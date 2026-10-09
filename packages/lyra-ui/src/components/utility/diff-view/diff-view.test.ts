@@ -325,7 +325,7 @@ describe("lr-diff-view", () => {
 
   it("paints the copy-button hover treatment under a real pointer", async () => {
     const el = await fixture<LyraDiffView>(html`
-      <lr-diff-view data-lr-theme-scope
+      <lr-diff-view
         copyable
         style="--lr-color-brand: rgb(1, 2, 3)"
         .oldText=${"a"}

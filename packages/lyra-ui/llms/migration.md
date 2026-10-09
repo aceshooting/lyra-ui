@@ -84,7 +84,6 @@ review removed names before running the migrated application.
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
 | `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
 | `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
-| `THEME_SCOPE_CSS_INPUT_REVIEW`, `THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW` | The `theme-scopes` rule found an input, shared output or marker that needs a theme scope by hand. |
 | `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
 | `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
 | `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
@@ -821,7 +820,6 @@ review removed names before running the migrated application.
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
 | `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
 | `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
-| `THEME_SCOPE_CSS_INPUT_REVIEW`, `THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW` | The `theme-scopes` rule found an input, shared output or marker that needs a theme scope by hand. |
 | `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
 | `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
 | `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
@@ -1543,7 +1541,6 @@ the old name keeps working meanwhile.
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
 | `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
 | `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
-| `THEME_SCOPE_CSS_INPUT_REVIEW`, `THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW` | The `theme-scopes` rule found an input, shared output or marker that needs a theme scope by hand. |
 | `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
 | `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
 | `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
@@ -1624,7 +1621,6 @@ the old name keeps working meanwhile.
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
 | `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
 | `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
-| `THEME_SCOPE_CSS_INPUT_REVIEW`, `THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW` | The `theme-scopes` rule found an input, shared output or marker that needs a theme scope by hand. |
 | `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
 | `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
 | `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
@@ -1679,11 +1675,6 @@ working; other uses (a deep import, a namespace member) and removed localization
 | part | `<lr-permission-grant> ::part(decision)` | Style the label through decision-label and the inner button through decision-base. | Reported only. decision is now the lr-button host. |
 | part | `<lr-eval-dataset> ::part(search-clear)` | Style the clear button through part search-clear on the field, and the native input through search-input-field. | Reported only. search-clear is now the composed lr-input clear button. |
 | part | `<lr-eval-dataset> ::part(search-input)` | Style the native input through search-input-field. | Reported only. search-input is now the lr-input host, not the native input. |
-
-This profile also runs the structural rule `theme-scopes`, the same implementation as `--rule=<name>`.
-It adds `data-lr-theme-scope` to elements whose inline style sets a token-layer input, and reports dynamic inputs,
-markers inside loops, and stylesheet rules that set an input or a shared output outside a theme scope
-(`THEME_SCOPE_*_REVIEW`, acknowledged like any other code).
 
 ## Upstream-protected compatibility spellings
 

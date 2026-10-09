@@ -126,7 +126,7 @@ describe('node typing', () => {
 
   it('reads selection ring widths from the --lr-border-width-* ladder, not the generic --lr-size-* scale (regression: theming purpose)', async () => {
     const el = (await fixture(html`
-      <lr-graph data-lr-theme-scope
+      <lr-graph
         style="--lr-theme-border-width-medium: 12px; --lr-theme-border-width-thick: 13px; --lr-theme-size-2px: 22px; --lr-theme-size-3px: 23px;"
       ></lr-graph>
     `)) as LyraGraph;

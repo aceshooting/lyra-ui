@@ -842,16 +842,6 @@ These named interfaces and helper signatures are available to typed integrations
   `resolveCanvasColor(/* public names: scope, color, fallback */): unknown`
   `resolveCanvasColors(/* public names: scope, colors, fallback */): unknown`
 
-- **`internal-document-tokens-contracts`** — Shared utility contracts.
-  `adoptLyraTokens(root: Document | ShadowRoot): void`
-  Adopts the document token layer into a document or shadow root. Idempotent; see "Application
-  shadow roots" in the styles and tokens guide for when a root needs it.
-
-- **`internal-theme-scopes-contracts`** — Shared utility contracts.
-  `findUnscopedThemeInputs(root?: Document | DocumentFragment | Element): Element[]`
-  Lists elements that set an inline `--lr-theme-*` input the layer consumes without being a theme
-  scope. Reads inline styles only and logs nothing.
-
 - **`internal-localization-runtime-contracts`** — Shared utility contracts.
   `getLyraLocaleDirection(/* public names: locale */): unknown`
   `getLyraLocale(): unknown`

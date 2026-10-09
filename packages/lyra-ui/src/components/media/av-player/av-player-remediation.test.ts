@@ -49,7 +49,7 @@ it('consumes removed mime-type as absent with null readback and later audio dete
 });
 
 it('keeps the unavailable timeline resting paint under hover and press while retaining enabled feedback', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-av-player']>(html`<lr-av-player data-lr-theme-scope style="inline-size: 400px; --lr-transition-fast: 0s;"></lr-av-player>`);
+  const el = await fixture<HTMLElementTagNameMap['lr-av-player']>(html`<lr-av-player style="inline-size: 400px; --lr-transition-fast: 0s;"></lr-av-player>`);
   const timeline = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline"]')!;
   const read = (): string[] => { const style = getComputedStyle(timeline); return [style.backgroundColor, style.borderColor]; };
   await resetMouse();

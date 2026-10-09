@@ -117,12 +117,12 @@ for (const direction of ['ltr', 'rtl'] as const) {
   it(`keeps a fixed dropdown menu at full size inside a transformed short virtual row (${direction})`, async () => {
     const dropdownMarkup =
       direction === 'ltr'
-        ? html`<lr-dropdown data-lr-theme-scope hoist style="--lr-transition-fast: 0ms">
+        ? html`<lr-dropdown hoist style="--lr-transition-fast: 0ms">
             <button slot="trigger">Actions</button>
             <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
             <lr-dropdown-item value="delete">Delete</lr-dropdown-item>
           </lr-dropdown>`
-        : html`<lr-dropdown data-lr-theme-scope positioning-strategy="fixed" style="--lr-transition-fast: 0ms">
+        : html`<lr-dropdown positioning-strategy="fixed" style="--lr-transition-fast: 0ms">
             <button slot="trigger">Actions</button>
             <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
             <lr-dropdown-item value="delete">Delete</lr-dropdown-item>
@@ -161,7 +161,7 @@ for (const direction of ['ltr', 'rtl'] as const) {
 it('honors a same-as-default hoist property over an inherited fixed strategy', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="--lr-positioning-strategy:fixed">
-      <lr-dropdown data-lr-theme-scope style="--lr-transition-fast:0ms">
+      <lr-dropdown style="--lr-transition-fast:0ms">
         <button slot="trigger">Actions</button>
         <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
       </lr-dropdown>
@@ -184,13 +184,13 @@ it('promotes a trapped fixed dropdown above an open dialog and leaves an untrapp
   const dialog = await fixture<HTMLElement>(html`
     <lr-dialog label="Actions">
       <div id="trap" style="transform: translateY(0); overflow: hidden; block-size: 40px">
-        <lr-dropdown data-lr-theme-scope id="trapped" hoist style="--lr-transition-fast: 0ms">
+        <lr-dropdown id="trapped" hoist style="--lr-transition-fast: 0ms">
           <button slot="trigger">Actions</button>
           <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
           <lr-dropdown-item value="delete">Delete</lr-dropdown-item>
         </lr-dropdown>
       </div>
-      <lr-dropdown data-lr-theme-scope id="plain" hoist style="--lr-transition-fast: 0ms">
+      <lr-dropdown id="plain" hoist style="--lr-transition-fast: 0ms">
         <button slot="trigger">More</button>
         <lr-dropdown-item value="copy">Copy</lr-dropdown-item>
       </lr-dropdown>
@@ -234,9 +234,9 @@ it('promotes a trapped fixed dropdown above an open dialog and leaves an untrapp
 it('keeps a parent dropdown top layer open for nested and canceled hide events', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="transform: translateY(0); overflow: hidden; block-size: 40px">
-      <lr-dropdown data-lr-theme-scope hoist style="--lr-transition-fast: 0ms; --hide-duration: 120ms">
+      <lr-dropdown hoist style="--lr-transition-fast: 0ms; --hide-duration: 120ms">
         <button slot="trigger">Outer</button>
-        <lr-dropdown data-lr-theme-scope hoist style="--lr-transition-fast: 0ms">
+        <lr-dropdown hoist style="--lr-transition-fast: 0ms">
           <button slot="trigger">Inner</button>
           <lr-dropdown-item value="inner-action">Inner action</lr-dropdown-item>
         </lr-dropdown>
@@ -838,7 +838,7 @@ for (const shape of ['direct', 'nested'] as const) {
           <div dir=${direction}>
             <div style="position: fixed; inset: 0; background: white;"></div>
             <div style="position: fixed; inset-block-start: 32px; inset-inline-start: 16px; inline-size: 390px; max-inline-size: calc(100vw - 32px); display: flex; justify-content: end;">
-              <lr-dropdown data-lr-theme-scope
+              <lr-dropdown
                 placement="bottom-end"
                 .hoist=${hoist}
                 .withoutArrow=${!arrow}
@@ -911,7 +911,7 @@ for (const consumerMenu of [false, true]) {
         <lr-dropdown-item value=${String(index)}>Action ${index + 1}</lr-dropdown-item>
       `);
       const el = await fixture<LyraDropdown>(html`
-        <lr-dropdown data-lr-theme-scope .withoutArrow=${!arrow} style="--show-duration: 0ms; --hide-duration: 0ms; --lr-transition-fast: 0ms;">
+        <lr-dropdown .withoutArrow=${!arrow} style="--show-duration: 0ms; --hide-duration: 0ms; --lr-transition-fast: 0ms;">
           <button slot="trigger" type="button">Actions</button>
           ${consumerMenu ? html`
             <lr-menu>

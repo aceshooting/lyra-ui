@@ -123,7 +123,7 @@ it("leaves the resting textarea border colour unchanged (unset-regression)", asy
 
 it("themes the textarea hover border through a component hook", async () => {
   const el = await fixture<LyraTextarea>(html`
-    <lr-textarea data-lr-theme-scope
+    <lr-textarea
       aria-label="Notes"
       style="--lr-transition-fast: 0s; --lr-textarea-hover-border-color: rgb(1, 2, 3)"
     ></lr-textarea>
@@ -152,7 +152,7 @@ it("gives the textarea field a focus border-colour hook", () => {
 
 it("turns the focused textarea border brand when the hook is unset, like every sibling field", async () => {
   const el = await fixture<LyraTextarea>(
-    html`<lr-textarea data-lr-theme-scope
+    html`<lr-textarea
       aria-label="Notes"
       style="--lr-transition-fast: 0s"
     ></lr-textarea>`
@@ -166,7 +166,7 @@ it("turns the focused textarea border brand when the hook is unset, like every s
 
 it("themes the textarea focus border through a component hook", async () => {
   const el = await fixture<LyraTextarea>(html`
-    <lr-textarea data-lr-theme-scope
+    <lr-textarea
       aria-label="Notes"
       style="--lr-transition-fast: 0s; --lr-textarea-focus-border-color: rgb(1, 2, 3)"
     ></lr-textarea>

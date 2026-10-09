@@ -333,10 +333,6 @@ export function computeRootScriptCoverage({
 // never fires) -- unlike the gate this file itself guards, going quiet is not this map's failure
 // mode; a MISSING reason is, and that is what `computeCoverage` fails closed on.
 export const EXEMPTIONS = Object.freeze({
-  'check-host-token-declarations.mjs':
-    'a gate, not a generator: `--stylesheets` checks shipped source stylesheets inside contract-policy, ' +
-    'and the argument-free form checks the BUILT shadow sheets inside check:build-artifacts; neither ' +
-    'writes a file.',
   'generate-component-quality.mjs':
     'measures BUILT dist/ output (gzip size) and test quality, so it must run after `pnpm build`; ' +
     'documented as the one step run separately after `regen`, not inside it (docs/agents/ci-and-gates.md).',

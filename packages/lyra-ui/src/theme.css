@@ -895,6 +895,16 @@
     --lr-theme-terminal-color-red: var(--_lr-dark-on,var(--_lr-ll-terminal-color-red))var(--_lr-light-on,var(--_lr-ld-terminal-color-red));
     --lr-theme-terminal-color-white: var(--_lr-dark-on,var(--_lr-ll-terminal-color-white))var(--_lr-light-on,var(--_lr-ld-terminal-color-white));
     --lr-theme-terminal-color-yellow: var(--_lr-dark-on,var(--_lr-ll-terminal-color-yellow))var(--_lr-light-on,var(--_lr-ld-terminal-color-yellow));
+    --lr-focus-ring-width: max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px));
+    --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color,var(--lr-theme-color-focus,Highlight));
+    --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset,2px);
+    --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+  }
+  [data-lr-contrast], [data-lr-motion] {
+    --lr-focus-ring-width: max(var(--lr-theme-focus-ring-width, 2px), var(--_lr-preference-focus-min, 0px));
+    --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color,var(--lr-theme-color-focus,Highlight));
+    --lr-focus-ring-offset: var(--lr-theme-focus-ring-offset,2px);
+    --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
   }
   :root, [data-lr-look], [data-lr-density], [data-lr-theme-scope] {
     --lr-theme-space-2xs: var(--_lr-dense-on,var(--_lr-dark-on,var(--_lr-ll-space-2xs))var(--_lr-light-on,var(--_lr-ld-space-2xs)))var(--_lr-dense-off,max(calc((var(--_lr-dark-on,var(--_lr-ll-space-2xs))var(--_lr-light-on,var(--_lr-ld-space-2xs))) * var(--_lr-density-space,1)),0px));
@@ -1247,11 +1257,6 @@
           var(--_lr-glass-original-focus-ring-color, var(--lr-color-text)),
           var(--lr-color-text) calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
         );
-      }
-      @media (forced-colors: none) {
-        :where(.lr-surface-chrome) {
-          --lr-focus-ring-color: var(--_lr-glass-qualified-focus-ring-color, var(--_lr-glass-original-focus-ring-color)); --lr-focus-ring: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-        }
       }
       :where(.lr-surface-chrome) {
         isolation: var(--_lr-surface-isolation, isolate);

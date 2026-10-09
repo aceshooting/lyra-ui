@@ -1090,7 +1090,6 @@ describe('lr-trace-tree', () => {
       );
       // The `prefers-color-scheme: dark` media query is not forceable from this harness, so drive
       // the same two token inputs that block sets -- which is also exactly how a consumer rethemes.
-      el.setAttribute('data-lr-theme-scope', '');
       el.style.setProperty('--lr-theme-color-text-normal', '#f2f2f2');
       el.style.setProperty('--lr-theme-color-success-fill-loud', '#3fb950');
       expect(brightness(partColor(el, 'ok', 'status-text'))).to.be.greaterThan(

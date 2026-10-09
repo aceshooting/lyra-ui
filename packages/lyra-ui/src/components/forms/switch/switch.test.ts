@@ -143,7 +143,7 @@ it("keeps the thumb clearance symmetric when a consumer adds a border to the tra
           border: 1px solid black;
         }
       </style>
-      <lr-switch data-lr-theme-scope style="--lr-transition-fast: 0s">Enable</lr-switch>
+      <lr-switch style="--lr-transition-fast: 0s">Enable</lr-switch>
     </div>
   `)) as HTMLElement;
   const el = frame.querySelector("lr-switch") as LyraSwitch;
@@ -177,7 +177,7 @@ it("gives the switch track hover and press feedback matching the keyboard focus-
   // getComputedStyle one frame after the pointer arrives would otherwise catch the INTERPOLATED
   // colour -- still the resting one at t=0 -- and report a working hover as broken.
   const el = (await fixture(
-    html`<lr-switch data-lr-theme-scope style="--lr-transition-fast: 0s">Label</lr-switch>`
+    html`<lr-switch style="--lr-transition-fast: 0s">Label</lr-switch>`
   )) as LyraSwitch;
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
@@ -220,7 +220,7 @@ it("gives the switch track hover and press feedback matching the keyboard focus-
 
 it("moves the checked track under the pointer too, away from its own brand fill", async () => {
   const el = (await fixture(
-    html`<lr-switch data-lr-theme-scope checked style="--lr-transition-fast: 0s">Label</lr-switch>`
+    html`<lr-switch checked style="--lr-transition-fast: 0s">Label</lr-switch>`
   )) as LyraSwitch;
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
@@ -243,7 +243,7 @@ it("moves the checked track under the pointer too, away from its own brand fill"
 
 it("themes checked track, thumb, hover, and pressed paint through component hooks", async () => {
   const el = (await fixture(html`
-    <lr-switch data-lr-theme-scope
+    <lr-switch
       checked
       style="
         --lr-transition-fast: 0s;
@@ -278,7 +278,7 @@ it("themes checked track, thumb, hover, and pressed paint through component hook
 
 it("resolves a checked switch that sets only the resting track fill to the default checked brand color, not the resting token", async () => {
   const onlyResting = (await fixture(html`
-    <lr-switch data-lr-theme-scope checked style="--lr-transition-fast: 0s; --lr-switch-track-fill: rgb(10, 20, 30);">Label</lr-switch>
+    <lr-switch checked style="--lr-transition-fast: 0s; --lr-switch-track-fill: rgb(10, 20, 30);">Label</lr-switch>
   `)) as LyraSwitch;
   const plainChecked = (await fixture(html`<lr-switch checked>Label</lr-switch>`)) as LyraSwitch;
   const onlyRestingTrack = onlyResting.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
@@ -298,8 +298,8 @@ it("resolves ::part(track) token overrides on the track itself for both checked 
           --lr-switch-checked-track-fill: rgb(2, 2, 2);
         }
       </style>
-      <lr-switch data-lr-theme-scope class="s4" checked style="--lr-transition-fast: 0s;">Checked</lr-switch>
-      <lr-switch data-lr-theme-scope class="s4" style="--lr-transition-fast: 0s;">Unchecked</lr-switch>
+      <lr-switch class="s4" checked style="--lr-transition-fast: 0s;">Checked</lr-switch>
+      <lr-switch class="s4" style="--lr-transition-fast: 0s;">Unchecked</lr-switch>
     </div>
   `);
   const switches = Array.from(wrapper.querySelectorAll<LyraSwitch>("lr-switch"));
@@ -315,7 +315,7 @@ it("resolves ::part(track) token overrides on the track itself for both checked 
 
 it("never leaks the checked track fill token into an unchecked switch's resting track color", async () => {
   const onlyChecked = (await fixture(html`
-    <lr-switch data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-switch-checked-track-fill: rgb(200, 100, 50);">Label</lr-switch>
+    <lr-switch style="--lr-transition-fast: 0s; --lr-switch-checked-track-fill: rgb(200, 100, 50);">Label</lr-switch>
   `)) as LyraSwitch;
   const plainUnchecked = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   const onlyCheckedTrack = onlyChecked.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
@@ -333,8 +333,8 @@ it("supports a per-state hover override through :state(checked) instead of a ded
           --lr-switch-track-hover-fill: rgb(3, 3, 3);
         }
       </style>
-      <lr-switch data-lr-theme-scope class="s6" checked style="--lr-transition-fast: 0s;">Checked</lr-switch>
-      <lr-switch data-lr-theme-scope class="s6" style="--lr-transition-fast: 0s;">Unchecked</lr-switch>
+      <lr-switch class="s6" checked style="--lr-transition-fast: 0s;">Checked</lr-switch>
+      <lr-switch class="s6" style="--lr-transition-fast: 0s;">Unchecked</lr-switch>
     </div>
   `);
   const switches = Array.from(wrapper.querySelectorAll<LyraSwitch>("lr-switch"));
@@ -368,7 +368,7 @@ it("supports a per-state hover override through :state(checked) instead of a ded
 
 it("mixes unchecked hover and press from the resting track fill even when the checked token is also set", async () => {
   const both = (await fixture(html`
-    <lr-switch data-lr-theme-scope
+    <lr-switch
       style="
         --lr-transition-fast: 0s;
         --lr-switch-track-fill: rgb(10, 20, 30);
@@ -378,7 +378,7 @@ it("mixes unchecked hover and press from the resting track fill even when the ch
     >
   `)) as LyraSwitch;
   const restingOnly = (await fixture(html`
-    <lr-switch data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-switch-track-fill: rgb(10, 20, 30);">Label</lr-switch>
+    <lr-switch style="--lr-transition-fast: 0s; --lr-switch-track-fill: rgb(10, 20, 30);">Label</lr-switch>
   `)) as LyraSwitch;
   const bothBase = both.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   const bothTrack = both.shadowRoot!.querySelector<HTMLElement>('[part~="track"]')!;
@@ -2214,13 +2214,13 @@ describe('reactive-accessor hardening', () => {
   it('restores the "on" default and removes the attribute when value is written as null (unset-regression)', async () => {
     const el = (await fixture(html`<lr-switch value="custom"></lr-switch>`)) as LyraSwitch;
     expect(el.hasAttribute('value')).to.be.true;
-    el.value = null;
+    (el as unknown as { value: string | null }).value = null;
     await el.updateComplete;
     expect(el.value).to.equal('on');
     expect(el.hasAttribute('value')).to.be.false;
 
     // Writing null again while the attribute is already absent must not throw or misbehave.
-    el.value = null;
+    (el as unknown as { value: string | null }).value = null;
     await el.updateComplete;
     expect(el.hasAttribute('value')).to.be.false;
   });

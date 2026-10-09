@@ -34,7 +34,6 @@ import {
   createMigrationRuntimeInventory,
   migrateFiles,
   migrateText,
-  migrateThemeScopes,
   parseArgs,
   readExportDeprecations,
   readRenameLedger,
@@ -1628,7 +1627,6 @@ test('the repository CLI accepts --origin=lyra-v21 with the checked-in ledger', 
       lyraVersion: '22.1.0',
       origin: 'lyra-v21',
       report: null,
-      rule: null,
       targets: ['src'],
     });
     assert.throws(() => parseArgs(['--origin=lyra-v20', 'src']), /Unknown migration origin: lyra-v20/);
@@ -1905,7 +1903,7 @@ test('retired event exposure preserves global add/remove pairing and rejects a n
 });
 
 // ---------------------------------------------------------------------------------------------
-// Profile `globals` and `rules` (RFC 0003), exercised through the lyra-v26 profile.
+// Profile `globals` (RFC 0003), exercised through the lyra-v26 profile.
 // ---------------------------------------------------------------------------------------------
 
 const PACKAGE = '@aceshooting/lyra-ui';
@@ -1919,7 +1917,6 @@ function globalsLedger(patch = (profile) => profile) {
     moduleEntry(`${PACKAGE}/data.json`, '@aceshooting/lyra-ide/data.json'),
     moduleEntry(`${PACKAGE}/locales/`, '@aceshooting/lyra-translations/', { prefix: true, except: [`${PACKAGE}/locales/keep/`] }),
   ];
-  profile.rules = ['theme-scopes'];
   patch(profile);
   return value;
 }
@@ -1997,41 +1994,19 @@ test('a locale-key global reports keys and quoted strings, and an acknowledgemen
   assert.equal(v26("const oldLabel = { oldLabel: 1 };", 'unrelated.ts').warnings.length, 0, 'a file that never touches Lyra is left alone');
 });
 
-test('the theme-scopes rule runs through the profile, shares one implementation, and honors acknowledgements', () => {
-  const lit = [
-    "const t = html`<div style=\"--lr-theme-border-radius-m: 4px\"><lr-button></lr-button></div>`;",
-    '<section class="lr-dark" style="--lr-theme-border-radius-m: 2px"></section>',
-    '',
-  ].join('\n');
-  const profile = v26(lit, 'view.ts');
-  const standalone = migrateThemeScopes(lit, { file: 'view.ts' });
-  assert.equal(profile.content, standalone.content);
-  assert.deepEqual(profile.changes.map((change) => [change.line, change.action, change.target]), [[1, 'insert-theme-scope', 'data-lr-theme-scope']]);
-  assert.equal(v26("<div style={{ '--lr-theme-border-radius-m': '4px' }} />", 'view.tsx').content, "<div data-lr-theme-scope=\"\" style={{ '--lr-theme-border-radius-m': '4px' }} />");
-  const css = '.card { --lr-theme-border-radius-m: 4px; }\n';
-  const reported = v26(css, 'card.css');
-  assert.deepEqual(reported.warnings.map((warning) => warning.warningCode), ['THEME_SCOPE_CSS_INPUT_REVIEW']);
-  assert.equal(reported.content, css);
-  const acknowledged = v26(`/* lyra-migrate-reviewed: THEME_SCOPE_CSS_INPUT_REVIEW:--lr-theme-border-radius-m */\n${css}`, 'card.css');
-  assert.deepEqual([acknowledged.warnings.length, acknowledged.acknowledged], [0, 1]);
-  assert.equal(v26(profile.content, 'view.ts').changes.length, 0, 'idempotent');
-});
-
-test('globals and rules follow the installed release and keep an empty profile empty', () => {
-  const source = `import type { OldStatus } from '${PACKAGE}';\n<div style="--lr-theme-border-radius-m: 4px"></div>\n`;
+test('globals follow the installed release and keep an empty profile empty', () => {
+  const source = `import type { OldStatus } from '${PACKAGE}';\n`;
   const early = v26(source, 'old.ts', { lyraVersion: '26.9.0' });
-  assert.equal(early.content, source, 'a release before the target ships neither the globals nor the rule');
+  assert.equal(early.content, source, 'a release before the target ships none of the globals');
   const contract = buildMigrationContract(inventory, { renameLedger: globalsLedger(), lyraVersion: '26.9.0' });
-  assert.equal(contract.renameProfiles.get('lyra-v26').skipped.length, 5, 'four globals and the rule are withheld');
-  assert.equal(v26(source, 'new.ts', { lyraVersion: '27.0.0' }).changes.length, 2);
+  assert.equal(contract.renameProfiles.get('lyra-v26').skipped.length, 4, 'the four globals are withheld');
+  assert.equal(v26(source, 'new.ts', { lyraVersion: '27.0.0' }).changes.length, 1);
   const empty = buildMigrationContract(inventory, { renameLedger: syntheticLedger() });
   assert.equal(empty.renameProfiles.get('lyra-v26').isEmpty, true);
   assert.equal(migrateText(source, empty, { file: 'old.ts', origin: 'lyra-v26' }).content, source);
-  const onlyRule = buildMigrationContract(inventory, { renameLedger: globalsLedger((profile) => { profile.globals = []; }) });
-  assert.equal(onlyRule.renameProfiles.get('lyra-v26').isEmpty, false, 'an enabled rule is never an empty profile');
 });
 
-test('globals and rules are shape-validated in the authored ledger and its projection', () => {
+test('globals are shape-validated in the authored ledger and its projection', () => {
   assert.deepEqual(validateRenameLedgerShape(globalsLedger()), []);
   const invalid = (patch, pattern) => assertFinding(validateRenameLedgerShape(globalsLedger(patch)), pattern);
   invalid((profile) => { profile.globals[0].kind = 'tag'; }, /kind must be one of module, export, locale-key/);
@@ -2045,21 +2020,17 @@ test('globals and rules are shape-validated in the authored ledger and its proje
   invalid((profile) => { profile.globals[2].except = [`${PACKAGE}/data.json/`]; }, /except needs prefix/);
   invalid((profile) => { profile.globals.reverse(); }, /globals must be sorted by kind and name/);
   invalid((profile) => { profile.globals.push(structuredClone(profile.globals[0])); }, /duplicate entry/);
-  invalid((profile) => { profile.rules = ['theme-scopes', 'other']; }, /unknown rule "other"/);
-  invalid((profile) => { profile.rules = ['theme-scopes', 'theme-scopes']; }, /rules must be sorted and unique/);
-  invalid((profile) => { profile.rules = 'theme-scopes'; }, /rules must be an array/);
   const projection = projectRenameLedger(globalsLedger(), inventory);
   const projected = projection.profiles.find((profile) => profile.origin === 'lyra-v26');
   assert.equal(projected.globals.length, 4);
-  assert.deepEqual(projected.rules, ['theme-scopes']);
   assert.equal(projection.profiles.find((profile) => profile.origin === 'lyra-v21').globals, undefined, 'profiles without them project unchanged');
   assert.deepEqual(validateRenameLedgerShape(projection, { projected: true }), []);
 });
 
-test('the checked-in v26 profile carries the 27.0.0 moves and runs the theme-scopes rule', () => {
+test('the checked-in v26 profile carries the 27.0.0 moves', () => {
   const profile = readRenameLedger().profiles.find((entry) => entry.origin === 'lyra-v26');
   assert.deepEqual([profile.fromMajor, profile.toMajor, profile.aliasRemovalMajor], [26, 27, 29]);
-  assert.deepEqual(profile.rules, ['theme-scopes']);
+  assert.equal(profile.rules, undefined);
   const key = (entry) => `${entry.kind} ${entry.from} -> ${entry.to}`;
   const entries = profile.globals.map(key);
   for (const expected of [
@@ -2078,17 +2049,17 @@ test('the checked-in v26 profile carries the 27.0.0 moves and runs the theme-sco
   assert.equal(result.content, `import type { ToolStatus as ToolCallStatus } from '${PACKAGE}';\nimport '@aceshooting/lyra-translations/fr.js';\nimport '${PACKAGE}/translations/pseudo/en-XA.js';\n`);
 });
 
-test('the packaged CLI applies a profile rule and rewrites through --origin=lyra-v26', () => {
+test('the packaged CLI rewrites through --origin=lyra-v26', () => {
   const { scratch, invoke } = packagedCli(globalsLedger());
   try {
     const file = path.join(scratch, 'app.html');
-    fs.writeFileSync(file, `<div style="--lr-theme-border-radius-m: 4px"></div>\n<script type="module">import '${PACKAGE}/data.json';</script>\n`);
+    fs.writeFileSync(file, `<script type="module">import '${PACKAGE}/data.json';</script>\n`);
     const check = invoke('--origin=lyra-v26', '--lyra-version=27.0.0', '--check', file);
     assert.equal(check.status, 1, check.stdout + check.stderr);
     const apply = invoke('--origin=lyra-v26', '--lyra-version=27.0.0', file);
     assert.equal(apply.status, 0, apply.stdout + apply.stderr);
     assert.equal(fs.readFileSync(file, 'utf8'),
-      `<div data-lr-theme-scope style="--lr-theme-border-radius-m: 4px"></div>\n<script type="module">import '@aceshooting/lyra-ide/data.json';</script>\n`);
+      `<script type="module">import '@aceshooting/lyra-ide/data.json';</script>\n`);
     const again = invoke('--origin=lyra-v26', '--lyra-version=27.0.0', '--check', file);
     assert.equal(again.status, 0, again.stdout + again.stderr);
   } finally {

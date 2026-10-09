@@ -47,7 +47,7 @@ function separatorColors(wrapper: HTMLElement): string[] {
 
 it('defaults to the Shadcn subtle border independently of the control border', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div data-lr-theme-scope style="--lr-theme-color-surface-border: rgb(10, 20, 30)">
+    <div style="--lr-theme-color-surface-border: rgb(10, 20, 30)">
       <lr-divider></lr-divider>
       <lr-divider orientation="vertical"></lr-divider>
     </div>
@@ -57,7 +57,7 @@ it('defaults to the Shadcn subtle border independently of the control border', a
 
 it('follows a theme-level subtle border, and --color still wins over it', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div data-lr-theme-scope
+    <div
       style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(40, 50, 60)"
     >
       <lr-divider></lr-divider>

@@ -165,7 +165,7 @@ assert.ok(
   'design-tokens.css must repeat theme.css\'s layer order statement exactly',
 );
 assert.ok(
-  bySuffix('/src/styles/tokens-root.css').includes('--lr-color-border-subtle:var(--_lr-dark-on,var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, #e5e5e5 var(--_lr-subtle-mix,100%), var(--lr-color-border)))))var(--_lr-light-on,var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, rgb(255 255 255 / 0.1) var(--_lr-subtle-mix,100%), var(--lr-color-border)))));'),
+  bySuffix('/src/styles/tokens-root.css').includes('--lr-color-border-subtle: var(--_lr-dark-on,var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, #e5e5e5 var(--_lr-subtle-mix,100%), var(--lr-color-border)))))var(--_lr-light-on,var(--_lr-preference-control-color, var(--lr-theme-color-surface-border-subtle, color-mix(in srgb, rgb(255 255 255 / 0.1) var(--_lr-subtle-mix,100%), var(--lr-color-border)))));'),
   'the decorative border tier is published at document scope, still derived from --lr-color-border',
 );
 
@@ -256,9 +256,6 @@ try {
   mkdirSync(path.join(layerFixture, 'src', 'theme'), { recursive: true });
   writeFileSync(path.join(layerFixture, 'src', 'theme', 'gemstones-data.ts'), readFileSync(path.join(packageDir, 'src', 'theme', 'gemstones-data.ts')));
 
-  // The document token layer's host remainder reads the glass surface defaults.
-  mkdirSync(path.join(layerFixture, 'tokens', 'surfaces'), { recursive: true });
-  writeFileSync(path.join(layerFixture, 'tokens', 'surfaces', 'glass.json'), readFileSync(path.join(packageDir, 'tokens', 'surfaces', 'glass.json')));
   mkdirSync(path.join(layerFixture, 'tokens', 'options'), { recursive: true });
   for (const kind of ['shape', 'typography', 'elevation']) {
     writeFileSync(path.join(layerFixture, 'tokens', 'options', `${kind}.json`),

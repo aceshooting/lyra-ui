@@ -604,7 +604,7 @@ describe('row part styling reaches both rendering paths', () => {
   }
 
   async function list(virtualizeAt: number): Promise<LyraNeighborList> {
-    const el = (await fixture(html`<lr-neighbor-list data-lr-theme-scope
+    const el = (await fixture(html`<lr-neighbor-list
       virtualize-at=${virtualizeAt}
       group-by-relation
       expandable

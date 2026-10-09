@@ -39,7 +39,7 @@ describe('slotted feedback editor navigation', () => {
 it('leaves keys an open slotted menu handled with that menu', async () => {
   const toolbar = await fixture<LyraMessageActions>(html`
     <lr-message-actions .controls=${['regenerate', 'edit']}>
-      <lr-dropdown data-lr-theme-scope style="--lr-transition-fast:0ms">
+      <lr-dropdown style="--lr-transition-fast:0ms">
         <button slot="trigger" type="button">More</button>
         <lr-menu label="More">
           <lr-menu-item value="a">A</lr-menu-item>

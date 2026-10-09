@@ -648,7 +648,7 @@ describe('lr-poll-status', () => {
 
   it('paints the enabled pause-button hover treatment under a real pointer', async () => {
     const el = await fixture<LyraPollStatus>(html`
-      <lr-poll-status data-lr-theme-scope
+      <lr-poll-status
         style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-color-brand: rgb(4, 5, 6)"
       ></lr-poll-status>
     `);
@@ -674,7 +674,7 @@ describe('lr-poll-status', () => {
 
   it('keeps pause-button hover overrides scoped while refresh follows shared brand tokens', async () => {
     const el = await fixture<LyraPollStatus>(html`
-      <lr-poll-status data-lr-theme-scope
+      <lr-poll-status
         with-refresh
         style="
           --lr-color-brand-quiet: rgb(1, 2, 3);

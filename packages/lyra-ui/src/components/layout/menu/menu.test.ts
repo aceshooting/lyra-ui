@@ -1334,7 +1334,7 @@ it('treats any other out-of-syntax hook value the same way, never as no cap at a
 
 it('lets a submenu surface uncap on none without losing its own clamp', async () => {
   const wrapper = await fixture<HTMLDivElement>(html`
-    <div data-lr-theme-scope
+    <div
       style="inline-size: 1200px; --lr-menu-max-inline-size: none; --lr-menu-min-inline-size: 0; --lr-theme-popover-viewport-clamp: 2rem"
     >
       ${nested()}

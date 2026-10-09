@@ -885,7 +885,7 @@ describe('lr-highlight-layer', () => {
 
       const actionWrapper = await fixture<HTMLElement>(html`
         <div style="position: relative; width: 200px; height: 200px">
-          <lr-highlight-layer data-lr-theme-scope
+          <lr-highlight-layer
             style="--lr-color-surface: rgb(4, 5, 6); --lr-color-surface-raised: rgb(1, 2, 3)"
             .items=${[
               {

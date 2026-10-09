@@ -1480,7 +1480,7 @@ describe("lr-rubric-form", () => {
 
   it("dims the disabled submit/skip buttons through the shared disabled-opacity token", async () => {
     const wrapper = (await fixture(
-      html`<div data-lr-theme-scope style="--lr-theme-opacity-disabled: 0.25">
+      html`<div style="--lr-theme-opacity-disabled: 0.25">
         <lr-rubric-form .keys=${KEYS} skippable disabled></lr-rubric-form>
       </div>`
     )) as HTMLElement;

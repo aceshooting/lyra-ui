@@ -871,7 +871,7 @@ describe('card chrome theming hooks', () => {
 
   it('draws the card edge on the decorative --lr-color-border-subtle tier', async () => {
     const el = (await fixture(html`
-      <lr-agent-run data-lr-theme-scope
+      <lr-agent-run
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
         .run=${makeRun({ steps })}
       ></lr-agent-run>

@@ -1954,7 +1954,7 @@ describe('lr-time-input validity, value coercion, and slots', () => {
 describe('lr-time-input disabled segment hover/press feedback', () => {
   it('does not tint a segment on hover or press while disabled', async () => {
     const el = await fixture<LyraTimeInput>(
-      html`<lr-time-input data-lr-theme-scope disabled value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>`,
+      html`<lr-time-input disabled value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>`,
     );
     const target = segment(el, 'hour');
     const resting = getComputedStyle(target).backgroundColor;
@@ -1984,7 +1984,7 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
     const form = await fixture<HTMLFormElement>(html`
       <form>
         <fieldset disabled>
-          <lr-time-input data-lr-theme-scope value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>
+          <lr-time-input value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>
         </fieldset>
       </form>
     `);
@@ -2018,7 +2018,7 @@ describe('lr-time-input disabled segment hover/press feedback', () => {
 
   it('still tints a segment on hover and press while enabled (control)', async () => {
     const el = await fixture<LyraTimeInput>(
-      html`<lr-time-input data-lr-theme-scope value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>`,
+      html`<lr-time-input value="10:00" style="--lr-transition-fast: 0s"></lr-time-input>`,
     );
     const target = segment(el, 'hour');
     const resting = getComputedStyle(target).backgroundColor;
@@ -2045,12 +2045,12 @@ describe('lr-time-input disabled action hover/press feedback', () => {
   for (const testCase of [
     {
       name: 'disabled picker toggle',
-      template: html`<lr-time-input data-lr-theme-scope disabled value="09:30" style="--lr-transition-fast: 0s"></lr-time-input>`,
+      template: html`<lr-time-input disabled value="09:30" style="--lr-transition-fast: 0s"></lr-time-input>`,
       part: 'expand-button',
     },
     {
       name: 'readonly clear action',
-      template: html`<lr-time-input data-lr-theme-scope readonly with-clear value="09:30" style="--lr-transition-fast: 0s"></lr-time-input>`,
+      template: html`<lr-time-input readonly with-clear value="09:30" style="--lr-transition-fast: 0s"></lr-time-input>`,
       part: 'clear-button',
     },
   ]) {
@@ -2227,7 +2227,7 @@ describe('lr-time-input clipped column focus', () => {
   for (const offset of [0, 2, -4]) {
     it(`keeps the first keyboard-focused option ring inside its column with offset ${offset}px`, async () => {
       const el = await fixture<LyraTimeInput>(html`
-        <lr-time-input data-lr-theme-scope value="01:00" style=${`--lr-theme-focus-ring-width: 3px; --lr-theme-focus-ring-offset: ${offset}px; --lr-theme-color-focus: rgb(255, 0, 0)`}></lr-time-input>
+        <lr-time-input value="01:00" style=${`--lr-theme-focus-ring-width: 3px; --lr-theme-focus-ring-offset: ${offset}px; --lr-theme-color-focus: rgb(255, 0, 0)`}></lr-time-input>
       `);
       await el.show();
       await el.updateComplete;

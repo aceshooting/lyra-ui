@@ -164,7 +164,7 @@ it("keeps the edge fade opaque when a consumer themes the shadow color transluce
   // documented consumer theming input. A mask reads alpha only, so a translucent shadow theme
   // dropped mask alpha across the whole tablist rather than just its edges.
   const el = (await fixture(html`
-    <lr-tab-group data-lr-theme-scope
+    <lr-tab-group
       style="display: block; max-inline-size: 90px; --lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
     >
       <lr-tab panel="input">Raw input document</lr-tab>
@@ -194,7 +194,6 @@ it('lets a consumer ::part(tab):hover color win in the rendered cascade', async 
     </div>
   `);
   const el = wrapper.querySelector('lr-tab-group') as LyraTabGroup;
-  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-transition-fast', '0ms');
   const target = tabButtons(el)[1]!;
   try {
@@ -987,7 +986,6 @@ describe("selected/hover cssprops", () => {
       html`<div style=${style}>${basic()}</div>`
     )) as HTMLElement;
     const el = wrapper.querySelector("lr-tab-group") as LyraTabGroup;
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty("--lr-transition-fast", "0ms");
     await el.updateComplete;
     return el;
@@ -1234,7 +1232,6 @@ describe('lr-tab host color inheritance from the themed tab button', () => {
         <lr-tab-panel name="preview">Rendered preview</lr-tab-panel>
       </lr-tab-group>
     `)) as LyraTabGroup;
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty("--lr-transition-fast", "0ms");
     const tabs = [...el.querySelectorAll("lr-tab")] as LyraTab[];
     const unselectedTab = tabs[1]!;
@@ -2278,7 +2275,6 @@ async function crowded(style = ""): Promise<LyraTabGroup> {
     </div>
   `)) as LyraTabGroup;
   const group = el.querySelector("lr-tab-group") as LyraTabGroup;
-  group.setAttribute('data-lr-theme-scope', '');
   group.style.setProperty("--lr-transition-fast", "0ms");
   await nextFrames();
   await group.updateComplete;

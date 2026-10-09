@@ -1885,7 +1885,7 @@ it('stops the jump-to-latest opacity transition under reduced motion', async () 
 
 it('reads its border widths from --lr-border-width-thin, not the generic --lr-size-1px scale (regression: theming purpose)', async () => {
   const el = (await fixture(html`
-    <lr-terminal data-lr-theme-scope style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;"></lr-terminal>
+    <lr-terminal style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;"></lr-terminal>
   `)) as LyraTerminal;
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -1941,7 +1941,7 @@ describe('card chrome theming hooks', () => {
 
   it('draws the card edge and divider on the subtle tier while toolbar buttons keep the control border', async () => {
     const el = (await fixture(html`
-      <lr-terminal data-lr-theme-scope
+      <lr-terminal
         downloadable
         .content=${CHROME_LOG}
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"

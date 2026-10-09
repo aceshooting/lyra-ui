@@ -1336,7 +1336,7 @@ it('keeps compact size and outlined/quiet appearance intact inside a narrow RTL 
 
 it('bounds and wraps a long rendered format menu within the popover viewport clamp', async () => {
   const el = await fixture<LyraExportButton>(html`
-    <lr-export-button data-lr-theme-scope
+    <lr-export-button
       open
       style="--lr-popover-viewport-clamp: 100px; --lr-transition-fast: 0s"
       .formats=${[
@@ -1568,7 +1568,7 @@ it('fails closed for a revoked formats array instead of invoking its traps', asy
 
 it('centers a short menu label inside its live minimum hit target', async () => {
   const el = (await fixture(html`
-    <lr-export-button data-lr-theme-scope open style="--lr-transition-fast: 0s" .formats=${['csv', 'json']}></lr-export-button>
+    <lr-export-button open style="--lr-transition-fast: 0s" .formats=${['csv', 'json']}></lr-export-button>
   `)) as LyraExportButton;
   const menu = await waitForOpenMenu(el);
   const item = menu.querySelector<HTMLButtonElement>('[part="menu-item"]')!;
@@ -1848,7 +1848,7 @@ describe('trigger paint custom properties', () => {
 
   it('honors the resting background, color and border properties', async () => {
     const el = (await fixture(html`
-      <lr-export-button data-lr-theme-scope
+      <lr-export-button
         .rows=${rows}
         .columns=${columns}
         style="--lr-transition-fast: 0s; --lr-export-button-bg: rgb(1, 2, 3); --lr-export-button-color: rgb(4, 5, 6); --lr-export-button-border: rgb(7, 8, 9);"
@@ -1865,7 +1865,7 @@ describe('trigger paint custom properties', () => {
   // opt-out, so a neutral-text outlined trigger was unreachable through documented properties.
   it('lets an author override the outlined appearance back to neutral text', async () => {
     const el = (await fixture(html`
-      <lr-export-button data-lr-theme-scope
+      <lr-export-button
         appearance="outlined"
         .rows=${rows}
         .columns=${columns}
@@ -1926,7 +1926,7 @@ describe('trigger -bg custom properties and their deprecated -background aliases
   ] as const) {
     it(`paints the resting trigger fill from the ${label}`, async () => {
       const el = (await fixture(html`
-        <lr-export-button data-lr-theme-scope
+        <lr-export-button
           .rows=${rows}
           .columns=${columns}
           style=${`--lr-transition-fast: 0s; ${style}`}
@@ -1940,7 +1940,7 @@ describe('trigger -bg custom properties and their deprecated -background aliases
 
 it('ignores retired rest, hover, and active background tokens in rendered pointer states', async () => {
   const el = (await fixture(html`
-    <lr-export-button data-lr-theme-scope
+    <lr-export-button
       .rows=${rows}
       .columns=${columns}
       style="--lr-transition-fast: 0s; --lr-export-button-background: rgb(1, 2, 3); --lr-export-button-hover-background: rgb(4, 5, 6); --lr-export-button-active-background: rgb(7, 8, 9)"

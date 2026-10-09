@@ -4,7 +4,7 @@ import '../toast/toast.js';
 import type { LyraAlert } from './alert.class.js';
 
 it('settles a toast removed before activation without announcing a stale show', async () => {
-  const el = await fixture<LyraAlert>(html`<lr-alert data-lr-theme-scope style="--lr-transition-fast:0ms;--lr-transition-medium:0ms">Notice</lr-alert>`);
+  const el = await fixture<LyraAlert>(html`<lr-alert style="--lr-transition-fast:0ms;--lr-transition-medium:0ms">Notice</lr-alert>`);
   let shows = 0;
   let settled = false;
   el.addEventListener('lr-show', () => { shows += 1; });
@@ -19,7 +19,7 @@ it('settles a toast removed before activation without announcing a stale show', 
 });
 
 it('retires a toast activation when the alert moves directly outside its owning region', async () => {
-  const el = await fixture<LyraAlert>(html`<lr-alert data-lr-theme-scope style="--lr-transition-fast:0ms;--lr-transition-medium:0ms">Notice</lr-alert>`);
+  const el = await fixture<LyraAlert>(html`<lr-alert style="--lr-transition-fast:0ms;--lr-transition-medium:0ms">Notice</lr-alert>`);
   const destination = await fixture<HTMLDivElement>(html`<div></div>`);
   let shows = 0;
   let settled = false;
@@ -36,7 +36,7 @@ it('retires a toast activation when the alert moves directly outside its owning 
 });
 
 it('can toast the same alert after an early cancelled activation without losing hide completion', async () => {
-  const el = await fixture<LyraAlert>(html`<lr-alert data-lr-theme-scope style="--lr-transition-fast:0ms;--lr-transition-medium:0ms">Notice</lr-alert>`);
+  const el = await fixture<LyraAlert>(html`<lr-alert style="--lr-transition-fast:0ms;--lr-transition-medium:0ms">Notice</lr-alert>`);
   const first = el.toast();
   el.remove();
   await first;

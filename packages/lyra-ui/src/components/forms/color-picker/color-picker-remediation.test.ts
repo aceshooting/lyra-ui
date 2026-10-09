@@ -272,7 +272,7 @@ it('steps the colour handles by ten with PageUp and PageDown', async () => {
 
 it('paints no pointer affordance on its sliders while disabled or readonly', async () => {
   const outlineOnHover = async (attribute: string): Promise<string> => {
-    const picker = await fixture<LyraColorPicker>(`<lr-color-picker data-lr-theme-scope inline ${attribute} value="#ff0000" style="--lr-transition-fast: 0s"></lr-color-picker>`);
+    const picker = await fixture<LyraColorPicker>(`<lr-color-picker inline ${attribute} value="#ff0000" style="--lr-transition-fast: 0s"></lr-color-picker>`);
     const slider = part(picker, 'hue-slider');
     try {
       await hoverUntilMatched(slider, 'the pointer never hovered the slider');

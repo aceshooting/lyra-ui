@@ -845,7 +845,7 @@ it("transitions the tooltip with motion tokens and stops under prefers-reduced-m
   try {
     await setReducedMotion("no-preference");
     const el = (await fixture(
-      html`<lr-slider data-lr-theme-scope
+      html`<lr-slider
         style="--lr-transition-fast: 2s"
         with-tooltip
         value="20"

@@ -1,13 +1,9 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import { css } from 'lit';
-import { setColorScheme, setForcedColors } from '../../test/wtr-media.js';
+import { LitElement, css } from 'lit';
+import { setForcedColors } from '../../test/wtr-media.js';
 import { forceCoarsePointer } from '../../test/coarse-pointer-media.js';
 import { tag } from './prefix.js';
-// The per-mode records: read as text only, to check the values they mirror.
 import { specialistTokens } from './specialist-tokens.styles.js';
-import { specialistTokens as specialistHostTokens } from './specialist-host-tokens.styles.js';
-import { hostTokens } from './host-tokens.styles.js';
-import { LyraElement } from './lyra-element.js';
 import { sizes } from './sizes.styles.js';
 import { contextualSizes } from './contextual-vocabulary.styles.js';
 import { tokens } from './tokens.styles.js';
@@ -15,28 +11,29 @@ import { palette } from './tokens/palette.styles.js';
 import { glassSurface } from './glass-surface.styles.js';
 import { toRgba } from '../../test/color-contrast.js';
 
-// Every probe is a real LyraElement: it adopts the document token layer on connect and carries the
-// host remainder, exactly like a shipped component.
-class TokenProbe extends LyraElement {
+class TokenProbe extends LitElement {
+  static override styles = [palette, tokens];
   override render() {
     return html`<div part="probe"></div>`;
   }
 }
 customElements.define(tag('token-probe'), TokenProbe);
 
-class SpecialistTokenProbe extends LyraElement {
-  static override styles = [LyraElement.styles, specialistHostTokens];
+class SpecialistTokenProbe extends LitElement {
+  static override styles = [palette, tokens, specialistTokens];
   override render() {
     return html`<div part="probe"></div>`;
   }
 }
 customElements.define(tag('specialist-token-probe'), SpecialistTokenProbe);
 
-// An intervening host: a LyraElement that renders another one inside its own shadow root. With the
-// document token layer, neither host re-declares the shared --lr-* outputs; both inherit them from
-// the nearest theme scope, and only the host-local names (--lr-icon-button-size and the safe-area
-// aliases) are re-declared per element.
-class NestedTokenProbe extends LyraElement {
+// An intervening host: it carries the same token layer every LyraElement carries, and
+// renders another token-bearing element inside its own shadow root. Any --lr-* token is
+// re-declared on this element's :host, so an ancestor's --lr-* value can never reach the
+// inner probe; only a --lr-theme-* input (declared nowhere in component styles) inherits
+// all the way down.
+class NestedTokenProbe extends LitElement {
+  static override styles = [palette, tokens];
   override render() {
     return html`<lr-token-probe></lr-token-probe>`;
   }
@@ -66,13 +63,10 @@ async function probeVar(name: string): Promise<string> {
   return getComputedStyle(el).getPropertyValue(name).trim();
 }
 
-/**
- * Resolve `name` on a probe nested one shadow root below an intervening host. The wrapper carrying
- * `ancestorStyle` is a theme scope, which is what makes its --lr-theme-* inputs re-derive the layer.
- */
+/** Resolve `name` on a probe nested one shadow root below an intervening token-bearing host. */
 async function probeNestedVar(name: string, ancestorStyle = ''): Promise<string> {
   const wrapper = (await fixture(
-    html`<div data-lr-theme-scope style=${ancestorStyle}><lr-nested-token-probe></lr-nested-token-probe></div>`,
+    html`<div style=${ancestorStyle}><lr-nested-token-probe></lr-nested-token-probe></div>`,
   )) as HTMLElement;
   const outer = wrapper.querySelector(tag('nested-token-probe')) as NestedTokenProbe;
   await outer.updateComplete;
@@ -82,11 +76,9 @@ async function probeNestedVar(name: string, ancestorStyle = ''): Promise<string>
 }
 
 /** Mount a nested probe and hand back the inner host, so a caller can force media rules on it. */
-async function nestedProbe(ancestorStyle = '', scope = true): Promise<TokenProbe> {
+async function nestedProbe(ancestorStyle = ''): Promise<TokenProbe> {
   const wrapper = (await fixture(
-    scope
-      ? html`<div data-lr-theme-scope style=${ancestorStyle}><lr-nested-token-probe></lr-nested-token-probe></div>`
-      : html`<div style=${ancestorStyle}><lr-nested-token-probe></lr-nested-token-probe></div>`,
+    html`<div style=${ancestorStyle}><lr-nested-token-probe></lr-nested-token-probe></div>`,
   )) as HTMLElement;
   const outer = wrapper.querySelector(tag('nested-token-probe')) as NestedTokenProbe;
   await outer.updateComplete;
@@ -273,11 +265,11 @@ it('retunes the interactive transition through the same --lr-theme-transition-fa
   );
 });
 
-it('maps logical safe-area insets to the mirrored physical edges in RTL, per host', () => {
-  const cssText = hostTokens.cssText.replace(/\s+/g, ' ');
+it('maps logical safe-area insets to the mirrored physical edges in RTL', () => {
+  const cssText = tokens.cssText.replace(/\s+/g, ' ');
   expect(cssText).to.include(
-    ':host(:dir(rtl)){--lr-safe-area-inline-start:env(safe-area-inset-right, 0px);' +
-      '--lr-safe-area-inline-end:env(safe-area-inset-left, 0px)}',
+    ':host(:dir(rtl)) { --lr-safe-area-inline-start: env(safe-area-inset-right, 0px); ' +
+      '--lr-safe-area-inline-end: env(safe-area-inset-left, 0px); }',
   );
 });
 
@@ -397,25 +389,24 @@ it('lets the --lr-theme-focus-ring-* inputs set on an ancestor reach a component
   expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-theme-focus-ring-offset: 5px')).to.equal('5px');
 });
 
-it('lets an ancestor --lr-* output reach nested components until the next theme scope, except the host-local icon-button size', async () => {
-  // With the document token layer no component re-declares the shared outputs, so an output set on a
-  // plain ancestor now inherits all the way down (a v27 widening). It stops at the next theme scope,
-  // which re-derives every output from the inputs it sees. --lr-icon-button-size is the one name
-  // here that stays element-scoped: every host re-declares it so the coarse-pointer floor applies
-  // per element, and --lr-icon-button-size-scope is its inheriting subtree input.
+it('cannot be rethemed through the --lr-* token itself, which is why the --lr-theme-* bridge exists', async () => {
+  // Every LyraElement re-declares --lr-* on its own :host, so an ancestor value is shadowed
+  // at the first intervening host and never reaches anything nested below it. These four tokens
+  // (icon-button-size, focus-ring-width/-offset, otp-input-segment-size, popover-viewport-clamp)
+  // are the only ones the shared base :host block declares under a component-looking name --
+  // see build-llms.mjs's "names that look per-component but are not" note.
+  //
+  // This is NOT the same claim as "there is no ancestor route". Each of these names has a
+  // separate, inheriting input that does reach: the --lr-theme-* bridge for all four, plus
+  // --lr-icon-button-size-scope for the icon-button size specifically. What stays pinned here is
+  // that the PUBLISHED per-component name keeps its element-scoped meaning -- setting
+  // --lr-icon-button-size on the icon button itself is authoritative, and cannot be overridden
+  // from a wrapper -- so nothing that relies on that today changes.
   expect(await probeNestedVar('--lr-icon-button-size', '--lr-icon-button-size: 3rem')).to.equal('2.25rem');
-  const unscoped = (style: string) => nestedProbe(style, false);
-  expect(resolvedPx(await unscoped('--lr-focus-ring-width: 4px'), '--lr-focus-ring-width')).to.equal(4);
-  expect(getComputedStyle(await unscoped('--lr-focus-ring-offset: 5px')).getPropertyValue('--lr-focus-ring-offset').trim()).to.equal('5px');
-  expect(getComputedStyle(await unscoped('--lr-otp-input-segment-size: 4em')).getPropertyValue('--lr-otp-input-segment-size').trim()).to.equal('4em');
-  // A scope between the output and the component re-derives it from its inputs.
-  expect(await probeNestedVar('--lr-otp-input-segment-size', '--lr-otp-input-segment-size: 4em')).to.equal('4em');
-  const wrapper = (await fixture(
-    html`<div style="--lr-popover-viewport-clamp: 50vw"><section data-lr-theme-scope><lr-token-probe></lr-token-probe></section></div>`,
-  )) as HTMLElement;
-  const behindScope = wrapper.querySelector(tag('token-probe')) as TokenProbe;
-  await behindScope.updateComplete;
-  expect(getComputedStyle(behindScope).getPropertyValue('--lr-popover-viewport-clamp').trim()).to.equal('92vw');
+  expect(resolvedPx(await nestedProbe('--lr-focus-ring-width: 4px'), '--lr-focus-ring-width')).to.equal(3);
+  expect(await probeNestedVar('--lr-focus-ring-offset', '--lr-focus-ring-offset: 5px')).to.equal('0px');
+  expect(await probeNestedVar('--lr-otp-input-segment-size', '--lr-otp-input-segment-size: 4em')).to.equal('2.5em');
+  expect(await probeNestedVar('--lr-popover-viewport-clamp', '--lr-popover-viewport-clamp: 50vw')).to.equal('92vw');
 });
 
 // The request's concrete repro: an ancestor wrapper styling
@@ -536,14 +527,14 @@ it('lets an explicit --lr-theme-color-surface-overlay win outright in dark mode'
 });
 
 it('keeps the light overlay surface white, independent of a page-surface override', async () => {
-  const el = (await fixture(html`<lr-token-probe data-lr-theme-scope style="--lr-theme-color-surface-default: #101820"></lr-token-probe>`)) as TokenProbe;
+  const el = (await fixture(html`<lr-token-probe style="--lr-theme-color-surface-default: #101820"></lr-token-probe>`)) as TokenProbe;
   await el.updateComplete;
   expect(toHex(resolvedColor(el, '--lr-color-surface'))).to.equal('#101820');
   expect(toHex(resolvedColor(el, '--lr-color-surface-overlay'))).to.equal('#ffffff');
 });
 
-it('provides central reduced-motion fallbacks on every host', () => {
-  const cssText = hostTokens.cssText;
+it('provides central reduced-motion fallbacks', () => {
+  const cssText = tokens.cssText;
   expect(cssText).to.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   expect(cssText).to.match(/animation-duration:\s*0\.001ms/);
 });
@@ -584,6 +575,8 @@ const FORCED_COLOR_TOKEN_NAMES = FORCED_COLOR_TOKENS.map(([name]) => name);
 /** Every route into dark mode this token layer answers to, plus the no-signal light default. */
 type DarkRoute = 'none' | 'os-preference' | 'attribute' | 'ancestor';
 
+/** `:host-context()` ships in Chromium only, so the dark-ancestor route is unreachable elsewhere. */
+const hostContextSupported = CSS.supports('selector(:host-context(.lr-dark))');
 
 async function probeTokensUnder(names: readonly string[], route: DarkRoute): Promise<Map<string, string>> {
   const probe =
@@ -591,24 +584,19 @@ async function probeTokensUnder(names: readonly string[], route: DarkRoute): Pro
       ? html`<lr-specialist-token-probe data-lr-theme="dark"></lr-specialist-token-probe>`
       : html`<lr-specialist-token-probe></lr-specialist-token-probe>`;
   const wrapper = (await fixture(
-    html`<div class=${route === 'ancestor' ? 'lr-dark' : route === 'os-preference' ? '' : 'lr-light'}>${probe}</div>`,
+    html`<div class=${route === 'ancestor' ? 'lr-dark' : 'lr-light'}>${probe}</div>`,
   )) as HTMLElement;
   const el = wrapper.querySelector(tag('specialist-token-probe')) as SpecialistTokenProbe;
   await el.updateComplete;
-  // The OS route is real colour-scheme emulation. The probe sits under a mode-neutral wrapper, so
-  // the document root's own mode decides it.
-  if (route !== 'os-preference') {
-    const computed = getComputedStyle(el);
-    return new Map(names.map((name) => [name, squash(computed.getPropertyValue(name))]));
-  }
-  wrapper.removeAttribute('class');
-  await setColorScheme('dark');
-  try {
-    const computed = getComputedStyle(el);
-    return new Map(names.map((name) => [name, squash(computed.getPropertyValue(name))]));
-  } finally {
-    await setColorScheme('no-preference');
-  }
+  // This runner exposes no colour-scheme emulation seam (test/wtr-media.ts reaches only
+  // Playwright's reducedMotion and forcedColors), so the OS route reuses the CSSOM rewrite the
+  // mode-switching tests at the end of this file already rely on: ONLY the
+  // (prefers-color-scheme: dark) condition is forced on. (forced-colors: active) stays a real
+  // media query answering to real emulation, and every selector, declaration and cascade position
+  // is the one that ships.
+  if (route === 'os-preference') el.shadowRoot!.adoptedStyleSheets = schemeForcedSheets(true);
+  const computed = getComputedStyle(el);
+  return new Map(names.map((name) => [name, squash(computed.getPropertyValue(name))]));
 }
 
 /**
@@ -642,8 +630,9 @@ it('reaches its dark values through every dark route while forced colors are off
   const light = await probeTokensUnder(names, 'none');
   expect(light.get('--lr-color-surface'), 'the no-signal default must still be the light surface').to.equal('#ffffff');
 
-  // Every engine follows an ancestor mode scope: the document layer resolves it with plain selectors.
-  const routes: DarkRoute[] = ['os-preference', 'attribute', 'ancestor'];
+  const routes: DarkRoute[] = hostContextSupported
+    ? ['os-preference', 'attribute', 'ancestor']
+    : ['os-preference', 'attribute'];
   const failures: string[] = [];
   for (const route of routes) {
     const dark = await probeTokensUnder(names, route);
@@ -685,6 +674,7 @@ it('substitutes system colours in forced colors on a data-lr-theme="dark" host',
 });
 
 it('substitutes system colours in forced colors under a dark ancestor', async function () {
+  if (!hostContextSupported) this.skip();
   if (!(await enterForcedColors())) this.skip();
   try {
     expectSystemColors(await probeTokensUnder(FORCED_COLOR_TOKEN_NAMES, 'ancestor'), 'ancestor');
@@ -705,8 +695,9 @@ it('darkens the border fallback to clear WCAG 1.4.11 non-text 3:1 contrast again
 const BORDER_TIERS = ['--lr-color-border', '--lr-color-border-subtle'] as const;
 
 it('keeps the default decorative and control boundary roles distinct on every mode route', async () => {
-  // Every engine follows an ancestor mode scope: the document layer resolves it with plain selectors.
-  const routes: DarkRoute[] = ['none', 'os-preference', 'attribute', 'ancestor'];
+  const routes: DarkRoute[] = hostContextSupported
+    ? ['none', 'os-preference', 'attribute', 'ancestor']
+    : ['none', 'os-preference', 'attribute'];
   for (const route of routes) {
     const values = await probeTokensUnder(BORDER_TIERS, route);
     const dark = route !== 'none';
@@ -815,8 +806,7 @@ it('chains filled-content and border tokens through the matching lyra theme-inpu
   // semantic grid landed -- a flat token now reaches its theme input through its grid slot rather
   // than naming it directly -- and a text assertion would have failed that purely structural change
   // while a broken chain that still *looked* right would have passed.
-  // A theme scope: only a scope re-derives the layer from inputs set on it.
-  const el = (await fixture(html`<lr-token-probe data-lr-theme-scope></lr-token-probe>`)) as TokenProbe;
+  const el = (await fixture(html`<lr-token-probe></lr-token-probe>`)) as TokenProbe;
   const read = (name: string) => getComputedStyle(el).getPropertyValue(name).trim();
   const cases: Array<[input: string, reaches: string]> = [
     ['--lr-theme-color-surface-border', '--lr-color-border'],
@@ -927,7 +917,7 @@ it('declares every bridged theme input in theme.css', async () => {
 
 it('keeps the default decorative boundary independent until its own input is overridden', async () => {
   await withThemeCss(async () => {
-    const wrapper = await fixture<HTMLElement>(html`<div data-lr-theme-scope style="--lr-theme-color-surface-border: #123456"><lr-token-probe></lr-token-probe></div>`);
+    const wrapper = await fixture<HTMLElement>(html`<div style="--lr-theme-color-surface-border: #123456"><lr-token-probe></lr-token-probe></div>`);
     const probe = wrapper.querySelector('lr-token-probe')!;
     expect(resolvedColor(probe, '--lr-color-border')).to.deep.equal([18, 52, 86]);
     expect(resolvedColor(probe, '--lr-color-border-subtle')).to.deep.equal([229, 229, 229]);
@@ -1188,16 +1178,33 @@ it('keeps terminal black and white apart in both modes, and backgrounds off the 
 // colour grid or chart ramp on dark surfaces, or the reverse -- and no such combination was ever
 // contrast-checked. All three layers must answer to the same signal, in both directions.
 //
-// The OS colour scheme is emulated for real (test/wtr-media.ts `setColorScheme`), so the media
-// rules that ship decide, and every assertion reads a computed value off a mounted host.
+// The runner cannot emulate the OS colour scheme (`@web/test-runner-commands` is not a dependency
+// of this package and adding a wtr command plugin for one assertion is not worth it), so the
+// shipped rules are re-adopted with ONLY the `(prefers-color-scheme: dark)` condition rewritten
+// through CSSOM. Every selector, declaration and cascade position stays exactly the one that
+// ships, and every assertion below reads a computed value off a mounted host.
 
 /** One token from each layer, plus a second base-token entry so a partial fix cannot pass. */
 const MODE_SWITCHED_TOKENS = [
-  '--lr-color-surface', // document layer, base family
-  '--lr-color-text', // document layer, base family
-  '--lr-color-brand-fill-loud', // document layer, semantic grid
-  '--lr-color-chart-1', // per-host specialist palette, on the inherited switches
+  '--lr-color-surface', // tokens layer
+  '--lr-color-text', // tokens layer
+  '--lr-color-brand-fill-loud', // palette layer
+  '--lr-color-chart-1', // specialistTokens layer
 ] as const;
+
+function schemeForcedSheets(prefersDark: boolean): CSSStyleSheet[] {
+  return [palette, tokens, specialistTokens].map((layer) => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(layer.cssText);
+    for (const rule of Array.from(sheet.cssRules)) {
+      const media = (rule as CSSMediaRule).media as MediaList | undefined;
+      if (media?.mediaText.includes('prefers-color-scheme: dark')) {
+        media.mediaText = prefersDark ? 'all' : 'not all';
+      }
+    }
+    return sheet;
+  });
+}
 
 async function probeUnderScheme(
   prefersDark: boolean,
@@ -1209,13 +1216,9 @@ async function probeUnderScheme(
       : html`<lr-specialist-token-probe data-lr-theme=${themeAttribute}></lr-specialist-token-probe>`,
   )) as SpecialistTokenProbe;
   await el.updateComplete;
-  await setColorScheme(prefersDark ? 'dark' : 'light');
-  try {
-    const computed = getComputedStyle(el);
-    return new Map(MODE_SWITCHED_TOKENS.map((name) => [name, squash(computed.getPropertyValue(name))]));
-  } finally {
-    await setColorScheme('no-preference');
-  }
+  el.shadowRoot!.adoptedStyleSheets = schemeForcedSheets(prefersDark);
+  const computed = getComputedStyle(el);
+  return new Map(MODE_SWITCHED_TOKENS.map((name) => [name, squash(computed.getPropertyValue(name))]));
 }
 
 it('moves all token layers together when the OS scheme alone decides the mode', async () => {

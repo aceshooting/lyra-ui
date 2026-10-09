@@ -1659,7 +1659,7 @@ describe("menu-open state", () => {
     dropdown: HTMLElement & { open: boolean; show(): Promise<void>; hide(options?: { focusTrigger?: boolean }): Promise<void> };
   }> {
     const el = await fixtureItem(html`<lr-conversation-item label="Session" ?active=${extra === "active"}>
-      <lr-dropdown data-lr-theme-scope slot="actions" style="--lr-transition-fast:0ms">
+      <lr-dropdown slot="actions" style="--lr-transition-fast:0ms">
         <button slot="trigger" type="button" aria-label="Session actions">⋮</button>
         <lr-menu label="Session actions">
           <lr-menu-item value="rename">Rename</lr-menu-item>
@@ -1745,7 +1745,7 @@ describe("menu-open state", () => {
     // The overlay's lifecycle events reach the row's own listener here, so only the actions-slot
     // filter keeps this out of the menu-open state.
     const el = await fixtureItem(html`<lr-conversation-item label="Session">
-      <lr-dropdown data-lr-theme-scope slot="meta" style="--lr-transition-fast:0ms">
+      <lr-dropdown slot="meta" style="--lr-transition-fast:0ms">
         <button slot="trigger" type="button">Elsewhere</button>
         <lr-menu label="Elsewhere">
           <lr-menu-item value="x">X</lr-menu-item>

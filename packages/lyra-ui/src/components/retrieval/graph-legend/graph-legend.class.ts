@@ -7,7 +7,7 @@ import {
   canonicalIdentityList,
   firstByRetrievalIdentity,
 } from '../retrieval-identity.js';
-import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './graph-legend.styles.js';
 import {

@@ -195,7 +195,7 @@ it("transitions the popup with the shared fast-transition token and respects red
   try {
     await setReducedMotion("no-preference");
     const el = (await fixture(
-      html`<lr-date-input data-lr-theme-scope style="--lr-transition-fast: 2s"></lr-date-input>`
+      html`<lr-date-input style="--lr-transition-fast: 2s"></lr-date-input>`
     )) as LyraDateInput;
     const popup = el.shadowRoot!.querySelector<HTMLElement>('[part="popup"]')!;
     expect(getComputedStyle(popup).transitionDuration).to.equal("2s");
@@ -987,7 +987,7 @@ describe("focus indicator per appearance", () => {
   ] as const) {
     it(`retints the ${appearance} input row's border while focus is inside it (WCAG 2.4.7)`, async () => {
       const el = (await fixture(html`
-        <lr-date-input data-lr-theme-scope
+        <lr-date-input
           appearance=${appearance}
           style="--lr-transition-fast: 0s; --lr-date-input-focus-border-color: rgb(1, 2, 3);"
         ></lr-date-input>

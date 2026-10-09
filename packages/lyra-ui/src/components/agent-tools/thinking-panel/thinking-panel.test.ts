@@ -956,7 +956,7 @@ describe('the tabbable scroll region\'s own affordances', () => {
   for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
     it(`keeps header and scroll-region focus rings inward with authored offset ${offset}`, async () => {
       const el = await fixture<LyraThinkingPanel>(html`
-        <lr-thinking-panel data-lr-theme-scope expanded style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}>
+        <lr-thinking-panel expanded style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}>
           Long reasoning transcript
         </lr-thinking-panel>
       `);
@@ -1079,7 +1079,7 @@ describe('card chrome theming hooks', () => {
   // (WCAG 2.2 SC 1.4.11): it stays on the control tier even when the decorative input is set.
   it('keeps the card edge and divider on the --lr-color-border control tier, not the subtle tier', async () => {
     const el = (await fixture(html`
-      <lr-thinking-panel data-lr-theme-scope
+      <lr-thinking-panel
         expanded
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
         >Reasoning</lr-thinking-panel

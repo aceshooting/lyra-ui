@@ -1533,7 +1533,7 @@ describe("inline code / code-block theming hooks", () => {
 
   it("falls back to the ambient --lr-color-brand-quiet for both surfaces when --lr-markdown-code-bg is unset", async () => {
     const el = (await fixture(
-      html`<lr-markdown data-lr-theme-scope
+      html`<lr-markdown
         style="--lr-theme-color-brand-fill-quiet: rgb(1, 2, 3);"
         content=${dualContent}
       ></lr-markdown>`
@@ -1673,7 +1673,7 @@ describe("table header theming hook", () => {
 
   it("falls back to the ambient --lr-color-brand-quiet for the table header background when --lr-markdown-table-header-bg is unset", async () => {
     const el = (await fixture(
-      html`<lr-markdown data-lr-theme-scope
+      html`<lr-markdown
         style="--lr-theme-color-brand-fill-quiet: rgb(1, 2, 3);"
         content=${tableContent}
       ></lr-markdown>`
@@ -3135,7 +3135,7 @@ describe("shiki dark-theme signal", () => {
     htmlMode: "sanitize" | "trusted" = "sanitize"
   ): Promise<{ span: HTMLElement; content: Element }> {
     const wrapper = (await fixture(html`
-      <div data-lr-theme-scope style=${wrapperStyle}><lr-markdown></lr-markdown></div>
+      <div style=${wrapperStyle}><lr-markdown></lr-markdown></div>
     `)) as HTMLElement;
     const el = wrapper.querySelector("lr-markdown") as LyraMarkdown;
     el.htmlMode = htmlMode;
@@ -3197,7 +3197,7 @@ describe("shiki dark-theme signal", () => {
 
   it("refreshes highlighted palette selection after live CSSOM theme mutations", async () => {
     const wrapper = (await fixture(html`
-      <div data-lr-theme-scope
+      <div
         style="--lr-theme-color-text-normal:#202020; --lr-theme-color-surface-default:#f8f8f8;"
       >
         <lr-markdown></lr-markdown>
@@ -3215,7 +3215,6 @@ describe("shiki dark-theme signal", () => {
     const content = el.shadowRoot!.querySelector('[part="content"]')!;
     expect(content.hasAttribute("data-dark-theme")).to.equal(false);
 
-    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty("--lr-theme-color-text-normal", "#f2f2f2");
     wrapper.style.setProperty("--lr-theme-color-surface-default", "#1a1a1a");
     await waitUntil(() => content.getAttribute("data-dark-theme") === "true");
@@ -3397,7 +3396,7 @@ describe('top-layer escape in trusted content', () => {
     )) as LyraMarkdown;
     el.content =
       '<div style="position:relative; block-size:40px">' +
-      '<lr-popover data-lr-theme-scope positioning-strategy="fixed" style="--lr-transition-fast:0ms">' +
+      '<lr-popover positioning-strategy="fixed" style="--lr-transition-fast:0ms">' +
       '<button slot="trigger">Open</button><p style="margin:0; block-size:160px">Popover body</p>' +
       '</lr-popover>' +
       '<div class="plain" style="position:absolute; inset-block-start:0; inset-inline-start:200px; ' +
@@ -3438,7 +3437,7 @@ for (const part of ['code-block', 'table-wrapper', 'code-block-copy']) {
         ? '| A |\n| --- |\n| Synthetic |'
         : '```\nconst synthetic = 1;\n```';
       const el = await fixture<LyraMarkdown>(html`
-        <lr-markdown data-lr-theme-scope
+        <lr-markdown
           .content=${content}
           .codeBlockHeader=${part === 'code-block-copy'}
           style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}

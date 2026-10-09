@@ -8,8 +8,6 @@ const internalRoot = join(process.cwd(), 'src', 'internal');
 // consume. Shared structural styles remain in scope; only value-definition modules are exempt.
 const internalTokenDefinitionFiles = new Set([
   join(internalRoot, 'sizes.styles.ts'),
-  // The host remainder of the document token layer (the per-element reduced-motion safety net).
-  join(internalRoot, 'host-tokens.styles.ts'),
   join(internalRoot, 'specialist-tokens.styles.ts'),
   join(internalRoot, 'tokens.styles.ts'),
   join(internalRoot, 'tokens', 'palette.styles.ts'),

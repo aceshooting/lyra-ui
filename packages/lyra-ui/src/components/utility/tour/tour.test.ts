@@ -2189,7 +2189,7 @@ describe('lr-tour', () => {
   it('mixes the Next button fill toward the shared partner on hover and further again on press', async () => {
     const el = (await fixture(
       html`<div>
-        <lr-tour data-lr-theme-scope
+        <lr-tour
           style="--lr-color-brand: rgb(200, 200, 200); --lr-color-mix-partner: rgb(0, 0, 0); --lr-color-mix-hover: 10%; --lr-color-mix-active: 60%"
           .steps=${makeSteps(3)}
           open

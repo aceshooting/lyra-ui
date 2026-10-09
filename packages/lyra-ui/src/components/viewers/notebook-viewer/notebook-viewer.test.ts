@@ -1835,7 +1835,7 @@ describe('virtualized cell part styling', () => {
 
   async function mount(notebook: unknown, wrapperStyle = ''): Promise<{ el: LyraNotebookViewer; vlistRoot: ShadowRoot }> {
     const wrapper = (await fixture(
-      html`<div data-lr-theme-scope style=${wrapperStyle}><lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer></div>`,
+      html`<div style=${wrapperStyle}><lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer></div>`,
     )) as HTMLElement;
     const el = wrapper.querySelector('lr-notebook-viewer') as LyraNotebookViewer;
     await waitUntil(() => (el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="cell"]').length ?? 0) > 0);

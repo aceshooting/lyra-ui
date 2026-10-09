@@ -777,7 +777,7 @@ describe('run-row chrome theming hooks', () => {
   // light raised surface under the pointer. Both readings below are of the RENDERED result.
   it('paints the hovered run control from --lr-subagent-panel-hover-bg', async () => {
     const el = (await fixture(html`
-      <lr-subagent-panel data-lr-theme-scope
+      <lr-subagent-panel
         .runs=${runs}
         style="--lr-subagent-panel-bg: rgb(1, 2, 3); --lr-subagent-panel-hover-bg: rgb(7, 8, 9); --lr-transition-fast: 0s"
       ></lr-subagent-panel>
@@ -798,7 +798,7 @@ describe('run-row chrome theming hooks', () => {
 
   it('keeps the hovered fill on the raised surface token when the hover hook is unset', async () => {
     const el = (await fixture(html`
-      <lr-subagent-panel data-lr-theme-scope
+      <lr-subagent-panel
         .runs=${runs}
         style="--lr-color-surface-raised: rgb(4, 5, 6); --lr-transition-fast: 0s"
       ></lr-subagent-panel>
@@ -835,7 +835,7 @@ describe('lr-subagent-panel deprecated --lr-subagent-panel-background/-hover-bac
   it('paints the hovered fill from --lr-subagent-panel-hover-bg and ignores the retired name', async () => {
     const expectHovered = async (style: string, expected: string, shouldMatch = true): Promise<void> => {
       const el = await fixture<LyraSubagentPanel>(
-        html`<lr-subagent-panel data-lr-theme-scope .runs=${runs} style=${`--lr-transition-fast: 0s; ${style}`}></lr-subagent-panel>`,
+        html`<lr-subagent-panel .runs=${runs} style=${`--lr-transition-fast: 0s; ${style}`}></lr-subagent-panel>`,
       );
       const trigger = el.shadowRoot!.querySelector('[part="run-trigger"]') as HTMLElement;
       try {

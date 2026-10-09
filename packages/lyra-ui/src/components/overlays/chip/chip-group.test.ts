@@ -67,7 +67,6 @@ it('lets a consumer ::part(overflow-indicator) override win while expanded', asy
 it('lets a consumer retint the expanded overflow-indicator via the scoped --lr-chip-group-overflow-expanded-color cssprop (regression)', async () => {
   const el = (await fixture(fiveChips())) as LyraChipGroup;
   el.maxVisible = 3;
-  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-transition-fast', '0ms');
   el.style.setProperty('--lr-chip-group-overflow-expanded-color', 'rgb(1, 2, 3)');
   await el.updateComplete;

@@ -157,7 +157,7 @@ describe('independent style axes', () => {
   });
 
   it('restores priority when an owned token had the same value before applying a scope', async () => {
-    const region = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-font-family-body: serif !important"></div>`);
+    const region = await fixture<HTMLDivElement>(html`<div style="--lr-theme-font-family-body: serif !important"></div>`);
     applyLyraStyleScope(region, { overrides: { '--lr-theme-font-family-body': 'serif' } });
     expect(region.style.getPropertyPriority('--lr-theme-font-family-body')).to.equal('');
     applyLyraStyleScope(region, null);
@@ -259,7 +259,7 @@ describe('independent style axes', () => {
 
   for (const hostile of ['expando', 'record', 'entry']) {
     it(`retains ownership with a hostile ${hostile} getter`, async () => {
-      const region = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-theme-font-family-body: serif"></div>`);
+      const region = await fixture<HTMLDivElement>(html`<div style="--lr-theme-font-family-body: serif"></div>`);
       const symbol = Symbol.for('@aceshooting/lyra-ui.style-ownership.v1');
       const fail = () => { throw new Error('hostile ownership'); };
       if (hostile === 'expando') Object.defineProperty(region, symbol, { configurable: true, get: fail });

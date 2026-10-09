@@ -331,7 +331,7 @@ describe('calendar labels and rendered styles', () => {
       // still the resting one for a frame (so a regression passes vacuously) and an in-between one
       // after that (so a correct implementation can fail). Zeroing the ease makes the painted
       // colour agree with the `:hover`/`:active` state the reads below are gated on.
-      const el = await fixture<LyraDatePicker>(html`<lr-date-picker data-lr-theme-scope style="--lr-transition-fast:0s" .mode=${value.includes('/') ? 'range' : 'single'} .value=${value}></lr-date-picker>`);
+      const el = await fixture<LyraDatePicker>(html`<lr-date-picker style="--lr-transition-fast:0s" .mode=${value.includes('/') ? 'range' : 'single'} .value=${value}></lr-date-picker>`);
       for (const selected of el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="day-selected"]')) {
         const rest = getComputedStyle(selected).backgroundColor;
         const foreground = getComputedStyle(selected).color;
@@ -441,7 +441,7 @@ for (const theme of ['light', 'dark']) {
     // taken while that ease is in flight measures an in-between colour, or the resting colour that
     // already passed one line earlier. With the ease zeroed, the landed `:hover` and the polled
     // `:active` each guarantee the colour being measured is the one that state actually paints.
-    const wrap = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-transition-fast:0s">
+    const wrap = await fixture<HTMLDivElement>(html`<div style="--lr-transition-fast:0s">
       <lr-date-picker data-lr-theme=${theme} value="2026-07-15"></lr-date-picker>
       <lr-calendar data-lr-theme=${theme} view="agenda" view-date="2026-07-01" .events=${[{ date: '2026-07-15', title: 'Meeting', color: 'var(--lr-color-brand)' }]}></lr-calendar>
     </div>`);
@@ -462,7 +462,7 @@ for (const theme of ['light', 'dark']) {
 for (const target of ['preset', 'month'] as const) {
   it(`retains the selected ${target} foreground/background pairing through hover and press`, async () => {
     // Zeroed ease: every read below asserts a paint did NOT move (see the selected-day test above).
-    const el = await fixture<LyraDatePicker>(html`<lr-date-picker data-lr-theme-scope
+    const el = await fixture<LyraDatePicker>(html`<lr-date-picker
       style="--lr-transition-fast:0s"
       .mode=${target === 'preset' ? 'range' : 'single'}
       .value=${target === 'preset' ? '2026-07-01/2026-07-07' : '2026-07-15'}
@@ -490,7 +490,7 @@ for (const target of ['preset', 'month'] as const) {
 }
 
 it('paints a pressed preset from the shared preset-pressed name, which wins over preset-active', async () => {
-  const el = await fixture<LyraDatePicker>(html`<lr-date-picker data-lr-theme-scope
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker
     style="--lr-transition-fast:0s;--lr-date-picker-preset-active-bg:rgb(1, 1, 1);--lr-date-picker-preset-pressed-bg:rgb(4, 5, 6)"
     mode="range"
     value="2026-07-01/2026-07-07"

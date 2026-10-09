@@ -37,7 +37,6 @@ import { readCurrentCompatibilityContextSync } from './check-published-compatibi
 import { readComponentMetadataSources, assembleComponentMetadata } from './component-metadata-source.mjs';
 import { SHARED_COMPAT_ORDER, SHARED_TOPICS } from './shared-topics.mjs';
 import { walk } from './lib/fs-walk.mjs';
-import { THEME_SCOPE_VOCABULARY } from './theme-scope-vocabulary.generated.mjs';
 
 export { SHARED_TOPICS } from './shared-topics.mjs';
 
@@ -345,31 +344,20 @@ export function buildTokens() {
       .filter((mode) => token.values[mode] !== undefined)
       .map((mode) => `${mode}: \`${token.values[mode]}\``)
       .join('<br>') || '—';
-  const consumed = new Set(THEME_SCOPE_VOCABULARY.consumedInputs);
-  const hostReadInputs = [...new Set(rows.map((token) => token.themeInput))]
-    .filter((name) => typeof name === 'string' && !consumed.has(name))
-    .sort();
   const body = [
     GENERATED('scripts/fixtures/token-docs.generated.json'),
     '',
     '# Design tokens',
     '',
-    'Every `lr-*` component resolves its styling through this two-layer token system:',
+    'Every `lr-*` component resolves its styling through this two-layer token system, inherited from',
+    '`LyraElement`:',
     '',
-    '1. **`--lr-theme-*` — the application input layer.** Set these on `:root` or on a **theme scope**',
-    '   to retheme. This is the only supported theming mechanism; never hardcode a color, spacing, or',
-    '   font value that fights it.',
+    '1. **`--lr-theme-*` — the application input layer.** Set these (on `:root`, or any ancestor of a',
+    '   subtree) to retheme. This is the only supported theming mechanism; never hardcode a color,',
+    '   spacing, or font value that fights it.',
     '2. **`--lr-*` — the internal layer.** Direct theme-backed tokens read a `--lr-theme-*` input',
     '   with a built-in fallback. Other tokens are aliases, computed or environment-backed values,',
     '   or fixed contract constants. Every component renders correctly with no theme configured.',
-    '',
-    'Since 27.0.0 the shared `--lr-*` outputs form the **document token layer**: the first connected',
-    'Lyra element adopts one stylesheet that declares them on `:root` and re-derives them only at theme',
-    'scopes (`:root`, `.lr-light`/`.lr-dark`, `[data-lr-theme]`, the style-axis boundaries, the',
-    'design-token fixture scopes, and the `data-lr-theme-scope` marker). Components inherit them;',
-    '`@aceshooting/lyra-ui/tokens-root.css` is the same layer as a static file. See',
-    '[Styles and tokens](./shared/styles-and-tokens.md) for theme scopes, application shadow roots and',
-    'server rendering.',
     '',
     'Import `@aceshooting/lyra-ui/theme.css` once for the built-in Shadcn, Glass and Emerald profile.',
     '`theme.css` already includes Shadcn; no separate Shadcn look import is required.',
@@ -378,29 +366,55 @@ export function buildTokens() {
     'Other stylesheet looks, such as Material, require their optional `looks/<look>.css` sheet.',
     'The separate `looks/shadcn.css` sheet remains optional for its scoped `.light`/`.dark`',
     'compatibility aliases; look and mode remain independent.',
+    'See [Styles and tokens](./shared/styles-and-tokens.md) for runtime and stylesheet options.',
     'Per-component `--lr-<component>-*` custom properties (listed in each component\'s own section)',
     'override a single element without touching the shared layer.',
     '',
-    '**Where an input takes effect.** An input the document layer consumes re-derives the layer only',
-    'where it is set on a theme scope; set it on a plain wrapper and mark that wrapper with',
-    '`data-lr-theme-scope`. The inputs listed under *Inputs read on the host* below are read by each',
-    'component itself and keep working on any element. An `--lr-*` output set on an ancestor reaches',
-    'everything below it until the next theme scope; the outputs derived from it follow only on a scope.',
+    '**Consumer-scope exception: the focus ring.** `--lr-focus-ring` and its three parts',
+    '(`-width`/`-color`/`-offset`) are the one layer-2 group `theme.css` also declares at document',
+    'scope, on `:root` and on both mode selectors. They exist to serve a CONSUMER-authored idiom —',
+    'the Web Awesome `outline: var(--wa-focus-ring)` that migrating projects already have — and that',
+    'rule is written against the consumer\'s own element, where a `:host`-only token resolves to',
+    'nothing. An empty `var()` makes the whole `outline` declaration invalid at computed-value time,',
+    'and because `outline` does not inherit, the ring did not degrade: it DISAPPEARED, silently, with',
+    'no console warning. So `outline: var(--lr-focus-ring); outline-offset:',
+    'var(--lr-focus-ring-offset);` now works wherever you write it, provided `theme.css` is imported.',
+    'Every component still re-derives all four on its own `:host`, so component rendering is',
+    'unchanged.',
     '',
-    '**The `--lr-*` names that resolve per element.** `--lr-icon-button-size` (it takes the',
-    'coarse-pointer floor per element and reads the subtree input `--lr-icon-button-size-scope`),',
-    '`--lr-radius-button` (it reads the form-control radius a control declares on itself) and the',
-    'logical `--lr-safe-area-inline-*` aliases (mirrored under each element\'s own direction) are',
-    're-declared on every host, so an ancestor value for them is replaced at the first component.',
-    'Every other shared output inherits. The focus ring (`--lr-focus-ring` and its three parts) is',
-    'part of the document layer: `outline: var(--lr-focus-ring)` works on any application element',
-    'once the layer applies.',
+    '> **Why layer 1 is not merely *preferred* but *required*: an ancestor `--lr-*` override does',
+    '> not survive a nested component boundary.** Every component re-derives the whole `--lr-*` layer',
+    '> from `--lr-theme-*` on its **own** `:host` (that is what `LyraElement`\'s shared token',
+    '> stylesheet does). So setting, say, `--lr-color-warning-quiet` on an application element does',
+    '> apply to that element and to plain nested markup — it looks right in review and in a shallow',
+    '> `getComputedStyle` probe — but it is **reset at the first `lr-*` element inside another',
+    '> `lr-*` element\'s shadow root** (a badge inside a table cell, say), which re-derives it back to',
+    '> the library fallback. The override degrades silently, the deeper it is consumed, with no',
+    '> warning. Always set the `--lr-theme-*` input instead: that layer is read through `var()` at',
+    '> every level, so it inherits across every boundary. Per-component `--lr-<component>-*`',
+    '> properties are the other safe lever, because no component re-declares another component\'s',
+    '> namespace — with six named exceptions declared by the shared base layer itself; see below.',
     '',
-    `## Inputs read on the host (${hostReadInputs.length})`,
-    '',
-    'These work on any element, theme scope or not. Every other `--lr-theme-*` input needs a theme scope.',
-    '',
-    hostReadInputs.map((name) => `\`${name}\``).join(', '),
+    '**The `--lr-*` names that look per-component but are not.** `--lr-focus-ring-width`,',
+    '`--lr-focus-ring-color`, `--lr-focus-ring-offset` (the consumer-scope exception above),',
+    '`--lr-icon-button-size`, `--lr-otp-input-segment-size`, and `--lr-popover-viewport-clamp` are',
+    'the only tokens the shared base `:host` block in `internal/tokens.styles.ts` declares under a',
+    'component-looking name — each reads its own `--lr-theme-*` input there. Because that block is',
+    'mixed into every `lr-*` component, all six behave like the internal layer above, not like an',
+    'ordinary per-component property: a rule that sets one of them directly on an ancestor is reset',
+    'at the first intervening `lr-*` component and never reaches a nested target — even though',
+    'setting it directly on the target element itself still works, which is what makes the failure',
+    'look arbitrary rather than systematic. Reach through a subtree with `--lr-theme-focus-ring-*`,',
+    '`--lr-theme-otp-input-segment-size`, or `--lr-theme-popover-viewport-clamp` instead.',
+    '`--lr-icon-button-size` additionally has a dedicated subtree-scoped input,',
+    '`--lr-icon-button-size-scope`, which an ancestor rule can set without reaching for the',
+    'application-wide `--lr-theme-icon-button-size`. The subtree input wins where both are set,',
+    'because the shipped `design-tokens.css` declares the theme tier on `:root` and a var() chain',
+    'only falls through for a property that is unset everywhere. Every other `--lr-<component>-*`',
+    'token — including',
+    'the rest of `lr-icon-button`\'s own (`-radius`, `-background`, `-color`, `-border`, and their',
+    '`-hover`/`-active` variants) — is not re-declared anywhere in the shared layer and inherits',
+    'normally from an ancestor.',
     '',
     `## Direct theme-backed tokens (${rows.length})`,
     '',
@@ -614,8 +628,8 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
       lines.push(
         `## Migrating from ${from} to ${to} (\`--origin=${profile.origin}\`)`,
         '',
-        `${to} relocates package entry points and types and removes some localization keys, and its token layer`,
-        'changes which elements re-derive theme inputs. No component member is renamed. Run the CLI of the installed',
+        `${to} relocates package entry points and types and removes some localization keys.`,
+        'No component member is renamed. Run the CLI of the installed',
         `package after upgrading to ${to}; the profile applies only the entries that release ships:`,
         '',
         '```bash',
@@ -665,7 +679,6 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
       '| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |',
       '| `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |',
       '| `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |',
-      '| `THEME_SCOPE_CSS_INPUT_REVIEW`, `THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW` | The `theme-scopes` rule found an input, shared output or marker that needs a theme scope by hand. |',
       '| `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |',
       '| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |',
       '| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |',
@@ -677,7 +690,7 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
       'hydration compares template strings.',
       '',
     );
-    const total = [profile.renames, profile.defaults, profile.detailChanges, profile.propertyChanges ?? [], profile.retiredEvents ?? [], profile.reviews, profile.slotContent, profile.moduleReviews, profile.globals ?? [], profile.rules ?? []]
+    const total = [profile.renames, profile.defaults, profile.detailChanges, profile.propertyChanges ?? [], profile.retiredEvents ?? [], profile.reviews, profile.slotContent, profile.moduleReviews, profile.globals ?? []]
       .reduce((sum, entries) => sum + entries.length, 0);
     if (total === 0) {
       lines.push(`No ${from} names are scheduled to change yet.`, '');
@@ -795,15 +808,6 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
           const to = entry.kind === 'part' || entry.kind === 'css-property' ? cell(entry.to) : `\`${cell(entry.to)}${entry.prefix ? '*' : ''}\``;
           return `| ${entry.kind} | \`${cell(from)}\` | ${to} | ${cell(handling)} |`;
         }),
-        '',
-      );
-    }
-    if (profile.rules?.length) {
-      lines.push(
-        `This profile also runs the structural ${profile.rules.length === 1 ? 'rule' : 'rules'} ${profile.rules.map((rule) => `\`${rule}\``).join(', ')}, the same implementation as \`--rule=<name>\`.`,
-        'It adds `data-lr-theme-scope` to elements whose inline style sets a token-layer input, and reports dynamic inputs,',
-        'markers inside loops, and stylesheet rules that set an input or a shared output outside a theme scope',
-        '(`THEME_SCOPE_*_REVIEW`, acknowledged like any other code).',
         '',
       );
     }

@@ -16,7 +16,7 @@ const data = {
 };
 
 async function matrix(multiple = true): Promise<LyraHeatmap> {
-  return fixture<LyraHeatmap>(html`<lr-heatmap data-lr-theme-scope
+  return fixture<LyraHeatmap>(html`<lr-heatmap
     style="inline-size: 320px; --lr-transition-fast: 0ms"
     accessible-cells .multiple=${multiple} .data=${data}
   ></lr-heatmap>`);

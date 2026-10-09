@@ -137,7 +137,7 @@ it("renders a localized, keyboard-reachable clear button on the per-column filte
 
 it("normalizes search and page-size native chrome against the grid palette, replacing the suppressed search-cancel glyph with the component's own clear buttons", async () => {
   const element = await dataGrid(html`
-    <lr-data-grid data-lr-theme-scope
+    <lr-data-grid
       paginate
       with-search
       label="People"

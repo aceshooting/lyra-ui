@@ -11,7 +11,6 @@ export const THEME_ATTRIBUTES = [
   'data-lr-theme-scope',
   'data-lr-contrast',
   'data-lr-motion',
-  'data-lr-design-token-mode',
   'data-theme',
   'data-color-scheme',
 ] as const;

@@ -1249,7 +1249,7 @@ describe('lr-graph-query-builder', () => {
 
   it('dims the disabled run button through the shared disabled-opacity token', async () => {
     const wrapper = (await fixture(
-      html`<div data-lr-theme-scope style="--lr-theme-opacity-disabled: 0.25">
+      html`<div style="--lr-theme-opacity-disabled: 0.25">
         <lr-graph-query-builder disabled></lr-graph-query-builder>
       </div>`
     )) as HTMLElement;
@@ -1339,7 +1339,7 @@ describe('lr-graph-query-builder', () => {
 
   it('rules off the saved-queries section with the subtle border while controls keep the control border', async () => {
     const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
-    const el = (await fixture(html`<lr-graph-query-builder data-lr-theme-scope
+    const el = (await fixture(html`<lr-graph-query-builder
       style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
       .savedQueries=${saved}
     ></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;

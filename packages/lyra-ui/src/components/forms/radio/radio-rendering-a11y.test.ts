@@ -551,7 +551,7 @@ describe("checked-state cssprop escape hatch", () => {
 
 it("themes radio hover and pressed border/ring paint through component hooks", async () => {
   const el = (await fixture(html`
-    <lr-radio data-lr-theme-scope
+    <lr-radio
       style="
         --lr-transition-fast: 0s;
         --lr-radio-hover-border-color: rgb(1, 2, 3);
@@ -1178,7 +1178,7 @@ it("reveals aggregate ARIA through native form validation exactly once and remai
 // brand default under the pointer. Unset hover/active hooks now fall back to the checked border.
 it("keeps --lr-radio-checked-border-color while checked and hovered or pressed", async () => {
   const el = (await fixture(html`
-    <lr-radio data-lr-theme-scope
+    <lr-radio
       checked
       style="--lr-transition-fast: 0s; --lr-radio-checked-border-color: rgb(10, 20, 30);"
       >Choice</lr-radio

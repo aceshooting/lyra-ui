@@ -772,7 +772,7 @@ describe('lr-document-compare', () => {
       // resting boundary of a focusable widget (WCAG 2.2 SC 1.4.11) and must not read the
       // decorative --lr-color-border-subtle tier a theme may lighten.
       const el = (await fixture(html`
-        <lr-document-compare data-lr-theme-scope
+        <lr-document-compare
           view="side-by-side"
           style="--lr-theme-color-surface-border: rgb(4, 5, 6); --lr-theme-color-surface-border-subtle: rgb(1, 2, 3)"
           .oldVersion=${{ id: 'old', name: 'Old', text: 'before' }}

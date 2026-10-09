@@ -81,7 +81,7 @@ it("renders a disabled button when no href is available", async () => {
 
 it('keeps disabled rail-item paint unchanged on hover and press', async () => {
   const el = (await fixture(html`
-    <lr-app-rail-item data-lr-theme-scope
+    <lr-app-rail-item
       disabled
       style="--lr-app-rail-item-hover-bg:rgb(1,2,3);--lr-app-rail-item-active-bg:rgb(4,5,6);--lr-transition-fast:0s"
     >Settings</lr-app-rail-item>

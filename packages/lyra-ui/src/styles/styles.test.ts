@@ -59,7 +59,7 @@ it("keeps native normalization scoped to descendants of an explicit .lr-native c
 
 it('lets the composite --lr-focus-ring token style native controls', async () => {
   const el = await fixture(html`
-    <div data-lr-theme-scope
+    <div
       class="lr-native"
       style="
         --lr-focus-ring: 6px dashed rgb(1, 2, 3);

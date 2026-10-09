@@ -64,8 +64,6 @@ this document keeps the original wording, so read it with these in mind.
   `resetLyraStyle()`; `accent: null` stays an explicit clear. The "Default" column of the axes
   table has been refreshed. Saved choices stay independent and win. In 25.6.2 the default Glass
   opacity became 60% (`--lr-theme-surface-opacity`); 25.0.0 had set 70%.
-- **27.0.0.** RFC 0002 delivered the document-level token layer, so a scope is any element carrying
-  a style-axis attribute or `data-lr-theme-scope` (`lyra-ui-migrate --rule=theme-scopes`).
 
 No new feature is added by this status change.
 
@@ -1431,9 +1429,9 @@ resolver is internal: reverting `theme.css` to per-mode blocks changes no public
 11. **Future work, not scheduled.** The runtime does not suppress transitions when an axis switches.
     Original question: **Transition suppression.** Should the runtime suppress interactive transitions for the frame in
     which an axis switches, so that controls do not visibly fade between looks?
-12. **Closed: explicit installation.** The adopted document layer (RFC 0002) does not carry the
-    resolver or mode rules; an application-owned shadow root with local style boundaries installs
-    `theme.css` and the selected look sheets itself, as the documentation says. Original question:
+12. **Closed: explicit installation.** Lyra hosts resolve the token layer on each host and
+    do not carry the resolver or mode rules; an application-owned shadow root with local style
+    boundaries installs `theme.css` and the selected look sheets itself, as the documentation says. Original question:
     **Resolver in foreign shadow roots.** Ship the resolver and mode rules (about 2 KB) inside RFC
     0002's adopted document layer, which adds them to the component core, or require an explicit
     adoption call for application shadow roots that carry axis attributes?

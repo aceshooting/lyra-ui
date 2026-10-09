@@ -592,7 +592,7 @@ describe('header text contrast at rest, hover and press', () => {
   for (const theme of ['light', 'dark'] as const) {
     it(`keeps the header text readable and following the header colour (${theme})`, async () => {
       const wrapper = await fixture<HTMLElement>(
-        html`<div data-lr-theme=${theme}><lr-source-list data-lr-theme-scope style="--lr-transition-fast: 0s"></lr-source-list></div>`,
+        html`<div data-lr-theme=${theme}><lr-source-list style="--lr-transition-fast: 0s"></lr-source-list></div>`,
       );
       const el = wrapper.querySelector('lr-source-list') as LyraSourceList;
       await el.updateComplete;
@@ -654,7 +654,7 @@ describe('lr-source-list size and the retired compact alias', () => {
 for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
   it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
     const el = await fixture<LyraSourceList>(html`
-      <lr-source-list data-lr-theme-scope  style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-source-list>
+      <lr-source-list  style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-source-list>
     `);
     for (const part of ['header']) {
       const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;

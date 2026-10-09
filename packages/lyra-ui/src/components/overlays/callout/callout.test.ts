@@ -156,7 +156,7 @@ it('inherits the panel font through the close control and text glyph', async () 
 
 it('exposes the reflected appearance vocabulary without changing the unset treatment', async () => {
   const el = (await fixture(html`
-    <lr-callout data-lr-theme-scope
+    <lr-callout
       style="
         --lr-color-brand-fill-quiet: rgb(10, 20, 30);
         --lr-color-brand-fill-loud: rgb(40, 50, 60);
@@ -1000,7 +1000,7 @@ describe('size', () => {
 
 it('inherits contextual variant and size only while their attributes are unset', async () => {
   const outer = (await fixture(html`
-    <lr-callout data-lr-theme-scope
+    <lr-callout
       variant="danger"
       size="xl"
       style="
@@ -1059,7 +1059,7 @@ it('inherits contextual variant and size only while their attributes are unset',
 
 it('maps explicit neutral to its semantic quiet/loud palette', async () => {
   const el = (await fixture(html`
-    <lr-callout data-lr-theme-scope
+    <lr-callout
       variant="neutral"
       style="--lr-color-neutral-fill-quiet: rgb(11, 22, 33); --lr-color-neutral-fill-loud: rgb(44, 55, 66)"
     >Neutral</lr-callout>

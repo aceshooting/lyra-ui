@@ -847,7 +847,7 @@ describe('playback controls', () => {
   it('renders native rate-select theming, its hover state, and the decorative chevron', async function () {
     this.timeout(10000);
     const el = (await fixture(html`
-      <lr-av-player data-lr-theme-scope
+      <lr-av-player
         src=${MP4_SRC}
         style="--lr-transition-fast: 0ms linear; --lr-color-surface: rgb(7, 8, 9); --lr-color-text: rgb(10, 11, 12); --lr-color-brand-quiet: rgb(1, 2, 3)"
       ></lr-av-player>
@@ -1557,7 +1557,7 @@ describe('hover feedback for click-to-seek/clickable parts', () => {
     // 6000ms Mocha timeout web-test-runner.config.js sets for the whole suite.
     this.timeout(25000);
     const el = await fixture<LyraAvPlayer>(html`
-      <lr-av-player data-lr-theme-scope
+      <lr-av-player
         src=${MP3_SRC}
         style="--lr-transition-fast: 0ms linear; --lr-color-brand: rgb(1, 2, 3); --lr-color-brand-quiet: rgb(4, 5, 6); --lr-color-mix-partner: rgb(255, 255, 255); --lr-color-mix-hover: 50%"
         .cues=${CUES}
@@ -1615,7 +1615,7 @@ describe('hover feedback for click-to-seek/clickable parts', () => {
 describe('focus-visible feedback for keyboard-operable parts', () => {
   for (const direction of ['ltr', 'rtl']) for (const offset of [0, 4]) {
     it(`keeps the first transcript cue's keyboard outline inside its clipping scrollport in ${direction} with offset ${offset}`, async () => {
-      const el = await fixture<LyraAvPlayer>(html`<lr-av-player data-lr-theme-scope
+      const el = await fixture<LyraAvPlayer>(html`<lr-av-player
         dir=${direction} style="inline-size:320px;--lr-theme-focus-ring-width:5px;--lr-theme-focus-ring-offset:${offset}px"
         .cues=${CUES}
       ></lr-av-player>`);
@@ -2381,7 +2381,6 @@ describe('waveform', () => {
 
   it('uses the --lr-color-brand custom property for the waveform fill when the host defines it', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .peaks=${[1, 1]}></lr-av-player>`)) as LyraAvPlayer;
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-color-brand', 'rgb(0, 200, 0)');
     enableWaveformPainting(el);
     window.dispatchEvent(new Event('resize'));
@@ -2417,7 +2416,6 @@ describe('waveform', () => {
     enableWaveformPainting(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-color-brand', 'rgb(0, 200, 0)');
     window.dispatchEvent(new Event('resize'));
     const prior = ctx.fillStyle;
@@ -2896,7 +2894,7 @@ describe('active-state cssprop escape hatches', () => {
     // default it would flatten every toned marker to brand the moment the pointer arrived. Hence
     // the two halves below -- each marker mixes from ITS OWN resting fill, and pressed is a further
     // step rather than a repeat of hover.
-    const wrapper = (await fixture(html`<div data-lr-theme-scope style="--lr-transition-fast: 0ms linear">
+    const wrapper = (await fixture(html`<div style="--lr-transition-fast: 0ms linear">
       <lr-av-player
         kind="audio"
         .highlights=${[
@@ -3032,7 +3030,7 @@ describe('active-state cssprop escape hatches', () => {
 
 it('honors inherited and direct-host AV theme hooks', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div data-lr-theme-scope style="--lr-transition-fast:0ms linear; --lr-av-player-marker-bg:rgb(1, 2, 3); --lr-av-player-transcript-height:123px">
+    <div style="--lr-transition-fast:0ms linear; --lr-av-player-marker-bg:rgb(1, 2, 3); --lr-av-player-transcript-height:123px">
       <lr-av-player
         src=${MP3_SRC}
         .cues=${CUES}

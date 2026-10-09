@@ -30,8 +30,8 @@ uses a substring class selector, so a class such as `app-lr-flex-preview` does n
 assets repeat `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides`; an ordinary unlayered
 application rule therefore beats them regardless of load order. A third opt-in asset,
 [`tokens-root.css`](./styles-and-tokens.md#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), is not a
-style sheet in the same sense — it declares custom properties only: the document token layer that
-the first connected Lyra element would otherwise adopt, available before any component connects.
+style sheet in the same sense — it declares custom properties only, and exists so your own
+components can read the resolved `--lr-*` tokens these two are written against.
 
 ### Utility class inventory
 
@@ -113,8 +113,7 @@ keeps that surface's text colour. Heading tracking reads `--lr-heading-letter-sp
 | Muted | `lr-text-sm lr-text-quiet`      |
 
 For an exact 0.875rem muted/small size, use a class of your own with the token chain (resolved
-`--lr-*` tokens exist at document scope once a Lyra element has connected or `tokens-root.css` is
-loaded; the chain covers the moment before):
+`--lr-*` tokens are undefined at document scope unless `tokens-root.css` is loaded):
 
 ```css
 .app-muted {

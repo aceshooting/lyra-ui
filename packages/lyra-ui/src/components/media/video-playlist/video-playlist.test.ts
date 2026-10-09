@@ -254,13 +254,13 @@ describe('lr-video-playlist public contract', () => {
 
   it('keeps the current items themed border-color under hover instead of falling back to the unselected wash, leaving a non-current items hover border unaffected', async () => {
     const plain = await fixture<LyraVideoPlaylist>(html`
-      <lr-video-playlist data-lr-theme-scope style="--lr-transition-fast: 0s">
+      <lr-video-playlist style="--lr-transition-fast: 0s">
         <lr-video title="First"></lr-video>
         <lr-video title="Second"></lr-video>
       </lr-video-playlist>
     `);
     const themed = await fixture<LyraVideoPlaylist>(html`
-      <lr-video-playlist data-lr-theme-scope
+      <lr-video-playlist
         style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-border-color: rgb(200, 100, 50)"
       >
         <lr-video title="First"></lr-video>
@@ -301,7 +301,7 @@ describe('lr-video-playlist public contract', () => {
 
   it('resolves the current items hovered and pressed background from its own themed token, differing across two current-item background fixtures', async () => {
     const fixtureX = await fixture<LyraVideoPlaylist>(html`
-      <lr-video-playlist data-lr-theme-scope
+      <lr-video-playlist
         style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-bg: rgb(11, 22, 33)"
       >
         <lr-video title="First"></lr-video>
@@ -309,7 +309,7 @@ describe('lr-video-playlist public contract', () => {
       </lr-video-playlist>
     `);
     const fixtureY = await fixture<LyraVideoPlaylist>(html`
-      <lr-video-playlist data-lr-theme-scope
+      <lr-video-playlist
         style="--lr-transition-fast: 0s; --lr-video-playlist-item-current-bg: rgb(44, 55, 66)"
       >
         <lr-video title="First"></lr-video>
@@ -360,7 +360,7 @@ describe('lr-video-playlist public contract', () => {
 
   it('draws the playlist container edge in the subtle border tier', async () => {
     const wrapper = await fixture<HTMLElement>(html`
-      <div data-lr-theme-scope style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+      <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
         <lr-video-playlist><lr-video title="First"></lr-video><lr-video title="Second"></lr-video></lr-video-playlist>
       </div>
     `);

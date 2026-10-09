@@ -567,7 +567,7 @@ describe("lr-button", () => {
     try {
       await setReducedMotion("no-preference");
       const el = (await fixture(
-        html`<lr-button data-lr-theme-scope style="--lr-transition-fast: 0ms">Save</lr-button>`
+        html`<lr-button style="--lr-transition-fast: 0ms">Save</lr-button>`
       )) as LyraButton;
       const target = el.shadowRoot!.querySelector<HTMLElement>(
         '[part~="base"]'
@@ -837,7 +837,7 @@ describe("lr-button", () => {
 
   it('renders the link underline offset and focus-visible outline through their public tokens', async () => {
     const el = (await fixture(html`
-      <lr-button data-lr-theme-scope
+      <lr-button
         appearance="link"
         style="--lr-size-0-15rem: 5px; --lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(4, 5, 6); --lr-focus-ring-offset: 2px"
         >Retry</lr-button
@@ -2567,7 +2567,7 @@ describe("lr-button hover and press feedback", () => {
   for (const appearance of ["quiet", "plain"] as const) {
     it(`paints a hovered appearance="${appearance}" button something other than the page surface`, async () => {
       const el = (await fixture(
-        html`<lr-button data-lr-theme-scope
+        html`<lr-button
           appearance=${appearance}
           style="--lr-transition-fast: 0s"
           >Save</lr-button
@@ -2600,7 +2600,7 @@ describe("lr-button hover and press feedback", () => {
 
   it("presses a quiet button to a background stronger than -- and different from -- its hover", async () => {
     const el = (await fixture(
-      html`<lr-button data-lr-theme-scope appearance="quiet" style="--lr-transition-fast: 0s"
+      html`<lr-button appearance="quiet" style="--lr-transition-fast: 0s"
         >Save</lr-button
       >`
     )) as LyraButton;
@@ -2630,7 +2630,7 @@ describe("lr-button hover and press feedback", () => {
 
   it("moves an accent button away from its own fill on hover, without the pre-8.0.0 filter", async () => {
     const el = (await fixture(
-      html`<lr-button data-lr-theme-scope
+      html`<lr-button
         appearance="accent"
         variant="brand"
         style="--lr-transition-fast: 0s"
@@ -2670,7 +2670,7 @@ describe("--lr-button-hover-bg / --lr-button-active-bg and their deprecated -bac
   ] as const) {
     it(`checks ${name} hover and press background reach`, async () => {
       const el = (await fixture(
-        html`<lr-button data-lr-theme-scope style=${`--lr-transition-fast: 0s; ${style}`}>Save</lr-button>`
+        html`<lr-button style=${`--lr-transition-fast: 0s; ${style}`}>Save</lr-button>`
       )) as LyraButton;
       await el.updateComplete;
       const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
@@ -2707,7 +2707,7 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
   for (const appearance of appearances) {
     it(`preserves appearance="${appearance}"'s default hover foreground and border treatment`, async () => {
       const el = (await fixture(
-        html`<lr-button data-lr-theme-scope
+        html`<lr-button
           appearance=${appearance}
           style="--lr-transition-fast: 0s"
           >Save</lr-button
@@ -2740,7 +2740,7 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
 
   it('keeps the Shoelace-compatible outline boolean\'s resting text/border colour on hover when unset (regression)', async () => {
     const el = (await fixture(
-      html`<lr-button data-lr-theme-scope outline style="--lr-transition-fast: 0s">Save</lr-button>`
+      html`<lr-button outline style="--lr-transition-fast: 0s">Save</lr-button>`
     )) as LyraButton;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
@@ -2757,7 +2757,7 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
 
   it("overrides hover text and border colour through the new hooks", async () => {
     const el = (await fixture(
-      html`<lr-button data-lr-theme-scope
+      html`<lr-button
         appearance="quiet"
         style="--lr-transition-fast: 0s; --lr-button-hover-color: rgb(1, 2, 3); --lr-button-hover-border: rgb(4, 5, 6);"
         >Save</lr-button
@@ -2780,7 +2780,7 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
 
   it("inherits the hover hooks from an ancestor", async () => {
     const wrapper = await fixture<HTMLElement>(html`
-      <div data-lr-theme-scope
+      <div
         style="--lr-transition-fast: 0s; --lr-button-hover-color: rgb(7, 8, 9); --lr-button-hover-border: rgb(10, 11, 12);"
       >
         <lr-button appearance="outlined">Save</lr-button>
@@ -2803,7 +2803,7 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
 
   it('leaves appearance="link"\'s hover colour driven by its own colour-mix, ignoring --lr-button-hover-color', async () => {
     const el = (await fixture(
-      html`<lr-button data-lr-theme-scope
+      html`<lr-button
         appearance="link"
         style="--lr-transition-fast: 0s"
         >Save</lr-button

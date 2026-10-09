@@ -167,8 +167,6 @@ export const CURATED_UTILITY_MODULES = Object.freeze([
   'src/utilities/scoped-registry.ts',
   'src/utilities/scoped-registry-loader.ts',
   'src/utilities/theme.ts',
-  'src/utilities/theme-scopes.ts',
-  'src/utilities/tokens.ts',
 ]);
 
 // Shared document admission is used by both the viewer and the editor companion. Its consumer

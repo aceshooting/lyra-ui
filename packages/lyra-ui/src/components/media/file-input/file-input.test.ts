@@ -946,7 +946,7 @@ it("adds a :focus-visible outline to the dropzone base using the shared focus-ri
 
 it("renders the dropzone hover treatment before a mouse user clicks", async () => {
   const el = await fixture<LyraFileInput>(html`
-    <lr-file-input data-lr-theme-scope style="--lr-color-brand: rgb(1, 2, 3)"></lr-file-input>
+    <lr-file-input style="--lr-color-brand: rgb(1, 2, 3)"></lr-file-input>
   `);
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   base.scrollIntoView({ block: "center" });
@@ -4472,7 +4472,7 @@ describe("aria-describedby forwarding", () => {
 
 it('draws selected-file rows in the subtle border tier while the dropzone stays control-grade', async () => {
   const wrapper = (await fixture(html`
-    <div data-lr-theme-scope style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
       <lr-file-input multiple></lr-file-input>
     </div>
   `)) as HTMLElement;

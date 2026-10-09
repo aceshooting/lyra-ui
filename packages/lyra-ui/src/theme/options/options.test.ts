@@ -64,7 +64,7 @@ describe('optional shape, typography and elevation presets', () => {
 
   it('composes shape, script typography and elevation while preserving local hooks and restoring unset rendering', async () => {
     const scope = await fixture<HTMLElement>(html`
-      <section data-lr-theme-scope lang="ar" dir="rtl" style="--lr-theme-border-radius-m: 7px">
+      <section lang="ar" dir="rtl" style="--lr-theme-border-radius-m: 7px">
         <lr-card>العربية · English · १२३</lr-card>
         <lr-card style="--border-radius: 11px">Local radius</lr-card>
         <lr-button>Action</lr-button>

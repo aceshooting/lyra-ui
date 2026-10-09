@@ -1437,7 +1437,6 @@ describe('box-plot robustness regressions', () => {
       refreshes++;
       refreshTheme();
     };
-    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty('--lr-theme-color-surface-default', 'rgb(31, 41, 51)');
     await aTimeout(0);
 
@@ -2276,7 +2275,7 @@ it('inherits the chart canvas hover-outline token on a rendered box plot', async
 
 it('draws default grid lines in the subtle border tier while the hover outline stays control-grade', async () => {
   const el = (await fixture(html`
-    <lr-box-plot data-lr-theme-scope
+    <lr-box-plot
       style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9);"
       .labels=${['K=2']}
       .datasets=${[{ label: 'Loss', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }]}

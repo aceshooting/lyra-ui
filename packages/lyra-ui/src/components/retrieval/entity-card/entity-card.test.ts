@@ -281,7 +281,7 @@ it('retints the resting card frame through --lr-entity-card-bg', async () => {
 
 it('leaves the resting frame on the shared surface token when --lr-entity-card-bg is unset', async () => {
   const el = (await fixture(
-    html`<lr-entity-card data-lr-theme-scope .entity=${entity} style="--lr-color-surface: rgb(4, 5, 6)"></lr-entity-card>`
+    html`<lr-entity-card .entity=${entity} style="--lr-color-surface: rgb(4, 5, 6)"></lr-entity-card>`
   )) as LyraEntityCard;
   expect(baseChrome(el).backgroundColor).to.equal('rgb(4, 5, 6)');
 });

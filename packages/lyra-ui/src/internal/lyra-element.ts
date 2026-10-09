@@ -6,11 +6,10 @@ import {
   type ReactiveController,
 } from 'lit';
 import { property } from 'lit/decorators.js';
-import { hostTokens } from './host-tokens.styles.js';
-import { ensureLyraTokens } from './document-tokens.js';
-import { DOCUMENT_TOKEN_SCOPE_ATTRIBUTES } from './document-tokens.generated.js';
+import { tokens } from './tokens.styles.js';
+import { palette } from './tokens/palette.styles.js';
 import { resolveIntlLocale } from './intl-cache.js';
-import { devWarnOnce, warnThemeScopeUsage, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
+import { devWarnOnce, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 import type { LyraDeprecatedAliases } from './deprecated-alias-types.js';
 
 type DeprecatedAliasSyncHook = (host: LyraElement<any>, name: PropertyKey | undefined, oldValue: unknown) => void;
@@ -218,8 +217,6 @@ const REACTIVE_HOST_ATTRIBUTES = [
   'dir',
 ] as const;
 const DIRECTION_HOST_ATTRIBUTES = ['class', 'style', 'slot'] as const;
-/** A change to one of these on the host can make it a theme scope inside an application root. */
-const SCOPE_HOST_ATTRIBUTES: readonly string[] = [...DOCUMENT_TOKEN_SCOPE_ATTRIBUTES, 'class'];
 
 /** The `adoptedStyleSheets` setter rejects a sheet constructed in another document. The exception
  *  is raised in the shadow root's own realm, so it is matched by name rather than by prototype. */
@@ -249,16 +246,15 @@ function hasOwnAutofocusAccessor(host: HTMLElement): boolean {
 }
 
 /**
- * Shared base for every Lyra component. On connect it adopts the document token layer (the shared
- * `--lr-*` outputs, resolved from `--lr-theme-*` inputs at `:root` and at every theme scope) into
- * its document, and into an application shadow root where a scope inside that root needs it. Its
- * own styles carry only the host-local remainder and the preference arms.
+ * Shared base for every Lyra component. Supplies the design-token layer
+ * (`--lr-theme-*` theme-input properties with hardcoded `--lr-*` fallbacks).
  * RTL is handled by components using CSS logical properties rather than a forced `dir`.
  */
 export class LyraElement<Events = LyraEventMap> extends LitElement {
-  // The host remainder of the token layer. The shared outputs are declared once per document by
-  // `ensureLyraTokens()`, not here: one shared sheet, but resolved per scope instead of per host.
-  static override styles: CSSResultGroup = [hostTokens];
+  // `palette` before `tokens`: the ramp and the semantic grid are raw inputs, and `tokens` is
+  // free to reference them. Both are shared `CSSResult` instances, so adopting them in every
+  // component costs one stylesheet in the bundle, not one per component.
+  static override styles: CSSResultGroup = [palette, tokens];
 
   /** Optional immutable collection boundary, imported only by components that need it. */
   protected static collectionSupport?: LyraCollectionSupport;
@@ -326,7 +322,6 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
         ...super.observedAttributes,
         ...REACTIVE_HOST_ATTRIBUTES,
         ...DIRECTION_HOST_ATTRIBUTES,
-        ...SCOPE_HOST_ATTRIBUTES,
       ]),
     ];
     this.collectionSupport?.installProperties(this);
@@ -454,12 +449,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // whatever the browser alone can see. The SSR generation pass itself never seeds at all (see
     // SEED_FIRST_RENDER_STATE): the server renderer does not even call connectedCallback.
     this.hydratingServerShadow ??= !this.hasUpdated && this.shadowRoot !== null;
-    // Before Lit's first update, so a component never paints without its tokens. Every connect
-    // re-checks, which restores a layer an application removed by replacing adoptedStyleSheets.
-    ensureLyraTokens(this);
     super.connectedCallback();
     warnUnknownAttributes(this);
-    warnThemeScopeUsage(this);
     recordLyraOwnerDocumentConnection(this);
     trackInputModality(this.ownerDocument);
     // A reconnected element may sit under a different `lang`/`dir` ancestor,
@@ -590,7 +581,6 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       );
     if (directionHostAttribute)
       queueInheritedDirectionChange(this, name === 'slot');
-    if (oldValue !== value && this.isConnected && SCOPE_HOST_ATTRIBUTES.includes(name)) ensureLyraTokens(this);
     const finishAliasWarning = oldValue !== value ? deprecatedAliasAttributeHook?.(this, name) : undefined;
     super.attributeChangedCallback(name, oldValue, value);
     finishAliasWarning?.();

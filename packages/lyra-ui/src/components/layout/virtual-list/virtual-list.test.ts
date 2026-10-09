@@ -5446,7 +5446,7 @@ describe("row overlays and the top layer", () => {
 
   async function resolvedRowStrategy(style: string, partOverride = false): Promise<string> {
     await import("../../overlays/overlay/dropdown.js");
-    const { el } = await mount(style, (value: unknown) => html`<lr-dropdown data-lr-theme-scope style="--lr-transition-fast:0ms"
+    const { el } = await mount(style, (value: unknown) => html`<lr-dropdown style="--lr-transition-fast:0ms"
       ><button slot="trigger" type="button">${value}</button><span>Menu</span></lr-dropdown
     >`);
     const sheet = document.createElement("style");
@@ -5489,7 +5489,7 @@ describe("row overlays and the top layer", () => {
   it("lets a default-absolute tooltip in the last visible row escape the list", async () => {
     await import("../../overlays/overlay/tooltip.js");
     const { el } = await mount("", (value: unknown) => html`<button type="button" id=${`b-${String(value).replace(" ", "")}`}>${value}</button
-      ><lr-tooltip data-lr-theme-scope for=${`b-${String(value).replace(" ", "")}`} placement="bottom" style="--lr-transition-fast:0ms">Tip for ${value}</lr-tooltip>`);
+      ><lr-tooltip for=${`b-${String(value).replace(" ", "")}`} placement="bottom" style="--lr-transition-fast:0ms">Tip for ${value}</lr-tooltip>`);
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const baseRect = base.getBoundingClientRect();
     const tooltip = el.shadowRoot!.querySelector<HTMLElement & { show(): Promise<void>; hide(): Promise<void> }>(

@@ -859,7 +859,7 @@ describe('non-actionable and empty segments', () => {
 
   it('uses the shared disabled-opacity theme token when no component override is set', async () => {
     const el = (await fixture(
-      html`<lr-context-meter data-lr-theme-scope interactive total="100" style="--lr-theme-opacity-disabled: 0.37"></lr-context-meter>`,
+      html`<lr-context-meter interactive total="100" style="--lr-theme-opacity-disabled: 0.37"></lr-context-meter>`,
     )) as LyraContextMeter;
     el.segments = [{ label: 'Disabled', value: 1, disabled: true }];
     await el.updateComplete;

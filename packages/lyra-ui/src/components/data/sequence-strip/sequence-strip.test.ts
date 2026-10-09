@@ -1174,7 +1174,7 @@ describe('disabled items', () => {
 
   it('uses the shared disabled-opacity theme token when no component override is set', async () => {
     const el = await fixture<LyraSequenceStrip>(
-      html`<lr-sequence-strip data-lr-theme-scope style="--lr-theme-opacity-disabled: 0.37"></lr-sequence-strip>`,
+      html`<lr-sequence-strip style="--lr-theme-opacity-disabled: 0.37"></lr-sequence-strip>`,
     );
     el.items = [{ id: 'disabled', categoryId: 'text', disabled: true }];
     await el.updateComplete;

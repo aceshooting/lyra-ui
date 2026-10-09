@@ -93,7 +93,7 @@ const MODULE_PATH_PATTERN = /^\.\/[A-Za-z0-9_./-]+\.(?:js|css)$/;
 const moduleReviewKey = (entry) => [entry.kind, entry.module ?? '', entry.name].join('\u0000');
 const PROFILE_LIST_KEYS = ['renames', 'defaults', 'detailChanges', 'detailFields', 'propertyChanges', 'retiredEvents', 'reviews', 'slotContent', 'moduleReviews', 'globals'];
 const OPTIONAL_PROFILE_LISTS = ['propertyChanges', 'retiredEvents', 'detailFields', 'globals'];
-const AUTHORED_PROFILE_KEYS = ['origin', 'fromMajor', 'toMajor', 'aliasRemovalMajor', ...PROFILE_LIST_KEYS, 'rules'];
+const AUTHORED_PROFILE_KEYS = ['origin', 'fromMajor', 'toMajor', 'aliasRemovalMajor', ...PROFILE_LIST_KEYS];
 
 /**
  * Entries that no `lr-*` tag owns (RFC 0003). `module` rewrites a package specifier (exactly, or by
@@ -102,8 +102,6 @@ const AUTHORED_PROFILE_KEYS = ['origin', 'fromMajor', 'toMajor', 'aliasRemovalMa
  * prefix of them) and `part` a part whose meaning changed on one component; the last three never edit.
  */
 const GLOBAL_KINDS = Object.freeze(['module', 'export', 'locale-key', 'css-property', 'part']);
-/** Structural rules a profile can enable; each is implemented and tested in the codemod. */
-export const PROFILE_RULES = Object.freeze(['theme-scopes']);
 const PACKAGE_SPECIFIER_PATTERN = /^@aceshooting\/lyra-[a-z]+(?:\/[A-Za-z0-9_./-]*)?$/;
 const PROJECTED_PROFILE_KEYS = [...AUTHORED_PROFILE_KEYS, 'exposure'];
 
@@ -287,15 +285,6 @@ function validateGlobalEntry(findings, label, entry) {
   if (entry.from === entry.to) findings.push(`${label}: from and to must differ`);
   if (entry.kind === 'export' && entry.module !== '.') findings.push(`${label}: an export entry needs module "." (the package root)`);
   if (optional && Object.hasOwn(entry, 'module')) findings.push(`${label}: locale keys do not take a module`);
-}
-
-function validateRulesList(findings, origin, rules) {
-  if (!Array.isArray(rules)) {
-    findings.push(`${origin}: rules must be an array`);
-    return;
-  }
-  for (const rule of rules) if (!PROFILE_RULES.includes(rule)) findings.push(`${origin}: unknown rule ${JSON.stringify(rule)}`);
-  if (JSON.stringify(rules) !== JSON.stringify([...new Set(rules)].sort(compareText))) findings.push(`${origin}: rules must be sorted and unique`);
 }
 
 function validateRenameEntry(findings, label, entry, projected) {
@@ -597,7 +586,6 @@ export function validateRenameLedgerShape(ledger, { projected = false, historica
         findings.push(`${origin}: ${list} must be sorted by ${list === 'moduleReviews' ? 'kind, module and name' : list === 'globals' ? 'kind and name' : 'tag and name'}`);
       }
     }
-    if (profile.rules !== undefined) validateRulesList(findings, origin, profile.rules);
     if (!Array.isArray(profile.renames) || !Array.isArray(profile.reviews)) continue;
 
     // A rename target that is itself renamed would make a second run rewrite the first run's
@@ -1074,7 +1062,6 @@ export function projectRenameLedger(ledger, inventory, { exportDeprecations = []
         ...(Array.isArray(profile.detailFields) ? { detailFields: profile.detailFields.map((entry) => structuredClone(entry)) } : {}),
         propertyChanges: (profile.propertyChanges ?? []).map((entry) => ({ ...structuredClone(entry), since: release })),
         ...(Array.isArray(profile.globals) ? { globals: profile.globals.map((entry) => structuredClone(entry)) } : {}),
-        ...(Array.isArray(profile.rules) ? { rules: [...profile.rules] } : {}),
         reviews: profile.reviews.map((entry) => {
           const record = recordFor(entry, entry.kind, entry.name);
           const retired = historicalMember(compatibilityContext, entry.tag, entry.kind, entry.name);
@@ -1160,10 +1147,7 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
         const { removedIn, ...beforeRemoval } = entry;
         return beforeRemoval;
       });
-    // A structural rule belongs to the target release, like any entry that starts there.
-    const rulesApply = lyraVersion === null || compareVersions(lyraVersion, `${full.toMajor}.0.0`) >= 0;
-    if (!rulesApply) skipped.push(...(full.rules ?? []).map((rule) => ({ list: 'rules', rule })));
-    const data = { ...full, ...Object.fromEntries(PROFILE_LIST_KEYS.map((list) => [list, available(list)])), rules: rulesApply ? [...(full.rules ?? [])] : [] };
+    const data = { ...full, ...Object.fromEntries(PROFILE_LIST_KEYS.map((list) => [list, available(list)])) };
     const renamesByOwner = new Map(data.renames.map((entry) => [ownerKey(entry.tag, entry.kind, entry.from), entry]));
     const renamesByName = indexBy(data.renames, (entry) => nameKey(entry.kind, entry.from));
     const renamesByTarget = indexBy(data.renames, (entry) => nameKey(entry.kind, entry.to));
@@ -1199,7 +1183,7 @@ export function createRenameProfiles(projection, { lyraVersion = null } = {}) {
       data,
       skipped,
       tags,
-      isEmpty: tags.size === 0 && data.moduleReviews.length === 0 && data.globals.length === 0 && data.rules.length === 0,
+      isEmpty: tags.size === 0 && data.moduleReviews.length === 0 && data.globals.length === 0,
       renameFor: (tag, kind, name) => renamesByOwner.get(ownerKey(tag, kind, name)) ?? null,
       renamesNamed,
       renamesOnto: (kind, name) => renamesByTarget.get(nameKey(kind, name)) ?? [],

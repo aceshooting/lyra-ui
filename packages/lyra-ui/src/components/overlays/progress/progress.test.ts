@@ -358,15 +358,15 @@ it('lets a consumer retune the track (and inherited indicator) corner radius wit
 });
 
 it('recolors the bar indicator per variant instead of always rendering brand regardless of the attribute', async () => {
-  const brand = (await fixture(html`<lr-progress-bar data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" value="50"></lr-progress-bar>`)) as LyraProgressBar;
+  const brand = (await fixture(html`<lr-progress-bar style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" value="50"></lr-progress-bar>`)) as LyraProgressBar;
   const neutral = (await fixture(
-    html`<lr-progress-bar data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="neutral" value="50"></lr-progress-bar>`,
+    html`<lr-progress-bar style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="neutral" value="50"></lr-progress-bar>`,
   )) as LyraProgressBar;
   const success = (await fixture(
-    html`<lr-progress-bar data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="success" value="50"></lr-progress-bar>`,
+    html`<lr-progress-bar style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="success" value="50"></lr-progress-bar>`,
   )) as LyraProgressBar;
   const danger = (await fixture(
-    html`<lr-progress-bar data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="danger" value="50"></lr-progress-bar>`,
+    html`<lr-progress-bar style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="danger" value="50"></lr-progress-bar>`,
   )) as LyraProgressBar;
 
   // 'brand' is the property default and must reflect even though no attribute was authored.
@@ -381,15 +381,15 @@ it('recolors the bar indicator per variant instead of always rendering brand reg
 });
 
 it('recolors the ring indicator per variant instead of always rendering brand regardless of the attribute', async () => {
-  const brand = (await fixture(html`<lr-progress-ring data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" value="50"></lr-progress-ring>`)) as LyraProgressRing;
+  const brand = (await fixture(html`<lr-progress-ring style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" value="50"></lr-progress-ring>`)) as LyraProgressRing;
   const neutral = (await fixture(
-    html`<lr-progress-ring data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="neutral" value="50"></lr-progress-ring>`,
+    html`<lr-progress-ring style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="neutral" value="50"></lr-progress-ring>`,
   )) as LyraProgressRing;
   const success = (await fixture(
-    html`<lr-progress-ring data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="success" value="50"></lr-progress-ring>`,
+    html`<lr-progress-ring style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="success" value="50"></lr-progress-ring>`,
   )) as LyraProgressRing;
   const danger = (await fixture(
-    html`<lr-progress-ring data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="danger" value="50"></lr-progress-ring>`,
+    html`<lr-progress-ring style="--lr-theme-color-brand-fill-loud: rgb(1, 2, 3); --lr-theme-color-success-fill-loud: rgb(4, 5, 6); --lr-theme-color-danger-fill-loud: rgb(7, 8, 9)" variant="danger" value="50"></lr-progress-ring>`,
   )) as LyraProgressRing;
 
   // 'brand' is the property default and must reflect even though no attribute was authored,

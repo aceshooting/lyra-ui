@@ -1850,7 +1850,7 @@ it("keeps the reading position when content above it grows while follow is relea
 
 it("paints the themed focus ring on the keyboard-focused transcript", async () => {
   const el = (await fixture(
-    html`<lr-chat-viewport data-lr-theme-scope style="--lr-focus-ring-color: rgb(1, 2, 3)"
+    html`<lr-chat-viewport style="--lr-focus-ring-color: rgb(1, 2, 3)"
       >${row("m0")}</lr-chat-viewport
     >`
   )) as LyraChatViewport;

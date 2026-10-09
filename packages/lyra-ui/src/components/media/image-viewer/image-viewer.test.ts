@@ -1776,7 +1776,7 @@ describe("active-state cssprop escape hatches", () => {
 describe("native control theming", () => {
   it("renders native fit-control theming and all three toolbar controls' hover/focus treatment", async () => {
     const el = (await fixture(
-      html`<lr-image-viewer data-lr-theme-scope
+      html`<lr-image-viewer
         src=${LOADABLE_PNG}
         style="--lr-color-surface: rgb(7, 8, 9); --lr-color-text: rgb(10, 11, 12); --lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring: 6px solid rgb(4, 5, 6)"
       ></lr-image-viewer>`

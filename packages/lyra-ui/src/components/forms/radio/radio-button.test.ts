@@ -323,8 +323,8 @@ describe('lr-radio-button hover and press feedback', () => {
   // getComputedStyle one frame after the pointer arrives would otherwise catch the INTERPOLATED
   // colour -- still the resting one at t=0 -- and report "hover does nothing" for a working hover.
   for (const [label, markup] of [
-    ['unchecked', html`<lr-radio-button data-lr-theme-scope value="a" style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
-    ['checked', html`<lr-radio-button data-lr-theme-scope value="a" checked style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
+    ['unchecked', html`<lr-radio-button value="a" style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
+    ['checked', html`<lr-radio-button value="a" checked style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
   ] as const) {
     it(`presses a ${label} segment to a background different from its hover`, async () => {
       const el = await fixture(markup);
@@ -346,9 +346,9 @@ describe('lr-radio-button hover and press feedback', () => {
   it('keeps group-disabled plain and button radios visually inert at rest, hover, and press', async () => {
     const group = await fixture(html`
       <lr-radio-group disabled orientation="horizontal">
-        <lr-radio data-lr-theme-scope value="plain" style="--lr-transition-fast: 0s">Plain</lr-radio>
-        <lr-radio-button data-lr-theme-scope value="button" style="--lr-transition-fast: 0s">Button</lr-radio-button>
-        <lr-radio data-lr-theme-scope appearance="button" value="appearance" style="--lr-transition-fast: 0s">
+        <lr-radio value="plain" style="--lr-transition-fast: 0s">Plain</lr-radio>
+        <lr-radio-button value="button" style="--lr-transition-fast: 0s">Button</lr-radio-button>
+        <lr-radio appearance="button" value="appearance" style="--lr-transition-fast: 0s">
           Appearance
         </lr-radio>
       </lr-radio-group>
@@ -397,8 +397,8 @@ describe('lr-radio-button hover and press feedback', () => {
   // without it a disabled segment still visibly tints under the pointer even though it can't
   // be activated, contradicting its own not-allowed cursor and opacity.
   for (const [label, markup] of [
-    ['unchecked', html`<lr-radio-button data-lr-theme-scope value="a" disabled style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
-    ['checked', html`<lr-radio-button data-lr-theme-scope value="a" checked disabled style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
+    ['unchecked', html`<lr-radio-button value="a" disabled style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
+    ['checked', html`<lr-radio-button value="a" checked disabled style="--lr-transition-fast: 0s">Alpha</lr-radio-button>`],
   ] as const) {
     it(`does not tint a disabled ${label} segment on hover or press`, async () => {
       const el = await fixture(markup);
@@ -429,7 +429,7 @@ describe('lr-radio-button hover and press feedback', () => {
 
   it('themes unchecked and checked pointer-state longhands independently', async () => {
     const unchecked = await fixture(html`
-      <lr-radio-button data-lr-theme-scope
+      <lr-radio-button
         style="
           --lr-transition-fast: 0s;
           --lr-radio-button-hover-bg: rgb(1, 2, 3);
@@ -456,7 +456,7 @@ describe('lr-radio-button hover and press feedback', () => {
     }
 
     const checked = await fixture(html`
-      <lr-radio-button data-lr-theme-scope
+      <lr-radio-button
         checked
         style="
           --lr-transition-fast: 0s;

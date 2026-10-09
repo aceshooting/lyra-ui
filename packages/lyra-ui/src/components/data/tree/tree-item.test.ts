@@ -897,7 +897,7 @@ it('applies all five mirrored indentation custom properties on the item that ren
 
 it('defaults the indentation guide to the subtle border while the checkbox keeps the control border', async () => {
   const el = (await fixture(html`
-    <lr-tree-item data-lr-theme-scope
+    <lr-tree-item
       label="Nested item"
       style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3); --indent-guide-width: 1px"
     ></lr-tree-item>
@@ -1034,7 +1034,7 @@ it('gives the expand/collapse toggle pressed feedback distinct from hover', asyn
 
 it("falls the toggle's unset hover fill back to the neutral fill token, not the border token", async function () {
   if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
-  const el = (await fixture(html`<lr-tree-item data-lr-theme-scope
+  const el = (await fixture(html`<lr-tree-item
     style="--lr-color-border: rgb(1, 2, 3); --lr-color-neutral-fill-quiet: rgb(4, 5, 6)"
     .item=${{ id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] }}
   ></lr-tree-item>`)) as LyraTreeItem;
@@ -1075,7 +1075,7 @@ it('leaves the resting item and toggle backgrounds unchanged (unset-regression)'
 
 it('themes checked and indeterminate checkbox paint independently from the shared brand', async () => {
   const wrapper = await fixture(html`
-    <div data-lr-theme-scope
+    <div
       role="tree"
       style="--lr-color-brand:rgb(40, 41, 42); --lr-tree-checkbox-checked-border-color:rgb(1, 2, 3); --lr-tree-checkbox-checked-bg:rgb(4, 5, 6); --lr-tree-checkbox-checked-color:rgb(7, 8, 9); --lr-tree-checkbox-indeterminate-border-color:rgb(10, 11, 12); --lr-tree-checkbox-indeterminate-bg:rgb(13, 14, 15); --lr-tree-checkbox-indeterminate-color:rgb(16, 17, 18)"
     >
@@ -1290,7 +1290,7 @@ it('shows a hover fill on a selected row, distinct from the resting selected fil
 // checked or indeterminate border vanished under the pointer. They now start from the state token.
 it('keeps the themed checked and indeterminate checkbox border under the pointer', async () => {
   const wrapper = await fixture(html`
-    <div data-lr-theme-scope
+    <div
       role="tree"
       style="--lr-color-brand: rgb(40, 41, 42); --lr-tree-checkbox-checked-border-color: rgb(200, 0, 0); --lr-tree-checkbox-indeterminate-border-color: rgb(0, 0, 200)"
     >

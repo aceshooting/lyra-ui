@@ -775,7 +775,7 @@ describe('toolbar menu', () => {
       >
         <lr-flow-node node-id="a" heading="Fetch">
           Body
-          <lr-dropdown data-lr-theme-scope slot="toolbar" placement="bottom-end" style="--lr-transition-fast:0ms">
+          <lr-dropdown slot="toolbar" placement="bottom-end" style="--lr-transition-fast:0ms">
             <button slot="trigger" type="button" aria-label="Node actions">⋮</button>
             <lr-menu label="Node actions">
               <lr-menu-item value="run">Run</lr-menu-item>

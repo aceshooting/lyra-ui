@@ -1427,7 +1427,7 @@ describe("horizontal step row overflow", () => {
     // documented consumer theming input. A mask reads alpha only, so a translucent shadow theme
     // dropped mask alpha across the whole step row rather than just its edges.
     const el = (await fixture(
-      html`<lr-stepper data-lr-theme-scope
+      html`<lr-stepper
         style="display: block; max-inline-size: 90px; --lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
         .steps=${steps()}
       ></lr-stepper>`
@@ -1600,7 +1600,7 @@ describe("step hover specificity", () => {
             background-color: rgb(7, 8, 9);
           }
         </style>
-        <lr-stepper data-lr-theme-scope
+        <lr-stepper
           style="--lr-transition-fast: 0ms"
           .steps=${steps()}
         ></lr-stepper>
@@ -2160,7 +2160,7 @@ describe("lr-stepper read-only mode", () => {
     // that the selector was typed; this lands a real pointer and reads the rendered paint on both
     // sides of the same element, which is what a future selector regression would actually break.
     const el = (await fixture(
-      html`<lr-stepper data-lr-theme-scope
+      html`<lr-stepper
         readonly
         style="--lr-transition-fast: 0ms; --lr-stepper-hover-bg: rgb(1, 2, 3)"
         .steps=${mixedSteps()}
@@ -2398,7 +2398,7 @@ describe("lr-stepper read-only scroll tab stop", () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div>
         <button id="before">before</button>
-        <lr-stepper data-lr-theme-scope
+        <lr-stepper
           readonly
           aria-label="Onboarding progress"
           style="display: block; max-inline-size: 90px; --lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 4px"

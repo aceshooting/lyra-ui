@@ -1327,7 +1327,7 @@ describe("header content", () => {
 describe("shiki dark-theme signal", () => {
   it('marks part="body" as dark-theme once the resolved --lr-color-text is lighter than --lr-color-surface', async () => {
     const wrapper = (await fixture(html`
-      <div data-lr-theme-scope
+      <div
         style="--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a;"
       >
         <lr-code-block-core></lr-code-block-core>
@@ -1350,7 +1350,7 @@ describe("shiki dark-theme signal", () => {
 
   it("refreshes after a live CSSOM token mutation", async () => {
     const wrapper = (await fixture(html`
-      <div data-lr-theme-scope
+      <div
         style="--lr-theme-color-text-normal:#202020; --lr-theme-color-surface-default:#f8f8f8;"
       >
         <lr-code-block-core></lr-code-block-core>
@@ -1359,7 +1359,6 @@ describe("shiki dark-theme signal", () => {
     const el = wrapper.querySelector("lr-code-block-core") as LyraCodeBlockCore;
     const body = el.shadowRoot!.querySelector('[part="body"]')!;
     expect(body.hasAttribute("data-dark-theme")).to.be.false;
-    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty("--lr-theme-color-text-normal", "#f2f2f2");
     wrapper.style.setProperty("--lr-theme-color-surface-default", "#1a1a1a");
     await waitUntil(() => body.getAttribute("data-dark-theme") === "true");
@@ -1372,7 +1371,7 @@ describe("shiki dark-theme signal", () => {
       wrapperStyle: string
     ): Promise<{ span: HTMLElement; body: Element }> {
       const wrapper = (await fixture(html`
-        <div data-lr-theme-scope style=${wrapperStyle}>
+        <div style=${wrapperStyle}>
           <lr-code-block-core
             language="json"
             .languages=${sharedJsonLanguages}

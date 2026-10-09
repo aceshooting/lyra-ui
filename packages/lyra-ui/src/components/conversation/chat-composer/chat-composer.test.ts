@@ -617,7 +617,7 @@ describe('toolbar slot', () => {
 
   it('renders the toolbar inside the frame, sharing its :focus-within affordance', async () => {
     const el = (await fixture(html`
-      <lr-chat-composer data-lr-theme-scope style="--lr-theme-transition-fast: 0s">
+      <lr-chat-composer style="--lr-theme-transition-fast: 0s">
         <button slot="toolbar">Model</button>
       </lr-chat-composer>
     `)) as LyraChatComposer;
@@ -1317,7 +1317,7 @@ it("escalates the send button from resting to hover to pressed with the shared c
 
 it("gives the busy Stop action distinct hover and pressed feedback", async () => {
   const el = (await fixture(html`
-    <lr-chat-composer data-lr-theme-scope
+    <lr-chat-composer
       status="streaming"
       style="--lr-chat-composer-busy-bg: rgb(10, 20, 30); --lr-transition-fast: 0s"
     ></lr-chat-composer>
@@ -1802,7 +1802,7 @@ describe("frame", () => {
     // The card affordance is a transitioned border-color, so getComputedStyle reports the
     // mid-transition value right after focus -- zero out the duration to read the settled one.
     const card = (await fixture(
-      html`<lr-chat-composer data-lr-theme-scope
+      html`<lr-chat-composer
         style="--lr-theme-transition-fast: 0s"
       ></lr-chat-composer>`
     )) as LyraChatComposer;
@@ -1825,7 +1825,7 @@ describe("frame", () => {
 
   it("retunes the plain focus underline through the shared focus-ring tokens", async () => {
     const wrapper = (await fixture(html`
-      <div data-lr-theme-scope
+      <div
         style="--lr-theme-focus-ring-width: 5px; --lr-theme-color-focus: rgb(10, 20, 30)"
       >
         <lr-chat-composer frame="plain"></lr-chat-composer>
@@ -2041,14 +2041,14 @@ describe('card chrome theming hooks', () => {
     // mid-transition -- zero the duration and poll for the exact settled colour, read from an
     // unhooked control rather than restated here as a literal.
     const control = (await fixture(html`
-      <lr-chat-composer data-lr-theme-scope style="--lr-theme-transition-fast: 0s"></lr-chat-composer>
+      <lr-chat-composer style="--lr-theme-transition-fast: 0s"></lr-chat-composer>
     `)) as LyraChatComposer;
     textareaOf(control).focus();
     const focusedBorder = getComputedStyle(base(control)).borderTopColor;
     expect(focusedBorder).to.not.equal('rgb(4, 5, 6)');
 
     const el = (await fixture(html`
-      <lr-chat-composer data-lr-theme-scope
+      <lr-chat-composer
         style="--lr-theme-transition-fast: 0s; --lr-chat-composer-border-color: rgb(4, 5, 6)"
       ></lr-chat-composer>
     `)) as LyraChatComposer;

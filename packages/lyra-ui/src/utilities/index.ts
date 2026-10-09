@@ -113,8 +113,6 @@ export type {
 } from './format.js';
 export { invalidateLyraTheme } from './theme.js';
 export type { LyraThemeRoot } from './theme.js';
-export { adoptLyraTokens } from './tokens.js';
-export { findUnscopedThemeInputs } from './theme-scopes.js';
 export type { LyraCatalog, LyraCatalogEntry } from './catalog.js';
 export type {
   LyraAnchorTarget,

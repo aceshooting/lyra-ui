@@ -61,7 +61,7 @@ it("restores every nonempty declared default when its attribute is removed", asy
 
 it('uses scoped active and invalid segment paint inherited from an ancestor', async () => {
   const activeWrapper = await fixture<HTMLElement>(html`
-    <div data-lr-theme-scope style="--lr-transition-fast: 0ms; --lr-otp-input-active-border-color: rgb(1, 2, 3); --lr-otp-input-active-ring-color: rgb(4, 5, 6)">
+    <div style="--lr-transition-fast: 0ms; --lr-otp-input-active-border-color: rgb(1, 2, 3); --lr-otp-input-active-ring-color: rgb(4, 5, 6)">
       <lr-otp-input></lr-otp-input>
     </div>
   `);
@@ -76,7 +76,7 @@ it('uses scoped active and invalid segment paint inherited from an ancestor', as
   expect(activeStyle.boxShadow).to.contain('rgb(4, 5, 6)');
 
   const invalidWrapper = await fixture<HTMLElement>(html`
-    <div data-lr-theme-scope style="--lr-transition-fast: 0ms; --lr-otp-input-invalid-border-color: rgb(7, 8, 9)">
+    <div style="--lr-transition-fast: 0ms; --lr-otp-input-invalid-border-color: rgb(7, 8, 9)">
       <lr-otp-input required></lr-otp-input>
     </div>
   `);
@@ -1855,7 +1855,7 @@ it('marks the next segment active only while focused', async () => {
 
 it('shows a visible focus indicator while readonly', async () => {
   const el = await fixture<LyraOtpInput>(html`
-    <lr-otp-input data-lr-theme-scope readonly value="1234" label="Code" style="--lr-transition-fast: 0s"></lr-otp-input>
+    <lr-otp-input readonly value="1234" label="Code" style="--lr-transition-fast: 0s"></lr-otp-input>
   `);
   const segments = segmentsOf(el);
   for (const segment of segments) segment.style.transition = 'none';

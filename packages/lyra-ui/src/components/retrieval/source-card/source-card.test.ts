@@ -523,7 +523,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
 
   it('leaves the resting frame on the shared surface token when --lr-source-card-bg is unset', async () => {
     const el = (await fixture(
-      html`<lr-source-card data-lr-theme-scope heading="a.pdf" style="--lr-color-surface: rgb(4, 5, 6)"></lr-source-card>`
+      html`<lr-source-card heading="a.pdf" style="--lr-color-surface: rgb(4, 5, 6)"></lr-source-card>`
     )) as LyraSourceCard;
     expect(getComputedStyle(partOf(el, 'base')).backgroundColor).to.equal('rgb(4, 5, 6)');
   });

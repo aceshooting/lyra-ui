@@ -350,7 +350,7 @@ it('fallback="text" renders a plain string result as preformatted text, not lr-j
 
 it('chains the fallback-text font through the shared --lr-font-mono token, honoring a --lr-theme-font-family-mono override', async () => {
   const el = (await fixture(html`
-    <lr-tool-result-view data-lr-theme-scope tool-name="unregistered" fallback="text" style="--lr-theme-font-family-mono: 'Custom Mono';" .result=${'line one'}></lr-tool-result-view>
+    <lr-tool-result-view tool-name="unregistered" fallback="text" style="--lr-theme-font-family-mono: 'Custom Mono';" .result=${'line one'}></lr-tool-result-view>
   `)) as LyraToolResultView;
   const pre = base(el).querySelector('[part="fallback-text"]') as HTMLElement;
   expect(getComputedStyle(pre).fontFamily).to.contain('Custom Mono');

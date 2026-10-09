@@ -540,7 +540,7 @@ describe('row styling across both rendering paths', () => {
 
 it('renders open-button and toggle hover/focus-visible feedback', async () => {
   const el = await fixture<LyraChunkInspector>(html`
-    <lr-chunk-inspector data-lr-theme-scope
+    <lr-chunk-inspector
       style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6)"
       .chunks=${[chunks[0]!]}
     ></lr-chunk-inspector>

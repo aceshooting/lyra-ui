@@ -273,7 +273,7 @@ it('retints the resting card frame through --lr-community-card-bg', async () => 
 
 it('leaves the resting frame on the shared surface token when --lr-community-card-bg is unset', async () => {
   const el = (await fixture(
-    html`<lr-community-card data-lr-theme-scope .community=${community} style="--lr-color-surface: rgb(4, 5, 6)"></lr-community-card>`
+    html`<lr-community-card .community=${community} style="--lr-color-surface: rgb(4, 5, 6)"></lr-community-card>`
   )) as LyraCommunityCard;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(getComputedStyle(base).backgroundColor).to.equal('rgb(4, 5, 6)');
@@ -352,7 +352,7 @@ it('is accessible with members and an overflow chip', async () => {
 
 it('renders the title, member, and overflow hover/focus-visible feedback', async () => {
   const el = await fixture<LyraCommunityCard>(html`
-    <lr-community-card data-lr-theme-scope
+    <lr-community-card
       max-members="1"
       style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6)"
       .community=${community}

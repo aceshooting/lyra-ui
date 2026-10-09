@@ -14,8 +14,7 @@ const LIGHT = new Set(['light-class-scope', 'light-island-in-dark']);
 // Forms whose surface an input or output override sets, and the shadcn regions (their inputs decide).
 const SKIP = /theme-input|output-token|foreign-host-inputs|marked-input-wrapper|shadcn-/;
 const passes = [[1, '', 'light'], [1, 'dark', 'light'], [1, '', 'dark'], [0, '', 'light'], [0, 'dark', 'light'], [0, '', 'dark']];
-// v21's dark page surface was #1a1a1a; the Shadcn default look (v24+) uses #0a0a0a.
-const isDark = (value) => /^#(?:1a1a1a|0a0a0a)$/i.test(value);
+const isDark = (value) => /^#1a1a1a$/i.test(value);
 for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
   const browser = await engine.launch();
   for (const [theme, root, scheme] of passes) {
@@ -30,9 +29,8 @@ for (const [name, engine] of Object.entries({ chromium, firefox, webkit })) {
         .map(([id, list]) => [id, list[0][0].replace(/^lr-button\{/, '').split('|')[0]])));
       await page.close();
     }
-    // v21's theme.css pinned :root light; since v22 (RFC 0001) theme.css follows the OS preference
-    // on a root without an explicit mode, exactly like the zero-configuration layer.
-    const rootDark = root === 'dark' || scheme === 'dark';
+    // Where theme.css is loaded it pins :root light unless the root carries the dark attribute.
+    const rootDark = root === 'dark' || (scheme === 'dark' && !theme);
     const wrong = Object.fromEntries(VARIANTS.map((v) => [v, []]));
     for (const id of Object.keys(seen[VARIANTS[0]])) {
       if (SKIP.test(id)) continue;

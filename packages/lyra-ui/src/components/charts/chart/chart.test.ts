@@ -2022,7 +2022,7 @@ it('keeps the canvas hover outline on the chart grid-color fallback by default',
 // hover state of a focusable widget, so with --lr-chart-grid-color unset it must not follow them.
 it('draws default grid lines in the subtle border tier while the hover outline stays control-grade', async () => {
   const el = (await fixture(html`
-    <lr-chart data-lr-theme-scope
+    <lr-chart
       style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9);"
       .labels=${['A', 'B']}
       .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
@@ -2078,7 +2078,7 @@ it('routes [part="canvas"]:hover’s rendered outline through scoped width and c
 
 it('actually inherits the surrounding font on a rendered reset-zoom-button, not just in the stylesheet source', async () => {
   const el = (await fixture(
-    html`<lr-chart data-lr-theme-scope zoomable style="--lr-theme-font-family-body: 'Custom Zoom Font', monospace;"></lr-chart>`,
+    html`<lr-chart zoomable style="--lr-theme-font-family-body: 'Custom Zoom Font', monospace;"></lr-chart>`,
   )) as LyraChart;
   el.type = 'line';
   el.labels = ['A', 'B'];
@@ -2644,7 +2644,7 @@ it('uses `height` as a private fallback without overwriting the public --lr-char
 
 it('renders the reset-zoom-button focus-visible outline from the focus-ring tokens', async () => {
   const el = (await fixture(html`
-    <lr-chart data-lr-theme-scope
+    <lr-chart
       zoomable
       style="--lr-focus-ring-width: 6px; --lr-focus-ring-color: rgb(4, 5, 6); --lr-focus-ring-offset: 3px;"
       .labels=${['A', 'B']}

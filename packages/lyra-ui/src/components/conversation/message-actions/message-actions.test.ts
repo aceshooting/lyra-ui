@@ -1470,7 +1470,7 @@ describe("reveal-on-interaction with a slotted menu", () => {
       <div class="message" data-id=${String(item)} style="padding:8px">
         Message ${String(item)}
         <lr-message-actions reveal-on-interaction>
-          <lr-dropdown data-lr-theme-scope placement="bottom-start" style="--lr-transition-fast:0ms">
+          <lr-dropdown placement="bottom-start" style="--lr-transition-fast:0ms">
             <button slot="trigger" type="button" aria-label="More for ${String(item)}">⋮</button>
             <lr-menu label="More">
               <lr-menu-item value="share">Share</lr-menu-item>

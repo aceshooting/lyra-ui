@@ -1482,7 +1482,7 @@ describe('field-input hover (mouse-user parity with :focus-visible)', () => {
   for (const appearance of ['outlined', 'filled', 'filled-outlined'] as const) {
     it(`changes the border color on hover in the ${appearance} appearance`, async () => {
       const el = (await fixture(html`
-        <lr-known-date data-lr-theme-scope appearance=${appearance} style="--lr-transition-fast: 0s"></lr-known-date>
+        <lr-known-date appearance=${appearance} style="--lr-transition-fast: 0s"></lr-known-date>
       `)) as LyraKnownDate;
       await el.updateComplete;
       const field = el.shadowRoot!.querySelector('[part="field-input"]') as HTMLElement;
@@ -1510,7 +1510,6 @@ describe('invalid-border cssprop indirection', () => {
     el.style.setProperty('--lr-known-date-invalid-border-color', 'rgb(10, 20, 30)');
     // The invalid-field border now eases over --lr-transition-fast instead of snapping; zero it so
     // this token/override assertion reads the settled colour, not a mid-interpolation sample.
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-transition-fast', '0s');
     const day = el.shadowRoot!.querySelector('input[data-field="day"]') as HTMLInputElement;
     day.focus();

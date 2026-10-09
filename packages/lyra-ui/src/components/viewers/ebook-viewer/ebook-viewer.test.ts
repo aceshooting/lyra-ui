@@ -1,6 +1,5 @@
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import {
   aTimeout,
   expect,
@@ -105,10 +104,7 @@ it("resolves highlight tokens through the adopted document window", async () => 
     return { getPropertyValue: () => "rgb(1, 2, 3)" } as unknown as CSSStyleDeclaration;
   }) as typeof ownerWindow.getComputedStyle;
   try {
-    // Adopting the document token layer reads the sentinel through the same stubbed window.
-    expectDevWarning('lyra-theme-scope:foreign-layer');
     iframe.contentDocument!.body.append(el);
-    calls = 0;
     const fill = (
       el as unknown as {
         resolveHighlightFill(value: { token: string; fallback: string }): {

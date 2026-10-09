@@ -3321,10 +3321,9 @@ lr-thread-list::part(row-item-label) {
 }
 ```
 
-Do **not** reach for `::part(row) { --lr-theme-space-s: … }` instead. A part is not a theme scope,
-so the input does not re-derive the spacing of the components nested in the row; and a scope there
-would be a whole-subtree retheme that shrinks everything inside the row, including the items of a
-`renderActions` menu, below the accessible touch-target minimum. The `row-item-*` parts exist so row
+Do **not** reach for `::part(row) { --lr-theme-space-s: … }` instead. That is a whole-subtree
+retheme: it shrinks everything nested inside the row, including the items of a `renderActions` menu,
+which pushes their touch targets below the accessible minimum. The `row-item-*` parts exist so row
 density can be tuned without that blast radius.
 
 **Sizing:** the internal list fills whatever height this component is given, with no consumer CSS —

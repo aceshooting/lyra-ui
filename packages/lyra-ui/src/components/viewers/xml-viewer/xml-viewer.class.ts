@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { DocumentAnchorTarget, prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
 import type {
   AnchorResultDetail,

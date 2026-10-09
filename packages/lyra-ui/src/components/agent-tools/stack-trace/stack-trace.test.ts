@@ -738,7 +738,7 @@ describe('card chrome theming hooks', () => {
 
   it('draws the card edge on the subtle tier while the copy button keeps the control border', async () => {
     const el = (await fixture(html`
-      <lr-stack-trace data-lr-theme-scope
+      <lr-stack-trace
         .trace=${trace}
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
       ></lr-stack-trace>

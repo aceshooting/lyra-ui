@@ -703,7 +703,7 @@ it("gives the summary (the real focusable/clickable surface) focus-visible treat
   const wrapper = await fixture<HTMLElement>(html`
     <div>
       <button id="before">before</button>
-      <lr-details data-lr-theme-scope
+      <lr-details
         style="--lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3)"
         summary="More"
         >Content</lr-details
@@ -1983,7 +1983,7 @@ describe("fill chain (block-size)", () => {
 for (const appearance of ['outlined', 'filled-outlined'] as const) {
   it(`keeps the ${appearance} frame on the --lr-color-border control tier, not the subtle tier`, async () => {
     const el = await fixture<LyraDetails>(html`
-      <lr-details data-lr-theme-scope
+      <lr-details
         summary="Shipping"
         appearance=${appearance}
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"

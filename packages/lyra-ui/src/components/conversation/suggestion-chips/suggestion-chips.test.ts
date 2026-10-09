@@ -486,7 +486,7 @@ it('keeps its internal scroller events inside the component', async () => {
 });
 
 it('dims a disabled chip with the theme disabled opacity', async () => {
-  const el = await fixture<LyraSuggestionChips>(html`<lr-suggestion-chips data-lr-theme-scope
+  const el = await fixture<LyraSuggestionChips>(html`<lr-suggestion-chips
     style="--lr-theme-opacity-disabled: 0.38"
     .suggestions=${[{ suggestionId: 'a', label: 'A', disabled: true }]}
   ></lr-suggestion-chips>`);

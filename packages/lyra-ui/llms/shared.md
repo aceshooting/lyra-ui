@@ -187,9 +187,8 @@ The entry points, then:
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
   `@aceshooting/lyra-ui/looks/shadcn.css` (opt-in shadcn/ui look, imported after `theme.css` — see
   [The shadcn look](#the-shadcn-look--looksshadcncss)),
-  `@aceshooting/lyra-ui/tokens-root.css` (the document token layer as a static file: link it for
-  server-rendered pages and for application elements that paint before the first Lyra element
-  connects),
+  `@aceshooting/lyra-ui/tokens-root.css` (opt-in: the curated resolved `--lr-*` tokens at `:root`,
+  so your own components can read them),
   `@aceshooting/lyra-ui/native.css` (opt-in native-element styles inside `.lr-native`),
   `@aceshooting/lyra-ui/utilities.css` (opt-in light-DOM layout/text/typography utilities),
   `@aceshooting/lyra-ui/theme.js` (the zero-dependency style runtime),
@@ -881,17 +880,17 @@ Three layers, and **which one you set decides how far the override reaches**:
 3. **`--lr-<component>-*`** — per-component properties, for one element at a time. Listed in each
    component's own section.
 
-**Layer 2 (`--lr-*`) is declared once per document, not on each component** (since 27.0.0). The
-first connected `lr-*` element adopts the _document token layer_: one constructed stylesheet that
-declares every shared output on `:root` and re-derives it only at [theme scopes](#theme-scopes).
-Components inherit the result, and so do your own elements — `body { color: var(--lr-color-text) }`
-resolves once any Lyra element has connected, or from first paint when you link
-[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), the same
-layer as a static file. Retheme through layer 1 (`--lr-theme-*`) **on a theme scope**: `:root`, a
-mode scope, a style-axis boundary, or any element marked `data-lr-theme-scope`.
+**Layer 2 (`--lr-*`) is declared only on each `lr-*` element's own shadow `:host`.** It never
+reaches plain application CSS, and it never reaches your own custom elements, since neither is a
+descendant of an `lr-*` shadow root — `body { color: var(--lr-color-text) }` in application CSS
+resolves to nothing, silently, not an error. Retheme through layer 1 (`--lr-theme-*`), which
+`theme.css` supplies at document scope and which inherits normally into every nested shadow root.
+To _read_ (not retheme) the resolved values from your own components, import the opt-in
+[`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), which
+declares a curated subset of layer 2 at `:root`.
 See [Where an override actually reaches](#where-an-override-actually-reaches) below for the full
-inheritance rules, including per-component `--lr-<component>-*` hooks (layer 3), which inherit
-through wrappers.
+inheritance rules, including the one documented exception (per-component `--lr-<component>-*`
+hooks, layer 3, which do inherit through wrappers).
 
 ### Lyra signature starter
 
@@ -1085,27 +1084,20 @@ design launcher. Keep these layout rules shared across application headers and a
 
 ### Reading the resolved tokens from your own components — `tokens-root.css`
 
-Since 27.0.0 the resolved layer lives in the document, so your own elements read it like any
-component does: `var(--lr-color-border)` inside **your** component resolves as soon as the first
-`lr-*` element has connected. `tokens-root.css` is that same layer as a static stylesheet, for the
-moments before any Lyra element exists:
+The paragraph above is a real problem for any application that has custom elements of its own: they
+are not descendants of an `lr-*` shadow root either, so `var(--lr-color-border)` inside **your**
+component resolves to nothing, and `var(--lr-space-m, 0.5rem)` quietly runs on its literal fallback
+forever. Both failures are invisible without reading computed styles in a browser.
 
-- **Server-rendered pages.** Declarative shadow roots no longer carry the layer, so link it for a
-  correct first paint before hydration (see [Theme scopes](#theme-scopes) for application shadow
-  roots).
-- **Application elements that paint before the first Lyra element connects**, for example a lazily
-  loaded route; otherwise they change value at that first connect.
-- **Pages that want to skip the one-off style invalidation** the first adoption causes on a large
-  DOM: a document whose root already resolves the layer keeps the static copy and adopts no
-  constructed one.
+Import one optional stylesheet and the curated part of layer 2 exists at document scope:
 
 ```css
-@import "@aceshooting/lyra-ui/theme.css"; /* the --lr-theme-* input layer, and Lyra's layer order */
-@import "@aceshooting/lyra-ui/tokens-root.css"; /* the resolved --lr-* layer */
+@import "@aceshooting/lyra-ui/theme.css"; /* the --lr-theme-* input layer */
+@import "@aceshooting/lyra-ui/tokens-root.css"; /* the resolved --lr-* layer, at :root */
 ```
 
 ```css
-/* Valid in your own component's stylesheet, in plain application CSS, anywhere. */
+/* Now valid in your own component's stylesheet, in plain application CSS, anywhere. */
 .app-panel {
   padding: var(--lr-space-m);
   border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -1120,9 +1112,10 @@ moments before any Lyra element exists:
 }
 ```
 
-**Every output is visible on `:root`; only a subset is public API.** `--lr-*` is internal precisely
-so it can change without a major version. The stable subset is what an application's own component
-needs to sit inside a Lyra UI without looking foreign, and the file's header lists it:
+**It is opt-in, and it is a curated subset — not all of layer 2.** `--lr-*` is internal precisely so
+it can change without a major version; publishing all of it at `:root` would freeze several hundred
+internal decisions as permanent API. What ships is what an application's own component needs to sit
+inside a Lyra UI without looking foreign:
 
 | Family                | Names                                                                                                                                                                                                                     |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1135,99 +1128,53 @@ needs to sit inside a Lyra UI without looking foreign, and the file's header lis
 | Typography            | `--lr-font`, `--lr-font-mono`, the ten `--lr-font-size-*` steps, the four `--lr-font-weight-*` steps                                                                                                                        |
 | State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base`, `--lr-transition-interactive` |
 
-The grid is stable as a whole because its contrast guarantee is **per tier** — a `fill-quiet`
-background is only guaranteed legible under the matching `on-quiet` foreground.
+The grid ships whole because its contrast guarantee is **per tier** — a `fill-quiet` background is
+only guaranteed legible under the matching `on-quiet` foreground — so shipping the flat aliases
+alone would hand you a pairing with nothing behind it.
 
-**Visible but internal** (read them at your own risk; they may change in any release): `--lr-size-*`,
-`--lr-layer-*`, `--lr-color-mix-*`, `--lr-hover-brightness`, `--lr-line-height-*`,
+**Deliberately not published**, and each for a reason that makes reading it a bug rather than a
+convenience: `--lr-ramp-*` (tooling-only numeric inputs, absent from component host styles),
+`--lr-size-*` (value-named geometry constants, frozen internals), the chart, graph and terminal
+palettes (generated ramps that move with the palette tooling), `--lr-layer-*` (stacking order is
+your decision), `--lr-color-mix-*` and `--lr-hover-brightness` (inputs to the library's own
+interaction recipe), `--lr-line-height-*`, the per-control internals (`--lr-icon-button-size`,
 `--lr-otp-input-segment-size`, `--lr-scroll-fade-size`, `--lr-popover-viewport-clamp`,
-`--lr-mask-opaque`, `--lr-color-no-data`, and the private `--_lr-*` names. **Not in the layer at all:**
-`--lr-ramp-*` (tooling-only), the chart, graph and terminal palettes (per host, on the components that
-draw with them), the form-control ladder, and the per-element names `--lr-icon-button-size`,
-`--lr-radius-button` and `--lr-safe-area-*`. If you need one of these, ask for it to be added to the
-stable subset rather than reading it from the document.
+`--lr-safe-area-*`, `--lr-mask-opaque`, `--lr-color-no-data`), and the nine variant-following slots
+(`--lr-color-fill-loud` and friends), which mean "the variant _this_ element is set to" and are
+meaningless on `:root`. If you need one of these, ask for it to be added rather than reading it out
+of a component's shadow root.
 
 **Stability promise.** Every name in the table is public API from the release that introduced it: it
 will not be renamed or removed outside a major version, and its meaning will not change. Its _value_
 may change in a minor exactly as it may inside a component — a palette retune moves your elements
-and the kit's together, which is the point.
+and the kit's together, which is the point. Names absent from the file stay internal and may change
+in any release.
 
-**Modes follow the nearest mode scope.** The layer follows the OS preference at the root and accepts
-`.lr-light` / `.lr-dark`, `data-lr-theme` and `data-lr-mode` scopes, in every engine, with or without
-`theme.css`. When `theme.css` is installed its requested mode owns the switches. A mode-neutral
-scope keeps its ancestor's mode. Forced colours, increased contrast and reduced motion apply at every
-scope and again on every component host.
+**Modes follow the inherited style context.** Standalone `tokens-root.css` follows the OS at the
+root and accepts `.lr-light` / `.lr-dark`, `data-lr-theme` and `data-lr-mode` scopes. When `theme.css`
+is also installed, its requested mode owns the switches instead. Shared outputs re-resolve on style
+and contrast/motion preference boundaries; forced-colors and reduced-motion overrides use those
+same boundaries, including under a dark OS. Each output reads the local `--lr-theme-*` input before
+its built-in fallback. A preference-only boundary never overwrites inherited theme inputs.
 
-Public outputs sit in the `lr-theme` cascade layer (the fallback mode switches in `lr-base`), so any
-unlayered application rule beats them regardless of load order, and the file declares custom
-properties only — notably not `color-scheme` — so importing it paints nothing by itself.
-
-### Theme scopes
-
-A **theme scope** is an element that re-derives the whole token layer from the `--lr-theme-*` inputs
-and the mode it sees. The list is closed: `:root`; the mode scopes `.lr-light`, `.lr-dark` and
-`[data-lr-theme]` (any value); the style-axis boundaries `[data-lr-mode]`, `[data-lr-look]`,
-`[data-lr-accent]`, `[data-lr-density]`, `[data-lr-contrast]`, `[data-lr-motion]`; a look's scoped
-`.light` / `.dark` aliases; the design-token fixture scopes `.lr-token-light`, `.lr-token-dark`,
-`[data-lr-design-token-mode]`; and the mode-neutral marker **`data-lr-theme-scope`**.
+**One caveat, and it is the same shape as layer 2's rule everywhere else.** A `--lr-theme-*` input
+set on a mid-tree element retunes every `lr-*` component below it, because each component re-derives
+the resolved layer on its own `:host`. The document-scope copy cannot: it is substituted where it is
+declared, and what inherits past that point is the finished value. So if an application element
+carries a subtree override and expects its **own** descendants to follow, give that element a mode
+scope too — `data-lr-mode`, `data-lr-theme-scope`, or the compatibility `lr-light`/`lr-dark`
+classes — so the whole subset resolves again there:
 
 ```html
-<!-- Re-theme one region: mark it, then set inputs on it. -->
-<section data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: #7c3aed">
-  <lr-button variant="brand">Save</lr-button>
-</section>
-
-<!-- Mode scopes are already scopes; a marked region inside one keeps its mode. -->
-<aside class="lr-dark"><div data-lr-theme-scope style="--lr-theme-space-m: 1rem">…</div></aside>
-
-<!-- A single re-themed component. -->
-<lr-button data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: #7c3aed">Save</lr-button>
+<!-- Both the lr-* components and the app's own elements below follow the override. -->
+<section class="lr-light" style="--lr-theme-color-brand-fill-loud: #7c3aed">…</section>
 ```
 
-- **The marker follows HTML presence semantics:** `data-lr-theme-scope="false"` still marks. React
-  renders `data-*={false}` as `"false"`, so write `data-lr-theme-scope=""` (or omit the attribute);
-  the development build warns on the literal `"false"`.
-- **Nesting** works like inheritance: a scope re-derives from what it inherits plus what it sets, and
-  its descendants inherit the result until the next scope. A scope costs roughly what one component
-  cost before 27.0.0, so put inputs on a common ancestor rather than marking every row of a list.
-- **`applyLyraStyleScope()`** writes the marker whenever it writes inline inputs.
-- **Which inputs need a scope.** Only the `--lr-theme-*` inputs the layer consumes (listed in
-  `llms/tokens.md`). Inputs read on the host itself keep working on any element: the chart,
-  graph and terminal palettes, the form-control heights and radius, the icon-button size, the
-  button radius, scrollbar and progress-ring inputs.
-
-**Application shadow roots.** Custom properties inherit across shadow boundaries; selectors do not.
-A scope _inside_ your own component's shadow root therefore needs the layer adopted in that root.
-Lyra does that on demand: when a Lyra element connects inside an application shadow root and it is,
-or sits below, a scope in that root, the layer is appended to the root's `adoptedStyleSheets`.
-Library components' own shadow roots never receive it. Call
-`adoptLyraTokens(root)` (from `@aceshooting/lyra-ui/utilities/tokens.js`, or the package root) for a
-root whose scopes appear after its Lyra elements connected, a root that has scopes but no Lyra
-element yet, or an iframe that holds application elements only. Server-rendered application roots
-that contain scopes include `<link rel="stylesheet" href="…/tokens-root.css">`.
-
-```js
-// An application component whose shadow root holds scopes before any Lyra element connects in it.
-import { adoptLyraTokens } from "@aceshooting/lyra-ui/utilities/tokens.js";
-adoptLyraTokens(this.shadowRoot); // adoptLyraTokens(root: Document | ShadowRoot): void, idempotent
-```
-
-**Append, never replace.** Lyra appends its sheet to `document.adoptedStyleSheets` and to an
-application root's. An application that later assigns a new array wholesale removes it until the next
-Lyra element connects there; append to the existing array instead.
-
-**Layer order.** On a page with no Lyra stylesheet, the adopted sheet's layer statement is the last
-the browser sees, so Lyra's layers sort after yours. Declare Lyra's order first (import `theme.css`,
-or repeat `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;` before your own
-layers), or leave application overrides of `--lr-*` outputs unlayered.
-
-**Finding unscoped inputs.** `findUnscopedThemeInputs(root?)` (from
-`@aceshooting/lyra-ui/utilities/theme-scopes.js`; `findUnscopedThemeInputs(root?: Document |
-DocumentFragment | Element): Element[]`) returns, without logging, every element under `root`
-(through open shadow roots) whose inline style sets a layer-consumed input and that is not a scope. `lyra-ui-migrate --rule=theme-scopes`
-adds the marker in HTML, Lit and JSX templates and reports dynamic inputs and stylesheet rules;
-`lyra-ui-migrate --origin=lyra-v26` runs the same rule together with the other Lyra 27 moves (relocated
-locale and editor-data specifiers, `ToolStatus`) and reports removed localization keys.
+Public outputs sit in the `lr-theme` cascade layer, like `theme.css`, so any unlayered application rule
+beats it regardless of load order, and the file declares custom properties only — notably not
+`color-scheme` — so importing it paints nothing by itself. `--lr-focus-ring` and its three parts are
+also declared at document scope by `theme.css`; both spell the same chain, so importing both is a
+no-op either way round.
 
 ### The colour ramp and the semantic grid
 
@@ -1268,9 +1215,8 @@ These guarantees apply in both modes.
 rethemed without forking anything beneath it:
 
 ```css
-/* Both the grid slot and the flat alias below now resolve to this, for every component inside
-   the panel (mark the panel <div class="invoice-panel" data-lr-theme-scope>, or use :root). */
-.invoice-panel[data-lr-theme-scope] {
+/* Both the grid slot and the flat alias below now resolve to this. */
+.invoice-panel {
   --lr-theme-color-brand-fill-loud: #7c3aed;
 }
 ```
@@ -1491,26 +1437,25 @@ compatibility aliases above.
 
 ### Where an override actually reaches
 
-**Shared computed `--lr-*` outputs are resolved at theme scopes and inherited everywhere else.** That
-includes palette, spacing, radius, typography and motion outputs such as `--lr-color-brand`,
-`--lr-space-m` and `--lr-radius`. No component re-declares them on its host (since 27.0.0), so:
+**Shared computed `--lr-*` design-token outputs are declared on every `lr-*` element's `:host`.**
+That includes palette, spacing, radius, typography, and motion outputs such as
+`--lr-color-brand`, `--lr-space-m`, and `--lr-radius`. A value for one of those shared outputs set
+on an ancestor is re-declared — and lost — at the first `lr-*` element between that ancestor and
+the component you meant to style. It never reaches anything nested inside another component.
 
-- **A `--lr-theme-*` input** retunes everything below it **when it is set on a theme scope**. Set on a
-  plain wrapper, a component's inline style, or an application component's own `:host` rule, it no
-  longer re-derives the components below; add `data-lr-theme-scope` to that element.
-- **A `--lr-*` output** set on an ancestor now reaches every component below it, until the next theme
-  scope (which re-derives every output). The outputs _derived_ from it (`--lr-focus-ring` from
-  `--lr-focus-ring-color`, `--lr-color-brand` from `--lr-color-brand-fill-loud`,
-  `--lr-transition-interactive` from `--lr-transition-fast`) keep the scope's values unless the
-  element is itself a scope.
+**`--lr-theme-*` inputs are never redeclared inside a component's shadow styles.** `theme.css`
+supplies them on its root and light/dark mode selectors, so an application override inherits normally
+through every nested shadow root. **Setting a `--lr-theme-*` input on a wrapper element is the
+supported way to retheme one subtree.** Setting a `--lr-*` token there only works for that wrapper's
+direct children.
 
 ```css
-/* Reaches everything in the subtree, however deeply nested: the element is a theme scope. */
-.invoice-panel[data-lr-theme-scope] {
+/* Reaches everything in the subtree, however deeply nested. */
+.invoice-panel {
   --lr-theme-color-brand-fill-loud: #7c3aed;
 }
 
-/* An output reaches the subtree down to the next scope; its dependants do not follow it. */
+/* A shared computed output reaches direct lr-* children only — shadowed at the first nested host. */
 .invoice-panel {
   --lr-color-brand: #7c3aed;
 }
@@ -1533,9 +1478,8 @@ reliable way to theme a group of matching components:
 State and size selectors change only the private fallback. An inherited or direct public value
 continues to win in every state and size tier.
 
-**Diagnostic:** if a `--lr-theme-*` input has no effect on a nested component, check that the element
-carrying it is a theme scope (the development build warns once per page about an inline input on an
-element that is not, and `findUnscopedThemeInputs()` lists them). If a documented component-specific hook
+**Diagnostic:** if a shared design-token output has no effect on a nested component, check which
+layer you set before assuming the component is at fault. If a documented component-specific hook
 fails when inherited from a wrapper, that is a component bug; setting the same hook directly on
 every host should not be necessary.
 
@@ -1645,16 +1589,28 @@ consult it rather than guessing a token name.
 }
 ```
 
-Switch modes by putting `class="lr-light"`/`class="lr-dark"` (or `data-lr-theme="light"`/`"dark"`,
-or `data-lr-mode`) on any element, including a component itself; with `theme.css` imported it also
-sets `color-scheme`. **Every engine follows the nearest mode scope, with or without `theme.css`:** the
-document layer carries mode to every scope through two inherited private switches, so a `.lr-light`
-island inside a `.lr-dark` region is light, a mode-neutral scope keeps its ancestor's mode, and the
-OS preference decides the root unless the root carries an explicit mode. A real `--lr-theme-*` value
-still wins over the built-in light or dark default. (Before 27.0.0 an ancestor mode reached
-components without `theme.css` only in Chromium, through `:host-context()`.)
+With `theme.css` imported, switch modes by putting `class="lr-light"`/`class="lr-dark"` (or
+`data-lr-theme="light"`/`"dark"`) on any ancestor; it also sets `color-scheme`. Without it, the token
+layer still ships a `prefers-color-scheme: dark` fallback that re-points the hardcoded defaults at a
+dark palette. Two things switch that fallback off:
 
-Each component host also keeps `:host([hidden]) { display: none !important; }` and an inherited
+- **A real `--lr-theme-*` value**, which the fallback only substitutes for.
+- **`data-lr-theme="light"` on the component itself**, which pins light mode regardless of the OS.
+  Both layers honour it now: the palette layer always did, and the token layer — the hardcoded
+  surface/text/border defaults — does too, so `<lr-card data-lr-theme="light">` on a dark machine is
+  light throughout rather than light chrome over a dark colour grid. The mirror-image
+  `data-lr-theme="dark"` pins dark on a light machine the same way, and a `.lr-dark` /
+  `data-lr-theme="dark"` _ancestor_ is followed as well (through `:host-context()` where the engine
+  has it, and through `theme.css`'s inheriting custom properties everywhere else).
+
+Note the asymmetry: the _light_ pin is read on the component itself (`:host([data-lr-theme='light'])`),
+while a _dark_ ancestor is followed through `:host-context()`. Putting `data-lr-theme="light"` on
+`<html>` — what `setLyraStyle({ mode: 'light' })` does — pins the page through
+`theme.css`'s real `--lr-theme-*` values, which inherit into every shadow root. Without `theme.css`
+there are no such values to inherit, so put the attribute on the components you actually need
+pinned.
+
+The token layer also sets `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
 
 ### Style runtime — @aceshooting/lyra-ui/theme.js
@@ -1869,8 +1825,8 @@ uses a substring class selector, so a class such as `app-lr-flex-preview` does n
 assets repeat `@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides`; an ordinary unlayered
 application rule therefore beats them regardless of load order. A third opt-in asset,
 [`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss), is not a
-style sheet in the same sense — it declares custom properties only: the document token layer that
-the first connected Lyra element would otherwise adopt, available before any component connects.
+style sheet in the same sense — it declares custom properties only, and exists so your own
+components can read the resolved `--lr-*` tokens these two are written against.
 
 ### Utility class inventory
 
@@ -1952,8 +1908,7 @@ keeps that surface's text colour. Heading tracking reads `--lr-heading-letter-sp
 | Muted | `lr-text-sm lr-text-quiet`      |
 
 For an exact 0.875rem muted/small size, use a class of your own with the token chain (resolved
-`--lr-*` tokens exist at document scope once a Lyra element has connected or `tokens-root.css` is
-loaded; the chain covers the moment before):
+`--lr-*` tokens are undefined at document scope unless `tokens-root.css` is loaded):
 
 ```css
 .app-muted {
@@ -2666,23 +2621,6 @@ browser-bundle argument for excluding them does not apply to a server render. Us
 - `client-render`: the server emits the host's serializable attributes and light DOM with no shadow
   template; the component renders when its definition upgrades in the browser. Use this for initial
   renders that require light-DOM traversal, layout, canvas, observers, media, or other browser APIs.
-
-**Link the token layer in `<head>`.** Since 27.0.0 declarative shadow roots no longer carry the
-shared `--lr-*` layer (one server-rendered `lr-button` is about 34 KB smaller); the browser adopts it
-on the first connect, which for server-rendered markup is hydration. For a correct first paint
-before hydration, link the static copy after the no-flash bootstrap and with `theme.css`:
-
-```html
-<link rel="stylesheet" href="/node_modules/@aceshooting/lyra-ui/dist/theme.css" />
-<link rel="stylesheet" href="/node_modules/@aceshooting/lyra-ui/dist/styles/tokens-root.css" />
-```
-
-Hydration then skips the constructed copy. An application's **own** declarative shadow roots that
-contain theme scopes (for example a `.lr-dark` region or a `data-lr-theme-scope` wrapper) include the
-same `<link rel="stylesheet" href="…/tokens-root.css">` inside their template: document styles do not
-reach into a shadow root until hydration adopts the layer there. Without any link and without
-JavaScript, server-rendered components paint without resolved tokens, as a page without Lyra's styles
-always did.
 
 Server setup (the fallback must precede Lit's renderer):
 
@@ -4300,16 +4238,6 @@ These named interfaces and helper signatures are available to typed integrations
 - **`internal-canvas-color-contracts`** — Shared utility contracts.
   `resolveCanvasColor(/* public names: scope, color, fallback */): unknown`
   `resolveCanvasColors(/* public names: scope, colors, fallback */): unknown`
-
-- **`internal-document-tokens-contracts`** — Shared utility contracts.
-  `adoptLyraTokens(root: Document | ShadowRoot): void`
-  Adopts the document token layer into a document or shadow root. Idempotent; see "Application
-  shadow roots" in the styles and tokens guide for when a root needs it.
-
-- **`internal-theme-scopes-contracts`** — Shared utility contracts.
-  `findUnscopedThemeInputs(root?: Document | DocumentFragment | Element): Element[]`
-  Lists elements that set an inline `--lr-theme-*` input the layer consumes without being a theme
-  scope. Reads inline styles only and logs nothing.
 
 - **`internal-localization-runtime-contracts`** — Shared utility contracts.
   `getLyraLocaleDirection(/* public names: locale */): unknown`

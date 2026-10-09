@@ -138,7 +138,7 @@ it('shows the latest entry as a one-line ticker in the header while mode="live"'
 
 it('lets a live feed retheme only its own status dot', async () => {
   const wrapper = await fixture(html`
-    <div data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: rgb(4, 5, 6);">
+    <div style="--lr-theme-color-brand-fill-loud: rgb(4, 5, 6);">
       <lr-activity-feed mode="live" style="--lr-activity-feed-live-status-color: rgb(1, 2, 3);"></lr-activity-feed>
       <lr-activity-feed mode="live"></lr-activity-feed>
     </div>
@@ -1252,7 +1252,7 @@ describe('entry part styling reaches both rendering paths', () => {
   }
 
   async function feed(threshold: number, extraHostStyle = ''): Promise<LyraActivityFeed> {
-    const el = (await fixture(html`<lr-activity-feed data-lr-theme-scope
+    const el = (await fixture(html`<lr-activity-feed
       expanded
       with-timestamps
       virtualize-at=${threshold}
@@ -1763,7 +1763,7 @@ describe('card chrome theming hooks', () => {
 
   it('draws the card edge and divider on the decorative --lr-color-border-subtle tier', async () => {
     const el = (await fixture(html`
-      <lr-activity-feed data-lr-theme-scope
+      <lr-activity-feed
         expanded
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
         .entries=${makeEntries(1)}
@@ -1829,7 +1829,7 @@ describe('lr-activity-feed deprecated --lr-activity-feed-background alias', () =
 for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
   it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
     const el = await fixture<LyraActivityFeed>(html`
-      <lr-activity-feed data-lr-theme-scope expanded .entries=${makeEntries(3)} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-activity-feed>
+      <lr-activity-feed expanded .entries=${makeEntries(3)} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-activity-feed>
     `);
     for (const part of ['header', 'body']) {
       const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;

@@ -15,7 +15,6 @@ in [`results.md`](results.md).
 | C | Only the 56 literal-only properties move (the ramp and the mask constant). |
 | D | B, with the three host-local properties kept on the host (the first draft of the RFC). |
 | E | The proposal: D, plus the two inherited mode switches instead of per-route dark rules, the preference arms kept on every host with their derived outputs, the closed scope list (including `.light` and `.dark`), specialist palettes on the switches, and on-demand adoption into the shadow root of a host that is not a registered library component. |
-| I | The 27.0.0 implementation exactly as built (`--candidate <dist>`), compared with A taken from the published 26.0.0 tarball (`LYRA_BASELINE_DIST`). Release gate only. |
 
 The prototypes rewrite the built stylesheets; the implementation would generate the layer from
 `tokens/canonical-tokens.json`. The checkout is never written to.
@@ -52,12 +51,6 @@ The prototypes rewrite the built stylesheets; the implementation would generate 
 5. `node report.mjs out/results-<…>.json`, `node parity-e.mjs`, `node parity-modes.mjs`,
    `node structure.mjs a,e`, `node late-adopt.mjs`, `node probe-ssr.mjs e`, `node analyze-inputs.mjs`.
    `run-revised.sh` runs the proposal's sequence.
-
-**Release gate (27.0.0).** Unpack the published 26.0.0 tarball next to a built 27 checkout and run
-`LYRA_CHECKOUT=<checkout> LYRA_BASELINE_DIST=<unpacked>/package/dist node build.mjs --refresh --only a
---candidate <checkout>/packages/lyra-ui/dist`, then `run.mjs --variants a,i` for each scenario,
-`parity-e.mjs --variants a,i`, `parity-modes.mjs --variants a,i` and `late-adopt.mjs --variants a,i`
-with and without `--link`. Each variant loads its own `theme.css`.
 
 Measure on an otherwise idle machine. The runs in `results.md` were not: each records its load
 average, and single-digit percentage differences are noise unless the interquartile ranges separate.

@@ -8,7 +8,7 @@ const NO_MOTION = '--show-duration: 0ms; --hide-duration: 0ms; --lr-transition-f
 
 async function mount(topLayer: boolean) {
   const { wrapper, sibling } = await headerFixture(html`<lr-tooltip
-    data-lr-theme-scope style=${NO_MOTION}
+    style=${NO_MOTION}
     placement="bottom"
     manual
     ?top-layer=${topLayer}

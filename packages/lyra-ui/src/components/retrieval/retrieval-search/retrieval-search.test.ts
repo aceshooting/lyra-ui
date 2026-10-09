@@ -1105,7 +1105,7 @@ describe('320px allocation', () => {
 describe('hover and pressed treatment', () => {
   it('keeps a visible hover affordance when the submit action becomes Cancel', async () => {
     const el = await fixture<LyraRetrievalSearch>(html`
-      <lr-retrieval-search data-lr-theme-scope
+      <lr-retrieval-search
         loading
         style="--lr-transition-fast: 0ms"
       ></lr-retrieval-search>

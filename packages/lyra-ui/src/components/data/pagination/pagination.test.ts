@@ -2632,7 +2632,7 @@ describe("lr-pagination activation event", () => {
 describe("lr-pagination current page under the pointer", () => {
   it("keeps the themed current background and border when hovered and pressed", async () => {
     const el = (await fixture(html`
-      <lr-pagination data-lr-theme-scope
+      <lr-pagination
         total="95"
         page-size="10"
         page="2"

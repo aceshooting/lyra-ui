@@ -2389,7 +2389,6 @@ test('CLI argument parsing includes check mode, dry-run, and a stable report tar
     lyraVersion: null,
     origin: 'lyra-v21',
     report: 'out/report.json',
-    rule: null,
     targets: ['src'],
   });
   assert.throws(() => parseArgs(['--origin=lyra-v6', 'src']), /Unknown migration origin/);

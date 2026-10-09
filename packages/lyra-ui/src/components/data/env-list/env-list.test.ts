@@ -424,7 +424,7 @@ describe('lr-env-list', () => {
 
   it('fully resets native button foreground and chrome for an explicit dark theme', async () => {
     const el = await fixture<LyraEnvList>(html`
-      <lr-env-list data-lr-theme-scope
+      <lr-env-list
         style="color-scheme:dark; --lr-color-text:rgb(240, 241, 242); --lr-color-border:rgb(80, 81, 82)"
         .entries=${[{ name: 'A', value: 'one' }]}
       ></lr-env-list>
@@ -533,7 +533,7 @@ it('keeps a hover tint on a revealed toggle, not only on the hidden ones', async
 
 it('reads its reveal/copy button border widths from --lr-border-width-thin, not the generic --lr-size-1px scale (regression: theming purpose)', async () => {
   const el = (await fixture(html`
-    <lr-env-list data-lr-theme-scope
+    <lr-env-list
       .entries=${[{ name: 'API_KEY', value: 'secret1', secret: true }]}
       style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;"
     ></lr-env-list>
@@ -582,7 +582,7 @@ it('names the reveal toggle by its action and carries no pressed state', async (
 });
 
 it('deepens a masked reveal button while it is pressed', async () => {
-  const el = await fixture<LyraEnvList>(html`<lr-env-list data-lr-theme-scope style="--lr-transition-fast: 0s" .entries=${[{ name: 'API_KEY', value: 'secret', secret: true }]}></lr-env-list>`);
+  const el = await fixture<LyraEnvList>(html`<lr-env-list style="--lr-transition-fast: 0s" .entries=${[{ name: 'API_KEY', value: 'secret', secret: true }]}></lr-env-list>`);
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="reveal-button"]')!;
   const rect = button.getBoundingClientRect();
   try {

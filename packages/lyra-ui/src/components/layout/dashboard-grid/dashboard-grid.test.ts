@@ -3631,7 +3631,7 @@ describe("collision preview must not erase the focus indicator", () => {
 
 it('reads the collision outline width from --lr-border-width-medium, not the generic --lr-size-2px scale (regression: theming purpose)', async () => {
   const el = (await fixture(html`
-    <lr-dashboard-grid data-lr-theme-scope
+    <lr-dashboard-grid
       style="--lr-theme-border-width-medium: 12px; --lr-theme-size-2px: 22px;"
     ></lr-dashboard-grid>
   `)) as LyraDashboardGrid;

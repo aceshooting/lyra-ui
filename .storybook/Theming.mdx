@@ -87,11 +87,8 @@ So the full chain for one colour is: your `--lr-theme-*` input, else the grid sl
 step. To move one slot, set its input — the grid slot and every flat alias above it follow:
 
 ```css
-.invoice-panel[data-lr-theme-scope] { --lr-theme-color-brand-fill-loud: #7c3aed; }
+.invoice-panel { --lr-theme-color-brand-fill-loud: #7c3aed; }
 ```
-
-The element carrying the input must be a theme scope (here, marked with `data-lr-theme-scope`); see
-*Where an override actually reaches* below.
 
 The ramp itself has **no** `--lr-theme-*` hook, and each step is declared on every `lr-*` element's
 own `:host` — so a ramp override written at `:root` is shadowed at the first component it meets and
@@ -242,37 +239,31 @@ Try it in the `Look` toolbar menu on any story, or compare both looks side by si
 
 ## Where an override actually reaches
 
-**The shared `--lr-*` layer is declared once per document** (since 27.0.0) and re-derived only at
-**theme scopes**: `:root`, the mode scopes (`.lr-light`, `.lr-dark`, `[data-lr-theme]`), the
-style-axis boundaries, the design-token fixture scopes and any element marked `data-lr-theme-scope`.
-Components inherit it; they no longer re-declare it on their own host.
+**A `--lr-*` token is declared on every `lr-*` element's `:host`.** So a `--lr-*` value you set on
+an ancestor is re-declared — and lost — at the first `lr-*` element between that ancestor and the
+component you meant to style. It never reaches anything nested inside another component.
 
-- A **`--lr-theme-*` input** re-derives everything below it **when it is set on a theme scope**. On a
-  plain wrapper it no longer reaches the components; mark the wrapper.
-- A **`--lr-*` output** set on an ancestor reaches every component below it until the next scope;
-  the outputs derived from it follow only on a scope.
+**`--lr-theme-*` inputs are never redeclared inside a component's shadow styles.** `theme.css`
+supplies them on its root and light/dark mode selectors, so an application override inherits normally
+through every nested shadow root. **Setting a `--lr-theme-*` input on a wrapper element is the
+supported way to retheme one subtree.**
 
 ```css
 /* Reaches everything in the subtree, however deeply nested. */
-.invoice-panel[data-lr-theme-scope] { --lr-theme-color-brand-fill-loud: #7c3aed; }
+.invoice-panel { --lr-theme-color-brand-fill-loud: #7c3aed; }
 
-/* An output reaches the subtree down to the next scope; its dependants do not follow it. */
+/* Reaches direct lr-* children only — shadowed at the first nested lr-* host. */
 .invoice-panel { --lr-color-brand: #7c3aed; }
 ```
-
-The **Theming/Theme scopes** stories show nested scopes, a scoped override next to an unscoped one,
-and an application shadow root. Scopes inside your own shadow roots need the layer adopted there:
-Lyra does it on demand when a Lyra element connects under a scope, and `adoptLyraTokens(root)` covers
-scopes that appear first. Append to `adoptedStyleSheets`, never replace it.
 
 Layer 3 is the exception that proves the rule: a handful of `--lr-<component>-*` escape hatches are
 deliberately left **undeclared** by their component and read only through a `var()` fallback at the
 point of use, precisely so a value set on an ancestor is not shadowed. Each one says so on its own
 component page; assume shadowing for anything that doesn't.
 
-**Diagnostic.** If an input has no effect on a nested component, check that the element carrying it is
-a theme scope; the development build warns once per page, and `findUnscopedThemeInputs()` lists the
-elements. And note that a dead
+**Diagnostic.** If an override has no effect on a nested component, check which layer you set before
+assuming the component is at fault. An override that works on a standalone control and stops working
+once you nest that control inside another component is this rule, not a bug. And note that a dead
 `--lr-*` declaration is byte-identical to a working one in the stylesheet — nothing reports it —
 so verify with `getComputedStyle` on the real element, and perturb the value deliberately to confirm
 the check actually bites.

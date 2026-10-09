@@ -167,41 +167,22 @@ The token rules are under "Design tokens only" in [coding-conventions.md](coding
 Token-driven spacing and sizing hardcode no text direction or font width, so longer or shorter
 translations and mirrored RTL layouts reflow without component-specific overrides.
 
-### The document token layer — one route into dark mode, resolved at theme scopes
+### The dark palette has three parallel routes — keep all of them in sync
 
-Since 27.0.0 (RFC 0002) components do not declare the shared `--lr-*` outputs on their own `:host`.
-`src/internal/document-tokens.generated.ts` (generated from `tokens/canonical-tokens.json` by
-`scripts/generate-design-tokens.mjs`, the same text as `src/styles/tokens-root.css`) declares them
-once per document on `:root` and re-derives them at the closed list of theme scopes. Mode reaches
-every scope through two inherited private switches (`--_lr-dark-on` / `--_lr-light-on`): each
-mode-dependent output is one declaration, `var(--_lr-dark-on, <light>)var(--_lr-light-on, <dark>)`,
-so there is exactly one route into dark mode and it behaves identically in Chromium, Firefox and
-WebKit. The former three per-host routes (`:host([data-lr-theme='dark'])`, `:host-context()`, the
-OS media rule) and their cross-engine trap are gone.
+`src/internal/tokens/palette.styles.ts` declares each dark-mode value **three times**, once per
+activation route: `:host([data-lr-theme='dark'])`, a `:host(...):host-context([data-lr-theme='dark'])`
+pair, and `@media (prefers-color-scheme: dark)`. They carry identical values today, and they must
+stay that way.
 
-Rules when you touch tokens:
+The trap is that **`:host-context(X)` matches when the host *itself* matches `X`**, not only when an
+ancestor does. So for `<lr-badge data-lr-theme="dark">` in Chromium the winning declaration is the
+`:host-context` block — later in the sheet *and* more specific — not the plain attribute block.
+Firefox and WebKit do not implement `:host-context()` at all, so there the attribute block governs.
 
-- **Edit the canonical data, then regenerate.** `tokens.styles.ts`, `tokens/palette.styles.ts` and
-  `specialist-tokens.styles.ts` remain the per-mode *records* the palette, chart, terminal, contrast
-  and style-axes tooling read and write, and `verifyRuntimeTokenParity()` /
-  `verifyRecordPartition()` keep them equal to canonical data, but no component adopts them. The
-  runtime is the generated module: `LyraElement.styles` is `host-tokens.styles.ts` (host-local
-  names plus the preference arms) and the 12 specialist consumers adopt
-  `specialist-host-tokens.styles.ts`.
-- **Never declare a layer name in a component sheet.** `check:host-token-declarations` (CSS-parser
-  based) fails it, apart from the host-local set, the generated preference arms and the listed glass
-  re-derivation names. A layer output that reads a component-local token (as `--lr-radius-button`
-  reads `--lr-form-control-radius`) must be host-local; the generator's reference guard says so.
-- **Every media-conditioned output arm is emitted both ways**: at the scopes (for application
-  elements) and on every host (so an unlayered application override cannot defeat forced colours,
-  increased contrast or reduced motion inside a component). The generator computes each host arm's
-  derived set from the dependency graph; do not hand-write one.
-- **A `--lr-theme-*` input the layer consumes only re-derives on a theme scope.** Test fixtures that
-  set one inline must mark the element (`pnpm run theme-scopes` does it; `check:theme-scopes`
-  enforces it). Dynamic `style.setProperty()` inputs in tests need a hand-written
-  `setAttribute('data-lr-theme-scope', '')`.
-- **Dark-mode tests run in every engine now.** Use `setColorScheme()` from `test/wtr-media.ts` for the
-  OS route; an ancestor `.lr-dark` route no longer needs a Chromium-only skip.
+Consequence: **a defect introduced into only one of the two blocks is invisible in one engine.**
+A literal injected into just one block leaves tests green in the other engine. When you touch that file, change every route, and when
+you write a dark-mode regression test remember that passing locally on one engine proves less than
+it looks. `check:palette-freshness` covers generation, not cross-route agreement.
 
 A related reading aid: the quiet-tier chain is *fully* token-driven end to end
 (`badge.styles.ts` → `--lr-color-fill-quiet` → `internal/variants.styles.ts` →

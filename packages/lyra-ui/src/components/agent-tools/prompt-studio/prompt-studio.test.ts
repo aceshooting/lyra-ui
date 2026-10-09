@@ -412,7 +412,7 @@ it('renders light and dark native option palettes, resets select appearance, and
 
 it('paints hover and active feedback on toolbar and direct action buttons', async () => {
   const el = await fixture<LyraPromptStudio>(html`
-    <lr-prompt-studio data-lr-theme-scope
+    <lr-prompt-studio
       style="--lr-color-surface: rgb(10, 20, 30); --lr-color-surface-raised: rgb(40, 50, 60); --lr-color-mix-partner: rgb(100, 110, 120); --lr-color-mix-active: 50%;"
       .messages=${messages}
     ></lr-prompt-studio>
@@ -530,7 +530,7 @@ it('uses a visibly distinct selected-version hover fallback in light and dark th
 
 it('retains the explicit selected-version hover background override', async () => {
   const el = (await fixture(html`
-    <lr-prompt-studio data-lr-theme-scope
+    <lr-prompt-studio
       style="--lr-transition-fast: 0s; --lr-prompt-studio-version-selected-hover-bg: rgb(1, 2, 3)"
       selected-version-id="v1"
       .versions=${versions}
@@ -760,7 +760,7 @@ it('tolerates a message with `content: null` without blanking the rest of the pa
 // themed selected fill vanished under the pointer. Both now start from the selected fill.
 it('mixes the selected version hover and press from --lr-prompt-studio-version-selected-bg', async () => {
   const el = (await fixture(html`
-    <lr-prompt-studio data-lr-theme-scope
+    <lr-prompt-studio
       style="--lr-transition-fast: 0s; --lr-prompt-studio-version-selected-bg: rgb(200, 0, 0)"
       selected-version-id="v1"
       .versions=${versions}

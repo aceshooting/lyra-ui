@@ -325,7 +325,7 @@ describe('horizontal scroll tab stop', () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div>
         <button id="before">before</button>
-        <lr-timeline data-lr-theme-scope
+        <lr-timeline
           orientation="horizontal"
           aria-label="Deployment history"
           style="display: block; max-inline-size: 90px; --lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 4px"
@@ -490,7 +490,7 @@ it('keeps the edge fade opaque when a consumer themes the shadow color transluce
   // documented consumer theming input. A mask reads alpha only, so a translucent shadow theme
   // dropped mask alpha across the whole strip rather than just its edges.
   const el = (await fixture(html`
-    <lr-timeline data-lr-theme-scope
+    <lr-timeline
       orientation="horizontal"
       style="display: block; max-inline-size: 90px; --lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
     >

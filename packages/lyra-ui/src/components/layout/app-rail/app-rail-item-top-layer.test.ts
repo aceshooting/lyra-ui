@@ -5,7 +5,7 @@ import './app-rail.js';
 
 async function mount(topLayer: boolean) {
   const { wrapper, sibling } = await headerFixture(
-    html`<lr-app-rail-item data-lr-theme-scope
+    html`<lr-app-rail-item
       icon-only
       tooltip
       ?top-layer=${topLayer}
@@ -59,7 +59,7 @@ describe('top-layer on lr-app-rail-item', () => {
   it('is forwarded by <lr-app-rail top-layer> without overwriting the item', async () => {
     const { wrapper, sibling } = await headerFixture(
       html`<lr-app-rail top-layer mode="icon-only" force-mode="icon-only"
-        ><lr-app-rail-item data-lr-theme-scope tooltip style="--lr-transition-fast: 0ms"
+        ><lr-app-rail-item tooltip style="--lr-transition-fast: 0ms"
           ><span slot="icon">D</span>Dashboard</lr-app-rail-item
         ></lr-app-rail
       >`,

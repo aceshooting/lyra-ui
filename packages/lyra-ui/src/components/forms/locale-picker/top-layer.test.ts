@@ -12,7 +12,7 @@ const NO_MOTION = '--lr-transition-fast: 0ms';
 
 async function mount(topLayer: boolean) {
   const { wrapper, sibling } = await headerFixture(html`<lr-locale-picker
-    data-lr-theme-scope style=${NO_MOTION}
+    style=${NO_MOTION}
     ?top-layer=${topLayer}
     value="en"
     without-flags

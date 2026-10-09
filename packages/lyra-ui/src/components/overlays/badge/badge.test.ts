@@ -279,7 +279,7 @@ describe('appearance', () => {
   });
 
   it('draws the neutral edge in the subtle border tier, not the control-grade border', async () => {
-    const el = (await fixture(html`<lr-badge data-lr-theme-scope
+    const el = (await fixture(html`<lr-badge
       style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9);"
     >Neutral</lr-badge>`)) as LyraBadge;
     expect(getComputedStyle(base(el)).borderTopColor).to.equal('rgb(1, 2, 3)');

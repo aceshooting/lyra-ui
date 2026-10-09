@@ -1761,7 +1761,7 @@ describe("gutter line-button hover specificity", () => {
     document.head.appendChild(style);
     try {
       const el = (await fixture(
-        html`<lr-code-block data-lr-theme-scope
+        html`<lr-code-block
           style="--lr-transition-fast: 0s"
           code=${"a\nb"}
           line-numbers
@@ -1942,7 +1942,7 @@ describe("highlighted-line background color (--lr-code-block-highlighted-line-bg
 describe("shiki dark-theme signal", () => {
   it('marks part="body" as dark-theme once the resolved --lr-color-text is lighter than --lr-color-surface', async () => {
     const wrapper = (await fixture(html`
-      <div data-lr-theme-scope
+      <div
         style="--lr-theme-color-text-normal:#f2f2f2; --lr-theme-color-surface-default:#1a1a1a;"
       >
         <lr-code-block></lr-code-block>
@@ -1956,7 +1956,7 @@ describe("shiki dark-theme signal", () => {
 
   it("keeps line-number gutters at the quiet text color under a dark theme", async () => {
     const wrapper = (await fixture(html`
-      <div data-lr-theme-scope
+      <div
         style="--lr-theme-color-text-normal:rgb(242, 242, 242); --lr-theme-color-text-quiet:rgb(140, 140, 140); --lr-theme-color-surface-default:rgb(26, 26, 26);"
       >
         <lr-code-block line-numbers .code=${"first\nsecond"}></lr-code-block>
@@ -1987,7 +1987,7 @@ describe("shiki dark-theme signal", () => {
 
   it("resolves contextual currentColor and modern syntax in the component context", async () => {
     const wrapper = (await fixture(html`
-      <div data-lr-theme-scope
+      <div
         style="color:#f2f2f2; --lr-theme-color-text-normal:currentColor; --lr-theme-color-surface-default:oklch(12% 0 0);"
       >
         <lr-code-block></lr-code-block>
@@ -2004,7 +2004,7 @@ describe("shiki dark-theme signal", () => {
 
   it("refreshes the dark-theme signal after a live CSSOM token mutation", async () => {
     const wrapper = (await fixture(html`
-      <div data-lr-theme-scope
+      <div
         style="--lr-theme-color-text-normal:#202020; --lr-theme-color-surface-default:#f8f8f8;"
       >
         <lr-code-block></lr-code-block>
@@ -2013,7 +2013,6 @@ describe("shiki dark-theme signal", () => {
     const el = wrapper.querySelector("lr-code-block") as LyraCodeBlock;
     const body = el.shadowRoot!.querySelector('[part="body"]')!;
     expect(body.hasAttribute("data-dark-theme")).to.be.false;
-    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty("--lr-theme-color-text-normal", "#f2f2f2");
     wrapper.style.setProperty("--lr-theme-color-surface-default", "#1a1a1a");
     await waitUntil(() => body.getAttribute("data-dark-theme") === "true");
@@ -2042,7 +2041,7 @@ describe("shiki dark-theme signal", () => {
       wrapperStyle: string
     ): Promise<{ span: HTMLElement; body: Element }> {
       const wrapper = (await fixture(html`
-        <div data-lr-theme-scope style=${wrapperStyle}>
+        <div style=${wrapperStyle}>
           <lr-code-block
             language="javascript"
             .code=${jsSample}
@@ -2215,7 +2214,7 @@ describe("gutter line-button pointer feedback", () => {
 
   async function gutterFixture(): Promise<LyraCodeBlock> {
     const el = (await fixture(
-      html`<lr-code-block data-lr-theme-scope
+      html`<lr-code-block
         style="--lr-transition-fast: 0s"
         code=${"a\nb"}
         line-numbers
@@ -2444,7 +2443,7 @@ describe("lr-code-block under a right-to-left document", () => {
 for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3px']]) {
   it(`keeps the clipped focus ring inward with authored offset ${offset}`, async () => {
     const el = await fixture<LyraCodeBlock>(html`
-      <lr-code-block data-lr-theme-scope .code=${'const synthetic = 1;'} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-code-block>
+      <lr-code-block .code=${'const synthetic = 1;'} style=${`--lr-focus-ring-width: 3px; --lr-focus-ring-offset: ${offset}`}></lr-code-block>
     `);
     for (const part of ['body']) {
       const target = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;

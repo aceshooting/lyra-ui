@@ -590,7 +590,7 @@ describe('lr-commit-card', () => {
 
   it('paints rendered hover feedback on files-toggle, file, and copy-button', async () => {
     const el = await fixture<LyraCommitCard>(html`
-      <lr-commit-card data-lr-theme-scope
+      <lr-commit-card
         hash="abcdef1"
         files-expanded="true"
         style="--lr-color-brand-quiet: rgb(1, 2, 3); --lr-transition-fast: 0s; --lr-transition-interactive: none"
@@ -684,7 +684,7 @@ describe('lr-commit-card', () => {
 
 it('reads its border widths from --lr-border-width-thin, not the generic --lr-size-1px scale (regression: theming purpose)', async () => {
   const el = (await fixture(html`
-    <lr-commit-card data-lr-theme-scope
+    <lr-commit-card
       hash="abcdef1"
       style="--lr-theme-border-width-thin: 11px; --lr-theme-size-1px: 21px;"
     ></lr-commit-card>
@@ -749,7 +749,7 @@ describe('card chrome theming hooks', () => {
 
   it('draws the card edge on the subtle tier while the copy button keeps the control border', async () => {
     const el = (await fixture(html`
-      <lr-commit-card data-lr-theme-scope
+      <lr-commit-card
         hash="abcdef1"
         style="--lr-theme-color-surface-border: rgb(10, 20, 30); --lr-theme-color-surface-border-subtle: rgb(7, 8, 9)"
       ></lr-commit-card>
@@ -816,7 +816,7 @@ it('lets a host veto the file-list toggle through lr-toggle-request', async () =
 
 it('paints its file rows, copy button and per-file counts from theme tokens', async () => {
   const el = (await fixture(html`
-    <lr-commit-card data-lr-theme-scope
+    <lr-commit-card
       style="--lr-color-text: rgb(1, 2, 3); --lr-color-success: rgb(4, 5, 6); --lr-color-danger: rgb(7, 8, 9)"
       hash="abcdef1234567"
       .files=${[{ path: 'a.ts', additions: 1, deletions: 2 }]}

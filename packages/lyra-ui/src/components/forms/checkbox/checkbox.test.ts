@@ -1769,7 +1769,7 @@ describe("lr-checkbox hover and press feedback", () => {
     // treatment is a ring rather than a tint -- asserted on the rendered box, since a stylesheet
     // match cannot tell a ring that paints from one behind a selector that never matches.
     const el = (await fixture(
-      html`<lr-checkbox data-lr-theme-scope style="--lr-transition-fast: 0s">Terms</lr-checkbox>`
+      html`<lr-checkbox style="--lr-transition-fast: 0s">Terms</lr-checkbox>`
     )) as LyraCheckbox;
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
@@ -1811,7 +1811,7 @@ describe("lr-checkbox hover and press feedback", () => {
 
   it("lets a consumer retint hover, press, and invalid paint independently", async () => {
     const el = (await fixture(html`
-      <lr-checkbox data-lr-theme-scope
+      <lr-checkbox
         style="--lr-transition-fast: 0s; --lr-checkbox-hover-border: rgb(1, 2, 3); --lr-checkbox-active-border: rgb(4, 5, 6); --lr-checkbox-active-ring: rgb(7, 8, 9);"
         >Terms</lr-checkbox
       >
@@ -2321,7 +2321,7 @@ describe("lr-checkbox checked border under the pointer", () => {
   for (const state of ["checked", "indeterminate"] as const) {
     it(`keeps --lr-checkbox-checked-border while ${state} and hovered or pressed`, async () => {
       const el = (await fixture(html`
-        <lr-checkbox data-lr-theme-scope
+        <lr-checkbox
           ?checked=${state === "checked"}
           ?indeterminate=${state === "indeterminate"}
           style="--lr-transition-fast: 0s; --lr-checkbox-checked-border: rgb(10, 20, 30);"
@@ -2353,7 +2353,7 @@ describe("lr-checkbox checked border under the pointer", () => {
 
   it("still lets an explicit hover hook win while checked", async () => {
     const el = (await fixture(html`
-      <lr-checkbox data-lr-theme-scope
+      <lr-checkbox
         checked
         style="--lr-transition-fast: 0s; --lr-checkbox-checked-border: rgb(10, 20, 30); --lr-checkbox-hover-border: rgb(1, 2, 3);"
         >Terms</lr-checkbox

@@ -1,7 +1,6 @@
 # RFC 0002: Declare design tokens once per document
 
-- **Status:** Accepted — implemented for 27.0.0; the status moves to Implemented once the
-  performance release gate (see [Delivery](#delivery-2700)) passes on the idle build host.
+- **Status:** Accepted (deferred to 28.0.0 after the 27 perf gate)
 - **Decision:** Accepted by the maintainer on 2026-09-27, with the 22.0 switch still conditional on
   the performance release gate; the unresolved questions not marked closed stay open, and closed
   question 3's removal of bare `.light`/`.dark` follows the fixed stylesheet's removal release
@@ -698,12 +697,13 @@ it.
 
 Numbers are stable, because RFC 0001 cites them; closed questions keep their place.
 
-1. **Closed (27.0.0): marker name.** A dedicated `data-lr-theme-scope`, the name 21.x already
-   recognised in `theme.css` and `tokens-root.css` and that `applyLyraStyleScope()` writes.
-2. **Closed (27.0.0): adoption into application roots.** On demand, as proposed, with no opt-out:
-   Lyra only ever appends, and `adoptLyraTokens()` covers scopes that appear later. The check also
-   walks up through enclosing application roots, so an application host that is itself a marked
-   scope inside another application root gets the layer in that outer root too.
+1. **Marker name.** A dedicated `data-lr-theme-scope`, an empty `data-lr-theme`, or a class such as
+   `lr-theme-scope`. RFC 0001's axis attributes may make a dedicated marker rarely necessary.
+2. **Adoption into application roots.** On demand (proposed) misses a scope added to a root after
+   its Lyra elements connected, until the application calls `adoptLyraTokens()`; adopting into every
+   root costs Chromium and WebKit measurably (Run 10); explicit-only adoption silently breaks
+   `data-lr-theme="dark"` on a Lyra host inside an application root. Is on demand the right default,
+   and does it need an opt-out, given that it appends to an application-owned array?
 3. **Closed: nested `.light` and `.dark` under the fixed shadcn stylesheet.** Bare `.light` and
    `.dark` remain mode-neutral scopes while the fixed stylesheet is supported, through at least v23,
    and leave with that stylesheet no earlier than v24; RFC 0001 scopes
@@ -711,75 +711,24 @@ Numbers are stable, because RFC 0001 cites them; closed questions keep their pla
 4. **Closed: composite components re-declaring shared outputs.** None do: every textual match is
    comment prose, and no parsed component sheet declares a layer name. The parser-based gate keeps
    it that way.
-5. **Closed (27.0.0): diagnostic depth.** No computed-style sampling. The development build walks
-   inline styles only, and each warning is issued once per page under a fixed key
-   (`lyra-theme-scope:unscoped-input`, `:false-marker`, `:layer-missing`, `:foreign-layer`) so the
-   strict-console test lanes can seed a deliberate case; `findUnscopedThemeInputs()` and the
-   `theme-scopes` migration report cover the rest.
-6. **Closed (27.0.0): two copies.** The layer declares a content hash as its sentinel value. A
-   document that already resolves the same hash (a linked `tokens-root.css`, or another copy of the
-   same release) keeps that copy; a different hash means a different layer, so the adopting copy
-   appends its own (the later-adopted layer wins, as change 9 states) and the development build
-   warns.
+5. **Diagnostic depth.** Should the development build also sample computed styles to catch
+   stylesheet-applied inputs, and on how many elements?
+6. **Two copies.** Accept "later-adopted layer wins", or version the sheet and warn when two differ?
 7. **Closed: layer placement.** The layer stays in `lr-theme` (RFC 0001).
-8. **Closed (27.0.0): stable names.** The subset does not grow. The generator's list now also names
-   `--lr-transition-interactive`, which the guide had already documented as stable.
-9. **Closed (27.0.0): specialist palettes.** Kept per host (alternative 10), on the mode switches.
+8. **Stable names.** Should the stable subset documented for `tokens-root.css` grow, now that every
+   output is visible on `:root`?
+9. **Specialist palettes.** Move them into the layer in 22.x, or keep them per host?
 10. **Pending human evidence.** Windows High Contrast review; a run on representative mobile
     hardware; scrolling and animation on pages with many scopes.
 11. **Per-family scopes.** Each scope re-derives all 290 outputs. The generator could have each axis
     attribute re-derive only the outputs that depend on the inputs that axis sets (density only the
     spacing family, mode only the 55 paired outputs and their dependants), keeping the full set for
     the neutral marker. This is the main lever if the scope regressions hold.
-12. **Closed (27.0.0): server-rendered application roots.** No server helper emits the layer: the
-    package has no response-level SSR helper to extend, and a per-response inline copy would defeat
-    caching of the static file. Pages link `tokens-root.css` in `<head>` and inside application
-    declarative shadow roots that contain scopes; change 4 stays breaking and is documented.
+12. **Server-rendered application roots.** Should the server helper emit the layer once per
+    response, and a `tokens-root.css` link inside application declarative shadow roots, making
+    change 4 non-breaking?
 13. **Accepting a measured regression.** If the release gate confirms a regression with scopes on an
     idle machine and per-family scopes do not remove it, ship with the documented cost or defer?
-
-## Delivery (27.0.0)
-
-The design ships in 27.0.0, against a codebase that had moved on since the spike (v21). Where the
-code had changed, the implementation follows this RFC's intent:
-
-- **Generated from canonical data.** `scripts/document-token-layer.mjs` builds the layer from the
-  projected `tokens/canonical-tokens.json`; `generate-design-tokens.mjs` writes
-  `src/internal/document-tokens.generated.ts` and `src/styles/tokens-root.css` (byte-identical
-  body). The per-mode files `tokens.styles.ts`, `tokens/palette.styles.ts` and
-  `specialist-tokens.styles.ts` stay as the records the palette, contrast and style-axes tooling read
-  and write, partition-checked against the layer; no component adopts them.
-- **Scope list.** The fixed `themes/shadcn.css` was removed in v24, so bare `.light`/`.dark` are no
-  longer scopes; a look's scoped aliases are, as `:where([data-lr-look]) :is(.light, .dark)`. The
-  RFC 0001 axes `[data-lr-contrast]` and `[data-lr-motion]` are scopes. `[data-lr-surface]` is not:
-  it sets no input the layer consumes, and `check-host-token-declarations` proves every shipped rule
-  that sets a consumed input uses a scope selector.
-- **Host remainder.** Besides the RFC's three host-local names, `--lr-radius-button` stays per host:
-  it reads the component-local `--lr-form-control-radius`, and the generator's reference guard fails
-  any layer output that reads a host-declared token. An increased-contrast arm (added after the spike)
-  is emitted both ways like forced colours and reduced motion; each host arm carries its
-  dependency-graph closure.
-- **Glass.** The glass material (added after the spike) qualifies text, borders and the focus ring on
-  the painted surface. Surfaces already re-derived text and borders locally; glass hosts now also
-  restate the focus-ring pair, and opaque interiors restore the unqualified borders.
-- **Mode.** The fallback switches live in `lr-base`, below `theme.css`'s `lr-theme-preset.mode`.
-  `theme.css`, the look aliases and `LOOK_MODE_RESOLVER` stop declaring the focus-ring composite
-  (change 11).
-- **Migration.** The `theme-scopes` rule ships as `lyra-ui-migrate --rule=theme-scopes`, not under
-  `--origin=lyra-v21` (the 21-to-22 profile), because the layer arrives in 27. It also marks inline
-  outputs that other outputs derive from (`--lr-transition-fast`), where marking restores the v26
-  result (change 2). The repository's own tests and stories are migrated by the same rule
-  (`pnpm run theme-scopes`, enforced by `check:theme-scopes`).
-- **Gates.** `check:host-token-declarations` (CSS-structure parser; shipped stylesheets in
-  contract-policy, built shadow sheets after the build), `check-ssr-tokens.mjs` in `test:ssr` (no
-  layer in any declarative shadow root, a JavaScript-disabled paint with `tokens-root.css` linked),
-  `document-token-layer.test.mjs` (byte identity, both-ways arms, input split), and the browser
-  suites `document-tokens.test.ts` and `document-token-parity.test.ts` (every registered component
-  inherits its scope's tokens in each page mode).
-- **Release gate.** The spike harness in [`0002-evidence/`](0002-evidence/) gained a baseline
-  variant from the published 26.0.0 tarball (`LYRA_BASELINE_DIST`) and an implementation variant
-  `i` (`--candidate`); results are recorded in the release notes before this RFC is marked
-  Implemented. Open questions 10, 11 and 13 stay open until then.
 
 ## Appendix A: evidence summary
 

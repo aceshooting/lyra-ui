@@ -12,7 +12,7 @@ function base(el: LyraCard): HTMLElement {
 
 it('uses an optional inherited container radius while preserving local card radius overrides', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div data-lr-theme-scope style="--lr-theme-border-radius-m: 7px">
+    <div style="--lr-theme-border-radius-m: 7px">
       <lr-card>Default</lr-card>
       <lr-card href="/details">Linked</lr-card>
       <lr-card style="--border-radius: 11px">Local</lr-card>
@@ -21,7 +21,6 @@ it('uses an optional inherited container radius while preserving local card radi
   const cards = [...wrapper.querySelectorAll<LyraCard>('lr-card')];
   await Promise.all(cards.map(card => card.updateComplete));
   expect(getComputedStyle(base(cards[0]!)).borderTopLeftRadius).to.equal('7px');
-  wrapper.setAttribute('data-lr-theme-scope', '');
   wrapper.style.setProperty('--lr-theme-border-radius-container', '23px');
   expect(getComputedStyle(base(cards[0]!)).borderTopLeftRadius).to.equal('23px');
   expect(getComputedStyle(base(cards[1]!)).borderTopLeftRadius).to.equal('23px');
@@ -1026,7 +1025,7 @@ it("restores the declared appearance and orientation defaults when attributes ar
 
 it('retunes the accent leading stripe width from the shared border-width-thick token', async () => {
   const el = (await fixture(
-    html`<lr-card data-lr-theme-scope appearance="accent" style="--lr-theme-border-width-thick: 9px">Accent</lr-card>`
+    html`<lr-card appearance="accent" style="--lr-theme-border-width-thick: 9px">Accent</lr-card>`
   )) as LyraCard;
   expect(getComputedStyle(base(el)).borderInlineStartWidth).to.equal('9px');
 });
@@ -1051,7 +1050,7 @@ it('mirrors the accent leading stripe to the physically opposite edge under dir=
 
 it('inherits independent appearance and interactive-state paint from an ancestor', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div data-lr-theme-scope style="
+    <div style="
       --lr-transition-fast: 0ms;
       --lr-card-filled-bg: rgb(1, 2, 3);
       --lr-card-filled-outlined-bg: rgb(4, 5, 6);
@@ -1072,7 +1071,6 @@ it('inherits independent appearance and interactive-state paint from an ancestor
   expect(getComputedStyle(base(cards[2]!)).borderInlineStartColor).to.equal('rgb(7, 8, 9)');
 
   const target = base(cards[3]!);
-  cards[3]!.setAttribute('data-lr-theme-scope', '');
   cards[3]!.style.setProperty('--lr-transition-fast', '0ms');
   try {
     await hoverUntilMatched(target, 'the interactive card never reported :hover');
@@ -1097,7 +1095,7 @@ it('keeps an actionable or linked card edge on the control-grade border while a 
   // actionable or linked card is one whole-card control whose outer edge is its only visible
   // boundary at rest (WCAG 2.2 SC 1.4.11); its header rule is still a decorative divider.
   const wrapper = await fixture<HTMLElement>(html`
-    <div data-lr-theme-scope style="
+    <div style="
       --lr-transition-fast: 0ms;
       --lr-theme-color-surface-border: rgb(4, 5, 6);
       --lr-theme-color-surface-border-subtle: rgb(1, 2, 3);
@@ -1187,7 +1185,7 @@ describe('--lr-card-shadow / --lr-card-interactive-hover-shadow', () => {
 
   it('keeps the resting shadow on hover when --lr-card-interactive-hover-shadow is unset (regression)', async () => {
     const el = (await fixture(
-      html`<lr-card data-lr-theme-scope
+      html`<lr-card
         actionable
         style="--lr-transition-fast: 0ms; --lr-card-shadow: 0 4px 8px rgba(0, 0, 0, 0.3)"
         >Body</lr-card
@@ -1205,7 +1203,7 @@ describe('--lr-card-shadow / --lr-card-interactive-hover-shadow', () => {
 
   it('overrides the hover shadow independently of the resting one', async () => {
     const el = (await fixture(
-      html`<lr-card data-lr-theme-scope
+      html`<lr-card
         actionable
         style="--lr-transition-fast: 0ms; --lr-card-shadow: none; --lr-card-interactive-hover-shadow: 0 8px 16px rgba(0, 0, 0, 0.4)"
         >Body</lr-card
@@ -1289,7 +1287,7 @@ describe('lr-card parity pass: default-tier background token, disabled, pressed/
 
   it('leaves the default appearance on the shared surface token when --lr-card-outlined-bg is unset', async () => {
     const el = (await fixture(
-      html`<lr-card data-lr-theme-scope style="--lr-color-surface: rgb(4, 5, 6)">body</lr-card>`
+      html`<lr-card style="--lr-color-surface: rgb(4, 5, 6)">body</lr-card>`
     )) as LyraCard;
     expect(getComputedStyle(base(el)).backgroundColor).to.equal('rgb(4, 5, 6)');
   });

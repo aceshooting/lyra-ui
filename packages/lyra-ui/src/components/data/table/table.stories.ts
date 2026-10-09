@@ -48,7 +48,7 @@ export const Default: Story = {
 
 export const RowMinimumAndDensity: Story = {
   render: () => html`
-    <div data-lr-theme-scope style="display: grid; gap: 1rem; --lr-theme-table-row-height: 3rem">
+    <div style="display: grid; gap: 1rem; --lr-theme-table-row-height: 3rem">
       ${(['compact', 'comfortable', 'touch'] as const).map(density => html`
         <section data-lr-density=${density}>
           <h3>${density}</h3>

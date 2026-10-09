@@ -96,7 +96,7 @@ describe('native chrome material', () => {
 
   it('resolves native local fills and leaves fixed descendants in viewport coordinates', async function () {
     if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
-    const surface = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope class="lr-surface-chrome" style="position:fixed;inset:80px auto auto 90px;--lr-surface-background:rgb(250 240 230);--lr-theme-color-text-normal:rgb(20 30 40);--lr-theme-surface-blur:2px"><span style="position:fixed;top:7px;left:9px">Fixed</span><div style="max-block-size:40px;overflow:auto"><p style="block-size:200px">Scrollable content</p></div></div>`);
+    const surface = await fixture<HTMLDivElement>(html`<div class="lr-surface-chrome" style="position:fixed;inset:80px auto auto 90px;--lr-surface-background:rgb(250 240 230);--lr-theme-color-text-normal:rgb(20 30 40);--lr-theme-surface-blur:2px"><span style="position:fixed;top:7px;left:9px">Fixed</span><div style="max-block-size:40px;overflow:auto"><p style="block-size:200px">Scrollable content</p></div></div>`);
     const fixed = surface.firstElementChild!;
     expect(getComputedStyle(surface).position).to.equal('fixed');
     expect(getComputedStyle(surface).color).to.equal('rgb(20, 30, 40)');

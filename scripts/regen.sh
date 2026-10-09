@@ -137,9 +137,6 @@ pnpm --filter @aceshooting/lyra-ui option-presets
 step "design-token artifacts"
 pnpm --filter @aceshooting/lyra-ui design-tokens
 
-step "theme-scope markers in tests and stories (RFC 0002)"
-pnpm --filter @aceshooting/lyra-ui theme-scopes
-
 step "adoptable reservation stylesheet (src/styles/reservations.styles.ts)"
 pnpm --filter @aceshooting/lyra-ui generate-reservation-styles
 
@@ -208,9 +205,6 @@ CHANGED_PATHS=(
   packages/lyra-ui/src/internal/root-registration-allowlist.ts
   packages/lyra-ui/src/translations/
   packages/lyra-ui/src/styles/design-tokens.css
-  packages/lyra-ui/src/styles/tokens-root.css
-  packages/lyra-ui/src/internal/document-tokens.generated.ts
-  packages/lyra-ui/scripts/theme-scope-vocabulary.generated.mjs
   packages/lyra-ui/src/styles/reservations.styles.ts
   packages/lyra-ui/design-tokens.json
   packages/lyra-ui/tokens/

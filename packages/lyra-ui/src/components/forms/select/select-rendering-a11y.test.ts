@@ -494,7 +494,7 @@ describe("trigger gap/radius cssprops", () => {
 
 it('clamps its keyboard-opened floating surface width through the shared popover-viewport-clamp token', async () => {
   const el = (await fixture(html`
-    <lr-select data-lr-theme-scope style="--lr-popover-viewport-clamp: 10px; --lr-transition-fast: 0s">
+    <lr-select style="--lr-popover-viewport-clamp: 10px; --lr-transition-fast: 0s">
       <lr-option value="a">Apple</lr-option>
     </lr-select>
   `)) as LyraSelect;
@@ -587,7 +587,7 @@ describe('sync (listbox sizing shared with lr-popup/lr-dropdown/lr-combobox)', (
     // 92vw, so a trigger wider than 92vw is a trigger wider than the clamp. Authoring the token
     // below the trigger width reproduces that at any window size.
     const el = (await fixture(html`
-      <lr-select data-lr-theme-scope
+      <lr-select
         sync="width"
         style="width: 500px; --lr-popover-viewport-clamp: 200px; --lr-transition-fast: 0s"
       >
@@ -607,7 +607,7 @@ describe('sync (listbox sizing shared with lr-popup/lr-dropdown/lr-combobox)', (
 
   it('still bounds a width-synced listbox by the measured available inline space', async () => {
     const el = (await fixture(html`
-      <lr-select data-lr-theme-scope sync="width" style="width: 3000px; --lr-transition-fast: 0s">
+      <lr-select sync="width" style="width: 3000px; --lr-transition-fast: 0s">
         <lr-option value="a">Apple</lr-option>
       </lr-select>
     `)) as LyraSelect;
@@ -673,7 +673,7 @@ describe('sync (listbox sizing shared with lr-popup/lr-dropdown/lr-combobox)', (
 
   it('is accessible while open and width-synced', async () => {
     const el = (await fixture(html`
-      <lr-select data-lr-theme-scope sync="width" label="Fruit" style="width: 500px; --lr-transition-fast: 0s">
+      <lr-select sync="width" label="Fruit" style="width: 500px; --lr-transition-fast: 0s">
         <lr-option value="a">Apple</lr-option>
         <lr-option value="b">Banana</lr-option>
       </lr-select>
@@ -1112,7 +1112,7 @@ describe("row state feedback on the already-selected option", () => {
 
   const openWithSelectedMiddleRow = async (): Promise<LyraSelect> => {
     const el = (await fixture(html`
-      <lr-select data-lr-theme-scope
+      <lr-select
         value="b"
         style="--lr-transition-fast: 0s; --lr-select-option-active-bg: rgb(1, 2, 3);"
       >
@@ -1178,7 +1178,7 @@ describe("row state feedback on the already-selected option", () => {
 
   it('does not paint hover or pressed feedback on a disabled option row', async function () {
     const el = (await fixture(html`
-      <lr-select data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-select-option-active-bg: rgb(1, 2, 3);">
+      <lr-select style="--lr-transition-fast: 0s; --lr-select-option-active-bg: rgb(1, 2, 3);">
         <lr-option value="disabled" disabled>Disabled</lr-option>
         <lr-option value="enabled">Enabled</lr-option>
       </lr-select>
@@ -1233,7 +1233,7 @@ describe("lr-select filled (Shoelace compatibility alias)", () => {
 
   it("keeps the trigger's hover and press feedback", async function () {
     const el = (await fixture(html`
-      <lr-select data-lr-theme-scope filled style="--lr-transition-fast: 0s">
+      <lr-select filled style="--lr-transition-fast: 0s">
         <lr-option value="a">Apple</lr-option>
       </lr-select>
     `)) as LyraSelect;
@@ -1472,7 +1472,7 @@ describe("lr-select hover and press feedback", () => {
   for (const appearance of ["outlined", "filled", "accent"] as const) {
     it(`presses an appearance="${appearance}" trigger deeper than it hovers it`, async () => {
       const el = (await fixture(html`
-        <lr-select data-lr-theme-scope appearance=${appearance} style="--lr-transition-fast: 0s">
+        <lr-select appearance=${appearance} style="--lr-transition-fast: 0s">
           <lr-option value="a">Apple</lr-option>
         </lr-select>
       `)) as LyraSelect;
@@ -1511,7 +1511,7 @@ describe("lr-select hover and press feedback", () => {
 
   it("themes trigger hover, pressed, and open border paint through component hooks", async () => {
     const el = (await fixture(html`
-      <lr-select data-lr-theme-scope
+      <lr-select
         open
         style="
           --lr-transition-fast: 0s;
@@ -1557,7 +1557,7 @@ describe("lr-select hover and press feedback", () => {
 
   it("lets a consumer retint the tag remove-button hover/pressed background through --lr-select-tag-remove-hover-bg with no ::part(tag__remove-button) rule", async () => {
     const el = (await fixture(html`
-      <lr-select data-lr-theme-scope
+      <lr-select
         multiple
         style="--lr-transition-fast: 0s; --lr-select-tag-remove-hover-bg: rgb(1, 2, 3);"
       >

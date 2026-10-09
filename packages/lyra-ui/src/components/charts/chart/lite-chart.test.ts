@@ -72,7 +72,7 @@ it('does not acquire the canvas-only chart hover-outline token', async () => {
 
 it('strokes default grid lines in the subtle border tier', async () => {
   const el = await mount(html`
-    <lr-lite-chart data-lr-theme-scope
+    <lr-lite-chart
       style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9);"
       .labels=${['A', 'B']}
       .datasets=${[{ label: 'Revenue', data: [1, 2] }]}

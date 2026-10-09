@@ -3,14 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>tokens-once spike</title>
-    <script>
-      // Each variant loads its own theme.css (27.0.0 dropped the focus-ring composite from it).
-      // link=1 also links the variant's tokens-root.css, for the first-adoption measurement.
-      const pageParams = new URLSearchParams(location.search);
-      const variantDist = `/dist-${pageParams.get('variant') ?? 'a'}`;
-      document.write(`<link rel="stylesheet" href="${variantDist}/theme.css" />`);
-      if (pageParams.get('link') === '1') document.write(`<link rel="stylesheet" href="${variantDist}/styles/tokens-root.css" />`);
-    </script>
+    <link rel="stylesheet" href="/dist-a/theme.css" />
     <style>
       body { margin: 0; font: 14px system-ui, sans-serif; }
       .row, .app-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px; align-items: center; }

@@ -49,7 +49,7 @@ it('keeps the localized dropzone instruction separate from the form-control labe
 });
 
 it('retains native fieldset-disabled remove paint while preserving enabled pointer feedback', async () => {
-  const host = await fixture<HTMLFieldSetElement>(html`<fieldset disabled><lr-file-input data-lr-theme-scope .files=${[new File(['a'], 'report.txt')]} style="--lr-transition-fast: 0s;"></lr-file-input></fieldset>`);
+  const host = await fixture<HTMLFieldSetElement>(html`<fieldset disabled><lr-file-input .files=${[new File(['a'], 'report.txt')]} style="--lr-transition-fast: 0s;"></lr-file-input></fieldset>`);
   const el = host.querySelector('lr-file-input')!;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;

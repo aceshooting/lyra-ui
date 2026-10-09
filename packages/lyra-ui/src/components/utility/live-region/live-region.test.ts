@@ -75,7 +75,6 @@ it('sizes the shadow part="region" mirror from the shared --lr-size-1px token, n
   // A hard-coded `width: 1px` / `height: 1px` / `margin: -1px` ignores it entirely, which is the
   // regression this asserts against -- src/internal/a11y.ts's `srOnly` is shared by ~50
   // components, so an untokenized copy there silently exempts all of them from the token scale.
-  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-theme-size-1px', '3px');
   const themed = getComputedStyle(region);
   expect(themed.inlineSize).to.equal('3px');

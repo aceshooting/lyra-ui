@@ -1,11 +1,13 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import { LyraElement } from '../internal/lyra-element.js';
+import { LitElement } from 'lit';
+import { palette } from '../internal/tokens/palette.styles.js';
+import { tokens } from '../internal/tokens.styles.js';
 import { tag } from '../internal/prefix.js';
-import { adoptLyraTokens } from '../utilities/tokens.js';
 import { setLyraStyle, type LyraMode } from './theme.js';
 
-/** A real LyraElement: it adopts the document token layer on connect, like every component. */
-class ProductionThemeProbe extends LyraElement {}
+class ProductionThemeProbe extends LitElement {
+  static override styles = [palette, tokens];
+}
 
 const probeTag = tag('production-theme-probe');
 if (!customElements.get(probeTag)) customElements.define(probeTag, ProductionThemeProbe);
@@ -160,12 +162,7 @@ describe('production theme rendering', () => {
 // inherit, the property fell back to `outline-style: none` and the focus ring VANISHED, silently.
 // That is a WCAG 2.4.7 failure with no console signal and no test signal. The library evidenced the
 // gap itself: `styles/native.css` hand-expanded the ring rather than using the composite.
-// Since 27.0.0 the document token layer owns the four focus-ring names (theme.css no longer declares
-// them), so an application element reads them wherever the layer applies: after the first Lyra
-// element connects, after `adoptLyraTokens(document)`, or with tokens-root.css linked.
 describe('focus-ring tokens at consumer scope', () => {
-  beforeEach(() => adoptLyraTokens(document));
-
   const FOCUS_RING_TOKENS = [
     '--lr-focus-ring-width',
     '--lr-focus-ring-color',

@@ -328,7 +328,7 @@ it('adopts a same-id replacement canvas and unsubscribes from the removed target
 
 it('dims a disabled toolbar button through the shared disabled-opacity token', async () => {
   const wrapper = (await fixture(
-    html`<div data-lr-theme-scope style="--lr-theme-opacity-disabled: 0.25"><lr-flow-controls></lr-flow-controls></div>`,
+    html`<div style="--lr-theme-opacity-disabled: 0.25"><lr-flow-controls></lr-flow-controls></div>`,
   )) as HTMLElement;
   const el = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
   await el.updateComplete;
@@ -482,7 +482,7 @@ describe('frame', () => {
   });
 
   it('draws the card frame with the decorative --lr-color-border-subtle token', async () => {
-    const el = (await fixture(html`<lr-flow-controls data-lr-theme-scope
+    const el = (await fixture(html`<lr-flow-controls
       style="--lr-color-border: rgb(4, 5, 6); --lr-color-border-subtle: rgb(1, 2, 3)"
     ></lr-flow-controls>`)) as LyraFlowControls;
     expect(getComputedStyle(baseOf(el)).borderTopColor).to.equal('rgb(1, 2, 3)');
@@ -591,7 +591,7 @@ describe('toolbar button hover specificity', () => {
     if (window.matchMedia('(hover: none), (pointer: coarse)').matches) this.skip();
     const wrapper = (await fixture(html`
       <lr-flow-canvas>
-        <lr-flow-controls data-lr-theme-scope
+        <lr-flow-controls
           slot="bottom-start"
           style="--lr-color-border: rgb(1, 2, 3); --lr-color-neutral-fill-quiet: rgb(4, 5, 6)"
         ></lr-flow-controls>

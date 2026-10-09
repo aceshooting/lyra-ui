@@ -122,7 +122,7 @@ afterEach(() => fixtureCleanup());
 
 /** Connects a map without allowing its optional peer to construct a real WebGL map. */
 async function connectedMapWithoutMaplibre(style = ''): Promise<{ wrapper: HTMLElement; el: LyraMap }> {
-  const wrapper = (await fixture(html`<div data-lr-theme-scope style=${style}></div>`)) as HTMLElement;
+  const wrapper = (await fixture(html`<div style=${style}></div>`)) as HTMLElement;
   const el = document.createElement('lr-map') as LyraMap;
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => new Promise(() => {});
   wrapper.append(el);
@@ -2370,7 +2370,6 @@ it('paints a theme-aware compact attribution glyph while preserving native discl
   attribution.style.setProperty('--lr-icon-button-size', '24px');
   expect(summary.getBoundingClientRect().width).to.be.at.least(24);
   expect(summary.getBoundingClientRect().height).to.be.at.least(24);
-  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-color-text', 'rgb(221, 238, 255)');
   el.style.setProperty('--lr-color-surface', 'rgb(17, 34, 51)');
   expect(getComputedStyle(summary, '::before').backgroundColor).to.equal('rgb(221, 238, 255)');
@@ -2800,7 +2799,6 @@ it('repaints applied layers once after an ancestor theme mutation without touchi
 
     wrapper.setAttribute('data-theme', 'dark');
     wrapper.style.setProperty('--lr-map-choropleth-fill-opacity', '0.42');
-    wrapper.setAttribute('data-lr-theme-scope', '');
     wrapper.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await aTimeout(0);
 
@@ -4439,7 +4437,7 @@ function stubMarkerConstruction(el: LyraMap): Array<{ color?: string } | undefin
 
 it('defaults an omitted marker color to the themed brand token instead of the unthemed maplibre-gl default', async () => {
   const el = (await fixture(
-    html`<lr-map data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
+    html`<lr-map style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
   )) as LyraMap;
   const constructedOptions = stubMarkerConstruction(el);
 
@@ -4452,7 +4450,7 @@ it('defaults an omitted marker color to the themed brand token instead of the un
 
 it('rebuilds default-coloured markers when the theme changes the brand token', async () => {
   const el = (await fixture(
-    html`<lr-map data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
+    html`<lr-map style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
   )) as LyraMap;
   const constructedOptions = stubMarkerConstruction(el);
   el.markers = [
@@ -4465,7 +4463,6 @@ it('rebuilds default-coloured markers when the theme changes the brand token', a
     'rgb(4, 5, 6)',
   ]);
 
-  el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-color-brand', 'rgb(1, 2, 3)');
   await waitUntil(() => constructedOptions.length === 3, 'the default pin never followed the theme');
   expect(constructedOptions[2]?.color, 'only the default pin is rebuilt').to.equal('rgb(1, 2, 3)');
@@ -4473,7 +4470,7 @@ it('rebuilds default-coloured markers when the theme changes the brand token', a
 
 it("leaves an explicit invalid marker color to maplibre-gl's own default, unlike an omitted color", async () => {
   const el = (await fixture(
-    html`<lr-map data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
+    html`<lr-map style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
   )) as LyraMap;
   const constructedOptions = stubMarkerConstruction(el);
 
@@ -5816,7 +5813,6 @@ describe('dataLayers clustering and heatmap', () => {
     expect(pixel(ids[1]!, 32, 32)[3]).to.equal(0);
     expect(pixel(ids[2]!, 32, 32)).to.deep.equal([1, 2, 3, 255]);
     const source = sources.get(dataLayerResourceId(el, 'pins'));
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await waitUntil(() => pixel(ids[0]!, 32, 32)[0] === 4);
     expect(pixel(ids[0]!, 32, 32)).to.deep.equal([4, 5, 6, 255]);
@@ -5921,7 +5917,6 @@ describe('dataLayers clustering and heatmap', () => {
     const symbols = layers.get(`${sourceId}-point-icon`)!;
     const imageId = [...images.keys()][0]!;
     expect([...images.get(imageId)!.data.slice(0, 4)]).to.deep.equal([1, 2, 3, 255]);
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await waitUntil(() => JSON.stringify(circle.paint!['circle-color']).includes('rgb(4, 5, 6)'));
     expect([...images.get(imageId)!.data.slice(0, 4)]).to.deep.equal([4, 5, 6, 255]);
@@ -6003,7 +5998,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('reconciles token-colored route paint and legend through theme changes without source churn', async () => {
-    const el = (await fixture(html`<lr-map data-lr-theme-scope style="--lr-theme-color-success-fill-loud: rgb(1, 2, 3)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map style="--lr-theme-color-success-fill-loud: rgb(1, 2, 3)"></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el);
     const stops = [[0, 'var(--lr-color-success)'], [100, 'red']] as const;
     el.legendGradient = stops;
@@ -6014,7 +6009,6 @@ describe('dataLayers clustering and heatmap', () => {
     const layer = layers.get(`${sourceId}-line`)!;
     expect(JSON.stringify(layer.paint!['line-color'])).to.include('rgb(1, 2, 3)');
     expect(layer.paint!['line-opacity']).to.equal(0.9);
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await waitUntil(() => JSON.stringify(layer.paint!['line-color']).includes('rgb(4, 5, 6)'));
     expect(sources.get(sourceId) === source).to.equal(true);
@@ -6087,7 +6081,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('pairs mixed cluster fill steps with a public count foreground and halo', async () => {
-    const el = (await fixture(html`<lr-map data-lr-theme-scope style="--lr-color-danger: rgb(80, 20, 40); --lr-color-brand: rgb(250, 240, 210)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map style="--lr-color-danger: rgb(80, 20, 40); --lr-color-brand: rgb(250, 240, 210)"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({
       cluster: {
@@ -6159,7 +6153,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('resolves count foreground and halo tokens on add and theme repaint', async () => {
-    const el = (await fixture(html`<lr-map data-lr-theme-scope style="--lr-color-danger: rgb(1, 2, 3); --lr-color-brand: rgb(4, 5, 6)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map style="--lr-color-danger: rgb(1, 2, 3); --lr-color-brand: rgb(4, 5, 6)"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     const added = captureAddedLayerPaint(el);
     el.dataLayers = entry({ cluster: {
@@ -6170,7 +6164,6 @@ describe('dataLayers clustering and heatmap', () => {
     const id = `${dataLayerResourceId(el, 'pins')}-cluster-count`;
     expect(added.get(id)!['text-color']).to.equal('rgb(1, 2, 3)');
     expect(added.get(id)!['text-halo-color']).to.equal('rgb(4, 5, 6)');
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-color-danger', 'rgb(7, 8, 9)');
     el.style.setProperty('--lr-color-brand', 'rgb(10, 11, 12)');
     (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
@@ -6696,7 +6689,7 @@ describe('dataLayers clustering and heatmap', () => {
 
   it('resolves a var() colour in cluster.colorSteps against the host, on add and on repaint', async () => {
     const el = (await fixture(
-      html`<lr-map data-lr-theme-scope style="--lr-color-brand: rgb(1, 2, 3); --lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
+      html`<lr-map style="--lr-color-brand: rgb(1, 2, 3); --lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
     )) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     const added = captureAddedLayerPaint(el);
@@ -6726,7 +6719,6 @@ describe('dataLayers clustering and heatmap', () => {
       'the paint-only half resolves the same way',
     ).to.deep.equal(resolved);
 
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-color-brand', 'rgb(7, 8, 9)');
     (el as unknown as { refreshThemePaint: () => void }).refreshThemePaint();
     expect(
@@ -6905,7 +6897,7 @@ describe('dataLayers clustering and heatmap', () => {
 
   it('resolves a var() colour in a single-stop heatmap ramp against the host', async () => {
     const el = (await fixture(
-      html`<lr-map data-lr-theme-scope style="--lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
+      html`<lr-map style="--lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
     )) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ kind: 'heatmap', heatmap: { stops: [[0.5, 'var(--lr-color-danger)']] } });
@@ -7085,7 +7077,6 @@ describe('dataLayers clustering and heatmap', () => {
     await el.updateComplete;
     const circle = layers.get(`${dataLayerResourceId(el, 'pins')}-circle`)!;
 
-    el.setAttribute('data-lr-theme-scope', '');
     el.style.setProperty('--lr-theme-color-success-fill-loud', 'rgb(4, 5, 6)');
     await waitUntil(() => JSON.stringify(circle.paint!['circle-color']).includes('rgb(4, 5, 6)'));
     expect(circle.paint!['circle-opacity']).to.deep.equal([

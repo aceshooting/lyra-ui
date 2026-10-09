@@ -36,7 +36,7 @@ import {
   forcedColorsActive,
   type ForcedColorEncodingName,
 } from './chart-forced-colors.js';
-import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
+import { specialistTokens } from '../../../internal/specialist-tokens.styles.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import {

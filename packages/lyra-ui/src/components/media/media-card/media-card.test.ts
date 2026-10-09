@@ -1046,7 +1046,7 @@ describe('active-state cssprops', () => {
     // suite-wide 6000ms default (see web-test-runner.config.js) would otherwise cut it off first.
     this.timeout(35000);
     const card = (await fixture(html`
-      <lr-media-card data-lr-theme-scope
+      <lr-media-card
         style="--lr-transition-fast: 0ms"
         src="https://example.test/roof-photo.png"
         kind="image"
@@ -1068,13 +1068,13 @@ describe('active-state cssprops', () => {
         --lr-media-card-active-border-color: rgb(10, 20, 30);
         --lr-media-card-active-bg: rgb(40, 50, 60);
       ">
-        <lr-media-card data-lr-theme-scope
+        <lr-media-card
           style="--lr-transition-fast: 0ms"
           src="https://example.test/roof-photo.png"
           kind="image"
           filename="roof-photo.png"
         ></lr-media-card>
-        <lr-media-card data-lr-theme-scope
+        <lr-media-card
           style="--lr-transition-fast: 0ms"
           src="https://example.test/quarterly-report.pdf"
           kind="file"
@@ -1235,7 +1235,7 @@ describe('lr-media-card parity pass: resting background token, disabled, pressed
 
   it('leaves the resting frame on the shared surface token when --lr-media-card-bg is unset', async () => {
     const el = await fixture<LyraMediaCard>(
-      html`<lr-media-card data-lr-theme-scope kind="file" filename="notes.txt" style="--lr-color-surface: rgb(4, 5, 6)"></lr-media-card>`
+      html`<lr-media-card kind="file" filename="notes.txt" style="--lr-color-surface: rgb(4, 5, 6)"></lr-media-card>`
     );
     expect(getComputedStyle(partOf(el, '[part="base"]')).backgroundColor).to.equal('rgb(4, 5, 6)');
   });

@@ -326,7 +326,7 @@ describe('size and frame', () => {
 
   it('leaves the resting bar on the shared surface token when --lr-confirm-bar-bg is unset', async () => {
     const el = (await fixture(
-      html`<lr-confirm-bar data-lr-theme-scope tool-name="delete_row" style="--lr-color-surface: rgb(4, 5, 6)"></lr-confirm-bar>`,
+      html`<lr-confirm-bar tool-name="delete_row" style="--lr-color-surface: rgb(4, 5, 6)"></lr-confirm-bar>`,
     )) as LyraConfirmBar;
     expect(getComputedStyle(part(el, 'base')).backgroundColor).to.equal('rgb(4, 5, 6)');
   });

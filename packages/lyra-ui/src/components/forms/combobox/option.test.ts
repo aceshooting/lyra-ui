@@ -638,7 +638,7 @@ describe('pressed feedback under a real pointer press', () => {
 
   it('keeps the pressed background even though the press also makes the option current', async () => {
     const el = (await fixture(html`
-      <lr-option data-lr-theme-scope
+      <lr-option
         value="a"
         tabindex="0"
         style="

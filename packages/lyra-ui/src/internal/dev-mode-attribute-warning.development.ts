@@ -1,6 +1,4 @@
-import { devWarnOnce, litDevWarnings } from './dev-warning.js';
-import { DOCUMENT_TOKEN_SCOPE_SELECTOR, LAYER_CONSUMED_INPUTS } from './document-tokens.generated.js';
-import { foreignLyraTokenLayer, hasLyraTokens } from './document-tokens.js';
+import { litDevWarnings } from './dev-warning.js';
 export { devWarn, devWarnOnce, deprecationWarningKey, warnDeprecatedUsage, type LyraDeprecatedUsageKind } from './dev-warning.js';
 
 /**
@@ -199,81 +197,5 @@ export function warnUnknownAttributes(
         ? `<${host.localName}>: unknown attribute '${name}' — did you mean '${suggestion}'?`
         : `<${host.localName}>: unknown attribute '${name}'`
     );
-  }
-}
-
-/** Composed parent: a slotted node's assigned slot is not walked; inheritance follows the host. */
-function composedParent(element: Element): Element | null {
-  if (element.parentElement) return element.parentElement;
-  const root = element.getRootNode();
-  return root.nodeType === 11 && 'host' in root ? (root as ShadowRoot).host : null;
-}
-
-const checkedScopeChains = new WeakSet<Element>();
-const THEME_SCOPE_LIST = `:root,${DOCUMENT_TOKEN_SCOPE_SELECTOR}`;
-const LAYER_INPUTS = new Set(LAYER_CONSUMED_INPUTS);
-
-/** The layer-consumed `--lr-theme-*` inputs `element`'s own inline style sets. */
-function inlineLayerInputs(element: Element): string[] {
-  const style = (element as Partial<ElementCSSInlineStyle>).style;
-  if (!style || style.length === 0) return [];
-  const found: string[] = [];
-  for (let index = 0; index < style.length; index++) {
-    const name = style.item(index);
-    if (LAYER_INPUTS.has(name)) found.push(name);
-  }
-  return found;
-}
-
-/**
- * Development-only theme-scope diagnostic (RFC 0002), run on every Lyra connect. It reads no
- * computed style. Each warning is issued once per page under a fixed key, so a test that exercises
- * the case deliberately can seed exactly that key:
- *
- * - `lyra-theme-scope:false-marker` -- `data-lr-theme-scope="false"` still marks a scope (HTML
- *   presence semantics), which is rarely what a framework binding meant.
- * - `lyra-theme-scope:unscoped-input` -- walking from the host (included) up the composed ancestor
- *   chain to the nearest theme scope, an element's inline style sets a --lr-theme-* input that the
- *   document layer consumes, but the element is not a scope, so the components below it no longer
- *   re-derive from it. Stylesheet-applied inputs and later `setProperty()` calls are left to
- *   `findUnscopedThemeInputs()` and the migration report.
- * - `lyra-theme-scope:layer-missing` -- the layer could not be adopted into the host's document.
- * - `lyra-theme-scope:foreign-layer` -- a different token layer (another Lyra release) was already
- *   present; the later-adopted layer wins where their values differ.
- */
-export function warnThemeScopeUsage(host: Element): void {
-  if (!litDevWarnings()) return;
-  if (host.getAttribute('data-lr-theme-scope') === 'false') {
-    devWarnOnce(
-      'lyra-theme-scope:false-marker',
-      `<${host.localName}>: data-lr-theme-scope="false" still marks a theme scope; omit the attribute (or bind it to null) to unmark the element.`
-    );
-  }
-  const doc = host.ownerDocument;
-  if (doc.defaultView && !hasLyraTokens(doc)) {
-    devWarnOnce(
-      'lyra-theme-scope:layer-missing',
-      `<${host.localName}>: the Lyra document token layer is not adopted in this document; link @aceshooting/lyra-ui/tokens-root.css or call adoptLyraTokens(document).`
-    );
-  }
-  const foreign = foreignLyraTokenLayer(doc);
-  if (foreign) {
-    devWarnOnce(
-      'lyra-theme-scope:foreign-layer',
-      `A different Lyra token layer (${foreign}) was already present in this document; the later-adopted layer wins where values differ. Load one copy of @aceshooting/lyra-ui per page.`
-    );
-  }
-  for (let element: Element | null = host; element && !checkedScopeChains.has(element); element = composedParent(element)) {
-    checkedScopeChains.add(element);
-    // A partial DOM (an SSR-shaped host) may lack Element.matches(); there is no scope chain to read.
-    if (typeof element.matches !== 'function' || element.matches(THEME_SCOPE_LIST)) break;
-    const inputs = inlineLayerInputs(element);
-    if (inputs.length) {
-      devWarnOnce(
-        'lyra-theme-scope:unscoped-input',
-        `<${element.localName}> sets ${inputs.join(', ')} inline but is not a theme scope, so Lyra components below it keep the nearest scope's values. Add data-lr-theme-scope to the element.`
-      );
-      break;
-    }
   }
 }

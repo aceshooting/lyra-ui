@@ -27,7 +27,7 @@ function requiredItem<T>(
 
 it("emits a cancelable lr-show/lr-hide pair and non-cancelable after-events", async () => {
   const el = (await fixture(html`
-    <lr-select data-lr-theme-scope style="--lr-transition-fast: 1ms linear">
+    <lr-select style="--lr-transition-fast: 1ms linear">
       <lr-option value="a">Apple</lr-option>
     </lr-select>
   `)) as LyraSelect;
@@ -182,7 +182,7 @@ it("resolves show()/hide() promises even when the transition is vetoed", async (
 
 it("drops a stale lr-after-show when closing interrupts the opening transition", async () => {
   const el = (await fixture(html`
-    <lr-select data-lr-theme-scope style="--lr-transition-fast: 40ms linear">
+    <lr-select style="--lr-transition-fast: 40ms linear">
       <lr-option value="a">Apple</lr-option>
     </lr-select>
   `)) as LyraSelect;

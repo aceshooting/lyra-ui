@@ -204,8 +204,8 @@ the alias stays valid if the component's internal family changes. Import
 
 ## Theming, internationalization & RTL
 
-All 308 tags share three guarantees, not opt-in per component: **theming** through `--lr-*` design tokens (declared once per document and
-re-derived at [theme scopes](./packages/lyra-ui/llms/shared/styles-and-tokens.md#theme-scopes); a light/dark base in `theme.css`, optional looks, and an independent style API for look, surface, density, mode and accent;
+All 308 tags share three guarantees, not opt-in per component: **theming** through `--lr-*` design tokens (a light/dark
+base in `theme.css`, optional looks, and an independent style API for look, surface, density, mode and accent;
 [styling guide](./packages/lyra-ui/llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density)),
 **internationalization** through one runtime (`registerLyraLocale`/`setLyraLocale` or a per-instance `.strings`
 override, no rebuild), and **RTL** with zero opt-in (`dir="rtl"` anywhere up the tree mirrors layout and keyboard

@@ -4867,7 +4867,7 @@ describe("virtualized page part styling", () => {
 
   it("styles the page wrapper, its canvas, and its text layer", async () => {
     const el = (await fixture(
-      html`<lr-pdf-viewer data-lr-theme-scope
+      html`<lr-pdf-viewer
         style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3)"
       ></lr-pdf-viewer>`
     )) as LyraPdfViewer;

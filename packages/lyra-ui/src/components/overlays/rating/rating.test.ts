@@ -96,7 +96,7 @@ it("exposes the live rating surface across updates and reconnects", async () => 
 
 it("renders star-row hover feedback only while the rating is editable", async () => {
   const mount = async (state = ""): Promise<LyraRating> => fixture<LyraRating>(html`
-    <lr-rating data-lr-theme-scope
+    <lr-rating
       .readonly=${state === "readonly"}
       .disabled=${state === "disabled"}
       style="--lr-color-border: rgb(1, 2, 3); --lr-color-border-strong: rgb(4, 5, 6)"
@@ -164,7 +164,7 @@ it("prefers the scoped rating gap, preserves the compatibility spacing fallback,
   ).querySelector("lr-rating") as LyraRating;
   const shared = (
     await fixture(html`
-      <div data-lr-theme-scope style="--lr-theme-space-xs: 7px">
+      <div style="--lr-theme-space-xs: 7px">
         <lr-rating size="xl" value="2"></lr-rating>
       </div>
     `)

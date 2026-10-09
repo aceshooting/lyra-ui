@@ -875,7 +875,7 @@ describe('file type metadata registry input validation', () => {
 
 it('frames the extension tile in the subtle border tier', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div data-lr-theme-scope style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
+    <div style="--lr-theme-color-surface-border-subtle: rgb(1, 2, 3); --lr-theme-color-surface-border: rgb(7, 8, 9)">
       <lr-file-icon mime-type="application/pdf"></lr-file-icon>
     </div>
   `);

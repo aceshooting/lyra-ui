@@ -1,10 +1,4 @@
 import { css, unsafeCSS, type CSSResult } from 'lit';
-import { GLASS_FOCUS_RING_DECLARATIONS } from './document-tokens.generated.js';
-
-// The document token layer resolves the focus ring at the theme scope, where no glass weight
-// exists. The glass host restates the two outputs that read its qualified colour, outside forced
-// colours, where the host's preference arm owns them.
-const glassFocusRing = unsafeCSS(GLASS_FOCUS_RING_DECLARATIONS);
 
 /**
  * Opt-in treatment for a component's chrome surface. Content panels must not compose this sheet.
@@ -74,11 +68,6 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
           var(--_lr-glass-original-focus-ring-color, var(--lr-color-text)),
           var(--lr-color-text) calc(var(--_lr-surface-foreground-weight, 99%) * var(--_lr-surface-enabled, 1) * (1 - var(--_lr-glass-parent-opacity, 0)) * (1 - var(--_lr-preference-glass-opacity, 0)))
         );
-      }
-      @media (forced-colors: none) {
-        :host {
-          ${glassFocusRing};
-        }
       }
       ${surface} {
         isolation: var(--_lr-surface-isolation, isolate);

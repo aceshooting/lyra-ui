@@ -98,7 +98,7 @@ describe('shared viewer loading treatment', () => {
         ['lr-html-viewer', 'fetchState'],
       ] as const;
       const holder = await fixture<HTMLElement>(html`
-        <div data-lr-theme-scope style="--lr-theme-duration-slow: 3s"></div>
+        <div style="--lr-theme-duration-slow: 3s"></div>
       `);
       const indicators: HTMLElement[] = [];
 

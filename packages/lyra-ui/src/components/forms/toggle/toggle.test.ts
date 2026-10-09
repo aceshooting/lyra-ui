@@ -222,7 +222,7 @@ describe('<lr-toggle>', () => {
 
   it('is inert while disabled: no toggle, no events, no focus, no hover tint', async () => {
     const el = await fixture<LyraToggle>(
-      html`<lr-toggle data-lr-theme-scope disabled style="--lr-transition-fast: 0s">Bold</lr-toggle>`,
+      html`<lr-toggle disabled style="--lr-transition-fast: 0s">Bold</lr-toggle>`,
     );
     const button = control(el);
     let events = 0;
@@ -423,7 +423,7 @@ describe('<lr-toggle>', () => {
   ] as const) {
     it(`checks resting and hover fill reach for ${name}`, async () => {
       const el = await fixture<LyraToggle>(
-        html`<lr-toggle data-lr-theme-scope style=${`--lr-transition-fast: 0s; ${style}`}>Bold</lr-toggle>`,
+        html`<lr-toggle style=${`--lr-transition-fast: 0s; ${style}`}>Bold</lr-toggle>`,
       );
       const button = control(el);
       expect(getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)').to.equal(!name.startsWith('deprecated'));
@@ -441,7 +441,7 @@ describe('<lr-toggle>', () => {
 
   it('keeps the unpressed hover token off a pressed toggle', async () => {
     const el = await fixture<LyraToggle>(
-      html`<lr-toggle data-lr-theme-scope pressed style="--lr-transition-fast: 0s; --lr-toggle-hover-bg: rgb(250, 0, 0)">Bold</lr-toggle>`,
+      html`<lr-toggle pressed style="--lr-transition-fast: 0s; --lr-toggle-hover-bg: rgb(250, 0, 0)">Bold</lr-toggle>`,
     );
     const button = control(el);
     try {
@@ -466,7 +466,7 @@ describe('<lr-toggle>', () => {
 
   it('repaints on hover, press and keyboard focus', async () => {
     const before = await fixture<HTMLButtonElement>(html`<button>Before</button>`);
-    const el = await fixture<LyraToggle>(html`<lr-toggle data-lr-theme-scope style="--lr-transition-fast: 0s">Bold</lr-toggle>`);
+    const el = await fixture<LyraToggle>(html`<lr-toggle style="--lr-transition-fast: 0s">Bold</lr-toggle>`);
     const button = control(el);
     const resting = getComputedStyle(button).backgroundColor;
     await hoverUntilMatched(button, 'the pointer never hovered the toggle');
@@ -501,14 +501,14 @@ describe('<lr-toggle>', () => {
 
   it('keeps pressed, hover and disabled states perceivable under forced colours', async function () {
     const pressed = await fixture<LyraToggle>(
-      html`<lr-toggle data-lr-theme-scope pressed style="--lr-transition-fast: 0s">P</lr-toggle>`,
+      html`<lr-toggle pressed style="--lr-transition-fast: 0s">P</lr-toggle>`,
     );
-    const resting = await fixture<LyraToggle>(html`<lr-toggle data-lr-theme-scope style="--lr-transition-fast: 0s">R</lr-toggle>`);
+    const resting = await fixture<LyraToggle>(html`<lr-toggle style="--lr-transition-fast: 0s">R</lr-toggle>`);
     const disabled = await fixture<LyraToggle>(
-      html`<lr-toggle data-lr-theme-scope disabled style="--lr-transition-fast: 0s">D</lr-toggle>`,
+      html`<lr-toggle disabled style="--lr-transition-fast: 0s">D</lr-toggle>`,
     );
     const pressedDisabled = await fixture<LyraToggle>(
-      html`<lr-toggle data-lr-theme-scope pressed disabled style="--lr-transition-fast: 0s">PD</lr-toggle>`,
+      html`<lr-toggle pressed disabled style="--lr-transition-fast: 0s">PD</lr-toggle>`,
     );
     const probe = await fixture<HTMLSpanElement>(html`<span style="color: GrayText">probe</span>`);
     if (!(await enterForcedColors())) this.skip();
@@ -750,9 +750,9 @@ describe('<lr-toggle>', () => {
 });
 
 it('keeps a pressed toggle on its own fill under the pointer when --lr-toggle-hover-bg is set', async () => {
-  const plain = await fixture<LyraToggle>(html`<lr-toggle data-lr-theme-scope pressed style="--lr-transition-fast: 0s">Bold</lr-toggle>`);
+  const plain = await fixture<LyraToggle>(html`<lr-toggle pressed style="--lr-transition-fast: 0s">Bold</lr-toggle>`);
   const themed = await fixture<LyraToggle>(
-    html`<lr-toggle data-lr-theme-scope pressed style="--lr-transition-fast: 0s; --lr-toggle-hover-bg: rgb(1, 2, 3)">Bold</lr-toggle>`,
+    html`<lr-toggle pressed style="--lr-transition-fast: 0s; --lr-toggle-hover-bg: rgb(1, 2, 3)">Bold</lr-toggle>`,
   );
   try {
     await hoverUntilMatched(control(plain), 'the pointer never hovered the plain toggle');

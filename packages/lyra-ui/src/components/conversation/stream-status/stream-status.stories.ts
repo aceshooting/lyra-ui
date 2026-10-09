@@ -52,7 +52,7 @@ export const Phases: Story = {
       <div>
         <p style="margin:0 0 0.375rem; font-size:0.8125rem; color:var(--lr-color-text-quiet);">stalled</p>
         <lr-stream-status ${ref(markInitiallyStalled)}>
-          <button slot="actions" data-lr-theme-scope style=${buttonStyle}>Retry</button>
+          <button slot="actions" style=${buttonStyle}>Retry</button>
         </lr-stream-status>
       </div>
     </div>
@@ -76,13 +76,13 @@ export const ThemedPhaseDots: Story = {
       <lr-stream-status connection-state="connecting"></lr-stream-status>
       <lr-stream-status connection-state="streaming"></lr-stream-status>
       <lr-stream-status ${ref(markInitiallyStalled)}>
-        <button slot="actions" data-lr-theme-scope style=${buttonStyle}>Retry</button>
+        <button slot="actions" style=${buttonStyle}>Retry</button>
       </lr-stream-status>
       <lr-stream-status
         ${ref(markInitiallyStalled)}
         style="--lr-stream-status-dot-color:var(--lr-color-danger); --lr-stream-status-dot-opacity:1;"
       >
-        <button slot="actions" data-lr-theme-scope style=${buttonStyle}>Direct override</button>
+        <button slot="actions" style=${buttonStyle}>Direct override</button>
       </lr-stream-status>
     </div>
   `,
@@ -94,8 +94,8 @@ export const Narrow320: Story = {
     <div style="inline-size:320px; max-inline-size:100%; box-sizing:border-box; border:1px dashed var(--lr-color-border); padding:8px;">
       <lr-stream-status ${ref(markInitiallyStalled)} style="inline-size:100%;">
         ConnectionRecoveryExplanationWithoutNaturalBreaksConnectionRecoveryExplanationWithoutNaturalBreaks
-        <button slot="actions" data-lr-theme-scope style=${buttonStyle}>Cancel</button>
-        <button slot="actions" data-lr-theme-scope style=${buttonStyle}>Retry</button>
+        <button slot="actions" style=${buttonStyle}>Cancel</button>
+        <button slot="actions" style=${buttonStyle}>Retry</button>
       </lr-stream-status>
     </div>
   `,
@@ -148,7 +148,7 @@ export const LiveDemo: Story = {
           @lr-stall=${(event: Event) => line(rootFor(event), 'lr-stall fired')}
           @lr-recover=${(event: Event) => line(rootFor(event), 'lr-recover fired')}
         >
-          <button slot="actions" data-lr-theme-scope style=${buttonStyle} data-stop @click=${onStop}>Stop</button>
+          <button slot="actions" style=${buttonStyle} data-stop @click=${onStop}>Stop</button>
         </lr-stream-status>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
           <button style=${buttonStyle} data-connect @click=${onConnect}>Connect</button>
@@ -172,8 +172,8 @@ export const CustomStalledMessage: Story = {
   render: () => html`
     <lr-stream-status ${ref(markInitiallyStalled)}>
       Taking longer than usual — the model may be thinking through a complex request.
-      <button slot="actions" data-lr-theme-scope style=${buttonStyle}>Cancel</button>
-      <button slot="actions" data-lr-theme-scope style=${buttonStyle}>Retry</button>
+      <button slot="actions" style=${buttonStyle}>Cancel</button>
+      <button slot="actions" style=${buttonStyle}>Retry</button>
     </lr-stream-status>
   `,
 };
@@ -182,7 +182,7 @@ export const DefaultStalledMessage: Story = {
   name: 'Default stalled message (nothing slotted)',
   render: () => html`
     <lr-stream-status ${ref(markInitiallyStalled)}>
-      <button slot="actions" data-lr-theme-scope style=${buttonStyle}>Retry</button>
+      <button slot="actions" style=${buttonStyle}>Retry</button>
     </lr-stream-status>
   `,
 };

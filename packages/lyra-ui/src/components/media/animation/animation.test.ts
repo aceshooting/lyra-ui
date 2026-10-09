@@ -465,7 +465,7 @@ it('parses a whole-second --lr-transition-ambient token (the "s" unit branch, vs
 
 it("falls back to the constructed default duration/easing when the resolved --lr-transition-* token does not parse", async () => {
   const el = (await fixture(html`
-    <lr-animation data-lr-theme-scope
+    <lr-animation
       name="fade-in"
       timing-preset="fast"
       style="--lr-transition-fast: 180"
@@ -484,7 +484,7 @@ it("falls back to the constructed default duration/easing when the resolved --lr
 
 it("rejects malformed timing-token numbers instead of passing NaN into WAAPI", async () => {
   const el = (await fixture(html`
-    <lr-animation data-lr-theme-scope
+    <lr-animation
       name="fade-in"
       timing-preset="fast"
       style="--lr-transition-fast: .ms ease-out"
@@ -506,7 +506,7 @@ it("rejects malformed timing-token numbers instead of passing NaN into WAAPI", a
 // post-match CSS.supports() validation rather than its regex-match guard.
 it("falls back to the constructed default duration/easing when a well-formed token carries an easing keyword CSS does not support", async () => {
   const el = (await fixture(html`
-    <lr-animation data-lr-theme-scope
+    <lr-animation
       name="fade-in"
       timing-preset="fast"
       style="--lr-transition-fast: 200ms not-a-real-easing-keyword"

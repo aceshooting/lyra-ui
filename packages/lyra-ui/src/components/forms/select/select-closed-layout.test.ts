@@ -15,8 +15,8 @@ for (const kind of ['select', 'combobox'] as const) {
       const container = await fixture<HTMLDivElement>(html`
         <div style="position: relative; width: 320px; height: 200px; overflow: auto; display: flex; justify-content: end; align-items: start">
           ${kind === 'select'
-            ? html`<lr-select data-lr-theme-scope label="Choice" positioning-strategy="absolute" style="width: 120px; --lr-transition-fast: 0s">${options}</lr-select>`
-            : html`<lr-combobox data-lr-theme-scope label="Choice" positioning-strategy="absolute" style="width: 120px; --lr-transition-fast: 0s">${options}</lr-combobox>`}
+            ? html`<lr-select label="Choice" positioning-strategy="absolute" style="width: 120px; --lr-transition-fast: 0s">${options}</lr-select>`
+            : html`<lr-combobox label="Choice" positioning-strategy="absolute" style="width: 120px; --lr-transition-fast: 0s">${options}</lr-combobox>`}
         </div>
       `);
       const control = container.querySelector<LyraSelect | LyraCombobox>(`lr-${kind}`)!;

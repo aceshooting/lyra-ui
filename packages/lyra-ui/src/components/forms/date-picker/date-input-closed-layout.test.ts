@@ -11,7 +11,7 @@ for (const phase of ['initial', 'closed after resize'] as const) {
   it(`keeps a ${phase} date-input popup out of the scrollable layout`, async () => {
     const container = await fixture<HTMLDivElement>(html`
       <div style="transform: translateZ(0); width: 320px; height: 200px; overflow: auto; display: flex; justify-content: end; align-items: start">
-        <lr-date-input data-lr-theme-scope style="width: 120px; --lr-transition-fast: 0s"></lr-date-input>
+        <lr-date-input style="width: 120px; --lr-transition-fast: 0s"></lr-date-input>
       </div>
     `);
     const el = container.querySelector<LyraDateInput>('lr-date-input')!;
