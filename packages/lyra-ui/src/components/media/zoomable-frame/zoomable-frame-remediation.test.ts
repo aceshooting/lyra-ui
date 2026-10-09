@@ -69,6 +69,10 @@ it('distinguishes zoom control focus from iframe entry, exit, public blur and re
       'The iframe button must own native focus before Tab',
     );
     await sendKeys({ press: 'Tab' });
+    // Firefox 155 spends one Tab leaving the nested document for the iframe element itself.
+    // wait-reason: let the engine's own Tab traversal settle before deciding it needs a second one
+    await aTimeout(150);
+    if (el.shadowRoot!.activeElement === frame && !frameDocument.hasFocus()) await sendKeys({ press: 'Tab' });
   } finally {
     await resetMouse();
   }

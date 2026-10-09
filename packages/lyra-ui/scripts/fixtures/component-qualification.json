@@ -56412,7 +56412,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 407,
+              "line": 420,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -36,6 +36,7 @@ Explicit empty text stays empty; later supplied text renders normally.
 - `name: string = ''`
 - `value: string = 'on'` — only contributed to form submission while `checked` (a native checkbox
   submits nothing at all, not even an empty string, while unchecked)
+- `defaultValue: string` — the native alias of `value` (a checkbox's `value` is its attribute)
 - `customError: string | null` (attribute `custom-error`) — reflected consumer validation message
 - `hint: string = ''` — WA supporting text below the control
 - `helpText: string = ''` (attribute `help-text`) — Shoelace alias for the same supporting-text

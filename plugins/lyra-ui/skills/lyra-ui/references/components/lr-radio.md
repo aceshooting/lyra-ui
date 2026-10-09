@@ -29,7 +29,8 @@ applies to the button appearance of `lr-radio`.
 
 **Properties:** live, non-reflecting `checked`; reflected `defaultChecked` (attribute `checked`);
 reflected `customError: string | null` (attribute `custom-error`); `disabled`, `required`, `name`,
-and `value`. A selected standalone radio submits its value through `ElementInternals`.
+`value` and its native alias `defaultValue`. A selected standalone radio submits its value through
+`ElementInternals`.
 An empty `name` is canonicalized to an omitted attribute rather than reappearing as `name=""`.
 `effectiveRequired` exposes the required state inherited from a containing radio group.
 `effectiveName` and `effectiveSize` expose the owning group's aggregate projections while `name`

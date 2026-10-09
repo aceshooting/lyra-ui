@@ -698,7 +698,7 @@ export type {
   LyraLocaleStrings,
   LyraMessageKey,
 } from './localization.js';
-export type { FormAssociatedInterface } from './internal/form-associated.js';
+export type { CheckedFormAssociatedInterface, FormAssociatedInterface } from './internal/form-associated.js';
 export type {
   LyraFormValidator,
   LyraFormValidatorResult,

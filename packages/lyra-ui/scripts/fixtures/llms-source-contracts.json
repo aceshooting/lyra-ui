@@ -17842,6 +17842,24 @@
         "name": "testing-happy-dom-shims-contracts",
         "declaration": "installHappyDomShims"
       }
+    },
+    {
+      "module": "src/internal/form-associated.ts",
+      "exportName": "CheckedFormAssociatedInterface",
+      "kind": "interface",
+      "fingerprint": "d18a2c8078b95e489ace",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form-associated",
+        "declaration": "CheckedFormAssociatedInterface"
+      }
     }
   ],
   "legacy": []

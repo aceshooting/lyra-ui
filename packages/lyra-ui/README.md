@@ -224,7 +224,7 @@ Lyra reads only its own `--lr-theme-*` variables; map existing values in applica
 Some upstream behavior is deliberately not automatic; the report records it instead of emitting markup that weakens a boundary:
 
 - `<lr-include>` sanitizes every fragment, has no script mode, defaults `mode` to `same-origin`, and strips every
-  navigation or resource attribute except same-document `#fragment` anchors.
+  navigation or resource attribute except same-document `#fragment` anchors. Its post-sanitization transclusion is network-silent and non-interactive: anchors remain only for resolvable same-document `#fragment` links (rebased per include instance); every other navigation or resource attribute, including `href`, `src`, `srcset`, `action`, `ping`, and `poster`, is stripped, so images do not load. Form-control and custom-element wrappers are unwrapped to safe ordinary text or children, while controls with no passive content are removed.
 - Link-like controls always add `noopener noreferrer` to `rel` when `target` is set and strip `opener`; author
   `rel` tokens are merged. `<lr-app-rail-item>` still derives `rel` from `target` alone.
 - `<lr-zoomable-frame>` rejects active/non-embeddable schemes, always sandboxes, and never combines

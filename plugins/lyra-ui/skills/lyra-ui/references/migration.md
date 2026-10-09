@@ -83,6 +83,7 @@ review removed names before running the migrated application.
 | `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
 | `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
+| `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
 | `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
 | `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
 | `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
@@ -818,6 +819,7 @@ review removed names before running the migrated application.
 | `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
 | `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
+| `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
 | `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
 | `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
 | `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
@@ -1538,6 +1540,7 @@ the old name keeps working meanwhile.
 | `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |
 | `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
 | `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
+| `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
 | `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
 | `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
 | `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
@@ -1581,6 +1584,97 @@ hydration compares template strings.
 | `<lr-widget>` | event | `lr-collapse-change` | `@lr-toggle` |
 | `<lr-widget>` | event | `lr-collapse-request` | `@lr-toggle-request` |
 | `<lr-widget>` | slot | `icon` | `slot="start"` |
+
+## Migrating from Lyra 26 to Lyra 27 (`--origin=lyra-v26`)
+
+Lyra 26 minor releases and Lyra 27 rename some Lyra-only attributes, properties, events, CSS parts,
+custom properties and slots. Each previous name keeps working as a deprecated alias until
+Lyra 29 removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never
+change. Run the CLI of the installed package after upgrading, within Lyra 26 or to Lyra 27. It
+applies only the entries the installed release ships, so running it again after a later upgrade
+picks up the rest:
+
+```bash
+npx lyra-ui-migrate --origin=lyra-v26 --diff src > lyra-v26.patch
+npx lyra-ui-migrate --origin=lyra-v26 --check --report=lyra-v26-migration.json src
+```
+
+`--diff` prints a patch and writes nothing. The profile rewrites a name only where the rewrite
+cannot change what the site reaches: attribute, property and slot bindings on the component in
+HTML, Lit, JSX, Vue, Svelte and Angular templates; `exportparts` and `::part()` or attribute
+selectors that name the component; and calls rooted at `querySelector('lr-…')`, `closest()` or
+`createElement()`. Events bubble and custom properties inherit, so a listener moves only when no
+other component already dispatches the new name, and an unowned listener or any custom-property
+use only when, in addition, every component with the old name renamed it the same way and the
+scanned code never dispatches the old name itself. Everything else is reported with a location;
+the old name keeps working meanwhile.
+
+| Code | Reported when |
+|---|---|
+| `RENAME_REVIEW` | An old name at a site that does not prove its component, or where another component keeps the name. |
+| `RENAME_TARGET_SHARED_REVIEW` | The new name is already used by another component, so renaming would widen the site. |
+| `NAME_GAINED_OWNER_REVIEW` | A listener, `::part()` selector or declaration of a name that more components use after the upgrade. |
+| `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |
+| `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |
+| `RETIRED_EVENT_REVIEW` | A listener or event-name string may use an alias already removed in the target release; review its replacement and listener reach. |
+| `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |
+| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
+| `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
+| `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
+| `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
+| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
+| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
+
+After reviewing a site, add a comment containing `lyra-migrate-reviewed: CODE:name` (for example
+`DETAIL_SHAPE_REVIEW:lr-close`) on the reported line, alone on the line above it, or directly before
+the element's opening tag. Acknowledged reports no longer fail `--check`. Re-running the profile
+is idempotent. Templates rendered on the server must be re-rendered after migrating, because Lit
+hydration compares template strings.
+
+| Component | Attribute | Inserted when absent to keep the Lyra 26 default |
+|---|---|---|
+| `<lr-prompt-studio>` | `heading-level` | `heading-level="2"` |
+| `<lr-task-list>` | `heading-level` | `heading-level="3"` |
+
+| Component | Event | Detail change in Lyra 27 (reported, never rewritten) |
+|---|---|---|
+| `<lr-tool-approval-dialog>` | `lr-deny-request` | The detail is now { waitUntil } instead of null. |
+
+| Component | Property | Semantic change in Lyra 27 (reported, never rewritten) |
+|---|---|---|
+| `<lr-context-inspector>` | `label` | label="" is now honored verbatim (no fallback to the heading or localized default); omit label to keep the default. |
+| `<lr-date-input>` | `autocorrect` | The string autoCorrect property is gone: autocorrect is a boolean (set .autocorrect=${false}, or autocorrect="off" in HTML), so a string assigned to it, or a framework binding of the string "off", is truthy. |
+| `<lr-model-select>` | `autocorrect` | The string autoCorrect property is gone: autocorrect is a boolean (set .autocorrect=${false}, or autocorrect="off" in HTML), so a string assigned to it, or a framework binding of the string "off", is truthy. |
+| `<lr-phone-input>` | `autocorrect` | The string autoCorrect property is gone: autocorrect is a boolean (set .autocorrect=${false}, or autocorrect="off" in HTML), so a string assigned to it, or a framework binding of the string "off", is truthy. |
+| `<lr-prompt-studio>` | `label` | label="" is now honored verbatim (no fallback to the heading or localized default); omit label to keep the default. |
+| `<lr-voice-picker>` | `autocorrect` | The string autoCorrect property is gone: autocorrect is a boolean (set .autocorrect=${false}, or autocorrect="off" in HTML), so a string assigned to it, or a framework binding of the string "off", is truthy. |
+
+Entries no component owns. A module specifier is rewritten where it is provably an import, re-export,
+dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any
+string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is
+reported. A removed root export is re-bound as `New as Old` in the import clause, so local references keep
+working; other uses (a deep import, a namespace member) and removed localization keys are reported as
+`GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.
+
+| Kind | From | To | Handling |
+|---|---|---|---|
+| css-property | `--lr-eval-dataset-search-*` | the lr-input tokens (--lr-input-* and --lr-form-control-*) | Reported only. lr-eval-dataset's search field is a composed lr-input. |
+| export | `ToolCallStatus (package root)` | `ToolStatus` | Import clause re-bound; other uses reported. One ToolStatus union replaces the per-component status types; import it from the package root. |
+| export | `ToolResultStatus (package root)` | `ToolStatus` | Import clause re-bound; other uses reported. One ToolStatus union replaces the per-component status types; import it from the package root. |
+| locale-key | `evaluationRunStatusCancelled` | `agentRunStatusCancelled` | Reported only. lr-evaluation-run reads the shared agentRunStatus* keys; a string override under the old key no longer applies. |
+| locale-key | `evaluationRunStatusIdle` | `agentRunStatusIdle` | Reported only. lr-evaluation-run reads the shared agentRunStatus* keys; a string override under the old key no longer applies. |
+| locale-key | `evaluationRunStatusWaitingApproval` | `agentRunStatusWaitingApproval` | Reported only. lr-evaluation-run reads the shared agentRunStatus* keys; a string override under the old key no longer applies. |
+| locale-key | `evaluationRunStatusWaitingInput` | `agentRunStatusWaitingInput` | Reported only. lr-evaluation-run reads the shared agentRunStatus* keys; a string override under the old key no longer applies. |
+| locale-key | `videoPlaybackSpeed` | `avPlayerPlaybackRate` | Reported only. lr-video names its speed select with the key lr-av-player shares; a string override under the old key no longer applies. |
+| module | `@aceshooting/lyra-ui/custom-elements.json` | `@aceshooting/lyra-ide/custom-elements.json` | Rewritten. Install @aceshooting/lyra-ide at the same version; the editor data moved out of @aceshooting/lyra-ui. |
+| module | `@aceshooting/lyra-ui/translations/*` | `@aceshooting/lyra-translations/*` | Rewritten except `@aceshooting/lyra-ui/translations/pseudo/`. Install @aceshooting/lyra-translations at the same version; the pseudo-locales stay in @aceshooting/lyra-ui. |
+| module | `@aceshooting/lyra-ui/vscode-css-data.json` | `@aceshooting/lyra-ide/vscode-css-data.json` | Rewritten. Install @aceshooting/lyra-ide at the same version; the editor data moved out of @aceshooting/lyra-ui. |
+| module | `@aceshooting/lyra-ui/vscode-html-data.json` | `@aceshooting/lyra-ide/vscode-html-data.json` | Rewritten. Install @aceshooting/lyra-ide at the same version; the editor data moved out of @aceshooting/lyra-ui. |
+| module | `@aceshooting/lyra-ui/web-types.json` | `@aceshooting/lyra-ide/web-types.json` | Rewritten. Install @aceshooting/lyra-ide at the same version; the editor data moved out of @aceshooting/lyra-ui. |
+| part | `<lr-connector-manager> ::part(action)` | Style the label through action-label and the inner button through action-base. | Reported only. action is now the lr-button host. |
+| part | `<lr-permission-grant> ::part(decision)` | Style the label through decision-label and the inner button through decision-base. | Reported only. decision is now the lr-button host. |
+| part | `<lr-eval-dataset> ::part(search-clear)` | Style the clear button through part search-clear on the field, and the native input through search-input-field. | Reported only. search-clear is now the composed lr-input clear button. |
+| part | `<lr-eval-dataset> ::part(search-input)` | Style the native input through search-input-field. | Reported only. search-input is now the lr-input host, not the native input. |
 
 ## Upstream-protected compatibility spellings
 

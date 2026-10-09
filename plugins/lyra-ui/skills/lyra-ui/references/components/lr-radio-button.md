@@ -46,7 +46,7 @@ The exact-320px story shows that behavior in LTR and RTL.
 
 **Properties and methods:** exactly the same functional surface as `lr-radio`. Its writable fields
 are `appearance`, `checked`, `defaultChecked`, `customError`, `disabled`, `name`, `required`, `value`,
-`size`, and `pill`. Its effective form/validity state is also inherited: read-only
+`defaultValue`, `size`, and `pill`. Its effective form/validity state is also inherited: read-only
 `effectiveDisabled`, `effectiveRequired`, `form`, `labels`, `validity`, `validationMessage`, and
 `willValidate`. The delegated methods are `click()`, `focus()`, `blur()`, `getForm()`,
 `checkValidity()`, `reportValidity()`, `setCustomValidity()`, and `resetValidity()`; form reset,

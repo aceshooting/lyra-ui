@@ -912,8 +912,10 @@ assert.match(
   /\[CHANGELOG\.md\]\(\.\.\/\.\.\/CHANGELOG\.md\)/u,
   'every generated component reference must link chronological release history',
 );
+// lr-table's family (data) currently carries no "Breaking changes" section; the charts family does.
+const chartReference = [...artifacts].find(([file]) => file.endsWith('/llms/components/lr-chart.md'))?.[1];
 assert.match(
-  table,
+  chartReference,
   /family-wide breaking-change summaries: \[\w+\]\(https:\/\/github\.com\/aceshooting\/lyra-ui\/blob\/main\/packages\/lyra-ui\/llms\/\w+\.md\)/u,
   'generated component references must expose their linked family-wide breaking-change summaries',
 );
@@ -945,8 +947,8 @@ assert.equal(
   '| `--lr-color-surface` | `--lr-theme-color-surface-default` | `#ffffff` | dark: `var(--lr-theme-color-surface-default, #0a0a0a)`<br>forcedColors: `Canvas` |',
 );
 
-// 29 since chartjs-plugin-annotation joined as lr-chart's optional annotations peer.
-assert.match(peers, /All 29 peers are \*\*optional\*\*/);
+// 30 since chartjs-plugin-annotation joined as lr-chart's optional annotations peer.
+assert.match(peers, /All 30 peers are \*\*optional\*\*/);
 
 // lr-phone-input's only reachable mention of libphonenumber-js is a JSDoc @example
 // (`import('libphonenumber-js/min')`) showing a consumer-built adapter -- it must not attribute
@@ -957,7 +959,7 @@ assert.doesNotMatch(
   'a JSDoc @example must never attribute an optional peer to the component that documents it',
 );
 assert.match(peers, /\*\*Framework declaration peers \(3\)\.\*\*/);
-assert.match(peers, /\*\*Component-loaded peers \(26\)\.\*\*/);
+assert.match(peers, /\*\*Component-loaded peers \(27\)\.\*\*/);
 
 for (const [peer, entry] of Object.entries(TYPE_ONLY_DECLARATION_PEERS)) {
   const row = peers

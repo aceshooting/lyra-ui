@@ -3204,6 +3204,11 @@ formResetCallback(): void; formStateRestoreCallback(state: FormSubmissionValue, 
   `FormAssociatedSubclassInterface<TValue> { protected captureLiveValueCheckpoint(): { readonly
 value: TValue; readonly dirty: boolean }; protected restoreLiveValueCheckpoint(checkpoint: {
 readonly value: TValue; readonly dirty: boolean }): void }`.
+  `CheckedFormAssociated(Base)` is the checkbox-, switch- and radio-shaped variant of that mixin: the
+  string `value` (default `'on'`) is submitted only while `checked`, `checked` has native
+  dirty/default semantics, reset and state restore round-trip it, and `required` means "must be
+  checked". It adds `CheckedFormAssociatedInterface { checked: boolean; get defaultChecked():
+boolean; set defaultChecked(next: boolean) }`.
 - **`group-by-recency` → `groupByRecency(items, options?)`** — buckets dated items into
   Today / Yesterday / Previous 7 Days / Older, on **local calendar-day boundaries** ("yesterday" is
   the previous calendar date, not 24–48 hours ago). Plain data in, plain data out — no DOM.

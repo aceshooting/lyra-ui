@@ -1128,7 +1128,7 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
     expect(Math.abs(gap - 6)).to.be.at.most(1);
   });
 
-  it('guards every numeric property against junk', async () => {
+  it('guards the distance property against junk', async () => {
     for (const value of ['banana', 'NaN', '-1', 'Infinity']) {
       const attributeMenu = await menuFixture(
         html`<lr-navigation-menu distance=${value}>${items(`d${value.length}-`)}</lr-navigation-menu>`,
@@ -1149,6 +1149,9 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
         await settle(menu);
       }
     }
+  });
+
+  it('guards the show-delay property against junk', async () => {
     for (const value of ['banana', 'NaN', 'Infinity', '-1']) {
       const attributeMenu = await menuFixture(
         html`<lr-navigation-menu show-delay=${value} skip-delay="0">${items(`s${value.length}-`)}</lr-navigation-menu>`,
@@ -1170,6 +1173,9 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
         }
       }
     }
+  });
+
+  it('guards the hide-delay and skip-delay properties against junk', async () => {
     for (const value of ['banana', 'NaN', 'Infinity']) {
       const menu = await menuFixture(
         html`<lr-navigation-menu show-delay="0" hide-delay=${value} skip-delay=${value}>${items(`h${value.length}-`)}</lr-navigation-menu>`,
@@ -1182,10 +1188,12 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
       await aTimeout(50);
       expect(first!.open, `hide-delay=${value} did not behave like the default`).to.equal(true);
       await waitUntil(() => !first!.open, `hide-delay=${value} never closed`);
+      // Read synchronously at hover time, so no render is awaited inside the skip-delay window
+      // that opened when the first item closed (a slow engine would otherwise outlast it).
       menu.showDelay = 400;
-      await settle(menu);
       hoverSynthetic(second!);
       expect(second!.open, `skip-delay=${value} did not behave like the default`).to.equal(true);
+      await settle(menu);
     }
   });
 

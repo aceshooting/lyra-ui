@@ -97,8 +97,18 @@ for (const name of controls.filter((entry) => entry !== 'input')) {
     const form = await fixture<HTMLFormElement>(html`<form></form>`);
     form.append(control);
     await control.updateComplete;
-    expect(control instanceof LyraFormControlElement).to.equal(true);
+    // The checked controls take the same surface from the `CheckedFormAssociated` mixin instead of
+    // `LyraFormControlElement`; either way it comes from a shared base, never from the class itself.
+    const checkedFamily = ['checkbox', 'switch', 'radio'].includes(name);
+    expect(control instanceof LyraFormControlElement).to.equal(!checkedFamily);
     const own = Object.getPrototypeOf(control);
+    if (checkedFamily) {
+      for (const member of ['getForm', 'labels', 'validity', 'validationMessage', 'willValidate']) {
+        let owner: object | null = own;
+        while (owner && !Object.prototype.hasOwnProperty.call(owner, member)) owner = Object.getPrototypeOf(owner);
+        expect(owner !== null && owner !== own, `${name}.${member} comes from the shared mixin`).to.equal(true);
+      }
+    }
     for (const member of ['getForm', 'labels', 'validity', 'validationMessage', 'willValidate']) {
       expect(Object.prototype.hasOwnProperty.call(own, member), `${name}.${member}`).to.equal(false);
     }

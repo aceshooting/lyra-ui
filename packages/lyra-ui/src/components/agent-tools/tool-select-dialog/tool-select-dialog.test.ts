@@ -1719,10 +1719,10 @@ function recordCheckedWrites(control: LyraCheckbox | LyraSwitch): {
   writes: boolean[];
   release: () => void;
 } {
-  const descriptor = Object.getOwnPropertyDescriptor(
-    Object.getPrototypeOf(control) as object,
-    'checked',
-  )!;
+  // The accessor lives on a mixin prototype, so walk the chain to the class that defines it.
+  let owner = Object.getPrototypeOf(control) as object;
+  while (!Object.prototype.hasOwnProperty.call(owner, 'checked')) owner = Object.getPrototypeOf(owner) as object;
+  const descriptor = Object.getOwnPropertyDescriptor(owner, 'checked')!;
   const writes: boolean[] = [];
   Object.defineProperty(control, 'checked', {
     configurable: true,

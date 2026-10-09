@@ -305,11 +305,24 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     if (!wasFocused && this.frameOwnsFocus(frame)) this.emitHostFocus(undefined, previous);
   }
 
+  /**
+   * `HTMLElement.blur()` on the iframe, plus the fallback Firefox 155 needs: it leaves an iframe
+   * element focused after its own `blur()` while the nested browsing context holds focus, so that
+   * window is released first and the element blurred again.
+   */
+  private releaseFrameFocus(frame: HTMLIFrameElement | undefined): void {
+    if (!frame) return;
+    frame.blur();
+    if (!this.frameIsActive(frame)) return;
+    try { frame.contentWindow?.blur(); } catch { /* an inaccessible window cannot hold focus for us */ }
+    frame.blur();
+  }
+
   /** Blur the internal iframe. Does not blur a focused zoom control. */
   override blur(): void {
     const frame = this.iframe;
     if (!frame || !this.frameOwnsFocus(frame)) return;
-    frame.blur();
+    this.releaseFrameFocus(frame);
     if (!this.frameOwnsFocus(frame)) this.emitHostBlur(undefined, activeElementIn(this.ownerDocument));
   }
 
@@ -500,7 +513,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     ) {
       const frame = this.iframe;
       const wasFocused = this.frameIsActive(frame);
-      frame?.blur();
+      this.releaseFrameFocus(frame);
       if (wasFocused && !this.frameIsActive(frame)) {
         this.emitHostBlur(undefined, activeElementIn(this.ownerDocument));
       }
@@ -511,7 +524,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     if (changed.has('withoutInteraction') && this.withoutInteraction) {
       const frame = this.iframe;
       const wasFocused = this.frameIsActive(frame);
-      frame?.blur();
+      this.releaseFrameFocus(frame);
       if (wasFocused) this.emitHostBlur(undefined, activeElementIn(this.ownerDocument));
       this.setFrameFocused(false);
     }

@@ -105,7 +105,12 @@ export function collectDocumentedSpecifiers(packageDir = defaultPackageDir) {
   const concretePattern = concreteModulePattern(packageName);
   const found = new Map();
   for (const file of scannedFiles(packageDir)) {
-    const contents = readFileSync(file, 'utf8');
+    // A migration table row of kind `module` names the FORMER specifier a consumer should stop
+    // importing (it deliberately no longer resolves), so those rows are not instructions to import.
+    const contents = readFileSync(file, 'utf8')
+      .split('\n')
+      .filter((line) => !/^\| module \|/.test(line))
+      .join('\n');
     for (const pattern of IMPORT_PATTERNS) {
       pattern.lastIndex = 0;
       let match;
