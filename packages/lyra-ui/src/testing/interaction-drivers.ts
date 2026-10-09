@@ -9,6 +9,12 @@ import type { LyraSwitch } from '../components/forms/switch/switch.class.js';
 import type { LyraModelSelect } from '../components/conversation/model-select/model-select.class.js';
 import type { LyraVoicePicker } from '../components/conversation/voice-picker/voice-picker.class.js';
 import type { LyraStepper } from '../components/layout/stepper/stepper.class.js';
+import type { LyraSwatchPicker } from '../components/forms/swatch-picker/swatch-picker.class.js';
+import type { LyraCurrencyPicker } from '../components/forms/currency-picker/currency-picker.class.js';
+import type { LyraPopover } from '../components/overlays/overlay/popover.class.js';
+import type { LyraOption } from '../components/forms/combobox/option.class.js';
+import { tag } from '../internal/prefix.js';
+import { deepActiveElementIn } from '../internal/active-element.js';
 
 /**
  * A small, typed set of interaction drivers that go through one `lr-*` component's own real
@@ -21,14 +27,15 @@ import type { LyraStepper } from '../components/layout/stepper/stepper.class.js'
  * nothing, which is the exact class of mistake {@link chooseOption}, {@link toggleSwitch},
  * {@link submitConfirmDecision} and {@link activateStep} exist to prevent.
  *
- * Pure DOM operations only (`Element.click()`, shadow-part queries, public properties) -- no
+ * Pure DOM operations only (`Element.click()`, an Escape `KeyboardEvent`, shadow-part queries,
+ * public properties) -- no
  * `@web/test-runner`/CDP-only helper such as `sendMouse`, so these also run under a downstream
  * suite's own happy-dom/jsdom environment, not only a real browser.
  *
- * Scope: one driver per interaction named in the request this closes (choosing an option,
- * submitting a confirm-bar decision, toggling a switch, activating a stepper step). Not a general
- * "drive any component" toolkit -- render the real component and interact with it directly for
- * anything else.
+ * Scope: one driver per commonly driven interaction (choosing an option, a swatch or a currency,
+ * submitting a confirm-bar decision, toggling a switch, activating a stepper step, opening and
+ * closing a popover). Not a general "drive any component" toolkit -- render the real component and
+ * interact with it directly for anything else.
  */
 
 /**
@@ -171,4 +178,181 @@ export async function activateStep(
   }
   button.click();
   await stepper.updateComplete;
+}
+
+/**
+ * Clicks the rendered `[part~="swatch"]` radio whose `data-value` matches `value` -- the same
+ * native button a pointer press activates -- so `<lr-swatch-picker>` runs its own selection path:
+ * `lr-change` (only when the selection moves) and then `lr-activate`, both dispatched before this
+ * resolves. Re-choosing the current value emits only `lr-activate`, exactly as a real click does.
+ * With duplicate values the first enabled occurrence is chosen.
+ *
+ * @throws {Error} if `picker` is disabled, no rendered swatch carries `value`, or every swatch
+ *   with that value is disabled.
+ */
+export async function chooseSwatch(picker: LyraSwatchPicker, value: string): Promise<void> {
+  if (picker.disabled) {
+    throw new Error('chooseSwatch(): the swatch picker is disabled and will not respond to click().');
+  }
+  await picker.updateComplete;
+  const swatches = Array.from(picker.renderRoot?.querySelectorAll<HTMLButtonElement>('[part~="swatch"]') ?? [])
+    .filter((swatch) => swatch.dataset['value'] === value);
+  if (swatches.length === 0) {
+    throw new Error(`chooseSwatch(): no rendered swatch has value ${JSON.stringify(value)}.`);
+  }
+  const swatch = swatches.find((candidate) => !candidate.disabled);
+  if (!swatch) {
+    throw new Error(`chooseSwatch(): the swatch with value ${JSON.stringify(value)} is disabled.`);
+  }
+  swatch.click();
+  await picker.updateComplete;
+}
+
+/**
+ * Chooses `code` in `<lr-currency-picker>` through the select (or, with `searchable`, the
+ * combobox) it composes: the inner control's listbox opens and the real option row is clicked, as
+ * {@link chooseOption} does. The picker then commits through its own path, so `input`,
+ * `lr-input`, `change` and `lr-change` have all been dispatched on the picker host (once, and only
+ * when the value changes) before this resolves. Awaits the picker's `updateComplete` first, which
+ * also waits for a `searchable` picker's lazily loaded combobox. Matching is exact against the
+ * catalog code (`"EUR"`, not `"eur"`).
+ *
+ * @throws {Error} if `picker` is disabled, `code` is not in its current catalog, or that entry is
+ *   disabled.
+ */
+export async function chooseCurrency(picker: LyraCurrencyPicker, code: string): Promise<void> {
+  if (picker.effectiveDisabled || picker.matches(':disabled')) {
+    throw new Error('chooseCurrency(): the currency picker is disabled and will not open.');
+  }
+  await picker.updateComplete;
+  const control = picker.renderRoot?.querySelector<LyraCombobox | LyraSelect>(`${tag('select')},${tag('combobox')}`);
+  if (!control) {
+    throw new Error('chooseCurrency(): the currency picker has not rendered its control yet.');
+  }
+  await control.updateComplete;
+  const option = Array.from(control.querySelectorAll<LyraOption>(tag('option'))).find((candidate) => candidate.value === code);
+  if (!option) {
+    throw new Error(`chooseCurrency(): ${JSON.stringify(code)} is not in the picker's catalog.`);
+  }
+  if (option.disabled) {
+    throw new Error(`chooseCurrency(): ${JSON.stringify(code)} is disabled in the picker's catalog.`);
+  }
+  await chooseOption(control, code);
+  await picker.updateComplete;
+}
+
+/** Options for {@link openPopover} and {@link closePopover}. */
+export interface PopoverDriverOptions {
+  /** Bounded wait, in milliseconds, for `lr-after-show`/`lr-after-hide` before rejecting. Default 2000. */
+  timeoutMs?: number;
+}
+
+/** Options for {@link closePopover}. */
+export interface ClosePopoverOptions extends PopoverDriverOptions {
+  /**
+   * How to close it. `'escape'` (the default) presses Escape on the focused element, which closes
+   * the topmost open overlay; `'trigger'` clicks the interaction trigger again, the click-mode
+   * toggle (and the release of a pinned `hover`/`focus` surface).
+   */
+  via?: 'escape' | 'trigger';
+}
+
+const POPOVER_SETTLE_TIMEOUT_MS = 2000;
+
+/** The popover's interaction owner: its slotted trigger, else its `for` target in the same root. */
+function popoverTrigger(popover: LyraPopover): HTMLElement | undefined {
+  const slot = popover.renderRoot?.querySelector<HTMLSlotElement>('slot[name="trigger"]');
+  const slotted = slot?.assignedElements({ flatten: true })[0];
+  if (slotted) return slotted as HTMLElement;
+  if (!popover.for) return undefined;
+  const root = popover.getRootNode() as Document | ShadowRoot;
+  return (root.getElementById?.(popover.for) as HTMLElement | null) ?? undefined;
+}
+
+/** Arms a one-shot listener before the interaction, so a synchronous settle is not missed. */
+function settled(popover: LyraPopover, type: 'lr-after-show' | 'lr-after-hide', timeoutMs: number, caller: string): { promise: Promise<void>; cancel(): void } {
+  let cancel = (): void => {};
+  const promise = new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      popover.removeEventListener(type, onSettled);
+      reject(new Error(`${caller}: ${type} did not fire within ${timeoutMs}ms.`));
+    }, timeoutMs);
+    const onSettled = (): void => {
+      clearTimeout(timer);
+      resolve();
+    };
+    popover.addEventListener(type, onSettled, { once: true });
+    cancel = () => {
+      clearTimeout(timer);
+      popover.removeEventListener(type, onSettled);
+    };
+  });
+  return { promise, cancel };
+}
+
+/**
+ * Opens `<lr-popover>` by clicking its interaction trigger (the slotted `trigger` element, else its
+ * `for` target) -- the pointer path a user takes -- and resolves after the component's own
+ * `lr-show` and `lr-after-show`, once the popup has rendered. Resolves immediately when it is
+ * already open. A `hover`/`focus` popover opens and pins on that click, as it does for a user.
+ *
+ * @throws {Error} if the popover is disabled, uses `trigger="manual"` or a `showAt()` virtual
+ *   anchor (use `show()`), has no trigger, or did not open (an `lr-show` veto, a disabled trigger,
+ *   or a peer that refused to close); rejects if `lr-after-show` does not follow in time.
+ */
+export async function openPopover(popover: LyraPopover, options: PopoverDriverOptions = {}): Promise<void> {
+  await popover.updateComplete;
+  if (popover.open) return;
+  if (popover.disabled) {
+    throw new Error('openPopover(): the popover is disabled and will not open.');
+  }
+  if (/(?:^|\s)manual(?:\s|$)/i.test(popover.trigger)) {
+    throw new Error('openPopover(): trigger="manual" ignores interaction; call show() instead.');
+  }
+  const trigger = popoverTrigger(popover);
+  if (!trigger) {
+    throw new Error('openPopover(): the popover has no slotted trigger or for target to activate; call show() instead.');
+  }
+  const after = settled(popover, 'lr-after-show', options.timeoutMs ?? POPOVER_SETTLE_TIMEOUT_MS, 'openPopover()');
+  trigger.click();
+  if (!popover.open) {
+    after.cancel();
+    throw new Error('openPopover(): the popover did not open (lr-show was vetoed, the trigger is disabled, or a peer stayed open).');
+  }
+  await after.promise;
+  await popover.updateComplete;
+}
+
+/**
+ * Closes `<lr-popover>` the way a user does -- Escape on the focused element by default, or a
+ * second click on its trigger with `{ via: 'trigger' }` -- and resolves after the component's own
+ * `lr-hide` and `lr-after-hide`. Focus returns to the trigger as for a real dismissal. Resolves
+ * immediately when it is already closed.
+ *
+ * @throws {Error} if the popover did not close: an `lr-hide` veto, Escape reaching a newer
+ *   overlay above it, or a trigger click that pinned a transient surface instead of closing it;
+ *   rejects if `lr-after-hide` does not follow in time.
+ */
+export async function closePopover(popover: LyraPopover, options: ClosePopoverOptions = {}): Promise<void> {
+  await popover.updateComplete;
+  if (!popover.open) return;
+  const after = settled(popover, 'lr-after-hide', options.timeoutMs ?? POPOVER_SETTLE_TIMEOUT_MS, 'closePopover()');
+  if (options.via === 'trigger') {
+    const trigger = popoverTrigger(popover);
+    if (!trigger) {
+      after.cancel();
+      throw new Error('closePopover(): the popover has no slotted trigger or for target to activate.');
+    }
+    trigger.click();
+  } else {
+    const document = popover.ownerDocument;
+    const target = deepActiveElementIn(document) ?? document.body ?? document.documentElement;
+    target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, composed: true, cancelable: true }));
+  }
+  if (popover.open) {
+    after.cancel();
+    throw new Error('closePopover(): the popover did not close (lr-hide was vetoed, another overlay owns Escape, or the click pinned it).');
+  }
+  await after.promise;
+  await popover.updateComplete;
 }

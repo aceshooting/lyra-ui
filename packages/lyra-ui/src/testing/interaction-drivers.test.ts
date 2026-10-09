@@ -12,6 +12,13 @@ import '../components/forms/switch/switch.js';
 import '../components/agent-tools/confirm-bar/confirm-bar.js';
 import '../components/agent-tools/tool-approval-dialog/tool-approval-dialog.js';
 import '../components/layout/stepper/stepper.js';
+import '../components/forms/swatch-picker/swatch-picker.js';
+import '../components/forms/currency-picker/currency-picker.js';
+import '../components/overlays/overlay/popover.js';
+import '../components/forms/button/button.js';
+import type { LyraSwatchPicker } from '../components/forms/swatch-picker/swatch-picker.js';
+import type { LyraCurrencyPicker } from '../components/forms/currency-picker/currency-picker.js';
+import type { LyraPopover } from '../components/overlays/overlay/popover.class.js';
 import type { LyraCombobox } from '../components/forms/combobox/combobox.js';
 import type { LyraSelect } from '../components/forms/select/select.js';
 import type { LyraLocalePicker } from '../components/forms/locale-picker/locale-picker.js';
@@ -23,7 +30,11 @@ import type { LyraToolApprovalDialog } from '../components/agent-tools/tool-appr
 import type { LyraStepper } from '../components/layout/stepper/stepper.js';
 import {
   activateStep,
+  chooseCurrency,
   chooseOption,
+  chooseSwatch,
+  closePopover,
+  openPopover,
   submitConfirmDecision,
   toggleSwitch,
 } from './interaction-drivers.js';
@@ -330,5 +341,170 @@ describe('activateStep', () => {
       error = caught;
     }
     expect(error).to.be.instanceOf(Error);
+  });
+});
+
+const swatchItems = [
+  { value: 'emerald', color: '#10b981', label: 'Emerald' },
+  { value: 'ruby', color: '#e11d48', label: 'Ruby' },
+  { value: 'topaz', color: '#f59e0b', label: 'Topaz', disabled: true },
+];
+
+/** Records host events in dispatch order; the listener is attached before the driver runs. */
+function recordEvents(target: EventTarget, types: readonly string[]): string[] {
+  const seen: string[] = [];
+  for (const type of types) target.addEventListener(type, () => seen.push(type));
+  return seen;
+}
+
+describe('chooseSwatch', () => {
+  it('clicks the real swatch radio: lr-change then lr-activate have fired when it resolves', async () => {
+    const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker aria-label="Accent" value="emerald" .items=${swatchItems}></lr-swatch-picker>`);
+    const seen = recordEvents(el, ['lr-change', 'lr-activate']);
+    const changed = oneEvent(el, 'lr-change');
+    await chooseSwatch(el, 'ruby');
+    expect((await changed).detail).to.deep.equal({ value: 'ruby' });
+    expect(seen).to.deep.equal(['lr-change', 'lr-activate']);
+    expect(el.value).to.equal('ruby');
+    const selected = el.shadowRoot!.querySelector<HTMLElement>('[part~="swatch-selected"]');
+    expect(selected?.dataset['value']).to.equal('ruby');
+    expect(selected?.getAttribute('aria-checked')).to.equal('true');
+  });
+
+  it('re-choosing the current value emits only lr-activate, like a real click', async () => {
+    const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker aria-label="Accent" value="emerald" .items=${swatchItems}></lr-swatch-picker>`);
+    const seen = recordEvents(el, ['lr-change', 'lr-activate']);
+    await chooseSwatch(el, 'emerald');
+    expect(seen).to.deep.equal(['lr-activate']);
+  });
+
+  it('throws for a disabled picker, a disabled swatch, or an unknown value without changing the value', async () => {
+    const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker aria-label="Accent" value="emerald" .items=${swatchItems}></lr-swatch-picker>`);
+    const seen = recordEvents(el, ['lr-change', 'lr-activate']);
+    let error: unknown;
+    try { await chooseSwatch(el, 'topaz'); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('is disabled');
+    error = undefined;
+    try { await chooseSwatch(el, 'sapphire'); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('no rendered swatch');
+    el.disabled = true;
+    await el.updateComplete;
+    error = undefined;
+    try { await chooseSwatch(el, 'ruby'); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('disabled');
+    expect(el.value).to.equal('emerald');
+    expect(seen).to.deep.equal([]);
+  });
+});
+
+describe('chooseCurrency', () => {
+  const currencies = [{ code: 'EUR' }, { code: 'USD' }, { code: 'GBP', disabled: true }];
+
+  it('commits through the composed select: input, lr-input, change and lr-change have fired once when it resolves', async () => {
+    const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker label="Currency" value="EUR" .currencies=${currencies}></lr-currency-picker>`);
+    const seen = recordEvents(el, ['input', 'lr-input', 'change', 'lr-change']);
+    const changed = oneEvent(el, 'lr-change');
+    await chooseCurrency(el, 'USD');
+    expect((await changed).detail).to.deep.equal({ value: 'USD', previousValue: 'EUR' });
+    expect(seen).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+    expect(el.value).to.equal('USD');
+  });
+
+  it('drives a searchable picker through its lazily loaded combobox', async () => {
+    const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker label="Currency" searchable .currencies=${currencies}></lr-currency-picker>`);
+    const changed = oneEvent(el, 'lr-change');
+    await chooseCurrency(el, 'EUR');
+    expect((await changed).detail.value).to.equal('EUR');
+    expect(el.value).to.equal('EUR');
+    expect(el.shadowRoot!.querySelector('lr-combobox'), 'the combobox took over').to.not.equal(null);
+  });
+
+  it('throws for a disabled picker, a disabled entry, or a code outside the catalog without committing', async () => {
+    const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker label="Currency" value="EUR" .currencies=${currencies}></lr-currency-picker>`);
+    const seen = recordEvents(el, ['change', 'lr-change']);
+    let error: unknown;
+    try { await chooseCurrency(el, 'GBP'); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('is disabled');
+    error = undefined;
+    try { await chooseCurrency(el, 'JPY'); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('not in the picker');
+    el.disabled = true;
+    await el.updateComplete;
+    error = undefined;
+    try { await chooseCurrency(el, 'USD'); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('disabled');
+    expect(el.value).to.equal('EUR');
+    expect(seen).to.deep.equal([]);
+  });
+});
+
+describe('openPopover / closePopover', () => {
+  const popoverFixture = () => html`
+    <lr-popover style="--show-duration: 0ms; --hide-duration: 0ms">
+      <lr-button slot="trigger">Open details</lr-button>
+      <p>Details</p>
+    </lr-popover>
+  `;
+
+  it('opens through the slotted trigger and closes with Escape, resolving after each lifecycle pair', async () => {
+    const el = await fixture<LyraPopover>(popoverFixture());
+    const seen = recordEvents(el, ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
+    await openPopover(el);
+    expect(el.open).to.equal(true);
+    expect(seen).to.deep.equal(['lr-show', 'lr-after-show']);
+    await openPopover(el);
+    expect(seen, 'opening an open popover is a no-op').to.deep.equal(['lr-show', 'lr-after-show']);
+    await closePopover(el);
+    expect(el.open).to.equal(false);
+    expect(seen).to.deep.equal(['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
+    await closePopover(el);
+    expect(seen.length, 'closing a closed popover is a no-op').to.equal(4);
+  });
+
+  it('closes by clicking the trigger again with via: trigger, and opens a for-owned popover', async () => {
+    const host = await fixture<HTMLElement>(html`
+      <div>
+        <button id="driver-popover-owner">Filters</button>
+        <lr-popover for="driver-popover-owner" style="--show-duration: 0ms; --hide-duration: 0ms"><p>Filter list</p></lr-popover>
+      </div>
+    `);
+    const el = host.querySelector('lr-popover') as LyraPopover;
+    const owner = host.querySelector('button')!;
+    await openPopover(el);
+    expect(el.open).to.equal(true);
+    expect(owner.getAttribute('aria-expanded')).to.equal('true');
+    await closePopover(el, { via: 'trigger' });
+    expect(el.open).to.equal(false);
+    expect(owner.getAttribute('aria-expanded')).to.equal('false');
+  });
+
+  it('throws instead of hanging when lr-show or lr-hide is vetoed, and refuses manual or disabled popovers', async () => {
+    const el = await fixture<LyraPopover>(popoverFixture());
+    const veto = (event: Event): void => event.preventDefault();
+    el.addEventListener('lr-show', veto);
+    let error: unknown;
+    try { await openPopover(el); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('did not open');
+    el.removeEventListener('lr-show', veto);
+
+    await openPopover(el);
+    el.addEventListener('lr-hide', veto);
+    error = undefined;
+    try { await closePopover(el); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('did not close');
+    expect(el.open).to.equal(true);
+    el.removeEventListener('lr-hide', veto);
+    await closePopover(el);
+
+    el.trigger = 'manual';
+    error = undefined;
+    try { await openPopover(el); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('manual');
+    el.trigger = 'click';
+    el.disabled = true;
+    error = undefined;
+    try { await openPopover(el); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('disabled');
+    expect(el.open).to.equal(false);
   });
 });
