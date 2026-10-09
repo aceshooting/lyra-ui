@@ -299,6 +299,9 @@ export const styles = css`
   [part~="page-field"] {
     display: inline-flex;
     align-items: center;
+    /* The page count's leading space collapses at the start of its flex item, so without a gap
+       the input's border touched the "/ N" text. */
+    gap: var(--lr-pagination-page-field-gap, var(--lr-space-2xs));
     color: var(--lr-color-text-quiet);
     white-space: nowrap;
   }

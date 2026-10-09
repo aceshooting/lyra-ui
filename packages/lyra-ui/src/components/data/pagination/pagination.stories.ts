@@ -150,6 +150,15 @@ export const Compact: Story = {
   ></lr-pagination>`,
 };
 
+/** The compact page input and its page count keep a small gap, retunable through
+ *  `--lr-pagination-page-field-gap`. */
+export const CompactPageFieldGap: Story = {
+  render: () => html`<div style="display:grid;gap:var(--lr-space-m)">
+    <lr-pagination format="compact" total="95" page-size="10"></lr-pagination>
+    <lr-pagination format="compact" total="95" page-size="10" style="--lr-pagination-page-field-gap: var(--lr-space-s)"></lr-pagination>
+  </div>`,
+};
+
 /** `total="-1"` enters indeterminate mode for a server API that never returns a total -- previous
  *  and next only, with a page-number field and no `/ totalPages` readout. `hasNext` (defaulting to
  *  `true`) is the one extra signal that mode needs; previous stays disabled at page 1 exactly as in

@@ -2688,3 +2688,32 @@ it('takes the summary noun from the plural `items` message by total, and `item-l
   await el.updateComplete;
   expect(summary()).to.equal('1–5 of 5 rows');
 });
+
+describe('compact page field gap', () => {
+  const field = (el: LyraPagination) => el.shadowRoot!.querySelector<HTMLElement>('[part~="page-field"]')!;
+  const input = (el: LyraPagination) => el.shadowRoot!.querySelector<HTMLElement>('[part="page-input"]')!;
+  const count = (el: LyraPagination) => el.shadowRoot!.querySelector<HTMLElement>('[part="page-count"]')!;
+  /** Inline distance from the input's trailing edge to the count's leading edge, in either direction. */
+  const spacing = (el: LyraPagination, rtl: boolean): number => {
+    const a = input(el).getBoundingClientRect();
+    const b = count(el).getBoundingClientRect();
+    return rtl ? a.left - b.right : b.left - a.right;
+  };
+
+  for (const dir of ['ltr', 'rtl'] as const) {
+    it(`separates the page input from the page count by a default gap (${dir})`, async () => {
+      const el = await compactPagination(html`<lr-pagination dir=${dir} format="compact" total="95" page-size="10"></lr-pagination>`);
+      const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      expect(getComputedStyle(field(el)).columnGap).to.equal(`${0.125 * rootPx}px`);
+      expect(spacing(el, dir === 'rtl')).to.be.closeTo(0.125 * rootPx, 0.5);
+    });
+
+    it(`retunes the gap through --lr-pagination-page-field-gap (${dir})`, async () => {
+      const wrapper = await fixture<HTMLElement>(html`<div style="--lr-pagination-page-field-gap: 7px"><lr-pagination dir=${dir} format="compact" total="95" page-size="10"></lr-pagination></div>`);
+      const el = wrapper.querySelector('lr-pagination') as LyraPagination;
+      await el.updateComplete;
+      expect(getComputedStyle(field(el)).columnGap).to.equal('7px');
+      expect(spacing(el, dir === 'rtl')).to.be.closeTo(7, 0.5);
+    });
+  }
+});
