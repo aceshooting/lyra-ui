@@ -451,11 +451,13 @@ const reviewedCeilingKeys = Object.keys(budgets)
   .sort();
 // The tightest standalone ceiling in the file, and the one that notices when the shared base class
 // grows. The 21.0.0 accessibility surface adds forwarding for `aria-keyshortcuts` on buttons;
-// the measured standalone registration is 32.53 KiB gzip, so the canary remains below this
-// deliberately narrow 33 KiB ceiling.
+// the measured standalone registration was 32.53 KiB gzip under the former 33 KiB canary. The
+// v28 document token layer (RFC 0002) moved the shared token resolver into a document-scoped layer
+// adopted on first registration, measured at exactly 34,814 gzip bytes; the canary stays at that
+// exact ceiling so any further growth of the shared base class still fails here first.
 assert.ok(
-  budgets['dist/components/forms/button/button.js'] <= 33,
-  'the standalone button registration must remain at or below 33 KiB gzip',
+  budgets['dist/components/forms/button/button.js'] <= 34814 / 1024,
+  'the standalone button registration must remain at or below 34,814 gzip bytes',
 );
 assert.deepEqual(reviewedCeilingKeys, [
   '$componentMaxGzipKb',
