@@ -129,6 +129,10 @@ echo "==> Synchronizing package-manager documentation"
 node scripts/sync-package-manager-docs.mjs --write
 
 echo
+echo "==> Synchronizing Playwright container images"
+node scripts/sync-playwright-images.mjs --write
+
+echo
 echo "==> Installing workspace dependencies and refreshing pnpm-lock.yaml"
 # npm-check-updates has just changed the workspace manifests, so override pnpm's CI default of a
 # frozen lockfile and persist the upgraded dependency graph before building generated artifacts.

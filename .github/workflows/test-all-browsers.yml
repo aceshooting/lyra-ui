@@ -59,7 +59,7 @@ jobs:
     # Native engines inherit their pinned binaries and OS dependencies. Real Chrome/Edge channels
     # retain hosted VMs. An empty image means no job container; the matrix axes stay unchanged.
     container:
-      image: ${{ contains(fromJSON('["chromium","firefox","safari"]'), matrix.browser) && 'mcr.microsoft.com/playwright:v1.63.0-noble' || '' }}
+      image: ${{ contains(fromJSON('["chromium","firefox","safari"]'), matrix.browser) && 'mcr.microsoft.com/playwright:v1.64.0-noble' || '' }}
       options: --shm-size=2g -v /usr/share/fonts:/usr/share/host-fonts:ro
     env:
       HOME: ${{ contains(fromJSON('["chromium","firefox","safari"]'), matrix.browser) && '/root' || '/home/runner' }}

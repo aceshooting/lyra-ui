@@ -207,7 +207,7 @@ jobs:
     # degraded -- apt sets no default Acquire::Retries and its timeout only fires on a fully idle
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
       # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
       # there, and this repo has already been bitten once by exhausting it (see the
       # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
@@ -276,7 +276,7 @@ jobs:
     # degraded -- apt sets no default Acquire::Retries and its timeout only fires on a fully idle
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
       # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
       # there, and this repo has already been bitten once by exhausting it (see the
       # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
@@ -581,7 +581,7 @@ jobs:
     runs-on: ubuntu-latest
     # The matching image provides all three engines and their OS dependencies before consumers.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
       options: --shm-size=2g -v /usr/share/fonts:/usr/share/host-fonts:ro
     env:
       HOME: /root
@@ -832,7 +832,7 @@ jobs:
     # degraded -- apt sets no default Acquire::Retries and its timeout only fires on a fully idle
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
       # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
       # there, and this repo has already been bitten once by exhausting it (see the
       # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
@@ -890,7 +890,7 @@ jobs:
     # degraded -- apt sets no default Acquire::Retries and its timeout only fires on a fully idle
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
       # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
       # there, and this repo has already been bitten once by exhausting it (see the
       # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
@@ -944,7 +944,7 @@ jobs:
     name: docs-and-storybook / show-code
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
       options: --shm-size=2g -v /usr/share/fonts:/usr/share/host-fonts:ro
     env:
       HOME: /root
@@ -1045,7 +1045,7 @@ jobs:
     # degraded -- apt sets no default Acquire::Retries and its timeout only fires on a fully idle
     # socket. The tag MUST match the `playwright` devDependency; release-integrity asserts it.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
       # Docker defaults /dev/shm to 64MB. Chromium keeps its tile/compositor buffers
       # there, and this repo has already been bitten once by exhausting it (see the
       # --disable-dev-shm-usage note in web-test-runner.config.js): the renderer dies with
@@ -1144,7 +1144,7 @@ jobs:
             shard_index: 1
             shard_total: 1
             install_browser: chromium
-            container: 'mcr.microsoft.com/playwright:v1.63.0-noble'
+            container: 'mcr.microsoft.com/playwright:v1.64.0-noble'
           - browser: chrome
             node-version: 22
             shard_index: 1
@@ -1162,19 +1162,19 @@ jobs:
             shard_index: 1
             shard_total: 2
             install_browser: firefox
-            container: 'mcr.microsoft.com/playwright:v1.63.0-noble'
+            container: 'mcr.microsoft.com/playwright:v1.64.0-noble'
           - browser: firefox
             node-version: 22
             shard_index: 2
             shard_total: 2
             install_browser: firefox
-            container: 'mcr.microsoft.com/playwright:v1.63.0-noble'
+            container: 'mcr.microsoft.com/playwright:v1.64.0-noble'
           - browser: safari
             node-version: 22
             shard_index: 1
             shard_total: 1
             install_browser: webkit
-            container: 'mcr.microsoft.com/playwright:v1.63.0-noble'
+            container: 'mcr.microsoft.com/playwright:v1.64.0-noble'
     runs-on: ubuntu-latest
     # 4 of 6 legs run in the official Playwright image, which ships the browser binaries and
     # every OS-level dependency -- no apt, no browser download. Only the branded chrome/msedge
