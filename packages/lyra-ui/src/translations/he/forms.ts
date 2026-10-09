@@ -84,6 +84,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: "אימוג'י",
   emojiPickerEmpty: 'לא נמצא אימוג׳י',
   emojiPickerLoadError: 'לא ניתן לטעון אימוג׳י.',
+  emojiPickerPeerMissing: 'אימוג׳י אינם זמינים.',
   emojiPickerGroupSmileysEmotion: 'סמיילים ורגשות',
   emojiPickerGroupPeopleBody: 'אנשים וגוף',
   emojiPickerGroupComponent: 'רכיב',

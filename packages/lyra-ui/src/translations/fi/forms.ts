@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emojit',
   emojiPickerEmpty: 'Emojeja ei löytynyt',
   emojiPickerLoadError: 'Emojeja ei voitu ladata.',
+  emojiPickerPeerMissing: 'Emojit eivät ole käytettävissä.',
   emojiPickerGroupSmileysEmotion: 'Hymiöt ja tunteet',
   emojiPickerGroupPeopleBody: 'Ihmiset ja keho',
   emojiPickerGroupComponent: 'Osat',

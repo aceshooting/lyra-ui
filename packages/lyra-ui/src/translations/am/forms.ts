@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'ኢሞጂ',
   emojiPickerEmpty: 'ኢሞጂ አልተገኘም',
   emojiPickerLoadError: 'ኢሞጂን መጫን አልተቻለም።',
+  emojiPickerPeerMissing: 'ኢሞጂ አይገኝም።',
   emojiPickerGroupSmileysEmotion: 'ፈገግታዎች እና ስሜት',
   emojiPickerGroupPeopleBody: 'ሰዎች እና አካል',
   emojiPickerGroupComponent: 'ክፍል',

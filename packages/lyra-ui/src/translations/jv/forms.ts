@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Emoji ora ditemokake',
   emojiPickerLoadError: 'Emoji ora bisa dimuat.',
+  emojiPickerPeerMissing: 'Emoji ora kasedhiya.',
   emojiPickerGroupSmileysEmotion: 'Pasuryan mesem lan emosi',
   emojiPickerGroupPeopleBody: 'Wong lan awak',
   emojiPickerGroupComponent: 'Komponen',

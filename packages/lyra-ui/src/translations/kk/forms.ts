@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Эмодзи',
   emojiPickerEmpty: 'Эмодзи табылмады',
   emojiPickerLoadError: 'Эмодзиді жүктеу мүмкін болмады.',
+  emojiPickerPeerMissing: 'Эмодзи қолжетімді емес.',
   emojiPickerGroupSmileysEmotion: 'Смайликтер мен эмоциялар',
   emojiPickerGroupPeopleBody: 'Адамдар мен дене',
   emojiPickerGroupComponent: 'Құрамдас бөліктер',

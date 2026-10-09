@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Emoji teu kapanggih',
   emojiPickerLoadError: 'Emoji teu bisa dimuat.',
+  emojiPickerPeerMissing: 'Emoji teu sayogi.',
   emojiPickerGroupSmileysEmotion: 'Beungeut jeung émosi',
   emojiPickerGroupPeopleBody: 'Jalma jeung awak',
   emojiPickerGroupComponent: 'Komponén',

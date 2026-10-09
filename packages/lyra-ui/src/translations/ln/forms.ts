@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Bilembo ya emoji',
   emojiPickerEmpty: 'Emoji emonani te',
   emojiPickerLoadError: 'Tokoki te kocharger emoji.',
+  emojiPickerPeerMissing: 'Emoji ezali te.',
   emojiPickerGroupSmileysEmotion: 'Ba elongi ya koseka mpe mayoki',
   emojiPickerGroupPeopleBody: 'Bato mpe nzoto',
   emojiPickerGroupComponent: 'Eteni',

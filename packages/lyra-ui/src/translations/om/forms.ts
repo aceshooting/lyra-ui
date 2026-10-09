@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Emoji hin argamne',
   emojiPickerLoadError: 'Emoji fe\'uun hin danda\'amne.',
+  emojiPickerPeerMissing: 'Emoji\'n hin argamu.',
   emojiPickerGroupSmileysEmotion: 'Fuula seeqaa fi miira',
   emojiPickerGroupPeopleBody: 'Namoota fi qaama',
   emojiPickerGroupComponent: 'Qaama',

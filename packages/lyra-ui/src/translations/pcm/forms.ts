@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Dem no find emoji',
   emojiPickerLoadError: 'E no fit load emoji.',
+  emojiPickerPeerMissing: 'Emoji no dey.',
   emojiPickerGroupSmileysEmotion: 'Smileys and how person dey feel',
   emojiPickerGroupPeopleBody: 'People and body',
   emojiPickerGroupComponent: 'Part',

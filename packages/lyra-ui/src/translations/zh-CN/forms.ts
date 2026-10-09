@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: '表情',
   emojiPickerEmpty: '未找到表情',
   emojiPickerLoadError: '无法加载表情。',
+  emojiPickerPeerMissing: '表情不可用。',
   emojiPickerGroupSmileysEmotion: '笑脸与情感',
   emojiPickerGroupPeopleBody: '人物与身体',
   emojiPickerGroupComponent: '组件',

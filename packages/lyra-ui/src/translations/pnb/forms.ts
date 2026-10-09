@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'ایموجی',
   emojiPickerEmpty: 'کوئی ایموجی نئیں لبھیا',
   emojiPickerLoadError: 'ایموجی لوڈ نئیں ہو سکے۔',
+  emojiPickerPeerMissing: 'ایموجی دستیاب نئیں۔',
   emojiPickerGroupSmileysEmotion: 'مسکراہٹاں تے جذبات',
   emojiPickerGroupPeopleBody: 'لوک تے جسم',
   emojiPickerGroupComponent: 'جزو',

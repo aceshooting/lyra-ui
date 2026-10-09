@@ -2,6 +2,8 @@ import { expect } from '@open-wc/testing';
 import {
   loadEmojiData,
   loadEmojiDataCached,
+  loadEmojiDataOutcome,
+  loadEmojiDataOutcomeCached,
   clearEmojiDataCache,
   resolveEmojiDataLocale,
 } from './emoji-data-loader.js';
@@ -221,4 +223,68 @@ it('does not keep a failed load for the page lifetime', async () => {
   } finally {
     console.warn = originalWarn;
   }
+});
+
+describe('peer missing vs. peer failed', () => {
+  async function captureWarnings(body: () => Promise<void>): Promise<string[]> {
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(String(args[0]));
+    try {
+      await body();
+    } finally {
+      console.warn = originalWarn;
+    }
+    return warnings;
+  }
+  const notInstalled = (): Promise<unknown> =>
+    Promise.reject(Object.assign(new Error("Cannot find package 'emoji-picker-element-data'"), { code: 'ERR_MODULE_NOT_FOUND' }));
+
+  it('reports a peer that is not installed as missing, with an install hint', async () => {
+    let outcome: unknown;
+    const warnings = await captureWarnings(async () => {
+      outcome = await loadEmojiDataOutcome('en', notInstalled);
+    });
+    expect(outcome).to.deep.equal({ reason: 'missing' });
+    expect(warnings.length).to.equal(1);
+    expect(warnings[0]).to.contain('is not installed');
+    expect(warnings[0]).to.contain('pnpm add emoji-picker-element-data');
+  });
+
+  it('reports an installed peer that fails to import as failed, without claiming it is missing', async () => {
+    let outcome: unknown;
+    const warnings = await captureWarnings(async () => {
+      outcome = await loadEmojiDataOutcome('en', () => Promise.reject(new TypeError('Failed to fetch dynamically imported module: x')));
+    });
+    expect(outcome).to.deep.equal({ reason: 'failed' });
+    expect(warnings.length).to.equal(1);
+    expect(warnings[0]).to.contain('could not be loaded or validated');
+    expect(warnings[0]).to.not.contain('not installed');
+  });
+
+  it('reports an installed peer with the wrong module shape as failed', async () => {
+    let outcome: unknown;
+    const warnings = await captureWarnings(async () => {
+      outcome = await loadEmojiDataOutcome('en', () => Promise.resolve({ notAnArray: true }));
+    });
+    expect(outcome).to.deep.equal({ reason: 'failed' });
+    expect(warnings[0]).to.contain('could not be loaded or validated');
+  });
+
+  it('keeps loadEmojiData() resolving null for either failure', async () => {
+    await captureWarnings(async () => {
+      expect(await loadEmojiData('en', notInstalled)).to.equal(null);
+      expect(await loadEmojiData('en', () => Promise.resolve({}))).to.equal(null);
+    });
+  });
+
+  it('caches neither failure, so a later call imports again', async () => {
+    let calls = 0;
+    await captureWarnings(async () => {
+      expect(await loadEmojiDataOutcomeCached('fr', () => (calls++, notInstalled()))).to.deep.equal({ reason: 'missing' });
+      const groups = await loadEmojiDataOutcomeCached('fr', () => (calls++, Promise.resolve([{ emoji: '😀', group: 0, annotation: 'x' }])));
+      expect(Array.isArray(groups)).to.be.true;
+    });
+    expect(calls).to.equal(2);
+  });
 });

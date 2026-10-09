@@ -895,6 +895,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'No emoji found',
   emojiPickerLoadError: 'Could not load emoji.',
+  emojiPickerPeerMissing: 'Emoji are not available.',
   // Emojibase's canonical group headings (group ids 0-9), used for the emoji set
   // `<lr-emoji-picker>` auto-loads from `emoji-picker-element-data`. A consumer-supplied `groups`
   // array carries its own already-authored `label` and never routes through these.

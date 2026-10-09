@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Walang nahanap na emoji',
   emojiPickerLoadError: 'Hindi ma-load ang emoji.',
+  emojiPickerPeerMissing: 'Hindi available ang emoji.',
   emojiPickerGroupSmileysEmotion: 'Mga ngiti at damdamin',
   emojiPickerGroupPeopleBody: 'Mga tao at katawan',
   emojiPickerGroupComponent: 'Bahagi',

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'इमोजी',
   emojiPickerEmpty: 'कोई इमोजी नहीं मिला',
   emojiPickerLoadError: 'इमोजी लोड नहीं हो सके।',
+  emojiPickerPeerMissing: 'इमोजी उपलब्ध नहीं हैं।',
   emojiPickerGroupSmileysEmotion: 'मुस्कान और भावनाएँ',
   emojiPickerGroupPeopleBody: 'लोग और शरीर',
   emojiPickerGroupComponent: 'घटक',

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emojik',
   emojiPickerEmpty: 'Nem található emoji',
   emojiPickerLoadError: 'Nem sikerült betölteni az emojikat.',
+  emojiPickerPeerMissing: 'Az emojik nem érhetők el.',
   emojiPickerGroupSmileysEmotion: 'Hangulatjelek és érzelmek',
   emojiPickerGroupPeopleBody: 'Emberek és testrészek',
   emojiPickerGroupComponent: 'Összetevők',

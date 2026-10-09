@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Biểu tượng cảm xúc',
   emojiPickerEmpty: 'Không tìm thấy biểu tượng cảm xúc',
   emojiPickerLoadError: 'Không thể tải biểu tượng cảm xúc.',
+  emojiPickerPeerMissing: 'Biểu tượng cảm xúc không khả dụng.',
   emojiPickerGroupSmileysEmotion: 'Mặt cười và cảm xúc',
   emojiPickerGroupPeopleBody: 'Con người và cơ thể',
   emojiPickerGroupComponent: 'Thành phần',

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Ahụghị emoji',
   emojiPickerLoadError: 'Enweghị ike ibunye emoji.',
+  emojiPickerPeerMissing: 'Emoji adịghị.',
   emojiPickerGroupSmileysEmotion: 'Ihu ọchị na mmetụta uche',
   emojiPickerGroupPeopleBody: 'Ndị mmadụ na akụkụ ahụ',
   emojiPickerGroupComponent: 'Akụkụ',

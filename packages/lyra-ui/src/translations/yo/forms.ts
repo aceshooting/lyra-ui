@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Àtòjọ emoji',
   emojiPickerEmpty: 'A kò rí emoji',
   emojiPickerLoadError: 'Kò ṣeé ṣe láti gbé emoji wọlé.',
+  emojiPickerPeerMissing: 'Emoji kò sí.',
   emojiPickerGroupSmileysEmotion: 'Àwọn ẹ̀rín àti ìmọ̀lára',
   emojiPickerGroupPeopleBody: 'Àwọn ènìyàn àti ara',
   emojiPickerGroupComponent: 'Ẹ̀yà',

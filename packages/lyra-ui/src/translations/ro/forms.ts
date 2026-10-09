@@ -84,6 +84,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Niciun emoji găsit',
   emojiPickerLoadError: 'Emoji-urile nu au putut fi încărcate.',
+  emojiPickerPeerMissing: 'Emoji-urile nu sunt disponibile.',
   emojiPickerGroupSmileysEmotion: 'Emoticoane și emoții',
   emojiPickerGroupPeopleBody: 'Persoane și corp',
   emojiPickerGroupComponent: 'Componente',

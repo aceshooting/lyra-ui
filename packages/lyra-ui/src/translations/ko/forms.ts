@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: '이모지',
   emojiPickerEmpty: '이모티콘이 없습니다',
   emojiPickerLoadError: '이모티콘을 로드할 수 없습니다.',
+  emojiPickerPeerMissing: '이모티콘을 사용할 수 없습니다.',
   emojiPickerGroupSmileysEmotion: '미소와 감정',
   emojiPickerGroupPeopleBody: '사람 및 신체',
   emojiPickerGroupComponent: '요소',

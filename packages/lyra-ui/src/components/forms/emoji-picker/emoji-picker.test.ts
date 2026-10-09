@@ -2368,3 +2368,61 @@ it('marks the active descendant on the selected emoji outside forced colors too'
   await el.updateComplete;
   expect(getComputedStyle(buttons[0]!).outlineStyle).to.not.equal(selectionOnly);
 });
+
+describe('optional-peer load failure: missing vs. failed', () => {
+  type Outcome = EmojiPickerGroup[] | null | { reason: 'missing' | 'failed' };
+  const connectWithOutcome = (outcome: Outcome): Promise<LyraEmojiPicker> =>
+    connectEmojiPicker(() => Promise.resolve(outcome) as Promise<EmojiPickerGroup[] | null>);
+  const errorText = (el: LyraEmojiPicker): string | null =>
+    (el.shadowRoot!.querySelector('[part="load-error"]') as HTMLElement | null)?.textContent?.trim() ?? null;
+  const hasRetry = (el: LyraEmojiPicker): boolean => el.shadowRoot!.querySelector('[part="load-retry"]') !== null;
+  const announced = (): string[] => {
+    const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`);
+    return sink ? Array.from(sink.children, (child) => (child.textContent ?? '').trim()) : [];
+  };
+
+  it('says the emoji set is unavailable, without a Retry button, when the peer is not installed', async () => {
+    const errors: string[] = [];
+    const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+    (el as unknown as { loadGroups: () => Promise<Outcome> }).loadGroups = () => Promise.resolve({ reason: 'missing' });
+    el.addEventListener('lr-load-error', () => errors.push('lr-load-error'));
+    created.push(el);
+    document.body.append(el);
+    await waitUntil(() => errorText(el) !== null, 'load-error surface never rendered');
+    expect(errorText(el)).to.equal('Emoji are not available.');
+    expect(hasRetry(el)).to.be.false;
+    expect(announced()).to.include('Emoji are not available.');
+    expect(errors).to.deep.equal(['lr-load-error']);
+    await expect(el).to.be.accessible();
+  });
+
+  it('keeps the load-error message and Retry button when an installed peer fails to load', async () => {
+    const el = await connectWithOutcome({ reason: 'failed' });
+    await waitUntil(() => errorText(el) !== null, 'load-error surface never rendered');
+    expect(errorText(el)).to.equal('Could not load emoji.');
+    expect(hasRetry(el)).to.be.true;
+    expect(announced()).to.include('Could not load emoji.');
+  });
+
+  it('treats a bare null from the loader as a failed load', async () => {
+    const el = await connectWithOutcome(null);
+    await waitUntil(() => errorText(el) !== null, 'load-error surface never rendered');
+    expect(errorText(el)).to.equal('Could not load emoji.');
+    expect(hasRetry(el)).to.be.true;
+  });
+
+  it('localizes the peer-missing message through .strings', async () => {
+    const el = await connectWithOutcome({ reason: 'missing' });
+    el.strings = { emojiPickerPeerMissing: 'MARKER-PEER-MISSING' };
+    await waitUntil(() => errorText(el) === 'MARKER-PEER-MISSING', 'the .strings override never reached the DOM');
+  });
+
+  it('clears the peer-missing state when a consumer supplies groups', async () => {
+    const el = await connectWithOutcome({ reason: 'missing' });
+    await waitUntil(() => errorText(el) !== null, 'load-error surface never rendered');
+    el.groups = groups;
+    await el.updateComplete;
+    expect(errorText(el)).to.equal(null);
+    expect(hasRetry(el)).to.be.false;
+  });
+});

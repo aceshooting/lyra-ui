@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'အီမိုဂျီ',
   emojiPickerEmpty: 'အီမိုဂျီ မတွေ့ပါ',
   emojiPickerLoadError: 'အီမိုဂျီကို မတင်နိုင်ပါ။',
+  emojiPickerPeerMissing: 'အီမိုဂျီ မရရှိနိုင်ပါ။',
   emojiPickerGroupSmileysEmotion: 'အပြုံးနှင့် စိတ်ခံစားမှု',
   emojiPickerGroupPeopleBody: 'လူနှင့် ကိုယ်ခန္ဓာ',
   emojiPickerGroupComponent: 'အစိတ်အပိုင်း',

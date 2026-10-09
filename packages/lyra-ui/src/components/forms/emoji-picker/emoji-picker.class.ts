@@ -22,13 +22,14 @@ import { closeIcon } from '../../../internal/icons.js';
 import { revealRange, revealRow } from '../../../internal/reveal-row.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './emoji-picker.styles.js';
-import { loadEmojiDataCached } from './emoji-data-loader.js';
+import { loadEmojiDataOutcomeCached, type EmojiDataLoadFailure } from './emoji-data-loader.js';
+import type { OptionalPeerFailure } from '../../../internal/optional-peer-failure.js';
 // Data types live in ./emoji-types.js (extracted to break a type-only import cycle with
 // emoji-data-loader.ts); re-exported so `export *` from emoji-picker.js keeps the public paths.
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_emojiPickerSearchPlaceholder, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerPeerMissing, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_emojiPickerSearchPlaceholder, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { EmojiPickerItem, EmojiPickerGroup };
@@ -182,7 +183,9 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *
  * The auto-loader fails *closed and visibly*: when the optional `emoji-picker-element-data` peer
  * cannot be loaded, the grid renders a distinct localized `[part="load-error"]` surface in place of
- * the ordinary `[part="empty"]` message, so a skipped install is distinguishable at a glance from a
+ * the ordinary `[part="empty"]` message -- "Emoji are not available." when the peer is not
+ * installed, "Could not load emoji." plus a `[part="load-retry"]` button when it is installed but
+ * failed to load or validate -- so a skipped install is distinguishable at a glance from a
  * genuine zero-match search or a deliberate `groups = []` opt-out, and announces the same message
  * once through the document's shared assertive live region. Assigning `groups` afterwards clears
  * it. The auto-loader also picks the `emoji-picker-element-data` locale directory closest to
@@ -258,7 +261,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *   zero-match search or a deliberate `groups = []`, and a later `groups` assignment clears it. The
  *   same message is announced once through the shared light-DOM assertive sink rather than through
  *   a shadow-root `role="alert"`, which announces unreliably.
- * @csspart load-retry - The Retry button shown beside a failed built-in emoji load.
+ * @csspart load-retry - The Retry button shown beside a failed built-in emoji load. It is not shown
+ *   when the peer is not installed, where retrying cannot succeed.
  * @csspart virtual-spacer - The full-height scroll spacer that gives the grid its scrollbar while
  *   only the visible rows exist in the DOM. Rendered on the windowed path only.
  * @csspart virtual-row - One windowed row, absolutely positioned at the `--lr-emoji-picker-row-height`
@@ -347,6 +351,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     emojiPickerGroupTravelPlaces: LYRA_DEFAULT_emojiPickerGroupTravelPlaces,
     emojiPickerGroupUnknown: LYRA_DEFAULT_emojiPickerGroupUnknown,
     emojiPickerLoadError: LYRA_DEFAULT_emojiPickerLoadError,
+    emojiPickerPeerMissing: LYRA_DEFAULT_emojiPickerPeerMissing,
     emojiPickerSearchLabel: LYRA_DEFAULT_emojiPickerSearchLabel,
     emojiPickerSearchPlaceholder: LYRA_DEFAULT_emojiPickerSearchPlaceholder,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
@@ -378,8 +383,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // without re-fetching on every unrelated re-render or reconnect at the same locale.
   private builtInGroupsLocale?: string;
   /** The third state `groups` alone cannot express: the optional `emoji-picker-element-data` peer
-   *  was consulted and did not resolve, as opposed to "not loaded yet" or "loaded, and empty". */
-  @state() private peerLoadFailed = false;
+   *  was consulted and did not resolve, as opposed to "not loaded yet" or "loaded, and empty".
+   *  `'missing'`: the peer is not installed (nothing to retry); `'failed'`: it did not load. */
+  @state() private peerLoadFailure?: OptionalPeerFailure;
   /** Live region for the peer-load failure. A shadow-root `role="alert"` is unreliable, so the
    *  message goes through the document's shared light-DOM assertive sink -- the same channel
    *  `<lr-combobox>` uses for its own `sourceFailed` announcement. */
@@ -405,7 +411,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     if (!this.applyingBuiltInGroups) this.groupsWereSet = true;
     // A consumer assignment always supersedes a failed auto-load, including a deliberate `[]`
     // opt-out: from here on the empty grid is the consumer's decision, not a missing install.
-    this.peerLoadFailed = false;
+    this.peerLoadFailure = undefined;
     // Every public assignment is caller-owned, even if it reuses an array previously returned by
     // the optional loader. Only connectedCallback's successful private load restores provenance.
     this.builtInGroups = new WeakSet<EmojiPickerGroup>();
@@ -455,7 +461,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  `LyraPdfViewer`'s `loadLibrary` field / `LyraQrCode`'s `loadLibrary` field). Receives the
    *  picker's current `effectiveLocale` so the default (`loadEmojiDataCached`) can load the
    *  matching locale directory of the optional peer. */
-  private loadGroups: (locale: string) => Promise<EmojiPickerGroup[] | null> = loadEmojiDataCached;
+  private loadGroups: (locale: string) => Promise<EmojiPickerGroup[] | EmojiDataLoadFailure | null> =
+    loadEmojiDataOutcomeCached;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -496,14 +503,15 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
       ) {
         return;
       }
-      if (!loaded) {
+      if (!Array.isArray(loaded)) {
         // Fail closed and SAY so. Leaving `groups` at its `[]` default rendered the picker's
         // ordinary "no emoji found" state -- byte-identical to a genuine zero-match search and to
         // a consumer's deliberate `groups = []` opt-out -- so a skipped `emoji-picker-element-data`
         // install was indistinguishable from working software, diagnosable only by a one-time
         // console.warn nobody sees. Mirrors <lr-combobox>'s `sourceFailed` treatment of the same
         // shape.
-        this.peerLoadFailed = true;
+        // A bare `null` (an injected loader without a reason) is a failed load.
+        this.peerLoadFailure = loaded?.reason ?? 'failed';
         this.announcePeerLoadFailure();
         this.emit('lr-load-error');
         return;
@@ -519,7 +527,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   }
 
   private retryLoad = (): void => {
-    this.peerLoadFailed = false;
+    this.peerLoadFailure = undefined;
     this.builtInGroupsLocale = undefined;
     this.loadBuiltInGroups();
   };
@@ -1199,10 +1207,15 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.resetOwnerRealmResources();
   }
 
+  /** The localized peer-load failure message: not installed, or installed but not loaded. */
+  private peerLoadMessage(): string {
+    return this.localize(this.peerLoadFailure === 'missing' ? 'emojiPickerPeerMissing' : 'emojiPickerLoadError');
+  }
+
   /** Announces the peer-load failure once, through the owning document's shared assertive sink. */
   private announcePeerLoadFailure(): void {
     if (!this.isConnected) return;
-    this.peerErrorAnnouncements.announceAssertive(this.localize('emojiPickerLoadError'));
+    this.peerErrorAnnouncements.announceAssertive(this.peerLoadMessage());
   }
 
   override adoptedCallback(): void {
@@ -1334,13 +1347,13 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
             @focusin=${this.onGridFocusIn}
           >
             ${items.length === 0
-              ? this.peerLoadFailed
+              ? this.peerLoadFailure
                 ? html`<div
                     part="load-error"
                     role="option"
                     aria-selected="false"
                     aria-disabled="true"
-                  >${this.localize('emojiPickerLoadError')}</div>`
+                  >${this.peerLoadMessage()}</div>`
                 : html`<div
                     part="empty"
                     role="option"
@@ -1361,7 +1374,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
                   `,
                 )}
           </div>
-          ${this.peerLoadFailed && items.length === 0
+          ${this.peerLoadFailure === 'failed' && items.length === 0
             ? html`<button part="load-retry" type="button" ?disabled=${this.effectiveDisabled} @click=${this.retryLoad}>${this.localize('retry')}</button>`
             : nothing}
         </div>

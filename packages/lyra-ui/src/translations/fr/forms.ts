@@ -84,6 +84,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Aucun emoji trouvé',
   emojiPickerLoadError: 'Impossible de charger les emojis.',
+  emojiPickerPeerMissing: 'Les emojis ne sont pas disponibles.',
   emojiPickerGroupSmileysEmotion: 'Émoticônes et émotions',
   emojiPickerGroupPeopleBody: 'Personnes et corps',
   emojiPickerGroupComponent: 'Composants',

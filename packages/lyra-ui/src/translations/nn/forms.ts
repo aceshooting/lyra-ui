@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Fann ingen emoji',
   emojiPickerLoadError: 'Klarte ikkje å laste inn emoji.',
+  emojiPickerPeerMissing: 'Emoji er ikkje tilgjengelege.',
   emojiPickerGroupSmileysEmotion: 'Smilefjes og kjensler',
   emojiPickerGroupPeopleBody: 'Menneske og kropp',
   emojiPickerGroupComponent: 'Komponentar',

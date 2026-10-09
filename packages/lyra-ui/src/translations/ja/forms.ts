@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: '絵文字',
   emojiPickerEmpty: '絵文字が見つかりません',
   emojiPickerLoadError: '絵文字を読み込めませんでした。',
+  emojiPickerPeerMissing: '絵文字は利用できません。',
   emojiPickerGroupSmileysEmotion: 'スマイリーと感情',
   emojiPickerGroupPeopleBody: '人と体',
   emojiPickerGroupComponent: 'コンポーネント',

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'ایموجی',
   emojiPickerEmpty: 'ایموجی پیدا نشد',
   emojiPickerLoadError: 'بارگذاری ایموجی ممکن نشد.',
+  emojiPickerPeerMissing: 'ایموجی در دسترس نیست.',
   emojiPickerGroupSmileysEmotion: 'چهره‌ها و احساسات',
   emojiPickerGroupPeopleBody: 'مردم و بدن',
   emojiPickerGroupComponent: 'جزء',

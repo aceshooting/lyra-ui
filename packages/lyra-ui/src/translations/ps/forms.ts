@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'ایموجي',
   emojiPickerEmpty: 'ایموجي ونه موندل شو',
   emojiPickerLoadError: 'ایموجي نه شو راوړل کېدای.',
+  emojiPickerPeerMissing: 'ایموجي شتون نه لري.',
   emojiPickerGroupSmileysEmotion: 'موسکا او احساسات',
   emojiPickerGroupPeopleBody: 'خلک او بدن',
   emojiPickerGroupComponent: 'برخه',

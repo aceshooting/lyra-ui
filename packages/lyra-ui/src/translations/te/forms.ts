@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'ఎమోజీ',
   emojiPickerEmpty: 'ఎమోజీ ఏదీ కనిపించలేదు',
   emojiPickerLoadError: 'ఎమోజీని లోడ్ చేయలేకపోయాం.',
+  emojiPickerPeerMissing: 'ఎమోజీ అందుబాటులో లేదు.',
   emojiPickerGroupSmileysEmotion: 'స్మైలీలు, భావోద్వేగాలు',
   emojiPickerGroupPeopleBody: 'వ్యక్తులు, శరీరం',
   emojiPickerGroupComponent: 'భాగాలు',

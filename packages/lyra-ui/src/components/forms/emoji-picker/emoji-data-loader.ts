@@ -1,3 +1,4 @@
+import { classifyOptionalPeerImportError, type OptionalPeerFailure } from '../../../internal/optional-peer-failure.js';
 import type { EmojiPickerGroup, EmojiPickerItem } from './emoji-types.js';
 
 // The locale directories `emoji-picker-element-data` actually ships -- verified against the
@@ -34,69 +35,110 @@ export function resolveEmojiDataLocale(locale: string): string {
   return base && SUPPORTED_LOCALE_DIRECTORIES.has(base) ? base : 'en';
 }
 
-const cached = new Map<string, Promise<EmojiPickerGroup[] | null>>();
+/** Why the built-in emoji set is unavailable: the peer is not installed, or it failed to load. */
+export interface EmojiDataLoadFailure {
+  readonly reason: OptionalPeerFailure;
+}
+
+interface CachedLoad {
+  readonly outcome: Promise<EmojiPickerGroup[] | EmojiDataLoadFailure>;
+  readonly groups: Promise<EmojiPickerGroup[] | null>;
+}
+
+const cached = new Map<string, CachedLoad>();
+
+const MISSING_WARNING =
+  '<lr-emoji-picker>: the optional peer dependency `emoji-picker-element-data` is not installed, so ' +
+  'there is no default emoji set. Install it with `pnpm add emoji-picker-element-data`, or supply ' +
+  '`groups` directly.';
+const FAILED_WARNING =
+  '<lr-emoji-picker>: the optional peer dependency `emoji-picker-element-data` was found but its emoji ' +
+  'data could not be loaded or validated. Check the installed version and that your bundler supports ' +
+  'JSON import attributes, or supply `groups` directly:';
 
 /**
  * Loads the optional peer dependency `emoji-picker-element-data` and adapts its JSON export into
  * this component's own `EmojiPickerGroup[]` shape via `adaptEmojiPickerElementData()` below. Never
- * throws — resolves `null` (with a one-time `console.warn`) if the peer isn't installed, the import
- * otherwise fails, or the resolved module matches neither the expected bare-array nor
- * `{ default: [...] }` namespace shape (a broken or spoofed peer) — that last case fails closed
- * rather than silently folding into `[]`, which would be indistinguishable from a well-formed peer
- * that legitimately produced zero groups. Mirrors `pdf-loader.ts`'s `loadPdfJsDeps()` exact shape.
+ * throws: a failure resolves `{ reason }` with one `console.warn` that names the cause --
+ * `'missing'` when the module cannot be resolved (not installed, see
+ * `classifyOptionalPeerImportError()`), `'failed'` when the import otherwise rejects or the resolved
+ * module matches neither the expected bare-array nor `{ default: [...] }` namespace shape (a broken
+ * or spoofed peer). The shape case fails closed rather than silently folding into `[]`, which would
+ * be indistinguishable from a well-formed peer that legitimately produced zero groups. Mirrors
+ * `pdf-loader.ts`'s `loadPdfJsDeps()` exact shape.
  *
  * `locale` selects which of the peer's shipped locale directories to load, resolved through
  * `resolveEmojiDataLocale()` (falling back to English for any locale the peer doesn't ship).
  * `importData` is an injectable seam for tests (see `emoji-data-loader.test.ts`), receiving the
  * already-resolved locale directory name rather than the raw `locale` argument.
  */
-export async function loadEmojiData(
+export async function loadEmojiDataOutcome(
   locale = 'en',
   importData: (resolvedLocale: string) => Promise<unknown> = (resolvedLocale) =>
     (LOCALE_DATA_IMPORTERS[resolvedLocale] ?? importEnglishData)(),
-): Promise<EmojiPickerGroup[] | null> {
+): Promise<EmojiPickerGroup[] | EmojiDataLoadFailure> {
+  let raw: unknown;
   try {
-    const raw = await importData(resolveEmojiDataLocale(locale));
-    const adapted = adaptEmojiPickerElementData(raw);
-    if (adapted === null) {
-      // Neither a bare array nor a `{ default: [...] }` namespace -- a broken or spoofed peer,
-      // not a legitimately-installed one with zero entries. Throwing here (rather than returning
-      // `[]`) routes it through the same fail-closed warning below instead of silently rendering
-      // indistinguishably from "this peer legitimately has no data".
-      throw new TypeError(
-        'The emoji-picker-element-data peer does not expose the expected array (or ' +
-          '{ default: array }) shape.',
-      );
-    }
-    return adapted;
+    raw = await importData(resolveEmojiDataLocale(locale));
   } catch (error) {
-    console.warn(
-      '<lr-emoji-picker> needs the optional peer dependency `emoji-picker-element-data` to show a ' +
-        'default emoji set — install it with `pnpm add emoji-picker-element-data`, or supply `groups` ' +
-        'directly:',
-      error,
-    );
-    return null;
+    const reason = classifyOptionalPeerImportError(error);
+    if (reason === 'missing') console.warn(MISSING_WARNING);
+    else console.warn(FAILED_WARNING, error);
+    return { reason };
   }
+  const adapted = adaptEmojiPickerElementData(raw);
+  if (adapted === null) {
+    // Neither a bare array nor a `{ default: [...] }` namespace: a broken or spoofed peer, not a
+    // legitimately-installed one with zero entries.
+    console.warn(
+      FAILED_WARNING,
+      new TypeError('The emoji-picker-element-data peer does not expose the expected array (or { default: array }) shape.'),
+    );
+    return { reason: 'failed' };
+  }
+  return adapted;
+}
+
+/** {@link loadEmojiDataOutcome}, resolving `null` instead of the failure reason. */
+export async function loadEmojiData(
+  locale = 'en',
+  importData?: Parameters<typeof loadEmojiDataOutcome>[1],
+): Promise<EmojiPickerGroup[] | null> {
+  const outcome = await loadEmojiDataOutcome(locale, importData);
+  return Array.isArray(outcome) ? outcome : null;
 }
 
 /** Cached per page **and per resolved locale**, mirroring `pdf-loader.ts`'s `loadPdfJs()`
  *  single-flight shape: a concurrent or repeated call for the same resolved locale shares one
  *  in-flight/successful promise instead of re-fetching, while a different locale gets its own cache
- *  slot instead of reusing whichever locale happened to load first. */
+ *  slot instead of reusing whichever locale happened to load first. A failure of either kind is
+ *  not kept, so a transient import failure can be retried. */
+export function loadEmojiDataOutcomeCached(
+  locale = 'en',
+  importData?: Parameters<typeof loadEmojiDataOutcome>[1],
+): Promise<EmojiPickerGroup[] | EmojiDataLoadFailure> {
+  return cachedLoad(locale, importData).outcome;
+}
+
+/** {@link loadEmojiDataOutcomeCached}, resolving `null` instead of the failure reason (the same
+ *  promise instance for every caller sharing the load). */
 export function loadEmojiDataCached(
   locale = 'en',
-  importData?: Parameters<typeof loadEmojiData>[1],
+  importData?: Parameters<typeof loadEmojiDataOutcome>[1],
 ): Promise<EmojiPickerGroup[] | null> {
+  return cachedLoad(locale, importData).groups;
+}
+
+function cachedLoad(locale: string, importData?: Parameters<typeof loadEmojiDataOutcome>[1]): CachedLoad {
   const key = resolveEmojiDataLocale(locale);
   let entry = cached.get(key);
   if (!entry) {
-    const pending = loadEmojiData(key, importData);
-    entry = pending;
-    cached.set(key, pending);
-    // A failed load is not kept, so a transient import failure can be retried.
-    void pending.then((groups) => {
-      if (groups === null && cached.get(key) === pending) cached.delete(key);
+    const outcome = loadEmojiDataOutcome(key, importData);
+    const load: CachedLoad = { outcome, groups: outcome.then((value) => (Array.isArray(value) ? value : null)) };
+    entry = load;
+    cached.set(key, load);
+    void outcome.then((value) => {
+      if (!Array.isArray(value) && cached.get(key) === load) cached.delete(key);
     });
   }
   return entry;

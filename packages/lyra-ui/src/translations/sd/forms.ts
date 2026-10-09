@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'ايموجي',
   emojiPickerEmpty: 'ڪو به ايموجي نه مليو',
   emojiPickerLoadError: 'ايموجي لوڊ نه ٿي سگهيا.',
+  emojiPickerPeerMissing: 'ايموجي دستياب ناهن.',
   emojiPickerGroupSmileysEmotion: 'مرڪون ۽ جذبا',
   emojiPickerGroupPeopleBody: 'ماڻهو ۽ جسم',
   emojiPickerGroupComponent: 'جزو',

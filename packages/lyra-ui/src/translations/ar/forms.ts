@@ -90,6 +90,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'الرموز التعبيرية',
   emojiPickerEmpty: 'لم يتم العثور على رموز تعبيرية',
   emojiPickerLoadError: 'تعذّر تحميل الرموز التعبيرية.',
+  emojiPickerPeerMissing: 'الرموز التعبيرية غير متاحة.',
   emojiPickerGroupSmileysEmotion: 'الوجوه والمشاعر',
   emojiPickerGroupPeopleBody: 'الأشخاص والجسد',
   emojiPickerGroupComponent: 'المكوّنات',

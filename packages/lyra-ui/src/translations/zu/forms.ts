@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Ama-emoji',
   emojiPickerEmpty: 'Ayitholakalanga i-emoji',
   emojiPickerLoadError: 'Ama-emoji awalayisekanga.',
+  emojiPickerPeerMissing: 'Ama-emoji awatholakali.',
   emojiPickerGroupSmileysEmotion: 'Ubuso nemizwa',
   emojiPickerGroupPeopleBody: 'Abantu nomzimba',
   emojiPickerGroupComponent: 'Ingxenye',

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Hakuna emoji iliyopatikana',
   emojiPickerLoadError: 'Imeshindwa kupakia emoji.',
+  emojiPickerPeerMissing: 'Emoji hazipatikani.',
   emojiPickerGroupSmileysEmotion: 'Nyuso na hisia',
   emojiPickerGroupPeopleBody: 'Watu na mwili',
   emojiPickerGroupComponent: 'Kipengele',

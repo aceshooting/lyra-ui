@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Emoji topilmadi',
   emojiPickerLoadError: 'Emojini yuklab boʻlmadi.',
+  emojiPickerPeerMissing: 'Emojilar mavjud emas.',
   emojiPickerGroupSmileysEmotion: 'Yuz ifodalari va hislar',
   emojiPickerGroupPeopleBody: 'Odamlar va tana',
   emojiPickerGroupComponent: 'Komponent',

@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Ba a sami emoji ba',
   emojiPickerLoadError: 'An kasa loda emoji.',
+  emojiPickerPeerMissing: 'Emoji ba su samuwa.',
   emojiPickerGroupSmileysEmotion: 'Murmushi da motsin rai',
   emojiPickerGroupPeopleBody: 'Mutane da sassan jiki',
   emojiPickerGroupComponent: 'Abu',

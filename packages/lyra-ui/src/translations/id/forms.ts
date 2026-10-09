@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Emoji tidak ditemukan',
   emojiPickerLoadError: 'Tidak dapat memuat emoji.',
+  emojiPickerPeerMissing: 'Emoji tidak tersedia.',
   emojiPickerGroupSmileysEmotion: 'Wajah dan emosi',
   emojiPickerGroupPeopleBody: 'Orang dan tubuh',
   emojiPickerGroupComponent: 'Komponen',

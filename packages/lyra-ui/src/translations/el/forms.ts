@@ -82,6 +82,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'Δεν βρέθηκαν emoji',
   emojiPickerLoadError: 'Δεν ήταν δυνατή η φόρτωση των emoji.',
+  emojiPickerPeerMissing: 'Τα emoji δεν είναι διαθέσιμα.',
   emojiPickerGroupSmileysEmotion: 'Χαμογελαστά πρόσωπα και συναισθήματα',
   emojiPickerGroupPeopleBody: 'Άνθρωποι και σώμα',
   emojiPickerGroupComponent: 'Στοιχείο',

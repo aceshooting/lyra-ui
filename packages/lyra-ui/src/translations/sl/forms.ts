@@ -86,6 +86,7 @@ const strings: LyraLocaleStrings = {
   emojiPickerGridLabel: 'Emodži',
   emojiPickerEmpty: 'Ni najdenih emodžijev',
   emojiPickerLoadError: 'Emodžijev ni bilo mogoče naložiti.',
+  emojiPickerPeerMissing: 'Emodžiji niso na voljo.',
   emojiPickerGroupSmileysEmotion: 'Smeški in čustva',
   emojiPickerGroupPeopleBody: 'Ljudje in telo',
   emojiPickerGroupComponent: 'Komponente',

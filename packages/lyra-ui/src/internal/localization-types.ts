@@ -870,6 +870,7 @@ export type LyraMessageKey =
   | 'emojiPickerGridLabel'
   | 'emojiPickerEmpty'
   | 'emojiPickerLoadError'
+  | 'emojiPickerPeerMissing'
   | 'emojiPickerGroupSmileysEmotion'
   | 'emojiPickerGroupPeopleBody'
   | 'emojiPickerGroupComponent'
