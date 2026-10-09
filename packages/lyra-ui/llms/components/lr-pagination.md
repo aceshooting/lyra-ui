@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -203,7 +203,9 @@ buttons, the numbered pages and the page input — `--lr-pagination-control-padd
 `--lr-pagination-control-size`, so this only adjusts the icon/digit inset. Layout spacing is split
 across `--lr-pagination-base-gap` (default `var(--lr-space-m)`) between summary and controls,
 `--lr-pagination-controls-gap` (default `var(--lr-space-xs)`) inside the navigation group, and
-`--lr-pagination-pages-gap` (default `var(--lr-space-xs)`) between numbered pages; each remains
+`--lr-pagination-pages-gap` (default `var(--lr-space-xs)`) between numbered pages, and
+`--lr-pagination-page-field-gap` (default `var(--lr-space-2xs)`) between the compact
+`[part="page-input"]` and its `[part="page-count"]`; each remains
 active in standard, compact, and 320px container layouts —
 `--lr-pagination-invalid-border` (default `var(--lr-color-danger)`) — border color of
 `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`); a state hook

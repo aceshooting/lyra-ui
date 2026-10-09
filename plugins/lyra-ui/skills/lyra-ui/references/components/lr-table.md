@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 47 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 56 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -284,6 +284,26 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `hasNext: boolean = true` (attribute `has-next`, reflected) — whether at least one more page
   exists past the current one; consulted only alongside `unknownTotal` and forwarded verbatim to
   the nested `<lr-pagination>`'s own `hasNext`
+- `paginationWithSummary: boolean = false` (attribute `pagination-with-summary`, reflected) — the
+  nested `<lr-pagination>`'s `with-summary`: the item-range summary ("1–10 of 95") at the inline
+  start of the pagination footer, with the controls at the inline end (mirrored under RTL). An
+  `unknownTotal` pager has no summary to show
+- `paginationFormat: 'standard'|'compact' = 'compact'` (attribute `pagination-format`) — the nested
+  pager's `format`: `compact` keeps previous/next around a page-jump input and page count;
+  `standard` renders the numbered page list. Unsupported values resolve to `compact`
+- The nested pager's parts are exported with a `pagination-` prefix, so page CSS styles them
+  without a `::part(pagination)` alignment workaround: `pagination-summary`,
+  `pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`,
+  `pagination-page-field`, `pagination-page-input`, `pagination-page-count` and
+  `pagination-button` (every page, ellipsis and navigation control). `pagination` remains the
+  `<lr-pagination>` host itself.
+
+```html
+<lr-table page-size="10" pagination-with-summary pagination-format="standard"></lr-table>
+<style>
+  lr-table::part(pagination-summary) { font-variant-numeric: tabular-nums; }
+</style>
+```
 - Editable columns emit `lr-cell-edit` on commit and never mutate the supplied row object.
 - `groupBy?: (row: T) => string | number` (attribute: false) — inserts a non-focusable full-width
   group row wherever this key changes between consecutive rendered rows. Supply `rows` with each

@@ -96169,6 +96169,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-pagination-page-field-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
             "name": "--lr-pagination-pages-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -131530,6 +131536,16 @@
             "default": 100
           },
           {
+            "name": "pagination-format",
+            "property": "paginationFormat",
+            "type": "LyraPaginationFormat",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "compact"
+          },
+          {
             "name": "pagination-mode",
             "property": "paginationMode",
             "type": "'client' | 'server'",
@@ -131538,6 +131554,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "client"
+          },
+          {
+            "name": "pagination-with-summary",
+            "property": "paginationWithSummary",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "priority-columns-visible",
@@ -132069,6 +132095,16 @@
             "default": 100
           },
           {
+            "name": "paginationFormat",
+            "attribute": "pagination-format",
+            "type": "LyraPaginationFormat",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "compact"
+          },
+          {
             "name": "paginationMode",
             "attribute": "pagination-mode",
             "type": "'client' | 'server'",
@@ -132077,6 +132113,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "client"
+          },
+          {
+            "name": "paginationWithSummary",
+            "attribute": "pagination-with-summary",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "priorityColumnsToggleAvailable",
@@ -132524,6 +132570,42 @@
           },
           {
             "name": "pagination",
+            "deprecated": null
+          },
+          {
+            "name": "pagination-button",
+            "deprecated": null
+          },
+          {
+            "name": "pagination-controls",
+            "deprecated": null
+          },
+          {
+            "name": "pagination-page",
+            "deprecated": null
+          },
+          {
+            "name": "pagination-page-count",
+            "deprecated": null
+          },
+          {
+            "name": "pagination-page-current",
+            "deprecated": null
+          },
+          {
+            "name": "pagination-page-field",
+            "deprecated": null
+          },
+          {
+            "name": "pagination-page-input",
+            "deprecated": null
+          },
+          {
+            "name": "pagination-pages",
+            "deprecated": null
+          },
+          {
+            "name": "pagination-summary",
             "deprecated": null
           },
           {

@@ -1616,6 +1616,7 @@ These named interfaces and helper signatures are available to typed integrations
 }`
   `ClosePopoverOptions {
   via: unknown;
+  timeoutMs: unknown;
 }`
   `openPopover(/* public names: popover, options */): unknown`
   `closePopover(/* public names: popover, options */): unknown`

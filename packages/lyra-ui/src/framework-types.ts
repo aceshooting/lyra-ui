@@ -8588,6 +8588,7 @@ export interface LyraComponentTypeMap {
       | '--lr-pagination-hover-bg'
       | '--lr-pagination-hover-border-color'
       | '--lr-pagination-invalid-border'
+      | '--lr-pagination-page-field-gap'
       | '--lr-pagination-pages-gap';
     attributeAliases: {
       'aria-label'?: LyraPagination['accessibleLabel'];
@@ -11670,7 +11671,9 @@ export interface LyraComponentTypeMap {
       | 'moreLabel'
       | 'page'
       | 'pageSize'
+      | 'paginationFormat'
       | 'paginationMode'
+      | 'paginationWithSummary'
       | 'priorityColumnsVisible'
       | 'revealColumnsLabel'
       | 'rowExpandLabel'
@@ -11761,7 +11764,9 @@ export interface LyraComponentTypeMap {
       'loading-more-label'?: LyraTable['loadingMoreLabel'];
       'more-label'?: LyraTable['moreLabel'];
       'page-size'?: LyraTable['pageSize'];
+      'pagination-format'?: LyraTable['paginationFormat'];
       'pagination-mode'?: LyraTable['paginationMode'];
+      'pagination-with-summary'?: LyraTable['paginationWithSummary'];
       'priority-columns-visible'?: LyraTable['priorityColumnsVisible'];
       'reveal-columns-label'?: LyraTable['revealColumnsLabel'];
       'scroll-mode'?: LyraTable['scrollMode'];

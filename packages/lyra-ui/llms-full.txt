@@ -15145,6 +15145,26 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `hasNext: boolean = true` (attribute `has-next`, reflected) — whether at least one more page
   exists past the current one; consulted only alongside `unknownTotal` and forwarded verbatim to
   the nested `<lr-pagination>`'s own `hasNext`
+- `paginationWithSummary: boolean = false` (attribute `pagination-with-summary`, reflected) — the
+  nested `<lr-pagination>`'s `with-summary`: the item-range summary ("1–10 of 95") at the inline
+  start of the pagination footer, with the controls at the inline end (mirrored under RTL). An
+  `unknownTotal` pager has no summary to show
+- `paginationFormat: 'standard'|'compact' = 'compact'` (attribute `pagination-format`) — the nested
+  pager's `format`: `compact` keeps previous/next around a page-jump input and page count;
+  `standard` renders the numbered page list. Unsupported values resolve to `compact`
+- The nested pager's parts are exported with a `pagination-` prefix, so page CSS styles them
+  without a `::part(pagination)` alignment workaround: `pagination-summary`,
+  `pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`,
+  `pagination-page-field`, `pagination-page-input`, `pagination-page-count` and
+  `pagination-button` (every page, ellipsis and navigation control). `pagination` remains the
+  `<lr-pagination>` host itself.
+
+```html
+<lr-table page-size="10" pagination-with-summary pagination-format="standard"></lr-table>
+<style>
+  lr-table::part(pagination-summary) { font-variant-numeric: tabular-nums; }
+</style>
+```
 - Editable columns emit `lr-cell-edit` on commit and never mutate the supplied row object.
 - `groupBy?: (row: T) => string | number` (attribute: false) — inserts a non-focusable full-width
   group row wherever this key changes between consecutive rendered rows. Supply `rows` with each
@@ -15759,7 +15779,9 @@ buttons, the numbered pages and the page input — `--lr-pagination-control-padd
 `--lr-pagination-control-size`, so this only adjusts the icon/digit inset. Layout spacing is split
 across `--lr-pagination-base-gap` (default `var(--lr-space-m)`) between summary and controls,
 `--lr-pagination-controls-gap` (default `var(--lr-space-xs)`) inside the navigation group, and
-`--lr-pagination-pages-gap` (default `var(--lr-space-xs)`) between numbered pages; each remains
+`--lr-pagination-pages-gap` (default `var(--lr-space-xs)`) between numbered pages, and
+`--lr-pagination-page-field-gap` (default `var(--lr-space-2xs)`) between the compact
+`[part="page-input"]` and its `[part="page-count"]`; each remains
 active in standard, compact, and 320px container layouts —
 `--lr-pagination-invalid-border` (default `var(--lr-color-danger)`) — border color of
 `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`); a state hook
