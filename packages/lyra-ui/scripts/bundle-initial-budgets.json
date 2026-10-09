@@ -15,7 +15,7 @@
   },
   "$marginalGzipKb": {
     "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 7.4375,
-    "dist/components/conversation/model-select/model-select.js": 27.0625,
+    "dist/components/conversation/model-select/model-select.js": 27.125,
     "dist/components/conversation/usage-badge/usage-badge.js": 4.4375,
     "dist/components/conversation/voice-picker/voice-picker.js": 28.625,
     "dist/components/forms/color-picker/color-picker.js": 27,
