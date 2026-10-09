@@ -1,4 +1,5 @@
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import type { LyraPaginationFormat } from '../pagination/pagination.class.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -227,6 +228,11 @@ export type TableSortIndicators = 'active' | 'all';
 export type TableScrollMode = 'self' | 'page' | 'auto';
 
 const TABLE_LAYOUT = literalSetConverter<'auto' | 'fixed'>(['auto', 'fixed'], 'auto');
+const TABLE_PAGINATION_FORMAT = literalSetConverter<LyraPaginationFormat>(['standard', 'compact'], 'compact');
+/** The nested pager's parts a consumer styles, forwarded under a collision-resistant prefix. */
+const PAGINATION_EXPORT_PARTS = [
+  'summary', 'controls', 'pages', 'page', 'page-current', 'page-field', 'page-input', 'page-count', 'button',
+].map((name) => `${name}:pagination-${name}`).join(', ');
 
 /** Canonical table sort direction. */
 export type TableSortDirection = 'asc' | 'desc';
@@ -644,6 +650,15 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  *   is what keeps them geometrically identical to real rows), so this is the part to target for
  *   the placeholder's own look — e.g. `::part(skeleton) { --lr-skeleton-h: 2em; }`.
  * @csspart pagination - The optional pagination component.
+ * @csspart pagination-summary - The nested pager's item-range summary (`pagination-with-summary`).
+ * @csspart pagination-controls - The nested pager's previous/pages/next control group.
+ * @csspart pagination-pages - The nested pager's numbered page list (`pagination-format="standard"`).
+ * @csspart pagination-page - One numbered page control (`pagination-format="standard"`).
+ * @csspart pagination-page-current - Also carried by the applied page control.
+ * @csspart pagination-page-field - The compact page input and page-count wrapper.
+ * @csspart pagination-page-input - The compact page-jump input.
+ * @csspart pagination-page-count - The compact total page count after the input.
+ * @csspart pagination-button - Every page, ellipsis and navigation control of the nested pager.
  * @csspart row-limit - Localized notice when the assigned row collection exceeds 10,000 entries.
  * @csspart empty - The built-in `<lr-empty>` host, in all three empty states (no columns
  *   configured, no rows at all, and filtered/paginated down to zero rows). The two data-empty
@@ -1053,6 +1068,15 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  outside `paginationMode: 'server'` -- client mode always knows the exact row count it slices,
    *  so it never needs the indeterminate layout. */
   @property({ type: Boolean, attribute: 'unknown-total', reflect: true }) unknownTotal = false;
+  /** Shows the nested `<lr-pagination>`'s item-range summary (its `with-summary`, e.g. "1-10 of
+   *  95") at the inline start of the pagination footer, with the controls at the inline end. An
+   *  indeterminate server pager (`unknownTotal`) has no summary to show. */
+  @property({ type: Boolean, attribute: 'pagination-with-summary', reflect: true }) paginationWithSummary = false;
+  /** The nested `<lr-pagination>`'s `format`: `compact` (default; previous/next around a page-jump
+   *  input and page count) or `standard` (a numbered page list). Unsupported values resolve to
+   *  `compact`. */
+  @property({ attribute: 'pagination-format', converter: TABLE_PAGINATION_FORMAT })
+  paginationFormat: LyraPaginationFormat = 'compact';
   /** Whether at least one more page exists past the current one. Consulted only alongside
    *  `unknownTotal`; forwarded verbatim to the nested `<lr-pagination>`'s own `hasNext`. Defaults to
    *  `true` so an indeterminate server pager stays navigable until the caller's API reports
@@ -3851,7 +3875,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         ${hasPagination
           ? html`<lr-pagination
               part="pagination"
-              format="compact"
+              exportparts=${PAGINATION_EXPORT_PARTS}
+              .format=${this.paginationFormat}
+              .withSummary=${this.paginationWithSummary}
               .page=${this.page}
               .pageSize=${this.normalizedPageSize}
               .total=${this.serverUnknownTotal ? -1 : this.matchingTotalItems}

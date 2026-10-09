@@ -958,3 +958,19 @@ export const LiveLocalePage: Story = {
     </div>
   `,
 };
+
+/** The built-in pager's options and parts: item-range summary at the start, controls at the end. */
+export const PaginationSummaryAndParts: Story = {
+  name: 'Pagination summary, format and parts',
+  render: () => html`
+    <style>
+      .pagination-parts-demo::part(pagination-page-count) { color: var(--lr-color-text); }
+    </style>
+    <div style="display:grid;gap:var(--lr-space-l)">
+      <lr-table aria-label="Compact pager with summary" class="pagination-parts-demo" page-size="1"
+        pagination-with-summary .columns=${columns} .rows=${rows}></lr-table>
+      <lr-table aria-label="Standard pager with summary" page-size="1" pagination-with-summary
+        pagination-format="standard" .columns=${columns} .rows=${rows}></lr-table>
+    </div>
+  `,
+};

@@ -1323,3 +1323,100 @@ it('moves the roving tabindex between body rows and back up into the header', as
   expect(ignored.defaultPrevented).to.equal(false);
   expect(el.shadowRoot!.activeElement === bodyRows[0]).to.equal(true);
 });
+
+describe('pagination options and parts', () => {
+  async function pagedTable(template = html`<lr-table page-size="1"></lr-table>`): Promise<LyraTable<Row>> {
+    const el = (await fixture(template)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    return el;
+  }
+  const pager = (el: LyraTable<Row>) => el.shadowRoot!.querySelector('lr-pagination') as HTMLElement & {
+    format: string; withSummary: boolean; updateComplete: Promise<unknown>; shadowRoot: ShadowRoot;
+  };
+
+  it('keeps the compact, summary-less pager when neither option is set', async () => {
+    const el = await pagedTable();
+    expect(el.paginationFormat).to.equal('compact');
+    expect(el.paginationWithSummary).to.equal(false);
+    expect(el.hasAttribute('pagination-format')).to.equal(false);
+    expect(el.hasAttribute('pagination-with-summary')).to.equal(false);
+    const nested = pager(el);
+    await nested.updateComplete;
+    expect(nested.format).to.equal('compact');
+    expect(nested.withSummary).to.equal(false);
+    expect(nested.shadowRoot.querySelector('[part="summary"]') === null).to.equal(true);
+    expect(nested.shadowRoot.querySelector('[part="page-input"]') !== null).to.equal(true);
+  });
+
+  it('forwards pagination-with-summary and pagination-format to the nested pager, live', async () => {
+    const el = await pagedTable(html`<lr-table page-size="1" pagination-with-summary pagination-format="standard"></lr-table>`);
+    const nested = pager(el);
+    await nested.updateComplete;
+    expect(nested.format).to.equal('standard');
+    expect(nested.withSummary).to.equal(true);
+    expect(nested.shadowRoot.querySelector('[part="summary"]')!.textContent!.trim()).to.not.equal('');
+    expect(nested.shadowRoot.querySelectorAll('[part~="page"]').length).to.equal(2);
+
+    el.setAttribute('pagination-format', 'sideways');
+    el.paginationWithSummary = false;
+    await el.updateComplete;
+    await nested.updateComplete;
+    expect(el.paginationFormat, 'an unsupported format resolves to compact').to.equal('compact');
+    expect(nested.format).to.equal('compact');
+    expect(nested.shadowRoot.querySelector('[part="summary"]') === null).to.equal(true);
+  });
+
+  it('exports the nested pager parts under a pagination- prefix', async () => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(`
+      lr-table::part(pagination-summary) { color: rgb(1, 2, 3); }
+      lr-table::part(pagination-page-count) { color: rgb(4, 5, 6); }
+      lr-table::part(pagination-page-input) { outline-color: rgb(7, 8, 9); }
+      lr-table::part(pagination-button) { outline-color: rgb(10, 11, 12); }
+    `);
+    const previous = [...document.adoptedStyleSheets];
+    document.adoptedStyleSheets = [...previous, sheet];
+    try {
+      const el = await pagedTable(html`<lr-table page-size="1" pagination-with-summary></lr-table>`);
+      const nested = pager(el);
+      await nested.updateComplete;
+      const part = (name: string) => nested.shadowRoot.querySelector<HTMLElement>(`[part~="${name}"]`)!;
+      expect(getComputedStyle(part('summary')).color).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(part('page-count')).color).to.equal('rgb(4, 5, 6)');
+      expect(getComputedStyle(part('page-input')).outlineColor).to.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(part('next-button')).outlineColor).to.equal('rgb(10, 11, 12)');
+    } finally {
+      document.adoptedStyleSheets = previous;
+    }
+  });
+
+  for (const dir of ['ltr', 'rtl'] as const) {
+    it(`lays the summary out at the inline start and the controls at the inline end (${dir})`, async () => {
+      const wrapper = await fixture<HTMLElement>(html`<div dir=${dir} style="inline-size: 48rem"><lr-table page-size="1" pagination-with-summary></lr-table></div>`);
+      const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+      el.columns = columns;
+      el.rows = rows;
+      el.rowKey = (r) => r.id;
+      await el.updateComplete;
+      const nested = pager(el);
+      await nested.updateComplete;
+      const rect = (name: string) => nested.shadowRoot.querySelector<HTMLElement>(`[part~="${name}"]`)!.getBoundingClientRect();
+      const base = rect('base');
+      const summary = rect('summary');
+      const controls = rect('controls');
+      expect(summary.top, 'one row').to.be.closeTo(base.top + (base.height - summary.height) / 2, 2);
+      if (dir === 'ltr') {
+        expect(summary.left - base.left).to.be.closeTo(0, 1);
+        expect(base.right - controls.right).to.be.closeTo(0, 1);
+        expect(summary.right).to.be.lessThan(controls.left);
+      } else {
+        expect(base.right - summary.right).to.be.closeTo(0, 1);
+        expect(controls.left - base.left).to.be.closeTo(0, 1);
+        expect(controls.right).to.be.lessThan(summary.left);
+      }
+    });
+  }
+});
