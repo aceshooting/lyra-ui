@@ -203,6 +203,105 @@ describe('bindAccessibleTextObserver', () => {
   });
 });
 
+describe('bindAccessibleTextObserver computed-style work', () => {
+  /** Counts getComputedStyle() reads per element while `run` executes; restores the global. */
+  function countComputedStyle(run: () => void): Map<Element, number> {
+    const counts = new Map<Element, number>();
+    const original = window.getComputedStyle;
+    window.getComputedStyle = function counted(this: Window, element: Element, pseudo?: string | null) {
+      counts.set(element, (counts.get(element) ?? 0) + 1);
+      return original.call(window, element, pseudo);
+    } as typeof window.getComputedStyle;
+    try {
+      run();
+    } finally {
+      window.getComputedStyle = original;
+    }
+    return counts;
+  }
+  const total = (counts: Map<Element, number>): number => [...counts.values()].reduce((sum, count) => sum + count, 0);
+
+  it('reads each composed ancestor once per bind, sharing the text walk with the ancestor baselines', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <section><div><div><div><div id="counted-host"><span>Label</span></div></div></div></div></section>
+    `);
+    const host = root.querySelector<HTMLElement>('#counted-host')!;
+    const ancestors: Element[] = [];
+    for (let node = host.parentElement; node; node = node.parentElement) ancestors.push(node);
+    const observer = new MutationObserver(() => {});
+    try {
+      const first = countComputedStyle(() => bindAccessibleTextObserver(observer, host));
+      // The first batch opts the observer into ancestor baselines, which every later bind records.
+      expect(accessibleTextRecordsMatter(observer, [])).to.equal(true);
+      const filtered = countComputedStyle(() => bindAccessibleTextObserver(observer, host));
+      expect(total(first), 'span + host + every ancestor, once each').to.equal(2 + ancestors.length);
+      expect(total(filtered), 'baselines reuse the walk instead of a second ancestor pass').to.equal(total(first));
+      for (const ancestor of ancestors) expect(filtered.get(ancestor), ancestor.localName).to.equal(1);
+      // Before the shared readings this bind cost 2 + 2 x ancestors.
+      expect(2 + 2 * ancestors.length - total(filtered)).to.equal(ancestors.length);
+
+      // The reused baselines still describe the real state: a hide matters, a move does not.
+      root.style.left = '3px';
+      expect(accessibleTextRecordsMatter(observer, observer.takeRecords())).to.equal(false);
+      root.style.visibility = 'hidden';
+      expect(accessibleTextRecordsMatter(observer, observer.takeRecords())).to.equal(true);
+    } finally {
+      observer.disconnect();
+    }
+  });
+
+  it('reads an ancestor written many times in one batch only once', async () => {
+    const root = await fixture<HTMLElement>(html`<section style="position: fixed"><div id="batched-host"><span>Label</span></div></section>`);
+    const host = root.querySelector<HTMLElement>('#batched-host')!;
+    const observer = new MutationObserver(() => {});
+    try {
+      bindAccessibleTextObserver(observer, host);
+      expect(accessibleTextRecordsMatter(observer, [])).to.equal(true);
+      bindAccessibleTextObserver(observer, host);
+      for (let step = 0; step < 6; step += 1) root.style.top = `${step}px`;
+      const records = observer.takeRecords();
+      expect(records.length).to.equal(6);
+      let matters: boolean | undefined;
+      const counts = countComputedStyle(() => { matters = accessibleTextRecordsMatter(observer, records); });
+      expect(matters).to.equal(false);
+      expect(counts.get(root), 'six records, one reading').to.equal(1);
+      expect(total(counts)).to.equal(1);
+    } finally {
+      observer.disconnect();
+    }
+  });
+
+  it('checks the content snapshot once per batch and still catches a selector that hides content', async () => {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync('.hide-labels span { visibility: hidden; }');
+    const previous = [...document.adoptedStyleSheets];
+    document.adoptedStyleSheets = [...previous, sheet];
+    const root = await fixture<HTMLElement>(html`<section><article><div id="snapshot-host"><span>Label</span></div></article></section>`);
+    const host = root.querySelector<HTMLElement>('#snapshot-host')!;
+    const article = root.querySelector('article')!;
+    const span = host.querySelector('span')!;
+    const observer = new MutationObserver(() => {});
+    try {
+      bindAccessibleTextObserver(observer, host);
+      expect(accessibleTextRecordsMatter(observer, [])).to.equal(true);
+      bindAccessibleTextObserver(observer, host);
+
+      root.className = 'unrelated';
+      article.className = 'also-unrelated';
+      let matters: boolean | undefined;
+      const counts = countComputedStyle(() => { matters = accessibleTextRecordsMatter(observer, observer.takeRecords()); });
+      expect(matters, 'presentation-only changes on two ancestors').to.equal(false);
+      expect(counts.get(span), 'the content snapshot is read once for the batch').to.equal(1);
+
+      root.className = 'hide-labels';
+      expect(accessibleTextRecordsMatter(observer, observer.takeRecords()), 'a selector that hides the label matters').to.equal(true);
+    } finally {
+      observer.disconnect();
+      document.adoptedStyleSheets = previous;
+    }
+  });
+});
+
 describe('composedAccessibilityText / composedAccessibilityTextResult', () => {
   it('extracts a plain text node', () => {
     const node = document.createTextNode('Hello world');

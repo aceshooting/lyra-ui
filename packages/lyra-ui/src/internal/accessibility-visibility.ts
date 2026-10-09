@@ -177,8 +177,14 @@ function ancestorPresentationKey(element: Element): string {
   return [element.getAttribute('class') ?? '', ...customProperties].join('|');
 }
 
-function ancestorVisibilityBaseline(element: Element): AncestorVisibilityBaseline {
-  return { visibility: visibilityKey(element), presentation: ancestorPresentationKey(element) };
+/** `state` reuses a reading the same synchronous bind already took; image-map elements resolve
+ *  their own state, since the text walk may have looked their image up under a node budget. */
+function ancestorVisibilityBaseline(element: Element, state?: AccessibilityElementState): AncestorVisibilityBaseline {
+  const reusable = state && element.localName !== 'area' && element.localName !== 'map';
+  return {
+    visibility: reusable ? visibilityKey(element, state) : visibilityKey(element),
+    presentation: ancestorPresentationKey(element),
+  };
 }
 
 /**
@@ -198,11 +204,20 @@ export function accessibleTextRecordsMatter(
     filteringObservers.add(observer);
     return true;
   }
+  // A batch is delivered synchronously, so one computed-style reading per element answers every
+  // record in it: a positioner or scroll lock often rewrites the same ancestor many times a batch.
+  const keys = new Map<Element, string>();
+  const currentKey = (element: Element): string => {
+    let key = keys.get(element);
+    if (key === undefined) keys.set(element, (key = visibilityKey(element)));
+    return key;
+  };
+  let contentChecked = false;
   for (const record of records) {
     const target = record.target as Element;
     if (record.type !== 'attributes' || !baseline.has(target)) return true;
     const previous = baseline.get(target)!;
-    if (visibilityKey(target) !== previous.visibility) return true;
+    if (currentKey(target) !== previous.visibility) return true;
     const presentation = ancestorPresentationKey(target);
     if (presentation !== previous.presentation) {
       // Selectors and inherited variables can affect a forwarded descendant without changing its
@@ -211,8 +226,12 @@ export function accessibleTextRecordsMatter(
       // A derived hidden wrapper can prevent both traversal and reliable computed styles for its
       // descendants. A presentation change must get a fresh semantic probe in that case.
       if (content?.incomplete) return true;
-      for (const [element, visibility] of content?.elements ?? []) {
-        if (visibilityKey(element) !== visibility) return true;
+      // The content snapshot does not change within the batch; one unchanged pass covers it.
+      if (!contentChecked) {
+        for (const [element, visibility] of content?.elements ?? []) {
+          if (currentKey(element) !== visibility) return true;
+        }
+        contentChecked = true;
       }
       previous.presentation = presentation;
     }
@@ -281,13 +300,16 @@ export function bindAccessibleTextObserver(
   if (references) releaseAccessibleTextReferences(references);
   observeAccessibleTextNode(observer, host, extraAttributes);
   const baseline = filteringObservers.has(observer) ? new Map<Element, AncestorVisibilityBaseline>() : undefined;
+  // Baselines are read after the text walk below, which validates the same composed ancestors and
+  // reports each state it reads; reusing those readings halves the computed-style work per bind.
+  // Nothing between here and there mutates the DOM, so the readings are the ones taken here.
+  const baselineElements: Element[] = [];
   let ancestor = composedParentElement(host);
   while (ancestor) {
     observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
-    baseline?.set(ancestor, ancestorVisibilityBaseline(ancestor));
+    if (baseline) baselineElements.push(ancestor);
     ancestor = composedParentElement(ancestor);
   }
-  if (baseline) ancestorVisibilityBaselines.set(observer, baseline);
   for (const slot of host.querySelectorAll<HTMLSlotElement>('slot')) {
     for (const assigned of slot.assignedNodes({ flatten: true })) {
       observeAccessibleTextNode(observer, assigned, extraAttributes);
@@ -299,7 +321,7 @@ export function bindAccessibleTextObserver(
       while (ancestor) {
         if (ancestor !== host && !host.contains(ancestor) && ancestor.getRootNode() !== host.shadowRoot) {
           observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
-          baseline?.set(ancestor, ancestorVisibilityBaseline(ancestor));
+          if (baseline) baselineElements.push(ancestor);
         }
         ancestor = composedParentElement(ancestor);
       }
@@ -311,10 +333,12 @@ export function bindAccessibleTextObserver(
     ? { elements: new Map(), incomplete: false }
     : undefined;
   const observationExclusions = new Map<Element, boolean>();
+  const walkStates = new Map<Element, AccessibilityElementState>();
   const result = composedAccessibilityTextResult(host.childNodes, {
     requireRendered: false,
     isSubtreeExcluded: (element) => observationExclusions.get(element) ?? isAccessibilitySubtreeExcluded(element),
     onElementState: (element, state) => {
+      if (baseline) walkStates.set(element, state);
       const ownedWrapper = element.getRootNode() === host.shadowRoot;
       // An owner may suppress duplicate accessibility exposure with an inert/ARIA-hidden wrapper
       // while still deriving its name from these visible descendants. Observe through that fence;
@@ -336,6 +360,10 @@ export function bindAccessibleTextObserver(
       return false;
     },
   });
+  if (baseline) {
+    for (const element of baselineElements) baseline.set(element, ancestorVisibilityBaseline(element, walkStates.get(element)));
+    ancestorVisibilityBaselines.set(observer, baseline);
+  }
   if (contentBaseline) {
     contentBaseline.incomplete ||= result.truncated;
     contentVisibilityBaselines.set(observer, contentBaseline);
