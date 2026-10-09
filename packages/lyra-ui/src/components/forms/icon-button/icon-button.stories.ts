@@ -104,3 +104,14 @@ export const AncestorTheme: Story = {
     </div>
   `,
 };
+
+/** A short text label instead of a glyph gets breathing room through a documented property. */
+export const TextLabelPadding: Story = {
+  name: 'Text label padding',
+  render: () => html`
+    <div style="display:flex;gap:0.5rem;align-items:center">
+      <lr-icon-button aria-label="Currency: euro"><span>€ EUR</span></lr-icon-button>
+      <lr-icon-button aria-label="Currency: euro" style="--lr-icon-button-padding-inline: var(--lr-space-s)"><span>€ EUR</span></lr-icon-button>
+    </div>
+  `,
+};

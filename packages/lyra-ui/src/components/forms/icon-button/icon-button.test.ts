@@ -335,6 +335,51 @@ it('exposes --lr-icon-button-radius, defaulting to the shared token default', as
   expect(cs.borderRadius).to.equal('8px');
 });
 
+it('defaults --lr-icon-button-padding-inline to 0, keeping an icon-only button at its hit-area floor', async () => {
+  const el = await fixture<LyraIconButton>(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  const button = el.shadowRoot!.querySelector('button')!;
+  const cs = getComputedStyle(button);
+  expect(cs.paddingInlineStart).to.equal('0px');
+  expect(cs.paddingInlineEnd).to.equal('0px');
+  expect(cs.minInlineSize).to.equal('36px');
+  const box = button.getBoundingClientRect();
+  expect(box.width).to.equal(36);
+  expect(box.height).to.equal(36);
+});
+
+it('pads a text label through --lr-icon-button-padding-inline, logically and without dropping the floor', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div>
+      <lr-icon-button aria-label="Currency"><span>€ EUR</span></lr-icon-button>
+      <lr-icon-button aria-label="Currency" style="--lr-icon-button-padding-inline: 12px"><span>€ EUR</span></lr-icon-button>
+      <lr-icon-button icon="close" aria-label="Dismiss" style="--lr-icon-button-padding-inline: 2px"></lr-icon-button>
+    </div>
+  `);
+  const [plain, padded, icon] = [...wrapper.querySelectorAll<LyraIconButton>('lr-icon-button')];
+  const control = (host: LyraIconButton) => host.shadowRoot!.querySelector('button')!;
+  const paddedStyle = getComputedStyle(control(padded!));
+  expect(paddedStyle.paddingInlineStart).to.equal('12px');
+  expect(paddedStyle.paddingInlineEnd).to.equal('12px');
+  expect(paddedStyle.paddingBlockStart, 'block padding is untouched').to.equal('0px');
+  expect(paddedStyle.minInlineSize, 'the hit-area rule still applies').to.equal('36px');
+  expect(control(padded!).getBoundingClientRect().width - control(plain!).getBoundingClientRect().width).to.be.closeTo(24, 0.5);
+  expect(control(icon!).getBoundingClientRect().width, 'small padding stays inside the floor').to.equal(36);
+
+  padded!.setAttribute('dir', 'rtl');
+  padded!.style.setProperty('--lr-icon-button-padding-inline', '4px');
+  const rtl = getComputedStyle(control(padded!));
+  expect(rtl.paddingLeft).to.equal('4px');
+  expect(rtl.paddingRight).to.equal('4px');
+});
+
+it('inherits --lr-icon-button-padding-inline from an ancestor', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="--lr-icon-button-padding-inline: 6px"><lr-icon-button aria-label="Unit"><span>km</span></lr-icon-button></div>
+  `);
+  const button = wrapper.querySelector('lr-icon-button')!.shadowRoot!.querySelector('button')!;
+  expect(getComputedStyle(button).paddingInlineStart).to.equal('6px');
+});
+
 it('retunes the corner radius via --lr-icon-button-radius with no element-selector override', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
   (el as HTMLElement).style.setProperty('--lr-icon-button-radius', '3px');

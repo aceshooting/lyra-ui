@@ -198,6 +198,10 @@ function namesControl(nodes: Iterable<Node>): boolean {
  *   application at once. Only the two ancestor levers keep the coarse-pointer hit-area floor;
  *   see `llms/shared.md`.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Corner radius of the native button.
+ * @cssprop [--lr-icon-button-padding-inline=0] - Logical inline padding of the native button, for
+ *   a trigger that carries a short text label (a currency, unit or locale code) instead of a
+ *   square glyph. The default keeps an icon-only button at exactly its `--lr-icon-button-size`
+ *   floor; padding adds to the content, so a label grows the button and never shrinks the floor.
  * @cssprop [--lr-icon-button-bg=transparent] - Background fill of the native button.
  * @cssprop [--lr-icon-button-bg-hover=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
  *   Background fill on hover. Before 8.0.0 this fell back to `var(--lr-color-surface)` — the page

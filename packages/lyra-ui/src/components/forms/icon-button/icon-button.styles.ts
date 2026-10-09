@@ -14,6 +14,10 @@ export const styles = css`
      private tier lets a composing parent provide defaults without reading and writing the same
      public token, which creates a custom-property cycle in scope-flattening test resolvers. */
   [part~='button'] { ${iconHitTarget} ${iconAction} }
+  /* Inline padding only, after the shared action's padding reset. The default 0 keeps an icon-only
+     button at exactly its hit-area floor; a short text label (a currency or unit code) opts into
+     breathing room through the public property instead of a part rule. */
+  [part~='button'] { padding-inline: var(--lr-icon-button-padding-inline, 0); }
   /* The hover fallback was once var(--lr-color-surface), the PAGE background, so hovering on a
      default page changed nothing. Mixing that surface toward --lr-color-mix-partner (the text
      colour) always moves, and the way the surface needs: darker on a light page, lighter on a dark
