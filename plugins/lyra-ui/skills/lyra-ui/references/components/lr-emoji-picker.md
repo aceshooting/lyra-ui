@@ -178,15 +178,20 @@ one declaration to retheme every internal scroll container in the library.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
-supply `groups` directly instead. The loader never throws; a missing or failed peer logs one
-`console.warn` and leaves `groups` empty, and the picker then **fails closed and visibly**: the
-grid renders a distinct localized `[part="load-error"]` surface instead of the ordinary
-`[part="empty"]` message, so a skipped install is distinguishable at a glance from a genuine
-zero-match search or a deliberate `groups = []` opt-out, announces the same message once
+supply `groups` directly instead. The loader never throws; it leaves `groups` empty and logs one
+`console.warn` that names the cause: the peer **is not installed** (its module cannot be resolved)
+or it **was found but could not be loaded or validated** (a network or JSON/import-attribute error,
+an incompatible version, or a module without the expected data array). The picker then **fails
+closed and visibly**: the grid renders a distinct localized `[part="load-error"]` surface instead
+of the ordinary `[part="empty"]` message — `emojiPickerPeerMissing` ("Emoji are not available.")
+for a missing peer, `emojiPickerLoadError` ("Could not load emoji.") with the `load-retry` button
+for a failed one — so a skipped install is distinguishable at a glance from a broken one, a
+genuine zero-match search or a deliberate `groups = []` opt-out. It announces the same message once
 through the document's shared assertive live region (not a shadow-root `role="alert"`, which
-announces unreliably) and emits `lr-load-error` (no detail). The failed load is not cached: the
-`load-retry` button (or a later locale change) loads again, and a successful retry clears the
-failure. Assigning `groups` also clears it. The adapter buckets the peer's flat
+announces unreliably) and emits `lr-load-error` (no detail) in both cases. A failed load is not
+cached: the `load-retry` button (or a later locale change) loads again, and a successful retry
+clears the failure. No Retry button is offered for a missing peer, since retrying cannot install
+it. Assigning `groups` also clears it. The adapter buckets the peer's flat
 entry list by numeric group id and returns only the public `{ key, label, emojis }` shape. The picker
 privately maps auto-loaded group ids 0–9 to the existing `emojiPickerGroup*` locale strings; override
 those through `registerLyraLocale()` or `.strings`. An unknown future group id uses `Group {id}`.

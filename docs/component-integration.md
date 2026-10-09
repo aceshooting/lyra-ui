@@ -116,7 +116,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-ebook-viewer"></a>`lr-ebook-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-ebook-viewer.js';` | `epubjs` | none | none | 51.5 KiB |
 | <a id="lr-email-viewer"></a>`lr-email-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-email-viewer.js';` | `dompurify`, `postal-mime` | none | none | 50.4 KiB |
 | <a id="lr-embedding-explorer"></a>`lr-embedding-explorer` | retrieval | `import '@aceshooting/lyra-ui/components/lr-embedding-explorer.js';` | none | none | none | 28.6 KiB |
-| <a id="lr-emoji-picker"></a>`lr-emoji-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-emoji-picker.js';` | `emoji-picker-element-data` | none | none | 44.7 KiB |
+| <a id="lr-emoji-picker"></a>`lr-emoji-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-emoji-picker.js';` | `emoji-picker-element-data` | none | none | 45.1 KiB |
 | <a id="lr-empty"></a>`lr-empty` | overlays | `import '@aceshooting/lyra-ui/components/lr-empty.js';` | none | none | none | 28.7 KiB |
 | <a id="lr-entity-card"></a>`lr-entity-card` | retrieval | `import '@aceshooting/lyra-ui/components/lr-entity-card.js';` | none | `lr-badge`, `lr-button`, `lr-chip`, `lr-empty`, `lr-result-field` | none | 57.3 KiB |
 | <a id="lr-entity-chip"></a>`lr-entity-chip` | retrieval | `import '@aceshooting/lyra-ui/components/lr-entity-chip.js';` | none | none | none | 44 KiB |

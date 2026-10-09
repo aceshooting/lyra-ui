@@ -15030,7 +15030,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "475a1b2265fd192409b3",
+      "fingerprint": "bb40e78d891157209cb8",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15164,7 +15164,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "9b1a94ba669f22a1ce62",
+      "fingerprint": "f95ecee972884584689c",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16307,7 +16307,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "6fb2f2d27f2bea6da2fe",
+      "fingerprint": "9861c5e258f0ce14fa50",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16758,7 +16758,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "3a6b066b654d270148e4",
+      "fingerprint": "d3d4ca3a6547a1c7f834",
       "routes": [
         "src/localization.ts"
       ],
@@ -17896,6 +17896,38 @@
         "kind": "utility",
         "name": "internal-theme-scopes-contracts",
         "declaration": "findUnscopedThemeInputs"
+      }
+    },
+    {
+      "module": "src/testing/happy-dom-shims.ts",
+      "exportName": "flattenCascadeLayers",
+      "kind": "function",
+      "fingerprint": "7f4df3768fc0b3314fdc",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-happy-dom-shims-contracts",
+        "declaration": "flattenCascadeLayers"
+      }
+    },
+    {
+      "module": "src/testing/happy-dom-shims.ts",
+      "exportName": "installHappyDomCascadeLayerShim",
+      "kind": "function",
+      "fingerprint": "e693735f904181f023be",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-happy-dom-shims-contracts",
+        "declaration": "installHappyDomCascadeLayerShim"
       }
     }
   ],

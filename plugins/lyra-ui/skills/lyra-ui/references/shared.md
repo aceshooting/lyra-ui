@@ -2781,6 +2781,22 @@ only targets in the element's own or an ancestor shadow scope (sibling and desce
 targets are dropped); `null` clears it and removes the attribute; a changed `aria-controls`
 attribute resolves ids in the element's own root instead.
 
+`installHappyDomShims()` also calls `installHappyDomCascadeLayerShim()`. Happy DOM 20 drops every
+rule inside an `@layer` block from its CSSOM, while `CSS.supports('at-rule(@layer)')` still reports
+support. Lyra's stylesheets declare their probe properties (`--_lr-style-resolver`, the
+`--_lr-*-installed` markers, the token-layer sentinel) inside cascade layers, so under Happy DOM
+`theme.css` looked absent: `setLyraStyle()` warned that a stylesheet was missing and took its
+no-stylesheet fallback. The shim passes the text that `CSSStyleSheet.replaceSync()`/`replace()`
+parse (the path used by `<style>`, `<link rel="stylesheet">` and constructed sheets) through the
+exported `flattenCascadeLayers(css)`. That function drops `@layer a, b;` statements and unwraps
+each layer block in place, leaving comments, strings, `url(...)` and `@import … layer(x)` as they
+are. The probes then resolve as they do in a browser. Layer precedence is not modelled: the
+unwrapped rules cascade in source order, so assert behaviour, not values that depend on which layer
+wins. `insertRule()` is unchanged. The shim detects the defect by parsing a layered rule, so it is
+a no-op in every browser and without a `CSSStyleSheet` global; it installs once and returns a
+function that restores the original methods. Install it before any stylesheet is parsed (in the
+same `setupFiles` entry): a sheet parsed earlier keeps the rules it dropped.
+
 ## Constructing a validated test event: `createLyraEvent()`
 
 `@aceshooting/lyra-ui/testing` also exports
@@ -5073,7 +5089,9 @@ These named interfaces and helper signatures are available to typed integrations
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
   `installHappyDomFormAssociatedShims(): unknown`
   `installHappyDomShadowFocusShim(): unknown`
+  `flattenCascadeLayers(/* public names: css */): unknown`
   `installHappyDomAriaControlsShim(/* public names: proto */): unknown`
+  `installHappyDomCascadeLayerShim(/* public names: proto, misbehaves */): unknown`
   `installHappyDomShims(): unknown`
   `installStubInternalsForTest(/* public names: host */): unknown`
 
