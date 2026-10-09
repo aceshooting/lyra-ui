@@ -1587,7 +1587,9 @@ These named interfaces and helper signatures are available to typed integrations
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
   `installHappyDomFormAssociatedShims(): unknown`
   `installHappyDomShadowFocusShim(): unknown`
+  `flattenCascadeLayers(/* public names: css */): unknown`
   `installHappyDomAriaControlsShim(/* public names: proto */): unknown`
+  `installHappyDomCascadeLayerShim(/* public names: proto, misbehaves */): unknown`
   `installHappyDomShims(): unknown`
   `installStubInternalsForTest(/* public names: host */): unknown`
 

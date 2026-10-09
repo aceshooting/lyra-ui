@@ -209,10 +209,137 @@ export function installHappyDomAriaControlsShim(proto: object | undefined = glob
 }
 
 /** Installs every Happy DOM shim: form-associated internals, shadow focus and ARIA reflection. */
+/** Index just past the comment, string or `url(...)` token that starts at `index`, or `index`. */
+function skipOpaqueToken(css: string, index: number): number {
+  const char = css[index];
+  if (char === '/' && css[index + 1] === '*') {
+    const end = css.indexOf('*/', index + 2);
+    return end === -1 ? css.length : end + 2;
+  }
+  if (char === '"' || char === "'") {
+    let cursor = index + 1;
+    while (cursor < css.length && css[cursor] !== char) cursor += css[cursor] === '\\' ? 2 : 1;
+    return Math.min(cursor + 1, css.length);
+  }
+  if ((char === 'u' || char === 'U') && /^url\(/i.test(css.slice(index, index + 4)) && !/[\w-]/.test(css[index - 1] ?? '')) {
+    let cursor = index + 4;
+    while (cursor < css.length && /\s/.test(css[cursor]!)) cursor++;
+    if (css[cursor] === '"' || css[cursor] === "'") return index; // a quoted url is a string token
+    const end = css.indexOf(')', cursor);
+    return end === -1 ? css.length : end + 1;
+  }
+  return index;
+}
+
+/** Index of the `}` closing the block whose `{` is at `open` (or the text length when unclosed). */
+function matchingBrace(css: string, open: number): number {
+  let depth = 0;
+  for (let index = open; index < css.length; index++) {
+    const skipped = skipOpaqueToken(css, index);
+    if (skipped !== index) {
+      index = skipped - 1;
+      continue;
+    }
+    if (css[index] === '{') depth++;
+    else if (css[index] === '}' && --depth === 0) return index;
+  }
+  return css.length;
+}
+
+/**
+ * Removes CSS cascade layers from `css` while keeping every rule in place: `@layer a, b;`
+ * statements are dropped and each `@layer name { ... }` block (named, anonymous or nested, also
+ * inside `@media`/`@supports`) is replaced by its own content. Comments, strings and `url(...)`
+ * are copied verbatim, and `@import ... layer(x)` is left alone. Layer precedence is NOT
+ * modelled: the unwrapped rules cascade in source order like unlayered rules.
+ */
+export function flattenCascadeLayers(css: string): string {
+  let output = '';
+  let index = 0;
+  while (index < css.length) {
+    const skipped = skipOpaqueToken(css, index);
+    if (skipped !== index) {
+      output += css.slice(index, skipped);
+      index = skipped;
+      continue;
+    }
+    if (css.startsWith('@layer', index) && !/[\w-]/.test(css[index + 6] ?? '')) {
+      let cursor = index + 6;
+      while (cursor < css.length && css[cursor] !== ';' && css[cursor] !== '{') cursor++;
+      if (css[cursor] === '{') {
+        const close = matchingBrace(css, cursor);
+        output += flattenCascadeLayers(css.slice(cursor + 1, close));
+        index = close + 1;
+      } else {
+        index = cursor + 1;
+      }
+      continue;
+    }
+    output += css[index];
+    index++;
+  }
+  return output;
+}
+
+/** True when this engine's CSSOM discards rules inside `@layer` blocks, as Happy DOM 20 does. */
+function cascadeLayerRulesDropped(): boolean {
+  try {
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync('@layer lr-probe{:root{--lr-probe:1}}');
+    return sheet.cssRules.length === 0;
+  } catch {
+    return false;
+  }
+}
+
+interface SheetTextMethods {
+  replaceSync(text: string): void;
+  replace(text: string): Promise<unknown>;
+}
+
+const FLATTENING = Symbol.for('lyra-ui.testing.cascade-layer-shim');
+
+/**
+ * Makes an engine whose CSSOM drops `@layer` rules (Happy DOM 20 discards every layered rule, so
+ * `getComputedStyle()` never sees a custom property `theme.css` declares inside a layer) parse the
+ * layer contents as ordinary rules. `replaceSync()` and `replace()` -- the path `<style>`,
+ * `<link rel="stylesheet">` and constructed sheets all take -- receive the text through
+ * {@link flattenCascadeLayers}, so Lyra's stylesheet probes (`--_lr-style-resolver`, the
+ * `--_lr-*-installed` markers, the token-layer sentinel) resolve as in a browser. Layer order is
+ * not modelled; assert behaviour, not values that depend on layer precedence. `insertRule()` is
+ * unchanged. No-op wherever the engine keeps layer rules (every browser) or has no
+ * `CSSStyleSheet`; installs once and returns a function that restores the original methods.
+ * `proto` and `misbehaves` default to the global `CSSStyleSheet.prototype` and the engine probe.
+ */
+export function installHappyDomCascadeLayerShim(
+  proto: SheetTextMethods | undefined = globalThis.CSSStyleSheet?.prototype,
+  misbehaves: () => boolean = cascadeLayerRulesDropped,
+): () => void {
+  if (!proto || typeof proto.replaceSync !== 'function') return () => {};
+  const installed = proto as SheetTextMethods & { [FLATTENING]?: boolean };
+  if (installed[FLATTENING] || !misbehaves()) return () => {};
+  const { replaceSync, replace } = proto;
+  installed.replaceSync = function (this: SheetTextMethods, text: string): void {
+    replaceSync.call(this, typeof text === 'string' ? flattenCascadeLayers(text) : text);
+  };
+  if (typeof replace === 'function') {
+    installed.replace = function (this: SheetTextMethods, text: string): Promise<unknown> {
+      return replace.call(this, typeof text === 'string' ? flattenCascadeLayers(text) : text);
+    };
+  }
+  installed[FLATTENING] = true;
+  return () => {
+    installed.replaceSync = replaceSync;
+    if (typeof replace === 'function') installed.replace = replace;
+    delete installed[FLATTENING];
+  };
+}
+
 export function installHappyDomShims(): void {
   installHappyDomFormAssociatedShims();
   installHappyDomShadowFocusShim();
   installHappyDomAriaControlsShim();
+  installHappyDomCascadeLayerShim();
 }
 
 /** Test-only: returns a fresh stub `ElementInternals`-shaped object, independent of whether

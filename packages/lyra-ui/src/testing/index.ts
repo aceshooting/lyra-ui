@@ -1,5 +1,7 @@
 export {
+  flattenCascadeLayers,
   installHappyDomAriaControlsShim,
+  installHappyDomCascadeLayerShim,
   installHappyDomFormAssociatedShims,
   installHappyDomShadowFocusShim,
   installHappyDomShims,

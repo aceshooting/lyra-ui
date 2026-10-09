@@ -1,8 +1,10 @@
 import { expect } from '@open-wc/testing';
 import {
   createAriaControlsElementsDescriptor,
+  flattenCascadeLayers,
   guardShadowActiveElement,
   installHappyDomAriaControlsShim,
+  installHappyDomCascadeLayerShim,
   installHappyDomFormAssociatedShims,
   installHappyDomShadowFocusShim,
   installHappyDomShims,
@@ -277,8 +279,104 @@ describe('ariaControlsElements shim', () => {
   it('installHappyDomShims is a no-op on a real browser', () => {
     const before = Object.getOwnPropertyDescriptor(Element.prototype, 'ariaControlsElements');
     const beforeInternals = HTMLElement.prototype.attachInternals;
+    const beforeReplaceSync = CSSStyleSheet.prototype.replaceSync;
+    const beforeReplace = CSSStyleSheet.prototype.replace;
     installHappyDomShims();
     expect(Object.getOwnPropertyDescriptor(Element.prototype, 'ariaControlsElements')?.get === before?.get).to.be.true;
     expect(HTMLElement.prototype.attachInternals).to.equal(beforeInternals);
+    expect(CSSStyleSheet.prototype.replaceSync === beforeReplaceSync).to.be.true;
+    expect(CSSStyleSheet.prototype.replace === beforeReplace).to.be.true;
+  });
+});
+
+describe('flattenCascadeLayers', () => {
+  it('drops layer order statements and unwraps named and anonymous layer blocks in place', () => {
+    const css = '@layer a, b.c;\n@layer a{:root{--x:1}}\n:root{--y:2}\n@layer{.k{color:red}}';
+    expect(flattenCascadeLayers(css)).to.equal('\n:root{--x:1}\n:root{--y:2}\n.k{color:red}');
+  });
+
+  it('unwraps nested layers and layers inside conditional groups without moving rules out of them', () => {
+    const css = '@layer lr-theme{@layer inner{a{b:c}} @media (min-width: 1px){@layer x.y{d{e:f}}}}';
+    expect(flattenCascadeLayers(css)).to.equal('a{b:c} @media (min-width: 1px){d{e:f}}');
+  });
+
+  it('leaves braces and @layer text inside strings, comments and urls untouched', () => {
+    const css = '/* @layer a{ */ q::before{content:"@layer b{"} r{background:url(x@layer{.png)} @layer c{s{t:u}}';
+    expect(flattenCascadeLayers(css)).to.equal('/* @layer a{ */ q::before{content:"@layer b{"} r{background:url(x@layer{.png)} s{t:u}');
+  });
+
+  it('returns text without cascade layers unchanged, and is idempotent', () => {
+    const css = '@media screen{:root{--lr-a:1}} .layer-name{--layered:2} @import url("a.css") layer(x);';
+    expect(flattenCascadeLayers(css)).to.equal(css);
+    const flat = flattenCascadeLayers('@layer a{b{c:d}}');
+    expect(flattenCascadeLayers(flat)).to.equal(flat);
+  });
+
+  it('keeps an unterminated block instead of dropping the rest of the sheet', () => {
+    expect(flattenCascadeLayers('@layer a{b{c:d}')).to.equal('b{c:d}');
+  });
+});
+
+describe('installHappyDomCascadeLayerShim', () => {
+  function fakeSheetPrototype(): { proto: { replaceSync(text: string): void; replace(text: string): Promise<unknown> }; seen: string[] } {
+    const seen: string[] = [];
+    const proto = {
+      replaceSync(text: string): void {
+        seen.push(text);
+      },
+      replace(text: string): Promise<unknown> {
+        seen.push(`async:${text}`);
+        return Promise.resolve(this);
+      },
+    };
+    return { proto, seen };
+  }
+
+  it('flattens the text replaceSync() and replace() parse when the engine drops layer rules', async () => {
+    const { proto, seen } = fakeSheetPrototype();
+    const restore = installHappyDomCascadeLayerShim(proto, () => true);
+    proto.replaceSync('@layer lr-theme{:root{--_lr-style-resolver:1}}');
+    await proto.replace('@layer a, b;@layer b{x{y:z}}');
+    expect(seen).to.deep.equal([':root{--_lr-style-resolver:1}', 'async:x{y:z}']);
+    restore();
+    proto.replaceSync('@layer a{b{c:d}}');
+    expect(seen[2]).to.equal('@layer a{b{c:d}}');
+  });
+
+  it('installs once: a second call neither re-wraps nor breaks the first restore', () => {
+    const { proto } = fakeSheetPrototype();
+    const original = proto.replaceSync;
+    const restore = installHappyDomCascadeLayerShim(proto, () => true);
+    const wrapped = proto.replaceSync;
+    installHappyDomCascadeLayerShim(proto, () => true)();
+    expect(proto.replaceSync === wrapped).to.be.true;
+    restore();
+    expect(proto.replaceSync === original).to.be.true;
+  });
+
+  it('is a no-op in a real browser, whose CSSOM keeps layer rules', () => {
+    const replaceSync = CSSStyleSheet.prototype.replaceSync;
+    const replace = CSSStyleSheet.prototype.replace;
+    const restore = installHappyDomCascadeLayerShim();
+    try {
+      expect(CSSStyleSheet.prototype.replaceSync === replaceSync).to.be.true;
+      expect(CSSStyleSheet.prototype.replace === replace).to.be.true;
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync('@layer probe{:root{--probe:1}}');
+      expect(sheet.cssRules.length).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('does not throw without a CSSStyleSheet global (a plain-Node project sharing the setup file)', () => {
+    const holder = globalThis as unknown as { CSSStyleSheet?: unknown };
+    const original = holder.CSSStyleSheet;
+    delete holder.CSSStyleSheet;
+    try {
+      expect(() => installHappyDomCascadeLayerShim()()).to.not.throw();
+    } finally {
+      holder.CSSStyleSheet = original;
+    }
   });
 });
