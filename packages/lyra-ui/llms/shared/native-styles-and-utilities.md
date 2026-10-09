@@ -304,3 +304,37 @@ contrast and forced colors retain opaque fills. Load `preferences.css` for expli
 contrast/motion choices. Nested chrome suppresses repeated blur; independently presented top-layer
 surfaces begin their own material root. Keep cards, data tables, charts, map layers and editing
 fields outside the automatic chrome class.
+
+#### Application fallback fills and cascade layers
+
+Lyra paints the `.lr-surface-chrome` fill from a rule inside its cascade layers
+(`lr-theme-preset.surface`). An **unlayered** application rule that sets `background` on the same
+element — a generic `dialog { background: … }`, a `.panel` class — beats every layered rule
+whatever its specificity, so the element keeps the application's opaque fill and the Glass
+treatment disappears without a warning. No `revert-layer` workaround is needed; put the
+application's fallback where it ranks below Lyra:
+
+```css
+/* 1. A low-priority application layer named before Lyra's. This order statement must be the first
+      the browser sees: put it at the top of the entry stylesheet, before the theme.css import. */
+@layer app-base, lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
+@import "@aceshooting/lyra-ui/theme.css";
+
+@layer app-base {
+  dialog,
+  .panel {
+    background: #fff; /* still paints when the Lyra stylesheets are absent */
+  }
+}
+
+/* 2. Or choose the chrome's base fill through its token; Glass mixes it at the surface opacity. */
+.panel.lr-surface-chrome {
+  --lr-surface-background: #fff;
+}
+```
+
+An application layer declared after Lyra's (or unnamed until after `theme.css` loads) ranks above
+the surface layer and disables Glass in the same way as an unlayered rule. Keep unlayered
+`background` rules off `.lr-surface-chrome` elements, or exclude them with
+`:not(.lr-surface-chrome)`. See [Cascade layers](styles-and-tokens.md#cascade-layers) for the full
+order.

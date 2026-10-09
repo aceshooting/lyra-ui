@@ -94,6 +94,32 @@ describe('native chrome material', () => {
     });
   }
 
+  it('keeps Glass under a lower-layer application fallback fill, loses it to an unlayered one, and mixes --lr-surface-background', async function () {
+    if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
+    const unlayered = new CSSStyleSheet();
+    unlayered.replaceSync('.app-panel { background: rgb(1 2 3); }');
+    // The documented order statement comes first, so app-base ranks below every Lyra layer.
+    const layered = new CSSStyleSheet();
+    layered.replaceSync('@layer app-base, lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides; @layer app-base { .app-panel { background: rgb(1 2 3); } }');
+    const panel = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope class="lr-surface-chrome app-panel">Panel</div>`);
+    const alpha = (): number => toRgba(getComputedStyle(panel).backgroundColor)[3]!;
+    const glassAlpha = alpha();
+    expect(glassAlpha, 'Glass paints a translucent fill').to.be.within(152, 154);
+    const lyraSheets = [...document.adoptedStyleSheets];
+    try {
+      document.adoptedStyleSheets = [layered, ...lyraSheets];
+      expect(alpha(), 'a fallback in a lower layer leaves Glass in place').to.equal(glassAlpha);
+      expect(getComputedStyle(panel).backgroundColor).to.not.equal('rgb(1, 2, 3)');
+      document.adoptedStyleSheets = [...lyraSheets, unlayered];
+      expect(getComputedStyle(panel).backgroundColor, 'an unlayered rule beats every layered one').to.equal('rgb(1, 2, 3)');
+      document.adoptedStyleSheets = lyraSheets;
+      panel.style.setProperty('--lr-surface-background', 'rgb(250 240 230)');
+      expect(toRgba(getComputedStyle(panel).backgroundColor)).to.deep.equal(toRgba('rgb(250 240 230 / 0.6)'));
+    } finally {
+      document.adoptedStyleSheets = lyraSheets;
+    }
+  });
+
   it('resolves native local fills and leaves fixed descendants in viewport coordinates', async function () {
     if (!CSS.supports('backdrop-filter', 'blur(1px)')) this.skip();
     const surface = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope class="lr-surface-chrome" style="position:fixed;inset:80px auto auto 90px;--lr-surface-background:rgb(250 240 230);--lr-theme-color-text-normal:rgb(20 30 40);--lr-theme-surface-blur:2px"><span style="position:fixed;top:7px;left:9px">Fixed</span><div style="max-block-size:40px;overflow:auto"><p style="block-size:200px">Scrollable content</p></div></div>`);
