@@ -185,11 +185,12 @@ The entry points, then:
 - **`lr-flag`** registers from the barrel, but resolving a flag by `country`/`language` (rather than
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
-- **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
+- **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme, including the
+  document token layer),
   `@aceshooting/lyra-ui/looks/shadcn.css` (opt-in shadcn/ui look, imported after `theme.css` — see
   [The shadcn look](./styles-and-tokens.md#the-shadcn-look--looksshadcncss)),
-  `@aceshooting/lyra-ui/tokens-root.css` (opt-in: the curated resolved `--lr-*` tokens at `:root`,
-  so your own components can read them),
+  `@aceshooting/lyra-ui/tokens-root.css` (the document token layer alone, for pages that do not
+  use `theme.css`; link one of the two, not both),
   `@aceshooting/lyra-ui/native.css` (opt-in native-element styles inside `.lr-native`),
   `@aceshooting/lyra-ui/utilities.css` (opt-in light-DOM layout/text/typography utilities),
   `@aceshooting/lyra-ui/theme.js` (the zero-dependency style runtime),

@@ -14,11 +14,21 @@ const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-development-conditions-'))
 try {
   mkdirSync(path.join(fixture, 'dist/internal'), { recursive: true });
   writeFileSync(path.join(fixture, 'package.json'), JSON.stringify({ type: 'module', imports: pkg.imports }));
-  for (const module of ['dev-warning', 'dev-mode-attribute-warning']) {
-    for (const suffix of ['', '.development', '.production']) {
-      const source = readFileSync(path.join(packageDir, `src/internal/${module}${suffix}.ts`), 'utf8');
-      writeFileSync(path.join(fixture, `dist/internal/${module}${suffix}.js`),
-        transformSync(source, { loader: 'ts', format: 'esm', target: 'es2022' }).code);
+  // The entry modules, plus every relative module they import (the development diagnostics read
+  // the document token layer), transpiled into the fixture's dist/ with the same relative layout.
+  const pending = ['dev-warning', 'dev-mode-attribute-warning'].flatMap((module) =>
+    ['', '.development', '.production'].map((suffix) => `src/internal/${module}${suffix}.ts`));
+  const seen = new Set();
+  while (pending.length) {
+    const relative = pending.pop();
+    if (seen.has(relative)) continue;
+    seen.add(relative);
+    const source = readFileSync(path.join(packageDir, relative), 'utf8');
+    const target = path.join(fixture, 'dist', relative.slice('src/'.length).replace(/\.ts$/, '.js'));
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, transformSync(source, { loader: 'ts', format: 'esm', target: 'es2022' }).code);
+    for (const match of source.matchAll(/(?:from|import)\s*'(\.{1,2}\/[^']+)\.js'/g)) {
+      pending.push(path.posix.join(path.posix.dirname(relative), `${match[1]}.ts`));
     }
   }
   writeFileSync(path.join(fixture, 'probe.mjs'), `

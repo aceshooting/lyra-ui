@@ -202,7 +202,9 @@ function verifyDocument(doc: Document, state: DocumentLayerState, rescan: boolea
   if (state.provider && !providerApplies(doc, state.provider)) state.provider = undefined;
   if (!state.provider && rescan) state.provider = findProvider(doc, state.sheet);
   if (state.provider) {
-    if (withdraw(doc, state.sheet)) state.arrivedLate = true;
+    // Only a static stylesheet that applied late is worth a warning; an application that adopts
+    // theme.css as a constructed sheet after registering Lyra chose that order.
+    if (withdraw(doc, state.sheet) && topSheet(state.provider).ownerNode) state.arrivedLate = true;
     return;
   }
   // A provider that cannot be read cannot be validated either; it is trusted until the page adopts

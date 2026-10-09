@@ -504,7 +504,7 @@ describe('document token layer: theme scopes and mode', () => {
         sheet.replaceSync(await (await fetch(new URL(path, import.meta.url))).text());
         return sheet;
       }));
-      const sheets = order === 'theme.css first' ? [theme, fixtureSheet] : [fixtureSheet, theme];
+      const sheets: CSSStyleSheet[] = order === 'theme.css first' ? [theme!, fixtureSheet!] : [fixtureSheet!, theme!];
       const previous = document.adoptedStyleSheets;
       document.adoptedStyleSheets = [...previous, ...sheets];
       const root = document.documentElement;

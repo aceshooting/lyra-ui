@@ -17860,6 +17860,43 @@
         "name": "form-associated",
         "declaration": "CheckedFormAssociatedInterface"
       }
+    },
+    {
+      "module": "src/internal/document-tokens.ts",
+      "exportName": "adoptLyraTokens",
+      "kind": "function",
+      "fingerprint": "aa83857718a01786754c",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/index.ts",
+        "src/utilities/tokens.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "internal-document-tokens-contracts",
+        "declaration": "adoptLyraTokens"
+      }
+    },
+    {
+      "module": "src/internal/theme-scopes.ts",
+      "exportName": "findUnscopedThemeInputs",
+      "kind": "function",
+      "fingerprint": "ae9b8bd789a1b7df42ff",
+      "routes": [
+        "src/utilities/index.ts",
+        "src/utilities/theme-scopes.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "internal-theme-scopes-contracts",
+        "declaration": "findUnscopedThemeInputs"
+      }
     }
   ],
   "legacy": []

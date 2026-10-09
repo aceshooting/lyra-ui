@@ -11,11 +11,12 @@ Every `lr-*` component resolves its styling through this two-layer token system:
    with a built-in fallback. Other tokens are aliases, computed or environment-backed values,
    or fixed contract constants. Every component renders correctly with no theme configured.
 
-Since 27.0.0 the shared `--lr-*` outputs form the **document token layer**: the first connected
-Lyra element adopts one stylesheet that declares them on `:root` and re-derives them only at theme
-scopes (`:root`, `.lr-light`/`.lr-dark`, `[data-lr-theme]`, the style-axis boundaries, the
-design-token fixture scopes, and the `data-lr-theme-scope` marker). Components inherit them;
-`@aceshooting/lyra-ui/tokens-root.css` is the same layer as a static file. See
+Since 28.0.0 the shared `--lr-*` outputs form the **document token layer**: one stylesheet that
+declares them on `:root` and re-derives them only at theme scopes (`:root`, `.lr-light`/`.lr-dark`,
+`[data-lr-theme]`, the style-axis boundaries, the design-token fixture scopes, and the
+`data-lr-theme-scope` marker). `theme.css` carries it; without `theme.css` the first registered
+Lyra element adopts it. Components inherit them; `@aceshooting/lyra-ui/tokens-root.css` is the
+same layer alone, for pages without `theme.css`. See
 [Styles and tokens](./shared/styles-and-tokens.md) for theme scopes, application shadow roots and
 server rendering.
 

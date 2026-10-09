@@ -63,6 +63,20 @@ function pick<T extends Element = HTMLElement>(root: ParentNode, selector: strin
 const style = (root: ParentNode, selector: string): CSSStyleDeclaration =>
   getComputedStyle(pick(root, selector));
 
+/**
+ * The used value of `property: var(token)` at document scope. Since 28.0.0 the document token layer
+ * is present once any Lyra class is registered (this file registers lr-card), so the utilities
+ * resolve the layer's values, not their own Lyra-look fallbacks.
+ */
+function resolved(property: 'font-size' | 'border-top-left-radius', token: string): string {
+  const probe = document.createElement('div');
+  probe.style.setProperty(property, `var(${token})`);
+  document.body.append(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return value;
+}
+
 /** Splits a selector list at its top-level commas (commas inside :where()/:not() stay put). */
 function selectorArms(selectorText: string): string[] {
   const arms: string[] = [];
@@ -278,7 +292,7 @@ describe('typography scope', () => {
         <h6>Six</h6>
       </div>
     `);
-    const sizes = ['32px', '28px', '20px', '18px', '16px', '13px'];
+    const sizes = ['32px', '28px', '20px', '18px', resolved('font-size', '--lr-font-size-m'), '13px'];
     sizes.forEach((size, index) => {
       expect(style(el, `h${index + 1}`).fontSize, `h${index + 1}`).to.equal(size);
     });
@@ -418,7 +432,7 @@ describe('typography scope', () => {
     expect(computed.paddingBottom, `${label} padding-bottom`).to.equal('2px');
     expect(computed.paddingLeft, `${label} padding-left`).to.equal('4px');
     expect(computed.paddingRight, `${label} padding-right`).to.equal('4px');
-    expect(computed.borderTopLeftRadius, `${label} radius`).to.equal('2px');
+    expect(computed.borderTopLeftRadius, `${label} radius`).to.equal(resolved('border-top-left-radius', '--lr-radius-xs'));
     expect(computed.backgroundColor, `${label} background`).to.not.equal(TRANSPARENT);
   }
 
@@ -639,7 +653,9 @@ describe('typography precedence', () => {
     expect(style(el, '#h2').fontSize).to.equal('28px');
     expect(style(el, '#h2').borderBottomWidth).to.equal('0px');
     expect(style(el, '#h3').fontSize).to.equal('20px');
-    expect(style(el, '#h4').fontSize).to.equal(style(el, '#bare-h4').fontSize);
+    // lr-prose sizes h4 from the layer's body size; unclassed markup keeps the browser's default.
+    expect(style(el, '#h4').fontSize).to.equal(resolved('font-size', '--lr-font-size-m'));
+    expect(style(el, '#bare-h4').fontSize).to.equal('16px');
     expect(style(el, '#bq').borderLeftWidth).to.equal('3px');
     expect(style(el, '#bq').fontStyle).to.equal('normal');
     expect(style(el, '#bq').color).to.equal(style(el, '#quiet').color);

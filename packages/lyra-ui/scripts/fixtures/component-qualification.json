@@ -3658,7 +3658,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/audio-visualizer/audio-visualizer.test.ts",
-              "line": 399,
+              "line": 401,
               "kind": "320px allocation test signal"
             }
           ]

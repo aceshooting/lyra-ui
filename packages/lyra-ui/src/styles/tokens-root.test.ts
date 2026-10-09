@@ -7,7 +7,8 @@ import '../components/layout/card/card.js';
 import { expectDevWarning } from '../../test/expected-dev-warnings.js';
 
 // Captured at module evaluation, i.e. BEFORE the `before()` hook links the stylesheet and before any
-// Lyra element connects: until one of the two happens, the layer does not exist at document scope.
+// Lyra element connects, but after `card.js` registered lr-card: since 28.0.0 registering the first
+// Lyra class adopts the layer into the document, so it already exists at document scope.
 const baselineNames = ['--lr-color-brand', '--lr-color-border', '--lr-space-m', '--lr-radius'];
 const baseline = new Map(
   baselineNames.map((name) => [name, getComputedStyle(document.documentElement).getPropertyValue(name).trim()]),
@@ -57,8 +58,8 @@ after(() => {
   for (const node of injected) node.remove();
 });
 
-it('declares nothing at document scope until the stylesheet is opted into', () => {
-  expect([...baseline.values()]).to.deep.equal(['', '', '', '']);
+it('has the layer at document scope as soon as a Lyra class is registered, without the stylesheet', () => {
+  expect([...baseline.values()].filter((value) => value === '')).to.deep.equal([]);
 });
 
 it('publishes the whole document layer, and names its stable subset in the header', () => {
