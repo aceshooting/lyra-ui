@@ -229,10 +229,6 @@ export type TableScrollMode = 'self' | 'page' | 'auto';
 
 const TABLE_LAYOUT = literalSetConverter<'auto' | 'fixed'>(['auto', 'fixed'], 'auto');
 const TABLE_PAGINATION_FORMAT = literalSetConverter<LyraPaginationFormat>(['standard', 'compact'], 'compact');
-/** The nested pager's parts a consumer styles, forwarded under a collision-resistant prefix. */
-const PAGINATION_EXPORT_PARTS = [
-  'summary', 'controls', 'pages', 'page', 'page-current', 'page-field', 'page-input', 'page-count', 'button',
-].map((name) => `${name}:pagination-${name}`).join(', ');
 
 /** Canonical table sort direction. */
 export type TableSortDirection = 'asc' | 'desc';
@@ -3875,7 +3871,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         ${hasPagination
           ? html`<lr-pagination
               part="pagination"
-              exportparts=${PAGINATION_EXPORT_PARTS}
+              exportparts="summary:pagination-summary, controls:pagination-controls, pages:pagination-pages, page:pagination-page, page-current:pagination-page-current, page-field:pagination-page-field, page-input:pagination-page-input, page-count:pagination-page-count, button:pagination-button"
               .format=${this.paginationFormat}
               .withSummary=${this.paginationWithSummary}
               .page=${this.page}

@@ -15400,7 +15400,10 @@ affordance; the part has no live-region role in either appearance),
 and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts, which is exactly what keeps them
 geometrically identical to real rows, so `skeleton` is the part to target for the placeholder's own
 look: `::part(skeleton) { --lr-skeleton-h: 2em; }`), and
-`pagination`, `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
+`pagination` (the nested `<lr-pagination>` host, which re-exports its own inner parts as
+`pagination-summary`, `pagination-controls`, `pagination-pages`, `pagination-page`,
+`pagination-page-current`, `pagination-page-field`, `pagination-page-input`,
+`pagination-page-count` and `pagination-button`), `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
 separator, with a finite explicit ARIA maximum even when no CSS `maxWidth` was supplied). The built-in empty state is addressable rather than fixed: `empty` is the `<lr-empty>`
 host in all three empty states, and it re-exports that element's own inner parts as `empty-base`,
 `empty-icon`, `empty-heading`, `empty-description` and `empty-actions`. Note that the no-columns and
