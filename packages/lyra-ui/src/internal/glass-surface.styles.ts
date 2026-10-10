@@ -100,9 +100,9 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
              The deepening anchor is the theme surface at 10% toward black, not pure black, so a lifted
              dark palette lifts the glass with it. The share is capped by the 4.5:1 text contrast over
              a white backdrop that the stock palettes are qualified for; opacity from 70% keeps the
-             fill's own colour. */
+             fill's own colour. --lr-theme-surface-glass-dark-share is the public input for that share. */
           --_lr-glass-dark-fill-weight: clamp(20%, calc(var(--_lr-glass-effective-opacity) * 800% - 460%), 100%);
-          --_lr-glass-fill: light-dark(${fill}, color-mix(in srgb, ${fill} var(--_lr-glass-dark-fill-weight), color-mix(in srgb, var(--lr-color-surface, var(--_lr-glass-dark-anchor)) 10%, var(--_lr-glass-dark-anchor))));
+          --_lr-glass-fill: light-dark(${fill}, color-mix(in srgb, ${fill} var(--_lr-glass-dark-fill-weight), color-mix(in srgb, var(--lr-color-surface, var(--_lr-glass-dark-anchor)) clamp(0%, var(--lr-theme-surface-glass-dark-share, 10%), 100%), var(--_lr-glass-dark-anchor))));
           --_lr-glass-background: color-mix(
             in srgb,
             ${restingFill} calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),

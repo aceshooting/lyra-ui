@@ -356,6 +356,8 @@ export function renderGlass(data, { defaults = false } = {}) {
   }
 
   let css = LAYERS + '@layer lr-theme-preset.surface {\n';
+  // Registered so an invalid consumer value falls back to the initial 10% instead of voiding the fill.
+  css += "  @property --lr-theme-surface-glass-dark-share {\n    syntax: '<percentage>';\n    inherits: true;\n    initial-value: 10%;\n  }\n";
   css += rule(':root', [['--lr-theme-surface-opacity', data.opacity]]);
   css += rule(':root, :host', [['--_lr-media-clear-scrim-start', clear.scrimStart], ['--_lr-media-clear-scrim-end', clear.scrimEnd], ['--_lr-media-clear-fill', `rgb(255 255 255 / ${clear.fillOpacity})`], ['--_lr-media-clear-text', '#ffffff'], ['--_lr-glass-dark-anchor', data.darkFillAnchor]]);
   css += rule(defaults ? ":root:not([data-lr-surface]), [data-lr-surface='glass']" : "[data-lr-surface='glass']", [['--_lr-surface-installed', STYLE_VERSION], ['--_lr-surface-enabled', '1'], ['--_lr-surface-root-filter', 'initial'], ['--_lr-glass-blocker', 'initial'], ['--_lr-surface-content', "''"], ['--_lr-surface-isolation', 'isolate'], ['--_lr-surface-min-opacity', data.minimumOpacity], ['--_lr-surface-maximum-blur', data.maximumBlur], ['--_lr-surface-foreground-weight', `${data.foregroundWeight * 100}%`], ['--_lr-surface-border-weight', `${data.borderWeight * 100}%`], ['--_lr-surface-child-filter', 'none'], ['--_lr-surface-child-opacity', '1'], ['--lr-theme-surface-blur', data.blur], ['--lr-theme-surface-saturation', data.saturation], ['--lr-theme-surface-highlight', data.highlight]]);

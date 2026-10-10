@@ -69,4 +69,58 @@ describe('dark glass fill follows the theme surface ramp', () => {
       }
     });
   }
+
+  describe('--lr-theme-surface-glass-dark-share', () => {
+    const SHARE = '--lr-theme-surface-glass-dark-share';
+    const channels = (color: number[]) => color.slice(0, 3);
+    const sum = (color: number[]) => color[0]! + color[1]! + color[2]!;
+
+    for (const look of LOOKS) {
+      it(`leaves ${look} glass byte-identical when the input is the documented 10% default`, async function () {
+        if (!CSS.supports('color', 'light-dark(red, blue)')) this.skip();
+        const unset = await paint(look);
+        const explicit = await paint(look, `${SHARE}: 10%`);
+        expect(channels(explicit.background), `${look}: explicit default`).to.deep.equal(channels(unset.background));
+      });
+    }
+
+    it('lifts the dark fill when set on :root, and restores it when removed', async function () {
+      if (!CSS.supports('color', 'light-dark(red, blue)')) this.skip();
+      const lifted = '#1f2023';
+      const style = ['default', 'raised', 'overlay', 'container-high'].map(name => `--lr-theme-color-surface-${name}: ${lifted}`).join(';');
+      const base = await paint('shadcn', style);
+      document.documentElement.style.setProperty(SHARE, '60%');
+      try {
+        const raised = await paint('shadcn', style);
+        expect(sum(raised.background), 'root input lifts the fill').to.be.greaterThan(sum(base.background) + 3);
+      } finally {
+        document.documentElement.style.removeProperty(SHARE);
+      }
+      const restored = await paint('shadcn', style);
+      expect(channels(restored.background), 'removing the input restores the default').to.deep.equal(channels(base.background));
+    });
+
+    it('lifts the dark fill inside a scoped container only', async function () {
+      if (!CSS.supports('color', 'light-dark(red, blue)')) this.skip();
+      const lifted = '#1f2023';
+      const tokens = ['default', 'raised', 'overlay', 'container-high'].map(name => `--lr-theme-color-surface-${name}: ${lifted}`).join(';');
+      const host = await fixture<HTMLDivElement>(html`<div data-lr-look="shadcn" data-lr-mode="dark" data-lr-surface="glass" style=${tokens}>
+        <div id="plain" class="lr-surface-chrome" style="padding:1rem">Plain</div>
+        <div style=${`${SHARE}: 60%`}><div id="scoped" class="lr-surface-chrome" style="padding:1rem">Scoped</div></div>
+      </div>`);
+      const plain = toRgba(getComputedStyle(host.querySelector('#plain')!).backgroundColor);
+      const scoped = toRgba(getComputedStyle(host.querySelector('#scoped')!).backgroundColor);
+      expect(sum(scoped), 'scoped container lifts the fill').to.be.greaterThan(sum(plain) + 3);
+    });
+
+    it('falls back to the 10% default for an invalid value', async function () {
+      if (!CSS.supports('color', 'light-dark(red, blue)')) this.skip();
+      const unset = await paint('shadcn');
+      for (const bad of ['banana', '1.5', '10', '#fff', '10px']) {
+        const painted = await paint('shadcn', `${SHARE}: ${bad}`);
+        expect(painted.alpha, `${bad}: stays translucent`).to.be.within(0.59, 0.61);
+        expect(channels(painted.background), `${bad}: falls back`).to.deep.equal(channels(unset.background));
+      }
+    });
+  });
 });

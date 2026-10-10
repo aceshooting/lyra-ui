@@ -6214,6 +6214,27 @@ and overlay tokens) lifts its Glass chrome with it. That share is small on purpo
 palettes are qualified for 4.5:1 text over a pure white backdrop at 60% opacity, which caps how
 light the pane can get. To paint a lifted palette's own overlay colour, set `--lr-theme-surface-opacity`
 to 0.7 or higher.
+
+`--lr-theme-surface-glass-dark-share` is the public input for that share. It is a percentage,
+default `10%`, read in dark mode only, below 70% opacity. It sets how much of `--lr-color-surface`
+the deepening anchor keeps (the rest is black), so raising it lifts dark Glass chrome toward the
+surface. It inherits, so set it on `:root` for the whole app or on any container for that subtree;
+values outside 0% to 100% clamp, and a value that is not a percentage falls back to `10%`. The default
+paints exactly as before. For a softer grey dark mode:
+
+```css
+:root {
+  --lr-theme-color-surface-default: #1f2023;
+  --lr-theme-color-surface-raised: #1f2023;
+  --lr-theme-color-surface-overlay: #1f2023;
+  --lr-theme-surface-glass-dark-share: 60%;
+}
+```
+
+The trade-off is contrast: the 4.5:1 qualification over a white backdrop at 60% opacity holds for
+the stock palettes only at the 10% default, and a lighter pane lowers light-text contrast over bright
+backdrops. After raising the share, re-measure your own text colours, or raise
+`--lr-theme-surface-opacity` to 0.7 or higher, where the fill keeps the palette's own colour.
 Necessary control borders use the effective painted opacity: their glass adjustment grows as
 transparency increases and disappears at 100% opacity. Ordinary and strong borders share this
 adjustment; decorative borders and explicit component border overrides keep their own tokens.
