@@ -2167,8 +2167,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail-focus-return.test.ts",
-              "test": "falls back to the element that held focus when the overlay opened while the trigger stays hidden",
+              "file": "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
+              "test": "closes on Escape and stays closed until focus leaves and returns",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -2189,8 +2189,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
-              "test": "tracks live ${direction} width and hit-target changes after reconnect under reduced motion",
+              "file": "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
+              "test": "animates the expansion with the motion tokens and keeps the footprint steady",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -2303,6 +2303,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
           "src/components/layout/app-rail/app-rail-focus-return.test.ts",
           "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",
@@ -2607,8 +2608,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail-focus-return.test.ts",
-              "test": "falls back to the element that held focus when the overlay opened while the trigger stays hidden",
+              "file": "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
+              "test": "closes on Escape and stays closed until focus leaves and returns",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -2629,8 +2630,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
-              "test": "tracks live ${direction} width and hit-target changes after reconnect under reduced motion",
+              "file": "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
+              "test": "animates the expansion with the motion tokens and keeps the footprint steady",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -2732,6 +2733,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
           "src/components/layout/app-rail/app-rail-focus-return.test.ts",
           "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",

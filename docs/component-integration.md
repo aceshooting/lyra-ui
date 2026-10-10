@@ -27,7 +27,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-alert"></a>`lr-alert` | overlays | `import '@aceshooting/lyra-ui/components/lr-alert.js';` | none | none | `lr-toast`, `lr-toast-item` | 45.8 KiB |
 | <a id="lr-animated-image"></a>`lr-animated-image` | media | `import '@aceshooting/lyra-ui/components/lr-animated-image.js';` | none | none | none | 25.2 KiB |
 | <a id="lr-animation"></a>`lr-animation` | media | `import '@aceshooting/lyra-ui/components/lr-animation.js';` | none | none | none | 27.6 KiB |
-| <a id="lr-app-rail"></a>`lr-app-rail` | layout | `import '@aceshooting/lyra-ui/components/lr-app-rail.js';` | none | `lr-app-rail-item` | none | 69.1 KiB |
+| <a id="lr-app-rail"></a>`lr-app-rail` | layout | `import '@aceshooting/lyra-ui/components/lr-app-rail.js';` | none | `lr-app-rail-item` | none | 70.5 KiB |
 | <a id="lr-app-rail-group"></a>`lr-app-rail-group` | layout | `import '@aceshooting/lyra-ui/components/lr-app-rail-group.js';` | none | none | none | 25.4 KiB |
 | <a id="lr-app-rail-item"></a>`lr-app-rail-item` | layout | `import '@aceshooting/lyra-ui/components/lr-app-rail-item.js';` | none | none | none | 50.4 KiB |
 | <a id="lr-approval-queue"></a>`lr-approval-queue` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-approval-queue.js';` | none | `lr-badge`, `lr-tool-approval-dialog` | `lr-button`, `lr-json-viewer` | 68.6 KiB |
@@ -179,7 +179,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-media-card"></a>`lr-media-card` | media | `import '@aceshooting/lyra-ui/components/lr-media-card.js';` | none | none | none | 25 KiB |
 | <a id="lr-memory-panel"></a>`lr-memory-panel` | retrieval | `import '@aceshooting/lyra-ui/components/lr-memory-panel.js';` | none | `lr-confirm-bar`, `lr-empty`, `lr-provenance-panel` | `lr-button`, `lr-chip`, `lr-chunk-inspector`, `lr-community-card`, `lr-details`, `lr-entity-chip`, `lr-json-viewer`, `lr-live-region`, `lr-path-strip`, `lr-scroller`, `lr-virtual-list` | 109.8 KiB |
 | <a id="lr-mention-popover"></a>`lr-mention-popover` | utility | `import '@aceshooting/lyra-ui/components/lr-mention-popover.js';` | none | none | none | 45.3 KiB |
-| <a id="lr-menu"></a>`lr-menu` | layout | `import '@aceshooting/lyra-ui/components/lr-menu.js';` | none | `lr-menu-item` | none | 58.7 KiB |
+| <a id="lr-menu"></a>`lr-menu` | layout | `import '@aceshooting/lyra-ui/components/lr-menu.js';` | none | `lr-menu-item` | none | 58.6 KiB |
 | <a id="lr-menu-item"></a>`lr-menu-item` | layout | `import '@aceshooting/lyra-ui/components/lr-menu-item.js';` | none | `lr-menu` | none | 31.8 KiB |
 | <a id="lr-menu-label"></a>`lr-menu-label` | layout | `import '@aceshooting/lyra-ui/components/lr-menu-label.js';` | none | none | none | 21.2 KiB |
 | <a id="lr-menubar"></a>`lr-menubar` | layout | `import '@aceshooting/lyra-ui/components/lr-menubar.js';` | none | `lr-menubar-item` | `lr-menu`, `lr-menu-item` | 65.8 KiB |

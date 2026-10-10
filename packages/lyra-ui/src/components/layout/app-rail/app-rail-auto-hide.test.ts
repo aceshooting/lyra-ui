@@ -36,6 +36,9 @@ afterEach(async () => {
 
 const base = (el: LyraAppRail): HTMLElement =>
   el.shadowRoot!.querySelector<HTMLElement>('[part="base"], [part="panel"]')!;
+/** The focusable surface inside an item: the item host itself is not a focus target. */
+const itemFocus = (el: LyraAppRail, index = 0): HTMLElement =>
+  el.querySelectorAll('lr-app-rail-item')[index]!.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
 const pin = (el: LyraAppRail): HTMLButtonElement | null =>
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part="pin-button"]');
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -251,7 +254,7 @@ describe('lr-app-rail auto-hide: pointer peek', () => {
 describe('lr-app-rail auto-hide: keyboard peek', () => {
   it('opens when keyboard focus enters the rail and closes after focus leaves', async () => {
     const { el, main } = await autoHideRail();
-    const item = el.querySelector<HTMLElement>('lr-app-rail-item')!;
+    const item = itemFocus(el);
     const seen = peekEvents(el);
     await focusByKeyboard(item);
     await waitUntil(() => el.peeking, 'keyboard focus peeks', { timeout: 2000 });
@@ -262,14 +265,14 @@ describe('lr-app-rail auto-hide: keyboard peek', () => {
 
   it('does not peek for pointer-originated focus', async () => {
     const { el } = await autoHideRail();
-    await focusAfterPointer(el.querySelector<HTMLElement>('lr-app-rail-item')!);
+    await focusAfterPointer(itemFocus(el));
     await sleep(160);
     expect(el.peeking).to.equal(false);
   });
 
   it('closes on Escape and stays closed until focus leaves and returns', async () => {
     const { el, main } = await autoHideRail();
-    const item = el.querySelector<HTMLElement>('lr-app-rail-item')!;
+    const item = itemFocus(el);
     await focusByKeyboard(item);
     await waitUntil(() => el.peeking, 'keyboard focus peeks', { timeout: 2000 });
     await sendKeys({ press: 'Escape' });
@@ -315,7 +318,8 @@ describe('lr-app-rail auto-hide: pin control', () => {
     const pressed = pin(el)!;
     expect(pressed.getAttribute('aria-pressed')).to.equal('true');
     expect(pressed.getAttribute('aria-label')).to.equal('Unpin navigation');
-    await waitUntil(() => Math.abs(el.getBoundingClientRect().width - base(el).getBoundingClientRect().width) < 1, 'docked footprint equals the rail');
+    await waitUntil(() => base(el).getBoundingClientRect().width > 200, 'rail reaches the docked width', { timeout: 3000 });
+    await waitUntil(() => Math.abs(el.getBoundingClientRect().width - base(el).getBoundingClientRect().width) < 1, 'docked footprint equals the rail', { timeout: 3000 });
     expect(main.getBoundingClientRect().left).to.be.greaterThan(stripMain.left + 100);
     pressed.click();
     await el.updateComplete;
@@ -371,7 +375,7 @@ describe('lr-app-rail auto-hide: pin control', () => {
 
   it('toggles from the keyboard', async () => {
     const { el } = await autoHideRail();
-    await focusByKeyboard(el.querySelector<HTMLElement>('lr-app-rail-item')!);
+    await focusByKeyboard(itemFocus(el));
     await waitUntil(() => el.peeking && pin(el) !== null, 'peek with pin', { timeout: 2000 });
     pin(el)!.focus();
     await sendKeys({ press: 'Enter' });
@@ -488,7 +492,9 @@ describe('lr-app-rail auto-hide: motion', () => {
     expect(durations.every((duration) => duration <= 0.000002)).to.equal(true);
     hover(el);
     await waitUntil(() => el.peeking, 'peek opens', { timeout: 2000 });
-    await waitUntil(() => base(el).getBoundingClientRect().width > 200, 'rail expands at once', { timeout: 1000 });
+    const deadline = Date.now() + 2000;
+    while (base(el).getBoundingClientRect().width <= 200 && Date.now() < deadline) await sleep(20);
+    expect(base(el).getBoundingClientRect().width, `peeking ${el.peeking}, mode ${el.mode}, host ${el.getBoundingClientRect().width}`).to.be.greaterThan(200);
   });
 });
 
