@@ -332,7 +332,8 @@ describe('document token layer: provider identity', () => {
     });
     try {
       await connectProbe(doc);
-      expect(doc.adoptedStyleSheets.length).to.equal(1);
+      // Besides the other copy's layer, at most Chromium's root key (see the key tests below).
+      expect(doc.adoptedStyleSheets.filter((sheet) => !Array.from(sheet.cssRules).some((rule) => rule.cssText.includes('--_lr-root-inputs'))).length).to.equal(1);
       // When that copy's sheet goes away, this copy provides its own.
       doc.adoptedStyleSheets = [];
       await new Promise((resolve) => setTimeout(resolve));

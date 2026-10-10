@@ -63,6 +63,8 @@ interface DocumentLayerState extends ScopeState {
   foreignLayer?: string;
   /** A static provider was found after the constructed copy had been adopted. */
   arrivedLate: boolean;
+  /** The root re-derivation key sheet (Chromium), `null` where the engine does not need it. */
+  rootKey?: CSSStyleSheet | null;
 }
 
 const documentStates = new WeakMap<Document, DocumentLayerState>();
@@ -298,11 +300,12 @@ function rootLayerSheet(doc: Document, state: DocumentLayerState): CSSStyleSheet
   return state.rootSheet;
 }
 
-function adopt(root: Document | ShadowRoot, sheet: CSSStyleSheet): void {
+function adopt(root: Document | ShadowRoot, ...add: CSSStyleSheet[]): void {
+  if (!add.length) return;
   const sheets = root.adoptedStyleSheets;
-  if (sheets.includes(sheet)) return;
+  const missing = add.filter((sheet) => !sheets.includes(sheet));
   // Appended, never replacing: the array belongs to the application.
-  root.adoptedStyleSheets = [...sheets, sheet];
+  if (missing.length) root.adoptedStyleSheets = [...sheets, ...missing];
 }
 
 /** Removes this copy's own sheet from a tree scope; never touches an application sheet. */
@@ -312,6 +315,32 @@ function withdraw(root: Document | ShadowRoot, sheet: CSSStyleSheet | undefined)
   if (!sheets.includes(sheet)) return false;
   root.adoptedStyleSheets = sheets.filter((entry) => entry !== sheet);
   return true;
+}
+
+/**
+ * Chromium only: a private custom property on the root whose value concatenates every input and
+ * switch the layer reads (`--lr-theme-*`, `--_lr-*`; `0` for one that is not set). Blink compares an element's custom
+ * properties by hash first and walks them only when the hashes match. Its property tree keeps the
+ * value a slot held before the slot was split, and the root's tree is built from scratch, so a
+ * root re-derivation leaves values behind that differ between two equal states. Every element then
+ * compares unequal after the full walk and is restyled anyway; this key makes the hashes differ,
+ * so the comparison fails at once. WebKit and Firefox compare by value and stop at a scope whose
+ * values are unchanged, which this key would defeat, so they never receive it. Engines are told
+ * apart by the Chromium brand of `navigator.userAgentData` (no brand: no key).
+ */
+function rootKeySheet(doc: Document, state: DocumentLayerState): CSSStyleSheet | null {
+  if (state.rootKey === undefined) {
+    const view = doc.defaultView!;
+    const brands = (view.navigator as Navigator & { userAgentData?: { brands?: readonly { brand: string }[] } }).userAgentData?.brands;
+    state.rootKey = null;
+    if (brands?.some((entry) => entry.brand === 'Chromium')) {
+      const names = new Set(Array.from(DOCUMENT_TOKEN_CSS.matchAll(/var\((--(?:lr-theme-|_lr-)[\w-]+)/g), (match) => match[1]));
+      const sheet = new view.CSSStyleSheet();
+      sheet.replaceSync(`:root{--_lr-root-inputs:${Array.from(names, (name) => `var(${name},0)`).join('')}}`);
+      state.rootKey = sheet;
+    }
+  }
+  return state.rootKey;
 }
 
 /**
@@ -325,6 +354,11 @@ type DocumentCheck = 'connect' | 'load' | 'explicit';
  * adoption also look, in every rule, for a provider that appeared since the last look.
  */
 function verifyDocument(doc: Document, state: DocumentLayerState, check: DocumentCheck): void {
+  // The key goes in on the first look, with the layer copy, and on the load and explicit checks: a
+  // connect that finds the static provider reads the adopted list no further.
+  const first = state.rootKey === undefined;
+  const key = rootKeySheet(doc, state);
+  const keyNow = key && (first || check !== 'connect') ? [key] : [];
   if (state.provider && !providerApplies(doc, state.provider)) state.provider = undefined;
   if (!state.provider && check !== 'connect') state.provider = findProvider(doc, state.sheet, true);
   if (state.provider) {
@@ -332,16 +366,20 @@ function verifyDocument(doc: Document, state: DocumentLayerState, check: Documen
     // Only a static stylesheet that applied late is worth a warning; an application that adopts
     // theme.css as a constructed sheet after registering Lyra chose that order.
     if (withdraw(doc, state.sheet) && topSheet(state.provider).ownerNode) state.arrivedLate = true;
+    adopt(doc, ...keyNow);
     return;
   }
   if (state.unreadableProvider) {
     // A provider that cannot be read cannot be validated cheaply. It is trusted on every implicit
     // check: a shadow root that needed this copy's sheet says nothing about the document's provider.
     // Explicit adoption re-reads the sentinel (this copy's sheet is not in the document meanwhile).
-    if (check !== 'explicit' || resolvedSentinel(doc) === DOCUMENT_TOKEN_LAYER_ID) return;
+    if (check !== 'explicit' || resolvedSentinel(doc) === DOCUMENT_TOKEN_LAYER_ID) {
+      adopt(doc, ...keyNow);
+      return;
+    }
     state.unreadableProvider = false;
   }
-  adopt(doc, layerSheet(doc, state));
+  adopt(doc, layerSheet(doc, state), ...(key ? [key] : []));
 }
 
 function verifyRoot(root: ShadowRoot, doc: Document, state: DocumentLayerState): void {
