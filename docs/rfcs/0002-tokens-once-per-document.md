@@ -408,7 +408,10 @@ wrappers).
 ### Examples
 
 ```html
-<!-- Re-theme one region: mark it, then set inputs on it. -->
+<!-- Re-theme one region: mark it, then set inputs on it. In the default look the marker does not
+     move the roles that follow brand (Shadcn's neutral loud tier): they resolve at the nearest
+     style boundary. For a brand region, use applyLyraStyleScope(el, { accent }), which writes the
+     data-lr-accent="custom" boundary, or set those neutral inputs on the region too. -->
 <section data-lr-theme-scope style="--lr-theme-color-brand-fill-loud: #7c3aed">
   <lr-button variant="brand">Save</lr-button>
 </section>
@@ -446,10 +449,15 @@ adopted in the tree scope that contains it:
    whose host is not a library component, and the element is a scope or has a scope ancestor inside
    that root (one `closest()` over the scope list, which stops at the tree boundary), the layer is
    adopted there too. `LyraElement` re-checks when its own `data-lr-theme` or `data-lr-theme-scope`
-   changes. A library component is one whose constructor was registered through `defineElement()`,
-   checked through the `Symbol.for`-keyed registration registry that already backs
-   duplicate-registration diagnostics, not with `instanceof`, so it works across copies. A consumer
-   subclass of the public `LyraElement` is therefore foreign. Library components' own shadow roots
+   changes. "Below" follows the flat tree: an element slotted into an application component (directly,
+   or through forwarded slots) also checks the tree of its assigned slot, once more after the next
+   microtask when the host renders its slots after connecting, as Lit does. A Lyra element inside a
+   slotted non-Lyra wrapper, or a slot that appears later, still needs `adoptLyraTokens(root)`. A
+   library component is one whose constructor was registered through `defineElement()` or
+   `createScopedRegistry()`, checked through the `Symbol.for`-keyed registration registry that
+   already backs duplicate-registration diagnostics (the element's own scoped registry included),
+   not with `instanceof`, so it works across copies. A consumer subclass of the public `LyraElement`
+   that the application defines itself is therefore foreign. Library components' own shadow roots
    never receive the layer, and none of them uses a mode scope internally.
 3. **Explicit.** `adoptLyraTokens(root)` for a root whose scopes appear after its Lyra elements
    connected, or that has scopes but no Lyra element yet.
@@ -841,9 +849,11 @@ accent change on the root was about three times slower with 50 scopes or a scope
   while it is still small. Only a page that registers Lyra late, after building a large DOM, and
   links neither stylesheet still pays the one-off whole-document invalidation; the gate measures that
   case separately (`late-adopt.mjs --lazy --no-theme`).
-- **One document check per task.** The connect-time check (and the development diagnostic's layer
-  check) runs once per document per task instead of once per element; a wholesale replacement of
-  `adoptedStyleSheets` is still repaired by the next task's connect.
+- **One document check per microtask checkpoint.** The connect-time check (and the development
+  diagnostic's layer check) runs once per document per microtask checkpoint instead of once per
+  element, so a batch insert, which connects every element before the next checkpoint, is checked
+  once; a wholesale replacement of `adoptedStyleSheets` is still repaired by the next connect after
+  a checkpoint.
 - **Trigger of the WebKit accent regression.** The default look projects Shadcn's neutral loud
   roles, which follow brand, into a `:root`-only rule as a raw `var(--lr-theme-color-brand-…)`
   slot, so the value was substituted once at `:root` and inherited. Every theme scope re-resolves
@@ -876,11 +886,16 @@ accent change on the root was about three times slower with 50 scopes or a scope
   no root-only declaration in `theme.css` references a name a boundary re-declares (it fails on the
   27 follower compile); and custom-property budgets (1,006 on `:root`, 253 at a neutral scope).
 - **Provider identity instead of a permanent "linked" flag.** The runtime identifies the stylesheet
-  that provides the layer in each tree scope (by reading the tail of each sheet for the sentinel, no
-  computed-style read per element), re-validates it cheaply, adopts its own copy when the provider
-  is removed, withdraws its own copy when a static provider arrives later (once after `load`, and
-  on every explicit `adoptLyraTokens()`; the development build warns), honours a `<link>` inside an
-  application shadow root, and checks each root once per microtask checkpoint. A copy with a
+  that provides the layer in each tree scope (by reading each sheet for the `@layer lr-theme` block
+  that opens with the sentinel: the tail first, any position when a bundler inlined `theme.css`
+  mid-file, no computed-style read per element), re-validates it cheaply (owner connected and still
+  owning that sheet object, media matching now), adopts its own copy when the provider is removed,
+  withdraws its own copy when a static provider arrives later (once after `load`, and on every
+  explicit `adoptLyraTokens()`; the development build warns), honours a `<link>` inside an
+  application shadow root, and checks each root once per microtask checkpoint. A provider known
+  only through the resolved sentinel (a cross-origin `theme.css` without CORS) stays trusted on
+  every implicit check, including after an application shadow root needed the constructed copy;
+  `adoptLyraTokens(document)` re-reads the sentinel. A copy with a
   different layer takes over the shared adopter, because its sheet is adopted later and wins.
 - **Fixture modes take precedence correctly.** The design-token fixture switches sit in
   `lr-theme-preset.mode` with a class or attribute selector, so a fixture on `<html>` beats

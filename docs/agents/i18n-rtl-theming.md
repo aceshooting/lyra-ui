@@ -174,8 +174,9 @@ Since 28.0.0 (RFC 0002) components do not declare the shared `--lr-*` outputs on
 `scripts/generate-design-tokens.mjs`, the same text as `src/styles/tokens-root.css` and the tail of
 `src/theme.css`) declares them once per document on `:root` and re-derives them at the closed list of theme scopes. Mode reaches
 every scope through two inherited private switches (`--_lr-dark-on` / `--_lr-light-on`): each
-mode-dependent output is one declaration, `var(--_lr-dark-on, <light>)var(--_lr-light-on, <dark>)`,
-so there is exactly one route into dark mode and it behaves identically in Chromium, Firefox and
+mode-dependent output is one declaration whose differing part is `var(--_lr-dark-on,<light>)var(--_lr-light-on,<dark>)`
+(the generator's `pairModes()` writes the shared wrappers, such as the `--lr-theme-*` input, once
+and pairs only the innermost run of tokens that differs), so there is exactly one route into dark mode and it behaves identically in Chromium, Firefox and
 WebKit. The former three per-host routes (`:host([data-lr-theme='dark'])`, `:host-context()`, the
 OS media rule) and their cross-engine trap are gone.
 

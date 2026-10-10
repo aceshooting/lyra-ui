@@ -18089,6 +18089,38 @@
         "name": "theme-theme-contracts",
         "declaration": "startLyraStyle"
       }
+    },
+    {
+      "module": "src/testing/jsdom-shims.ts",
+      "exportName": "installJsdomFormAssociatedShim",
+      "kind": "function",
+      "fingerprint": "425b3980c8ee2b3bd2f8",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-jsdom-shims-contracts",
+        "declaration": "installJsdomFormAssociatedShim"
+      }
+    },
+    {
+      "module": "src/testing/jsdom-shims.ts",
+      "exportName": "JsdomFormAssociatedTargets",
+      "kind": "interface",
+      "fingerprint": "b2d7ba7fe4018a0f9a0a",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-jsdom-shims-contracts",
+        "declaration": "JsdomFormAssociatedTargets"
+      }
     }
   ],
   "legacy": []

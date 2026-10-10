@@ -1601,6 +1601,12 @@ These named interfaces and helper signatures are available to typed integrations
   isJsdom?: () => boolean;
 }`
   `installJsdomAdoptedStyleSheetsShim(targets?: JsdomAdoptedStyleSheetsTargets): () => void`
+  `JsdomFormAssociatedTargets {
+  internalsPrototype?: object;
+  elementPrototype?: object;
+  isJsdom?: () => boolean;
+}`
+  `installJsdomFormAssociatedShim(targets?: JsdomFormAssociatedTargets): () => void`
   `installJsdomShims(): () => void`
   See "jsdom: `installJsdomShims()`" above for the full contract.
 
