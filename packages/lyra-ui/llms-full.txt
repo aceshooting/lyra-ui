@@ -15136,35 +15136,15 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `paginationMode: 'client'|'server' = 'client'` (attribute `pagination-mode`, reflected) — client
   mode slices rows and updates `page`; server mode leaves `page` controlled and bounds the supplied
   page to `pageSize`
-- `unknownTotal: boolean = false` (attribute `unknown-total`, reflected) — server pagination for a
-  caller with no total item count, only whether one more page exists (`hasNext`). Forwarded to the
-  nested `<lr-pagination>` as its own indeterminate mode (`total="-1"`): previous/next only, no
-  numbered page list, no item-range summary. Ignored outside `paginationMode: 'server'` — client
-  mode always knows the exact row count it slices. A dedicated boolean rather than reusing
-  `totalItems`'s own `-1` sentinel, which already means "derive from the currently matching rows"
-- `hasNext: boolean = true` (attribute `has-next`, reflected) — whether at least one more page
-  exists past the current one; consulted only alongside `unknownTotal` and forwarded verbatim to
-  the nested `<lr-pagination>`'s own `hasNext`
-- `paginationWithSummary: boolean = false` (attribute `pagination-with-summary`, reflected) — the
-  nested `<lr-pagination>`'s `with-summary`: the item-range summary ("1–10 of 95") at the inline
-  start of the pagination footer, with the controls at the inline end (mirrored under RTL). An
-  `unknownTotal` pager has no summary to show
-- `paginationFormat: 'standard'|'compact' = 'compact'` (attribute `pagination-format`) — the nested
-  pager's `format`: `compact` keeps previous/next around a page-jump input and page count;
-  `standard` renders the numbered page list. Unsupported values resolve to `compact`
-- The nested pager's parts are exported with a `pagination-` prefix, so page CSS styles them
-  without a `::part(pagination)` alignment workaround: `pagination-summary`,
-  `pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`,
-  `pagination-page-field`, `pagination-page-input`, `pagination-page-count` and
-  `pagination-button` (every page, ellipsis and navigation control). `pagination` remains the
-  `<lr-pagination>` host itself.
-
-```html
-<lr-table page-size="10" pagination-with-summary pagination-format="standard"></lr-table>
-<style>
-  lr-table::part(pagination-summary) { font-variant-numeric: tabular-nums; }
-</style>
-```
+- `unknownTotal: boolean = false` (attribute `unknown-total`, reflected) — server pagination with
+  no total, only `hasNext`: the pager's indeterminate mode (previous/next only). Ignored outside
+  `paginationMode: 'server'`
+- `hasNext: boolean = true` (attribute `has-next`, reflected) — whether another page exists;
+  read only with `unknownTotal`
+- `paginationWithSummary: boolean = false` (attribute `pagination-with-summary`, reflected) —
+  pager item-range summary at the inline start, controls at the inline end
+- `paginationFormat: 'standard'|'compact' = 'compact'` (attribute `pagination-format`) — pager
+  `format`; invalid values resolve to `compact`
 - Editable columns emit `lr-cell-edit` on commit and never mutate the supplied row object.
 - `groupBy?: (row: T) => string | number` (attribute: false) — inserts a non-focusable full-width
   group row wherever this key changes between consecutive rendered rows. Supply `rows` with each
@@ -15400,10 +15380,9 @@ affordance; the part has no live-region role in either appearance),
 and cells reuse the ordinary `row`/`cell`/`row-total-cell` parts, which is exactly what keeps them
 geometrically identical to real rows, so `skeleton` is the part to target for the placeholder's own
 look: `::part(skeleton) { --lr-skeleton-h: 2em; }`), and
-`pagination` (the nested `<lr-pagination>` host, which re-exports its own inner parts as
-`pagination-summary`, `pagination-controls`, `pagination-pages`, `pagination-page`,
-`pagination-page-current`, `pagination-page-field`, `pagination-page-input`,
-`pagination-page-count` and `pagination-button`), `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
+`pagination` (the pager host; re-exported as `pagination-summary`,
+`pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`,
+`pagination-page-field`, `pagination-page-input`, `pagination-page-count`, `pagination-button`), `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
 separator, with a finite explicit ARIA maximum even when no CSS `maxWidth` was supplied). The built-in empty state is addressable rather than fixed: `empty` is the `<lr-empty>`
 host in all three empty states, and it re-exports that element's own inner parts as `empty-base`,
 `empty-icon`, `empty-heading`, `empty-description` and `empty-actions`. Note that the no-columns and
