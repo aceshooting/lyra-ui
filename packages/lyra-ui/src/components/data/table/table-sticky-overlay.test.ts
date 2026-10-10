@@ -80,7 +80,7 @@ for (const sticky of ['end', 'start'] as const) {
       });
 
       it('keeps the resting content z-index while no overlay is open', async () => {
-        const { rowEls, cellOf } = await mountTable(sticky, dir);
+        const { root, rowEls, cellOf } = await mountTable(sticky, dir);
         for (const row of rowEls) {
           const cell = cellOf(row);
           expect(getComputedStyle(cell).zIndex).to.equal(layer(cell, '--lr-layer-content'));
@@ -89,6 +89,8 @@ for (const sticky of ['end', 'start'] as const) {
         await dropdown.show();
         await dropdown.hide({ focusTrigger: false });
         await waitUntil(() => !dropdown.hasAttribute('open'), 'the dropdown closed');
+        // Closing leaves focus on a control inside the cell, which is the focus-within state below.
+        (root.activeElement as HTMLElement | null)?.blur();
         const cell = cellOf(rowEls[0]!);
         expect(getComputedStyle(cell).zIndex).to.equal(layer(cell, '--lr-layer-content'));
       });
