@@ -14,9 +14,12 @@ import { isRegisteredLyraElement } from './prefix.js';
  * provider: a static stylesheet that carries it (`theme.css` or `tokens-root.css`, linked or
  * imported, or a `<link>` inside a declarative shadow root), another Lyra copy's adopted sheet with
  * the same content hash, or this copy's own constructed sheet. A provider is identified by its sheet
- * object, found by reading the tail of each stylesheet for the layer's sentinel, and re-validated
- * cheaply (still adopted, or owner node still connected and enabled) instead of being assumed
- * present for the life of the page. When the provider disappears, the constructed copy is adopted;
+ * object, found by reading each stylesheet for the `@layer lr-theme` block that declares the
+ * layer's sentinel (the tail first, where the generated `tokens-root.css` puts it; anywhere else,
+ * for the built `theme.css`, whose minifier merges same-named layer blocks, and for a bundler that
+ * inlined the import mid-file), and re-validated cheaply (still adopted, or owner
+ * node still connected, enabled, owning that sheet object, and its media matching) instead of being
+ * assumed present for the life of the page. When the provider disappears, the constructed copy is adopted;
  * when a static provider turns up after the constructed copy went in (a stylesheet that loaded
  * late), the constructed copy is withdrawn. Only this copy's own sheet is ever removed.
  *
@@ -26,8 +29,11 @@ import { isRegisteredLyraElement } from './prefix.js';
  * loading; and through the public `adoptLyraTokens()`, which always looks again.
  *
  * **Application shadow roots** receive the layer on demand: when a connecting Lyra element is a
- * scope or sits below one in that root, unless the root holds its own static provider. Library
- * components' own roots never receive it: none of their templates contains a scope.
+ * scope or sits below one in that root, unless the root holds its own static provider. "Below"
+ * follows the flat tree: an element slotted into an application component is below the scopes
+ * around that slot, so its assigned slot's tree is checked too (once more after the next microtask
+ * when the host has not rendered its slots yet, as Lit components do). Library components' own
+ * roots never receive it: none of their templates contains a scope.
  *
  * **Several copies of Lyra.** A copy whose layer has the same content hash reuses whichever provider
  * is present. A copy with a different layer adopts its own sheet, which comes later and wins where
@@ -43,7 +49,10 @@ interface ScopeState {
 interface DocumentLayerState extends ScopeState {
   /** This copy's constructed sheet, shared by the document and its shadow roots. */
   sheet?: CSSStyleSheet;
-  /** The sentinel resolves to this layer, from a sheet whose rules cannot be read (cross-origin). */
+  /**
+   * The sentinel resolves to this layer from a sheet whose rules cannot be read (cross-origin). It
+   * is trusted on every implicit check; only an explicit `adoptLyraTokens(document)` re-reads it.
+   */
   unreadableProvider: boolean;
   /** The sentinel value found before the first adoption, when it named a different layer. */
   foreignLayer?: string;
@@ -55,10 +64,16 @@ const documentStates = new WeakMap<Document, DocumentLayerState>();
 const rootStates = new WeakMap<ShadowRoot, ScopeState>();
 /** Tree scopes already verified since the last microtask checkpoint. */
 const verifiedSinceCheckpoint = new WeakSet<Document | ShadowRoot>();
-/** Whether a sheet carries this layer; sheets are read once (a reloaded link is a new object). */
-const carrierCache = new WeakMap<CSSStyleSheet, boolean>();
+/**
+ * Whether a sheet carries this layer; sheets are read once (a reloaded link is a new object).
+ * `'tail'`: only the tail was read, and it does not carry the layer.
+ */
+const carrierCache = new WeakMap<CSSStyleSheet, boolean | 'tail'>();
 const libraryRoots = new WeakMap<ShadowRoot, boolean>();
-const SENTINEL_TEXT = `${DOCUMENT_TOKEN_SENTINEL}:${DOCUMENT_TOKEN_LAYER_ID}`;
+const LAYER_NAME = 'lr-theme';
+/** Slot hops followed from one connecting element (nested slot forwarding). */
+const MAX_SLOT_HOPS = 8;
+const mediaLists = new WeakMap<Window, Map<string, MediaQueryList>>();
 
 function onceSinceCheckpoint(scope: Document | ShadowRoot): boolean {
   if (verifiedSinceCheckpoint.has(scope)) return false;
@@ -69,17 +84,48 @@ function onceSinceCheckpoint(scope: Document | ShadowRoot): boolean {
   return true;
 }
 
-/** True when a rule declares this layer's sentinel; the layer puts it first in its last @layer block. */
-function declaresSentinel(rule: CSSRule): boolean {
-  const nested = (rule as CSSGroupingRule).cssRules;
-  const text = nested && nested.length ? nested[0]!.cssText : rule.cssText;
-  return (text ?? '').replace(/\s+/g, '').includes(SENTINEL_TEXT);
+/** True when a style rule declares this layer's sentinel (a property lookup, no serialization). */
+function styleDeclaresSentinel(rule: CSSRule | undefined): boolean {
+  const style = (rule as CSSStyleRule | undefined)?.style;
+  return !!style && style.getPropertyValue(DOCUMENT_TOKEN_SENTINEL).trim() === DOCUMENT_TOKEN_LAYER_ID;
 }
 
-/** True when `sheet` (or a sheet it imports) carries this layer. Unreadable sheets do not. */
-function carriesLayer(sheet: CSSStyleSheet, depth = 0): boolean {
+/**
+ * True when a rule declares this layer's sentinel. The generated layer puts it first in its last
+ * `@layer` block; `anywhere` also reads every other rule of the block, because a minifier that
+ * merges same-named layer blocks (the built `theme.css`) moves it to the middle of one block.
+ */
+function declaresSentinel(rule: CSSRule, anywhere = false): boolean {
+  const nested = (rule as CSSGroupingRule).cssRules;
+  if (!nested) return styleDeclaresSentinel(rule);
+  const count = anywhere ? nested.length : Math.min(1, nested.length);
+  for (let index = 0; index < count; index++) if (styleDeclaresSentinel(nested[index])) return true;
+  return false;
+}
+
+/**
+ * True when an `@layer lr-theme` block in `rules` declares this layer's sentinel. Layer blocks are
+ * searched at any position and inside other layer blocks (`@import … layer(vendor)` inlined by a
+ * bundler nests it), never inside conditional rules.
+ */
+function containsLayerBlock(rules: CSSRuleList, depth: number): boolean {
+  for (let index = 0; index < rules.length; index++) {
+    const rule = rules[index] as CSSLayerBlockRule;
+    // A layer block has no legacy type constant (0); keyframes (7) also have a name and rules.
+    if (rule.type !== 0 || typeof rule.name !== 'string' || !rule.cssRules) continue;
+    if (rule.name === LAYER_NAME ? declaresSentinel(rule, true) : depth < 2 && containsLayerBlock(rule.cssRules, depth + 1)) return true;
+  }
+  return false;
+}
+
+/**
+ * True when `sheet` (or a sheet it imports) carries this layer. Unreadable sheets do not. The tail
+ * is read first (`theme.css`, `tokens-root.css`); `thorough` also reads every other top-level rule,
+ * for a stylesheet that inlined one of them mid-file (Vite, Sass, postcss-import).
+ */
+function carriesLayer(sheet: CSSStyleSheet, thorough: boolean, depth = 0): boolean {
   const known = carrierCache.get(sheet);
-  if (known !== undefined) return known;
+  if (known === true || known === false || (known === 'tail' && !thorough)) return known === true;
   let rules: CSSRuleList;
   try {
     rules = sheet.cssRules;
@@ -87,16 +133,19 @@ function carriesLayer(sheet: CSSStyleSheet, depth = 0): boolean {
     return false; // cross-origin, or still loading: not cached, so a later look can succeed
   }
   let found = false;
-  // The layer is the tail of theme.css and tokens-root.css: its sentinel opens the last @layer block.
-  for (let index = rules.length - 1; !found && index >= Math.max(0, rules.length - 3); index--) {
-    found = declaresSentinel(rules[index]!);
+  if (known !== 'tail') {
+    // The layer is the tail of theme.css and tokens-root.css: its sentinel opens the last @layer block.
+    for (let index = rules.length - 1; !found && index >= Math.max(0, rules.length - 3); index--) {
+      found = declaresSentinel(rules[index]!);
+    }
   }
   for (let index = 0; !found && depth < 3 && index < rules.length; index++) {
     const rule = rules[index] as CSSImportRule;
     if (rule.type !== 3) break; // @import rules come first
-    if (rule.styleSheet) found = carriesLayer(rule.styleSheet, depth + 1);
+    if (rule.styleSheet) found = carriesLayer(rule.styleSheet, thorough, depth + 1);
   }
-  carrierCache.set(sheet, found);
+  if (!found && thorough) found = containsLayerBlock(rules, 0);
+  carrierCache.set(sheet, found ? true : thorough ? false : 'tail');
   return found;
 }
 
@@ -107,13 +156,29 @@ function topSheet(sheet: CSSStyleSheet): CSSStyleSheet {
   return current;
 }
 
-/** A static sheet applies: owner connected, enabled, not limited to a non-screen medium. */
+/** Whether a media query list matches now, through one live `MediaQueryList` per window and text. */
+function mediaMatches(view: Window, media: string): boolean {
+  let lists = mediaLists.get(view);
+  if (!lists) mediaLists.set(view, (lists = new Map()));
+  let list = lists.get(media);
+  if (!list) lists.set(media, (list = view.matchMedia(media)));
+  return list.matches;
+}
+
+/**
+ * A static sheet applies: enabled, its owner connected and still owning this sheet object (CSS hot
+ * replacement gives a `<style>` a new one), and its media matching now (`print`, or a
+ * `(prefers-color-scheme: dark)` link in light mode, does not).
+ */
 function staticSheetApplies(sheet: CSSStyleSheet): boolean {
   if (sheet.disabled) return false;
-  const owner = sheet.ownerNode;
+  const owner = sheet.ownerNode as (Node & { readonly sheet?: StyleSheet | null }) | null;
   if (!owner || !owner.isConnected) return false;
+  if ('sheet' in owner && owner.sheet !== sheet) return false;
   const media = sheet.media?.mediaText.trim() ?? '';
-  return media === '' || media === 'all' || /\bscreen\b/.test(media);
+  if (media === '' || media === 'all') return true;
+  const view = owner.ownerDocument?.defaultView;
+  return view && typeof view.matchMedia === 'function' ? mediaMatches(view, media) : /\bscreen\b/.test(media);
 }
 
 function providerApplies(scope: Document | ShadowRoot, provider: CSSStyleSheet): boolean {
@@ -122,18 +187,27 @@ function providerApplies(scope: Document | ShadowRoot, provider: CSSStyleSheet):
 }
 
 /** Finds a provider of this layer in a tree scope, other than `own`. Reads no computed style. */
-function findProvider(scope: Document | ShadowRoot, own: CSSStyleSheet | undefined): CSSStyleSheet | undefined {
+function findProvider(scope: Document | ShadowRoot, own: CSSStyleSheet | undefined, thorough: boolean): CSSStyleSheet | undefined {
   const linked = scope.styleSheets;
   for (let index = linked.length - 1; index >= 0; index--) {
     const sheet = linked[index] as CSSStyleSheet;
-    if (staticSheetApplies(sheet) && carriesLayer(sheet)) return sheet;
+    if (staticSheetApplies(sheet) && carriesLayer(sheet, thorough)) return sheet;
   }
   const adopted = scope.adoptedStyleSheets;
   for (let index = adopted.length - 1; index >= 0; index--) {
     const sheet = adopted[index]!;
-    if (sheet !== own && carriesLayer(sheet)) return sheet;
+    if (sheet !== own && carriesLayer(sheet, thorough)) return sheet;
   }
   return undefined;
+}
+
+/** The sentinel value the document root resolves (one computed-style read). */
+function resolvedSentinel(doc: Document): string {
+  try {
+    return doc.documentElement ? doc.defaultView!.getComputedStyle(doc.documentElement).getPropertyValue(DOCUMENT_TOKEN_SENTINEL).trim() : '';
+  } catch {
+    return '';
+  }
 }
 
 function layerState(doc: Document): DocumentLayerState | undefined {
@@ -144,24 +218,23 @@ function layerState(doc: Document): DocumentLayerState | undefined {
   const view = doc.defaultView;
   if (!view || typeof view.CSSStyleSheet !== 'function' || !('adoptedStyleSheets' in doc)) return undefined;
   const state: DocumentLayerState = { unreadableProvider: false, arrivedLate: false };
-  state.provider = findProvider(doc, undefined);
+  state.provider = findProvider(doc, undefined, false);
   if (!state.provider) {
-    // One computed-style read per document, before anything is adopted: a provider whose rules
-    // cannot be read (a cross-origin stylesheet), or a different layer from another release.
-    let found = '';
-    try {
-      if (doc.documentElement) found = view.getComputedStyle(doc.documentElement).getPropertyValue(DOCUMENT_TOKEN_SENTINEL).trim();
-    } catch {
-      found = '';
-    }
-    if (found === DOCUMENT_TOKEN_LAYER_ID) state.unreadableProvider = true;
-    else if (found) state.foreignLayer = found;
+    // One computed-style read per document, before anything is adopted: a static copy that is not
+    // the tail of its stylesheet, a provider whose rules cannot be read (a cross-origin stylesheet),
+    // or a different layer from another release. Every rule is read only when a copy applies.
+    const found = resolvedSentinel(doc);
+    if (found === DOCUMENT_TOKEN_LAYER_ID) {
+      state.provider = findProvider(doc, undefined, true);
+      state.unreadableProvider = !state.provider;
+    } else if (found) state.foreignLayer = found;
   }
   documentStates.set(doc, state);
   if (doc.readyState !== 'complete') {
     // A stylesheet that was still loading (async CSS, a module script that did not wait for it,
-    // CSS injected by a bundler) is looked for once more when the document has loaded.
-    view.addEventListener('load', () => verifyDocument(doc, state, true), { once: true });
+    // CSS injected by a bundler, possibly inlined mid-file) is looked for once more, in every rule,
+    // when the document has loaded.
+    view.addEventListener('load', () => verifyDocument(doc, state, 'load'), { once: true });
   }
   return state;
 }
@@ -195,21 +268,32 @@ function withdraw(root: Document | ShadowRoot, sheet: CSSStyleSheet | undefined)
 }
 
 /**
- * Leaves the document with exactly one provider of this layer. `rescan` also looks for a provider
- * that appeared since the last look (the `load` check and explicit adoption).
+ * Why the document is verified: a connect or registration (`'connect'`), the one look after the
+ * document's `load` event (`'load'`), or `adoptLyraTokens(document)` (`'explicit'`).
  */
-function verifyDocument(doc: Document, state: DocumentLayerState, rescan: boolean): void {
+type DocumentCheck = 'connect' | 'load' | 'explicit';
+
+/**
+ * Leaves the document with exactly one provider of this layer. The `load` check and explicit
+ * adoption also look, in every rule, for a provider that appeared since the last look.
+ */
+function verifyDocument(doc: Document, state: DocumentLayerState, check: DocumentCheck): void {
   if (state.provider && !providerApplies(doc, state.provider)) state.provider = undefined;
-  if (!state.provider && rescan) state.provider = findProvider(doc, state.sheet);
+  if (!state.provider && check !== 'connect') state.provider = findProvider(doc, state.sheet, true);
   if (state.provider) {
+    state.unreadableProvider = false;
     // Only a static stylesheet that applied late is worth a warning; an application that adopts
     // theme.css as a constructed sheet after registering Lyra chose that order.
     if (withdraw(doc, state.sheet) && topSheet(state.provider).ownerNode) state.arrivedLate = true;
     return;
   }
-  // A provider that cannot be read cannot be validated either; it is trusted until the page adopts
-  // this copy's sheet for another reason.
-  if (state.unreadableProvider && !state.sheet) return;
+  if (state.unreadableProvider) {
+    // A provider that cannot be read cannot be validated cheaply. It is trusted on every implicit
+    // check: a shadow root that needed this copy's sheet says nothing about the document's provider.
+    // Explicit adoption re-reads the sentinel (this copy's sheet is not in the document meanwhile).
+    if (check !== 'explicit' || resolvedSentinel(doc) === DOCUMENT_TOKEN_LAYER_ID) return;
+    state.unreadableProvider = false;
+  }
   adopt(doc, layerSheet(doc, state));
 }
 
@@ -219,7 +303,7 @@ function verifyRoot(root: ShadowRoot, doc: Document, state: DocumentLayerState):
   if (local.provider && !providerApplies(root, local.provider)) local.provider = undefined;
   // A declarative root's own <link> may finish loading after the first connect, so look each time;
   // the carrier cache keeps that to reading list lengths.
-  if (!local.provider) local.provider = findProvider(root, state.sheet);
+  if (!local.provider) local.provider = findProvider(root, state.sheet, true);
   if (local.provider) withdraw(root, state.sheet);
   else adopt(root, layerSheet(doc, state));
 }
@@ -248,16 +332,50 @@ export function ensureLyraTokens(element: Element): void {
   const doc = element.ownerDocument;
   const state = layerState(doc);
   if (!state) return;
-  if (onceSinceCheckpoint(doc)) verifyDocument(doc, state, false);
-  let node: Element = element;
-  for (let root = node.getRootNode(); isShadowRoot(root); root = node.getRootNode()) {
-    if (isLibraryRoot(root)) return;
+  if (onceSinceCheckpoint(doc)) verifyDocument(doc, state, 'connect');
+  ensureAlongTrees(element, doc, state, 0);
+}
+
+/**
+ * Walks from `start` through each enclosing tree (node tree, then the host), verifying every
+ * application shadow root in which the walked node is or sits below a scope. At each step the
+ * node's assigned slot is followed as well, since inheritance takes the flat tree.
+ */
+function ensureAlongTrees(start: Element, doc: Document, state: DocumentLayerState, hops: number): void {
+  let node: Element = start;
+  for (;;) {
+    const root = node.getRootNode();
+    const shadow = isShadowRoot(root);
+    if (shadow && isLibraryRoot(root)) return;
+    followAssignedSlot(node, doc, state, hops);
+    if (!shadow) return;
     if (!verifiedSinceCheckpoint.has(root) && node.closest(DOCUMENT_TOKEN_SCOPE_SELECTOR)) {
       onceSinceCheckpoint(root);
       verifyRoot(root, doc, state);
     }
     node = root.host;
   }
+}
+
+/**
+ * Continues the walk from the slot `node` is assigned to, when its parent is an application
+ * component with an open shadow root. A slot inside a library component leads only to library
+ * roots, which never receive the layer, so the common slotted case costs two property reads. A host
+ * that renders its slots after connecting (Lit renders in a microtask) is looked at once more after
+ * the next microtask; a slot that appears later still needs `adoptLyraTokens(root)`.
+ */
+function followAssignedSlot(node: Element, doc: Document, state: DocumentLayerState, hops: number): void {
+  const slotRoot = node.parentElement?.shadowRoot;
+  if (!slotRoot || hops >= MAX_SLOT_HOPS || isLibraryRoot(slotRoot)) return;
+  const slot = node.assignedSlot;
+  if (slot) {
+    ensureAlongTrees(slot, doc, state, hops + 1);
+    return;
+  }
+  queueMicrotask(() => {
+    const late = node.isConnected && node.ownerDocument === doc ? node.assignedSlot : null;
+    if (late) ensureAlongTrees(late, doc, state, hops + 1);
+  });
 }
 
 let primed = false;
@@ -277,7 +395,7 @@ export function primeLyraTokens(): void {
   primed = true;
   const doc = document;
   const state = layerState(doc);
-  if (state && onceSinceCheckpoint(doc)) verifyDocument(doc, state, false);
+  if (state && onceSinceCheckpoint(doc)) verifyDocument(doc, state, 'connect');
 }
 
 const ADOPTER_KEY = Symbol.for('@aceshooting/lyra-ui.adopt-lyra-tokens.v1');
@@ -316,7 +434,7 @@ export function hasLyraTokens(root: Document | ShadowRoot): boolean {
   if (!state) return false;
   const local = root === doc ? state : rootStates.get(root as ShadowRoot);
   if (local?.provider && providerApplies(root, local.provider)) return true;
-  if (root === doc && state.unreadableProvider && !state.sheet) return true;
+  if (root === doc && state.unreadableProvider) return true;
   return !!state.sheet && root.adoptedStyleSheets.includes(state.sheet);
 }
 
@@ -333,7 +451,7 @@ export function adoptLyraTokens(root: Document | ShadowRoot): void {
   const doc = documentOf(root);
   const state = layerState(doc);
   if (!state) return;
-  if (root === doc) verifyDocument(doc, state, true);
+  if (root === doc) verifyDocument(doc, state, 'explicit');
   else if (isShadowRoot(root)) verifyRoot(root, doc, state);
 }
 

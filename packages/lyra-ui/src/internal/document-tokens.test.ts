@@ -437,6 +437,26 @@ describe('document token layer: provider identity', () => {
     }
   });
 
+  it('finds the sentinel mid-block when a minifier merged the layer blocks, as in the built theme.css', async () => {
+    // The built theme.css has one merged @layer lr-theme block (sentinel in its middle) followed by
+    // the lr-theme-preset.* blocks.
+    const merged = `${DOCUMENT_TOKEN_CSS.replace('@layer lr-theme{', '@layer lr-theme{:root{--lr-merged-before:1}')}
+      @layer lr-theme-preset.look{:root{--lr-merged-look:1}}@layer lr-theme-preset.surface{:root{--lr-merged-surface:1}}
+      @layer lr-theme-preset.accent{:root{--lr-merged-accent:1}}@layer lr-theme-preset.mode{:root{--lr-merged-mode:1}}`;
+    const { frame, doc } = await frameWith((d) => { styleWith(d, merged); });
+    try {
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(0);
+      // A known provider, not an unreadable one: removing it is repaired.
+      doc.querySelector('style')!.remove();
+      await new Promise((resolve) => setTimeout(resolve));
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(1);
+    } finally {
+      frame.remove();
+    }
+  });
+
   it('finds a static copy nested in another cascade layer, as an inlined @import … layer() puts it', async () => {
     const { frame, doc } = await frameWith((d) => { styleWith(d, `@layer vendor { ${DOCUMENT_TOKEN_CSS} } .app { color: red; }`); });
     try {

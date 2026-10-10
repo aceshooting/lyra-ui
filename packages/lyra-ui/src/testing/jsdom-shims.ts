@@ -118,10 +118,108 @@ export function installJsdomAdoptedStyleSheetsShim(targets: JsdomAdoptedStyleShe
   };
 }
 
+/** Overridable environment for {@link installJsdomFormAssociatedShim}; each entry defaults to the global. */
+export interface JsdomFormAssociatedTargets {
+  /** Defaults to `ElementInternals.prototype`. */
+  internalsPrototype?: object;
+  /** Defaults to `HTMLElement.prototype` (its `attachInternals()` records each internals' host). */
+  elementPrototype?: object;
+  /** Defaults to a check for jsdom's `navigator.userAgent` signature (`jsdom/<version>`). */
+  isJsdom?: () => boolean;
+}
+
+const FORM_INSTALLED = Symbol.for('lyra-ui.testing.jsdom-form-associated');
+const VALIDITY_FLAGS = ['valueMissing', 'typeMismatch', 'patternMismatch', 'tooLong', 'tooShort', 'rangeUnderflow',
+  'rangeOverflow', 'stepMismatch', 'badInput', 'customError'] as const;
+
+interface InternalsRecord {
+  host?: Element;
+  flags: Partial<Record<(typeof VALIDITY_FLAGS)[number], boolean>>;
+  message: string;
+  states?: Set<string>;
+}
+
 /**
- * Installs every jsdom shim this package ships (currently {@link installJsdomAdoptedStyleSheetsShim}).
- * A no-op outside jsdom. Call it from a `setupFiles` entry before anything imports Lit.
+ * Completes jsdom's `ElementInternals` for form-associated custom elements. jsdom implements
+ * `attachInternals()` with ARIA reflection, `shadowRoot` and `labels` only, so every Lyra form
+ * control (`lr-button`, `lr-input`, `lr-checkbox`, …) throws in its constructor on `setFormValue()`
+ * or `setValidity()`. The shim adds, only where missing, inert versions of the form-association
+ * members: `setFormValue()` records nothing, `setValidity()` keeps the flags and message so
+ * `validity`, `validationMessage`, `checkValidity()` and `reportValidity()` answer consistently,
+ * `willValidate` is `true`, `form` is the host's closest `<form>`, and `states` is a `Set`. Nothing is
+ * submitted and no `invalid` event fires: assert behaviour and DOM, not native form submission.
+ *
+ * Installs only under jsdom, once, and returns a function that removes everything it added.
+ */
+export function installJsdomFormAssociatedShim(targets: JsdomFormAssociatedTargets = {}): () => void {
+  const internalsPrototype = (targets.internalsPrototype ?? globalThis.ElementInternals?.prototype) as
+    (Record<PropertyKey, unknown> & { [FORM_INSTALLED]?: boolean }) | undefined;
+  const elementPrototype = (targets.elementPrototype ?? globalThis.HTMLElement?.prototype) as
+    { attachInternals?: (this: Element) => object } | undefined;
+  const isJsdom = targets.isJsdom ?? runningUnderJsdom;
+  if (!internalsPrototype || !elementPrototype || typeof elementPrototype.attachInternals !== 'function') return () => {};
+  if (internalsPrototype[FORM_INSTALLED] || !isJsdom()) return () => {};
+
+  const records = new WeakMap<object, InternalsRecord>();
+  const record = (internals: object): InternalsRecord => {
+    let known = records.get(internals);
+    if (!known) records.set(internals, (known = { flags: {}, message: '' }));
+    return known;
+  };
+  const isValid = (internals: object) => !VALIDITY_FLAGS.some((flag) => record(internals).flags[flag]);
+  const members: Record<string, PropertyDescriptor> = {
+    setFormValue: { value(): void {} },
+    setValidity: {
+      value(this: object, flags: InternalsRecord['flags'] = {}, message = ''): void {
+        const known = record(this);
+        known.flags = { ...flags };
+        known.message = isValid(this) ? '' : String(message);
+      },
+    },
+    validity: {
+      get(this: object) {
+        const { flags } = record(this);
+        return Object.freeze(Object.fromEntries([...VALIDITY_FLAGS.map((flag) => [flag, !!flags[flag]]), ['valid', isValid(this)]]));
+      },
+    },
+    validationMessage: { get(this: object): string { return record(this).message; } },
+    willValidate: { get(): boolean { return true; } },
+    checkValidity: { value(this: object): boolean { return isValid(this); } },
+    reportValidity: { value(this: object): boolean { return isValid(this); } },
+    form: { get(this: object): Element | null { return record(this).host?.closest('form') ?? null; } },
+    states: { get(this: object): Set<string> { const known = record(this); return (known.states ??= new Set()); } },
+  };
+  const added: string[] = [];
+  for (const [name, descriptor] of Object.entries(members)) {
+    if (name in internalsPrototype) continue;
+    Object.defineProperty(internalsPrototype, name, { configurable: true, ...descriptor });
+    added.push(name);
+  }
+  const attachInternals = elementPrototype.attachInternals;
+  elementPrototype.attachInternals = function (this: Element): object {
+    const internals = attachInternals.call(this);
+    record(internals).host = this;
+    return internals;
+  };
+  internalsPrototype[FORM_INSTALLED] = true;
+
+  return () => {
+    for (const name of added) delete internalsPrototype[name];
+    elementPrototype.attachInternals = attachInternals;
+    delete internalsPrototype[FORM_INSTALLED];
+  };
+}
+
+/**
+ * Installs every jsdom shim this package ships ({@link installJsdomAdoptedStyleSheetsShim} and
+ * {@link installJsdomFormAssociatedShim}). A no-op outside jsdom. Call it from a `setupFiles` entry
+ * before anything imports Lit. Returns a function that removes them all.
  */
 export function installJsdomShims(): () => void {
-  return installJsdomAdoptedStyleSheetsShim();
+  const restoreSheets = installJsdomAdoptedStyleSheetsShim();
+  const restoreForms = installJsdomFormAssociatedShim();
+  return () => {
+    restoreForms();
+    restoreSheets();
+  };
 }

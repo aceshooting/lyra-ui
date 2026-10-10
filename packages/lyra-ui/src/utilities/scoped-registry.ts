@@ -1,5 +1,8 @@
 import type { LyraElement } from '../internal/lyra-element.js';
 
+/** Read by `isRegisteredLyraElement()` (internal/prefix.ts), which tells library roots from application ones. */
+const SCOPED_LYRA_DEFINITION = Symbol.for('@aceshooting/lyra-ui.scoped-definition.v1');
+
 /** A class-only Lyra definition. Import registration-free `.class.js` component entries. */
 export type LyraScopedElementConstructor = {
   new (): LyraElement<any>;
@@ -53,6 +56,9 @@ export function supportsScopedRegistries(): boolean {
  * roots, scoped SSR/hydration and adoption to another document are outside this factory's scope;
  * create a separate factory for each owning document instead.
  * Unsupported native APIs throw, never falling back to a global registry or installing a polyfill.
+ * Definitions count as Lyra components, as with `defineElement()`: the document token layer is
+ * never adopted into their own shadow roots on demand (call `adoptLyraTokens(root)` for a subclass
+ * whose template holds theme scopes).
  */
 export function createScopedRegistry<Definitions extends LyraScopedDefinitions>(
   definitions: Definitions,
@@ -99,6 +105,9 @@ export function createScopedRegistry<Definitions extends LyraScopedDefinitions>(
         return super.attachShadow(scoped);
       }
     }
+    // Library components, like global defineElement() registrations: their shadow roots never
+    // receive the document token layer on demand.
+    Object.defineProperty(ScopedElement, SCOPED_LYRA_DEFINITION, { value: true });
     registry.define(name, ScopedElement);
     sources.set(name, Base);
   }

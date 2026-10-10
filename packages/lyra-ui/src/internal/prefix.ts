@@ -142,9 +142,16 @@ export function defineElementForPackageVersion(
 }
 
 /**
+ * The own static property `createScopedRegistry()` sets on each class it defines (shared across
+ * copies through `Symbol.for`), so `isRegisteredLyraElement()` knows its instances.
+ */
+const SCOPED_LYRA_DEFINITION = Symbol.for('@aceshooting/lyra-ui.scoped-definition.v1');
+
+/**
  * True when `element` is an instance of a constructor that some copy of Lyra registered through
- * `defineElement()`, read from the `Symbol.for`-keyed registry every copy shares. A consumer
- * subclass of the public `LyraElement` that the application defined itself is not one.
+ * `defineElement()` (read from the `Symbol.for`-keyed registry every copy shares) or defined through
+ * `createScopedRegistry()` (marked with an own `Symbol.for` static). A consumer subclass of the public
+ * `LyraElement` that the application defined itself is not one.
  *
  * @internal Used by document token adoption to tell library shadow roots from application ones.
  */
@@ -153,6 +160,7 @@ export function isRegisteredLyraElement(element: Element): boolean {
   if (!name.includes('-')) return false;
   const shared = sharedDiagnostics();
   const view = element.ownerDocument.defaultView;
+  if (Object.hasOwn(element.constructor, SCOPED_LYRA_DEFINITION)) return true;
   const registries = new Set<CustomElementRegistry | undefined>([
     typeof customElements === 'undefined' ? undefined : customElements,
     view?.customElements,

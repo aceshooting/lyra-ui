@@ -179,7 +179,72 @@ export function layerDeclarations(source) {
   return declarations;
 }
 
-const paired = ({ light, dark }) => (light === dark ? light : `var(${DARK_ON},${light})var(${LIGHT_ON},${dark})`);
+/** CSS value tokens: whitespace, `(`, `)`, `,`, `/`, strings, and runs (an identifier, number,
+ * hash or function name, with its opening parenthesis). Joined back, they are the input. */
+const VALUE_TOKENS = /\s+|[(),/]|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^\s(),/"']+\(?/g;
+/** Functions whose first argument is a name, never a substitution: a mode switch cannot go there. */
+const NAME_ARGUMENT = /^(?:var|env|attr)\($/i;
+
+function valueTokens(value) {
+  const tokens = value.match(VALUE_TOKENS) ?? [];
+  return tokens.join('') === value ? tokens : null;
+}
+
+const opens = (token) => token.endsWith('(') && !/^["']/.test(token);
+
+/** True when a token run is a balanced sequence: never closes what it did not open. */
+function balanced(tokens) {
+  let depth = 0;
+  for (const token of tokens) {
+    if (opens(token)) depth++;
+    else if (token === ')' && --depth < 0) return false;
+  }
+  return depth === 0;
+}
+
+/**
+ * The value for both modes: the light and dark values joined by the two inherited mode switches
+ * (`var(--_lr-dark-on,<light>)var(--_lr-light-on,<dark>)`, one of which substitutes nothing). The
+ * switch pair is placed around the smallest balanced run of tokens where the two values differ,
+ * so the wrappers they share (the `--lr-theme-*` input, a preference switch, a `color-mix()`) are
+ * written once. A `var()` substitutes the same tokens wherever it sits in a value, so the result is
+ * identical; the pair never replaces the name argument of `var()`, `env()` or `attr()`.
+ */
+export function pairModes({ light, dark }) {
+  if (light === dark) return light;
+  const whole = `var(${DARK_ON},${light})var(${LIGHT_ON},${dark})`;
+  const a = valueTokens(light);
+  const b = valueTokens(dark);
+  if (!a || !b) return whole;
+  let prefix = 0;
+  while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix]) prefix++;
+  let suffix = 0;
+  while (suffix < a.length - prefix && suffix < b.length - prefix && a[a.length - 1 - suffix] === b[b.length - 1 - suffix]) suffix++;
+  const namePosition = (index) => {
+    const before = a.slice(0, index).findLast((token) => !/^\s+$/.test(token));
+    return before !== undefined && NAME_ARGUMENT.test(before);
+  };
+  // The widest shared head and tail (smallest paired run) whose runs are balanced on both sides.
+  let best = null;
+  for (let head = prefix; head >= 0; head--) {
+    if (best && head + suffix <= best.head + best.tail) break;
+    if (namePosition(head)) continue;
+    for (let tail = suffix; tail >= 0; tail--) {
+      if (best && head + tail <= best.head + best.tail) break;
+      const runA = a.slice(head, a.length - tail);
+      const runB = b.slice(head, b.length - tail);
+      if (runA.length && runB.length && balanced(runA) && balanced(runB)) {
+        best = { head, tail, runA, runB };
+        break;
+      }
+    }
+  }
+  if (!best) return whole;
+  const { head, tail, runA, runB } = best;
+  return `${a.slice(0, head).join('')}var(${DARK_ON},${runA.join('')})var(${LIGHT_ON},${runB.join('')})${a.slice(a.length - tail).join('')}`;
+}
+
+const paired = pairModes;
 
 /** Arm values (forcedColors or reducedMotion) for every layer token that declares one. */
 function armDeclarations(source, mode, names) {

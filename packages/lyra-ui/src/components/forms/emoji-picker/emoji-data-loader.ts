@@ -46,6 +46,8 @@ interface CachedLoad {
 }
 
 const cached = new Map<string, CachedLoad>();
+/** A peer that is not installed cannot appear later in the same page: kept for every locale. */
+let missingPeer: CachedLoad | undefined;
 
 const MISSING_WARNING =
   '<lr-emoji-picker>: the optional peer dependency `emoji-picker-element-data` is not installed, so ' +
@@ -111,8 +113,10 @@ export async function loadEmojiData(
 /** Cached per page **and per resolved locale**, mirroring `pdf-loader.ts`'s `loadPdfJs()`
  *  single-flight shape: a concurrent or repeated call for the same resolved locale shares one
  *  in-flight/successful promise instead of re-fetching, while a different locale gets its own cache
- *  slot instead of reusing whichever locale happened to load first. A failure of either kind is
- *  not kept, so a transient import failure can be retried. */
+ *  slot instead of reusing whichever locale happened to load first. A `'failed'` load is not kept,
+ *  so a transient import failure can be retried. A `'missing'` peer is kept for the page and for
+ *  every locale: a package that is not installed cannot appear later, so later pickers neither
+ *  import nor warn again. */
 export function loadEmojiDataOutcomeCached(
   locale = 'en',
   importData?: Parameters<typeof loadEmojiDataOutcome>[1],
@@ -130,6 +134,7 @@ export function loadEmojiDataCached(
 }
 
 function cachedLoad(locale: string, importData?: Parameters<typeof loadEmojiDataOutcome>[1]): CachedLoad {
+  if (missingPeer) return missingPeer;
   const key = resolveEmojiDataLocale(locale);
   let entry = cached.get(key);
   if (!entry) {
@@ -138,7 +143,9 @@ function cachedLoad(locale: string, importData?: Parameters<typeof loadEmojiData
     entry = load;
     cached.set(key, load);
     void outcome.then((value) => {
-      if (!Array.isArray(value) && cached.get(key) === load) cached.delete(key);
+      if (Array.isArray(value)) return;
+      if (cached.get(key) === load) cached.delete(key);
+      if (value.reason === 'missing') missingPeer ??= load;
     });
   }
   return entry;
@@ -147,6 +154,7 @@ function cachedLoad(locale: string, importData?: Parameters<typeof loadEmojiData
 /** @internal Test-only cache reset. */
 export function clearEmojiDataCache(): void {
   cached.clear();
+  missingPeer = undefined;
 }
 
 // Group id -> label, mirroring emojibase's own canonical grouping (verified 2026-07-17 against

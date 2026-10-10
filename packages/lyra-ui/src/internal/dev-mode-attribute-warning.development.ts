@@ -1,6 +1,7 @@
 import { devWarnOnce, litDevWarnings } from './dev-warning.js';
 import { DOCUMENT_TOKEN_SCOPE_SELECTOR, LAYER_CONSUMED_INPUTS } from './document-tokens.generated.js';
 import { foreignLyraTokenLayer, hasLyraTokens, lyraTokenLayerArrivedLate } from './document-tokens.js';
+import { flattenedParentElement } from './composed-tree.js';
 export { devWarn, devWarnOnce, deprecationWarningKey, warnDeprecatedUsage, type LyraDeprecatedUsageKind } from './dev-warning.js';
 
 /**
@@ -202,13 +203,6 @@ export function warnUnknownAttributes(
   }
 }
 
-/** Composed parent: a slotted node's assigned slot is not walked; inheritance follows the host. */
-function composedParent(element: Element): Element | null {
-  if (element.parentElement) return element.parentElement;
-  const root = element.getRootNode();
-  return root.nodeType === 11 && 'host' in root ? (root as ShadowRoot).host : null;
-}
-
 const checkedScopeChains = new WeakSet<Element>();
 const THEME_SCOPE_LIST = `:root,${DOCUMENT_TOKEN_SCOPE_SELECTOR}`;
 const LAYER_INPUTS = new Set(LAYER_CONSUMED_INPUTS);
@@ -232,8 +226,9 @@ function inlineLayerInputs(element: Element): string[] {
  *
  * - `lyra-theme-scope:false-marker` -- `data-lr-theme-scope="false"` still marks a scope (HTML
  *   presence semantics), which is rarely what a framework binding meant.
- * - `lyra-theme-scope:unscoped-input` -- walking from the host (included) up the composed ancestor
- *   chain to the nearest theme scope, an element's inline style sets a --lr-theme-* input that the
+ * - `lyra-theme-scope:unscoped-input` -- walking from the host (included) up the flattened tree
+ *   (a slotted node continues at its assigned slot, as custom properties inherit) to the nearest
+ *   theme scope, an element's inline style sets a --lr-theme-* input that the
  *   document layer consumes, but the element is not a scope, so the components below it no longer
  *   re-derive from it. Stylesheet-applied inputs and later `setProperty()` calls are left to
  *   `findUnscopedThemeInputs()` and the migration report.
@@ -243,7 +238,7 @@ function inlineLayerInputs(element: Element): string[] {
  * - `lyra-theme-scope:foreign-layer` -- a different token layer (another Lyra release) was already
  *   present; the later-adopted layer wins where their values differ.
  */
-const layerVerifiedThisTask = new WeakSet<Document>();
+const layerVerifiedSinceCheckpoint = new WeakSet<Document>();
 
 export function warnThemeScopeUsage(host: Element): void {
   if (!litDevWarnings()) return;
@@ -254,11 +249,11 @@ export function warnThemeScopeUsage(host: Element): void {
     );
   }
   const doc = host.ownerDocument;
-  // Once per document per task, like the adoption check itself: a batch insert connects every
-  // element in one task.
-  if (doc.defaultView && !layerVerifiedThisTask.has(doc)) {
-    layerVerifiedThisTask.add(doc);
-    queueMicrotask(() => layerVerifiedThisTask.delete(doc));
+  // Once per document per microtask checkpoint, like the adoption check itself: a batch insert
+  // connects every element before the next checkpoint.
+  if (doc.defaultView && !layerVerifiedSinceCheckpoint.has(doc)) {
+    layerVerifiedSinceCheckpoint.add(doc);
+    queueMicrotask(() => layerVerifiedSinceCheckpoint.delete(doc));
     if (!hasLyraTokens(doc)) {
       devWarnOnce(
         'lyra-theme-scope:layer-missing',
@@ -279,7 +274,7 @@ export function warnThemeScopeUsage(host: Element): void {
       `A different Lyra token layer (${foreign}) was already present in this document; the later-adopted layer wins where values differ. Load one copy of @aceshooting/lyra-ui per page.`
     );
   }
-  for (let element: Element | null = host; element && !checkedScopeChains.has(element); element = composedParent(element)) {
+  for (let element: Element | null = host; element && !checkedScopeChains.has(element); element = flattenedParentElement(element)) {
     checkedScopeChains.add(element);
     // A partial DOM (an SSR-shaped host) may lack Element.matches(); there is no scope chain to read.
     if (typeof element.matches !== 'function' || element.matches(THEME_SCOPE_LIST)) break;
