@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
 
 export const styles = css`
@@ -629,6 +630,12 @@ export const styles = css`
   :host(:dir(rtl)) [part='cell'][data-sticky='end'] {
     box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border-subtle);
   }
+  /* Every sticky cell is its own stacking context (position + z-index), so an anchored overlay in
+     one -- a per-row actions menu -- is confined to it, and the next row's sticky cell, painted
+     later at the same z-index, would cover the open panel. The cell holding an open overlay rises
+     to the popover layer where the panel itself sits; a cell with focus inside rises one step so an
+     outward focus ring is not covered by the next row. After the sticky z-index above on purpose. */
+  ${raiseWhileOverlayOpen("[part='cell'][data-sticky]", 'var(--lr-layer-popover)', 'calc(var(--lr-layer-content) + 1)')}
   [part='foot'] {
     position: sticky;
     inset-block-end: 0;

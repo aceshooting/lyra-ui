@@ -974,3 +974,30 @@ export const PaginationSummaryAndParts: Story = {
     </div>
   `,
 };
+
+/** A per-row actions menu in a sticky column: the open menu stays above the rows that follow. */
+export const StickyRowActionsMenu: Story = {
+  name: 'Row actions menu in a sticky column',
+  render: () => html`
+    <lr-table aria-label="Accounts with row actions"
+      .columns=${[
+        { key: 'name', label: 'Name', cell: (row: DemoRow) => row.name },
+        { key: 'score', label: 'Score', align: 'end', cell: (row: DemoRow) => row.score },
+        {
+          key: 'actions',
+          label: 'Actions',
+          sticky: 'end',
+          cell: (row: DemoRow) => html`<lr-dropdown placement="bottom-end">
+            <lr-button slot="trigger" size="s" aria-label=${`Actions for ${row.name}`}>Actions</lr-button>
+            <lr-menu aria-label=${`Actions for ${row.name}`}>
+              <lr-menu-item>Open</lr-menu-item>
+              <lr-menu-item>Rename</lr-menu-item>
+              <lr-menu-item>Duplicate</lr-menu-item>
+              <lr-menu-item>Archive</lr-menu-item>
+            </lr-menu>
+          </lr-dropdown>`,
+        },
+      ] as TableColumn<DemoRow>[]}
+      .rows=${rows}></lr-table>
+  `,
+};

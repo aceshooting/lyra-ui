@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 
 export const styles = css`
   :host {
@@ -102,9 +103,7 @@ export const styles = css`
      focus can transiently drop focus to <body> with the fixed popup still open. The value matches
      [part='group'] below rather than exceeding it, so both share a layer and DOM order decides:
      groups render first, so an active row wins. */
-  [part="row"]:where(:focus-within, :has(lr-dropdown[open])) {
-    z-index: var(--lr-layer-content);
-  }
+  ${raiseWhileOverlayOpen('[part="row"]', 'var(--lr-layer-content)')}
   /* Engines without the native Popover API: a row holding an open dropdown stops being a
      containing block, so its fixed menu lays out against the viewport and the scroller no longer
      clips it. !important because the row offset is an inline transform, which outranks every

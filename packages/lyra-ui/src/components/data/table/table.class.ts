@@ -310,7 +310,11 @@ interface TableColumnCommon<T> {
   priority?: 'medium' | 'low';
   /** Pins this column's header/cell to one edge with `position: sticky` so it stays visible while
    *  the table scrolls horizontally. Both directions use CSS logical properties, so RTL flips
-   *  automatically. */
+   *  automatically. Each sticky cell is its own stacking context, so the table raises a cell above
+   *  its siblings while it holds an open `lr-dropdown`, `lr-popover`, `lr-select` or `lr-combobox`
+   *  (popover layer) or has focus inside (one step above content), keeping a per-row actions menu
+   *  visible and hit-testable over the following rows. Set `top-layer` on the overlay only when it
+   *  must also clear a stacking context outside the table. */
   sticky?: TableEdgeAlign;
   /** Renders a sticky-bottom footer cell for this column, computed from every currently-rendered
    *  row (post-sort, pre-pagination) -- e.g. a column total. Omit for a column with no footer
