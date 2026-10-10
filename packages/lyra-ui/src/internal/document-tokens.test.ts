@@ -573,6 +573,30 @@ describe('document token layer: application shadow roots', () => {
     expect(layerSheet(card.shadowRoot!) === undefined, 'library roots never receive the layer').to.equal(true);
   });
 
+  it('adopts an unlayered, zero-specificity copy into application roots, where application rules still win', async () => {
+    const { host } = await shell('');
+    const root = host.shadowRoot!;
+    const appSheet = new CSSStyleSheet();
+    appSheet.replaceSync('.app-surface { --lr-color-surface: rgb(1, 2, 3); }');
+    root.adoptedStyleSheets = [appSheet];
+    root.innerHTML = '<div class="lr-dark" id="plain"><lr-layer-probe></lr-layer-probe></div><div class="lr-dark app-surface" id="styled"></div>';
+    const probe = await probeIn(root);
+    const sheet = layerSheet(root)!;
+    expect(sheet !== undefined && sheet !== layerSheet(document), 'a root copy, not the document sheet').to.equal(true);
+    const rules = Array.from(sheet.cssRules);
+    // Cascade layers repeated in many shadow roots are costly to resolve; the root copy has none.
+    expect(rules.some((rule) => rule.cssText.trimStart().startsWith('@layer')), 'no @layer rules').to.equal(false);
+    const selectors = rules.flatMap((rule) => (rule as CSSGroupingRule).cssRules ? Array.from((rule as CSSGroupingRule).cssRules) : [rule])
+      .map((rule) => (rule as CSSStyleRule).selectorText);
+    expect(selectors.every((selector) => selector.startsWith(':where(')), 'zero specificity').to.equal(true);
+    expect(surfaceOf(probe)).to.deep.equal(DARK_SURFACE);
+    expect(read(root.querySelector('#styled')!, '--lr-color-surface')).to.equal('rgb(1, 2, 3)');
+    // Another copy with the same layer reuses the root copy instead of adding a second one.
+    adoptLyraTokens(root);
+    expect(root.adoptedStyleSheets.filter((entry) => entry === sheet).length).to.equal(1);
+    expect(hasLyraTokens(root)).to.equal(true);
+  });
+
   it('adopts into an application root when slotted Lyra content sits below a scope around the slot', async () => {
     const { host, root } = await shell(`<aside class="lr-dark"><slot></slot></aside>`);
     const probe = document.createElement(tag('layer-probe')) as LayerProbe;
