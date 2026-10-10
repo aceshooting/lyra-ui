@@ -19,12 +19,14 @@ beforeEach(() => {
   originalMatchMedia = window.matchMedia;
   // Desktop at every breakpoint unless a test flips `mobileViewport`: the breakpoint-derived mode
   // is `'full'`, so any icon-only presentation below comes from `auto-hide` alone.
-  window.matchMedia = ((query: string) => ({
-    matches: mobileViewport && query.includes('max-width'),
-    media: query,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  })) as unknown as typeof window.matchMedia;
+  window.matchMedia = ((query: string) => query.includes('max-width')
+    ? {
+      matches: mobileViewport,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    } as unknown as MediaQueryList
+    : originalMatchMedia.call(window, query)) as typeof window.matchMedia;
   localStorage.removeItem(STORAGE_KEY);
 });
 afterEach(async () => {
