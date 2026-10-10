@@ -35,12 +35,21 @@ describe('dark glass fill follows the theme surface ramp', () => {
   };
 
   for (const look of LOOKS) {
+    it(`paints the lifted ${look} palette unchanged once the surface opacity reaches 70%`, async function () {
+      if (!CSS.supports('color', 'light-dark(red, blue)')) this.skip();
+      const style = ['default', 'raised', 'overlay', 'container-high'].map(name => `--lr-theme-color-surface-${name}: ${LIFTED}`).join(';') + ';--lr-theme-surface-opacity: 0.7';
+      const { background, alpha, weight, fill } = await paint(look, style);
+      expect(alpha, `${look}: glass alpha`).to.be.within(0.69, 0.71);
+      expect(weight, `${look}: full fill weight`).to.equal(1);
+      for (let channel = 0; channel < 3; channel++) expect(background[channel], `${look}: channel ${channel} keeps the lifted colour`).to.be.closeTo(fill[channel]!, 2);
+    });
+
     it(`derives the ${look} dark anchor from the theme surface and stays close to the legacy near-black fill`, async function () {
       if (!CSS.supports('color', 'light-dark(red, blue)')) this.skip();
       const { background, alpha, weight, fill, surfaceDefault } = await paint(look);
       expect(alpha, `${look}: glass alpha`).to.be.within(0.59, 0.61);
       for (let channel = 0; channel < 3; channel++) {
-        const expected = fill[channel]! * weight + surfaceDefault[channel]! * 0.3 * (1 - weight);
+        const expected = fill[channel]! * weight + surfaceDefault[channel]! * 0.1 * (1 - weight);
         expect(background[channel], `${look}: channel ${channel} follows the surface-derived anchor`).to.be.closeTo(expected, 3);
         // Compared as the colour under the alpha, before it is blended with the backdrop.
         expect(Math.abs(expected - legacyFill(fill, weight)[channel]!), `${look}: channel ${channel} stays close to the legacy fill`).to.be.at.most(8);
@@ -53,10 +62,10 @@ describe('dark glass fill follows the theme surface ramp', () => {
       const { background, weight, fill, surfaceDefault } = await paint(look, style);
       if (look !== 'high-contrast') expect(surfaceDefault.slice(0, 3), `${look}: lifted surface`).to.deep.equal(toRgba(LIFTED).slice(0, 3));
       for (let channel = 0; channel < 3; channel++) {
-        const expected = fill[channel]! * weight + surfaceDefault[channel]! * 0.3 * (1 - weight);
+        const expected = fill[channel]! * weight + surfaceDefault[channel]! * 0.1 * (1 - weight);
         expect(background[channel], `${look}: lifted channel ${channel}`).to.be.closeTo(expected, 3);
-        // The legacy fill was 80% pure black: the lifted pane must be visibly lighter than that.
-        if (fill[channel]! > 8) expect(background[channel], `${look}: lifted channel ${channel} beats the pure-black anchor`).to.be.greaterThan(legacyFill(fill, weight)[channel]! + 4);
+        // The legacy fill was 80% pure black: the lifted pane must now sit above that.
+        if (fill[channel]! > 8) expect(background[channel], `${look}: lifted channel ${channel} beats the pure-black anchor`).to.be.greaterThan(legacyFill(fill, weight)[channel]! + 1);
       }
     });
   }

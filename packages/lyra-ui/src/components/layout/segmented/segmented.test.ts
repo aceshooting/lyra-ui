@@ -1232,12 +1232,12 @@ describe("active-state cssprops", () => {
     );
     const expectedCheckedBackground = resolvedInShadow(
       el,
-      "background: var(--lr-color-surface)",
+      "background: var(--lr-color-text)",
       "background-color"
     );
     const expectedCheckedColor = resolvedInShadow(
       el,
-      "color: var(--lr-color-text)",
+      "color: var(--lr-color-surface)",
       "color"
     );
 

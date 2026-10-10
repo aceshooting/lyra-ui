@@ -164,7 +164,7 @@ it('gives body-mounted confirmation actions the body scope shape and touch targe
       expect(Number.parseFloat(getComputedStyle(button).borderTopLeftRadius)).to.equal(1.5 * rem);
       expect(button.getBoundingClientRect().height).to.be.at.least(Math.max(44, 2.75 * rem));
     }
-    expect(toRgba(getComputedStyle(dialog.shadowRoot!.querySelector('[part~="panel"]')!).backgroundColor)).to.deep.equal(toRgba('color-mix(in srgb, color-mix(in srgb, rgb(53 42 36) 20%, black) 60%, transparent)'));
+    expect(toRgba(getComputedStyle(dialog.shadowRoot!.querySelector('[part~="panel"]')!).backgroundColor)).to.deep.equal(toRgba('color-mix(in srgb, color-mix(in srgb, rgb(53 42 36) 20%, color-mix(in srgb, rgb(24 18 15) 10%, black)) 60%, transparent)'));
     buttons[0]!.click();
     expect(await result).to.equal(false);
   } finally {

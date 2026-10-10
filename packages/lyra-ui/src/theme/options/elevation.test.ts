@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { setForcedColors } from '../../../test/wtr-media.js';
-import { contrastRatio, toRgba } from '../../../test/color-contrast.js';
+import { contrastRatio, resolvedColorToken, toRgba } from '../../../test/color-contrast.js';
 import { applyLyraStyleScope } from '../theme.js';
 import { LYRA_ELEVATION_PRESETS } from './elevation.js';
 import { LYRA_MATERIAL_LOOK } from '../looks/material.js';
@@ -11,8 +11,9 @@ import type { LyraCard } from '../../components/layout/card/card.js';
 import type { LyraDialog } from '../../components/overlays/dialog/dialog.js';
 
 // Normalize the specified fill through the same color space as the painted Glass material.
-function glassColor(fill: string, mode: 'light' | 'dark' = 'light') {
-  const qualifiedFill = mode === 'dark' ? `color-mix(in srgb, ${fill} 20%, black)` : fill;
+function glassColor(fill: string, mode: 'light' | 'dark' = 'light', surface = 'black') {
+  // Dark Glass deepens toward the theme surface at 10% (the rest black), not toward pure black.
+  const qualifiedFill = mode === 'dark' ? `color-mix(in srgb, ${fill} 20%, color-mix(in srgb, ${surface} 10%, black))` : fill;
   return toRgba(`color-mix(in srgb, ${qualifiedFill} 60%, transparent)`);
 }
 
@@ -76,7 +77,7 @@ describe('tonal surface elevation', () => {
         applyLyraStyleScope(scope, { look: 'material', mode });
         const expected = { card: getComputedStyle(base).backgroundColor, panel: getComputedStyle(panel).backgroundColor };
         expect(expected.card).to.equal(mode === 'light' ? 'rgb(252, 242, 237)' : 'rgb(33, 25, 20)');
-        expect(toRgba(expected.panel)).to.deep.equal(glassColor(mode === 'light' ? 'rgb(236 223 215)' : 'rgb(53 42 36)', mode));
+        expect(toRgba(expected.panel)).to.deep.equal(glassColor(mode === 'light' ? 'rgb(236 223 215)' : 'rgb(53 42 36)', mode, resolvedColorToken(panel, '--lr-color-surface')));
         applyLyraStyleScope(scope, { look: LYRA_MATERIAL_LOOK, mode });
         expect(getComputedStyle(base).backgroundColor).to.equal(expected.card);
         expect(getComputedStyle(panel).backgroundColor).to.equal(expected.panel);
@@ -90,7 +91,7 @@ describe('tonal surface elevation', () => {
       for (const look of ['lyra', 'shadcn', 'material']) for (const mode of ['light', 'dark'] as const) {
         applyLyraStyleScope(scope, { look, mode, overrides: LYRA_ELEVATION_PRESETS.tonal });
         expect(getComputedStyle(base).backgroundColor).to.equal(mode === 'light' ? 'rgb(247, 247, 247)' : 'rgb(32, 32, 32)');
-        expect(toRgba(getComputedStyle(panel).backgroundColor)).to.deep.equal(glassColor(mode === 'light' ? 'rgb(226 226 226)' : 'rgb(57 57 57)', mode));
+        expect(toRgba(getComputedStyle(panel).backgroundColor)).to.deep.equal(glassColor(mode === 'light' ? 'rgb(226 226 226)' : 'rgb(57 57 57)', mode, resolvedColorToken(panel, '--lr-color-surface')));
         expect(getComputedStyle(panel).boxShadow).to.equal('none');
       }
     } finally { applyLyraStyleScope(scope, null); }
