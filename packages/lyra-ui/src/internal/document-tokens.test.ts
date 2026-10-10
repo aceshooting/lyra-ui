@@ -897,3 +897,60 @@ describe('document token layer: inventory and observation', () => {
     }
   });
 });
+
+describe('document token layer: root re-derivation key (Chromium)', () => {
+  const KEY = '--_lr-root-inputs';
+  const brands = (navigator as Navigator & { userAgentData?: { brands?: readonly { brand: string }[] } }).userAgentData?.brands;
+  const chromium = !!brands?.some((entry) => entry.brand === 'Chromium');
+
+  it('declares the key on the root in Chromium only', async () => {
+    await fixture(html`<lr-layer-probe></lr-layer-probe>`);
+    expect(read(document.documentElement, KEY) !== '').to.equal(chromium);
+  });
+
+  it('changes the key with an input written on the root, and every element inherits it', async () => {
+    if (!chromium) return;
+    const island = (await fixture(html`<div class="lr-dark"><lr-layer-probe></lr-layer-probe></div>`)) as HTMLElement;
+    const probe = await probeIn(island);
+    const root = document.documentElement;
+    const before = read(root, KEY);
+    const islandBefore = read(probe, '--lr-color-brand');
+    root.style.setProperty('--lr-theme-color-brand-fill-loud', '#8b008b');
+    try {
+      expect(read(root, KEY)).to.not.equal(before);
+      // Inside the island the outputs keep their own slots; only the key follows the root.
+      expect(read(probe, '--lr-color-brand')).to.equal(islandBefore);
+      expect(read(probe, KEY)).to.equal(read(root, KEY));
+    } finally {
+      root.style.removeProperty('--lr-theme-color-brand-fill-loud');
+    }
+    expect(read(root, KEY)).to.equal(before);
+  });
+
+  it('follows a mode switch on the root', async () => {
+    if (!chromium) return;
+    await fixture(html`<lr-layer-probe></lr-layer-probe>`);
+    const root = document.documentElement;
+    const before = read(root, KEY);
+    root.setAttribute('data-lr-mode', 'dark');
+    try {
+      expect(read(root, KEY)).to.not.equal(before);
+    } finally {
+      root.removeAttribute('data-lr-mode');
+    }
+  });
+
+  it('restores the key after an application replaces adoptedStyleSheets wholesale', async () => {
+    if (!chromium) return;
+    await fixture(html`<lr-layer-probe></lr-layer-probe>`);
+    const previous = document.adoptedStyleSheets;
+    document.adoptedStyleSheets = [];
+    try {
+      expect(read(document.documentElement, KEY)).to.equal('');
+      await fixture(html`<lr-card>Again</lr-card>`);
+      expect(read(document.documentElement, KEY)).to.not.equal('');
+    } finally {
+      document.adoptedStyleSheets = [...new Set([...previous, ...document.adoptedStyleSheets])];
+    }
+  });
+});
