@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Hammamtaa sochii jijjiiri',
   appRailCollapse: 'Sochii cufi',
   appRailExpand: 'Sochii bani',
+  appRailPin: 'Sochii maxxansi',
+  appRailUnpin: 'Sochii maxxansa baasi',
   appRailItemCollapse: '{label} cufi',
   appRailItemExpand: '{label} bani',
   resizeValuePercent: '{value} dhibbeentaa',

@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'رهنمائي جو ماپ بدلايو',
   appRailCollapse: 'رهنمائي سميٽيو',
   appRailExpand: 'رهنمائي وڌايو',
+  appRailPin: 'رهنمائي پن ڪريو',
+  appRailUnpin: 'رهنمائي کان پن هٽايو',
   appRailItemCollapse: '{label} سميٽيو',
   appRailItemExpand: '{label} وڌايو',
   resizeValuePercent: '{value} سيڪڙو',

@@ -22,11 +22,12 @@ import { detectPlatform } from '../../../internal/platform.js';
 import { parseHotkey, hasNonShiftModifier, matchesHotkey, hotkeyAriaKeyShortcuts, isIgnorableKeyEvent, isEditableKeyEventTarget, registerHotkeyOwner, unregisterHotkeyOwner, resolveHotkeyOwner } from '../../../internal/hotkey.js';
 import { nextId, isAccessibilityVisible } from '../../../internal/a11y.js';
 import { acquireAriaOwnership, type AriaOwnershipLease } from '../../../internal/aria-ownership.js';
-import { chevronIcon, closeIcon, menuIcon } from '../../../internal/icons.js';
+import { chevronIcon, closeIcon, menuIcon, pinIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteDuration, finiteRange } from '../../../internal/numbers.js';
+import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { SeparatorDragController, separatorArrowDirection, separatorDelta } from '../../../internal/separator-drag.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { computeAppRailMode } from './app-rail-mode.js';
@@ -40,7 +41,7 @@ import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_appRailCollapse, LYRA_DEFAULT_appRailExpand, LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_appRailCollapse, LYRA_DEFAULT_appRailExpand, LYRA_DEFAULT_appRailPin, LYRA_DEFAULT_appRailUnpin, LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_navigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT_resizeNavigation, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraAppRailMode, LyraAppRailModeInput, LyraAppRailPreferredMode } from './app-rail-mode.js';
@@ -93,6 +94,11 @@ export interface LyraAppRailToggleDetail {
   expanded: boolean;
 }
 
+export interface LyraAppRailPeekChangeDetail {
+  /** Whether the auto-hide rail is now expanded as a temporary overlay. */
+  peeking: boolean;
+}
+
 export interface LyraAppRailResizeDetail {
   widthPx: number;
 }
@@ -114,6 +120,7 @@ export interface LyraAppRailEventMap {
   'lr-toggle': CustomEvent<LyraAppRailToggleDetail>;
   'lr-rail-resize-request': CustomEvent<LyraAppRailResizeDetail>;
   'lr-rail-resize': CustomEvent<LyraAppRailResizeDetail>;
+  'lr-peek-change': CustomEvent<LyraAppRailPeekChangeDetail>;
 }
 /**
  * `<lr-app-rail>` — the library's application sidebar, a responsive navigation rail across three
@@ -148,6 +155,14 @@ export interface LyraAppRailEventMap {
  * @cssprop [--lr-app-rail-frame-radius=var(--lr-radius)] - Card-frame corner radius.
  * @cssprop [--lr-app-rail-frame-shadow=var(--lr-shadow-s)] - Card-frame elevation.
  * @customElement lr-app-rail
+ * Opt in to `auto-hide` for a desktop sidebar that rests as the `'icon-only'` strip, temporarily
+ * expands to the full rail as an overlay (the strip's footprint stays in the layout, so the content
+ * never reflows) while the pointer or keyboard focus is inside, and docks at full width only once
+ * the user pins it with the built-in `[part="pin-button"]`. Pinning writes `preferredMode`, so it
+ * persists through `storage-key` with `persist="preferred-mode"` like every other mode preference.
+ * The `mode` stays `'icon-only'` while peeking -- peeking is a presentation of the strip, observable
+ * through `peeking`, not a mode change.
+ *
  * @slot - Nav items. Use `<lr-app-rail-item>` for the explicit icon/label
  *   contract that automatically hides labels in `'icon-only'` mode, and
  *   `<lr-app-rail-group>` to title and optionally collapse a section of them --
@@ -182,7 +197,16 @@ export interface LyraAppRailEventMap {
  *   keyboard step, or once on pointerup after a genuine drag. Non-cancelable; no event is emitted
  *   for clamped no-ops, canceled/lost gestures, or direct `railWidth` writes.
  *   `detail: LyraAppRailResizeDetail`.
+ * @event lr-peek-change - The `auto-hide` rail started or stopped peeking (expanding as a temporary
+ *   overlay). Non-cancelable. Not fired for the reset a disconnect performs.
+ *   `detail: LyraAppRailPeekChangeDetail`.
  * @csspart base - The rail root while inline (`'full'`/`'icon-only'` modes).
+ * @csspart pin-button - The `auto-hide` pin control, rendered inside `[part="header"]` while the rail
+ *   is peeking or pinned (docked at full width), never in the resting strip. Renders `aria-pressed`
+ *   as `"true"` while pinned and `"false"` otherwise, with the localized pin/unpin name; it takes
+ *   the shared `--lr-icon-button-size` hit area. Replaces `[part="collapse-toggle"]` while
+ *   `auto-hide` is set.
+ * @csspart pin-icon - The wrapper around `[part="pin-button"]`'s glyph.
  * @csspart header - The wrapper around the `header` slot.
  * @csspart nav - The wrapper around the default (nav items) slot.
  * @csspart footer - The wrapper around the `footer` slot.
@@ -237,6 +261,12 @@ export interface LyraAppRailEventMap {
  *   capped at `85vw`.
  * @cssprop [--lr-app-rail-overlay-color=var(--lr-color-overlay)] - The mobile overlay scrim's
  *   background.
+ * @cssprop [--lr-app-rail-peek-shadow=var(--lr-shadow-l)] - Elevation of the `auto-hide` rail while it
+ *   peeks as an overlay over the content.
+ * @cssprop [--lr-app-rail-peek-bg=var(--lr-color-surface-overlay)] - Background of the `auto-hide`
+ *   rail while peeking, kept opaque-leaning like the mobile panel because it overlays content.
+ * @cssprop [--lr-app-rail-pin-hover-bg=var(--lr-color-brand-quiet)] - Pin-control hover background.
+ * @cssprop [--lr-app-rail-pin-hover-color=var(--lr-color-brand)] - Pin-control hover foreground.
  * @cssprop [--lr-app-rail-panel-inset-block-start=0] - Block-start (top) inset shared by
  *   `[part="panel"]` and `[part="backdrop"]` -- raise it to leave room for a fixed app bar/status
  *   area above the drawer instead of the panel/scrim starting flush with the viewport top.
@@ -319,6 +349,17 @@ export interface LyraAppRailEventMap {
  * </lr-app-rail>
  * ```
  * @example
+ * An auto-hide sidebar: the icon-only strip peeks open over the content on hover or keyboard
+ * focus, and a pin docks it, remembered across reloads:
+ * ```html
+ * <lr-app-rail auto-hide label="Workspace" storage-key="app" persist="preferred-mode"
+ *   peek-open-delay="150" peek-close-delay="300">
+ *   <lr-app-rail-item href="/inbox" current>
+ *     <svg slot="icon" aria-hidden="true">...</svg>Inbox
+ *   </lr-app-rail-item>
+ * </lr-app-rail>
+ * ```
+ * @example
  * A standalone app sidebar: a card-framed rail collapsed to icons by an external trigger or
  * the Mod+B chord, remembering the reader's choice. Below `mobile-breakpoint` it becomes the
  * off-canvas overlay and the same trigger opens it:
@@ -356,6 +397,8 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     ...super.defaultStrings,
     appRailCollapse: LYRA_DEFAULT_appRailCollapse,
     appRailExpand: LYRA_DEFAULT_appRailExpand,
+    appRailPin: LYRA_DEFAULT_appRailPin,
+    appRailUnpin: LYRA_DEFAULT_appRailUnpin,
     closeNavigation: LYRA_DEFAULT_closeNavigation,
     navigation: LYRA_DEFAULT_navigation,
     openNavigation: LYRA_DEFAULT_openNavigation,
@@ -368,11 +411,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     super();
     new GlassScrollLayer(this, '[part="base"], [part="panel"]');
   }
-  /** Both are host state this component writes itself -- `mode` is the derived effective mode
-   *  (authors set `preferred-mode`), `dragging` tracks a live resize gesture. Neither is settable
-   *  from markup, so neither is observed; declaring them keeps the rail from reporting its own
-   *  output as an unknown attribute. */
-  protected static readonly knownUnobservedAttributes: readonly string[] = ['mode', 'dragging'];
+  /** All are host state this component writes itself -- `mode` is the derived effective mode
+   *  (authors set `preferred-mode`), `dragging` tracks a live resize gesture, `peeking` the open
+   *  state of an `auto-hide` peek. None is settable from markup, so none is observed; declaring
+   *  them keeps the rail from reporting its own output as an unknown attribute. */
+  protected static readonly knownUnobservedAttributes: readonly string[] = ['mode', 'dragging', 'peeking'];
 
   static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
 
@@ -490,6 +533,30 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  `toggle` csspart doc) as the panel's only in-panel dismiss control, and hiding it there too
    *  would leave the open panel with no in-panel way to close it at all -- only Escape/backdrop. */
   @property({ type: Boolean, reflect: true, attribute: 'without-toggle' }) withoutToggle = false;
+
+  /** Opts the desktop rail into auto-hide ("peek") mode: it rests as the `'icon-only'` strip and,
+   *  while the pointer moves inside it or keyboard focus enters it, expands to the full rail as an
+   *  overlay -- the strip's footprint stays in the layout, so nothing reflows -- and collapses back
+   *  after `peekCloseDelay`. Escape closes the peek. Touch pointers and boundary events with no
+   *  movement never open it. The rail docks at full width only while pinned: the built-in
+   *  `[part="pin-button"]` writes `preferredMode`, so the pin persists through `storage-key` with
+   *  `persist="preferred-mode"`. `preferredMode` and `forceMode` keep their meaning; an unset
+   *  `preferredMode` rests as `'icon-only'` instead of following `icon-only-breakpoint`. The mobile
+   *  presentation is unchanged, and `[part="collapse-toggle"]` is not rendered while this is set
+   *  (the pin control replaces it). `false` (the default) reproduces today's exact behavior.
+   *  @default false */
+  @property({ type: Boolean, reflect: true, attribute: 'auto-hide' }) autoHide = false;
+
+  /** Milliseconds a moving pointer must stay inside the `auto-hide` strip before it peeks open.
+   *  Keyboard focus opens it at once. A non-finite value uses the default and a negative one is
+   *  clamped to `0`.
+   *  @default 150 */
+  @property({ type: Number, attribute: 'peek-open-delay', useDefault: true }) peekOpenDelay = 150;
+
+  /** Milliseconds the `auto-hide` rail stays open after the pointer has left and keyboard focus is
+   *  no longer inside it. A non-finite value uses the default and a negative one is clamped to `0`.
+   *  @default 300 */
+  @property({ type: Number, attribute: 'peek-close-delay', useDefault: true }) peekCloseDelay = 300;
 
   /** Opts in the desktop collapse control: a `[part="collapse-toggle"]` button rendered inside
    *  `[part="header"]` that flips the rail between its `'full'` and `'icon-only'` presentations,
@@ -679,6 +746,170 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.toggleAttribute('dragging', next);
   }
 
+  /** Whether the `auto-hide` rail is currently expanded as a temporary overlay. Read-only: the
+   *  pointer, keyboard focus, Escape and the pin control own it. Reflected to the `peeking`
+   *  attribute for styling, and announced through `lr-peek-change`. `mode` stays `'icon-only'`
+   *  while this is `true` -- peeking presents the strip expanded, it does not change the mode.
+   *  Always `false` while `auto-hide` is unset or the rail is `'full'` (pinned) or `'mobile'`. */
+  get peeking(): boolean {
+    return this._peeking;
+  }
+  @state() private _peeking = false;
+  private peekOpenTimer?: ReturnType<typeof setTimeout>;
+  private peekCloseTimer?: ReturnType<typeof setTimeout>;
+  private peekPointerInside = false;
+  /** Keyboard-originated focus is inside the rail: pointer-originated focus (a click) must not
+   *  hold the peek open after the pointer has left. */
+  private peekKeyboardFocusInside = false;
+  private peekPointerSeen?: { x: number; y: number };
+  /** Escape closed the peek; it stays closed until the pointer and keyboard focus have both left. */
+  private peekDismissed = false;
+  /** The pin control unpinned the rail while the pointer or focus was still inside it. */
+  private peekAfterUnpin = false;
+  private peekHandle?: OverlayHandle;
+
+  private get peekEligible(): boolean {
+    return this.autoHide && this._mode === 'icon-only' && this.isConnected;
+  }
+
+  /** The preference the breakpoint resolver sees: an `auto-hide` rail rests as the strip until it
+   *  is pinned, so an unset `preferredMode` reads as `'icon-only'` instead of the viewport match. */
+  private get modePreference(): LyraAppRailPreferredMode | null | undefined {
+    return this.autoHide ? (this.preferredMode ?? 'icon-only') : this.preferredMode;
+  }
+
+  private clearPeekOpen(): void {
+    if (this.peekOpenTimer === undefined) return;
+    clearTimeout(this.peekOpenTimer);
+    this.peekOpenTimer = undefined;
+  }
+
+  private clearPeekClose(): void {
+    if (this.peekCloseTimer === undefined) return;
+    clearTimeout(this.peekCloseTimer);
+    this.peekCloseTimer = undefined;
+  }
+
+  private setPeeking(next: boolean, options?: { silent?: boolean }): void {
+    if (this._peeking === next || (next && !this.peekEligible)) return;
+    this._peeking = next;
+    this.toggleAttribute('peeking', next);
+    if (next) {
+      // A non-modal stack entry: it only routes Escape to this rail (never inerts the page, traps
+      // focus or restores it), and it orders the peek among other overlays.
+      this.peekHandle = activateOverlay({
+        host: this,
+        panel: () => this.baseEl ?? null,
+        modal: false,
+        trapFocus: false,
+        onEscape: () => this.dismissPeek(),
+      });
+    } else {
+      this.peekHandle?.deactivate({ restoreFocus: false });
+      this.peekHandle = undefined;
+    }
+    if (!options?.silent) this.emit('lr-peek-change', { peeking: next });
+  }
+
+  /** Cancels every timer and returns to the resting strip, forgetting where the pointer and focus
+   *  were. Silent for a disconnect, where no listener can still observe the rail. */
+  private resetPeek(options?: { silent?: boolean }): void {
+    this.clearPeekOpen();
+    this.clearPeekClose();
+    this.peekPointerInside = false;
+    this.peekKeyboardFocusInside = false;
+    this.peekPointerSeen = undefined;
+    this.peekDismissed = false;
+    this.peekAfterUnpin = false;
+    this.setPeeking(false, options);
+  }
+
+  private dismissPeek(): void {
+    this.peekDismissed = true;
+    this.clearPeekOpen();
+    this.clearPeekClose();
+    this.setPeeking(false);
+  }
+
+  private startPeekOpen(immediate = false): void {
+    this.clearPeekClose();
+    if (this._peeking || this.peekOpenTimer !== undefined || this.peekDismissed || !this.peekEligible) return;
+    const delay = immediate ? 0 : finiteDuration(this.peekOpenDelay, 150);
+    const open = (): void => {
+      if (this.peekPointerInside || this.peekKeyboardFocusInside) this.setPeeking(true);
+    };
+    if (delay === 0) {
+      open();
+      return;
+    }
+    this.peekOpenTimer = setTimeout(() => {
+      this.peekOpenTimer = undefined;
+      open();
+    }, delay);
+  }
+
+  private startPeekClose(): void {
+    this.clearPeekOpen();
+    if (!this._peeking || this.peekCloseTimer !== undefined) return;
+    if (this.peekPointerInside || this.peekKeyboardFocusInside) return;
+    this.peekCloseTimer = setTimeout(() => {
+      this.peekCloseTimer = undefined;
+      if (!this.peekPointerInside && !this.peekKeyboardFocusInside) this.setPeeking(false);
+    }, finiteDuration(this.peekCloseDelay, 300));
+  }
+
+  private onPeekPointerEnter = (event: PointerEvent): void => {
+    if (event.pointerType === 'touch') return;
+    this.peekPointerInside = true;
+    // Entering never opens by itself: a cursor resting where the page loaded fires the same
+    // boundary events with no movement. The first real movement inside does.
+    this.peekPointerSeen = { x: event.clientX, y: event.clientY };
+    this.clearPeekClose();
+  };
+
+  private onPeekPointerMove = (event: PointerEvent): void => {
+    if (event.pointerType === 'touch') return;
+    const seen = this.peekPointerSeen;
+    const moved =
+      (event.movementX || 0) !== 0 ||
+      (event.movementY || 0) !== 0 ||
+      (seen !== undefined && (seen.x !== event.clientX || seen.y !== event.clientY));
+    this.peekPointerSeen = { x: event.clientX, y: event.clientY };
+    this.peekPointerInside = true;
+    this.clearPeekClose();
+    if (moved) this.startPeekOpen();
+  };
+
+  private onPeekPointerLeave = (event: PointerEvent): void => {
+    if (event.pointerType === 'touch') return;
+    this.peekPointerInside = false;
+    this.peekPointerSeen = undefined;
+    this.clearPeekOpen();
+    if (!this.peekKeyboardFocusInside) this.peekDismissed = false;
+    this.startPeekClose();
+  };
+
+  private onPeekFocusIn = (event: FocusEvent): void => {
+    const keyboard = isKeyboardFocusEvent(event);
+    this.peekKeyboardFocusInside = keyboard;
+    if (!keyboard) return;
+    this.clearPeekClose();
+    this.startPeekOpen(true);
+  };
+
+  private onPeekFocusOut = (event: FocusEvent): void => {
+    const next = event.relatedTarget;
+    if (isHtmlElement(next) && composedContains(this, next)) return;
+    this.peekKeyboardFocusInside = false;
+    if (!this.peekPointerInside) this.peekDismissed = false;
+    this.startPeekClose();
+  };
+
+  private onPinClick = (): void => {
+    this.peekAfterUnpin = this._mode === 'full' && (this.peekPointerInside || this.peekKeyboardFocusInside);
+    this.toggleCollapse();
+  };
+
   @state() private hasHeaderSlot = false;
   @state() private hasFooterSlot = false;
 
@@ -800,7 +1031,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       }
     }
     for (const item of next)
-      item.toggleAttribute('icon-only', this._mode === 'icon-only');
+      item.toggleAttribute('icon-only', this._mode === 'icon-only' && !this._peeking);
     this.managedItems = next;
   }
 
@@ -978,7 +1209,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         const restoredMode = computeAppRailMode(
           this.iconOnlyMatches,
           this.mobileMatches,
-          this.preferredMode,
+          this.modePreference,
         );
         if (restoredMode !== this._mode) {
           this._mode = restoredMode;
@@ -1003,8 +1234,18 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.teardownMediaQueries();
       this.setupMediaQueries();
     }
+    if (changed.has('autoHide') && !this.forced && (this.hasUpdated || this.autoHide)) {
+      // Silent before the first render, like the breakpoint-derived mount mode: the first
+      // `updated()` announces whatever the restore below settles on.
+      this.applyComputedMode(this.hasUpdated ? undefined : { silent: true });
+    }
     if (this.hasUpdated && changed.has('preferredMode') && !this.forced) {
       this.applyComputedMode();
+    }
+    if (changed.has('autoHide') && !this.autoHide) this.resetPeek();
+    if (this.peekAfterUnpin) {
+      this.peekAfterUnpin = false;
+      if (changed.has('preferredMode')) this.setPeeking(true);
     }
     if (changed.has('open') || changed.has('mode')) {
       const next = this._mode === 'mobile' && this.open;
@@ -1105,6 +1346,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       } else {
         this.baseEl.style.removeProperty('inline-size');
       }
+      // A peeking rail expands to the same explicit width a docked one would take, so its overlay
+      // and the footprint-preserving margin (see the stylesheet) agree on it.
+      if (this._peeking && this.resizable && this.railWidth != null) {
+        this.baseEl.style.setProperty('--_lr-app-rail-peek-width', `${this.effectiveRailWidthPx}px`);
+      } else {
+        this.baseEl.style.removeProperty('--_lr-app-rail-peek-width');
+      }
     }
     this.observeResizerPosition();
     this.syncResizerPosition();
@@ -1156,6 +1404,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.resetPeek({ silent: true });
     this.disconnectResizerPosition();
     this.nativeModal.hide();
     if (this.hotkeyWindow) {
@@ -1177,6 +1426,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.resetPeek({ silent: true });
     this.disconnectResizerPosition();
     super.adoptedCallback();
     this.teardownMediaQueries();
@@ -1447,7 +1697,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   private applyComputedMode(options?: { silent?: boolean }): void {
     this.setEffectiveMode(
-      computeAppRailMode(this.iconOnlyMatches, this.mobileMatches, this.preferredMode),
+      computeAppRailMode(this.iconOnlyMatches, this.mobileMatches, this.modePreference),
       options,
     );
   }
@@ -1464,6 +1714,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.recoverInlineFocusAfterResponsiveClose = true;
     }
     this._mode = next;
+    if (next !== 'icon-only') {
+      // Only the strip peeks: a docked (pinned) or mobile rail has nothing to expand.
+      this.clearPeekOpen();
+      this.clearPeekClose();
+      this.setPeeking(false);
+    }
     if (this.baseEl) {
       if (!(this.resizable && this.railWidth != null && next === 'full')) {
         this.baseEl.style.removeProperty('inline-size');
@@ -1569,7 +1825,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   private syncBuiltInKeyShortcuts(): void {
     const value = this.resolvedHotkeyShortcuts;
-    for (const control of [this.toggleEl, this.renderRoot.querySelector('[part="collapse-toggle"]')]) {
+    for (const control of [
+      this.toggleEl,
+      this.renderRoot.querySelector('[part="collapse-toggle"]'),
+      this.renderRoot.querySelector('[part="pin-button"]'),
+    ]) {
       if (!control || control.getAttribute('aria-keyshortcuts') === value) continue;
       if (value === null) control.removeAttribute('aria-keyshortcuts');
       else control.setAttribute('aria-keyshortcuts', value);
@@ -1785,8 +2045,12 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   override render(): TemplateResult {
     const mobile = this._mode === 'mobile';
-    const showCollapse = this.collapsible && !mobile;
+    // `auto-hide` replaces the collapse control with the pin control, which flips the same preference.
+    const showCollapse = this.collapsible && !mobile && !this.autoHide;
+    const pinned = this._mode === 'full';
+    const showPin = this.autoHide && !mobile && (this._peeking || pinned);
     const expanded = this._mode !== 'icon-only';
+    const peekEvents = this.autoHide;
     return this.nativeModal.render(html`
       <button
         part="toggle"
@@ -1809,11 +2073,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
         aria-modal=${this.overlayActive && !this.nativeModal.requested ? 'true' : nothing}
         tabindex=${this.overlayActive || !mobile ? '-1' : nothing}
         ?inert=${mobile && !this.open}
+        @pointerenter=${peekEvents ? this.onPeekPointerEnter : nothing}
+        @pointermove=${peekEvents ? this.onPeekPointerMove : nothing}
+        @pointerleave=${peekEvents ? this.onPeekPointerLeave : nothing}
+        @focusin=${peekEvents ? this.onPeekFocusIn : nothing}
+        @focusout=${peekEvents ? this.onPeekFocusOut : nothing}
         @transitionend=${this.onPanelTransition}
         @transitioncancel=${this.onPanelTransition}
       >
         <span class="glass-scroll-layer" aria-hidden="true"></span>
-        <div part="header" ?hidden=${!this.hasHeaderSlot && !showCollapse}>
+        <div part="header" ?hidden=${!this.hasHeaderSlot && !showCollapse && !showPin}>
           <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
           ${showCollapse
             ? html`<button
@@ -1826,6 +2095,15 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
                   : this.localize('appRailExpand')}
                 @click=${this.onCollapseToggleClick}
               ><span part="collapse-icon" aria-hidden="true">${chevronIcon()}</span></button>`
+            : nothing}
+          ${showPin
+            ? html`<button
+                part="pin-button"
+                type="button"
+                aria-pressed=${pinned ? 'true' : 'false'}
+                aria-label=${pinned ? this.localize('appRailUnpin') : this.localize('appRailPin')}
+                @click=${this.onPinClick}
+              ><span part="pin-icon" aria-hidden="true">${pinIcon()}</span></button>`
             : nothing}
         </div>
         <div part="nav" id=${this.navRegionId}>

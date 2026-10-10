@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'تغيير حجم التنقل',
   appRailCollapse: 'طي التنقل',
   appRailExpand: 'توسيع التنقل',
+  appRailPin: 'تثبيت التنقل',
+  appRailUnpin: 'إلغاء تثبيت التنقل',
   appRailItemCollapse: 'طي {label}',
   appRailItemExpand: 'توسيع {label}',
   resizeValuePercent: '{value} بالمئة',

@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Đổi kích thước điều hướng',
   appRailCollapse: 'Thu gọn điều hướng',
   appRailExpand: 'Mở rộng điều hướng',
+  appRailPin: 'Ghim điều hướng',
+  appRailUnpin: 'Bỏ ghim điều hướng',
   appRailItemCollapse: 'Thu gọn {label}',
   appRailItemExpand: 'Mở rộng {label}',
   resizeValuePercent: '{value} phần trăm',

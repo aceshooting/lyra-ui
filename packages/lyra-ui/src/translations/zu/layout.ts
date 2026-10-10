@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Shintsha usayizi wokuzulazula',
   appRailCollapse: 'Goqa ukuzulazula',
   appRailExpand: 'Nweba ukuzulazula',
+  appRailPin: 'Phina ukuzulazula',
+  appRailUnpin: 'Susa ukuphina ukuzulazula',
   appRailItemCollapse: 'Goqa u-{label}',
   appRailItemExpand: 'Nweba u-{label}',
   resizeValuePercent: 'Amaphesenti angu-{value}',

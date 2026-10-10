@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'راہنمائی دا سائز بدلو',
   appRailCollapse: 'راہنمائی سمیٹو',
   appRailExpand: 'راہنمائی پھیلاؤ',
+  appRailPin: 'راہنمائی پن کرو',
+  appRailUnpin: 'راہنمائی توں پن لاہو',
   appRailItemCollapse: '{label} سمیٹو',
   appRailItemExpand: '{label} پھیلاؤ',
   resizeValuePercent: '{value} فیصد',

@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Badilisha ukubwa wa urambazaji',
   appRailCollapse: 'Kunja urambazaji',
   appRailExpand: 'Panua urambazaji',
+  appRailPin: 'Bandika urambazaji',
+  appRailUnpin: 'Ondoa urambazaji uliobandikwa',
   appRailItemCollapse: 'Kunja {label}',
   appRailItemExpand: 'Panua {label}',
   resizeValuePercent: 'asilimia {value}',

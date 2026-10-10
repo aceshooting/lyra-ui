@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -113,6 +113,31 @@ letting a consumer that syncs app chrome to the rail's mode pick up the restored
   a reload only when `storage-key` is set AND `persist` includes `preferred-mode` — the default
   `persist` is `open width`, which does not. Pair them: `persist="width preferred-mode"`. Either
   route announces itself through the existing `lr-mode-change` event; there is no new event.
+- `autoHide: boolean = false` (reflected, attribute `auto-hide`) — opts the desktop rail into an
+  auto-hide ("peek") mode. The rail rests as the `'icon-only'` strip (an unset `preferredMode` reads
+  as `'icon-only'` instead of following `icon-only-breakpoint`; `preferredMode` and `forceMode` keep
+  their meaning). While a non-touch pointer moves inside the strip, or keyboard focus enters it, the
+  rail expands to full width as an overlay: the strip's inline footprint stays in the layout, so the
+  content beside it never reflows, and the expansion grows toward the inline end and mirrors under
+  RTL. It collapses back once the pointer has left and keyboard focus is no longer inside, after
+  `peekCloseDelay`; Escape closes it at once and it stays closed until the pointer and focus have
+  both left. Touch pointers and boundary events fired with no movement (a cursor resting where the
+  page loaded) never open it, and pointer-originated focus (a click) does not hold it open. The rail
+  docks at full width only while pinned: the built-in `[part="pin-button"]` writes
+  `preferredMode`, so it persists through `storage-key` with `persist` including `preferred-mode`
+  (the default `persist` does not, so set `persist="preferred-mode"`). The mobile presentation is
+  unchanged, `[part="collapse-toggle"]` is not rendered while this is set (the pin replaces it),
+  `mode` stays `'icon-only'` while peeking, and the resizer is hidden until pinned. Unset reproduces
+  today's exact behavior.
+- `peekOpenDelay: number = 150` (attribute `peek-open-delay`) — milliseconds a moving pointer must
+  stay inside the strip before it peeks open; keyboard focus opens it at once. Non-finite values use
+  the default and negative values clamp to `0`.
+- `peekCloseDelay: number = 300` (attribute `peek-close-delay`) — milliseconds the peek stays open
+  after the pointer left and keyboard focus is no longer inside. Non-finite values use the default
+  and negative values clamp to `0`.
+- `peeking: boolean` (read-only getter, reflected `peeking` attribute) — whether the `auto-hide`
+  rail is currently expanded as a temporary overlay. Always `false` while `auto-hide` is unset or the
+  rail is pinned (`'full'`) or `'mobile'`. Disconnecting resets it silently.
 - `withoutToggle: boolean = false` (reflected, attribute `without-toggle`) — suppresses the built-in mobile
   `[part='toggle']` hamburger/OPEN button, for a consumer that already owns an external mobile-menu
   trigger wired to this rail's own `open` property (pair it with `trigger`/`for` below so focus
@@ -229,7 +254,9 @@ built-in control does, for a consumer rendering its own control (app chrome, a c
 keyboard shortcut). A no-op while `mode` is `'mobile'`. While `forceMode` pins the mode the
 preference alternates relative to `preferredMode ?? mode` on every call and takes effect once the pin is released.
 
-**Events:** `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
+**Events:** `lr-peek-change` (`detail: LyraAppRailPeekChangeDetail` = `{ peeking: boolean }`; the
+`auto-hide` rail started or stopped peeking; non-cancelable, and not fired for the silent reset a
+disconnect performs), `lr-mode-change` (`detail: LyraAppRailModeChangeDetail` = `{ mode: LyraAppRailMode }`; the
 effective mode changed, whether from a breakpoint crossing, a `forceMode` assignment, or a
 persisted `preferred-mode` restored on mount (`storage-key` + `persist="preferred-mode"`) — the
 restored-on-mount case fires once, from the first `updated()` after that mount's render and
@@ -272,7 +299,10 @@ underlying element — see above), `resizer` (the `resizable` opt-in's drag hand
 `aria-controls` at `[part="nav"]` — the item list whose presentation actually changes, never the
 containing `[part="base"]`/`[part="panel"]` — and takes a localized name from the
 `appRailCollapse`/`appRailExpand` keys) and `collapse-icon` (the chevron wrapper, mirrored by its own
-`transform` under RTL). Collapsing to `'icon-only'` keeps each item's own accessible name and
+`transform` under RTL), `pin-button` (the `auto-hide` pin control, rendered inside `[part="header"]`
+while the rail is peeking or pinned, never in the resting strip; `aria-pressed` renders `"true"`
+while pinned and `"false"` otherwise, the name comes from the `appRailPin`/`appRailUnpin` keys, and it
+takes the `--lr-icon-button-size` hit area) and `pin-icon` (its glyph wrapper). Collapsing to `'icon-only'` keeps each item's own accessible name and
 clips its `label`/`meta` visually, while hiding nested disclosure controls and child lists — so `aria-expanded` reports which of the two
 presentations is on screen, for magnifier and braille users, rather than announcing hidden content.
 
@@ -286,6 +316,13 @@ boundary. `--lr-app-rail-panel-shadow` (default `var(--lr-shadow-l)`) affects on
 panel; no value can paint elevation while closed. Prefer that token over an unqualified
 `::part(panel)` shadow rule, which would also paint while closed; state-scope a part override with
 `lr-app-rail[mode="mobile"][open]::part(panel)`.
+
+`--lr-app-rail-peek-shadow` (default `var(--lr-shadow-l)`) and `--lr-app-rail-peek-bg` (default
+`var(--lr-color-surface-overlay)`) restyle the `auto-hide` rail while it overlays the content; the
+overlay sits on the `--lr-layer-dropdown` layer token, below modals and popovers.
+`--lr-app-rail-pin-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-app-rail-pin-hover-color` (default `var(--lr-color-brand)`) tint the pin control on hover.
+Motion uses the shared transition tokens and stops under `prefers-reduced-motion`.
 
 Other hooks: `--lr-app-rail-width` (default `15rem` — the inline rail width in
 `'full'` mode), `--lr-app-rail-icon-width` (default `4rem` — the inline rail width in `'icon-only'`
@@ -373,6 +410,16 @@ fallback at its exact state rule and preserves the previous brand or active-mix 
 </script>
 ```
 
+An auto-hide sidebar that peeks open over the content and docks only when pinned, remembering the pin:
+
+```html
+<lr-app-rail auto-hide label="Workspace" storage-key="app" persist="preferred-mode">
+  <lr-app-rail-item href="/inbox" current>
+    <svg slot="icon" aria-hidden="true">...</svg>Inbox
+  </lr-app-rail-item>
+</lr-app-rail>
+```
+
 ```ts
 rail.forceMode = "icon-only"; // force a presentation regardless of viewport width
 rail.forceMode = "auto"; // release the force, resume live breakpoint tracking
@@ -381,7 +428,7 @@ rail.forceMode = "auto"; // release the force, resume live breakpoint tracking
 The package root also exports a pure `computeAppRailMode(iconOnlyMatches: boolean, mobileMatches:
 boolean, preferredMode?: 'full' | 'icon-only' | null): LyraAppRailMode` resolver (plus the
 `LyraAppRailMode`/`LyraAppRailModeInput`/`LyraAppRailPreferredMode`/`LyraAppRailPersistField`/
-`LyraAppRailModeChangeDetail`/`LyraAppRailToggleDetail`/`LyraAppRailResizeDetail` types) — the same
+`LyraAppRailModeChangeDetail`/`LyraAppRailToggleDetail`/`LyraAppRailResizeDetail`/`LyraAppRailPeekChangeDetail` types) — the same
 logic the element's internal `matchMedia` listeners call, exposed standalone so a
 consumer can compute or unit-test the same resolution without a real browser window. `mobileMatches`
 wins over everything else when true (the viewport is narrower than both breakpoints at once);

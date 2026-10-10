@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Yí ìwọ̀n ìtọ́sọ́nà padà',
   appRailCollapse: 'Kó ìtọ́sọ́nà jọ',
   appRailExpand: 'Fẹ ìtọ́sọ́nà sí i',
+  appRailPin: 'Gbé ìtọ́sọ́nà kọ́',
+  appRailUnpin: 'Tú ìtọ́sọ́nà sílẹ̀',
   appRailItemCollapse: 'Kó {label} jọ',
   appRailItemExpand: 'Fẹ {label} sí i',
   resizeValuePercent: '{value} ìdá ọgọ́rùn-ún',

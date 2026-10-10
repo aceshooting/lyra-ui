@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Ubah ukuran navigasi',
   appRailCollapse: 'Ciutkan navigasi',
   appRailExpand: 'Perluas navigasi',
+  appRailPin: 'Sematkan navigasi',
+  appRailUnpin: 'Lepas sematan navigasi',
   appRailItemCollapse: 'Ciutkan {label}',
   appRailItemExpand: 'Perluas {label}',
   resizeValuePercent: '{value} persen',

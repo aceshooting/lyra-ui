@@ -184,6 +184,8 @@ export type LyraMessageKey =
   | 'resizeNavigation'
   | 'appRailCollapse'
   | 'appRailExpand'
+  | 'appRailPin'
+  | 'appRailUnpin'
   | 'appRailItemCollapse'
   | 'appRailItemExpand'
   | 'resizeColumn'

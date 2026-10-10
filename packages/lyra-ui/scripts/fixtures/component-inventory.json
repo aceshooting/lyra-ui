@@ -6231,6 +6231,16 @@
             "default": null
           },
           {
+            "name": "auto-hide",
+            "property": "autoHide",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "collapsible",
             "property": "collapsible",
             "type": "boolean",
@@ -6358,6 +6368,26 @@
             "default": false
           },
           {
+            "name": "peek-close-delay",
+            "property": "peekCloseDelay",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 300
+          },
+          {
+            "name": "peek-open-delay",
+            "property": "peekOpenDelay",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 150
+          },
+          {
             "name": "persist",
             "property": "persist",
             "type": "string",
@@ -6445,6 +6475,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "autoHide",
+            "attribute": "auto-hide",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "collapsible",
@@ -6592,6 +6632,35 @@
             "default": false
           },
           {
+            "name": "peekCloseDelay",
+            "attribute": "peek-close-delay",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 300
+          },
+          {
+            "name": "peeking",
+            "attribute": null,
+            "type": "boolean",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "peekOpenDelay",
+            "attribute": "peek-open-delay",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 150
+          },
+          {
             "name": "persist",
             "attribute": "persist",
             "type": "string",
@@ -6701,6 +6770,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-peek-change",
+            "type": "CustomEvent<LyraAppRailPeekChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-rail-resize",
             "type": "CustomEvent<LyraAppRailResizeDetail>",
             "cancelable": "never",
@@ -6756,6 +6831,14 @@
           },
           {
             "name": "panel",
+            "deprecated": null
+          },
+          {
+            "name": "pin-button",
+            "deprecated": null
+          },
+          {
+            "name": "pin-icon",
             "deprecated": null
           },
           {
@@ -6926,6 +7009,30 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-shadow-l)"
+          },
+          {
+            "name": "--lr-app-rail-peek-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-overlay)"
+          },
+          {
+            "name": "--lr-app-rail-peek-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-l)"
+          },
+          {
+            "name": "--lr-app-rail-pin-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-app-rail-pin-hover-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-app-rail-resizer-active-bg",

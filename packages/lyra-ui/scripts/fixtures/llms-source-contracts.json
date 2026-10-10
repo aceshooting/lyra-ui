@@ -7530,6 +7530,28 @@
     },
     {
       "module": "src/components/layout/app-rail/app-rail.class.ts",
+      "exportName": "LyraAppRailPeekChangeDetail",
+      "kind": "interface",
+      "fingerprint": "bb1cbef85935cc7c359c",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/app-rail/app-rail.class.ts",
+        "src/components/layout/app-rail/app-rail.ts",
+        "src/components/layout/index.ts",
+        "src/components/lr-app-rail.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-app-rail-app-rail-contracts",
+        "declaration": "LyraAppRailPeekChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/layout/app-rail/app-rail.class.ts",
       "exportName": "LyraAppRailResizeDetail",
       "kind": "interface",
       "fingerprint": "cf4869c4b3752fac7a76",
@@ -14123,7 +14145,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "ac27554d3135a0094340",
+      "fingerprint": "e19d7d687394f784d036",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15030,7 +15052,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "bb40e78d891157209cb8",
+      "fingerprint": "1d0fd096a7ebb4f89d8b",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15164,7 +15186,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "f95ecee972884584689c",
+      "fingerprint": "5c89ffea756f5330cbba",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15748,7 +15770,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "5a55f0ad4f604e8e78f2",
+      "fingerprint": "0929d3764818ffab0d31",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15764,7 +15786,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "78669ad25e54688936e4",
+      "fingerprint": "45e4e5ff233d24142db0",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15780,7 +15802,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "d5dc43a109279bbe3d12",
+      "fingerprint": "3d0d6dbfc5a421f9a313",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16307,7 +16329,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "9861c5e258f0ce14fa50",
+      "fingerprint": "cfe9e1012e11fe24242b",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16324,7 +16346,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "2d156da0f273ea10734d",
+      "fingerprint": "fc8e132e30c55da531e5",
       "routes": [
         "src/vue.ts"
       ],
@@ -16733,7 +16755,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "59dac5892265d8373440",
+      "fingerprint": "a900476174cd3ddbb2cc",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16758,7 +16780,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "d3d4ca3a6547a1c7f834",
+      "fingerprint": "ad900c4c6ad937e31c71",
       "routes": [
         "src/localization.ts"
       ],

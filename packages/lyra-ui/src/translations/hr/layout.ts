@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Promijeni veličinu navigacije',
   appRailCollapse: 'Sažmi navigaciju',
   appRailExpand: 'Proširi navigaciju',
+  appRailPin: 'Prikvači navigaciju',
+  appRailUnpin: 'Otkvači navigaciju',
   appRailItemCollapse: 'Sažmi: {label}',
   appRailItemExpand: 'Proširi: {label}',
   resizeValuePercent: '{value} posto',

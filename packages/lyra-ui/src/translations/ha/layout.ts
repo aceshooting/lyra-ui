@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Canza girman kewayawa',
   appRailCollapse: 'Rage kewayawa',
   appRailExpand: 'Faɗaɗa kewayawa',
+  appRailPin: 'Maƙala kewayawa',
+  appRailUnpin: 'Cire maƙallar kewayawa',
   appRailItemCollapse: 'Rage {label}',
   appRailItemExpand: 'Faɗaɗa {label}',
   resizeValuePercent: 'kashi {value}',

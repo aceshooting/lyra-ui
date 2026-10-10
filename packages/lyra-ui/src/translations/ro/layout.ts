@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Redimensionează navigarea',
   appRailCollapse: 'Restrânge navigarea',
   appRailExpand: 'Extinde navigarea',
+  appRailPin: 'Fixează navigarea',
+  appRailUnpin: 'Anulează fixarea navigării',
   appRailItemCollapse: 'Restrânge {label}',
   appRailItemExpand: 'Extinde {label}',
   resizeValuePercent: '{value} la sută',

@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Gezinme alanını yeniden boyutlandır',
   appRailCollapse: 'Gezinme menüsünü daralt',
   appRailExpand: 'Gezinme menüsünü genişlet',
+  appRailPin: 'Gezinme menüsünü sabitle',
+  appRailUnpin: 'Gezinme menüsünün sabitlemesini kaldır',
   appRailItemCollapse: '{label} öğesini daralt',
   appRailItemExpand: '{label} öğesini genişlet',
   resizeValuePercent: 'yüzde {value}',

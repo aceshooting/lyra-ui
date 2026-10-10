@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'నావిగేషన్ పరిమాణాన్ని మార్చండి',
   appRailCollapse: 'నావిగేషన్‌ను ముడుచండి',
   appRailExpand: 'నావిగేషన్‌ను విస్తరించండి',
+  appRailPin: 'నావిగేషన్‌ను పిన్ చేయండి',
+  appRailUnpin: 'నావిగేషన్‌ను అన్‌పిన్ చేయండి',
   appRailItemCollapse: '{label}ను ముడుచండి',
   appRailItemExpand: '{label}ను విస్తరించండి',
   resizeValuePercent: '{value} శాతం',

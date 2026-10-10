@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Endre storleik på navigasjonen',
   appRailCollapse: 'Fald saman navigasjonen',
   appRailExpand: 'Utvid navigasjonen',
+  appRailPin: 'Fest navigasjonen',
+  appRailUnpin: 'Løys navigasjonen',
   appRailItemCollapse: 'Fald saman {label}',
   appRailItemExpand: 'Utvid {label}',
   resizeValuePercent: '{value} prosent',

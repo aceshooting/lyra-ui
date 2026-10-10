@@ -778,6 +778,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraAppRail,
       | 'accessibleLabel'
+      | 'autoHide'
       | 'collapsible'
       | 'focusFallback'
       | 'for'
@@ -791,6 +792,8 @@ export interface LyraComponentTypeMap {
       | 'minRailWidth'
       | 'mobileBreakpoint'
       | 'open'
+      | 'peekCloseDelay'
+      | 'peekOpenDelay'
       | 'persist'
       | 'preferredMode'
       | 'railWidth'
@@ -805,6 +808,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraAppRailEventMap;
     eventNames:       | 'lr-mode-change'
+      | 'lr-peek-change'
       | 'lr-rail-resize'
       | 'lr-rail-resize-request'
       | 'lr-toggle'
@@ -835,6 +839,10 @@ export interface LyraComponentTypeMap {
       | '--lr-app-rail-panel-radius-start-end'
       | '--lr-app-rail-panel-radius-start-start'
       | '--lr-app-rail-panel-shadow'
+      | '--lr-app-rail-peek-bg'
+      | '--lr-app-rail-peek-shadow'
+      | '--lr-app-rail-pin-hover-bg'
+      | '--lr-app-rail-pin-hover-color'
       | '--lr-app-rail-resizer-active-bg'
       | '--lr-app-rail-resizer-hover-bg'
       | '--lr-app-rail-toggle-active-bg'
@@ -844,12 +852,15 @@ export interface LyraComponentTypeMap {
       | '--lr-app-rail-width';
     attributeAliases: {
       'aria-label'?: LyraAppRail['accessibleLabel'];
+      'auto-hide'?: LyraAppRail['autoHide'];
       'focus-fallback'?: LyraAppRail['focusFallback'];
       'force-mode'?: LyraAppRail['forceMode'];
       'icon-only-breakpoint'?: LyraAppRail['iconOnlyBreakpoint'];
       'max-rail-width'?: LyraAppRail['maxRailWidth'];
       'min-rail-width'?: LyraAppRail['minRailWidth'];
       'mobile-breakpoint'?: LyraAppRail['mobileBreakpoint'];
+      'peek-close-delay'?: LyraAppRail['peekCloseDelay'];
+      'peek-open-delay'?: LyraAppRail['peekOpenDelay'];
       'preferred-mode'?: LyraAppRail['preferredMode'];
       'rail-width'?: LyraAppRail['railWidth'];
       'storage-key'?: LyraAppRail['storageKey'];

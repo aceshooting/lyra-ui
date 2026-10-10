@@ -130,6 +130,37 @@ export const styles = css`
     transition: none;
   }
 
+  /* auto-hide: the resting strip keeps its inline footprint in the layout while the peeking rail
+     paints wider over the content. The extra inline-size is taken back out of the margin box with
+     a negative inline-end margin, so the host (and everything laid out beside it) never reflows.
+     Both properties transition with the same timing, so their sum -- the footprint -- is constant
+     at every frame of the expansion. Logical properties only: the overlay grows toward the inline
+     end and mirrors under dir="rtl" with no second rule. */
+  :host([auto-hide]:not([mode="mobile"])) [part="base"] {
+    transition:
+      inline-size var(--lr-transition-base),
+      margin-inline-end var(--lr-transition-base);
+  }
+  :host([auto-hide][peeking]) [part="base"] {
+    --_lr-app-rail-peek-full: var(
+      --_lr-app-rail-peek-width,
+      var(--lr-app-rail-width, var(--_lr-app-rail-width))
+    );
+    inline-size: var(--_lr-app-rail-peek-full);
+    margin-inline-end: calc(
+      var(--lr-app-rail-icon-width, var(--_lr-app-rail-icon-width)) - var(--_lr-app-rail-peek-full)
+    );
+    z-index: var(--lr-layer-dropdown);
+    background: var(--lr-app-rail-peek-bg, var(--lr-color-surface-overlay));
+    box-shadow: var(--lr-app-rail-peek-shadow, var(--lr-shadow-l));
+  }
+  :host([auto-hide][peeking][frame="card"]) [part="base"] {
+    margin-inline-end: calc(
+      var(--_lr-app-rail-frame-gap) + var(--lr-app-rail-icon-width, var(--_lr-app-rail-icon-width)) -
+        var(--_lr-app-rail-peek-full)
+    );
+  }
+
   /* The hit target takes the shared --lr-icon-button-size floor (as lr-code-block's/
      lr-json-viewer's [part='toggle'] and lr-swatch-picker's [part='swatch'] do), centered on the
      inset-inline-end edge the old 3px box held; the visible drag line stays a 3px bar on the
@@ -335,6 +366,52 @@ export const styles = css`
   :host(:dir(rtl)) [part="collapse-toggle"]:where([aria-expanded="false"]) [part="collapse-icon"] {
     transform: rotate(180deg);
   }
+  /* Row layout for the header only while it can hold the pin control; the hidden resting-strip
+     header (no slotted content, no pin) stays display: none. */
+  :host([auto-hide]:not([mode="mobile"])) [part="header"]:not([hidden]) {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-s);
+  }
+  :host([auto-hide][mode="icon-only"]:not([peeking])) [part="header"] {
+    justify-content: center;
+  }
+  [part="pin-button"] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    align-items: center;
+    justify-content: center;
+    font: inherit;
+    ${iconHitTarget}
+    padding: 0;
+    border: 0;
+    border-radius: var(--lr-radius);
+    background: transparent;
+    color: var(--lr-color-text);
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+  [part="pin-button"]:where([aria-pressed="true"]) {
+    color: var(--lr-color-brand);
+  }
+  [part="pin-button"]:hover {
+    background: var(--lr-app-rail-pin-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-app-rail-pin-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
+  }
+  [part="pin-button"]:active {
+    background: color-mix(
+      in oklab,
+      var(--lr-app-rail-pin-hover-bg, var(--lr-color-brand-quiet)),
+      var(--lr-color-mix-partner) var(--lr-color-mix-active)
+    );
+  }
+  [part="pin-button"]:focus-visible {
+    ${focusRing}
+  }
+  [part="pin-icon"] {
+    display: inline-flex;
+  }
   [part="footer"] {
     padding: var(--lr-app-rail-footer-padding, var(--lr-space-m));
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
@@ -354,10 +431,10 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-app-rail-nav-gap, var(--lr-space-xs));
   }
-  :host([mode="icon-only"]) [part="nav"] {
+  :host([mode="icon-only"]:not([peeking])) [part="nav"] {
     align-items: center;
   }
-  :host([mode="icon-only"]) ::slotted(lr-app-rail-item) {
+  :host([mode="icon-only"]:not([peeking])) ::slotted(lr-app-rail-item) {
     max-inline-size: var(
       --lr-app-rail-icon-width,
       var(--_lr-app-rail-icon-width)
@@ -368,6 +445,7 @@ export const styles = css`
     [part="base"],
     [part="panel"],
     [part="collapse-toggle"],
+    [part="pin-button"],
     [part="resizer-track"] {
       transition: none !important;
     }

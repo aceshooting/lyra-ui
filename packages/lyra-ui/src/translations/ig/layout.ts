@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Gbanwee nha nnyagharị',
   appRailCollapse: 'Kpọkọọ nnyagharị',
   appRailExpand: 'Mụbaa nnyagharị',
+  appRailPin: 'Kpọchie nnyagharị n’ebe ọ nọ',
+  appRailUnpin: 'Tọpụ nnyagharị n’ebe ọ nọ',
   appRailItemCollapse: 'Kpọkọọ {label}',
   appRailItemExpand: 'Mụbaa {label}',
   resizeValuePercent: '{value} pasent',

@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'ปรับขนาดการนำทาง',
   appRailCollapse: 'ยุบการนำทาง',
   appRailExpand: 'ขยายการนำทาง',
+  appRailPin: 'ปักหมุดการนำทาง',
+  appRailUnpin: 'เลิกปักหมุดการนำทาง',
   appRailItemCollapse: 'ยุบ {label}',
   appRailItemExpand: 'ขยาย {label}',
   resizeValuePercent: '{value} เปอร์เซ็นต์',

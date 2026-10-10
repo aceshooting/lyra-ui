@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Змінити розмір навігації',
   appRailCollapse: 'Згорнути навігацію',
   appRailExpand: 'Розгорнути навігацію',
+  appRailPin: 'Закріпити навігацію',
+  appRailUnpin: 'Відкріпити навігацію',
   appRailItemCollapse: 'Згорнути {label}',
   appRailItemExpand: 'Розгорнути {label}',
   resizeValuePercent: '{value} відсотків',

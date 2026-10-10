@@ -2111,6 +2111,12 @@ export type LyraPauseChangeEvent =
   | LyraRandomContentEventMap['lr-pause-change'];
 
 /**
+ * `lr-peek-change` — dispatched by `<lr-app-rail>`; detail
+ * `LyraAppRailEventMap['lr-peek-change']`.
+ */
+export type LyraPeekChangeEvent = LyraAppRailEventMap['lr-peek-change'];
+
+/**
  * `lr-permission-decision` — dispatched by `<lr-permission-grant>`; detail
  * `LyraPermissionGrantEventMap['lr-permission-decision']`.
  */
@@ -3632,6 +3638,7 @@ export interface LyraGlobalEventMap {
   'lr-path-request': LyraPathRequestEvent;
   'lr-pause': LyraPauseEvent;
   'lr-pause-change': LyraPauseChangeEvent;
+  'lr-peek-change': LyraPeekChangeEvent;
   'lr-permission-decision': LyraPermissionDecisionEvent;
   'lr-permission-rule-change': LyraPermissionRuleChangeEvent;
   'lr-pin-change': LyraPinChangeEvent;

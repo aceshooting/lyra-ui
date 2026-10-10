@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Baguhin ang laki ng navigation',
   appRailCollapse: 'Paliitin ang navigation',
   appRailExpand: 'Palawakin ang navigation',
+  appRailPin: 'I-pin ang navigation',
+  appRailUnpin: 'I-unpin ang navigation',
   appRailItemCollapse: 'Paliitin ang {label}',
   appRailItemExpand: 'Palawakin ang {label}',
   resizeValuePercent: '{value} porsiyento',

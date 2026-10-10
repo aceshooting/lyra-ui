@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Bongola bonene ya nzela ya kotambola',
   appRailCollapse: 'Kitisá navigation',
   appRailExpand: 'Kolisá navigation',
+  appRailPin: 'Kanga navigation',
+  appRailUnpin: 'Longola navigation',
   appRailItemCollapse: 'Kitisá {label}',
   appRailItemExpand: 'Kolisá {label}',
   resizeValuePercent: '{value} pourcent',

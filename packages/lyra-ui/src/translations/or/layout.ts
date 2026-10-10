@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'ନେଭିଗେସନ୍‌ର ଆକାର ବଦଳାନ୍ତୁ',
   appRailCollapse: 'ନେଭିଗେସନ୍ ସଙ୍କୁଚିତ କରନ୍ତୁ',
   appRailExpand: 'ନେଭିଗେସନ୍ ପ୍ରସାରଣ କରନ୍ତୁ',
+  appRailPin: 'ନେଭିଗେସନ୍ ପିନ୍ କରନ୍ତୁ',
+  appRailUnpin: 'ନେଭିଗେସନ୍ ଅନପିନ୍ କରନ୍ତୁ',
   appRailItemCollapse: '{label} ସଙ୍କୁଚିତ କରନ୍ତୁ',
   appRailItemExpand: '{label} ପ୍ରସାରଣ କରନ୍ତୁ',
   resizeValuePercent: '{value} ପ୍ରତିଶତ',

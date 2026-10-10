@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: '내비게이션 크기 조정',
   appRailCollapse: '내비게이션 접기',
   appRailExpand: '내비게이션 펼치기',
+  appRailPin: '내비게이션 고정',
+  appRailUnpin: '내비게이션 고정 해제',
   appRailItemCollapse: '{label} 접기',
   appRailItemExpand: '{label} 확장',
   resizeValuePercent: '{value}퍼센트',

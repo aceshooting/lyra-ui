@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'የዳሰሳ መጠን ቀይር',
   appRailCollapse: 'ዳሰሳን አጠቃልል',
   appRailExpand: 'ዳሰሳን አስፋ',
+  appRailPin: 'ዳሰሳን ሰካ',
+  appRailUnpin: 'የዳሰሳ መሰካትን አንሳ',
   appRailItemCollapse: '{label} አጠቃልል',
   appRailItemExpand: '{label} አስፋ',
   resizeValuePercent: '{value} በመቶ',

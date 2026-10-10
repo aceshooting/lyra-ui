@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'လမ်းညွှန်မှု အရွယ်အစားပြောင်းရန်',
   appRailCollapse: 'လမ်းညွှန်မှု ခေါက်သိမ်းရန်',
   appRailExpand: 'လမ်းညွှန်မှု ချဲ့ရန်',
+  appRailPin: 'လမ်းညွှန်မှု ပင်ထိုးရန်',
+  appRailUnpin: 'လမ်းညွှန်မှု ပင်ဖြုတ်ရန်',
   appRailItemCollapse: '{label} ကို ခေါက်သိမ်းရန်',
   appRailItemExpand: '{label} ကို ချဲ့ရန်',
   resizeValuePercent: '{value} ရာခိုင်နှုန်း',

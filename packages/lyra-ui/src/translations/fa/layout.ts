@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'تغییر اندازهٔ بخش پیمایش',
   appRailCollapse: 'جمع کردن بخش پیمایش',
   appRailExpand: 'گسترش بخش پیمایش',
+  appRailPin: 'پین کردن بخش پیمایش',
+  appRailUnpin: 'برداشتن پین بخش پیمایش',
   appRailItemCollapse: 'جمع کردن {label}',
   appRailItemExpand: 'گسترش {label}',
   resizeValuePercent: '{value} درصد',

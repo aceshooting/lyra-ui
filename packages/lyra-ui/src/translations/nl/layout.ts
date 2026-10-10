@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Navigatieformaat aanpassen',
   appRailCollapse: 'Navigatie inklappen',
   appRailExpand: 'Navigatie uitklappen',
+  appRailPin: 'Navigatie vastzetten',
+  appRailUnpin: 'Navigatie losmaken',
   appRailItemCollapse: '{label} inklappen',
   appRailItemExpand: '{label} uitklappen',
   resizeValuePercent: '{value} procent',

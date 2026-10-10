@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Αλλαγή μεγέθους πλοήγησης',
   appRailCollapse: 'Σύμπτυξη πλοήγησης',
   appRailExpand: 'Ανάπτυξη πλοήγησης',
+  appRailPin: 'Καρφίτσωμα πλοήγησης',
+  appRailUnpin: 'Ξεκαρφίτσωμα πλοήγησης',
   appRailItemCollapse: 'Σύμπτυξη {label}',
   appRailItemExpand: 'Ανάπτυξη {label}',
   resizeValuePercent: '{value} τοις εκατό',

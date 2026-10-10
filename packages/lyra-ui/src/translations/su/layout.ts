@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Robah ukuran napigasi',
   appRailCollapse: 'Ciutkeun napigasi',
   appRailExpand: 'Kembangkeun napigasi',
+  appRailPin: 'Sematkeun napigasi',
+  appRailUnpin: 'Leupaskeun sematan napigasi',
   appRailItemCollapse: 'Ciutkeun {label}',
   appRailItemExpand: 'Kembangkeun {label}',
   resizeValuePercent: '{value} persén',

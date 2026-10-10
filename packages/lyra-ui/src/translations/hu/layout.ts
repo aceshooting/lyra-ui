@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Navigáció átméretezése',
   appRailCollapse: 'Navigáció összecsukása',
   appRailExpand: 'Navigáció kibontása',
+  appRailPin: 'Navigáció rögzítése',
+  appRailUnpin: 'Navigáció rögzítésének feloldása',
   appRailItemCollapse: 'Összecsukás: {label}',
   appRailItemExpand: 'Kibontás: {label}',
   resizeValuePercent: '{value} százalék',

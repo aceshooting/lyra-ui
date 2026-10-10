@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'نیویگیشن کا سائز بدلیں',
   appRailCollapse: 'نیویگیشن سمیٹیں',
   appRailExpand: 'نیویگیشن پھیلائیں',
+  appRailPin: 'نیویگیشن پن کریں',
+  appRailUnpin: 'نیویگیشن ان پن کریں',
   appRailItemCollapse: '{label} سمیٹیں',
   appRailItemExpand: '{label} پھیلائیں',
   resizeValuePercent: '{value} فیصد',

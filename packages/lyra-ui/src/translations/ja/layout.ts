@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'ナビゲーションのサイズを変更',
   appRailCollapse: 'ナビゲーションを折りたたむ',
   appRailExpand: 'ナビゲーションを展開',
+  appRailPin: 'ナビゲーションを固定',
+  appRailUnpin: 'ナビゲーションの固定を解除',
   appRailItemCollapse: '{label} を折りたたむ',
   appRailItemExpand: '{label} を展開',
   resizeValuePercent: '{value} パーセント',

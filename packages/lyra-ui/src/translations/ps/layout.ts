@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'د لارموندنې کچه بدلول',
   appRailCollapse: 'لارموندنه راټولول',
   appRailExpand: 'لارموندنه غځول',
+  appRailPin: 'لارموندنه ټنګول',
+  appRailUnpin: 'د لارموندنې ټنګېدل لرې کول',
   appRailItemCollapse: '{label} راټولول',
   appRailItemExpand: '{label} غځول',
   resizeValuePercent: '{value} سلنه',

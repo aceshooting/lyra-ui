@@ -596,6 +596,16 @@ export const SidebarInPage: Story = {
 };
 
 
+export const AutoHidePeek: Story = {
+  parameters: { docs: { description: { story: 'An auto-hide sidebar. It rests as the icon-only strip; moving the pointer over it, or tabbing into it, peeks the full rail open as an overlay without moving the content, and Escape or leaving closes it. The pin button docks it at full width, and the pin is remembered through storage-key with persist="preferred-mode".' } } },
+  render: () => html`<div style="display:flex;block-size:24rem;border:1px solid var(--lr-color-border);border-radius:0.5rem;overflow:hidden"><lr-app-rail label="Workspace" auto-hide frame="card" storage-key="auto-hide-story" persist="preferred-mode">${navItems}</lr-app-rail><main style="flex:1;padding:1.5rem"><h2 style="margin-top:0">Page content</h2><p>The strip keeps its footprint, so this text never reflows while the rail peeks.</p></main></div>`,
+};
+
+export const AutoHidePeekRtl: Story = {
+  parameters: { docs: { description: { story: 'The same auto-hide sidebar under dir="rtl": the strip sits at the inline start and the peek overlay grows toward the inline end.' } } },
+  render: () => html`<div dir="rtl" style="display:flex;block-size:24rem;border:1px solid var(--lr-color-border);border-radius:0.5rem;overflow:hidden"><lr-app-rail label="مساحة العمل" auto-hide peek-open-delay="100" peek-close-delay="200">${navItems}</lr-app-rail><main style="flex:1;padding:1.5rem"><h2 style="margin-top:0">المحتوى</h2><p>يبقى الشريط في مكانه ولا يتحرك المحتوى عند الإظهار المؤقت.</p></main></div>`,
+};
+
 export const FromNativeModal: Story = {
   parameters: { docs: { description: { story: 'Open the native dialog, then open the layout surface. Its action remains usable, and Escape returns focus to the native opener.' } } },
   render: () => html`<section>

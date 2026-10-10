@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: '调整导航宽度',
   appRailCollapse: '收起导航',
   appRailExpand: '展开导航',
+  appRailPin: '固定导航',
+  appRailUnpin: '取消固定导航',
   appRailItemCollapse: '收起{label}',
   appRailItemExpand: '展开{label}',
   resizeValuePercent: '百分之{value}',

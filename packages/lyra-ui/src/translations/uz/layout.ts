@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'Navigatsiya oʻlchamini oʻzgartirish',
   appRailCollapse: 'Navigatsiyani yigʻish',
   appRailExpand: 'Navigatsiyani yoyish',
+  appRailPin: 'Navigatsiyani mahkamlash',
+  appRailUnpin: 'Navigatsiyani mahkamdan chiqarish',
   appRailItemCollapse: '{label}ni yigʻish',
   appRailItemExpand: '{label}ni yoyish',
   resizeValuePercent: '{value} foiz',

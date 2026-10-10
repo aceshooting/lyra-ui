@@ -22,6 +22,8 @@ const strings: LyraLocaleStrings = {
   resizeNavigation: 'வழிசெலுத்தல் அளவை மாற்று',
   appRailCollapse: 'வழிசெலுத்தலைச் சுருக்கு',
   appRailExpand: 'வழிசெலுத்தலை விரி',
+  appRailPin: 'வழிசெலுத்தலை பின் செய்',
+  appRailUnpin: 'வழிசெலுத்தலின் பின்னை நீக்கு',
   appRailItemCollapse: '{label}-ஐச் சுருக்கு',
   appRailItemExpand: '{label}-ஐ விரி',
   resizeValuePercent: '{value} சதவீதம்',

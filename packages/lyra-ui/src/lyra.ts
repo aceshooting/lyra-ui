@@ -831,6 +831,7 @@ export type {
   LyraAppRailModeChangeDetail,
   LyraAppRailToggleDetail,
   LyraAppRailResizeDetail,
+  LyraAppRailPeekChangeDetail,
 } from './components/layout/app-rail/app-rail.class.js';
 export {
   resolveResponsivePanelEffectiveMode,
