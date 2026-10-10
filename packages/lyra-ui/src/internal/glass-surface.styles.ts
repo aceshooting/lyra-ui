@@ -96,9 +96,11 @@ export function glassSurface(selector: string, fill: CSSResult, restingFill: CSS
       }
       @supports (color: light-dark(Canvas, CanvasText)) {
         ${surface} {
-          /* Dark material needs a deeper fill at lower alpha to keep light text readable over bright backdrops. */
+          /* Dark material needs a deeper fill at lower alpha to keep light text readable over bright backdrops.
+             The deepening anchor is the theme surface at 30% toward black, not pure black, so a lifted
+             dark palette lifts the glass with it. */
           --_lr-glass-dark-fill-weight: clamp(20%, calc(var(--_lr-glass-effective-opacity) * 800% - 460%), 100%);
-          --_lr-glass-fill: light-dark(${fill}, color-mix(in srgb, ${fill} var(--_lr-glass-dark-fill-weight), var(--_lr-glass-dark-anchor)));
+          --_lr-glass-fill: light-dark(${fill}, color-mix(in srgb, ${fill} var(--_lr-glass-dark-fill-weight), color-mix(in srgb, var(--lr-color-surface, var(--_lr-glass-dark-anchor)) 30%, var(--_lr-glass-dark-anchor))));
           --_lr-glass-background: color-mix(
             in srgb,
             ${restingFill} calc((1 - var(--_lr-surface-enabled, 1) * (1 - var(--_lr-preference-glass-opacity, 0))) * 100%),

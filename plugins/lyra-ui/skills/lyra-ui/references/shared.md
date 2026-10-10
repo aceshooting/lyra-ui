@@ -6131,7 +6131,11 @@ of the backdrop; the default foreground qualification covers 60%, while a custom
 cannot guarantee contrast against every backdrop. Solid and accessibility preferences retain
 opaque fills regardless of this input.
 Dark Glass deepens the selected fill at opacity below 70% so light foregrounds remain readable
-against bright backdrops; at 70% and above, the selected fill keeps its original color.
+against bright backdrops; at 70% and above, the selected fill keeps its original color. The
+deepening blends toward a darkened `--lr-color-surface` (30% of the surface, the rest black), not
+pure black, so a lifted dark palette (for example a neutral grey `--lr-theme-color-surface-default`
+and overlay tokens) lifts its Glass chrome with it; the stock palettes stay within a few levels of
+their previous near-black panes.
 Necessary control borders use the effective painted opacity: their glass adjustment grows as
 transparency increases and disappears at 100% opacity. Ordinary and strong borders share this
 adjustment; decorative borders and explicit component border overrides keep their own tokens.

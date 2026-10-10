@@ -122,8 +122,13 @@ export const styles = css`
      exist to allow. Unset, each falls back to the token the rule used before the hooks existed.
      */
   [part="segment"][aria-checked="true"] {
-    background: var(--lr-segmented-selected-bg, var(--lr-color-surface));
-    color: var(--lr-segmented-selected-color, var(--lr-color-text));
+    /* Inverted by default: the checked segment is filled with the text colour and labelled in the
+       surface colour. A surface-coloured pill on a surface-coloured card or dialog was about 1:1
+       with its container in every look and mode; the text/surface pairing is the one the theme
+       already guarantees to be legible, so the state is distinguishable without relying on the
+       shadow (WCAG 1.4.11). */
+    background: var(--lr-segmented-selected-bg, var(--lr-color-text));
+    color: var(--lr-segmented-selected-color, var(--lr-color-surface));
     font-weight: var(
       --lr-segmented-selected-font-weight,
       var(--lr-font-weight-semibold)

@@ -1822,11 +1822,15 @@ The floor at the two compact tiers is the ladder's own (20px at `2xs`, 24px at `
 `2xs`/`xs` _segment_ separately carries a 24×24px minimum box, so the tappable target holds even
 when a label is a single character and the track ends up taller than its nominal floor.
 
-`--lr-segmented-selected-bg` (default `var(--lr-color-surface)`), `--lr-segmented-selected-color`
-(default `var(--lr-color-text)`), `--lr-segmented-selected-font-weight` (default
+`--lr-segmented-selected-bg` (default `var(--lr-color-text)`), `--lr-segmented-selected-color`
+(default `var(--lr-color-surface)`), `--lr-segmented-selected-font-weight` (default
 `var(--lr-font-weight-semibold)`) and `--lr-segmented-selected-shadow` (default
 `var(--lr-shadow-xs)` — the shallowest step in the elevation scale, since the checked segment is a
-thumb lifted a hair off its own track) style the checked segment's pill;
+thumb lifted a hair off its own track) style the checked segment's pill. The default pill is the
+inverse of the surface (text-coloured fill, surface-coloured label), so the checked state stays at
+least 3:1 against a card or dialog in every look and mode; when you override
+`--lr-segmented-selected-bg`, also set `--lr-segmented-selected-color` to a label that contrasts with
+your fill;
 `--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
 neither checked nor disabled, independently of the four above — so recoloring the checked pill never
 bleeds onto hover. `--lr-segmented-hover-bg` (default `transparent`) and `--lr-segmented-hover-shadow`

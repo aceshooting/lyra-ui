@@ -1116,12 +1116,12 @@ describe("selected-state cssprops", () => {
       );
       expect(getComputedStyle(unchecked).color).to.equal("rgb(7, 8, 9)");
       expect(getComputedStyle(checked).color).to.equal(
-        resolvedInShadow(el, "color: var(--lr-color-text)", "color")
+        resolvedInShadow(el, "color: var(--lr-color-surface)", "color")
       );
       expect(getComputedStyle(checked).backgroundColor).to.equal(
         resolvedInShadow(
           el,
-          "background: var(--lr-color-surface)",
+          "background: var(--lr-color-text)",
           "background-color"
         )
       );
@@ -1130,7 +1130,7 @@ describe("selected-state cssprops", () => {
     }
   });
 
-  it("renders identically to the pre-cssprop output when every prop is unset", async () => {
+  it("renders the inverted checked pill when every prop is unset", async () => {
     const el = (await fixture(
       html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
     )) as LyraSegmented;
@@ -1138,12 +1138,12 @@ describe("selected-state cssprops", () => {
     expect(checked.backgroundColor).to.equal(
       resolvedInShadow(
         el,
-        "background: var(--lr-color-surface)",
+        "background: var(--lr-color-text)",
         "background-color"
       )
     );
     expect(checked.color).to.equal(
-      resolvedInShadow(el, "color: var(--lr-color-text)", "color")
+      resolvedInShadow(el, "color: var(--lr-color-surface)", "color")
     );
     expect(checked.fontWeight).to.equal(
       resolvedInShadow(

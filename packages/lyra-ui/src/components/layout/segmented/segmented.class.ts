@@ -128,10 +128,13 @@ function snapshotSegmentedItems(
  *   `size` tier (sets both `block-size` and `min-block-size`) so the row can sit flush beside a
  *   hard-sized toolbar control. **Genuinely unset by default** — while unset each tier keeps its
  *   own `--lr-segmented-track-min-height` floor and the track grows with its content.
- * @cssprop [--lr-segmented-selected-bg=var(--lr-color-surface)] - Background of the checked
- *   segment. Scoped to `[aria-checked='true']` only, so it never repaints a hovered unselected
- *   segment (which is what hijacking `--lr-color-surface` library-wide used to do).
- * @cssprop [--lr-segmented-selected-color=var(--lr-color-text)] - Text color of the checked segment.
+ * @cssprop [--lr-segmented-selected-bg=var(--lr-color-text)] - Background of the checked
+ *   segment. The default is the inverse of the surface, so the state stays at least 3:1 against its
+ *   container in every look and mode; when you override it, also set
+ *   `--lr-segmented-selected-color` to a label colour that contrasts with your fill. Scoped to `[aria-checked='true']` only, so it never
+ *   repaints a hovered unselected segment (which is what hijacking `--lr-color-surface` library-wide used to do).
+ * @cssprop [--lr-segmented-selected-color=var(--lr-color-surface)] - Text color of the checked segment,
+ *   paired with the default `--lr-segmented-selected-bg` fill.
  * @cssprop [--lr-segmented-selected-font-weight=var(--lr-font-weight-semibold)] - Font weight of the
  *   checked segment.
  * @cssprop [--lr-segmented-selected-shadow=var(--lr-shadow-xs)] - Box shadow lifting the checked
