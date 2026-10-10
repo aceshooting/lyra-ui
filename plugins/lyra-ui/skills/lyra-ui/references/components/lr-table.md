@@ -78,14 +78,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   `scroll-mode="auto"`, adapts to actual overflow rather than a fixed token threshold, and can be
   reversed with `[part='reveal-columns-button']`; `sticky` pins headers/cells to the logical start
   or end while scrolling. Sticky columns stack in logical order using
-  `--lr-table-sticky-offset` rather than overlap. Each sticky cell is its own stacking context, so
-  an anchored overlay inside one (an `lr-dropdown` row-actions menu, `lr-popover`, `lr-select`,
-  `lr-combobox`) cannot paint above the next row's sticky cell on its own; the table therefore raises
-  a sticky cell to the popover layer while it holds an open overlay, and one step above its siblings
-  while focus is inside it, so the open panel stays visible and hit-testable over the following rows
-  with no consumer setup. `top-layer` is still the right opt-in for an overlay that must also clear
-  a stacking context outside the table, for example a table inside a sticky or `z-index`ed toolbar,
-  rail or dialog region that a higher sibling surface covers. A sticky body cell's
+  `--lr-table-sticky-offset` rather than overlap. Open overlays in a sticky cell stay on top. A sticky body cell's
   background always matches its own row's effective fill — striped, selected, hovered, or pressed —
   rather than painting a flat opaque surface over that state; a sticky header cell is unaffected
   (headers are never striped/selected) and keeps its plain surface fill, see

@@ -122,6 +122,12 @@ overlay, and promoting through each would lift overlays above layers that pages 
 depends on sibling layering elsewhere on the page, which only the page knows, so the page opts in
 per instance.
 
+Two hosts raise the box that holds an open overlay themselves, so a per-row actions menu needs no
+`top-layer` there: an `lr-table` `sticky` column cell (each is a stacking context, so the next row's
+sticky cell would otherwise cover the panel) and an `lr-virtual-list` row. Both match an open
+`lr-dropdown`, `lr-popover`, `lr-select` or `lr-combobox` and a focused descendant. Keep `top-layer`
+for a stacking context outside the table or list, such as a sticky toolbar or rail around it.
+
 ```html
 <header style="position: fixed; inset-block-start: 0; inset-inline: 0; z-index: 1000">
   <lr-popover top-layer placement="bottom-start">
