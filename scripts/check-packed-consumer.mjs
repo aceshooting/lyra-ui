@@ -467,6 +467,7 @@ async function verifyPackedMigrationCli(fixtureDir) {
   const expectedCliFiles = [
     'agent-registry.mjs',
     'component-inventory.mjs',
+    'css-declarations.mjs',
     'html-comments.mjs',
     'init-agents.mjs',
     'is-main-module.mjs',
@@ -477,7 +478,9 @@ async function verifyPackedMigrationCli(fixtureDir) {
     'migration-contract.json',
     'migration-contract.mjs',
     'migration-renames.mjs',
+    'migration-theme-scopes.mjs',
     'migration-transforms.mjs',
+    'theme-scope-vocabulary.generated.mjs',
   ];
   if (JSON.stringify(cliFiles) !== JSON.stringify(expectedCliFiles)) {
     throw new Error(
