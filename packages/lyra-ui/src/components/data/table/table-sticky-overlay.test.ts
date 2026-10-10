@@ -17,7 +17,7 @@ const actionRows: ActionRow[] = ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id, nam
 const ITEM_COUNT = 8;
 
 function actionsCell(row: ActionRow) {
-  return html`<lr-dropdown placement="bottom-start" style="--lr-transition-fast: 0ms"
+  return html`<lr-dropdown data-lr-theme-scope placement="bottom-start" style="--lr-transition-fast: 0ms"
     ><button slot="trigger" type="button" data-trigger=${row.id}>Actions ${row.id}</button>
     ${Array.from(
       { length: ITEM_COUNT },
@@ -73,7 +73,7 @@ for (const sticky of ['end', 'start'] as const) {
         for (const item of over) {
           const r = item.getBoundingClientRect();
           const hit = root.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-          expect(hit === item, `item ${item.dataset.item} is the topmost box at its centre`).to.equal(true);
+          expect(hit === item, `item ${item.dataset['item']} is the topmost box at its centre`).to.equal(true);
         }
         expect(getComputedStyle(cellOf(rowEls[0]!)).zIndex).to.equal(layer(cellOf(rowEls[0]!), '--lr-layer-popover'));
         await dropdown.hide({ focusTrigger: false });
