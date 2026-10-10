@@ -7,7 +7,7 @@ import { css, unsafeCSS, type CSSResult } from 'lit';
  * the box holding an open overlay above its siblings instead.
  * @internal
  */
-export const ANCHORED_OVERLAY_OPEN_SELECTOR =
+const ANCHORED_OVERLAY_OPEN_SELECTOR =
   'lr-dropdown[open], lr-popover[open], lr-select[open], lr-combobox[open]';
 
 /**

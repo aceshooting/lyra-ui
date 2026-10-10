@@ -48479,6 +48479,7 @@
           "src/components/data/table/table-request.test.ts",
           "src/components/data/table/table-resize.test.ts",
           "src/components/data/table/table-selection.test.ts",
+          "src/components/data/table/table-sticky-overlay.test.ts",
           "src/components/data/table/table.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
