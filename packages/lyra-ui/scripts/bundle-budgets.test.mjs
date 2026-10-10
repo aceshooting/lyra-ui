@@ -455,11 +455,12 @@ const reviewedCeilingKeys = Object.keys(budgets)
 // v28 document token layer (RFC 0002) moved the shared token resolver into a document-scoped layer
 // adopted on first registration, measured at exactly 34,814 gzip bytes. Finding a static layer
 // anywhere in a stylesheet and following assigned slots for on-demand adoption add 55 bytes
-// (34,869); the canary stays at that exact ceiling so any further growth of the shared base class
-// still fails here first.
+// (34,869); deriving the unlayered copy that application shadow roots adopt adds 274 (35,143). The
+// canary stays at that exact ceiling so any further growth of the shared base class still fails
+// here first.
 assert.ok(
-  budgets['dist/components/forms/button/button.js'] <= 34869 / 1024,
-  'the standalone button registration must remain at or below 34,869 gzip bytes',
+  budgets['dist/components/forms/button/button.js'] <= 35143 / 1024,
+  'the standalone button registration must remain at or below 35,143 gzip bytes',
 );
 assert.deepEqual(reviewedCeilingKeys, [
   '$componentMaxGzipKb',
