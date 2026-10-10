@@ -15,6 +15,7 @@ import {
   layerConsumedInputs,
   layerDeclarations,
   hostReadInputs,
+  pairModes,
   validateDocumentLayer,
 } from './document-token-layer.mjs';
 import { projectDefaultTokenSource, readCanonicalTokens, readLayerOrderStatement } from './generate-design-tokens.mjs';
@@ -35,6 +36,74 @@ test('the adopted layer and tokens-root.css are byte-identical, and the runtime 
   const literal = `'${layerCss.replaceAll('\\', '\\\\').replaceAll("'", "\\'").replaceAll('\n', '\\n')}'`;
   assert.ok(module.includes(`export const DOCUMENT_TOKEN_CSS = ${literal};`));
   assert.ok(module.includes(`export const DOCUMENT_TOKEN_LAYER_ID = '${documentLayerIdOf(layerCss)}';`));
+});
+
+/** Resolves every mode-switch pair in `value` as the cascade does in `mode`. */
+function resolveMode(value, mode) {
+  let out = '';
+  let index = 0;
+  for (;;) {
+    const start = value.indexOf('var(--_lr-', index);
+    const match = start === -1 ? null : /^var\((--_lr-(?:dark|light)-on),/.exec(value.slice(start));
+    if (start === -1) return out + value.slice(index);
+    if (!match) {
+      out += value.slice(index, start + 1);
+      index = start + 1;
+      continue;
+    }
+    let depth = 0;
+    let end = start;
+    for (; end < value.length; end++) {
+      if (value[end] === '(') depth++;
+      else if (value[end] === ')' && --depth === 0) break;
+    }
+    const fallback = value.slice(start + match[0].length, end);
+    const applies = (match[1] === '--_lr-dark-on') === (mode === 'light');
+    out += value.slice(index, start) + (applies ? resolveMode(fallback, mode) : '');
+    index = end + 1;
+  }
+}
+
+test('mode pairs share their common wrappers and pair only the tokens that differ', () => {
+  assert.equal(pairModes({ light: 'red', dark: 'red' }), 'red');
+  assert.equal(
+    pairModes({ light: 'var(--lr-theme-color-surface, #ffffff)', dark: 'var(--lr-theme-color-surface, #0a0a0a)' }),
+    'var(--lr-theme-color-surface, var(--_lr-dark-on,#ffffff)var(--_lr-light-on,#0a0a0a))',
+  );
+  assert.equal(
+    pairModes({ light: 'color-mix(in srgb, #e5e5e5 50%, white)', dark: 'color-mix(in srgb, rgb(255 255 255 / 0.1) 50%, white)' }),
+    'color-mix(in srgb, var(--_lr-dark-on,#e5e5e5)var(--_lr-light-on,rgb(255 255 255 / 0.1)) 50%, white)',
+  );
+  // Never in the name argument of var(): the whole var() differs.
+  assert.equal(
+    pairModes({ light: 'var(--lr-theme-a, red)', dark: 'var(--lr-theme-b, red)' }),
+    'var(--_lr-dark-on,var(--lr-theme-a, red))var(--_lr-light-on,var(--lr-theme-b, red))',
+  );
+  // Two differing literals: one balanced run from the first difference to the last.
+  assert.equal(
+    pairModes({ light: '0 1px 2px rgb(0 0 0 / 0.1)', dark: '0 1px 2px rgb(0 0 0 / 0.4)' }),
+    '0 1px 2px rgb(0 0 0 / var(--_lr-dark-on,0.1)var(--_lr-light-on,0.4))',
+  );
+  assert.equal(
+    pairModes({ light: '0 1px rgb(0 0 0 / 0.1), 0 2px rgb(0 0 0 / 0.1)', dark: '0 1px rgb(0 0 0 / 0.4), 0 2px rgb(0 0 0 / 0.5)' }),
+    '0 1px var(--_lr-dark-on,rgb(0 0 0 / 0.1), 0 2px rgb(0 0 0 / 0.1))var(--_lr-light-on,rgb(0 0 0 / 0.4), 0 2px rgb(0 0 0 / 0.5))',
+  );
+  assert.equal(pairModes({ light: 'a b', dark: 'a' }), 'var(--_lr-dark-on,a b)var(--_lr-light-on,a)');
+});
+
+test('every hoisted mode pair resolves to exactly the light and dark values it replaces', () => {
+  const declarations = layerDeclarations(source);
+  let pairs = 0;
+  for (const [name, values] of declarations) {
+    if (values.light === values.dark) continue;
+    pairs++;
+    const value = pairModes(values);
+    assert.equal(resolveMode(value, 'light'), resolveMode(values.light, 'light'), `${name} (light)`);
+    assert.equal(resolveMode(value, 'dark'), resolveMode(values.dark, 'dark'), `${name} (dark)`);
+    assert.ok(value.length < `var(--_lr-dark-on,${values.light})var(--_lr-light-on,${values.dark})`.length || !/^var\(--lr-theme-/.test(values.light),
+      `${name}: a shared input wrapper is written once`);
+  }
+  assert.ok(pairs > 50, `the layer has its mode pairs (${pairs})`);
 });
 
 test('the layer validates: every name it reads is declared, an input, or an allowed private switch', () => {

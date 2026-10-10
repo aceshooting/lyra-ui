@@ -40,6 +40,15 @@ class AppShell extends HTMLElement {
 }
 customElements.define('app-token-shell', AppShell);
 
+/** An application component that renders its shadow content in a microtask after connecting, as Lit does. */
+class LatePanel extends HTMLElement {
+  connectedCallback() {
+    const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
+    queueMicrotask(() => { root.innerHTML = '<aside class="lr-dark"><slot></slot></aside>'; });
+  }
+}
+customElements.define('app-token-late-panel', LatePanel);
+
 const read = (element: Element, name: string) => getComputedStyle(element).getPropertyValue(name).trim();
 const surfaceOf = (element: Element) => toRgba(read(element, '--lr-color-surface'));
 const LIGHT_SURFACE = [255, 255, 255, 255];
@@ -193,7 +202,7 @@ describe('document token layer: adoption', () => {
     expect(hasLyraTokens(document)).to.equal(true);
   });
 
-  it('checks the document once per task, not once per connecting element', async () => {
+  it('checks the document once per microtask checkpoint, not once per connecting element', async () => {
     const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'adoptedStyleSheets')!;
     let reads = 0;
     Object.defineProperty(Document.prototype, 'adoptedStyleSheets', {
@@ -215,7 +224,7 @@ describe('document token layer: adoption', () => {
       Object.defineProperty(Document.prototype, 'adoptedStyleSheets', descriptor);
       container.remove();
     }
-    // The next task verifies again, so a wholesale replacement is still repaired.
+    // A later checkpoint verifies again, so a wholesale replacement is still repaired.
     await new Promise((resolve) => setTimeout(resolve));
     const previous = document.adoptedStyleSheets;
     document.adoptedStyleSheets = previous.filter((sheet) => sheet !== layerSheet());
@@ -352,6 +361,160 @@ describe('document token layer: provider identity', () => {
     expect(constructedCopies(root), 'explicit adoption repairs the root').to.equal(1);
   });
 
+  /**
+   * A stylesheet that inlined theme.css mid-file, as Vite, Sass and postcss-import do with `@import`:
+   * more application rules follow the layer than the tail look reads.
+   */
+  const inlinedTheme = () => [
+    '.app-header { color: red; }',
+    DOCUMENT_TOKEN_CSS,
+    '.app-nav { color: green; }',
+    '.app-main { color: gray; }',
+    '.app-footer { color: blue; }',
+    '@media print { .app-footer { color: black; } }',
+  ].join('\n');
+  function styleWith(doc: Document, text: string, media?: string): HTMLStyleElement {
+    const style = doc.createElement('style');
+    if (media) style.media = media;
+    style.textContent = text;
+    doc.head.append(style);
+    return style;
+  }
+
+  it('finds a static copy inlined mid-file when the stylesheet loads before Lyra registers', async () => {
+    const { frame, doc } = await frameWith((d) => { styleWith(d, inlinedTheme()); });
+    try {
+      const probe = await connectProbe(doc);
+      expect(constructedCopies(doc), 'the inlined copy is the provider').to.equal(0);
+      expect(hasLyraTokens(doc)).to.equal(true);
+      expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+      // It is a known provider, not an unreadable one: removing it is repaired.
+      doc.querySelector('style')!.remove();
+      await new Promise((resolve) => setTimeout(resolve));
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(1);
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('withdraws its own copy when a mid-file static copy is injected after Lyra registered (Vite development)', async () => {
+    const { frame, doc } = await frameWith();
+    try {
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(1);
+      // Vite injects the CSS module's <style> when it evaluates, after the components registered.
+      styleWith(doc, inlinedTheme());
+      adoptLyraTokens(doc);
+      expect(constructedCopies(doc), 'no duplicate layer for the page lifetime').to.equal(0);
+      const warnings = await captureDevWarnings(async () => { await connectProbe(doc); });
+      expect(warnings.some((message) => message.includes('applied after Lyra registered'))).to.equal(true);
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('finds a mid-file static copy on the load check, for components imported before the CSS', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const doc = frame.contentDocument!;
+      const view = frame.contentWindow!;
+      // A document that is still loading: the runtime registers a single load check for it.
+      doc.open();
+      doc.write('<!doctype html><html><head></head><body></body></html>');
+      expect(doc.readyState).to.equal('loading');
+      await connectProbe(doc);
+      expect(constructedCopies(doc), 'nothing static yet: the constructed copy goes in').to.equal(1);
+      styleWith(doc, inlinedTheme());
+      const loaded = new Promise((resolve) => view.addEventListener('load', resolve, { once: true }));
+      doc.close();
+      await loaded;
+      expect(constructedCopies(doc), 'the load check reads every rule').to.equal(0);
+      expect(hasLyraTokens(doc)).to.equal(true);
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('finds a static copy nested in another cascade layer, as an inlined @import … layer() puts it', async () => {
+    const { frame, doc } = await frameWith((d) => { styleWith(d, `@layer vendor { ${DOCUMENT_TOKEN_CSS} } .app { color: red; }`); });
+    try {
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(0);
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('recognises a media-qualified static provider while its media matches, and not otherwise', async () => {
+    const matching = await frameWith((d) => { styleWith(d, DOCUMENT_TOKEN_CSS, '(min-width: 1px)'); });
+    try {
+      await connectProbe(matching.doc);
+      expect(constructedCopies(matching.doc), 'a matching media query provides the layer').to.equal(0);
+    } finally {
+      matching.frame.remove();
+    }
+    const print = await frameWith((d) => { styleWith(d, DOCUMENT_TOKEN_CSS, 'print'); });
+    try {
+      const probe = await connectProbe(print.doc);
+      expect(constructedCopies(print.doc), 'a print-only copy does not apply on screen').to.equal(1);
+      expect(print.frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+    } finally {
+      print.frame.remove();
+    }
+  });
+
+  it('notices when a <style> provider is rewritten without the layer (CSS hot replacement)', async () => {
+    const { frame, doc } = await frameWith((d) => { styleWith(d, DOCUMENT_TOKEN_CSS); });
+    try {
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(0);
+      // Hot replacement rewrites the same element in place: it stays connected, with a new sheet.
+      doc.querySelector('style')!.textContent = '.app { color: red; }';
+      await new Promise((resolve) => setTimeout(resolve));
+      const probe = await connectProbe(doc);
+      expect(constructedCopies(doc), 'the old sheet object is no longer the provider').to.equal(1);
+      expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+    } finally {
+      frame.remove();
+    }
+  });
+
+  it('keeps trusting an unreadable provider when an application shadow root needs the constructed copy', async () => {
+    // A provider known only through the resolved sentinel (theme.css served cross-origin without
+    // CORS): no stylesheet the runtime can read carries the layer, but the root resolves it.
+    const { frame, doc } = await frameWith((d) => {
+      d.documentElement.style.setProperty(DOCUMENT_TOKEN_SENTINEL, DOCUMENT_TOKEN_LAYER_ID);
+    });
+    try {
+      await connectProbe(doc);
+      expect(constructedCopies(doc)).to.equal(0);
+      expect(hasLyraTokens(doc)).to.equal(true);
+      const host = doc.createElement('div');
+      doc.body.append(host);
+      const root = host.attachShadow({ mode: 'open' });
+      const region = doc.createElement('div');
+      region.className = 'lr-dark';
+      root.append(region);
+      await connectProbe(doc, region);
+      expect(constructedCopies(root), 'the root needs its own copy').to.equal(1);
+      await new Promise((resolve) => setTimeout(resolve));
+      await connectProbe(doc);
+      expect(constructedCopies(doc), 'the document never adopts a redundant copy').to.equal(0);
+      expect(hasLyraTokens(doc)).to.equal(true);
+      // Explicit adoption re-reads the sentinel: still resolved, still trusted ...
+      adoptLyraTokens(doc);
+      expect(constructedCopies(doc)).to.equal(0);
+      // ... and once the provider is gone, it adopts the constructed copy.
+      doc.documentElement.style.removeProperty(DOCUMENT_TOKEN_SENTINEL);
+      adoptLyraTokens(doc);
+      expect(constructedCopies(doc)).to.equal(1);
+    } finally {
+      frame.remove();
+    }
+  });
+
   it('hands the shared adopter to a copy with a different layer, and keeps it for the same layer', async () => {
     const key = Symbol.for('@aceshooting/lyra-ui.adopt-lyra-tokens.v1');
     const published = (globalThis as unknown as Record<symbol, { layerId?: string }>)[key];
@@ -388,6 +551,37 @@ describe('document token layer: application shadow roots', () => {
     await card.updateComplete;
     expect(layerSheet(outer.shadowRoot!) !== undefined, 'a consumer subclass is an application component').to.equal(true);
     expect(layerSheet(card.shadowRoot!) === undefined, 'library roots never receive the layer').to.equal(true);
+  });
+
+  it('adopts into an application root when slotted Lyra content sits below a scope around the slot', async () => {
+    const { host, root } = await shell(`<aside class="lr-dark"><slot></slot></aside>`);
+    const probe = document.createElement(tag('layer-probe')) as LayerProbe;
+    host.append(probe);
+    await probe.updateComplete;
+    expect(layerSheet(root) !== undefined, 'the flat tree reaches the scope').to.equal(true);
+    expect(surfaceOf(probe)).to.deep.equal(DARK_SURFACE);
+  });
+
+  it('follows the slot of a host that renders after its slotted content connects (Lit-style)', async () => {
+    const panel = (await fixture(html`<app-token-late-panel><lr-layer-probe></lr-layer-probe></app-token-late-panel>`)) as HTMLElement;
+    const probe = panel.querySelector(tag('layer-probe')) as LayerProbe;
+    await probe.updateComplete;
+    await waitUntil(() => panel.shadowRoot!.querySelector('slot') !== null);
+    await Promise.resolve();
+    expect(layerSheet(panel.shadowRoot!) !== undefined).to.equal(true);
+    expect(surfaceOf(probe)).to.deep.equal(DARK_SURFACE);
+  });
+
+  it('follows forwarded slots through nested application roots', async () => {
+    const { host, root } = await shell(`<app-token-shell id="inner"><slot></slot></app-token-shell>`);
+    const inner = root.querySelector('#inner') as AppShell;
+    inner.markup = `<section data-lr-theme="dark"><slot></slot></section>`;
+    const probe = document.createElement(tag('layer-probe')) as LayerProbe;
+    host.append(probe);
+    await probe.updateComplete;
+    expect(layerSheet(inner.shadowRoot!) !== undefined, 'the scope two slots away').to.equal(true);
+    expect(layerSheet(root) === undefined, 'no scope in the outer root').to.equal(true);
+    expect(surfaceOf(probe)).to.deep.equal(DARK_SURFACE);
   });
 
   it('needs adoptLyraTokens() for a scope added after the root\'s Lyra elements connected', async () => {
@@ -439,6 +633,16 @@ describe('document token layer: theme scopes and mode', () => {
       await fixture(html`<div style="--lr-theme-color-chart-1: red"><lr-layer-probe></lr-layer-probe></div>`);
     });
     expect(warnings.filter((message) => message.includes('is not a theme scope')).length).to.equal(1);
+  });
+
+  it('reports an inline layer input on a shadow wrapper around the slot a Lyra element is assigned to', async () => {
+    const { host } = await shell(`<div data-lr-not-a-scope class="wrapper" style="--lr-theme-color-brand-fill-loud: red"><slot></slot></div>`);
+    const warnings = await captureDevWarnings(async () => {
+      const probe = document.createElement(tag('layer-probe')) as LayerProbe;
+      host.append(probe);
+      await probe.updateComplete;
+    });
+    expect(warnings.filter((message) => message.includes('<div> sets --lr-theme-color-brand-fill-loud')).length).to.equal(1);
   });
 
   it('keeps a mode-neutral scope in its ancestor mode, and a light island light, without theme.css', async () => {

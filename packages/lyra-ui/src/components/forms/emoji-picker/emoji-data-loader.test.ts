@@ -278,10 +278,23 @@ describe('peer missing vs. peer failed', () => {
     });
   });
 
-  it('caches neither failure, so a later call imports again', async () => {
+  it('keeps a missing peer for the page: one import and one warning, for every locale', async () => {
+    let calls = 0;
+    const warnings = await captureWarnings(async () => {
+      expect(await loadEmojiDataOutcomeCached('fr', () => (calls++, notInstalled()))).to.deep.equal({ reason: 'missing' });
+      const again = await loadEmojiDataOutcomeCached('fr', () => (calls++, Promise.resolve([{ emoji: '😀', group: 0, annotation: 'x' }])));
+      expect(again).to.deep.equal({ reason: 'missing' });
+      expect(await loadEmojiDataCached('ja', () => (calls++, notInstalled()))).to.equal(null);
+    });
+    expect(calls).to.equal(1);
+    expect(warnings.length).to.equal(1);
+  });
+
+  it('does not keep a failed load, so a later call imports again', async () => {
     let calls = 0;
     await captureWarnings(async () => {
-      expect(await loadEmojiDataOutcomeCached('fr', () => (calls++, notInstalled()))).to.deep.equal({ reason: 'missing' });
+      const failed = await loadEmojiDataOutcomeCached('fr', () => (calls++, Promise.reject(new TypeError('Failed to fetch dynamically imported module: x'))));
+      expect(failed).to.deep.equal({ reason: 'failed' });
       const groups = await loadEmojiDataOutcomeCached('fr', () => (calls++, Promise.resolve([{ emoji: '😀', group: 0, annotation: 'x' }])));
       expect(Array.isArray(groups)).to.be.true;
     });

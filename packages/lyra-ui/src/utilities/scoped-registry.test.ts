@@ -4,6 +4,7 @@ import { LyraElement } from '../internal/lyra-element.js';
 import { LyraChangeReview } from '../components/agent-tools/change-review/change-review.class.js';
 import { LyraDiffView } from '../components/utility/diff-view/diff-view.class.js';
 import { createScopedRegistry, supportsScopedRegistries } from './scoped-registry.js';
+import { isRegisteredLyraElement } from '../internal/prefix.js';
 
 class ScopedChild extends LyraElement { override render() { return litHtml`<span>Scoped child</span>`; } }
 class ScopedParent extends LyraElement { override render() { return litHtml`<scope-child></scope-child>`; } }
@@ -25,6 +26,21 @@ describe('optional scoped registries', () => {
     expect(child instanceof ScopedChild).to.equal(true);
     expect(customElements.get('scope-child') === undefined).to.equal(true);
     expect((child as ScopedChild).ownerDocument === document).to.equal(true);
+  });
+
+  it('counts scoped definitions as library components, so their roots never take the token layer on demand', async function () {
+    if (!supportsScopedRegistries()) this.skip();
+    const scope = createScopedRegistry({ 'scope-parent': ScopedParent, 'scope-child': ScopedChild });
+    const host = await fixture<HTMLElement>(html`<div></div>`);
+    const parent = scope.createElement('scope-parent');
+    scope.attachShadow(host).append(parent);
+    await parent.updateComplete;
+    const child = parent.shadowRoot!.querySelector('scope-child')!;
+    expect(isRegisteredLyraElement(parent), 'created by the factory').to.equal(true);
+    expect(isRegisteredLyraElement(child), 'cloned from a scoped template').to.equal(true);
+    class UnlistedChild extends LyraElement {}
+    customElements.define('scope-unlisted-global', UnlistedChild);
+    expect(isRegisteredLyraElement(document.createElement('scope-unlisted-global')), 'an application definition stays foreign').to.equal(false);
   });
 
   it('supports independent versions of a tag and predictable late definitions', async function () {
