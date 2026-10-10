@@ -385,6 +385,11 @@ and the mode it sees. The list is closed: `:root`; the mode scopes `.lr-light`, 
   than one component did before 28.0.0, so put inputs on a common ancestor rather than marking every
   row of a list.
 - **`applyLyraStyleScope()`** writes the marker whenever it writes inline inputs.
+- **Brand regions in the default look.** The marker re-derives outputs but is not a style boundary,
+  so the roles that follow brand in the default Shadcn look (the neutral loud tier) keep the brand
+  of the nearest boundary inside the first example above. For a brand region call
+  `applyLyraStyleScope(el, { accent: '#7c3aed' })`, which writes the `data-lr-accent="custom"`
+  boundary, or set the `--lr-theme-color-neutral-*-loud` inputs on the region too.
 - **Which inputs need a scope.** Only the `--lr-theme-*` inputs the layer consumes (listed in
   `llms/tokens.md`). Inputs read on the host itself keep working on any element: the chart,
   graph and terminal palettes, the form-control heights and radius, the icon-button size, the
@@ -394,7 +399,10 @@ and the mode it sees. The list is closed: `:root`; the mode scopes `.lr-light`, 
 A scope _inside_ your own component's shadow root therefore needs the layer adopted in that root.
 Lyra does that on demand: when a Lyra element connects inside an application shadow root and it is,
 or sits below, a scope in that root, the layer is appended to the root's `adoptedStyleSheets`.
-Library components' own shadow roots never receive it. Call
+"Below" follows the flat tree, so a Lyra element slotted into your component (directly, or through
+forwarded slots) counts as below the scopes around its slot, also when your component renders its
+slots right after connecting, as Lit does. A Lyra element inside a slotted non-Lyra wrapper does not
+trigger it. Library components' own shadow roots never receive it. Call
 `adoptLyraTokens(root)` (from `@aceshooting/lyra-ui/utilities/tokens.js`, or the package root) for a
 root whose scopes appear after its Lyra elements connected, a root that has scopes but no Lyra
 element yet, or an iframe that holds application elements only. Server-rendered application roots

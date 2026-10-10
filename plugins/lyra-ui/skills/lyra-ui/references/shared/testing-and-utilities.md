@@ -44,7 +44,7 @@ shadow root. jsdom registers each of those sheets on the document, not the shado
 hundred Lyra elements on the page a single computed-style read can take over 100 ms, and Lyra
 reads computed style to decide which slotted text is visible, so whole tests slow to a crawl.
 
-`installJsdomShims()` (currently `installJsdomAdoptedStyleSheetsShim()`) adds an inert
+`installJsdomShims()` installs the two jsdom shims. `installJsdomAdoptedStyleSheetsShim()` adds an inert
 `adoptedStyleSheets` to `Document` and `ShadowRoot`, so Lit adopts each component's constructed
 stylesheet instead of appending `<style>` elements. Adopted sheets are stored and read back (the
 same array until reassigned, so `push()` persists) but never applied; jsdom could not cascade them
@@ -55,6 +55,13 @@ that record the text. The shim installs only when `navigator.userAgent` carries 
 `jsdom/<version>` signature and `adoptedStyleSheets` is missing, so it is a no-op in browsers,
 under Happy DOM and in plain Node projects. It installs once and returns a function that removes
 what it added.
+
+jsdom's `ElementInternals` has no form association, so every Lyra form control (`lr-button`,
+`lr-input`, `lr-checkbox`, …) throws in its constructor there. `installJsdomFormAssociatedShim()`
+adds, only where missing, an inert `setFormValue()`, a `setValidity()` that `validity`,
+`validationMessage`, `checkValidity()` and `reportValidity()` reflect, `willValidate`, `form` (the
+host's closest `<form>`) and a `Set` for `states`. Nothing is submitted and no `invalid` event
+fires. It has the same jsdom detection, install-once and restore behaviour.
 
 Lit decides whether it can adopt stylesheets when its module is first evaluated, so call the shim
 in a `setupFiles` entry before anything imports Lit or a Lyra component. Importing

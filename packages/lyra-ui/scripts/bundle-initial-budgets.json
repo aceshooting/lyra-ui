@@ -8,31 +8,31 @@
     "dist/components/utility/icon/icon.js"
   ],
   "$routeGzipKb": {
-    "dist/autoloader-cdn.js": 12.8125,
-    "dist/autoloader.js": 12.625,
+    "dist/autoloader-cdn.js": 12.798828125,
+    "dist/autoloader.js": 12.6220703125,
     "dist/locale-loader.js": 0.9208984375,
-    "dist/utilities/scoped-registry-loader.js": 11
+    "dist/utilities/scoped-registry-loader.js": 11.0205078125
   },
   "$marginalGzipKb": {
-    "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 7.4375,
-    "dist/components/conversation/model-select/model-select.js": 27.125,
-    "dist/components/conversation/usage-badge/usage-badge.js": 4.4375,
+    "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 7.421875,
+    "dist/components/conversation/model-select/model-select.js": 27.1103515625,
+    "dist/components/conversation/usage-badge/usage-badge.js": 4.35546875,
     "dist/components/conversation/voice-picker/voice-picker.js": 28.6708984375,
-    "dist/components/forms/color-picker/color-picker.js": 27.0146484375,
-    "dist/components/forms/combobox/combobox.js": 39.1875,
-    "dist/components/forms/date-picker/date-input.js": 40.828125,
-    "dist/components/forms/input/time-input.js": 26.275390625,
-    "dist/components/forms/locale-picker/locale-picker.js": 27.52734375,
-    "dist/components/forms/select/select.js": 34.1357421875,
-    "dist/components/layout/app-rail/app-rail-item.js": 7.75,
-    "dist/components/layout/menu/menu.js": 17.2138671875,
-    "dist/components/overlays/overlay/popover.js": 17.0224609375,
-    "dist/components/overlays/overlay/tooltip.js": 15.4658203125,
-    "dist/components/overlays/popup/popup.js": 4.625,
-    "dist/components/retrieval/citation-badge/citation-badge.js": 6.44140625,
-    "dist/components/retrieval/entity-chip/entity-chip.js": 5.875,
-    "dist/components/utility/export-button/export-button.js": 13.703125,
-    "dist/components/utility/mention-popover/mention-popover.js": 8.875,
-    "dist/components/utility/tour/tour.js": 17.375
+    "dist/components/forms/color-picker/color-picker.js": 27.0361328125,
+    "dist/components/forms/combobox/combobox.js": 39.1669921875,
+    "dist/components/forms/date-picker/date-input.js": 40.82421875,
+    "dist/components/forms/input/time-input.js": 26.287109375,
+    "dist/components/forms/locale-picker/locale-picker.js": 27.53515625,
+    "dist/components/forms/select/select.js": 34.1552734375,
+    "dist/components/layout/app-rail/app-rail-item.js": 7.6962890625,
+    "dist/components/layout/menu/menu.js": 17.2099609375,
+    "dist/components/overlays/overlay/popover.js": 17.04296875,
+    "dist/components/overlays/overlay/tooltip.js": 14.671875,
+    "dist/components/overlays/popup/popup.js": 4.5986328125,
+    "dist/components/retrieval/citation-badge/citation-badge.js": 6.4267578125,
+    "dist/components/retrieval/entity-chip/entity-chip.js": 5.84765625,
+    "dist/components/utility/export-button/export-button.js": 13.724609375,
+    "dist/components/utility/mention-popover/mention-popover.js": 8.8935546875,
+    "dist/components/utility/tour/tour.js": 17.357421875
   }
 }
