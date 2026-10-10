@@ -1218,7 +1218,9 @@ and the mode it sees. The list is closed: `:root`; the mode scopes `.lr-light`, 
 **Application shadow roots.** Custom properties inherit across shadow boundaries; selectors do not.
 A scope _inside_ your own component's shadow root therefore needs the layer adopted in that root.
 Lyra does that on demand: when a Lyra element connects inside an application shadow root and it is,
-or sits below, a scope in that root, the layer is appended to the root's `adoptedStyleSheets`.
+or sits below, a scope in that root, an unlayered copy of the layer with zero-specificity
+(`:where()`) selectors is appended to the root's `adoptedStyleSheets`, so your component's own rules
+there still win (unless you put them in a cascade layer).
 "Below" follows the flat tree, so a Lyra element slotted into your component (directly, or through
 forwarded slots) counts as below the scopes around its slot, also when your component renders its
 slots right after connecting, as Lit does. A Lyra element inside a slotted non-Lyra wrapper does not

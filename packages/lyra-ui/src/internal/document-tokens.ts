@@ -28,7 +28,10 @@ import { isRegisteredLyraElement } from './prefix.js';
  * checkpoint; once after the document's `load` event, to find a static provider that was still
  * loading; and through the public `adoptLyraTokens()`, which always looks again.
  *
- * **Application shadow roots** receive the layer on demand: when a connecting Lyra element is a
+ * **Application shadow roots** receive the layer on demand, as an unlayered copy whose selectors
+ * have zero specificity (`:where()`): cascade layers repeated in hundreds of shadow roots made every
+ * root's style resolution markedly slower in Chromium, and with zero specificity the application's
+ * own rules in that root still win, as they did over the layered copy. They receive it when a connecting Lyra element is a
  * scope or sits below one in that root, unless the root holds its own static provider. "Below"
  * follows the flat tree: an element slotted into an application component is below the scopes
  * around that slot, so its assigned slot's tree is checked too (once more after the next microtask
@@ -47,8 +50,10 @@ interface ScopeState {
 }
 
 interface DocumentLayerState extends ScopeState {
-  /** This copy's constructed sheet, shared by the document and its shadow roots. */
+  /** This copy's constructed sheet for the document. */
   sheet?: CSSStyleSheet;
+  /** This copy's constructed sheet for application shadow roots (see {@link shadowRootLayerCss}). */
+  rootSheet?: CSSStyleSheet;
   /**
    * The sentinel resolves to this layer from a sheet whose rules cannot be read (cross-origin). It
    * is trusted on every implicit check; only an explicit `adoptLyraTokens(document)` re-reads it.
@@ -251,6 +256,48 @@ function layerSheet(doc: Document, state: DocumentLayerState): CSSStyleSheet {
   return state.sheet;
 }
 
+/**
+ * The layer for application shadow roots: the same declarations without cascade layers, without the
+ * `:root` selectors that never match there, every selector list wrapped in `:where()`, and the
+ * sentinel last (so another copy's tail look recognises it). Derived once per document from the
+ * generated text, whose shape the generator fixes (`@layer` statement, blocks, one rule per line).
+ */
+function shadowRootLayerCss(css: string): string {
+  let text = css.replace(/@layer [^{;]*;/g, '');
+  let unwrapped = '';
+  const layerOpen = /@layer [^{;]*\{/y;
+  for (let index = 0; index < text.length;) {
+    layerOpen.lastIndex = index;
+    const open = layerOpen.exec(text);
+    if (!open) {
+      unwrapped += text[index++];
+      continue;
+    }
+    let depth = 1;
+    const start = (index += open[0].length);
+    while (index < text.length && depth) {
+      const char = text[index++];
+      if (char === '{') depth++;
+      else if (char === '}') depth--;
+    }
+    unwrapped += text.slice(start, index - 1);
+  }
+  const sentinel = `${DOCUMENT_TOKEN_SENTINEL}:${DOCUMENT_TOKEN_LAYER_ID}`;
+  text = unwrapped.replace(`:root{${sentinel}}`, '').replaceAll(':where(:root),', '').replaceAll(':root,', '');
+  text = text.replace(/(^|[{}\n])([^@{}\n][^{}]*)\{/g, (_, lead: string, selector: string) => `${lead}:where(${selector.trim()}){`);
+  return `${text}\n:where(:root){${sentinel}}\n`;
+}
+
+function rootLayerSheet(doc: Document, state: DocumentLayerState): CSSStyleSheet {
+  if (!state.rootSheet) {
+    const sheet = new doc.defaultView!.CSSStyleSheet();
+    sheet.replaceSync(shadowRootLayerCss(DOCUMENT_TOKEN_CSS));
+    carrierCache.set(sheet, true);
+    state.rootSheet = sheet;
+  }
+  return state.rootSheet;
+}
+
 function adopt(root: Document | ShadowRoot, sheet: CSSStyleSheet): void {
   const sheets = root.adoptedStyleSheets;
   if (sheets.includes(sheet)) return;
@@ -303,9 +350,9 @@ function verifyRoot(root: ShadowRoot, doc: Document, state: DocumentLayerState):
   if (local.provider && !providerApplies(root, local.provider)) local.provider = undefined;
   // A declarative root's own <link> may finish loading after the first connect, so look each time;
   // the carrier cache keeps that to reading list lengths.
-  if (!local.provider) local.provider = findProvider(root, state.sheet, true);
-  if (local.provider) withdraw(root, state.sheet);
-  else adopt(root, layerSheet(doc, state));
+  if (!local.provider) local.provider = findProvider(root, state.rootSheet, true);
+  if (local.provider) withdraw(root, state.rootSheet);
+  else adopt(root, rootLayerSheet(doc, state));
 }
 
 function isShadowRoot(node: Node): node is ShadowRoot {
@@ -435,7 +482,8 @@ export function hasLyraTokens(root: Document | ShadowRoot): boolean {
   const local = root === doc ? state : rootStates.get(root as ShadowRoot);
   if (local?.provider && providerApplies(root, local.provider)) return true;
   if (root === doc && state.unreadableProvider) return true;
-  return !!state.sheet && root.adoptedStyleSheets.includes(state.sheet);
+  const own = root === doc ? state.sheet : state.rootSheet;
+  return !!own && root.adoptedStyleSheets.includes(own);
 }
 
 /**

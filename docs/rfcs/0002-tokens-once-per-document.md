@@ -449,7 +449,13 @@ adopted in the tree scope that contains it:
    whose host is not a library component, and the element is a scope or has a scope ancestor inside
    that root (one `closest()` over the scope list, which stops at the tree boundary), the layer is
    adopted there too. `LyraElement` re-checks when its own `data-lr-theme` or `data-lr-theme-scope`
-   changes. "Below" follows the flat tree: an element slotted into an application component (directly,
+   changes. The root receives an unlayered copy of the layer whose selector lists are wrapped in
+   `:where()` (zero specificity, no `:root` selectors, sentinel last): the same `@layer` blocks
+   adopted into hundreds of application roots made Chromium's style resolution in every such root
+   much slower (the 28 gate's nested-root cells: insert +11–27 %, style recalc up to +85 %), while
+   the unlayered copy costs what 27.0.0 did. With zero specificity the application's own rules in
+   that root still win, as they did over the layered copy; an application rule inside a cascade
+   layer of its own, in that same root, now loses to it. "Below" follows the flat tree: an element slotted into an application component (directly,
    or through forwarded slots) also checks the tree of its assigned slot, once more after the next
    microtask when the host renders its slots after connecting, as Lit does. A Lyra element inside a
    slotted non-Lyra wrapper, or a slot that appears later, still needs `adoptLyraTokens(root)`. A
