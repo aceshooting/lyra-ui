@@ -1239,6 +1239,11 @@ adoptLyraTokens(this.shadowRoot); // adoptLyraTokens(root: Document | ShadowRoot
 **Append, never replace.** Lyra appends its sheet to `document.adoptedStyleSheets` and to an
 application root's. An application that later assigns a new array wholesale removes it until the next
 Lyra element connects there; append to the existing array instead.
+In Chromium, Lyra also appends a one-rule sheet to `document.adoptedStyleSheets`: a private root
+property (`--_lr-root-inputs`) that follows every theme input. It lets Chromium skip a full
+custom-property comparison per element when the root is re-themed (an accent or spacing input
+written on `<html>` with dark islands or other scopes on the page costs about half as much). Firefox
+and Safari do not get it; they already stop at unchanged scopes, which the property would defeat.
 
 **Layer order.** On a page with no Lyra stylesheet, the adopted sheet's layer statement is the last
 the browser sees, so Lyra's layers sort after yours. Declare Lyra's order first (import `theme.css`,

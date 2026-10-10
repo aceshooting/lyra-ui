@@ -595,6 +595,19 @@ before the application has rendered a large DOM (see [Delivery](#delivery-2800))
 every browser above the v22 floor (roadmap item 35: Firefox 125, Safari 17). The switches need only
 empty and `initial` custom-property values; the parity suite exercises them in all three engines.
 
+**Chromium root key.** Blink compares an element's custom properties by hash first and walks them
+only when the hashes match. Its property trie keeps the value a slot held before the slot was split
+(`HashTrieNode::Set` clears the key, not the value, and `operator==` compares the arrays), and the
+root's trie is built from scratch on every root recalc. A root re-derivation therefore leaves
+state-dependent values behind, every element inherits them, and every element compares unequal, but
+only after walking about 1,000 equal properties. With dark islands on the page an accent input on
+`<html>` cost Chromium up to twice 27.0.0's time although only the elements outside the islands
+changed any value. In Chromium only (the `Chromium` brand of `navigator.userAgentData`), the runtime
+appends a one-rule sheet declaring `--_lr-root-inputs` on `:root`, a concatenation of every input and
+switch the layer reads, so the hashes differ and the comparison fails at once. WebKit and Firefox
+compare by value and stop at an unchanged scope, which the key would defeat (WebKit's islands accent
+write went from 2 ms to 1.7 s with it), so they never receive it.
+
 **Security.** Constructed stylesheets are not inline `<style>` elements, so a strict `style-src`
 policy is unaffected. The layer contains no URLs and no remote content.
 
