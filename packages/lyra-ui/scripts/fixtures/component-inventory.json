@@ -118577,13 +118577,13 @@
             "name": "--lr-segmented-selected-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface)"
+            "default": "var(--lr-color-text)"
           },
           {
             "name": "--lr-segmented-selected-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-text)"
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-segmented-selected-font-weight",

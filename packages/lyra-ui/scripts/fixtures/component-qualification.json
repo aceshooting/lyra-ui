@@ -42659,6 +42659,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/layout/segmented/segmented-checked-contrast.test.ts",
+              "test": "passes axe with a checked segment in ${look}/${mode}/${direction}",
+              "target": "scope",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/segmented/segmented.test.ts",
               "test": "is accessible",
               "target": "el",
@@ -42701,8 +42707,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/segmented/segmented.test.ts",
-              "test": "swaps Arrow key semantics under dir=\\\"rtl\\\": ArrowLeft moves forward, ArrowRight moves backward",
+              "file": "src/components/layout/segmented/segmented-checked-contrast.test.ts",
+              "line": 30,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -42811,6 +42817,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/segmented/segmented-checked-contrast.test.ts",
           "src/components/layout/segmented/segmented.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
