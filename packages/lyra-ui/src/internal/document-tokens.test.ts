@@ -958,6 +958,34 @@ describe('document token layer: root re-derivation key (Chromium)', () => {
     }
   });
 
+  for (const [change, write] of [
+    ['an input written inline', (root: HTMLElement) => root.style.setProperty('--lr-theme-space-m', '1px')],
+    ['a mode switch', (root: HTMLElement) => root.setAttribute('data-lr-mode', 'dark')],
+  ] as const) {
+    it(`waits for the first change on the root (${change}) before adopting the key beside a static provider`, async () => {
+      const frame = document.createElement('iframe');
+      document.body.append(frame);
+      try {
+        const frameDocument = frame.contentDocument!;
+        const style = frameDocument.createElement('style');
+        style.textContent = DOCUMENT_TOKEN_CSS;
+        frameDocument.head.append(style);
+        const probe = document.createElement(tag('layer-probe')) as LayerProbe;
+        frameDocument.body.append(frameDocument.adoptNode(probe));
+        await probe.updateComplete;
+        const key = () => frame.contentWindow!.getComputedStyle(frameDocument.documentElement).getPropertyValue(KEY).trim();
+        // A late first look on a large page would otherwise restyle every element for the key alone.
+        expect(key(), 'no key on the first look').to.equal('');
+        expect(frameDocument.adoptedStyleSheets.length, 'nothing adopted beside the static provider').to.equal(0);
+        write(frameDocument.documentElement);
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(key() !== '', 'the key once the root re-derives').to.equal(chromium);
+      } finally {
+        frame.remove();
+      }
+    });
+  }
+
   it('restores the key after an application replaces adoptedStyleSheets wholesale', async () => {
     if (!chromium) return;
     await fixture(html`<lr-layer-probe></lr-layer-probe>`);
