@@ -197,7 +197,7 @@ export const styles = css`
     /* A stacking context, so each highlight's hit-area pseudo-element (z-index: -1) paints beneath
        every highlight's own box instead of escaping behind the image. */
     isolation: isolate;
-    /* Size container: a highlight clamps its border to its own percentage size in cqw/cqh. */
+    /* Container units provide the border limits until the image's unzoomed size is measured. */
     container-type: size;
     --_lr-image-viewer-hit-layer: -1;
   }
@@ -208,8 +208,6 @@ export const styles = css`
      --lr-image-viewer-highlight-*-bg knobs still back each fill. */
   /* The box is exactly the percentage rectangle the data names; it never takes a minimum size.
      The accessible target floor lives on the transparent ::after below, centred on the box. */
-  /* no-transition-needed: the hover and press mix lands in the same frame as the pointer, so a
-     dense field of neighbouring regions never shows a fill lagging behind the cursor. */
   [part="highlight"] {
     position: absolute;
     box-sizing: border-box;
@@ -221,11 +219,11 @@ export const styles = css`
     border-width:
       min(
         var(--_lr-image-viewer-highlight-bw),
-        calc(var(--_lr-image-viewer-highlight-h) * 0.5cqh)
+        var(--_lr-image-viewer-highlight-max-bh, calc(var(--_lr-image-viewer-highlight-h) * 0.5cqh))
       )
       min(
         var(--_lr-image-viewer-highlight-bw),
-        calc(var(--_lr-image-viewer-highlight-w) * 0.5cqw)
+        var(--_lr-image-viewer-highlight-max-bw, calc(var(--_lr-image-viewer-highlight-w) * 0.5cqw))
       );
     --_lr-image-viewer-highlight-fill: var(
       --lr-image-viewer-highlight-bg,

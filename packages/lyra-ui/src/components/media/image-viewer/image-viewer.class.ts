@@ -17,6 +17,7 @@ import type {
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
+import { normalizeImageZoom } from '../../../internal/image-zoom.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -268,18 +269,18 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     this.requestUpdate('fit', old);
   }
   /** Multiplier over the fit-derived base scale, delegated to the embedded pan-zoom surface. */
-  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoom
+  // numeric-guard-exempt: the frame and highlight border limits both normalize it with normalizeImageZoom
   @property({ type: Number, reflect: true }) zoom = 1;
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.minZoom`. Same default as
    *  `<lr-pan-zoom>` itself. Mirrors `<lr-lightbox>`'s own `minZoom` (name, default,
    *  pass-through shape) -- both wrap the exact same `<lr-pan-zoom>` surface. */
-  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeMinZoom
+  // numeric-guard-exempt: the frame and highlight border limits both normalize it with normalizeImageZoom
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.maxZoom`. Mirrors
    *  `<lr-lightbox>`'s own `maxZoom`. */
-  // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeMaxZoom
+  // numeric-guard-exempt: the frame and highlight border limits both normalize it with normalizeImageZoom
   @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.zoomStep`. Mirrors
@@ -708,6 +709,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       : visible.some(({ highlight }) => highlight.id === this.activeHighlightId)
         ? this.activeHighlightId
         : visible[0]?.highlight.id ?? null;
+    const zoom = normalizeImageZoom(this.zoom, this.minZoom, this.maxZoom);
+    const layout = this.mediaLayoutSize;
     return html`<div
       part="highlight-layer"
       role="group"
@@ -733,6 +736,11 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
             height: `${rect.height}%`,
             '--_lr-image-viewer-highlight-w': String(rect.width),
             '--_lr-image-viewer-highlight-h': String(rect.height),
+            // Floor the visible half-region to keep browser border snapping inside the rectangle.
+            '--_lr-image-viewer-highlight-max-bw': layout
+              ? `${Math.floor(layout.width * (rect.width / 200) * zoom) / zoom}px` : undefined,
+            '--_lr-image-viewer-highlight-max-bh': layout
+              ? `${Math.floor(layout.height * (rect.height / 200) * zoom) / zoom}px` : undefined,
           })}
           aria-label=${h.label?.trim() ? h.label : this.localize('imageViewerUnlabeledHighlight', undefined, {
             index: formatter.format(index + 1),

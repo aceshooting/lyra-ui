@@ -1,5 +1,7 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './image-viewer.js';
 import type { LyraImageViewer, LyraImageRotation } from './image-viewer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
@@ -98,8 +100,32 @@ const SMALL: Rect = { x: 40, y: 40, width: 1, height: 1 };
 const WIDE: Rect = { x: 55, y: 60, width: 2, height: 0.8 };
 
 describe('lr-image-viewer highlight painted geometry', () => {
+  it('transitions only highlight paint while region geometry updates immediately and reduced motion collapses timing', async () => {
+    await setReducedMotion('no-preference');
+    try {
+      const el = await viewer([region('a', SMALL)]);
+      const motion = getComputedStyle(box(el, 'a'));
+      expect(motion.transitionProperty.split(',').map(property => property.trim())).to.deep.equal([
+        'background-color', 'color', 'border-color',
+      ]);
+      expect(motion.transitionDuration.split(',').every(value => Number.parseFloat(value) > 0)).to.equal(true);
+      const moved: Rect = { x: 61, y: 33, width: 10, height: 8 };
+      el.highlights = [region('a', moved)];
+      el.activeHighlightId = 'a';
+      await el.updateComplete;
+      expectPainted(el, 'a', moved, 0, 'updated region');
+      await setReducedMotion('reduce');
+      await paint();
+      const reduced = getComputedStyle(box(el, 'a'));
+      expect(reduced.transitionDuration.split(',').every(value => Number.parseFloat(value) <= 0.00001)).to.equal(true);
+      expectPainted(el, 'a', moved, 0, 'reduced motion region');
+    } finally {
+      await setReducedMotion('no-preference');
+    }
+  });
+
   for (const fit of ['contain', 'width', 'actual']) {
-    for (const zoom of [1, 1.5]) {
+    for (const zoom of [0.5, 1, 1.5]) {
       for (const rotation of [0, 90] as const) {
         it(`paints a sub-hit-area region exactly (fit ${fit}, zoom ${zoom}, rotation ${rotation})`, async () => {
           const el = await viewer([region('a', SMALL), region('b', WIDE)], { fit, zoom, rotation });
@@ -153,6 +179,25 @@ describe('lr-image-viewer highlight painted geometry', () => {
     // Overlapping enlarged areas resolve deterministically to the later region in document order.
     const gapMiddle = (l.right + r.left) / 2;
     expect(pick(gapMiddle, l.top + l.height / 2)).to.equal('right');
+  });
+
+  it('activates the owning highlight from a native click inside its enlarged target', async () => {
+    await setReducedMotion('reduce');
+    try {
+      const el = await viewer([region('lone', { x: 20, y: 20, width: 1, height: 1 })]);
+      const highlight = box(el, 'lone');
+      await hoverUntilMatched(highlight, 'the enlarged highlight target should receive the pointer', rect => [
+        rect.left + rect.width / 2 + 14, rect.top + rect.height / 2,
+      ]);
+      const activation = oneEvent(el, 'lr-highlight-activate');
+      await sendMouse({ type: 'down' });
+      await sendMouse({ type: 'up' });
+      expect((await activation).detail.highlightId).to.equal('lone');
+      expect(el.activeHighlightId).to.equal('lone');
+    } finally {
+      await resetMouse();
+      await setReducedMotion('no-preference');
+    }
   });
 
   it('keeps arrow-key navigation between highlights unchanged', async () => {

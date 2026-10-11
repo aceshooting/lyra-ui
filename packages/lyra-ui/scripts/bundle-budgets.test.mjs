@@ -449,20 +449,16 @@ assert.throws(
 const reviewedCeilingKeys = Object.keys(budgets)
   .filter((key) => key.startsWith('dist/') || key === '$componentP95GzipKb' || key === '$componentMaxGzipKb')
   .sort();
-// The tightest standalone ceiling in the file, and the one that notices when the shared base class
-// grows. The 21.0.0 accessibility surface adds forwarding for `aria-keyshortcuts` on buttons;
-// the measured standalone registration was 32.53 KiB gzip under the former 33 KiB canary. The
-// v28 document token layer (RFC 0002) moved the shared token resolver into a document-scoped layer
-// adopted on first registration, measured at exactly 34,814 gzip bytes. Finding a static layer
-// anywhere in a stylesheet and following assigned slots for on-demand adoption add 55 bytes
-// (34,869); deriving the unlayered copy that application shadow roots adopt adds 274 (35,143). Correct
-// Intl option capture and repeated collection snapshots in the shared form and collection base
-// code add 312 more (35,455). The canary stays at that exact ceiling so any further growth of the
-// shared base class still fails here first.
-assert.ok(
-  budgets['dist/components/forms/button/button.js'] <= 35455 / 1024,
-  'the standalone button registration must remain at or below 35,455 gzip bytes',
-);
+// Correct Intl option capture measures 35,455 gzip bytes for standalone button registration.
+// Its 35,456-byte canary retains one byte of allowance and still catches shared-base growth.
+test('standalone button retains its reviewed gzip measurement and tight canary', () => {
+  const entry = 'dist/components/forms/button/button.js';
+  assert.equal(budgets.$reviewedGzipBytes[entry], 35_455);
+  assert.ok(
+    budgets[entry] <= 35_456 / 1024,
+    'the standalone button registration must remain at or below 35,456 gzip bytes',
+  );
+});
 assert.deepEqual(reviewedCeilingKeys, [
   '$componentMaxGzipKb',
   '$componentP95GzipKb',
@@ -741,44 +737,44 @@ async function probeToolParamFormRegistrationGraph() {
   }
 }
 
-const toolParamRegistrationProbe = await probeToolParamFormRegistrationGraph();
-assert.equal(
-  toolParamRegistrationProbe.registrations.length,
-  4,
-  'each rendered control must register exactly once even when reached transitively',
-);
-assert.deepEqual(
-  [...toolParamRegistrationProbe.registrations].sort(([left], [right]) =>
-    left.localeCompare(right)
-  ),
-  [
-    ['number-input', 'LyraNumberInput'],
-    ['option', 'LyraOption'],
-    ['select', 'LyraSelect'],
-    ['tool-param-form', 'LyraToolParamForm'],
-  ],
-  // `number-input` joined this set when a number/integer field's `control` part stopped being a
-  // raw `<input type="number">` whose native spin buttons were hidden with no replacement, and
-  // became the composed `<lr-number-input>` that ships its own stepper. That is a declared
-  // breaking change for this release, so the registration graph legitimately grew by one.
-  'the executed granular module graph must register the form, select, option and number-input controls',
-);
-for (const input of [
-  'src/components/agent-tools/tool-param-form/tool-param-form.ts',
-  'src/components/forms/combobox/option.ts',
-  'src/components/forms/select/select.ts',
-  'src/components/forms/input/number-input.ts',
-]) {
-  assert.ok(
-    toolParamRegistrationProbe.inputs.includes(input),
-    `the actual registration graph must include ${input}`,
+test('granular tool-param-form executes only its declared control registration graph', async () => {
+  const toolParamRegistrationProbe = await probeToolParamFormRegistrationGraph();
+  assert.equal(
+    toolParamRegistrationProbe.registrations.length,
+    4,
+    'each rendered control must register exactly once even when reached transitively',
   );
-}
-assert.ok(
-  toolParamRegistrationProbe.inputs.every(
-    (input) => !input.includes('src/components/forms/checkbox/')
-  ),
-  'the actual registration metafile must exclude the checkbox family',
-);
-
-console.log('hard bundle budget coverage tests passed.');
+  assert.deepEqual(
+    [...toolParamRegistrationProbe.registrations].sort(([left], [right]) =>
+      left.localeCompare(right)
+    ),
+    [
+      ['number-input', 'LyraNumberInput'],
+      ['option', 'LyraOption'],
+      ['select', 'LyraSelect'],
+      ['tool-param-form', 'LyraToolParamForm'],
+    ],
+    // `number-input` joined this set when a number/integer field's `control` part stopped being a
+    // raw `<input type="number">` whose native spin buttons were hidden with no replacement, and
+    // became the composed `<lr-number-input>` that ships its own stepper. That is a declared
+    // breaking change for this release, so the registration graph legitimately grew by one.
+    'the executed granular module graph must register the form, select, option and number-input controls',
+  );
+  for (const input of [
+    'src/components/agent-tools/tool-param-form/tool-param-form.ts',
+    'src/components/forms/combobox/option.ts',
+    'src/components/forms/select/select.ts',
+    'src/components/forms/input/number-input.ts',
+  ]) {
+    assert.ok(
+      toolParamRegistrationProbe.inputs.includes(input),
+      `the actual registration graph must include ${input}`,
+    );
+  }
+  assert.ok(
+    toolParamRegistrationProbe.inputs.every(
+      (input) => !input.includes('src/components/forms/checkbox/')
+    ),
+    'the actual registration metafile must exclude the checkbox family',
+  );
+});

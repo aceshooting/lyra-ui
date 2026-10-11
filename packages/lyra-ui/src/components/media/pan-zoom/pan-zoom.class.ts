@@ -5,6 +5,7 @@ import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { normalizeImageZoom } from '../../../internal/image-zoom.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
@@ -112,7 +113,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   }
 
   private get safeZoom(): number {
-    return finiteRange(this.zoom, 1, this.safeMinZoom, this.safeMaxZoom);
+    return normalizeImageZoom(this.zoom, this.minZoom, this.maxZoom);
   }
 
   private setZoom(value: number, quantize = true): void {

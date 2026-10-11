@@ -260,7 +260,8 @@ describe('lr-spreadsheet-viewer', () => {
     const sheet = XLSX.utils.aoa_to_sheet([
       ['Date', 'Time', 'Share', 'Price', 'Zip', 'Year'],
       [new Date(Date.UTC(2024, 0, 2)), 0.5, 0.25, 1234.5, 2134, 2024],
-    ]);
+    ], { UTC: true });
+    expect(sheet['A2']!.v, 'the workbook must encode midnight, independently of the host timezone').to.equal(45293);
     sheet['B2']!.z = 'h:mm';
     sheet['C2']!.z = '0%';
     sheet['D2']!.z = '"$"#,##0.00';
