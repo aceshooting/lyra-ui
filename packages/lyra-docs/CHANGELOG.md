@@ -1,5 +1,13 @@
 # @aceshooting/lyra-docs
 
+## 0.4.3
+
+### Patch Changes
+
+- be521ef: Allow fit-to-width document zoom to shrink to phone-sized allocations and update correctly as the editor resizes, without changing saved document content or explicit numeric zoom.
+- Updated dependencies [be521ef]
+  - @aceshooting/lyra-ui@28.1.0
+
 ## 0.4.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-translations",
-  "version": "28.0.0",
+  "version": "28.1.0",
   "description": "Built-in locale catalogs for @aceshooting/lyra-ui. Import a locale to register it; English is built in.",
   "keywords": [
     "lyra-ui",
