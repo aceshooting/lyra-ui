@@ -65,6 +65,8 @@ interface DocumentLayerState extends ScopeState {
   arrivedLate: boolean;
   /** The root re-derivation key sheet (Chromium), `null` where the engine does not need it. */
   rootKey?: CSSStyleSheet | null;
+  /** The key applies: the root has changed since the first look, or the key went in with this copy's layer. */
+  rootKeyLive?: boolean;
 }
 
 const documentStates = new WeakMap<Document, DocumentLayerState>();
@@ -327,6 +329,13 @@ function withdraw(root: Document | ShadowRoot, sheet: CSSStyleSheet | undefined)
  * so the comparison fails at once. WebKit and Firefox compare by value and stop at a scope whose
  * values are unchanged, which this key would defeat, so they never receive it. Engines are told
  * apart by the Chromium brand of `navigator.userAgentData` (no brand: no key).
+ *
+ * Adopting the key restyles every element once, which is cheap while the document is small but not
+ * when the first look comes late (a lazily loaded route on a large page that links `theme.css`).
+ * So beside a static provider it waits for the root to change: the first attribute change on the
+ * document element (an inline input, a mode or look attribute, a class) or the first color-scheme
+ * change. A mutation observer runs before the next rendering, so the key goes in with that change.
+ * It goes in at once with this copy's layer sheet, which restyles every element anyway.
  */
 function rootKeySheet(doc: Document, state: DocumentLayerState): CSSStyleSheet | null {
   if (state.rootKey === undefined) {
@@ -338,9 +347,31 @@ function rootKeySheet(doc: Document, state: DocumentLayerState): CSSStyleSheet |
       const sheet = new view.CSSStyleSheet();
       sheet.replaceSync(`:root{--_lr-root-inputs:${Array.from(names, (name) => `var(${name},0)`).join('')}}`);
       state.rootKey = sheet;
+      awaitRootChange(doc, state, sheet);
     }
   }
   return state.rootKey;
+}
+
+/** Adopts the key at the first change that re-derives the root (see {@link rootKeySheet}). */
+function awaitRootChange(doc: Document, state: DocumentLayerState, key: CSSStyleSheet): void {
+  const view = doc.defaultView!;
+  const root = doc.documentElement;
+  const scheme = typeof view.matchMedia === 'function' ? view.matchMedia('(prefers-color-scheme: dark)') : undefined;
+  if (!root || typeof view.MutationObserver !== 'function') {
+    state.rootKeyLive = true;
+    return;
+  }
+  const observer = new view.MutationObserver(() => goLive());
+  const goLive = () => {
+    observer.disconnect();
+    scheme?.removeEventListener('change', goLive);
+    if (state.rootKeyLive) return;
+    state.rootKeyLive = true;
+    adopt(doc, key);
+  };
+  observer.observe(root, { attributes: true });
+  scheme?.addEventListener('change', goLive);
 }
 
 /**
@@ -354,11 +385,10 @@ type DocumentCheck = 'connect' | 'load' | 'explicit';
  * adoption also look, in every rule, for a provider that appeared since the last look.
  */
 function verifyDocument(doc: Document, state: DocumentLayerState, check: DocumentCheck): void {
-  // The key goes in on the first look, with the layer copy, and on the load and explicit checks: a
+  // The key goes in with the layer copy, and once live on the load and explicit checks too: a
   // connect that finds the static provider reads the adopted list no further.
-  const first = state.rootKey === undefined;
   const key = rootKeySheet(doc, state);
-  const keyNow = key && (first || check !== 'connect') ? [key] : [];
+  const keyNow = key && state.rootKeyLive && check !== 'connect' ? [key] : [];
   if (state.provider && !providerApplies(doc, state.provider)) state.provider = undefined;
   if (!state.provider && check !== 'connect') state.provider = findProvider(doc, state.sheet, true);
   if (state.provider) {
@@ -379,6 +409,7 @@ function verifyDocument(doc: Document, state: DocumentLayerState, check: Documen
     }
     state.unreadableProvider = false;
   }
+  if (key) state.rootKeyLive = true;
   adopt(doc, layerSheet(doc, state), ...(key ? [key] : []));
 }
 
