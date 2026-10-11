@@ -606,13 +606,30 @@ changed any value. In Chromium only (the `Chromium` brand of `navigator.userAgen
 appends a one-rule sheet declaring `--_lr-root-inputs` on `:root`, a concatenation of every input and
 switch the layer reads, so the hashes differ and the comparison fails at once. WebKit and Firefox
 compare by value and stop at an unchanged scope, which the key would defeat (WebKit's islands accent
-write went from 2 ms to 1.7 s with it), so they never receive it.
+write went from 2 ms to 1.7 s with it), so they never receive it. Adopting the key restyles every
+element once. With this copy's own layer sheet that happens anyway, so the key goes in with it; beside
+a static provider (`theme.css` or `tokens-root.css`) it waits for the first attribute change on
+`<html>` or the first color-scheme change, through a mutation observer that runs before the next
+rendering. Adopting it on the first look instead made a lazily registered route on a 20,000-row page
+that links `theme.css` cost Chromium about 120 ms on its first connect, against 50 ms for 27.0.0.
 
 **Accepted costs (28.0.0 gate).** Two measured cells stay above 27.0.0 by decision: Chromium's first
 deferred style flush with thousands of marked rows carrying different inline inputs (+24 % at 3,000
 rows; every such row re-derives the 253 shared outputs), and a Firefox root spacing write with marked
 application hosts (up to about +15 %; the markers re-derive where 27's stopped inputs, which is the
 intended change). Per-family scopes (Q11) are the post-28 route to narrow both.
+
+A third: in WebKit, a root spacing or font write on a page with dark islands costs about 7 % more
+than in 27.0.0 (islands10: 329 to 351 ms at 1,000 rows, 975 to 1,052 ms at 3,000), while the same
+write without islands is about 35 % cheaper. WebKit compares two custom-property sets whose parent
+sets differ by walking the element's own values (those that differ from its parent's) and stops at
+the first difference. A dark island holds every colour output again, about 195 own values where
+27.0.0's islands held 111, and a passed-through write changes none of them, so every element below
+the island walks all of them before reaching the changed root value. A private key on each scope that
+follows the non-colour inputs ends the walk early (islands10 spacing 334 to 207 ms), but declared on
+every scope it made a root accent write on thousands of marked rows about 50 % slower, and declared on
+mode boundaries only it would defeat the cutoff of a density scope or a marked row that sets its own
+input below a boundary. Neither shipped in 28.0.0.
 
 **Security.** Constructed stylesheets are not inline `<style>` elements, so a strict `style-src`
 policy is unaffected. The layer contains no URLs and no remote content.

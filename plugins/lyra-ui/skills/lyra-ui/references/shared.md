@@ -1245,6 +1245,9 @@ property (`--_lr-root-inputs`) that follows every theme input. It lets Chromium 
 custom-property comparison per element when the root is re-themed (an accent or spacing input
 written on `<html>` with dark islands or other scopes on the page costs about half as much). Firefox
 and Safari do not get it; they already stop at unchanged scopes, which the property would defeat.
+When `theme.css` or `tokens-root.css` provides the layer, that sheet goes in only at the first
+attribute change on `<html>` (an inline input, a mode or look attribute, a class) or color-scheme
+change, so a route that registers Lyra late on a large page does not restyle every element for it.
 
 **Layer order.** On a page with no Lyra stylesheet, the adopted sheet's layer statement is the last
 the browser sees, so Lyra's layers sort after yours. Declare Lyra's order first (import `theme.css`,
