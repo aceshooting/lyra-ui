@@ -1146,11 +1146,6 @@
   }
 }
 @layer lr-theme-preset.surface {
-  @property --lr-theme-surface-glass-dark-share {
-    syntax: '<percentage>';
-    inherits: true;
-    initial-value: 10%;
-  }
   :root {
     --lr-theme-surface-opacity: 0.6;
   }

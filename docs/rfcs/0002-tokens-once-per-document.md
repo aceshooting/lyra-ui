@@ -608,6 +608,12 @@ switch the layer reads, so the hashes differ and the comparison fails at once. W
 compare by value and stop at an unchanged scope, which the key would defeat (WebKit's islands accent
 write went from 2 ms to 1.7 s with it), so they never receive it.
 
+**Accepted costs (28.0.0 gate).** Two measured cells stay above 27.0.0 by decision: Chromium's first
+deferred style flush with thousands of marked rows carrying different inline inputs (+24 % at 3,000
+rows; every such row re-derives the 253 shared outputs), and a Firefox root spacing write with marked
+application hosts (up to about +15 %; the markers re-derive where 27's stopped inputs, which is the
+intended change). Per-family scopes (Q11) are the post-28 route to narrow both.
+
 **Security.** Constructed stylesheets are not inline `<style>` elements, so a strict `style-src`
 policy is unaffected. The layer contains no URLs and no remote content.
 

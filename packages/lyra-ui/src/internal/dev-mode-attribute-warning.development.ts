@@ -239,6 +239,26 @@ function inlineLayerInputs(element: Element): string[] {
  *   present; the later-adopted layer wins where their values differ.
  */
 const layerVerifiedSinceCheckpoint = new WeakSet<Document>();
+/** Documents whose root glass dark share was already checked (one computed-style read each). */
+const glassShareChecked = new WeakSet<Document>();
+const GLASS_SHARE = '--lr-theme-surface-glass-dark-share';
+
+/**
+ * `lyra-style:glass-dark-share` -- the root's glass dark share is not a percentage, so dark Glass
+ * chrome loses its fill (the input is deliberately not registered with `@property`). Read once per
+ * document, on the root only.
+ */
+function checkGlassShare(doc: Document): void {
+  if (glassShareChecked.has(doc) || !doc.documentElement || !doc.defaultView) return;
+  glassShareChecked.add(doc);
+  const value = doc.defaultView.getComputedStyle(doc.documentElement).getPropertyValue(GLASS_SHARE).trim();
+  if (value && !CSS.supports('color', `color-mix(in srgb, red clamp(0%, ${value}, 100%), blue)`)) {
+    devWarnOnce(
+      'lyra-style:glass-dark-share',
+      `${GLASS_SHARE}: ${value} is not a percentage, so dark Glass chrome loses its fill; use a percentage such as 10% (the default).`
+    );
+  }
+}
 
 export function warnThemeScopeUsage(host: Element): void {
   if (!litDevWarnings()) return;
@@ -254,6 +274,7 @@ export function warnThemeScopeUsage(host: Element): void {
   if (doc.defaultView && !layerVerifiedSinceCheckpoint.has(doc)) {
     layerVerifiedSinceCheckpoint.add(doc);
     queueMicrotask(() => layerVerifiedSinceCheckpoint.delete(doc));
+    checkGlassShare(doc);
     if (!hasLyraTokens(doc)) {
       devWarnOnce(
         'lyra-theme-scope:layer-missing',

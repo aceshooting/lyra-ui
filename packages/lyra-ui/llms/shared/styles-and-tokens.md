@@ -1277,8 +1277,9 @@ to 0.7 or higher.
 default `10%`, read in dark mode only, below 70% opacity. It sets how much of `--lr-color-surface`
 the deepening anchor keeps (the rest is black), so raising it lifts dark Glass chrome toward the
 surface. It inherits, so set it on `:root` for the whole app or on any container for that subtree;
-values outside 0% to 100% clamp, and a value that is not a percentage falls back to `10%`. The default
-paints exactly as before. For a softer grey dark mode:
+values outside 0% to 100% clamp. It is deliberately not registered with `@property` (a registered
+inherited property slows every re-theme in Chromium), so a value that is not a percentage voids the
+dark fill; the development build warns about one set on `:root`. The default paints exactly as before. For a softer grey dark mode:
 
 ```css
 :root {
