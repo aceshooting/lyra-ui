@@ -575,7 +575,7 @@ describe("region highlights", () => {
     // comment above for the same trap), which left `[part="highlight-label"]` unrendered yet.
     const styleOverride = document.createElement("style");
     styleOverride.textContent =
-      "lr-image-viewer::part(highlight) { min-inline-size: 200px !important; }";
+      "lr-image-viewer::part(highlight) { inline-size: 200px !important; }";
     document.head.appendChild(styleOverride);
     try {
       for (const dir of ["ltr", "rtl"] as const) {
@@ -1397,7 +1397,7 @@ describe("accessibility", () => {
     expect(base.getAttribute("aria-label")).to.equal("Fallback image");
   });
 
-  it("gives tiny percentage highlights a hit-area floor independent of their data geometry", async () => {
+  it("gives tiny percentage highlights a hit-area floor that never resizes their painted box", async () => {
     const el = (await fixture(
       html`<lr-image-viewer
         src=${PNG_SRC}
@@ -1417,8 +1417,12 @@ describe("accessibility", () => {
       '[part="highlight"]'
     ) as HTMLElement;
     const style = getComputedStyle(box);
-    expect(parseFloat(style.minInlineSize)).to.be.at.least(36);
-    expect(parseFloat(style.minBlockSize)).to.be.at.least(36);
+    // The painted box stays exact; the floor is a transparent centred ::after.
+    expect(parseFloat(style.minInlineSize) || 0).to.equal(0);
+    const after = getComputedStyle(box, "::after");
+    expect(after.position).to.equal("absolute");
+    expect(parseFloat(after.width)).to.be.at.least(36);
+    expect(parseFloat(after.height)).to.be.at.least(36);
   });
 
   it("gives the toolbar fit/rotate/annotate controls the shared minimum hit-area on both axes", async () => {

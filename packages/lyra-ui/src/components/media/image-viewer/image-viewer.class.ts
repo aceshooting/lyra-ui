@@ -169,7 +169,8 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @csspart image-wrapper - The rotated wrapper around the image and its overlays.
  * @csspart image - The `<img>` element.
  * @csspart highlight-layer - The overlay hosting highlight boxes.
- * @csspart highlight - One highlight box (`data-tone`, `data-active`).
+ * @csspart highlight - One highlight box (`data-tone`, `data-active`). Its box is exactly the
+ *   region's percentage rectangle; the minimum pointer target is a transparent centred `::after`.
  * @csspart highlight-label - A highlight's visible label.
  * @csspart annotation-box - The in-progress draft rectangle.
  * @csspart error - Ordinary visible failure text. Fresh post-mount image/source failures append
@@ -715,6 +716,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     >
       ${visible.map(
         ({ highlight: h, rect }, index) => html`
+        <!-- hit-area-exempt: the box is the data-driven percentage rectangle and must paint
+             exactly; the shared target floor is a transparent centred ::after (see styles). -->
         <button
           part="highlight"
           type="button"

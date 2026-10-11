@@ -194,15 +194,20 @@ export const styles = css`
   [part="highlight-layer"] {
     position: absolute;
     inset: 0;
+    /* A stacking context, so each highlight's hit-area pseudo-element (z-index: -1) paints beneath
+       every highlight's own box instead of escaping behind the image. */
+    isolation: isolate;
   }
   /* Each tone sets --lr-image-viewer-highlight-fill instead of background, and the single
      background declaration reads it, so hover/active mix from whichever fill a highlight has.
      Mixing against the untoned default would flatten every toned box to brand on hover, and
      per-tone pairs would be ten near-identical rules. The public
      --lr-image-viewer-highlight-*-bg knobs still back each fill. */
+  /* The box is exactly the percentage rectangle the data names; it never takes a minimum size.
+     The accessible target floor lives on the transparent ::after below, centred on the box. */
   [part="highlight"] {
     position: absolute;
-    ${iconHitTarget}
+    box-sizing: border-box;
     border: var(--lr-border-width-medium) solid
       var(--lr-image-viewer-highlight-border, var(--lr-color-brand));
     --_lr-image-viewer-highlight-fill: var(
@@ -215,6 +220,18 @@ export const styles = css`
     );
     cursor: pointer;
     padding: 0;
+  }
+  /* Hit-area overlay: grows the pointer target to --lr-icon-button-size on either axis where the
+     painted box is smaller, centred on the box (a negative inset of half the shortfall; percentage
+     insets resolve against the box itself). It paints nothing and sits behind every highlight, so a
+     region's own painted box always wins over a neighbour's enlarged area; where only enlarged
+     areas overlap, the later region in document order wins. */
+  [part="highlight"]::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset-inline: min(0px, calc((100% - var(--lr-icon-button-size)) / 2));
+    inset-block: min(0px, calc((100% - var(--lr-icon-button-size)) / 2));
   }
   [part="highlight"]:where([data-tone="success"]) {
     border-style: double;
