@@ -113,13 +113,19 @@ describe('dark glass fill follows the theme surface ramp', () => {
       expect(sum(scoped), 'scoped container lifts the fill').to.be.greaterThan(sum(plain) + 3);
     });
 
-    it('falls back to the 10% default for an invalid value', async function () {
+    it('voids the dark fill for a value that is not a percentage (the input is not registered)', async function () {
       if (!CSS.supports('color', 'light-dark(red, blue)')) this.skip();
       const unset = await paint('shadcn');
       for (const bad of ['banana', '1.5', '10', '#fff', '10px']) {
         const painted = await paint('shadcn', `${SHARE}: ${bad}`);
-        expect(painted.alpha, `${bad}: stays translucent`).to.be.within(0.59, 0.61);
-        expect(channels(painted.background), `${bad}: falls back`).to.deep.equal(channels(unset.background));
+        expect(JSON.stringify(painted.background), `${bad}: not the default fill`).to.not.equal(JSON.stringify(unset.background));
+      }
+    });
+
+    it('is not registered with @property, which slows every Chromium re-theme', async () => {
+      for (const path of ['theme.css', 'surfaces/glass.css']) {
+        const text = await (await fetch(new URL(`../${path}`, import.meta.url))).text();
+        expect(text.includes('@property'), path).to.equal(false);
       }
     });
   });

@@ -256,6 +256,23 @@ describe('document token layer: adoption', () => {
     }
   });
 
+  it('reports a glass dark share on the root that is not a percentage, in development', async () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      const frameDocument = frame.contentDocument!;
+      frameDocument.documentElement.style.setProperty('--lr-theme-surface-glass-dark-share', 'banana');
+      const probe = document.createElement(tag('layer-probe')) as LayerProbe;
+      const warnings = await captureDevWarnings(async () => {
+        frameDocument.body.append(frameDocument.adoptNode(probe));
+        await probe.updateComplete;
+      });
+      expect(warnings.some((message) => message.includes('--lr-theme-surface-glass-dark-share'))).to.equal(true);
+    } finally {
+      frame.remove();
+    }
+  });
+
   it('adopts the layer text that tokens-root.css publishes, byte for byte', async () => {
     const response = await fetch(new URL('../styles/tokens-root.css', import.meta.url));
     const text = await response.text();
