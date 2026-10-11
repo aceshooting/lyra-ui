@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Tsart na {type} na walang datos.',
   chartSummarySeparator: '. ',
   chartData: 'Datos ng tsart',
+  chartRenderUnavailable: 'Hindi available ang pagpapakita ng chart.',
   chartDataSampled: 'Nagpapakita ang tsart at ang nabuong talahanayan ng sample na hanggang 1,000 rekord. Magbigay ng pasadyang talahanayan ng datos upang ma-access ang lahat ng datos ng tsart.',
   chartPlotSampled: 'Nagpapakita ang tsart ng sample na hanggang 1,000 rekord; nakalista sa talahanayan ng datos ang lahat ng datos.',
   chartZoomUnavailable: 'Hindi magagamit ang pag-zoom, pero magagamit pa rin ang pangunahing tsart.',

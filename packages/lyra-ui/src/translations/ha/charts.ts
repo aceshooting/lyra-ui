@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Jadawalin {type} marar bayanai.',
   chartSummarySeparator: '. ',
   chartData: 'Bayanan jadawali',
+  chartRenderUnavailable: 'Ba a samun damar nuna jadawali.',
   chartDataSampled: 'Jadawalin da teburin bayanan da aka samar suna nuna samfurin bayanai har zuwa 1,000. Samar da teburin bayananka don samun duk bayanan jadawalin.',
   chartPlotSampled: 'Jadawalin yana nuna samfurin bayanai har zuwa 1,000; teburin bayanai yana lissafa duk bayanan.',
   chartZoomUnavailable: 'Ba a samun zuƙowa, amma har yanzu ana iya amfani da babban jadawalin.',

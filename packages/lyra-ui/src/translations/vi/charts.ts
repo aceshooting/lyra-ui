@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Biểu đồ {type} chưa có dữ liệu.',
   chartSummarySeparator: '. ',
   chartData: 'Dữ liệu biểu đồ',
+  chartRenderUnavailable: 'Không thể hiển thị biểu đồ.',
   chartDataSampled: 'Biểu đồ và bảng dữ liệu được tạo chỉ hiển thị tối đa 1.000 bản ghi mẫu. Hãy cung cấp bảng dữ liệu tùy chỉnh để truy cập toàn bộ dữ liệu biểu đồ.',
   chartPlotSampled: 'Biểu đồ chỉ hiển thị tối đa 1.000 bản ghi mẫu; bảng dữ liệu liệt kê toàn bộ dữ liệu.',
   chartZoomUnavailable: 'Không thể thu phóng, nhưng biểu đồ chính vẫn khả dụng.',

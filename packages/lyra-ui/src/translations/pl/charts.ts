@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Wykres {type} bez danych.',
   chartSummarySeparator: '. ',
   chartData: 'Dane wykresu',
+  chartRenderUnavailable: 'Wyświetlanie wykresu jest niedostępne.',
   chartDataSampled: 'Wykres i wygenerowana tabela danych pokazują próbkę do 1000 rekordów. Podaj własną tabelę danych, aby uzyskać dostęp do wszystkich danych wykresu.',
   chartPlotSampled: 'Wykres pokazuje próbkę do 1000 rekordów; tabela danych zawiera wszystkie dane.',
   chartZoomUnavailable: 'Powiększanie jest niedostępne, ale podstawowy wykres nadal działa.',

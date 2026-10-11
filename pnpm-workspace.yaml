@@ -98,7 +98,7 @@ minimumReleaseAgeExclude:
   - knip@6.32.2 || 6.34.0 || 6.36.0 || 6.38.0 || 6.39.0 || 6.40.0 || 6.41.0
   - svelte@5.56.9 || 5.57.2
   - papaparse@5.6.0
-  - maplibre-gl@6.4.0 || 6.4.1 || 6.10.0 || 6.11.1 || 6.11.2 || 6.12.0 || 6.13.0
+  - maplibre-gl@6.4.0 || 6.4.1 || 6.10.0 || 6.11.1 || 6.11.2 || 6.12.0 || 6.13.0 || 6.14.0
   - '@rolldown/binding-darwin-x64@1.2.5'
   - '@rolldown/binding-linux-arm64-gnu@1.2.5'
   - '@types/react@19.3.0'

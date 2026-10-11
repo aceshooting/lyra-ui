@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Kaavio ({type}) ilman tietoja.',
   chartSummarySeparator: '. ',
   chartData: 'Kaavion tiedot',
+  chartRenderUnavailable: 'Kaavion piirtäminen ei ole käytettävissä.',
   chartDataSampled: 'Kaavio ja luotu datataulukko näyttävät otoksen, jossa on enintään 1 000 tietuetta. Anna mukautettu datataulukko, jotta kaikki kaavion tiedot ovat käytettävissä.',
   chartPlotSampled: 'Kaavio näyttää otoksen, jossa on enintään 1 000 tietuetta; datataulukossa ovat kaikki tiedot.',
   chartZoomUnavailable: 'Zoomaus ei ole käytettävissä, mutta peruskaavio on edelleen käytettävissä.',

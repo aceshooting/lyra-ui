@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Diagram ({type}) adatok nélkül.',
   chartSummarySeparator: '. ',
   chartData: 'Diagramadatok',
+  chartRenderUnavailable: 'A diagram megjelenítése nem érhető el.',
   chartDataSampled: 'A diagram és a generált adattábla legfeljebb 1000 rekordból álló mintát mutatnak. Az összes diagramadat eléréséhez adjon meg egyéni adattáblát.',
   chartPlotSampled: 'A diagram legfeljebb 1000 rekordból álló mintát mutat; az adattábla az összes adatot tartalmazza.',
   chartZoomUnavailable: 'A nagyítás nem érhető el, de az alapdiagram továbbra is elérhető.',

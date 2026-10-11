@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Eserese {type} enweghị data.',
   chartSummarySeparator: '. ',
   chartData: 'Data eserese',
+  chartRenderUnavailable: 'Igosipụta eserese adịghị.',
   chartDataSampled: 'Eserese ahụ na tebụl data e mepụtara na-egosi ihe nlele ruru ndekọ 1,000. Nye tebụl data nke gị iji nweta data eserese niile.',
   chartPlotSampled: 'Eserese ahụ na-egosi ihe nlele ruru ndekọ 1,000; tebụl data na-edepụta data niile.',
   chartZoomUnavailable: 'Enweghị ike ịbawanye nlele, mana eserese bụ isi ka dị.',

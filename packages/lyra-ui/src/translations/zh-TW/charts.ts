@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: '{type}圖，無資料。',
   chartSummarySeparator: '。',
   chartData: '圖表資料',
+  chartRenderUnavailable: '圖表繪製無法使用。',
   chartDataSampled: '圖表和生成的資料表顯示最多 1,000 條記錄的樣本。請提供自定義資料表以訪問全部圖表資料。',
   chartPlotSampled: '圖表顯示最多 1,000 條記錄的樣本；資料表列出全部資料。',
   chartZoomUnavailable: '縮放不可用，但核心圖表仍可用。',

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Carta {type} tanpa data.',
   chartSummarySeparator: '. ',
   chartData: 'Data carta',
+  chartRenderUnavailable: 'Paparan carta tidak tersedia.',
   chartDataSampled: 'Carta dan jadual data yang dijana memaparkan sampel sehingga 1,000 rekod. Sediakan jadual data tersuai untuk mengakses semua data carta.',
   chartPlotSampled: 'Carta memaparkan sampel sehingga 1,000 rekod; jadual data menyenaraikan semua data.',
   chartZoomUnavailable: 'Zum tidak tersedia, tetapi carta utama masih tersedia.',

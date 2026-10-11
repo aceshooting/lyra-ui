@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'ውሂብ የሌለው {type} ገበታ።',
   chartSummarySeparator: '. ',
   chartData: 'የገበታ ውሂብ',
+  chartRenderUnavailable: 'የገበታ ማሳያ አይገኝም።',
   chartDataSampled: 'ገበታው እና የተፈጠረው የውሂብ ሰንጠረዥ እስከ 1,000 መዝገቦች ድረስ ናሙና ያሳያሉ። ሁሉንም የገበታ ውሂብ ለማግኘት ብጁ የውሂብ ሰንጠረዥ ያቅርቡ።',
   chartPlotSampled: 'ገበታው እስከ 1,000 መዝገቦች ድረስ ናሙና ያሳያል፤ የውሂብ ሰንጠረዡ ሁሉንም ውሂብ ይዘረዝራል።',
   chartZoomUnavailable: 'ማጉላት አይገኝም፣ ግን ዋናው ገበታ ይገኛል።',

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Veri içermeyen {type} grafik.',
   chartSummarySeparator: '. ',
   chartData: 'Grafik verileri',
+  chartRenderUnavailable: 'Grafik görüntüleme kullanılamıyor.',
   chartDataSampled: 'Grafikte ve oluşturulan veri tablosunda en fazla 1.000 kaydın örneği gösterilir. Tüm grafik verilerine erişmek için özel bir veri tablosu sağlayın.',
   chartPlotSampled: 'Grafikte en fazla 1.000 kaydın örneği gösterilir; veri tablosunda tüm veriler listelenir.',
   chartZoomUnavailable: 'Yakınlaştırma kullanılamıyor; temel grafik kullanılabilir durumda.',

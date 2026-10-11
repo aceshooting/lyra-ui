@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'ಡೇಟಾ ಇಲ್ಲದ {type} ಚಾರ್ಟ್.',
   chartSummarySeparator: '। ',
   chartData: 'ಚಾರ್ಟ್ ಡೇಟಾ',
+  chartRenderUnavailable: 'ಚಾರ್ಟ್ ಪ್ರದರ್ಶನ ಲಭ್ಯವಿಲ್ಲ.',
   chartDataSampled: 'ಚಾರ್ಟ್ ಮತ್ತು ರಚಿಸಿದ ಡೇಟಾ ಟೇಬಲ್ ಗರಿಷ್ಠ 1,000 ದಾಖಲೆಗಳ ಮಾದರಿಯನ್ನು ತೋರಿಸುತ್ತವೆ. ಎಲ್ಲಾ ಚಾರ್ಟ್ ಡೇಟಾವನ್ನು ಪಡೆಯಲು ಕಸ್ಟಮ್ ಡೇಟಾ ಟೇಬಲ್ ಒದಗಿಸಿ.',
   chartPlotSampled: 'ಚಾರ್ಟ್ ಗರಿಷ್ಠ 1,000 ದಾಖಲೆಗಳ ಮಾದರಿಯನ್ನು ತೋರಿಸುತ್ತದೆ; ಡೇಟಾ ಟೇಬಲ್ ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ಪಟ್ಟಿ ಮಾಡುತ್ತದೆ.',
   chartZoomUnavailable: 'ಜೂಮ್ ಲಭ್ಯವಿಲ್ಲ, ಆದರೆ ಮುಖ್ಯ ಚಾರ್ಟ್ ಲಭ್ಯವಿದೆ.',

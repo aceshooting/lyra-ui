@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Grafikon ({type}) bez podataka.',
   chartSummarySeparator: '. ',
   chartData: 'Podaci grafikona',
+  chartRenderUnavailable: 'Iscrtavanje grafikona nije dostupno.',
   chartDataSampled: 'Grafikon i generirana tablica podataka prikazuju uzorak od najviše 1.000 zapisa. Za pristup svim podacima grafikona navedite prilagođenu tablicu podataka.',
   chartPlotSampled: 'Grafikon prikazuje uzorak od najviše 1.000 zapisa; tablica podataka navodi sve podatke.',
   chartZoomUnavailable: 'Zumiranje nije dostupno, ali osnovni grafikon ostaje dostupan.',

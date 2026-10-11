@@ -82,7 +82,7 @@ import {
 } from './chart-bidi.js';import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -1485,7 +1485,9 @@ function isDenseChartSize(size: LyraSize): boolean {
  * @csspart data-table-toggle - The disclosure button rendered by `dataTableToggle`.
  * @csspart center - The chart-area-centered overlay wrapper for the `center` slot.
  * @csspart error - Static visible error shown instead of `canvas` when the optional `chart.js`
- *   peer dependency is not installed; its transition is announced through a shared light-DOM alert.
+ *   peer dependency is not installed or the canvas context is unavailable. Canvas failure keeps
+ *   the data table visible and retries on data updates or `refreshTheme()`; its transition is
+ *   announced through a shared light-DOM alert.
  * @csspart notices - Wrapper for nonfatal feature warnings and generated-data truncation notices.
  * @csspart data-truncation - Explanation shown when the generated accessible alternative samples
  *   a data set larger than its 1,000-record ceiling.
@@ -1594,6 +1596,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     chartPointCoordinates: LYRA_DEFAULT_chartPointCoordinates,
     chartPointLabel: LYRA_DEFAULT_chartPointLabel,
     chartPrimaryAxis: LYRA_DEFAULT_chartPrimaryAxis,
+    chartRenderUnavailable: LYRA_DEFAULT_chartRenderUnavailable,
     chartSecondaryAxis: LYRA_DEFAULT_chartSecondaryAxis,
     chartSeriesLabel: LYRA_DEFAULT_chartSeriesLabel,
     chartSeriesNoData: LYRA_DEFAULT_chartSeriesNoData,
@@ -2425,6 +2428,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * closed into a visible `part="error"` and announces through the document-level sink.
    */
   @state() private loadFailed = false;
+  private canvasUnavailable = false;
 
   // Overridable instance field (not a direct `loadChartJs()` call site) purely so tests can
   // inject a stubbed loader before the element ever connects -- matches map/docx-viewer's own
@@ -4906,6 +4910,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private draw(): void {
     if (!this.chartJsModule || !this.canvasEl) return;
+    if (!this.chart && !this.canvasEl.getContext('2d')) {
+      this.setCanvasUnavailable(true);
+      return;
+    }
     this.canvasTokens.beginThemeDraw();
     const config = this.buildConfig();
     this.scaleExtremeSlices(config);
@@ -4932,10 +4940,21 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       return;
     }
     this.discardChart(true);
-    this.chart = new this.chartJsModule.Chart(
+    const candidate = new this.chartJsModule.Chart(
       this.canvasEl,
       { ...config, plugins: [...nextPlugins, this.chartAreaPlugin] } as never
     ) as unknown as RuntimeChart;
+    const context = candidate as unknown as {
+      canvas?: HTMLCanvasElement | null;
+      ctx?: CanvasRenderingContext2D | null;
+    };
+    if (context.canvas === null || context.ctx === null) {
+      candidate.destroy();
+      this.setCanvasUnavailable(true);
+      return;
+    }
+    this.chart = candidate;
+    this.setCanvasUnavailable(false);
     this.builtType = effectiveType;
     this.builtPlugins = [...nextPlugins];
     // A new Chart already reads configured `dataset.hidden` values. Apply and redraw only when a
@@ -4949,6 +4968,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.updateChartArea(this.chart);
     this.chartSync.update(this.syncGroup, typeof this.syncGroup === 'string' && this.syncGroup.trim() !== '' && this.syncCompatible());
     this.canvasTokens.rememberTheme();
+  }
+
+  private setCanvasUnavailable(unavailable: boolean): void {
+    if (this.canvasUnavailable === unavailable) return;
+    this.canvasUnavailable = unavailable;
+    // Drawing can run from updated(); render the fallback after that update has settled.
+    queueMicrotask(() => {
+      if (this.isConnected) this.requestUpdate();
+    });
+    if (unavailable) this.announcements.announceAssertive(this.localize('chartRenderUnavailable'));
   }
 
   private drawIfVisible(): void {
@@ -5647,7 +5676,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           : nothing}
       >
         <slot class="config-slot" @slotchange=${this.onConfigSlotChange}></slot>
-        <div part="plot">
+        ${this.canvasUnavailable
+          ? html`<div part="error">${this.localize('chartRenderUnavailable')}</div>`
+          : nothing}
+        <div part="plot" ?hidden=${this.canvasUnavailable}>
           <canvas
             part="canvas"
             role="application"
@@ -5679,7 +5711,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               </button>`
             : nothing}
         </div>
-        ${this.renderLegend()}
+        ${this.canvasUnavailable ? nothing : this.renderLegend()}
         <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
         <p class="sr-only" aria-hidden="true">${this.keyboardDatumAnnouncement}</p>
         <div part="notices">
@@ -5690,7 +5722,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ? html`<p part="data-truncation">${this.dataTruncationMessage()}</p>`
             : nothing}
         </div>
-        ${this.dataTableToggle
+        ${this.dataTableToggle && !this.canvasUnavailable
           ? html`<button
               part="data-table-toggle"
               type="button"
@@ -5704,7 +5736,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         <div
           id=${this.dataTableId}
           part="data-table"
-          ?data-visually-hidden=${!this.dataTableVisible}
+          ?data-visually-hidden=${!this.dataTableVisible && !this.canvasUnavailable}
         >
           <slot
             name="data-table"

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'د {type} چارټ معلومات نه لري.',
   chartSummarySeparator: '. ',
   chartData: 'د چارټ معلومات',
+  chartRenderUnavailable: 'د چارټ ښودل شتون نه لري.',
   chartDataSampled: 'چارټ او جوړ شوی د معلوماتو جدول د تر ۱۰۰۰ ریکارډونو بېلګه ښيي. د چارټ ټولو معلوماتو ته د لاسرسي لپاره خپل د معلوماتو جدول ورکړئ.',
   chartPlotSampled: 'چارټ د تر ۱۰۰۰ ریکارډونو بېلګه ښيي؛ د معلوماتو جدول ټول معلومات لېست کوي.',
   chartZoomUnavailable: 'لویول شوني نه دي، خو اصلي چارټ لا هم کار کوي.',

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: '{type}diagram utan data.',
   chartSummarySeparator: '. ',
   chartData: 'Diagramdata',
+  chartRenderUnavailable: 'Diagramvising er ikkje tilgjengeleg.',
   chartDataSampled: 'Diagrammet og den genererte datatabellen viser eit utval på opptil 1 000 postar. Legg ved ein eigen datatabell for å få tilgang til alle diagramdata.',
   chartPlotSampled: 'Diagrammet viser eit utval på opptil 1 000 postar; datatabellen viser alle data.',
   chartZoomUnavailable: 'Zoom er ikkje tilgjengeleg, men sjølve diagrammet er framleis tilgjengeleg.',

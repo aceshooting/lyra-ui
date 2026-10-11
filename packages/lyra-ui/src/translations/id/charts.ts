@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Bagan {type} tanpa data.',
   chartSummarySeparator: '. ',
   chartData: 'Data bagan',
+  chartRenderUnavailable: 'Tampilan bagan tidak tersedia.',
   chartDataSampled: 'Bagan dan tabel data yang dibuat menampilkan sampel hingga 1.000 catatan. Berikan tabel data khusus untuk mengakses semua data bagan.',
   chartPlotSampled: 'Bagan menampilkan sampel hingga 1.000 catatan; tabel data mencantumkan semua data.',
   chartZoomUnavailable: 'Pembesaran tidak tersedia, tetapi bagan utama tetap dapat digunakan.',

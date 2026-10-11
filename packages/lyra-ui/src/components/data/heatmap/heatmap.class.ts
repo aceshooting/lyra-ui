@@ -639,6 +639,7 @@ export type LyraHeatmapExportFormat = 'csv' | 'png';
  * @cssprop [--lr-heatmap-tooltip-bg=var(--lr-color-surface)] - Hover tooltip background.
  * @cssprop [--lr-heatmap-tooltip-color=var(--lr-color-text)] - Hover tooltip text color.
  * @cssprop [--lr-heatmap-focus-ring-color=var(--lr-focus-ring-color)] - Focus ring around a focused cell.
+ * @cssprop [--lr-heatmap-hover-ring-color=var(--lr-heatmap-focus-ring-color)] - Pointer hover outline on the canvas and accessible cells; independent of keyboard focus and pressed outlines.
  * @cssprop [--lr-heatmap-annotation-color=var(--lr-color-danger)] - Border color for an annotated cell.
  * @cssprop [--lr-heatmap-selected-color=var(--lr-color-success)] - Border color for the selected cell.
  * @cssprop [--lr-heatmap-sticky-label-bg=var(--lr-color-surface)] - Backdrop painted under a frozen `stickyLabels` band. Must be opaque: it covers the same labels the scrolling canvas painted underneath it.
@@ -2600,6 +2601,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       this.drawDirty = true;
       return;
     }
+    this.syncDeferredFitFrame(false);
     this.drawDirty = false;
     this.canvasHasContent = false;
     this.paintedTheme ??= this.themeSignature();
@@ -2610,6 +2612,23 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private requestDraw(): void {
     this.drawDirty = true;
     if (this.canvasVisible) this.draw();
+    else this.syncDeferredFitFrame(true);
+  }
+
+  /** Contain only a stale fitted frame, never a grid whose current cell floors require scrolling. */
+  private syncDeferredFitFrame(deferred: boolean): void {
+    const base = this.shadowRoot?.querySelector<HTMLElement>('[part="base"]');
+    if (!base) return;
+    let contained = false;
+    if (deferred && this.fitToWidth && this.clientWidth > 0) {
+      const width = this.effectiveMode === 'calendar'
+        ? this.columnXFor(Math.max(1, this.cachedCalendarGrid.weekCount))
+        : this.matrixPadLeft + this.matrixColLabels.length * this.matrixCellSize(this.matrixColLabels.length);
+      // Reuse the drawing geometry, including custom column placement, minimum cell size and
+      // accessible hit targets. Those intentional extents must not be scaled or clipped away.
+      contained = width <= this.clientWidth;
+    }
+    base.toggleAttribute('data-fit-frame-contained', contained);
   }
 
   /** Repaints the old and new focus-ring cells after keyboard/click navigation. The underlying

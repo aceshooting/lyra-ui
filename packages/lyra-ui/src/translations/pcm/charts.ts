@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: '{type} chart wey no get data.',
   chartSummarySeparator: '. ',
   chartData: 'Data for chart',
+  chartRenderUnavailable: 'Chart no fit show.',
   chartDataSampled: 'Di chart and di data table wey dem generate show sample reach 1,000 records. Put your own data table make you fit see all di chart data.',
   chartPlotSampled: 'Di chart show sample reach 1,000 records; di data table get all di data.',
   chartZoomUnavailable: 'Zoom no dey available, but di main chart still dey available.',

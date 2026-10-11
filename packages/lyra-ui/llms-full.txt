@@ -2908,7 +2908,7 @@ that need form-value or validity behavior: it supplies
 `form`/`labels`/`validity`/`validationMessage`/`willValidate`. The shim is a no-op where the
 platform already provides internals, so it is safe in a shared setup file.
 
-`installHappyDomShims()` installs that shim plus two more Happy DOM gap fixes, each a no-op where
+`installHappyDomShims()` installs that shim plus Happy DOM gap fixes, each a no-op where
 the engine already behaves (feature-detected, so safe in a shared setup file and never part of a
 production bundle): `installHappyDomShadowFocusShim()` makes `ShadowRoot.activeElement` return
 `null` for a sibling or detached shadow root instead of throwing a `TypeError` (own-root and
@@ -2933,6 +2933,19 @@ wins. `insertRule()` is unchanged. The shim detects the defect by parsing a laye
 a no-op in every browser and without a `CSSStyleSheet` global; it installs once and returns a
 function that restores the original methods. Install it before any stylesheet is parsed (in the
 same `setupFiles` entry): a sheet parsed earlier keeps the rules it dropped.
+
+`installHappyDomShims()` also supplies `ShadowRoot.styleSheets` when the environment lacks it.
+The live collection lists non-null `<style>` and stylesheet-link sheets in that shadow tree,
+in tree order, with indexed access, `length`, `item()` and iteration. Retained collections reflect
+insertions and removals; nested shadow trees and constructed `adoptedStyleSheets` remain separate.
+This lets marked application scopes discover and adopt their token provider under Happy DOM.
+An existing platform collection is never replaced, and plain Node remains unchanged.
+
+When Happy DOM lacks the HTML `dir="ltr"`/`dir="rtl"` presentational hints,
+`installHappyDomShims()` adds zero-specificity direction rules to the document head. This restores
+computed direction and inherited component direction while preserving explicit author CSS.
+The shim probes support before installing, is idempotent, and never runs in a native browser.
+It does not emulate `dir="auto"` text analysis or the `:dir()` pseudo-class.
 
 ### jsdom: `installJsdomShims()`
 
@@ -16344,7 +16357,10 @@ movements remain separate announcements, and `[part="live-region"]` is only an `
 Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
 calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain their physical
 previous/next movement instead of swapping for RTL.
-Full canvas redraws pause while the host is outside the viewport. Data, locale, theme, resize, and
+Full canvas redraws pause while the host is outside the viewport. A deferred `fitToWidth` frame
+stays within a smaller allocation when the current grid fits it; explicit cell floors, accessible
+hit targets and custom column extents still retain intentional overflow. The next visible draw
+restores the bitmap and cell geometry together. Data, locale, theme, resize, and
 DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
 environments without `IntersectionObserver` retain eager drawing. A theme signal (any ancestor
 `style`/`class` write) repaints only when a theme token the canvas reads changed, or while `cellColor`
@@ -16778,6 +16794,11 @@ resolve-via-`getComputedStyle` pattern), `--lr-heatmap-label-font` (default
 `--lr-heatmap-focus-ring-color` (default
 `var(--lr-focus-ring-color)` — the canvas-drawn ring stroked around the keyboard-focused cell;
 also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay visually in sync),
+`--lr-heatmap-hover-ring-color` (defaults to the effective `--lr-heatmap-focus-ring-color`) —
+the pointer-hover outline on the canvas and accessible cells. Set it to `transparent` to omit
+that outline while retaining keyboard-focus and pressed feedback. Leaving it unset preserves
+existing hover styling; native forced-color adjustment remains enabled.
+
 `--lr-heatmap-color-steps-gradient` (default
 `linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))` — the gradient
 painted on the continuous legend bar; the component writes it onto the host itself while
@@ -35375,6 +35396,11 @@ For horizontal scalar bars, tooltip values come from parsed x rather than the ca
 an effective raw `config.options.indexAxis` override. Both formatter APIs follow this rule;
 structured points retain their y-value formatting.
 
+If the browser cannot acquire a 2D canvas context, a localized visible message replaces the plot
+and the generated or slotted data table becomes visible. No failed Chart.js instance is retained.
+Changing the data or calling `refreshTheme()` retries rendering, so the plot recovers when the
+canvas capability becomes available.
+
 **Properties:**
 - `axes: LyraChartAxes = 'both'` — `'x' | 'y' | 'both' | 'none'`, controlling complete cartesian
   axes: labels, ticks, borders and grid lines. The `y` setting includes `y2`; invalid values use
@@ -36540,6 +36566,11 @@ their semantics, defaults, and gotchas.
 
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
+
+If the browser cannot acquire a 2D canvas context, a localized visible message replaces the plot
+and the generated or slotted data table becomes visible. No failed Chart.js instance is retained.
+Changing the data or calling `refreshTheme()` retries rendering, so the plot recovers when the
+canvas capability becomes available.
 
 With `IntersectionObserver` available, canvas construction waits for its first delivered visibility
 decision. An off-screen box plot stays unconstructed until visible. Without the observer, drawing

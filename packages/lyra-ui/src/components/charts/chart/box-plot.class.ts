@@ -71,7 +71,7 @@ import {
 } from './chart-chrome.js';import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
 import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -242,7 +242,9 @@ function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
  * @cssprop [--lr-box-plot-fill-color-8=var(--lr-color-chart-8)] - Eighth series box-fill and
  *   legend-swatch color.
  * @csspart error - Static visible error shown instead of the canvas when the optional box-plot
- *   peer fails to load; its transition is announced through a shared light-DOM alert.
+ *   peer fails to load or the canvas context is unavailable. Canvas failure keeps the data table
+ *   visible and retries on data updates or `refreshTheme()`; its transition is announced through
+ *   a shared light-DOM alert.
  * @csspart data-truncation - Explanation shown when the generated accessible alternative samples
  *   more than 1,000 records.
  * @event lr-legend-visibility-change-request - Cancelable proposed DOM legend visibility change.
@@ -301,6 +303,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     chartDataSampled: LYRA_DEFAULT_chartDataSampled,
     chartPlotSampled: LYRA_DEFAULT_chartPlotSampled,
     chartPointLabel: LYRA_DEFAULT_chartPointLabel,
+    chartRenderUnavailable: LYRA_DEFAULT_chartRenderUnavailable,
     chartSeriesLabel: LYRA_DEFAULT_chartSeriesLabel,
     chartSeriesNoData: LYRA_DEFAULT_chartSeriesNoData,
     chartSummarySeparator: LYRA_DEFAULT_chartSummarySeparator,
@@ -435,6 +438,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    */
   @state() private loading = true;
   @state() private loadFailed = false;
+  private canvasUnavailable = false;
 
   @state() private visible = true;
   /** Position of the keyboard cursor within `boxDatums()`; clamped on every read, never persisted. */
@@ -922,6 +926,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   // reusing whenever a chart already exists is always safe here.
   private draw(): void {
     if (!this.chartJsModule || !this.canvasEl) return;
+    if (!this.chart && !this.canvasEl.getContext('2d')) {
+      this.setCanvasUnavailable(true);
+      return;
+    }
     this.canvasTokens.beginThemeDraw();
     const config = this.buildConfig();
     if (this.chart) {
@@ -932,15 +940,36 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       this.canvasTokens.rememberTheme();
       return;
     }
-    this.chart = new this.chartJsModule.Chart(
+    const candidate = new this.chartJsModule.Chart(
       this.canvasEl,
       { ...config, plugins: [this.tooltipIsolationPlugin] } as never,
     ) as unknown as BoxPlotChartRuntime;
+    const context = candidate as unknown as {
+      canvas?: HTMLCanvasElement | null;
+      ctx?: CanvasRenderingContext2D | null;
+    };
+    if (context.canvas === null || context.ctx === null) {
+      candidate.destroy();
+      this.setCanvasUnavailable(true);
+      return;
+    }
+    this.chart = candidate;
+    this.setCanvasUnavailable(false);
     if (this.hiddenDatasets !== undefined) {
       this.applyDatasetVisibility();
       this.chart.update('none');
     }
     this.canvasTokens.rememberTheme();
+  }
+
+  private setCanvasUnavailable(unavailable: boolean): void {
+    if (this.canvasUnavailable === unavailable) return;
+    this.canvasUnavailable = unavailable;
+    // Drawing can run from updated(); render the fallback after that update has settled.
+    queueMicrotask(() => {
+      if (this.isConnected) this.requestUpdate();
+    });
+    if (unavailable) this.announcements.announceAssertive(this.localize('chartRenderUnavailable'));
   }
 
   private drawIfVisible(): void {
@@ -1460,7 +1489,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           ? chartChromeLegendPlacement(this.legendPosition)
           : nothing}
       >
-        <div part="plot">
+        ${this.canvasUnavailable
+          ? html`<div part="error">${this.localize('chartRenderUnavailable')}</div>`
+          : nothing}
+        <div part="plot" ?hidden=${this.canvasUnavailable}>
           <canvas
             part="canvas"
             role="application"
@@ -1473,13 +1505,13 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
             @keydown=${this.onCanvasKeyDown}
           ></canvas>
         </div>
-        ${this.renderLegend()}
+        ${this.canvasUnavailable ? nothing : this.renderLegend()}
         <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
         <p class="sr-only" aria-hidden="true">${this.keyboardDatumAnnouncement}</p>
         ${this.dataTruncationMessage()
           ? html`<p part="data-truncation">${this.dataTruncationMessage()}</p>`
           : nothing}
-        ${this.dataTableToggle
+        ${this.dataTableToggle && !this.canvasUnavailable
           ? html`<button
               part="data-table-toggle"
               type="button"
@@ -1493,7 +1525,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         <div
           id=${this.dataTableId}
           part="data-table"
-          ?data-visually-hidden=${!this.dataTableVisible}
+          ?data-visually-hidden=${!this.dataTableVisible && !this.canvasUnavailable}
         >
           <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
           ${hasCustomDataTable ? nothing : this.renderDataTable()}

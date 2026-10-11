@@ -10,7 +10,7 @@ that need form-value or validity behavior: it supplies
 `form`/`labels`/`validity`/`validationMessage`/`willValidate`. The shim is a no-op where the
 platform already provides internals, so it is safe in a shared setup file.
 
-`installHappyDomShims()` installs that shim plus two more Happy DOM gap fixes, each a no-op where
+`installHappyDomShims()` installs that shim plus Happy DOM gap fixes, each a no-op where
 the engine already behaves (feature-detected, so safe in a shared setup file and never part of a
 production bundle): `installHappyDomShadowFocusShim()` makes `ShadowRoot.activeElement` return
 `null` for a sibling or detached shadow root instead of throwing a `TypeError` (own-root and
@@ -35,6 +35,19 @@ wins. `insertRule()` is unchanged. The shim detects the defect by parsing a laye
 a no-op in every browser and without a `CSSStyleSheet` global; it installs once and returns a
 function that restores the original methods. Install it before any stylesheet is parsed (in the
 same `setupFiles` entry): a sheet parsed earlier keeps the rules it dropped.
+
+`installHappyDomShims()` also supplies `ShadowRoot.styleSheets` when the environment lacks it.
+The live collection lists non-null `<style>` and stylesheet-link sheets in that shadow tree,
+in tree order, with indexed access, `length`, `item()` and iteration. Retained collections reflect
+insertions and removals; nested shadow trees and constructed `adoptedStyleSheets` remain separate.
+This lets marked application scopes discover and adopt their token provider under Happy DOM.
+An existing platform collection is never replaced, and plain Node remains unchanged.
+
+When Happy DOM lacks the HTML `dir="ltr"`/`dir="rtl"` presentational hints,
+`installHappyDomShims()` adds zero-specificity direction rules to the document head. This restores
+computed direction and inherited component direction while preserving explicit author CSS.
+The shim probes support before installing, is idempotent, and never runs in a native browser.
+It does not emulate `dir="auto"` text analysis or the `:dir()` pseudo-class.
 
 ### jsdom: `installJsdomShims()`
 

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: '{type} graf bez dat.',
   chartSummarySeparator: '. ',
   chartData: 'Data grafu',
+  chartRenderUnavailable: 'Vykreslení grafu není k dispozici.',
   chartDataSampled: 'Graf a vygenerovaná tabulka dat zobrazují vzorek nejvýše 1 000 záznamů. Pro přístup ke všem datům grafu zadejte vlastní tabulku dat.',
   chartPlotSampled: 'Graf zobrazuje vzorek nejvýše 1 000 záznamů; tabulka dat obsahuje všechna data.',
   chartZoomUnavailable: 'Přiblížení není k dispozici, základní graf však zůstává dostupný.',

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'תרשים {type} ללא נתונים.',
   chartSummarySeparator: '. ',
   chartData: 'נתוני תרשים',
+  chartRenderUnavailable: 'הצגת התרשים אינה זמינה.',
   chartDataSampled: 'התרשים וטבלת הנתונים שנוצרה מציגים מדגם של עד 1,000 רשומות. ספקו טבלת נתונים מותאמת אישית כדי לגשת לכל נתוני התרשים.',
   chartPlotSampled: 'התרשים מציג מדגם של עד 1,000 רשומות; טבלת הנתונים מפרטת את כל הנתונים.',
   chartZoomUnavailable: 'הזום אינו זמין, אך התרשים הראשי נשאר זמין.',

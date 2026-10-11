@@ -281,11 +281,15 @@ describe('ariaControlsElements shim', () => {
     const beforeInternals = HTMLElement.prototype.attachInternals;
     const beforeReplaceSync = CSSStyleSheet.prototype.replaceSync;
     const beforeReplace = CSSStyleSheet.prototype.replace;
+    const beforeStyleSheets = Object.getOwnPropertyDescriptor(ShadowRoot.prototype, 'styleSheets');
+    const beforeHeadNodes = document.head.childNodes.length;
     installHappyDomShims();
     expect(Object.getOwnPropertyDescriptor(Element.prototype, 'ariaControlsElements')?.get === before?.get).to.be.true;
     expect(HTMLElement.prototype.attachInternals).to.equal(beforeInternals);
     expect(CSSStyleSheet.prototype.replaceSync === beforeReplaceSync).to.be.true;
     expect(CSSStyleSheet.prototype.replace === beforeReplace).to.be.true;
+    expect(Object.getOwnPropertyDescriptor(ShadowRoot.prototype, 'styleSheets')?.get === beforeStyleSheets?.get).to.be.true;
+    expect(document.head.childNodes.length).to.equal(beforeHeadNodes);
   });
 });
 

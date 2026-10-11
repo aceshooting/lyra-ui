@@ -4799,7 +4799,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4839,6 +4839,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -5037,7 +5038,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5077,6 +5078,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -5970,7 +5972,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6010,6 +6012,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -8098,7 +8101,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8146,6 +8149,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -17106,7 +17110,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17146,6 +17150,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -24277,7 +24282,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2364,
+              "line": 2365,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24313,6 +24318,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/heatmap/calendar-grid.test.ts",
+          "src/components/data/heatmap/heatmap-allocation-interaction.test.ts",
           "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
           "src/components/data/heatmap/heatmap-grid-navigation.test.ts",
           "src/components/data/heatmap/heatmap-i18n.test.ts",
@@ -24638,7 +24644,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24678,6 +24684,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -27765,7 +27772,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27805,6 +27812,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -28004,7 +28012,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28044,6 +28052,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -35811,7 +35820,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35858,6 +35867,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -36032,7 +36042,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36072,6 +36082,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -38537,7 +38548,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38577,6 +38588,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",
@@ -42415,7 +42427,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 506,
+              "line": 510,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42455,6 +42467,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
+          "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
           "src/components/charts/chart/chart-datum-legend.test.ts",

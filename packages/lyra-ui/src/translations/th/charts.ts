@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'แผนภูมิ {type} ไม่มีข้อมูล',
   chartSummarySeparator: '. ',
   chartData: 'ข้อมูลแผนภูมิ',
+  chartRenderUnavailable: 'ไม่สามารถแสดงแผนภูมิได้',
   chartDataSampled: 'แผนภูมิและตารางข้อมูลที่สร้างขึ้นแสดงตัวอย่างไม่เกิน 1,000 ระเบียน หากต้องการเข้าถึงข้อมูลแผนภูมิทั้งหมด ให้ระบุตารางข้อมูลที่กำหนดเอง',
   chartPlotSampled: 'แผนภูมิแสดงตัวอย่างไม่เกิน 1,000 ระเบียน ส่วนตารางข้อมูลแสดงข้อมูลทั้งหมด',
   chartZoomUnavailable: 'ซูมไม่ได้ แต่ยังใช้แผนภูมิหลักได้',

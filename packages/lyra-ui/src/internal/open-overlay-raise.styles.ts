@@ -1,4 +1,5 @@
 import { css, unsafeCSS, type CSSResult } from 'lit';
+import { OPEN_OVERLAY_ANCESTOR_SELECTOR } from './open-overlay-ancestors.js';
 
 /**
  * The anchored overlays whose open panel is positioned inside the element that hosts them. A panel
@@ -8,7 +9,7 @@ import { css, unsafeCSS, type CSSResult } from 'lit';
  * @internal
  */
 const ANCHORED_OVERLAY_OPEN_SELECTOR =
-  'lr-dropdown[open], lr-popover[open], lr-select[open], lr-combobox[open]';
+  `lr-dropdown[open], lr-popover[open], lr-select[open], lr-combobox[open], ${OPEN_OVERLAY_ANCESTOR_SELECTOR}`;
 
 /**
  * Raises `selector` while it holds focus and while it `:has()` an open anchored overlay. The state

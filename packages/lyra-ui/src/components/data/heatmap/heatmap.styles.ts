@@ -45,6 +45,14 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  /* A suspended fitted bitmap can outlive its previous allocation. Keep that stale frame and
+     its cell projection contained until the next visible draw restores their shared geometry. */
+  [part="base"]:where([data-fit-frame-contained]) {
+    overflow: clip;
+  }
+  [part="base"]:where([data-fit-frame-contained]) [part="canvas"] {
+    max-inline-size: 100%;
+  }
   canvas {
     display: block;
     inline-size: 100%;
@@ -61,7 +69,7 @@ export const styles = css`
   }
   [part="canvas"]:hover {
     outline: var(--lr-border-width-thin) solid
-      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
+      var(--lr-heatmap-hover-ring-color, var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color)));
     outline-offset: var(--lr-focus-ring-offset);
   }
   :host([multiple]) [part='canvas'],
@@ -145,7 +153,7 @@ export const styles = css`
   }
   [part="cell"]:hover {
     outline: var(--lr-border-width-thin) solid
-      var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color));
+      var(--lr-heatmap-hover-ring-color, var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color)));
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part="cell"]:active {

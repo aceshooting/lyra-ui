@@ -32,6 +32,30 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
       await page.screenshot({ path: evidence(`layout-${theme}`) });
     }
   });
+  await check('fit width follows phone resizing below fifty percent without changing the document', async () => {
+    await editor.evaluate(async element => { element.zoom = 'fit'; await element.updateComplete; });
+    for (const width of [390, 320, 800, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.waitForFunction(() => {
+        const element = document.getElementById('layout');
+        const viewport = element.querySelector('[data-lr-docx-viewport]');
+        const paper = element.querySelector('.docx-page').getBoundingClientRect();
+        return paper.width <= viewport.clientWidth && paper.width > viewport.clientWidth * 0.7
+          && viewport.scrollWidth <= viewport.clientWidth + 1;
+      });
+      const layout = await editor.evaluate(element => ({
+        paperWidth: element.querySelector('.docx-page').getBoundingClientRect().width,
+        viewportWidth: element.querySelector('[data-lr-docx-viewport]').clientWidth,
+        zoom: element.zoom
+      }));
+      assert.equal(layout.zoom, 'fit');
+      assert.ok(layout.paperWidth > layout.viewportWidth * 0.7, JSON.stringify({ width, ...layout }));
+      if (width <= 390) assert.ok(layout.paperWidth < 408, JSON.stringify({ width, ...layout }));
+      assert.equal(zipEntry(await saveEditor(page, 'layout'), 'word/document.xml'), before);
+    }
+    await editor.evaluate(async element => { element.zoom = 1; await element.updateComplete; });
+    await page.setViewportSize({ width: 1440, height: 900 });
+  });
   await check('toolbar uses one stable row when wide and two reachable rows when narrower', async () => {
     for (const width of [2560, 1920, 1440, 800, 320]) {
       await page.setViewportSize({ width, height: 900 });

@@ -335,11 +335,77 @@ export function installHappyDomCascadeLayerShim(
   };
 }
 
+/** Supplies the live linked-sheet collection missing from Happy DOM's application shadow roots. */
+function installHappyDomShadowStyleSheetsShim(): void {
+  if (typeof ShadowRoot === 'undefined' || 'styleSheets' in ShadowRoot.prototype) return;
+  const lists = new WeakMap<ShadowRoot, StyleSheetList>();
+  Object.defineProperty(ShadowRoot.prototype, 'styleSheets', {
+    configurable: true,
+    enumerable: true,
+    get(this: ShadowRoot): StyleSheetList {
+      let list = lists.get(this);
+      if (list) return list;
+      const root = this;
+      const read = (): CSSStyleSheet[] => Array.from(
+        root.querySelectorAll<HTMLStyleElement | HTMLLinkElement>('style, link[rel~="stylesheet" i]'),
+        (element) => element.sheet,
+      ).filter((sheet): sheet is CSSStyleSheet => sheet !== null);
+      const collection = {
+        get length(): number { return read().length; },
+        item(index: number): CSSStyleSheet | null { return read()[index >>> 0] ?? null; },
+        *[Symbol.iterator](): IterableIterator<CSSStyleSheet> {
+          for (let index = 0; index < this.length; index++) yield this.item(index)!;
+        },
+      };
+      list = new Proxy(collection, {
+        get(target, key, receiver): unknown {
+          if (typeof key === 'string' && /^(0|[1-9]\d*)$/.test(key)) return read()[Number(key)];
+          return Reflect.get(target, key, receiver);
+        },
+      }) as StyleSheetList;
+      lists.set(root, list);
+      return list;
+    },
+  });
+}
+
+const happyDomDirectionStyles = new WeakMap<Document, HTMLStyleElement>();
+
+/** Supplies the missing HTML direction hints without overriding author CSS. */
+function installHappyDomDirectionShim(): void {
+  if (typeof document === 'undefined' || typeof navigator === 'undefined' ||
+      !/happy.?dom/i.test(navigator.userAgent) || !document.head || !document.body) return;
+  if (happyDomDirectionStyles.get(document)?.isConnected) return;
+  const probe = document.createElement('div');
+  probe.dir = 'rtl';
+  document.body.append(probe);
+  let supported: boolean;
+  try {
+    supported = document.defaultView?.getComputedStyle(probe).direction === 'rtl';
+  } finally {
+    probe.remove();
+  }
+  if (supported) return;
+  const style = document.createElement('style');
+  // Happy DOM's stylesheet matching also lacks case-insensitive attribute flags.
+  const selector = (value: string): string => {
+    let cases = [''];
+    for (const character of value) cases = cases.flatMap((prefix) => [prefix + character, prefix + character.toUpperCase()]);
+    return `:where(${cases.map((variant) => `[dir="${variant}"]`).join(',')})`;
+  };
+  style.textContent = `${selector('ltr')}{direction:ltr}${selector('rtl')}{direction:rtl}`;
+  document.head.append(style);
+  happyDomDirectionStyles.set(document, style);
+}
+
+/** Installs the feature-detected Happy DOM form, focus, ARIA, CSS layer, stylesheet and direction fixes. */
 export function installHappyDomShims(): void {
   installHappyDomFormAssociatedShims();
   installHappyDomShadowFocusShim();
   installHappyDomAriaControlsShim();
   installHappyDomCascadeLayerShim();
+  installHappyDomShadowStyleSheetsShim();
+  installHappyDomDirectionShim();
 }
 
 /** Test-only: returns a fresh stub `ElementInternals`-shaped object, independent of whether

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Grafik {type} tanpa data.',
   chartSummarySeparator: '. ',
   chartData: 'Data grafik',
+  chartRenderUnavailable: 'Tampilan bagan ora kasedhiya.',
   chartDataSampled: 'Grafik lan tabel data sing digawe nuduhake sampel nganti 1.000 rekaman. Wenehana tabel data khusus supaya kabeh data grafik bisa diakses.',
   chartPlotSampled: 'Grafik nuduhake sampel nganti 1.000 rekaman; tabel data ngemot kabeh data.',
   chartZoomUnavailable: 'Zoom ora kasedhiya, nanging grafik utama isih bisa digunakake.',

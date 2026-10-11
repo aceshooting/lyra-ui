@@ -90,6 +90,7 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingProgress: 'A enviar {percent}%',
   attachmentUploadingIndeterminate: 'A enviar…',
   attachmentUntitledFile: 'Ficheiro sem título',
+  chartRenderUnavailable: 'A apresentação do gráfico não está disponível.',
   chartDataSampled: 'O gráfico e a tabela de dados gerada mostram uma amostra de até 1.000 registos. Forneça uma tabela de dados personalizada para aceder a todos os dados do gráfico.',
   chartPlotSampled: 'O gráfico mostra uma amostra de até 1.000 registos; a tabela de dados lista todos os dados.',
   chartTypeLine: 'Linhas',

@@ -25,6 +25,7 @@ export const LYRA_DEFAULT_chartPlotSampled: LyraMessage = 'The chart shows a sam
 export const LYRA_DEFAULT_chartPointCoordinates: LyraMessage = 'x {x}, y {y}';
 export const LYRA_DEFAULT_chartPointLabel: LyraMessage = 'Point {n}';
 export const LYRA_DEFAULT_chartPrimaryAxis: LyraMessage = 'Primary axis';
+export const LYRA_DEFAULT_chartRenderUnavailable: LyraMessage = 'Chart rendering is unavailable.';
 export const LYRA_DEFAULT_chartSecondaryAxis: LyraMessage = 'Secondary axis';
 export const LYRA_DEFAULT_chartSeriesLabel: LyraMessage = 'Series';
 export const LYRA_DEFAULT_chartSeriesNoData: LyraMessage = '{label}: no data';

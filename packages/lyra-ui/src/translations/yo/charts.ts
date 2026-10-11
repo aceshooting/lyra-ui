@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Àwòrán {type} láìsí dátà.',
   chartSummarySeparator: '. ',
   chartData: 'Dátà àwòrán',
+  chartRenderUnavailable: 'Ìfihàn àwòrán ìṣirò kò sí.',
   chartDataSampled: 'Àwòrán náà àti tábìlì dátà tí a ṣẹ̀dá fi àpẹẹrẹ tó tó àkọsílẹ̀ 1,000 hàn. Pèsè tábìlì dátà àdáni láti wọ gbogbo dátà àwòrán.',
   chartPlotSampled: 'Àwòrán náà fi àpẹẹrẹ tó tó àkọsílẹ̀ 1,000 hàn; tábìlì dátà ṣe àkójọ gbogbo dátà.',
   chartZoomUnavailable: 'Ìfẹ̀ kò sí, ṣùgbọ́n àwòrán pàtàkì ṣì wà.',

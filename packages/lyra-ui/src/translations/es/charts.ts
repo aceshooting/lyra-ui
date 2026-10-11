@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Gráfico de {type} sin datos.',
   chartSummarySeparator: '. ',
   chartData: 'Datos del gráfico',
+  chartRenderUnavailable: 'La visualización del gráfico no está disponible.',
   chartDataSampled: 'El gráfico y la tabla de datos generada muestran una muestra de hasta 1.000 registros. Proporcione una tabla de datos personalizada para acceder a todos los datos del gráfico.',
   chartPlotSampled: 'El gráfico muestra una muestra de hasta 1.000 registros; la tabla de datos incluye todos los datos.',
   chartZoomUnavailable: 'El zoom no está disponible, pero el gráfico principal sigue disponible.',

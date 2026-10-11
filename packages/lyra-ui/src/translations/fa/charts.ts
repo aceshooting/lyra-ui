@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'نمودار {type} بدون داده.',
   chartSummarySeparator: '. ',
   chartData: 'داده‌های نمودار',
+  chartRenderUnavailable: 'نمایش نمودار در دسترس نیست.',
   chartDataSampled: 'نمودار و جدول دادهٔ تولیدشده نمونه‌ای شامل حداکثر ۱٬۰۰۰ رکورد را نشان می‌دهند. برای دسترسی به همهٔ داده‌های نمودار، یک جدول دادهٔ سفارشی فراهم کنید.',
   chartPlotSampled: 'نمودار نمونه‌ای شامل حداکثر ۱٬۰۰۰ رکورد را نشان می‌دهد؛ جدول داده همهٔ داده‌ها را فهرست می‌کند.',
   chartZoomUnavailable: 'بزرگ‌نمایی در دسترس نیست، اما نمودار اصلی همچنان در دسترس است.',

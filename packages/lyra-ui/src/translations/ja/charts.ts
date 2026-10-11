@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'データのない{type}チャート。',
   chartSummarySeparator: '。',
   chartData: 'チャートのデータ',
+  chartRenderUnavailable: 'グラフの描画は利用できません。',
   chartDataSampled: 'チャートと生成されたデータテーブルには、最大 1,000 件のレコードのサンプルが表示されます。すべてのチャートデータにアクセスするには、カスタムデータテーブルを指定してください。',
   chartPlotSampled: 'チャートには最大 1,000 件のレコードのサンプルが表示され、データテーブルにはすべてのデータが一覧表示されます。',
   chartZoomUnavailable: 'ズームは利用できませんが、チャート本体は引き続き利用できます。',

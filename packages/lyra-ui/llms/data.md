@@ -1996,7 +1996,10 @@ movements remain separate announcements, and `[part="live-region"]` is only an `
 Both modes deliberately retain physical LTR grid geometry under `dir="rtl"`: matrix column 0 and
 calendar week 0 remain at the physical left, so ArrowLeft and ArrowRight retain their physical
 previous/next movement instead of swapping for RTL.
-Full canvas redraws pause while the host is outside the viewport. Data, locale, theme, resize, and
+Full canvas redraws pause while the host is outside the viewport. A deferred `fitToWidth` frame
+stays within a smaller allocation when the current grid fits it; explicit cell floors, accessible
+hit targets and custom column extents still retain intentional overflow. The next visible draw
+restores the bitmap and cell geometry together. Data, locale, theme, resize, and
 DPR invalidations remain pending and coalesce into one redraw when the heatmap intersects again;
 environments without `IntersectionObserver` retain eager drawing. A theme signal (any ancestor
 `style`/`class` write) repaints only when a theme token the canvas reads changed, or while `cellColor`
@@ -2430,6 +2433,11 @@ resolve-via-`getComputedStyle` pattern), `--lr-heatmap-label-font` (default
 `--lr-heatmap-focus-ring-color` (default
 `var(--lr-focus-ring-color)` — the canvas-drawn ring stroked around the keyboard-focused cell;
 also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay visually in sync),
+`--lr-heatmap-hover-ring-color` (defaults to the effective `--lr-heatmap-focus-ring-color`) —
+the pointer-hover outline on the canvas and accessible cells. Set it to `transparent` to omit
+that outline while retaining keyboard-focus and pressed feedback. Leaving it unset preserves
+existing hover styling; native forced-color adjustment remains enabled.
+
 `--lr-heatmap-color-steps-gradient` (default
 `linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))` — the gradient
 painted on the continuous legend bar; the component writes it onto the host itself while

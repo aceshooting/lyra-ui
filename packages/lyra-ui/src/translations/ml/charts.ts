@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'ഡാറ്റയില്ലാത്ത {type} ചാർട്ട്.',
   chartSummarySeparator: '. ',
   chartData: 'ചാർട്ട് ഡാറ്റ',
+  chartRenderUnavailable: 'ചാർട്ട് പ്രദർശനം ലഭ്യമല്ല.',
   chartDataSampled: 'ചാർട്ടും സൃഷ്ടിച്ച ഡാറ്റ പട്ടികയും പരമാവധി 1,000 രേഖകളുടെ മാതൃക കാണിക്കുന്നു. ചാർട്ടിലെ മുഴുവൻ ഡാറ്റയും ലഭിക്കാൻ ഇഷ്ടാനുസൃത ഡാറ്റ പട്ടിക നൽകുക.',
   chartPlotSampled: 'ചാർട്ട് പരമാവധി 1,000 രേഖകളുടെ മാതൃക കാണിക്കുന്നു; ഡാറ്റ പട്ടികയിൽ മുഴുവൻ ഡാറ്റയും ഉണ്ട്.',
   chartZoomUnavailable: 'സൂം ലഭ്യമല്ലെങ്കിലും അടിസ്ഥാന ചാർട്ട് ലഭ്യമാണ്.',

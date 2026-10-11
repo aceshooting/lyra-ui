@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: '{type}-Diagramm ohne Daten.',
   chartSummarySeparator: '. ',
   chartData: 'Diagrammdaten',
+  chartRenderUnavailable: 'Die Diagrammdarstellung ist nicht verfügbar.',
   chartDataSampled: 'Das Diagramm und die generierte Datentabelle zeigen eine Stichprobe von bis zu 1.000 Datensätzen. Stellen Sie eine eigene Datentabelle bereit, um auf alle Diagrammdaten zuzugreifen.',
   chartPlotSampled: 'Das Diagramm zeigt eine Stichprobe von bis zu 1.000 Datensätzen; die Datentabelle enthält alle Daten.',
   chartZoomUnavailable: 'Die Zoomfunktion ist nicht verfügbar, aber das Diagramm bleibt verfügbar.',

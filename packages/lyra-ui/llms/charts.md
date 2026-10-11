@@ -79,6 +79,12 @@ For horizontal scalar bars, tooltip values come from parsed x rather than the ca
 an effective raw `config.options.indexAxis` override. Both formatter APIs follow this rule;
 structured points retain their y-value formatting.
 
+
+If the browser cannot acquire a 2D canvas context, a localized visible message replaces the plot
+and the generated or slotted data table becomes visible. No failed Chart.js instance is retained.
+Changing the data or calling `refreshTheme()` retries rendering, so the plot recovers when the
+canvas capability becomes available.
+
 **Properties:**
 - `axes: LyraChartAxes = 'both'` — `'x' | 'y' | 'both' | 'none'`, controlling complete cartesian
   axes: labels, ticks, borders and grid lines. The `y` setting includes `y2`; invalid values use
@@ -1246,6 +1252,11 @@ their semantics, defaults, and gotchas.
 
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
+
+If the browser cannot acquire a 2D canvas context, a localized visible message replaces the plot
+and the generated or slotted data table becomes visible. No failed Chart.js instance is retained.
+Changing the data or calling `refreshTheme()` retries rendering, so the plot recovers when the
+canvas capability becomes available.
 
 With `IntersectionObserver` available, canvas construction waits for its first delivered visibility
 decision. An off-screen box plot stays unconstructed until visible. Without the observer, drawing

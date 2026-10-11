@@ -66128,6 +66128,12 @@
             "default": "none"
           },
           {
+            "name": "--lr-heatmap-hover-ring-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-heatmap-focus-ring-color)"
+          },
+          {
             "name": "--lr-heatmap-label-font",
             "deprecated": null,
             "hasDefault": false

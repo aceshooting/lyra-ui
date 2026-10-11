@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Maʼlumotsiz {type} diagrammasi.',
   chartSummarySeparator: '. ',
   chartData: 'Diagramma maʼlumotlari',
+  chartRenderUnavailable: 'Diagrammani ko‘rsatish mavjud emas.',
   chartDataSampled: 'Diagramma va yaratilgan maʼlumotlar jadvalida 1 000 tagacha yozuv namunasi koʻrsatiladi. Barcha diagramma maʼlumotlariga kirish uchun maxsus jadval kiriting.',
   chartPlotSampled: 'Diagrammada 1 000 tagacha yozuv namunasi koʻrsatiladi; maʼlumotlar jadvalida barcha maʼlumotlar bor.',
   chartZoomUnavailable: 'Masshtablash mavjud emas, ammo asosiy diagramma ishlaydi.',

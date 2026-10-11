@@ -709,3 +709,23 @@ export const CalendarIgnoresRowHeight: Story = {
     }}></lr-heatmap>
   `,
 };
+
+
+export const IndependentHoverOutline: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'The hover outline can be transparent while Tab navigation keeps the keyboard focus ring. Pressed feedback retains the focus color. The second heatmap uses accessible cell buttons.',
+      },
+    },
+  },
+  render: () => html`
+    ${[false, true].map(accessible => html`
+      <lr-heatmap
+        .accessibleCells=${accessible}
+        style="--lr-heatmap-hover-ring-color: transparent"
+        .data=${{ kind: 'matrix', rowLabels: ['A', 'B'], colLabels: ['X', 'Y'], values: [[1, 2], [3, 4]] }}
+      ></lr-heatmap>
+    `)}
+  `,
+};

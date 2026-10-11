@@ -5989,6 +5989,7 @@ export interface LyraComponentTypeMap {
       | '--lr-heatmap-color-steps-gradient'
       | '--lr-heatmap-focus-ring-color'
       | '--lr-heatmap-grid-max-block-size'
+      | '--lr-heatmap-hover-ring-color'
       | '--lr-heatmap-label-font'
       | '--lr-heatmap-no-data-fill'
       | '--lr-heatmap-scale-hi'

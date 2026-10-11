@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: '{type}grafiek zonder gegevens.',
   chartSummarySeparator: '. ',
   chartData: 'Grafiekgegevens',
+  chartRenderUnavailable: 'De grafiekweergave is niet beschikbaar.',
   chartDataSampled: 'De grafiek en de gegenereerde gegevenstabel tonen een steekproef van maximaal 1.000 records. Geef een aangepaste gegevenstabel op om alle grafiekgegevens te bekijken.',
   chartPlotSampled: 'De grafiek toont een steekproef van maximaal 1.000 records; de gegevenstabel bevat alle gegevens.',
   chartZoomUnavailable: 'Zoomen is niet beschikbaar, maar de basisgrafiek blijft beschikbaar.',

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'କୌଣସି ତଥ୍ୟ ନଥିବା {type} ଚାର୍ଟ।',
   chartSummarySeparator: '. ',
   chartData: 'ଚାର୍ଟ ତଥ୍ୟ',
+  chartRenderUnavailable: 'ଚାର୍ଟ ପ୍ରଦର୍ଶନ ଉପଲବ୍ଧ ନାହିଁ।',
   chartDataSampled: 'ଚାର୍ଟ ଏବଂ ତିଆରି ହୋଇଥିବା ତଥ୍ୟ ସାରଣୀରେ ସର୍ବାଧିକ 1,000ଟି ରେକର୍ଡର ନମୁନା ଦେଖାଯାଏ। ସମସ୍ତ ଚାର୍ଟ ତଥ୍ୟ ପାଇବାକୁ କଷ୍ଟମ୍ ତଥ୍ୟ ସାରଣୀ ଦିଅନ୍ତୁ।',
   chartPlotSampled: 'ଚାର୍ଟରେ ସର୍ବାଧିକ 1,000ଟି ରେକର୍ଡର ନମୁନା ଦେଖାଯାଏ; ତଥ୍ୟ ସାରଣୀରେ ସମସ୍ତ ତଥ୍ୟ ଅଛି।',
   chartZoomUnavailable: 'ଜୁମ୍ ଉପଲବ୍ଧ ନାହିଁ, କିନ୍ତୁ ମୂଳ ଚାର୍ଟ ଉପଲବ୍ଧ ଅଛି।',

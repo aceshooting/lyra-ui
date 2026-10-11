@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'ဒေတာမရှိသော {type} ဇယား။',
   chartSummarySeparator: '။ ',
   chartData: 'ဇယားဒေတာ',
+  chartRenderUnavailable: 'ဇယားပုံဖော်ပြမှုကို မရနိုင်ပါ။',
   chartDataSampled: 'ဇယားနှင့် ဖန်တီးထားသော ဒေတာဇယားသည် မှတ်တမ်း ၁,၀၀၀ အထိ နမူနာကို ပြသသည်။ ဇယားဒေတာအားလုံးကို အသုံးပြုရန် စိတ်ကြိုက်ဒေတာဇယားကို ပေးပါ။',
   chartPlotSampled: 'ဇယားသည် မှတ်တမ်း ၁,၀၀၀ အထိ နမူနာကို ပြသပြီး ဒေတာဇယားတွင် ဒေတာအားလုံး ပါဝင်သည်။',
   chartZoomUnavailable: 'ချဲ့ကြည့်၍မရသော်လည်း အဓိကဇယားကို ဆက်လက်အသုံးပြုနိုင်သည်။',

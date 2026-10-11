@@ -3,6 +3,7 @@ import type {
   OverlayStackHandle,
 } from './overlay-stack.js';
 import { activateOverlayStack } from './overlay-stack.js';
+import { acquireOpenOverlayAncestors } from './open-overlay-ancestors.js';
 
 export type NonmodalOverlayActivationOptions = Omit<
   OverlayStackActivationOptions,
@@ -22,10 +23,18 @@ export type OverlayHandle = OverlayStackHandle;
  * scroll locking, or rendered-dialog lifecycle machinery.
  */
 export function activateNonmodalOverlay(options: NonmodalOverlayActivationOptions): OverlayHandle {
+  let releaseAncestors: (() => void) | undefined;
   return activateOverlayStack({
     ...options,
     modal: false,
     trapFocus: false,
+    onRegistered: () => { releaseAncestors = acquireOpenOverlayAncestors(options.host); },
+    onUnregistered: () => {
+      const release = releaseAncestors;
+      releaseAncestors = undefined;
+      release?.();
+      return undefined;
+    },
   });
 }
 

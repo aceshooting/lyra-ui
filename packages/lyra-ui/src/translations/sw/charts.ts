@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Chati ya {type} haina data.',
   chartSummarySeparator: '; ',
   chartData: 'Data ya chati',
+  chartRenderUnavailable: 'Uonyeshaji wa chati haupatikani.',
   chartDataSampled: 'Chati na jedwali la data lililotengenezwa vinaonyesha sampuli ya hadi rekodi 1,000. Toa jedwali maalum la data ili kufikia data yote ya chati.',
   chartPlotSampled: 'Chati inaonyesha sampuli ya hadi rekodi 1,000; jedwali la data linaorodhesha data yote.',
   chartZoomUnavailable: 'Kuza hakupatikani, lakini chati kuu bado inapatikana.',

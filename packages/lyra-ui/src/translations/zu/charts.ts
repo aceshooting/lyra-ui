@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Ishadi le-{type} alinayo idatha.',
   chartSummarySeparator: '. ',
   chartData: 'Idatha yeshadi',
+  chartRenderUnavailable: 'Ukuboniswa kweshadi akutholakali.',
   chartDataSampled: 'Ishadi kanye nethebula ledatha elakhiwe kubonisa isampula yamarekhodi afinyelela ku-1,000. Nikeza ithebula ledatha langokwezifiso ukuze ufinyelele kuyo yonke idatha yeshadi.',
   chartPlotSampled: 'Ishadi libonisa isampula yamarekhodi afinyelela ku-1,000; ithebula ledatha libala yonke idatha.',
   chartZoomUnavailable: 'Ukusondeza akutholakali, kodwa ishadi eliyinhloko lisatholakala.',

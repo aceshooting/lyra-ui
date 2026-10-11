@@ -421,6 +421,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   chartSummaryEmpty: '{type} chart with no data.',
   chartSummarySeparator: '. ',
   chartData: 'Chart data',
+  chartRenderUnavailable: 'Chart rendering is unavailable.',
   chartDataSampled:
     'The chart and its generated data table show a sample of up to 1,000 records. Provide a custom data table to access all chart data.',
   chartPlotSampled:

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'خالی {type} چارٹ۔',
   chartSummarySeparator: '. ',
   chartData: 'چارٹ ڈیٹا',
+  chartRenderUnavailable: 'چارٹ کی نمائش دستیاب نہیں ہے۔',
   chartDataSampled: 'چارٹ اور تیار کردہ ڈیٹا جدول میں زیادہ سے زیادہ 1,000 ریکارڈز کا نمونہ ہے۔ چارٹ کا پورا ڈیٹا حاصل کرنے کے لیے اپنی مرضی کا ڈیٹا جدول دیں۔',
   chartPlotSampled: 'چارٹ میں زیادہ سے زیادہ 1,000 ریکارڈز کا نمونہ ہے؛ ڈیٹا جدول میں سارا ڈیٹا موجود ہے۔',
   chartZoomUnavailable: 'زوم دستیاب نہیں، لیکن بنیادی چارٹ موجود ہے۔',

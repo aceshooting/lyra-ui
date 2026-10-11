@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Chaartii {type} odeeffannoo hin qabne.',
   chartSummarySeparator: '. ',
   chartData: 'Odeeffannoo chaartii',
+  chartRenderUnavailable: 'Chaartii agarsiisuun hin dandaʼamu.',
   chartDataSampled: 'Chaartiin fi gabateen odeeffannoo uumame galmeewwan hanga 1,000 keessaa fakkeenya agarsiisu. Odeeffannoo chaartii hunda argachuuf gabatee odeeffannoo ofii keetii dhiyeessi.',
   chartPlotSampled: 'Chaartiin galmeewwan hanga 1,000 keessaa fakkeenya agarsiisa; gabateen odeeffannoo odeeffannoo hunda tarreessa.',
   chartZoomUnavailable: 'Guddisuun hin danda\'amu, garuu chaartiin bu\'uuraa ni jira.',

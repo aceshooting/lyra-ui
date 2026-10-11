@@ -641,7 +641,9 @@ export async function openEigenpalDocument(
       setZoom(zoom) {
         if (destroyed || !owned()) return false;
         const active = current();
-        return (zoom === 'fit' ? active.setZoomMode('auto') : active.setZoom(zoom)).ok;
+        return (zoom === 'fit'
+          ? active.setZoomMode({ type: 'fit', fit: 'pageWidth', minZoom: 0.25, maxZoom: 1 })
+          : active.setZoom(zoom)).ok;
       },
       selectedImageElement() {
         if (destroyed || saving || executingGuarded || !image?.supported || !owned()) return null;

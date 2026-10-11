@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'Grafic de tip {type} fără date.',
   chartSummarySeparator: '. ',
   chartData: 'Datele graficului',
+  chartRenderUnavailable: 'Redarea graficului nu este disponibilă.',
   chartDataSampled: 'Graficul și tabelul de date generat afișează un eșantion de până la 1.000 de înregistrări. Furnizează un tabel de date personalizat pentru a accesa toate datele graficului.',
   chartPlotSampled: 'Graficul afișează un eșantion de până la 1.000 de înregistrări; tabelul de date conține toate datele.',
   chartZoomUnavailable: 'Zoom-ul nu este disponibil, dar graficul de bază rămâne disponibil.',

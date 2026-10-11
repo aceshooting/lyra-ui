@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'مخطط {type} بلا بيانات.',
   chartSummarySeparator: '. ',
   chartData: 'بيانات المخطط',
+  chartRenderUnavailable: 'عرض الرسم البياني غير متاح.',
   chartDataSampled: 'يعرض المخطط وجدول البيانات المُنشأ عينة تصل إلى 1,000 سجل. وفّر جدول بيانات مخصصًا للوصول إلى جميع بيانات المخطط.',
   chartPlotSampled: 'يعرض المخطط عينة تصل إلى 1,000 سجل، ويسرد جدول البيانات جميع البيانات.',
   chartZoomUnavailable: 'التكبير غير متاح، لكن المخطط الأساسي يبقى متاحًا.',

@@ -19,6 +19,11 @@
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 
+If the browser cannot acquire a 2D canvas context, a localized visible message replaces the plot
+and the generated or slotted data table becomes visible. No failed Chart.js instance is retained.
+Changing the data or calling `refreshTheme()` retries rendering, so the plot recovers when the
+canvas capability becomes available.
+
 With `IntersectionObserver` available, canvas construction waits for its first delivered visibility
 decision. An off-screen box plot stays unconstructed until visible. Without the observer, drawing
 starts when the peers and canvas are ready; an empty delivered callback retains the visible

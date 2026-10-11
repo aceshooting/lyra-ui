@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   chartSummaryEmpty: 'ਬਿਨਾਂ ਡਾਟੇ ਵਾਲਾ {type} ਚਾਰਟ।',
   chartSummarySeparator: '. ',
   chartData: 'ਚਾਰਟ ਡਾਟਾ',
+  chartRenderUnavailable: 'ਚਾਰਟ ਪ੍ਰਦਰਸ਼ਨ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।',
   chartDataSampled: 'ਚਾਰਟ ਅਤੇ ਤਿਆਰ ਕੀਤੀ ਡਾਟਾ ਸਾਰਣੀ ਵੱਧ ਤੋਂ ਵੱਧ 1,000 ਰਿਕਾਰਡਾਂ ਦਾ ਨਮੂਨਾ ਦਿਖਾਉਂਦੇ ਹਨ। ਚਾਰਟ ਦੇ ਸਾਰੇ ਡਾਟੇ ਤੱਕ ਪਹੁੰਚ ਲਈ ਕਸਟਮ ਡਾਟਾ ਸਾਰਣੀ ਦਿਓ।',
   chartPlotSampled: 'ਚਾਰਟ ਵੱਧ ਤੋਂ ਵੱਧ 1,000 ਰਿਕਾਰਡਾਂ ਦਾ ਨਮੂਨਾ ਦਿਖਾਉਂਦਾ ਹੈ; ਡਾਟਾ ਸਾਰਣੀ ਵਿੱਚ ਸਾਰਾ ਡਾਟਾ ਹੈ।',
   chartZoomUnavailable: 'ਜ਼ੂਮ ਉਪਲਬਧ ਨਹੀਂ, ਪਰ ਮੁੱਖ ਚਾਰਟ ਉਪਲਬਧ ਹੈ।',
