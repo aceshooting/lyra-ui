@@ -333,8 +333,10 @@ function withdraw(root: Document | ShadowRoot, sheet: CSSStyleSheet | undefined)
  * Adopting the key restyles every element once, which is cheap while the document is small but not
  * when the first look comes late (a lazily loaded route on a large page that links `theme.css`).
  * So beside a static provider it waits for the root to change: the first attribute change on the
- * document element (an inline input, a mode or look attribute, a class) or the first color-scheme
- * change. A mutation observer runs before the next rendering, so the key goes in with that change.
+ * document element (an inline input, a mode or look attribute, a class). A mutation observer runs
+ * before the next rendering, so the key goes in with that change. A system color-scheme change
+ * re-derives the root too, but is not watched (a media listener per document would be observable
+ * to the application); it costs only the comparison the key would have saved.
  * It goes in at once with this copy's layer sheet, which restyles every element anyway.
  */
 function rootKeySheet(doc: Document, state: DocumentLayerState): CSSStyleSheet | null {
@@ -357,21 +359,17 @@ function rootKeySheet(doc: Document, state: DocumentLayerState): CSSStyleSheet |
 function awaitRootChange(doc: Document, state: DocumentLayerState, key: CSSStyleSheet): void {
   const view = doc.defaultView!;
   const root = doc.documentElement;
-  const scheme = typeof view.matchMedia === 'function' ? view.matchMedia('(prefers-color-scheme: dark)') : undefined;
   if (!root || typeof view.MutationObserver !== 'function') {
     state.rootKeyLive = true;
     return;
   }
-  const observer = new view.MutationObserver(() => goLive());
-  const goLive = () => {
+  const observer = new view.MutationObserver(() => {
     observer.disconnect();
-    scheme?.removeEventListener('change', goLive);
     if (state.rootKeyLive) return;
     state.rootKeyLive = true;
     adopt(doc, key);
-  };
+  });
   observer.observe(root, { attributes: true });
-  scheme?.addEventListener('change', goLive);
 }
 
 /**

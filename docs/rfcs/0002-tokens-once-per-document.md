@@ -609,8 +609,8 @@ compare by value and stop at an unchanged scope, which the key would defeat (Web
 write went from 2 ms to 1.7 s with it), so they never receive it. Adopting the key restyles every
 element once. With this copy's own layer sheet that happens anyway, so the key goes in with it; beside
 a static provider (`theme.css` or `tokens-root.css`) it waits for the first attribute change on
-`<html>` or the first color-scheme change, through a mutation observer that runs before the next
-rendering. Adopting it on the first look instead made a lazily registered route on a 20,000-row page
+`<html>`, through a mutation observer that runs before the next rendering (a system color-scheme
+change is not watched and only misses the saving). Adopting it on the first look instead made a lazily registered route on a 20,000-row page
 that links `theme.css` cost Chromium about 120 ms on its first connect, against 50 ms for 27.0.0.
 
 **Accepted costs (28.0.0 gate).** Two measured cells stay above 27.0.0 by decision: Chromium's first
