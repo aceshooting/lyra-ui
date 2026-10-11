@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Ceilings retain at most 4% drift. Locale-picker's optional text filter adds localized matching, editable input and IME handling, keyboard focus/navigation, and an empty state. Its reviewed 24,921-byte initial marginal measurement retains a 2% allowance at 25,419 bytes; the shell, optional-peer exclusions and other ceilings are unchanged. Semantic popover trigger ownership measures 16,828 initial marginal gzip bytes versus 16,403 for published 25.5.0 under the same toolchain and dependencies. Its 17,038-byte ceiling preserves the previous 210-byte allowance; the 51,948-byte shell and every other route ceiling are unchanged. Changed initial routes use their exact measured marginal gzip sizes with failing ceilings rounded up to 64-byte boundaries; the shared shell and passing ceilings remain unchanged. Callable loader routes retain their named exports during measurement: CDN 13,059 bytes, autoloader 12,878, locale loader 1,469, scoped-registry loader 11,201. These initial-route ceilings and the remaining native form, editing, disclosure and lifecycle costs use the next 64-byte boundary. Passing marginal ceilings, shell imports and peer exclusions remain unchanged. The final callable CDN and scoped-registry routes advance only their failing ceilings to the next 64-byte boundary; all passing initial and marginal ceilings remain unchanged. The v28 document token layer advances only the failing initial-marginal ceilings, each to exactly its measured gzip bytes; every other route and marginal ceiling is unchanged. The app-rail auto-hide peek mode advances only the failing model-select and popup marginal ceilings to exactly their measured gzip bytes. Correct inherited/non-enumerable Intl option capture increases the shared formatter path reached by the affected controls; async color-picker cancellation and the bounded helper changes are included in their routes. Only breached initial-marginal ceilings advance to the next 64-byte boundary, with at most 63 bytes of allowance. Passing marginal and callable-loader ceilings, shell imports, and peer exclusions remain unchanged.",
+  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Ceilings retain at most 4% drift. Locale-picker's optional text filter adds localized matching, editable input and IME handling, keyboard focus/navigation, and an empty state. Its reviewed 24,921-byte initial marginal measurement retains a 2% allowance at 25,419 bytes; the shell, optional-peer exclusions and other ceilings are unchanged. Semantic popover trigger ownership measures 16,828 initial marginal gzip bytes versus 16,403 for published 25.5.0 under the same toolchain and dependencies. Its 17,038-byte ceiling preserves the previous 210-byte allowance; the 51,948-byte shell and every other route ceiling are unchanged. Changed initial routes use their exact measured marginal gzip sizes with failing ceilings rounded up to 64-byte boundaries; the shared shell and passing ceilings remain unchanged. Callable loader routes retain their named exports during measurement: CDN 13,059 bytes, autoloader 12,878, locale loader 1,469, scoped-registry loader 11,201. These initial-route ceilings and the remaining native form, editing, disclosure and lifecycle costs use the next 64-byte boundary. Passing marginal ceilings, shell imports and peer exclusions remain unchanged. The final callable CDN and scoped-registry routes advance only their failing ceilings to the next 64-byte boundary; all passing initial and marginal ceilings remain unchanged. The v28 document token layer advances only the failing initial-marginal ceilings, each to exactly its measured gzip bytes; every other route and marginal ceiling is unchanged. The app-rail auto-hide peek mode advances only the failing model-select and popup marginal ceilings to exactly their measured gzip bytes. Correct inherited/non-enumerable Intl option capture increases the shared formatter path reached by the affected controls; async color-picker cancellation and the bounded helper changes are included in their routes. Only breached initial-marginal ceilings advance to the next 64-byte boundary, with at most 63 bytes of allowance. Passing marginal and callable-loader ceilings, shell imports, and peer exclusions remain unchanged. The Chromium-only root re-derivation key in the document token runtime and the development-only glass dark share check set every failing ceiling to exactly its measured gzip bytes; passing ceilings are unchanged.",
   "$baseline": [
     "dist/components/data/stat/stat.js",
     "dist/components/overlays/callout/callout.js",
@@ -8,8 +8,8 @@
     "dist/components/utility/icon/icon.js"
   ],
   "$routeGzipKb": {
-    "dist/autoloader-cdn.js": 12.80078125,
-    "dist/autoloader.js": 12.6259765625,
+    "dist/autoloader-cdn.js": 12.8046875,
+    "dist/autoloader.js": 12.6279296875,
     "dist/locale-loader.js": 0.9208984375,
     "dist/utilities/scoped-registry-loader.js": 11.0263671875
   },
@@ -28,11 +28,11 @@
     "dist/components/layout/menu/menu.js": 17.375,
     "dist/components/overlays/overlay/popover.js": 17.0751953125,
     "dist/components/overlays/overlay/tooltip.js": 14.7119140625,
-    "dist/components/overlays/popup/popup.js": 4.6171875,
+    "dist/components/overlays/popup/popup.js": 4.6279296875,
     "dist/components/retrieval/citation-badge/citation-badge.js": 6.474609375,
     "dist/components/retrieval/entity-chip/entity-chip.js": 5.8857421875,
     "dist/components/utility/export-button/export-button.js": 13.78515625,
-    "dist/components/utility/mention-popover/mention-popover.js": 9.0,
+    "dist/components/utility/mention-popover/mention-popover.js": 9,
     "dist/components/utility/tour/tour.js": 17.38671875
   }
 }
