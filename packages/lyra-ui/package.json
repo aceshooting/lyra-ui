@@ -2968,5 +2968,5 @@
     "vue": "^3.5.43",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
-  "packageManager": "pnpm@12.10.1"
+  "packageManager": "pnpm@12.11.2"
 }
