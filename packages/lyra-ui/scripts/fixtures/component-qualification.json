@@ -25429,6 +25429,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/media/image-viewer/image-viewer-highlight-geometry.test.ts",
+              "test": "has no accessibility violations with small populated highlights",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
               "test": "is accessible with every active-state prop themed",
               "target": "el",
@@ -25448,8 +25454,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/image-viewer/image-viewer-remediation.test.ts",
-              "test": "keeps highlight Enter owned by the native button (${direction}, draft ${withDraft})",
+              "file": "src/components/media/image-viewer/image-viewer-highlight-geometry.test.ts",
+              "test": "keeps arrow-key navigation between highlights unchanged",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -25569,6 +25575,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/image-viewer/image-viewer-highlight-geometry.test.ts",
           "src/components/media/image-viewer/image-viewer-remediation.test.ts",
           "src/components/media/image-viewer/image-viewer.test.ts"
         ],

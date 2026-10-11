@@ -155,7 +155,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-icon"></a>`lr-icon` | utility | `import '@aceshooting/lyra-ui/components/lr-icon.js';` | `dompurify` | none | none | 30.3 KiB |
 | <a id="lr-icon-button"></a>`lr-icon-button` | forms | `import '@aceshooting/lyra-ui/components/lr-icon-button.js';` | `dompurify` | `lr-icon` | none | 35.4 KiB |
 | <a id="lr-image-comparer"></a>`lr-image-comparer` | media | `import '@aceshooting/lyra-ui/components/lr-image-comparer.js';` | none | none | none | 26.7 KiB |
-| <a id="lr-image-viewer"></a>`lr-image-viewer` | media | `import '@aceshooting/lyra-ui/components/lr-image-viewer.js';` | none | `lr-live-region`, `lr-pan-zoom` | none | 47.1 KiB |
+| <a id="lr-image-viewer"></a>`lr-image-viewer` | media | `import '@aceshooting/lyra-ui/components/lr-image-viewer.js';` | none | `lr-live-region`, `lr-pan-zoom` | none | 47.4 KiB |
 | <a id="lr-include"></a>`lr-include` | viewers | `import '@aceshooting/lyra-ui/components/lr-include.js';` | `dompurify` | none | none | 43.2 KiB |
 | <a id="lr-ingestion-queue"></a>`lr-ingestion-queue` | retrieval | `import '@aceshooting/lyra-ui/components/lr-ingestion-queue.js';` | none | `lr-badge`, `lr-empty`, `lr-progress-bar`, `lr-virtual-list` | none | 53.6 KiB |
 | <a id="lr-input"></a>`lr-input` | forms | `import '@aceshooting/lyra-ui/components/lr-input.js';` | none | none | none | 40.8 KiB |

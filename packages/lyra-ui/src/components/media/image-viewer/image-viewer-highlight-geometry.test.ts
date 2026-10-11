@@ -124,7 +124,7 @@ describe('lr-image-viewer highlight painted geometry', () => {
   });
 
   it('hit-tests the intended region at its centre and inside its enlarged area', async () => {
-    const lone: Rect = { x: 70, y: 70, width: 1, height: 1 };
+    const lone: Rect = { x: 20, y: 20, width: 1, height: 1 };
     const left: Rect = { x: 30, y: 45, width: 1, height: 1 };
     const right: Rect = { x: 32, y: 45, width: 1, height: 1 };
     const el = await viewer([region('lone', lone), region('left', left), region('right', right)]);
@@ -172,7 +172,7 @@ describe('lr-image-viewer highlight painted geometry', () => {
   });
 
   it('keeps the same painted geometry and hit-testing under dir="rtl"', async () => {
-    const lone: Rect = { x: 70, y: 70, width: 1, height: 1 };
+    const lone: Rect = { x: 20, y: 20, width: 1, height: 1 };
     const el = await viewer([region('lone', lone), region('other', SMALL)], { dir: 'rtl' });
     expectPainted(el, 'lone', lone, 0, 'rtl lone');
     expectPainted(el, 'other', SMALL, 0, 'rtl other');
