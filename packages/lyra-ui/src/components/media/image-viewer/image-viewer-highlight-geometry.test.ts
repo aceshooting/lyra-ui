@@ -18,8 +18,9 @@ function realImage(width = 800, height = 600): string {
 
 const IMAGE = realImage();
 
-function region(id: string, rect: Rect, label = id): LyraHighlight {
-  return { id, label, anchor: { kind: 'region', rect } };
+function region(id: string, rect: Rect): LyraHighlight {
+  // Unlabeled: a visible label is a separate, larger hit surface that is not under test here.
+  return { id, anchor: { kind: 'region', rect } };
 }
 
 async function paint(): Promise<void> {
@@ -130,7 +131,7 @@ describe('lr-image-viewer highlight painted geometry', () => {
     const el = await viewer([region('lone', lone), region('left', left), region('right', right)]);
     const root = el.shadowRoot!;
     const pick = (x: number, y: number) => {
-      const hit = root.elementFromPoint(x, y) as HTMLElement | null;
+      const hit = (root.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[part="highlight"]') ?? (root.elementFromPoint(x, y) as HTMLElement | null);
       return hit?.dataset['highlightId'] ?? `<${hit?.localName}:${hit?.getAttribute('part')} at ${Math.round(x)},${Math.round(y)}>`;
     };
     for (const id of ['lone', 'left', 'right']) {

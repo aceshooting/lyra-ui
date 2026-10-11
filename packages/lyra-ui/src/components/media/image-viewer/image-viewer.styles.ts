@@ -208,6 +208,8 @@ export const styles = css`
      --lr-image-viewer-highlight-*-bg knobs still back each fill. */
   /* The box is exactly the percentage rectangle the data names; it never takes a minimum size.
      The accessible target floor lives on the transparent ::after below, centred on the box. */
+  /* no-transition-needed: the hover and press mix lands in the same frame as the pointer, so a
+     dense field of neighbouring regions never shows a fill lagging behind the cursor. */
   [part="highlight"] {
     position: absolute;
     box-sizing: border-box;
