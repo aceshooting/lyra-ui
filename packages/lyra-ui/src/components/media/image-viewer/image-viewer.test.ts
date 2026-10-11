@@ -54,7 +54,7 @@ function assertiveAnnouncements(): string[] {
  *  and once a highlight box is detached `getComputedStyle(box).backgroundColor` reads `''` rather
  *  than throwing. A data URI actually loads, so the frame is never torn down mid-test. */
 const LOADABLE_PNG =
-  "data:image/png;
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
 
 /** A real image large enough that a percentage region is wider than two border widths, since the
  *  highlight border is clamped to half the region on each axis. */
@@ -63,7 +63,7 @@ const LARGE_PNG = (() => {
   canvas.width = 400;
   canvas.height = 300;
   return canvas.toDataURL("image/png");
-})();base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+})();
 
 function primaryPointerEvent(
   type: string,
