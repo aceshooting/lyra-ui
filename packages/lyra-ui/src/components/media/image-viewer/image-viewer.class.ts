@@ -730,6 +730,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
             top: `${rect.y}%`,
             width: `${rect.width}%`,
             height: `${rect.height}%`,
+            '--_lr-image-viewer-highlight-w': String(rect.width),
+            '--_lr-image-viewer-highlight-h': String(rect.height),
           })}
           aria-label=${h.label?.trim() ? h.label : this.localize('imageViewerUnlabeledHighlight', undefined, {
             index: formatter.format(index + 1),

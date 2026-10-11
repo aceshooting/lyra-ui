@@ -102,10 +102,9 @@ describe('lr-image-viewer highlight painted geometry', () => {
       for (const rotation of [0, 90] as const) {
         it(`paints a sub-hit-area region exactly (fit ${fit}, zoom ${zoom}, rotation ${rotation})`, async () => {
           const el = await viewer([region('a', SMALL), region('b', WIDE)], { fit, zoom, rotation });
-          const floor = parseFloat(getComputedStyle(el).getPropertyValue('--lr-icon-button-size')) || 36;
           const painted = box(el, 'a').getBoundingClientRect();
           expect(Math.min(painted.width, painted.height), 'the fixture region is below the hit-area floor')
-            .to.be.lessThan(Math.min(floor, 36));
+            .to.be.lessThan(36);
           expectPainted(el, 'a', SMALL, rotation, 'small region');
           expectPainted(el, 'b', WIDE, rotation, 'wide region');
         });
@@ -130,7 +129,10 @@ describe('lr-image-viewer highlight painted geometry', () => {
     const right: Rect = { x: 32, y: 45, width: 1, height: 1 };
     const el = await viewer([region('lone', lone), region('left', left), region('right', right)]);
     const root = el.shadowRoot!;
-    const pick = (x: number, y: number) => (root.elementFromPoint(x, y) as HTMLElement | null)?.dataset['highlightId'];
+    const pick = (x: number, y: number) => {
+      const hit = root.elementFromPoint(x, y) as HTMLElement | null;
+      return hit?.dataset['highlightId'] ?? `<${hit?.localName}:${hit?.getAttribute('part')} at ${Math.round(x)},${Math.round(y)}>`;
+    };
     for (const id of ['lone', 'left', 'right']) {
       const rect = box(el, id).getBoundingClientRect();
       expect(pick(rect.left + rect.width / 2, rect.top + rect.height / 2), `${id} centre`).to.equal(id);
@@ -142,7 +144,6 @@ describe('lr-image-viewer highlight painted geometry', () => {
       expect(pick(cx + dx!, cy + dy!), `lone enlarged area at ${dx},${dy}`).to.equal('lone');
     }
     expect(pick(cx + 24, cy), 'beyond the enlarged area nothing is picked').to.not.equal('lone');
-    // The enlarged area is centred: it extends equally on both sides.
     // A painted box always wins over another region's enlarged area, in any order.
     const l = box(el, 'left').getBoundingClientRect();
     const r = box(el, 'right').getBoundingClientRect();
@@ -160,7 +161,7 @@ describe('lr-image-viewer highlight painted geometry', () => {
       region('c', { x: 60, y: 40, width: 1, height: 1 }),
     ]);
     box(el, 'a').focus();
-    expect(el.shadowRoot!.activeElement).to.equal(box(el, 'a'));
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['highlightId']).to.equal('a');
     await sendKeys({ press: 'ArrowRight' });
     await el.updateComplete;
     expect((el.shadowRoot!.activeElement as HTMLElement).dataset['highlightId']).to.equal('b');

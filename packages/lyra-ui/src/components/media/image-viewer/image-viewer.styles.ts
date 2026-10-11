@@ -197,6 +197,9 @@ export const styles = css`
     /* A stacking context, so each highlight's hit-area pseudo-element (z-index: -1) paints beneath
        every highlight's own box instead of escaping behind the image. */
     isolation: isolate;
+    /* Size container: a highlight clamps its border to its own percentage size in cqw/cqh. */
+    container-type: size;
+    --_lr-image-viewer-hit-layer: -1;
   }
   /* Each tone sets --lr-image-viewer-highlight-fill instead of background, and the single
      background declaration reads it, so hover/active mix from whichever fill a highlight has.
@@ -208,8 +211,20 @@ export const styles = css`
   [part="highlight"] {
     position: absolute;
     box-sizing: border-box;
-    border: var(--lr-border-width-medium) solid
-      var(--lr-image-viewer-highlight-border, var(--lr-color-brand));
+    /* The border can never exceed half the box on its axis (--_lr-image-viewer-highlight-w/-h are the
+       region's own percentages, set inline), so the border box stays exactly the region even when
+       the region is thinner than two border widths. */
+    --_lr-image-viewer-highlight-bw: var(--lr-border-width-medium);
+    border: solid var(--lr-image-viewer-highlight-border, var(--lr-color-brand));
+    border-width:
+      min(
+        var(--_lr-image-viewer-highlight-bw),
+        calc(var(--_lr-image-viewer-highlight-h) * 0.5cqh)
+      )
+      min(
+        var(--_lr-image-viewer-highlight-bw),
+        calc(var(--_lr-image-viewer-highlight-w) * 0.5cqw)
+      );
     --_lr-image-viewer-highlight-fill: var(
       --lr-image-viewer-highlight-bg,
       color-mix(in srgb, var(--lr-color-brand) 20%, transparent)
@@ -229,7 +244,7 @@ export const styles = css`
   [part="highlight"]::after {
     content: "";
     position: absolute;
-    z-index: -1;
+    z-index: var(--_lr-image-viewer-hit-layer);
     inset-inline: min(0px, calc((100% - var(--lr-icon-button-size)) / 2));
     inset-block: min(0px, calc((100% - var(--lr-icon-button-size)) / 2));
   }
@@ -278,7 +293,7 @@ export const styles = css`
     );
   }
   [part="highlight"]:where([data-active]) {
-    border-width: var(
+    --_lr-image-viewer-highlight-bw: var(
       --lr-image-viewer-highlight-active-border-width,
       var(--lr-border-width-thick)
     );

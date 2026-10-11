@@ -30,6 +30,14 @@ apply when that wrapper itself owns keyboard input. Enter on a highlight button 
 highlight without starting or committing an annotation, whether or not a draft exists; wrapper arrow
 commands retain physical image-coordinate semantics in both directions.
 
+A region highlight paints exactly the percentage rectangle it names, at every fit, zoom and
+rotation: its box never takes the shared `--lr-icon-button-size` minimum, so a small region cannot
+grow past its data or overlap a neighbour. The accessible pointer target is a separate transparent
+`::after` of the `[part="highlight"]` button, centred on the box and grown to
+`--lr-icon-button-size` on any axis where the box is smaller. Overlap rule: a region's own painted
+box always wins over another region's enlarged area, and where only enlarged areas overlap the
+later highlight in document order wins. Keyboard navigation between highlights is unaffected.
+
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
 `contain`), `zoom: number = 1` (reflected), `minZoom: number = 0.5` (attribute
