@@ -107,6 +107,8 @@ it("resolves highlight tokens through the adopted document window", async () => 
   try {
     // Adopting the document token layer reads the sentinel through the same stubbed window.
     expectDevWarning('lyra-theme-scope:foreign-layer');
+    // ...and the development glass dark share check reads the same stub (not a percentage).
+    expectDevWarning('lyra-style:glass-dark-share');
     iframe.contentDocument!.body.append(el);
     calls = 0;
     const fill = (
