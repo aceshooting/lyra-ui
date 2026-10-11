@@ -349,7 +349,8 @@ function rootKeySheet(doc: Document, state: DocumentLayerState): CSSStyleSheet |
       const sheet = new view.CSSStyleSheet();
       sheet.replaceSync(`:root{--_lr-root-inputs:${Array.from(names, (name) => `var(${name},0)`).join('')}}`);
       state.rootKey = sheet;
-      awaitRootChange(doc, state, sheet);
+      // Without an existing provider the key is adopted immediately with the layer below.
+      if (state.provider || state.unreadableProvider) awaitRootChange(doc, state, sheet);
     }
   }
   return state.rootKey;

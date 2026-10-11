@@ -926,6 +926,31 @@ describe('document token layer: root re-derivation key (Chromium)', () => {
     expect(read(document.documentElement, KEY) !== '').to.equal(chromium);
   });
 
+  it('does not allocate a root-change observer when adopting the layer immediately', () => {
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const view = frame.contentWindow!;
+    const doc = frame.contentDocument!;
+    const NativeMutationObserver = view.MutationObserver;
+    let constructions = 0;
+    class TrackingMutationObserver extends NativeMutationObserver {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        constructions++;
+      }
+    }
+    view.MutationObserver = TrackingMutationObserver;
+    try {
+      adoptLyraTokens(doc);
+      expect(hasLyraTokens(doc)).to.equal(true);
+      expect(view.getComputedStyle(doc.documentElement).getPropertyValue(KEY).trim() !== '').to.equal(chromium);
+      expect(constructions, 'an immediately adopted key has no deferred work').to.equal(0);
+    } finally {
+      view.MutationObserver = NativeMutationObserver;
+      frame.remove();
+    }
+  });
+
   it('changes the key with an input written on the root, and every element inherits it', async () => {
     if (!chromium) return;
     const island = (await fixture(html`<div class="lr-dark"><lr-layer-probe></lr-layer-probe></div>`)) as HTMLElement;
