@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'اڳوڻو ورزن',
   branchNext: 'ايندڙ ورزن',
   branchPosition: '{total} مان ورزن {index}',
-  confirm: 'تصديق ڪريو',
   promptQueueItemLabel: 'قطار ۾ پرامپٽ {index}',
   promptQueueActionLabel: '{action}، قطار ۾ پرامپٽ {index}',
   sendMessage: 'پيغام موڪليو',

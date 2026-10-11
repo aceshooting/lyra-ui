@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Straničenje',
   paginationSummary: '{start}–{end} od {total} {itemLabel}',
   cancel: 'Odustani',
+  confirm: 'Potvrdi',
   search: 'Pretraži',
   items: {
     few: 'stavke',

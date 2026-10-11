@@ -1568,6 +1568,74 @@ describe('lr-qr-code', () => {
     expect(modules.get(1, 1)).to.equal(1);
   });
 
+  it('shares pending and decoded logo loads and settles cancelled work on disconnect', async () => {
+    const el = document.createElement('lr-qr-code') as LyraQrCode;
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'Image');
+    const images: FakeImage[] = [];
+    class FakeImage extends EventTarget {
+      decoding = '';
+      naturalWidth = 10;
+      naturalHeight = 10;
+      src = '';
+      constructor() {
+        super();
+        images.push(this);
+      }
+      removeAttribute(name: string): void {
+        if (name === 'src') this.src = '';
+      }
+    }
+    const load = (src: string) => (el as unknown as {
+      loadEmbeddedImage(value: string): Promise<HTMLImageElement | undefined>;
+    }).loadEmbeddedImage(src);
+    try {
+      Object.defineProperty(window, 'Image', { configurable: true, value: FakeImage });
+      const first = load('first');
+      const shared = load('first');
+      expect(images.length).to.equal(1);
+      images[0]!.dispatchEvent(new Event('load'));
+      expect((await first) === (await shared)).to.be.true;
+      expect((await load('first')) === (await first)).to.be.true;
+      expect(images.length).to.equal(1);
+      let cancelled = false;
+      const pending = load('second').then((image) => { cancelled = image === undefined; });
+      el.disconnectedCallback();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(cancelled).to.be.true;
+      await pending;
+      expect(images[1]!.src).to.equal('');
+      images[1]!.dispatchEvent(new Event('load'));
+      const restarted = load('second');
+      expect(images.length).to.equal(3);
+      images[2]!.dispatchEvent(new Event('load'));
+      await restarted;
+      for (const boundary of ['source', 'empty', 'adoption'] as const) {
+        const image = images.length;
+        let settled = false;
+        const waiting = load(boundary).then((result) => { settled = result === undefined; });
+        if (boundary === 'source') {
+          const replacement = load('replacement');
+          images[image + 1]!.dispatchEvent(new Event('load'));
+          await replacement;
+        } else if (boundary === 'empty') {
+          el.value = '';
+          el.generate();
+        } else {
+          el.adoptedCallback();
+        }
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(settled, boundary).to.be.true;
+        await waiting;
+        expect(images[image]!.src, boundary).to.equal('');
+      }
+    } finally {
+      el.disconnectedCallback();
+      if (descriptor) Object.defineProperty(window, 'Image', descriptor);
+    }
+  });
+
   it('fails closed when the owner realm has no Image constructor or an image load fails', async () => {
     const el = document.createElement('lr-qr-code') as LyraQrCode;
     const imageDescriptor = Object.getOwnPropertyDescriptor(window, 'Image');

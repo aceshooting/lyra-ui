@@ -2,7 +2,7 @@
 import { isMainModule } from './is-main-module.mjs';
 
 import { createHash } from 'node:crypto';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
@@ -510,6 +510,59 @@ async function sourceFiles(directory) {
   return nested.flat();
 }
 
+function defaultImportDeclarations(source, file) {
+  if (!source.includes('default-strings')) return [];
+  return parseProgram(file, source).body.filter((node) =>
+    node.type === 'ImportDeclaration' &&
+    /(?:^|\/)default-strings(?:\.generated|\/[^/]+\.generated)\.js$/.test(node.source.value),
+  );
+}
+
+function defaultImportKey(specifier, file) {
+  const name = specifier.imported?.name;
+  if (specifier.type !== 'ImportSpecifier' || !name?.startsWith('LYRA_DEFAULT_')) {
+    throw new Error(`${file}: default-string imports must name LYRA_DEFAULT_ constants`);
+  }
+  return name.slice('LYRA_DEFAULT_'.length);
+}
+
+/** Standalone helpers own fallback imports too; tests are rewritten but do not own catalog keys. */
+async function defaultImportConsumers(directory, classFiles) {
+  const consumers = new Map();
+  async function scan(dir) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) await scan(file);
+      else if (entry.isFile() && file.endsWith('.ts') && !file.endsWith('.generated.ts') && !classFiles.has(file)) {
+        const source = await readFile(file, 'utf8');
+        const imports = defaultImportDeclarations(source, file);
+        if (imports.length) consumers.set(file, { source, imports });
+      }
+    }
+  }
+  await scan(directory);
+  return new Map([...consumers].sort(([a], [b]) => a.localeCompare(b)));
+}
+
+function rewriteDefaultImports(source, file, imports, keyFiles) {
+  for (const declaration of [...imports].reverse()) {
+    const grouped = new Map();
+    for (const specifier of declaration.specifiers) {
+      const key = defaultImportKey(specifier, file);
+      const target = keyFiles.get(key);
+      if (!target) throw new Error(`${file}: default-string import ${key} has no runtime catalog owner`);
+      const names = grouped.get(target) ?? [];
+      names.push(source.slice(specifier.start, specifier.end));
+      grouped.set(target, names);
+    }
+    const replacement = [...grouped].sort(([a], [b]) => a.localeCompare(b)).map(([target, names]) =>
+      `import ${declaration.importKind === 'type' ? 'type ' : ''}{ ${names.join(', ')} } from '${relativeImport(file, target)}';`,
+    ).join('\n');
+    source = source.slice(0, declaration.start) + replacement + source.slice(declaration.end);
+  }
+  return source;
+}
+
 function runtimeImports(program) {
   const imports = [];
   for (const node of program.body) {
@@ -560,6 +613,7 @@ function isRuntimeHelper(rootFile, candidate, sourceRoot) {
     candidate.endsWith('.stories.ts') ||
     candidate.endsWith('.styles.ts') ||
     candidate.endsWith('default-strings.generated.ts') ||
+    relative.startsWith(path.join('internal', 'default-strings') + path.sep) ||
     candidate.endsWith(path.join('internal', 'localization.ts')) ||
     candidate.endsWith(path.join('internal', 'localization-runtime.ts'))
   ) {
@@ -750,7 +804,7 @@ export function applyConfiguredExclusions({
   return keys.filter((key) => !excluded.has(key));
 }
 
-export function rewriteClassSource(source, file, generatedFile, keys) {
+export function rewriteClassSource(source, file, generatedFile, keys, keyFiles = new Map()) {
   const clean = withoutGeneratedBlocks(source);
   if (keys.length === 0) return clean;
   const program = parseProgram(file, clean);
@@ -784,11 +838,18 @@ export function rewriteClassSource(source, file, generatedFile, keys) {
         `(file=${keys.join(',')}; classes=${classifiedKeys.join(',')})`,
     );
   }
-  const importNames = keys.map(constantName);
+  const imports = new Map();
+  for (const key of keys) {
+    const target = keyFiles.get(key) ?? generatedFile;
+    const names = imports.get(target) ?? [];
+    names.push(constantName(key));
+    imports.set(target, names);
+  }
   const importBlock =
     `${IMPORT_START}\n` +
     `import type { LyraLocaleStrings } from '${relativeImport(file, generatedFile).replace(/default-strings\.generated\.js$/, 'localization.js')}';\n` +
-    `import { ${importNames.join(', ')} } from '${relativeImport(file, generatedFile)}';\n` +
+    [...imports].sort(([a], [b]) => a.localeCompare(b)).map(([target, names]) =>
+      `import { ${names.join(', ')} } from '${relativeImport(file, target)}';\n`).join('') +
     `${IMPORT_END}\n`;
   const lastImportEnd = program.body
     .filter((node) => node.type === 'ImportDeclaration')
@@ -818,7 +879,7 @@ export function rewriteClassSource(source, file, generatedFile, keys) {
 function generatedCatalogSource(entries, usedKeys) {
   const lines = [
     '// GENERATED by scripts/generate-default-string-slices.mjs -- do not edit by hand.',
-    "import type { LyraMessage } from './localization.js';",
+    "import type { LyraMessage } from '../localization.js';",
     '',
   ];
   for (const key of usedKeys) {
@@ -858,6 +919,7 @@ async function classKeyReachability({ packageDir, exclusions }) {
   const catalogSource = await readFile(catalogFile, 'utf8');
   const componentsDir = path.join(packageDir, 'src', 'components');
   const files = (await sourceFiles(componentsDir)).sort();
+  const helperConsumers = await defaultImportConsumers(path.join(packageDir, 'src'), new Set(files));
   const memoKey = path.resolve(packageDir);
   const cached = reachabilityMemo.get(memoKey);
   if (
@@ -865,6 +927,7 @@ async function classKeyReachability({ packageDir, exclusions }) {
     cached.exclusions === exclusions &&
     cached.result.catalogSource === catalogSource &&
     cached.result.files.join('\0') === files.join('\0') &&
+    [...cached.result.helperConsumers.keys()].join('\0') === [...helperConsumers.keys()].join('\0') &&
     await sourcesUnchanged(cached.result.sourceCache)
   ) {
     return cached.result;
@@ -877,7 +940,7 @@ async function classKeyReachability({ packageDir, exclusions }) {
     new Set(files.map((file) => packageRelativePath(packageDir, file))),
   );
   const sourceRoot = path.join(packageDir, 'src');
-  const sourceCache = new Map();
+  const sourceCache = new Map([...helperConsumers].map(([file, consumer]) => [file, consumer.source]));
   const keysByFile = new Map();
   for (const file of files) {
     let source = sourceCache.get(file);
@@ -895,7 +958,7 @@ async function classKeyReachability({ packageDir, exclusions }) {
       exclusions,
     }));
   }
-  const result = { catalogFile, catalogSource, entries, catalogKeys, componentsDir, files, sourceCache, keysByFile };
+  const result = { catalogFile, catalogSource, entries, catalogKeys, componentsDir, files, sourceCache, keysByFile, helperConsumers };
   reachabilityMemo.set(memoKey, { exclusions, result });
   return result;
 }
@@ -903,7 +966,7 @@ async function classKeyReachability({ packageDir, exclusions }) {
 /**
  * Aggregates the SAME per-class-file key-reachability walk `generateDefaultStringSlices()` uses
  * (`sourceFiles()` + `reachableCatalogKeys()` + `applyConfiguredExclusions()`, over the same
- * `DEFAULT_STRINGS` catalog) by component FAMILY -- the directory segment directly under
+ * `DEFAULT_STRINGS` catalog), plus authored fallback imports in standalone helpers, by component FAMILY -- the directory segment directly under
  * `src/components/` (`src/components/forms/button/button.class.ts` -> `forms`) -- instead of by
  * class. This is deliberately not a re-derivation: `generate-translation-slices.mjs` imports this
  * function rather than re-walking the component tree, so a key's family assignment can never drift
@@ -917,7 +980,10 @@ export async function computeFamilyKeyIndex({
   packageDir = defaultPackageDir,
   exclusions = DEFAULT_STRING_SLICE_EXCLUSIONS,
 } = {}) {
-  const { catalogKeys, files, keysByFile } = await classKeyReachability({ packageDir, exclusions });
+  return familyKeyIndex(await classKeyReachability({ packageDir, exclusions }), packageDir);
+}
+
+function familyKeyIndex({ catalogKeys, files, keysByFile, helperConsumers }, packageDir) {
   const familyToKeys = new Map();
   const keyToFamilies = new Map();
   for (const file of files) {
@@ -934,6 +1000,27 @@ export async function computeFamilyKeyIndex({
     }
     familyToKeys.set(family, familyKeys);
   }
+  for (const [file, { imports }] of helperConsumers) {
+    if (file.endsWith('.test.ts') || file.endsWith('.stories.ts')) continue;
+    const relative = packageRelativePath(packageDir, file);
+    const family = relative.startsWith('src/components/') ? relative.split('/')[2] : 'shared';
+    for (const declaration of imports) {
+      if (declaration.importKind === 'type') continue;
+      for (const specifier of declaration.specifiers) {
+        if (specifier.importKind === 'type') continue;
+        const key = defaultImportKey(specifier, file);
+        if (!catalogKeys.has(key)) throw new Error(`${relative}: default-string import ${key} has no DEFAULT_STRINGS entry`);
+        const owners = keyToFamilies.get(key) ?? new Set();
+        owners.add(family);
+        keyToFamilies.set(key, owners);
+        if (family !== 'shared') {
+          const familyKeys = familyToKeys.get(family) ?? new Set();
+          familyKeys.add(key);
+          familyToKeys.set(family, familyKeys);
+        }
+      }
+    }
+  }
   return { familyToKeys, keyToFamilies, catalogKeys };
 }
 
@@ -944,6 +1031,8 @@ export async function generateDefaultStringSlices({
   beforeWrite,
 } = {}) {
   const generatedFile = path.join(packageDir, 'src', 'internal', 'default-strings.generated.ts');
+  const generatedDir = path.join(packageDir, 'src', 'internal', 'default-strings');
+  const reachability = await classKeyReachability({ packageDir, exclusions });
   const {
     catalogFile,
     catalogSource,
@@ -952,9 +1041,21 @@ export async function generateDefaultStringSlices({
     files,
     sourceCache,
     keysByFile,
-  } = await classKeyReachability({ packageDir, exclusions });
+    helperConsumers,
+  } = reachability;
+  const { keyToFamilies } = familyKeyIndex(reachability, packageDir);
+  const keyFiles = new Map();
+  const keysByModule = new Map();
+  for (const [key, families] of keyToFamilies) {
+    const family = families.size > 1 ? 'shared' : [...families][0];
+    const file = path.join(generatedDir, `${family}.generated.ts`);
+    keyFiles.set(key, file);
+    const keys = keysByModule.get(file) ?? [];
+    keys.push(key);
+    keysByModule.set(file, keys);
+  }
   const rewrites = [];
-  const allUsedKeys = new Set();
+  const allUsedKeys = new Set(keyToFamilies.keys());
   for (const file of files) {
     const source = sourceCache.get(file);
     const keys = keysByFile.get(file);
@@ -962,14 +1063,33 @@ export async function generateDefaultStringSlices({
       if (!entries.has(key)) throw new Error(`${file}: localize key ${key} has no DEFAULT_STRINGS entry`);
       allUsedKeys.add(key);
     }
-    const expected = rewriteClassSource(source, file, generatedFile, keys);
+    const expected = rewriteClassSource(source, file, generatedFile, keys, keyFiles);
+    if (expected !== source) rewrites.push({ file, source: expected });
+  }
+  const rewrittenClassFileCount = rewrites.length;
+  for (const [file, { source, imports }] of helperConsumers) {
+    const expected = rewriteDefaultImports(source, file, imports, keyFiles);
     if (expected !== source) rewrites.push({ file, source: expected });
   }
   const usedKeys = [...allUsedKeys].sort();
   const unusedKeys = [...entries.keys()].filter((key) => !allUsedKeys.has(key)).sort();
-  const generated = generatedCatalogSource(entries, usedKeys);
-  const actualGenerated = await readOptionalFile(generatedFile);
-  const generatedChanged = actualGenerated !== generated;
+  const outputs = new Map([...keysByModule].sort(([a], [b]) => a.localeCompare(b))
+    .map(([file, keys]) => [file, generatedCatalogSource(entries, keys.sort())]));
+  const generatedFiles = async () => {
+    try {
+      return (await readdir(generatedDir)).filter((name) => name.endsWith('.generated.ts'))
+        .map((name) => path.join(generatedDir, name)).sort();
+    } catch (error) {
+      if (error?.code === 'ENOENT') return [];
+      throw error;
+    }
+  };
+  const existingFiles = await generatedFiles();
+  const snapshots = new Map(await Promise.all([...new Set([generatedFile, ...existingFiles, ...outputs.keys()])]
+    .map(async (file) => [file, await readOptionalFile(file)])));
+  const obsolete = [...snapshots].filter(([file, source]) => source !== undefined && !outputs.has(file)).map(([file]) => file);
+  const changedOutputs = [...outputs].filter(([file, source]) => snapshots.get(file) !== source);
+  const generatedChanged = obsolete.length > 0 || changedOutputs.length > 0;
   if (write && (rewrites.length > 0 || generatedChanged)) {
     await beforeWrite?.();
     const currentFiles = (await sourceFiles(componentsDir)).sort();
@@ -979,24 +1099,32 @@ export async function generateDefaultStringSlices({
           'generated; refusing to write stale output',
       );
     }
+    const currentHelpers = await defaultImportConsumers(path.join(packageDir, 'src'), new Set(files));
+    if ([...currentHelpers.keys()].join('\0') !== [...helperConsumers.keys()].join('\0')) {
+      throw new Error('Default-string consumer inventory changed while generating; refusing to write stale output');
+    }
+    if ((await generatedFiles()).join('\0') !== existingFiles.join('\0')) {
+      throw new Error('Default-string module inventory changed while generating; refusing to write stale output');
+    }
     await Promise.all([
       assertSourceSnapshotUnchanged(packageDir, catalogFile, catalogSource),
       ...[...sourceCache].map(([file, snapshot]) =>
         assertSourceSnapshotUnchanged(packageDir, file, snapshot)),
-      ...(generatedChanged
-        ? [assertSourceSnapshotUnchanged(packageDir, generatedFile, actualGenerated)]
-        : []),
+      ...[...snapshots].map(([file, snapshot]) => assertSourceSnapshotUnchanged(packageDir, file, snapshot)),
     ]);
     await Promise.all(rewrites.map(({ file, source }) => writeFile(file, source)));
-    if (generatedChanged) await writeFile(generatedFile, generated);
+    await mkdir(generatedDir, { recursive: true });
+    await Promise.all(changedOutputs.map(([file, source]) => writeFile(file, source)));
+    await Promise.all(obsolete.map((file) => rm(file)));
   }
   return {
     classFileCount: files.length,
     rewrittenFileCount: rewrites.length,
+    rewrittenClassFileCount,
     usedKeyCount: usedKeys.length,
     unusedKeys,
     generatedChanged,
-    fingerprint: createHash('sha256').update(generated).digest('hex'),
+    fingerprint: createHash('sha256').update([...outputs].map(([file, source]) => `${path.basename(file)}\n${source}`).join('')).digest('hex'),
   };
 }
 
@@ -1020,7 +1148,7 @@ export function generationFailures(result, { write = false } = {}) {
   const failures = [];
   if (!write && (result.rewrittenFileCount > 0 || result.generatedChanged)) {
     failures.push(
-      `Default-string slices are stale (${result.rewrittenFileCount} class files, ` +
+      `Default-string slices are stale (${result.rewrittenFileCount} source files, ` +
         `${result.generatedChanged ? 'generated catalog changed' : 'catalog current'}); rerun with --write.`,
     );
   }

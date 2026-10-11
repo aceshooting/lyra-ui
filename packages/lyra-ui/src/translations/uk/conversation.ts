@@ -25,7 +25,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Попередня версія',
   branchNext: 'Наступна версія',
   branchPosition: 'Версія {index} із {total}',
-  confirm: 'Підтвердити',
   promptQueueItemLabel: 'Запит у черзі {index}',
   promptQueueActionLabel: '{action}, запит у черзі {index}',
   sendMessage: 'Надіслати повідомлення',

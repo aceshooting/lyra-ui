@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { bridgeLyraLocale, resolveLyraScopedString, subscribeLyraLocale } from './localization.js';
 import { getLyraLocale, registerLyraLocale, setLyraLocale } from './internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired } from './internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired } from './internal/default-strings/shared.generated.js';
 
 /** Restores the module-global active locale after each case; it is shared by the whole file. */
 function withActiveLocale(body: () => void): void {

@@ -12,7 +12,7 @@ import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
 import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_branchNext, LYRA_DEFAULT_branchPickerLabel, LYRA_DEFAULT_branchPosition, LYRA_DEFAULT_branchPrevious } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_branchNext, LYRA_DEFAULT_branchPickerLabel, LYRA_DEFAULT_branchPosition, LYRA_DEFAULT_branchPrevious } from '../../../internal/default-strings/conversation.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

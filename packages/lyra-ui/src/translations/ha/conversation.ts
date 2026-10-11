@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Sigar da ta gabata',
   branchNext: 'Siga ta gaba',
   branchPosition: 'Siga {index} cikin {total}',
-  confirm: 'Tabbatar',
   promptQueueItemLabel: 'Umarnin da ke jiran aiki {index}',
   promptQueueActionLabel: '{action}, umarnin da ke jiran aiki {index}',
   sendMessage: 'Aika saƙo',

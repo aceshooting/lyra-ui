@@ -17,7 +17,7 @@ import { resolveResponsivePanelEffectiveMode } from './responsive-panel-mode.js'
 import type { LyraResponsivePanelMode, LyraResponsivePanelEffectiveMode } from './responsive-panel-mode.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_responsivePanel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_responsivePanel } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export { resolveResponsivePanelEffectiveMode } from './responsive-panel-mode.js';

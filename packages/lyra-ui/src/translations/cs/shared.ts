@@ -42,6 +42,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Stránkování',
   paginationSummary: '{start}–{end} z {total} {itemLabel}',
   cancel: 'Zrušit',
+  confirm: 'Potvrdit',
   search: 'Hledat',
   items: {
     few: 'položky',

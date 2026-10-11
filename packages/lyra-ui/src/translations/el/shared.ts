@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Σελιδοποίηση',
   paginationSummary: '{start}–{end} από {total} {itemLabel}',
   cancel: 'Ακύρωση',
+  confirm: 'Επιβεβαίωση',
   search: 'Αναζήτηση',
   items: {
     one: 'στοιχείο',

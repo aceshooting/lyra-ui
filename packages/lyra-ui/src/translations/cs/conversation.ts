@@ -25,7 +25,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Předchozí verze',
   branchNext: 'Další verze',
   branchPosition: 'Verze {index} z {total}',
-  confirm: 'Potvrdit',
   promptQueueItemLabel: 'Prompt ve frontě {index}',
   promptQueueActionLabel: '{action}, prompt ve frontě {index}',
   sendMessage: 'Odeslat zprávu',

@@ -10,7 +10,8 @@ import { literalSetConverter, trueDefaultBooleanConverter } from '../../../inter
 import { styles } from './thinking-panel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel, LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_thoughtFor } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_thinking, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Whether the panel is streaming a run live or replaying a finished one -- the library's shared

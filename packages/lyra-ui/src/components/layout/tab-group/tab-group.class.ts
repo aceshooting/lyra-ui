@@ -16,7 +16,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraTab } from './tab.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** One canonical tab descriptor derived from a direct `<lr-tab>` child. */

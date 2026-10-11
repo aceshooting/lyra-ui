@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Fuulota keessa socho\'i',
   paginationSummary: '{total} {itemLabel} keessaa {start}–{end}',
   cancel: 'Dhiisi',
+  confirm: 'Mirkaneessi',
   search: 'Barbaadi',
   items: {
     one: 'wantoota',

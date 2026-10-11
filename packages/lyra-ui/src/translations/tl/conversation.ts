@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Nakaraang bersyon',
   branchNext: 'Susunod na bersyon',
   branchPosition: 'Bersyon {index} sa {total}',
-  confirm: 'Kumpirmahin',
   promptQueueItemLabel: 'Nakapilang prompt {index}',
   promptQueueActionLabel: '{action}, nakapilang prompt {index}',
   sendMessage: 'Ipadala ang mensahe',

@@ -32,6 +32,8 @@ import {
   type FormOwnerValue,
 } from '../../../internal/form-associated.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { finiteMidpoint } from '../../../internal/numbers.js';
+import { clampSteppedValue } from '../../../internal/step-value.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -39,7 +41,8 @@ import {
 } from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_rubricSkip, LYRA_DEFAULT_rubricSubmit, LYRA_DEFAULT_rubricSubmitAndNext } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_noData, LYRA_DEFAULT_unsupportedFieldType } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 installFormControlLabelSupport();
@@ -312,16 +315,14 @@ function isSegmentedScoreKey(key: ScoreRubricKey): boolean {
 function canonicalScore(value: unknown, key: ScoreRubricKey): number | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   const { min, max, step } = scoreDomain(key);
-  const clamped = Math.min(max, Math.max(min, value));
-  const snapped = Math.min(max, Math.max(min, min + Math.round((clamped - min) / step) * step));
-  return Number(snapped.toPrecision(15));
+  return clampSteppedValue(value, min, max, step);
 }
 
 function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): RubricValue {
   const source = value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value
     : EMPTY_VALUE;
-  const normalized: Record<string, number | string | readonly string[] | undefined> = {};
+  const normalized: Record<string, number | string | readonly string[] | undefined> = Object.create(null);
   for (const key of keys) {
     const descriptor = getOwnDataDescriptor(source, key.key);
     if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
@@ -330,7 +331,7 @@ function normalizeRubricValue(value: unknown, keys: readonly RubricKey[]): Rubri
     if (key.type === 'score') {
       const { min, max } = scoreDomain(key);
       const score = canonicalScore(
-        hasEntry ? entry : isSegmentedScoreKey(key) ? undefined : min + (max - min) / 2,
+        hasEntry ? entry : isSegmentedScoreKey(key) ? undefined : finiteMidpoint(min, max),
         key,
       );
       if (score !== undefined) normalized[key.key] = score;
@@ -790,7 +791,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
 
   private computeValidation(): { errors: Record<string, string>; flags: ValidityStateFlags;
   } {
-    const errors: Record<string, string> = {};
+    const errors: Record<string, string> = Object.create(null);
     const flags: ValidityStateFlags = {};
     for (const k of this._keys) {
       if (k.type !== 'score' && k.type !== 'category' && k.type !== 'comment') {
@@ -802,7 +803,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
         continue;
       }
       if (!k.required) continue;
-      const v = this._value[k.key];
+      const v = Object.hasOwn(this._value, k.key) ? this._value[k.key] : undefined;
       const present =
         k.type === 'category' && k.multiple ? Array.isArray(v) && v.length > 0 : v !== undefined && v !== '';
       if (!present) {
@@ -1102,7 +1103,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
         }}
       ></lr-segmented>`;
     }
-    const numeric = typeof current === 'number' ? current : min + (max - min) / 2;
+    const numeric = typeof current === 'number' ? current : finiteMidpoint(min, max);
     return html`<lr-slider
       id=${fieldId}
       class="control"
@@ -1133,6 +1134,14 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
     if (k.multiple) {
       const selected: readonly string[] = Array.isArray(current) ? (current as string[])
         : [];
+      const remaining = new Map<string, number>();
+      for (const value of selected) remaining.set(value, (remaining.get(value) ?? 0) + 1);
+      const checked = (value: string): boolean => {
+        const count = remaining.get(value) ?? 0;
+        if (count === 0) return false;
+        remaining.set(value, count - 1);
+        return true;
+      };
       return html`<lr-checkbox-group
         id=${fieldId}
         class="control"
@@ -1152,7 +1161,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
         ${description} ${error}
         ${options.map(
           (opt) =>
-            html`<lr-checkbox value=${opt.value} .checked=${live(selected.includes(opt.value))} ?disabled=${disabled}
+            html`<lr-checkbox value=${opt.value} .checked=${live(checked(opt.value))} ?disabled=${disabled}
               >${opt.icon == null ? nothing : renderInertPresentation(opt.icon)}<span
                 >${opt.label ?? opt.value}${opt.description
                   ? html`<small class="option-description">${opt.description}</small>`

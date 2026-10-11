@@ -11,7 +11,7 @@ import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_animatedImageDefaultAlt, LYRA_DEFAULT_pauseWithContext, LYRA_DEFAULT_playWithContext } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_animatedImageDefaultAlt, LYRA_DEFAULT_pauseWithContext, LYRA_DEFAULT_playWithContext } from '../../../internal/default-strings/media.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const MAX_FROZEN_FRAME_DIMENSION = 8192;

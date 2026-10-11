@@ -10,7 +10,7 @@ import { styles } from './reorder-item.styles.js';
 import { reorderIdentityChange, reorderOwnerUpdate, type ReorderIdentityOwner, type ReorderOwnerState } from './reorder-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraReorderItemEventMap {

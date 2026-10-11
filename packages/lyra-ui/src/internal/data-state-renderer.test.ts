@@ -3,12 +3,7 @@ import { css, html as litHtml } from 'lit';
 import { property } from 'lit/decorators.js';
 import { sendKeys } from '@web/test-runner-commands';
 import '../components/overlays/empty/empty.js';
-import {
-  LYRA_DEFAULT_loading,
-  LYRA_DEFAULT_noData,
-  LYRA_DEFAULT_retry,
-  LYRA_DEFAULT_tableLoadFailed,
-} from './default-strings.generated.js';
+import { LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from './default-strings/shared.generated.js';
 import {
   renderDataState,
   resolveDataState,

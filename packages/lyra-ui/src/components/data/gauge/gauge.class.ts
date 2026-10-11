@@ -16,7 +16,7 @@ import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.c
 import { styles } from './gauge.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_gaugeLabel, LYRA_DEFAULT_gaugeValueLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_gaugeLabel, LYRA_DEFAULT_gaugeValueLabel } from '../../../internal/default-strings/data.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The rendered geometry of a gauge. */

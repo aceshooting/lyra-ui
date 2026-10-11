@@ -48,7 +48,6 @@ import {
   FALLBACK_TICK_FONT_SIZE,
   FALLBACK_TOOLTIP_BG,
   FALLBACK_TOOLTIP_TEXT,
-  resolveCanvasColors,
   type ChartThemeColors as ThemeColors,
 } from './chart-colors.js';
 import { ChartTokenCache } from './chart-token-cache.js';
@@ -83,7 +82,8 @@ import {
 } from './chart-bidi.js';import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -3106,7 +3106,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const colors = typeof authoredColors === 'string'
       ? [this.canvasTokens.resolve(authoredColors, borderFallback ?? 'transparent'),]
       : authoredColors
-        ? resolveCanvasColors(this, authoredColors, borderFallback ?? 'transparent')
+        ? this.canvasTokens.resolveMany(authoredColors, borderFallback ?? 'transparent')
         : undefined;
     // Default a color-less series to the categorical palette, keyed by dataset index (matching
     // <lr-lite-chart>). pie/doughnut/polarArea carry one series whose *slices* each need a distinct
@@ -3140,8 +3140,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       ? rowIndexes.map((rowIndex) => series.segmentColors![rowIndex % series.segmentColors!.length]!)
       : series.segmentColors;
     const segmentColors = authoredSegmentColors
-      ? resolveCanvasColors(
-          this,
+      ? this.canvasTokens.resolveMany(
           authoredSegmentColors,
           colors?.[0] ?? borderFallback ?? 'transparent'
         )
@@ -3210,8 +3209,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       backgroundColor: encodedBackgroundColor,
       borderColor: colors?.[0] ?? sliceBorderColors ?? borderFallback,
       pointBackgroundColor: authoredPointColors
-        ? resolveCanvasColors(
-            this,
+        ? this.canvasTokens.resolveMany(
             authoredPointColors,
             colors?.[0] ?? borderFallback ?? 'transparent'
           )
@@ -4090,18 +4088,53 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private readonly visualPositions = new WeakMap<readonly number[], Map<number, number>>();
 
-  private syncDatums(): ChartDatum[] {
+  private syncDatumIndex?: {
+    datums: ChartDatum[];
+    byAddress: Map<string, ChartDatum>;
+    byCategory: Map<number, ChartDatum[]>;
+    labelCategories: Map<string, number[]>;
+  };
+
+  /** Indexes the immutable datum model once; visibility and geometry remain live checks. */
+  private indexedSyncDatums() {
+    const datums = this.chartDatums();
+    if (this.syncDatumIndex?.datums === datums) return this.syncDatumIndex;
+    const byAddress = new Map<string, ChartDatum>();
+    const byCategory = new Map<number, ChartDatum[]>();
+    for (const datum of datums) {
+      byAddress.set(`${datum.datasetIndex}:${datum.index}`, datum);
+      let category = byCategory.get(datum.index);
+      if (!category) {
+        category = [];
+        byCategory.set(datum.index, category);
+      }
+      category.push(datum);
+    }
+    const labels = this.effectiveData().labels;
+    const labelCategories = new Map<string, number[]>();
+    for (const index of [...byCategory.keys()].sort((a, b) => a - b)) {
+      const label = labels[index];
+      if (typeof label !== 'string') continue;
+      let categories = labelCategories.get(label);
+      if (!categories) {
+        categories = [];
+        labelCategories.set(label, categories);
+      }
+      categories.push(index);
+    }
+    return this.syncDatumIndex = { datums, byAddress, byCategory, labelCategories };
+  }
+
+  private syncDatumIsEligible(datum: ChartDatum): boolean {
     const chart = this.chart;
-    if (!chart) return [];
-    return this.chartDatums().filter((datum) => {
-      const visualDataset = this.visualPosition(this.visualDatasetSourceIndexes, datum.datasetIndex);
-      const visualIndex = this.visualPosition(this.visualRowSourceIndexes, datum.index);
-      const meta = chart.getDatasetMeta?.(visualDataset) as { data?: { skip?: boolean; x?: number; y?: number }[] } | undefined;
-      const element = meta?.data?.[visualIndex];
-      return chart.isDatasetVisible(visualDataset) && !!element && !element.skip &&
-        Number.isFinite(element.x) && Number.isFinite(element.y) &&
-        chartDatumNumericValue(datum.value) !== undefined;
-    });
+    if (!chart) return false;
+    const visualDataset = this.visualPosition(this.visualDatasetSourceIndexes, datum.datasetIndex);
+    const visualIndex = this.visualPosition(this.visualRowSourceIndexes, datum.index);
+    const meta = chart.getDatasetMeta?.(visualDataset) as { data?: { skip?: boolean; x?: number; y?: number }[] } | undefined;
+    const element = meta?.data?.[visualIndex];
+    return chart.isDatasetVisible(visualDataset) && !!element && !element.skip &&
+      Number.isFinite(element.x) && Number.isFinite(element.y) &&
+      chartDatumNumericValue(datum.value) !== undefined;
   }
 
   private publishSyncDatum(datum: ChartDatum): void {
@@ -4117,17 +4150,21 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     if (!hit) { this.chartSync.clear(); return; }
     const datasetIndex = this.visualDatasetSourceIndexes?.[hit.datasetIndex] ?? hit.datasetIndex;
     const index = this.visualRowSourceIndexes?.[hit.index] ?? hit.index;
-    const datum = this.syncDatums().find((candidate) => candidate.datasetIndex === datasetIndex && candidate.index === index);
-    if (datum) this.publishSyncDatum(datum);
+    const datum = this.indexedSyncDatums().byAddress.get(`${datasetIndex}:${index}`);
+    if (datum && this.syncDatumIsEligible(datum)) this.publishSyncDatum(datum);
   }
 
   private syncPresentation(label: string, sourceIndex?: number): ChartSyncPresentation | undefined {
     if (!this.syncCompatible() || !this.canvasEl || !this.chart) return undefined;
     const effective = this.effectiveData();
-    const datums = this.syncDatums();
-    const index = sourceIndex ?? datums.filter((datum) => effective.labels[datum.index] === label).sort((a, b) => a.index - b.index)[0]?.index;
-    if (index === undefined || effective.labels[index] !== label) return undefined;
-    const matches = datums.filter((datum) => datum.index === index);
+    if (sourceIndex !== undefined && effective.labels[sourceIndex] !== label) return undefined;
+    const indexed = this.indexedSyncDatums();
+    const categories = sourceIndex === undefined ? indexed.labelCategories.get(label) ?? [] : [sourceIndex];
+    let matches: ChartDatum[] = [];
+    for (const index of categories) {
+      matches = (indexed.byCategory.get(index) ?? []).filter((datum) => this.syncDatumIsEligible(datum));
+      if (matches.length) break;
+    }
     if (!matches.length) return undefined;
     const hits = matches.map((datum) => ({
       datasetIndex: this.visualPosition(this.visualDatasetSourceIndexes, datum.datasetIndex),

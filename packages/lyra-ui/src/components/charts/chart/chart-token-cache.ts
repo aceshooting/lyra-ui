@@ -32,6 +32,7 @@ export class ChartTokenCache {
   private themeSnapshot?: string;
   private colorVariables = new Set<string>();
   private readonly drawColorVariables = new Set<string>();
+  private readonly drawCacheKeys = new Set<string>();
 
   constructor(private readonly scope: Element) {}
 
@@ -48,12 +49,16 @@ export class ChartTokenCache {
   /** Starts dependency collection for a new canvas draw. */
   beginThemeDraw(): void {
     this.drawColorVariables.clear();
+    this.drawCacheKeys.clear();
   }
 
   /** Records only the inputs used by a successful canvas draw. */
   rememberTheme(): void {
     this.colorVariables = new Set(this.drawColorVariables);
     this.themeSnapshot = this.themeFingerprint();
+    for (const key of this.values.keys()) {
+      if (!this.drawCacheKeys.has(key)) this.values.delete(key);
+    }
   }
 
   private themeFingerprint(): string | undefined {
@@ -105,6 +110,7 @@ export class ChartTokenCache {
 
   private memo<T>(key: string, cacheable: boolean, compute: () => T): T {
     if (!cacheable) return compute();
+    this.drawCacheKeys.add(key);
     if (!this.values.has(key)) this.values.set(key, compute());
     return this.values.get(key) as T;
   }
@@ -114,6 +120,21 @@ export class ChartTokenCache {
     return this.memo(`${color}\n${fallback}`, !SCOPE_DEPENDENT_COLOR.test(color), () =>
       resolveCanvasColor(this.scope, color, fallback));
   };
+
+  /** Resolves each distinct batch color once while retaining its live theme dependencies. */
+  resolveMany(colors: Iterable<string>, fallback: string): string[] {
+    const batch = new Map<string, string>();
+    const resolved: string[] = [];
+    for (const color of colors) {
+      let value = batch.get(color);
+      if (value === undefined) {
+        value = this.resolve(color, fallback);
+        batch.set(color, value);
+      }
+      resolved.push(value);
+    }
+    return resolved;
+  }
 
   translucent(color: string): string {
     this.trackColorVariables(color);

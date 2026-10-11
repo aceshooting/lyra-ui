@@ -16,7 +16,8 @@ import { styles } from './qr-code.styles.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_qrCodeGenerationFailed, LYRA_DEFAULT_qrCodeMissingLibrary } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_qrCodeGenerationFailed, LYRA_DEFAULT_qrCodeMissingLibrary } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const DEFAULT_SIZE = 128;
@@ -315,6 +316,12 @@ export class LyraQrCode extends LyraElement {
    *  `loadLibrary` field). */
   private loadLibrary: () => Promise<QrCodeApi | null> = loadQrCodeCached;
   private generation = 0;
+  private embeddedImage?: {
+    src: string;
+    owner: Document;
+    promise: Promise<HTMLImageElement | undefined>;
+    cancel: () => void;
+  };
 
   constructor() {
     super();
@@ -354,6 +361,7 @@ export class LyraQrCode extends LyraElement {
 
   override disconnectedCallback(): void {
     this.generation++;
+    this.clearEmbeddedImage();
     this.clearVisibilityObserver();
     this.visible = false;
     this.visibilityKnown = false;
@@ -363,6 +371,8 @@ export class LyraQrCode extends LyraElement {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.generation++;
+    this.clearEmbeddedImage();
     this.clearVisibilityObserver();
     this.visible = false;
     this.visibilityKnown = false;
@@ -496,6 +506,9 @@ export class LyraQrCode extends LyraElement {
     // Encoding and canvas paint are intentionally client-only, but a non-empty declarative value
     // is already enough information to distinguish pending work from genuine empty data. Seed the
     // honest state before the server render and before the browser's first render alike.
+    if (!this.value || (changed.has('image') && this.embeddedImage?.src !== safeMediaSrc(this.image))) {
+      this.clearEmbeddedImage();
+    }
     if (changed.has('value') || changed.has('errorCorrection') || changed.has('image')) {
       this.transitionTo(this.value ? { kind: 'loading' } : { kind: 'empty' });
     }
@@ -511,6 +524,7 @@ export class LyraQrCode extends LyraElement {
   private async generateCurrentValue(): Promise<void> {
     const generation = ++this.generation;
     if (!this.value) {
+      this.clearEmbeddedImage();
       this.transitionTo({ kind: 'empty' });
       return;
     }
@@ -545,17 +559,61 @@ export class LyraQrCode extends LyraElement {
     }
   }
 
-  private async loadEmbeddedImage(src: string): Promise<HTMLImageElement | undefined> {
-    const ImageCtor = this.ownerDocument.defaultView?.Image;
-    if (!ImageCtor) return undefined;
+  private clearEmbeddedImage(): void {
+    const operation = this.embeddedImage;
+    this.embeddedImage = undefined;
+    operation?.cancel();
+    if (this.loadState.kind === 'ready' && this.loadState.image) {
+      this.transitionTo({ kind: 'ready', modules: this.loadState.modules });
+    }
+  }
+
+  private loadEmbeddedImage(src: string): Promise<HTMLImageElement | undefined> {
+    const owner = this.ownerDocument;
+    if (this.embeddedImage?.src === src && this.embeddedImage.owner === owner) {
+      return this.embeddedImage.promise;
+    }
+    this.clearEmbeddedImage();
+    const ImageCtor = owner.defaultView?.Image;
+    if (!ImageCtor) return Promise.resolve(undefined);
     const image = new ImageCtor();
     image.decoding = 'async';
-    const loaded = await new Promise<boolean>((resolve) => {
-      image.addEventListener('load', () => resolve(true), { once: true });
-      image.addEventListener('error', () => resolve(false), { once: true });
+    let settle!: (image: HTMLImageElement | undefined) => void;
+    const promise = new Promise<HTMLImageElement | undefined>((resolve) => { settle = resolve; });
+    let pending = true;
+    const cleanup = (): void => {
+      image.removeEventListener('load', onLoad);
+      image.removeEventListener('error', onError);
+    };
+    const finish = (loaded: boolean): void => {
+      if (!pending) return;
+      pending = false;
+      cleanup();
+      const valid = loaded && image.naturalWidth > 0 && image.naturalHeight > 0;
+      if (!valid && this.embeddedImage === operation) this.embeddedImage = undefined;
+      settle(valid ? image : undefined);
+    };
+    const onLoad = (): void => finish(true);
+    const onError = (): void => finish(false);
+    const operation = {
+      src,
+      owner,
+      promise,
+      cancel: (): void => {
+        if (!pending) return;
+        finish(false);
+        image.removeAttribute('src');
+      },
+    };
+    this.embeddedImage = operation;
+    image.addEventListener('load', onLoad);
+    image.addEventListener('error', onError);
+    try {
       image.src = src;
-    });
-    return loaded && image.naturalWidth > 0 && image.naturalHeight > 0 ? image : undefined;
+    } catch {
+      finish(false);
+    }
+    return promise;
   }
 
   /** Redraws canvas content after an upstream token or theme change, reusing the already-

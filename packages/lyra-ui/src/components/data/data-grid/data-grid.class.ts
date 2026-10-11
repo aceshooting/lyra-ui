@@ -82,7 +82,8 @@ import type {
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowLimit, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_dataGridColumnMenu, LYRA_DEFAULT_dataGridPinEnd, LYRA_DEFAULT_dataGridPinStart, LYRA_DEFAULT_dataGridRowLimit, LYRA_DEFAULT_dataGridRowsPerPage, LYRA_DEFAULT_dataGridTreeLimitReached, LYRA_DEFAULT_dataGridUnpin, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_tableFilterLabel } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export * from './data-grid-types.js';
@@ -1370,6 +1371,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
    *  menu-driven renders reuse it. Every memoized step also keys on its direct inputs, so a read
    *  between a property assignment and the next update is never stale. */
   private pipelineEpoch = 0;
+  /** A public keyless refresh also counts when coalesced with an unrelated view-state change. */
+  private contentRefreshPending = false;
   private readonly pipelineMemo = new Map<
     string,
     { readonly inputs: readonly unknown[]; readonly value: unknown }
@@ -1490,9 +1493,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     }
   }
 
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.contentRefreshPending = true;
+    super.requestUpdate(...args);
+  }
+
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (changed.size === 0 || [...changed.keys()].some((key) => !VIEW_STATE_PROPERTIES.has(key))) {
+    const contentRefresh = this.contentRefreshPending;
+    this.contentRefreshPending = false;
+    if (contentRefresh || [...changed.keys()].some((key) => !VIEW_STATE_PROPERTIES.has(key))) {
       this.pipelineEpoch += 1;
     }
     if (this.hasUpdated && changed.has('loading') && this.loading) {
@@ -1532,7 +1542,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.dragGhost = '';
     }
     if (changed.has('columns')) this.handleColumnsChange();
-    this.reconcileRowMeasurementCache(changed);
+    this.reconcileRowMeasurementCache(changed, contentRefresh);
 
     // Re-resolve a `selectedRows` assignment that landed before this first update against the now-
     // settled `data`/`rowKey` -- see the setter's doc. `!this.hasUpdated` here (checked before
@@ -2901,7 +2911,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private rowMatches(row: Row): boolean {
-    return (
+    const matches = this.memoize('rowMatches', [
+      this.pipelineEpoch, this.allSourceRows, this.columns, this.filters,
+      this.searchTerm, this.searchFn, this.effectiveLocale,
+    ], () => new Map<Row, boolean>());
+    const previous = matches.get(row);
+    if (previous !== undefined) return previous;
+    const matching = (
       filterRows([row], this.columns, this.filters, this.effectiveLocale)
         .length > 0 &&
       searchRows(
@@ -2912,6 +2928,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         this.searchFn
       ).length > 0
     );
+    matches.set(row, matching);
+    return matching;
   }
 
   private processedChildrenFor(row: Row, byIdentity: ReadonlyMap<DataGridKey, Row>): Row[] {
@@ -3287,7 +3305,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
    * leaving/re-entering the virtual window. */
   // Untyped PropertyValues includes the private reactive width and visibility maps, which are
   // intentionally omitted from keyof this but can change wrapping and row height.
-  private reconcileRowMeasurementCache(changed: PropertyValues): void {
+  private reconcileRowMeasurementCache(changed: PropertyValues, contentRefresh = changed.size === 0): void {
     const items = this.displayItems;
     const signature = this.measurementSignature(items);
     const locale = this.effectiveLocale;
@@ -3317,7 +3335,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.measurementDisplaySignature !== '' &&
       this.measurementDisplaySignature !== signature;
     const rowHeightChanged = this.recordMeasurementRowHeight();
-    if (changedGeometry || localeChanged || structureChanged || rowHeightChanged)
+    if (contentRefresh || changedGeometry || localeChanged || structureChanged || rowHeightChanged)
       this.invalidateRowMeasurements();
     this.measurementLocale = locale;
     this.measurementDisplaySignature = signature;
@@ -3418,7 +3436,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const schedule = owner?.queueMicrotask?.bind(owner) ?? queueMicrotask;
     schedule(() => {
       this.measurementUpdateQueued = false;
-      if (this.isConnected) this.requestUpdate();
+      // Measurements change offsets, not caller-owned content. Keep this follow-up out of the
+      // public keyless refresh path, which must discard offscreen heights after row edits.
+      if (this.isConnected) super.requestUpdate();
     });
   }
 
@@ -3917,6 +3937,19 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return finiteRange(resolveCssTokenLength(raw, { host: this }) ?? 56, 56, Math.max(24, targetFloor));
   }
 
+  /** Counts expanded detail rows before each display position, once per projection/expansion. */
+  private detailRowOffsets(items: readonly DisplayItem<Row>[]): readonly number[] {
+    if (!this.rowDetail) return [0];
+    return this.memoize('detailRowOffsets', [items, this.expandedKeys, this.rowDetail], () => {
+      const offsets = [0];
+      for (const item of items) {
+        offsets.push(offsets[offsets.length - 1]! +
+          (item.kind === 'row' && arrayHasKey(this.expandedKeys, item.key) ? 1 : 0));
+      }
+      return offsets;
+    });
+  }
+
   private get virtualWindow(): {
     items: DisplayItem<Row>[];
     allItems: DisplayItem<Row>[];
@@ -3924,13 +3957,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     end: number;
   } {
     const items = this.displayItems;
-    const expandedDetails = Boolean(
-      this.rowDetail &&
-        items.some(
-          (item) =>
-            item.kind === 'row' && arrayHasKey(this.expandedKeys, item.key)
-        )
-    );
+    const expandedDetails = (this.detailRowOffsets(items)[items.length] ?? 0) > 0;
     const disable =
       items.length < VIRTUALIZATION_THRESHOLD ||
       expandedDetails ||
@@ -5583,17 +5610,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     }
     const window = this.virtualWindow;
     const allItems = window.allItems;
-    let ariaRowIndex =
-      2 +
-      window.start +
-      allItems
-        .slice(0, window.start)
-        .filter(
-          (item) =>
-            item.kind === 'row' &&
-            Boolean(this.rowDetail) &&
-            arrayHasKey(this.expandedKeys, item.key)
-        ).length;
+    let ariaRowIndex = 2 + window.start + (this.detailRowOffsets(allItems)[window.start] ?? 0);
     return html`
       ${window.start > 0
         ? html`<div
@@ -5810,12 +5827,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   protected override render(): TemplateResult {
     const accessibleName = hostAriaLabel(this) ?? (this.label || undefined);
-    const detailCount = this.rowDetail
-      ? this.displayItems.filter(
-          (item) =>
-            item.kind === 'row' && arrayHasKey(this.expandedKeys, item.key)
-        ).length
-      : 0;
+    const detailCount = this.detailRowOffsets(this.displayItems)[this.displayItems.length] ?? 0;
     const rowCount = Math.max(1, this.displayItems.length + detailCount) + 1;
     const columnCount = this.ariaColumnCount;
     const role =

@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Penomboran halaman',
   paginationSummary: '{start}–{end} daripada {total} {itemLabel}',
   cancel: 'Batal',
+  confirm: 'Sahkan',
   search: 'Cari',
   items: {
     other: 'item'

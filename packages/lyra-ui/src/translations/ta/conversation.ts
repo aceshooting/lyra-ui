@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'முந்தைய பதிப்பு',
   branchNext: 'அடுத்த பதிப்பு',
   branchPosition: '{total}-இல் {index}-வது பதிப்பு',
-  confirm: 'உறுதிப்படுத்து',
   promptQueueItemLabel: 'வரிசையிலுள்ள கோரிக்கை {index}',
   promptQueueActionLabel: '{action}, வரிசையிலுள்ள கோரிக்கை {index}',
   sendMessage: 'செய்தியை அனுப்பு',

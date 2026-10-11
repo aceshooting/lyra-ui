@@ -12,7 +12,8 @@ import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './zoomable-frame.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraZoomableFrameLoading = 'eager' | 'lazy';

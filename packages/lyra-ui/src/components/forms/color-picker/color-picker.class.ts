@@ -52,7 +52,8 @@ import { styles } from './color-picker.styles.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_colorPicker, LYRA_DEFAULT_colorPickerCurrentValue, LYRA_DEFAULT_colorPickerEyeDropper, LYRA_DEFAULT_colorPickerHue, LYRA_DEFAULT_colorPickerHueValue, LYRA_DEFAULT_colorPickerOpacity, LYRA_DEFAULT_colorPickerOpacityValue, LYRA_DEFAULT_colorPickerSaturationBrightness, LYRA_DEFAULT_colorPickerSaturationBrightnessValue, LYRA_DEFAULT_colorPickerSwatch, LYRA_DEFAULT_colorPickerSwatches, LYRA_DEFAULT_colorPickerToggleFormat, LYRA_DEFAULT_colorPickerValueField, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_colorPicker, LYRA_DEFAULT_colorPickerCurrentValue, LYRA_DEFAULT_colorPickerEyeDropper, LYRA_DEFAULT_colorPickerHue, LYRA_DEFAULT_colorPickerHueValue, LYRA_DEFAULT_colorPickerOpacity, LYRA_DEFAULT_colorPickerOpacityValue, LYRA_DEFAULT_colorPickerSaturationBrightness, LYRA_DEFAULT_colorPickerSaturationBrightnessValue, LYRA_DEFAULT_colorPickerSwatch, LYRA_DEFAULT_colorPickerSwatches, LYRA_DEFAULT_colorPickerToggleFormat, LYRA_DEFAULT_colorPickerValueField } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -459,12 +460,23 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   @property({ type: Boolean, attribute: 'with-hint', reflect: true }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  private _readonly = false;
   /** Forwards native read-only behavior to the internal value field and blocks every other
    *  value-committing affordance (the popup panel opening, the saturation/hue/opacity handles,
    *  palette swatches, the eyedropper, and Enter/blur-driven text commits) while leaving the
    *  control focusable, its value selectable/copyable, and its current value submitted with the
-   *  form -- mirroring `lr-input`'s `readonly`. */
-  @property({ type: Boolean, reflect: true }) readonly = false;
+   *  form -- mirroring `lr-input`'s `readonly`.
+   *  @default false */
+  @property({ type: Boolean, reflect: true })
+  get readonly(): boolean {
+    return this._readonly;
+  }
+  set readonly(next: boolean) {
+    const previous = this._readonly;
+    this._readonly = Boolean(next);
+    if (this._readonly) this.cancelEyeDropper();
+    this.requestUpdate('readonly', previous);
+  }
   /** Visible-swatch size — the library-wide `2xs`–`xl` ladder shared with `lr-input`/`lr-select`.
    *  The interactive trigger retains the shared `--lr-icon-button-size` minimum target even when
    *  the visible swatch is denser. The Web Awesome / Shoelace spellings `small`/`medium`/`large`
@@ -714,8 +726,25 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     // A consumer assignment is authoritative. Retire any pointer transaction without restoring
     // its older checkpoint, or a later capture-loss event could overwrite the assigned value.
     this.endDrag();
+    this.cancelEyeDropper();
     super.value = next ?? '';
     this.valueNeedsParse = true;
+  }
+
+  /** Disables the control and retires any pending screen-color selection.
+   *  @default false */
+  override get disabled(): boolean {
+    return super.disabled;
+  }
+
+  override set disabled(next: boolean) {
+    if (next) this.cancelEyeDropper();
+    super.disabled = next;
+  }
+
+  override formDisabledCallback(disabled: boolean): void {
+    if (disabled) this.cancelEyeDropper();
+    super.formDisabledCallback(disabled);
   }
 
   protected override willUpdate(changed: PropertyValues): void {

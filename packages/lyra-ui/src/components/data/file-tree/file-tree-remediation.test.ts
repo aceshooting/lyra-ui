@@ -41,3 +41,15 @@ it('keeps first-valid path ownership across nested file collections', async () =
   expect(el.nodes[0]!.children!.length).to.equal(0);
   expect(el.nodes[2]!.children!.length).to.equal(0);
 });
+
+it('preserves both sibling loads completed before the next render', async () => {
+  const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${[
+    { path: 'root', children: [{ path: 'root/a', children: [] }, { path: 'root/b', children: [] }] },
+  ]}></lr-file-tree>`);
+  el.setChildren('root/a', [{ path: 'root/a/one' }]);
+  el.setChildren('root/b', [{ path: 'root/b/two' }]);
+  await el.updateComplete;
+  expect(el.nodes[0]!.children!.map(node => node.children!.map(child => child.path))).to.deep.equal([
+    ['root/a/one'], ['root/b/two'],
+  ]);
+});

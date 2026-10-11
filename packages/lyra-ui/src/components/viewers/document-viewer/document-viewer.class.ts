@@ -37,7 +37,8 @@ import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentViewerLabel, LYRA_DEFAULT_download, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_download } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_documentPreviewGenericError, LYRA_DEFAULT_documentViewerLabel, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

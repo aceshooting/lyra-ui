@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Προηγούμενη έκδοση',
   branchNext: 'Επόμενη έκδοση',
   branchPosition: 'Έκδοση {index} από {total}',
-  confirm: 'Επιβεβαίωση',
   promptQueueItemLabel: 'Ερώτημα {index} σε αναμονή',
   promptQueueActionLabel: '{action}, ερώτημα {index} σε αναμονή',
   sendMessage: 'Αποστολή μηνύματος',

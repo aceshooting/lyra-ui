@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Paginación',
   paginationSummary: '{start}–{end} de {total} {itemLabel}',
   cancel: 'Cancelar',
+  confirm: 'Confirmar',
   search: 'Buscar',
   items: {
     one: 'elemento',

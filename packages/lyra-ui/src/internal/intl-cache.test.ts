@@ -139,3 +139,136 @@ it('never serves a stale formatter for a reused options object mutated between l
   expect(getNumberFormat('de', options).format(1.25)).to.equal('1,250');
   expect(getNumberFormat('de').format(1.25)).to.equal('1,25');
 });
+
+it('does not confuse inherited formatter options with an empty options bag', () => {
+  const defaults = getNumberFormat('en-US', {});
+  const inherited: Intl.NumberFormatOptions = Object.create({ style: 'percent' });
+  expect(getNumberFormat('en-US', inherited).format(0.5)).to.equal('50%');
+  expect(getNumberFormat('en-US', {}).format(0.5)).to.equal('0.5');
+  expect(getNumberFormat('en-US', {}) === defaults).to.be.true;
+});
+
+it('reads formatter values exposed by a proxy instead of using its descriptors as values', () => {
+  getNumberFormat('en-US', {});
+  let style = 'percent';
+  let styleReads = 0;
+  const options = new Proxy({}, {
+    get(target, key, receiver) {
+      if (key === 'style') {
+        styleReads += 1;
+        return style;
+      }
+      return Reflect.get(target, key, receiver);
+    },
+  });
+  expect(getNumberFormat('en-US', options).format(0.5)).to.equal('50%');
+  expect(styleReads).to.equal(1);
+  style = 'decimal';
+  expect(getNumberFormat('en-US', options).format(0.5)).to.equal('0.5');
+  expect(styleReads).to.equal(2);
+  expect(getNumberFormat('en-US', { style: 'percent' }).format(0.5)).to.equal('50%');
+});
+
+it('includes formatter options inherited directly from Object.prototype', () => {
+  getNumberFormat('en-US', {});
+  const original = Object.getOwnPropertyDescriptor(Object.prototype, 'style');
+  try {
+    Object.defineProperty(Object.prototype, 'style', { value: 'percent', configurable: true });
+    expect(getNumberFormat('en-US', {}).format(0.5)).to.equal('50%');
+    expect(getNumberFormat('en-US', { style: 'decimal' }).format(0.5)).to.equal('0.5');
+  } finally {
+    if (original) Object.defineProperty(Object.prototype, 'style', original);
+    else Reflect.deleteProperty(Object.prototype, 'style');
+  }
+  expect(getNumberFormat('en-US', {}).format(0.5)).to.equal('0.5');
+});
+
+it('coerces captured proxy values once without re-reading their getters', () => {
+  let reads = 0;
+  let coercions = 0;
+  const options = new Proxy({}, {
+    get(target, key, receiver) {
+      if (key !== 'style') return Reflect.get(target, key, receiver);
+      reads += 1;
+      return { toString() { coercions += 1; return 'percent'; } };
+    },
+  });
+  expect(getNumberFormat('en-US', options).format(0.5)).to.equal('50%');
+  expect(reads).to.equal(1);
+  expect(coercions).to.equal(1);
+  expect(getNumberFormat('en-US', options).format(0.5)).to.equal('50%');
+  expect(reads).to.equal(2);
+  expect(coercions).to.equal(2);
+});
+
+it('keeps native coercion order when one ordinary option changes a later option', () => {
+  let coercions = 0;
+  const options = {
+    style: { toString() { coercions += 1; options.currency = 'EUR'; return 'currency'; } },
+    currency: 'USD',
+  };
+  const formatter = getNumberFormat('en-US', options as unknown as Intl.NumberFormatOptions);
+  expect(formatter.resolvedOptions().currency).to.equal('EUR');
+  expect(coercions).to.equal(1);
+});
+
+it('preserves native repeated DateTimeFormat accessor reads', () => {
+  const directReads: string[] = [];
+  const cachedReads: string[] = [];
+  const options = (reads: string[]): Intl.DateTimeFormatOptions => ({
+    get year(): 'numeric' { reads.push('year'); return 'numeric'; },
+    get timeZone() { reads.push('timeZone'); return 'UTC'; },
+  });
+  const date = new Date('2020-01-15T12:00:00Z');
+  const expected = new Intl.DateTimeFormat('en-US', options(directReads)).format(date);
+  expect(getDateTimeFormat('en-US', options(cachedReads)).format(date)).to.equal(expected);
+  expect(cachedReads).to.deep.equal(directReads);
+});
+
+it('honors non-enumerable formatter options before and after an ordinary cache hit', () => {
+  const options = Object.defineProperty({}, 'style', { value: 'percent', configurable: true });
+  expect(getNumberFormat('en-US', {}).format(0.5)).to.equal('0.5');
+  expect(getNumberFormat('en-US', options).format(0.5)).to.equal('50%');
+  Object.defineProperty(options, 'style', { value: 'decimal' });
+  expect(getNumberFormat('en-US', options).format(0.5)).to.equal('0.5');
+});
+
+it('preserves native getter and coercion behavior without poisoning ordinary cache entries', () => {
+  let reads = 0;
+  const options: Intl.NumberFormatOptions = {
+    get style() {
+      reads += 1;
+      return reads === 1 ? 'percent' : 'decimal';
+    },
+  };
+  expect(getNumberFormat('en-US', options).format(0.5)).to.equal('50%');
+  expect(reads).to.equal(1);
+  expect(getNumberFormat('en-US', options).format(0.5)).to.equal('0.5');
+  expect(reads).to.equal(2);
+  expect(getNumberFormat('en-US', { style: 'percent' }).format(0.5)).to.equal('50%');
+});
+
+it('passes inherited and hidden options through each formatter family', () => {
+  const date = Object.create({ year: 'numeric', timeZone: 'UTC' }) as Intl.DateTimeFormatOptions;
+  getDateTimeFormat('en-US', {});
+  expect(getDateTimeFormat('en-US', date).format(new Date('2020-01-15T12:00:00Z'))).to.equal('2020');
+
+  const collator = Object.defineProperty({}, 'numeric', { value: true });
+  getCollator('en-US', {});
+  expect(getCollator('en-US', collator).compare('2', '10')).to.be.lessThan(0);
+
+  const names = Object.create({ type: 'language' }) as Intl.DisplayNamesOptions;
+  expect(getDisplayNames('en-US', names).of('en')).to.equal('English');
+  const list = Object.create({ type: 'disjunction' }) as Intl.ListFormatOptions;
+  getListFormat('en-US', {});
+  expect(getListFormat('en-US', list).format(['a', 'b'])).to.equal('a or b');
+  const relative = Object.create({ numeric: 'auto' }) as Intl.RelativeTimeFormatOptions;
+  getRelativeTimeFormat('en-US', {});
+  expect(getRelativeTimeFormat('en-US', relative).format(-1, 'day')).to.equal('yesterday');
+  const plural = Object.create({ type: 'ordinal' }) as Intl.PluralRulesOptions;
+  getPluralRules('en-US', {});
+  expect(getPluralRules('en-US', plural).select(2)).to.equal('two');
+  const segment = Object.create({ granularity: 'word' }) as Intl.SegmenterOptions;
+  getSegmenter('en-US', {});
+  expect([...getSegmenter('en-US', segment).segment('one two')].length).to.equal(3);
+});

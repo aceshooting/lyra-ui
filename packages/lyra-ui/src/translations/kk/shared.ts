@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Беттер бойынша навигация',
   paginationSummary: '{start}–{end}, барлығы {total} {itemLabel}',
   cancel: 'Бас тарту',
+  confirm: 'Растау',
   search: 'Іздеу',
   items: {
     one: 'элемент',

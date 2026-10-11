@@ -13,7 +13,8 @@ import { hostAriaLabel } from '../../../internal/a11y.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_highlightLayerLabel, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_highlightLayerLabel } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Edellinen versio',
   branchNext: 'Seuraava versio',
   branchPosition: 'Versio {index}/{total}',
-  confirm: 'Vahvista',
   promptQueueItemLabel: 'Jonossa oleva kehote {index}',
   promptQueueActionLabel: '{action}, jonossa oleva kehote {index}',
   sendMessage: 'Lähetä viesti',

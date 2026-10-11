@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Ụdị gara aga',
   branchNext: 'Ụdị na-esote',
   branchPosition: 'Ụdị {index} n’ime {total}',
-  confirm: 'Kwenye',
   promptQueueItemLabel: 'Arịrịọ nọ n’ahịrị {index}',
   promptQueueActionLabel: '{action}, arịrịọ nọ n’ahịrị {index}',
   sendMessage: 'Zipu ozi',

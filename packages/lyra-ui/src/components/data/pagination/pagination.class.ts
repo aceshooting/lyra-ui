@@ -17,7 +17,8 @@ import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** `standard` renders the numbered page list; `compact` collapses it to the page-jump field. */

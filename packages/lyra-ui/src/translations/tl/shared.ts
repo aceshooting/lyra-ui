@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Pagpili ng pahina',
   paginationSummary: '{start}–{end} sa {total} {itemLabel}',
   cancel: 'Kanselahin',
+  confirm: 'Kumpirmahin',
   search: 'Maghanap',
   items: {
     one: 'bagay',

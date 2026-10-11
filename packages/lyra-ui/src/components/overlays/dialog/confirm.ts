@@ -1,6 +1,6 @@
 import { LyraDialog, type DialogCloseReason } from './dialog.class.js';
 import { defineElement, tag } from '../../../internal/prefix.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_confirm } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_confirm } from '../../../internal/default-strings/shared.generated.js';
 import { resolveLyraString } from '../../../internal/localization-runtime.js';
 
 const CONFIRM_DEFAULT_STRINGS = Object.freeze({

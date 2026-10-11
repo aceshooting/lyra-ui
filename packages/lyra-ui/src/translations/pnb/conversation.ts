@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'پچھلا ورژن',
   branchNext: 'اگلا ورژن',
   branchPosition: '{total} وچوں ورژن {index}',
-  confirm: 'تصدیق کرو',
   promptQueueItemLabel: 'قطار وچ پرامپٹ {index}',
   promptQueueActionLabel: '{action}، قطار وچ پرامپٹ {index}',
   sendMessage: 'پیغام بھیجو',

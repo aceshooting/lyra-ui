@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Inguqulo edlule',
   branchNext: 'Inguqulo elandelayo',
   branchPosition: 'Inguqulo {index} kokungu-{total}',
-  confirm: 'Qinisekisa',
   promptQueueItemLabel: 'Umyalo {index} osolayini',
   promptQueueActionLabel: '{action}, umyalo {index} osolayini',
   sendMessage: 'Thumela umlayezo',

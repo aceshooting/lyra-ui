@@ -44,7 +44,8 @@ import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_retry, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamResume, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamResume } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**

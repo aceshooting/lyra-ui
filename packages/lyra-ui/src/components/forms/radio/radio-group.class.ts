@@ -44,7 +44,7 @@ import { AdjacentRunScheduler, measureAdjacentRuns, type AdjacentRunPosition } f
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings/forms.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 installFormControlLabelSupport();

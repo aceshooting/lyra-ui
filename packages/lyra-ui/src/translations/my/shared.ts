@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'စာမျက်နှာပြောင်းရန်',
   paginationSummary: 'စုစုပေါင်း {total} {itemLabel} အနက် {start}–{end}',
   cancel: 'ပယ်ဖျက်ရန်',
+  confirm: 'အတည်ပြုရန်',
   search: 'ရှာဖွေရန်',
   items: {
     other: 'အရာများ',

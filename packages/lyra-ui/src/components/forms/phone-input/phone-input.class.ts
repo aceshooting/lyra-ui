@@ -46,7 +46,8 @@ import {
   trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_countryPickerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEFAULT_phoneInputLabel, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_countryPickerLabel, LYRA_DEFAULT_phoneInputIncomplete, LYRA_DEFAULT_phoneInputLabel } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraPhoneInputSelectionDirection = LyraSelectionDirection;

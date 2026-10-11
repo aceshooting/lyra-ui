@@ -5,9 +5,12 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildSpecialistHostCss } from './document-token-layer.mjs';
+import { parseProgram } from './lib/ast.mjs';
 import {
   buildDesignTokenArtifacts,
   buildLookInterchange,
+  projectDefaultTokenSource,
   readCanonicalTokens,
   readLayerOrderStatement,
   validateCanonicalTokens,
@@ -63,6 +66,18 @@ const bySuffix = (suffix) => {
   assert.ok(match, `missing generated ${suffix}`);
   return match[1];
 };
+
+const baseTokenModule = bySuffix('/document-tokens.generated.ts');
+assert.doesNotMatch(baseTokenModule, /SPECIALIST_TOKEN_CSS|--lr-terminal-|--lr-graph-|--lr-color-chart-/,
+  'ordinary component native imports must not download specialist token payloads');
+const specialistTokenModule = bySuffix('/specialist-tokens.generated.ts');
+assert.match(specialistTokenModule, /export const SPECIALIST_TOKEN_CSS = /);
+const specialistValue = parseProgram('specialist-tokens.generated.ts', specialistTokenModule)
+  .body.find((node) => node.type === 'ExportNamedDeclaration').declaration.declarations[0].init.value;
+assert.equal(specialistValue, buildSpecialistHostCss(projectDefaultTokenSource(source, packageDir)),
+  'the physically separate payload preserves every specialist CSS byte');
+assert.doesNotMatch(specialistTokenModule, /(?:import|export).*from/,
+  'specialist payload is independent of the base module');
 
 const dtcg = JSON.parse(bySuffix('/design-tokens.json'));
 assert.equal(

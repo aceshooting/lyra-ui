@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: '이전 버전',
   branchNext: '다음 버전',
   branchPosition: '{total}개 중 {index}번째 버전',
-  confirm: '확인',
   promptQueueItemLabel: '대기 중인 프롬프트 {index}',
   promptQueueActionLabel: '{action}, 대기 중인 프롬프트 {index}',
   sendMessage: '메시지 전송',

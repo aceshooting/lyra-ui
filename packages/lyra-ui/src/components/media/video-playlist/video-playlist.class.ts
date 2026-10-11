@@ -15,7 +15,7 @@ import type { LyraVideo, LyraVideoControls } from '../video/video.js';
 import { styles } from './video-playlist.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_videoPlaylistLabel, LYRA_DEFAULT_videoPlaylistUntitled } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_videoPlaylistLabel, LYRA_DEFAULT_videoPlaylistUntitled } from '../../../internal/default-strings/media.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraVideoPlaylistRepeat = 'none' | 'one' | 'all';

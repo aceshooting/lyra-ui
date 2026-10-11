@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Sideinddeling',
   paginationSummary: '{start}–{end} af {total} {itemLabel}',
   cancel: 'Annuller',
+  confirm: 'Bekræft',
   search: 'Søg',
   items: {
     one: 'element',

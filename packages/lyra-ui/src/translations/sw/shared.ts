@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Ukurasa',
   paginationSummary: '{start}–{end} kati ya {total} {itemLabel}',
   cancel: 'Ghairi',
+  confirm: 'Thibitisha',
   search: 'Tafuta',
   items: {
     one: 'kipengee',

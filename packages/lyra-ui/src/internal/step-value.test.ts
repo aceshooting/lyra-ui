@@ -1,12 +1,25 @@
 import { expect } from '@open-wc/testing';
 import { clampSteppedValue } from './step-value.js';
 
+it('snaps signed extreme domains when the offset or step product overflows', () => {
+  const max = Number.MAX_VALUE;
+  expect(clampSteppedValue(1e308, -max, max, max)).to.equal(max);
+  expect(clampSteppedValue(-1e308, -max, max, max)).to.equal(-max);
+  expect(clampSteppedValue(0, -max, max, max)).to.equal(0);
+  const snapped = clampSteppedValue(9e307, -max, max, 1e308);
+  expect(snapped).to.be.closeTo(1.2023068651376843e308, 1e293);
+  expect(clampSteppedValue(snapped, -max, max, 1e308)).to.equal(snapped);
+  expect(clampSteppedValue(1e308, max, -max, max)).to.equal(max);
+  expect(clampSteppedValue(-1e308, 0, max, max)).to.equal(0);
+});
+
 it('preserves exact endpoints and snap-final-clamps beyond a non-grid boundary', () => {
   expect(clampSteppedValue(1, 0, 1, 0.7)).to.equal(1);
   const endpoint = clampSteppedValue(1.1, 0, 1, 0.7);
   expect(endpoint).to.equal(1);
   expect(clampSteppedValue(endpoint, 0, 1, 0.7)).to.equal(endpoint);
   expect(clampSteppedValue(1.1, 1, 0, 0.7)).to.equal(1);
+  expect(clampSteppedValue(1.1, 0, 0.91, 0.7)).to.equal(0.91);
 });
 
 it('keeps malformed raw values and steps finite within sorted bounds', () => {

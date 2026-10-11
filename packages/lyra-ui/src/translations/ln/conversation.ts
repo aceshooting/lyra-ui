@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Version eleki',
   branchNext: 'Version ekoya',
   branchPosition: 'Version {index} kati na {total}',
-  confirm: 'Confirmer',
   promptQueueItemLabel: 'Prompt {index} na molongo',
   promptQueueActionLabel: '{action}, prompt {index} na molongo',
   sendMessage: 'Tinda message',

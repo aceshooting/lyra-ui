@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'మునుపటి వెర్షన్',
   branchNext: 'తదుపరి వెర్షన్',
   branchPosition: '{total}లో {index}వ వెర్షన్',
-  confirm: 'నిర్ధారించండి',
   promptQueueItemLabel: 'క్యూలో ఉన్న ప్రాంప్ట్ {index}',
   promptQueueActionLabel: '{action}, క్యూలో ఉన్న ప్రాంప్ట్ {index}',
   sendMessage: 'సందేశాన్ని పంపండి',

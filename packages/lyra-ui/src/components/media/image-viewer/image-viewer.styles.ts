@@ -237,6 +237,7 @@ export const styles = css`
     );
     cursor: pointer;
     padding: 0;
+    transition: var(--lr-transition-interactive);
   }
   /* Hit-area overlay: grows the pointer target to --lr-icon-button-size on either axis where the
      painted box is smaller, centred on the box (a negative inset of half the shortfall; percentage

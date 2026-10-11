@@ -18,7 +18,7 @@ import type { LyraDropdown } from '../overlay/dropdown.class.js';
 import { styles } from './context-menu.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_menuLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_menuLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Finger drift, in CSS pixels, a press-and-hold tolerates before it stops counting. */

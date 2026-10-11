@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Phiên bản trước',
   branchNext: 'Phiên bản tiếp theo',
   branchPosition: 'Phiên bản {index} trên {total}',
-  confirm: 'Xác nhận',
   promptQueueItemLabel: 'Lời nhắc đang chờ {index}',
   promptQueueActionLabel: '{action}, lời nhắc đang chờ {index}',
   sendMessage: 'Gửi tin nhắn',

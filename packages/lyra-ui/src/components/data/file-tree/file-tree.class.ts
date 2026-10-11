@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -15,7 +15,8 @@ import { LyraTreeItem } from '../tree/tree-item.class.js';
 import { TREE_MAX_RENDER_NODES } from '../tree/tree-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel, LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -270,6 +271,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
     copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
     fileTreeDiffSummary: LYRA_DEFAULT_fileTreeDiffSummary,
     fileTreeLabel: LYRA_DEFAULT_fileTreeLabel,
@@ -313,6 +315,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     this._nodes = snapshot.nodes;
     this.nodesTruncated = snapshot.truncated;
     this.nodesLimitReached = snapshot.limitReached;
+    this.rebuildNodeIndexes();
     this.requestUpdate('nodes', previous);
   }
 
@@ -339,20 +342,18 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     return this.nodesByPath.size <= TREE_MAX_RENDER_NODES;
   }
 
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    if (changed.has('nodes')) {
-      this.nodesByPath = new Map();
-      this.parentPathByPath = new Map();
-      const stack = [...this.nodes].reverse().map((node) => ({ node, parentPath: undefined as string | undefined }));
-      while (stack.length > 0) {
-        const { node, parentPath } = stack.pop()!;
-        this.nodesByPath.set(node.path, node);
-        if (parentPath !== undefined) this.parentPathByPath.set(node.path, parentPath);
-        if (node.children) {
-          for (let index = node.children.length - 1; index >= 0; index--) {
-            stack.push({ node: node.children[index]!, parentPath: node.path });
-          }
+  /** Methods may update several directories before Lit renders; index the current snapshot now. */
+  private rebuildNodeIndexes(): void {
+    this.nodesByPath = new Map();
+    this.parentPathByPath = new Map();
+    const stack = [...this.nodes].reverse().map((node) => ({ node, parentPath: undefined as string | undefined }));
+    while (stack.length > 0) {
+      const { node, parentPath } = stack.pop()!;
+      this.nodesByPath.set(node.path, node);
+      if (parentPath !== undefined) this.parentPathByPath.set(node.path, parentPath);
+      if (node.children) {
+        for (let index = node.children.length - 1; index >= 0; index--) {
+          stack.push({ node: node.children[index]!, parentPath: node.path });
         }
       }
     }

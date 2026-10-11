@@ -21,7 +21,7 @@ import { styles } from './avatar-group.styles.js';
 import type { LyraAvatar, LyraAvatarShape } from '../avatar/avatar.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 type AvatarPresentationAttribute = 'size' | 'shape' | 'variant';

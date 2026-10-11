@@ -35,7 +35,8 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { PopupController } from '../../../internal/popup-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel, LYRA_DEFAULT_statusError } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_statusError } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFormatMenuLabel } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraExportFormat = 'csv' | 'json';

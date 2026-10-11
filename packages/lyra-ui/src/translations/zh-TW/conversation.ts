@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: '上一個版本',
   branchNext: '下一個版本',
   branchPosition: '第{index}個版本，共{total}個',
-  confirm: '確認',
   promptQueueItemLabel: '佇列中的第{index}條提示詞',
   promptQueueActionLabel: '{action}，佇列中的第{index}條提示詞',
   sendMessage: '傳送訊息',

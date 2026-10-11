@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: '前のバージョン',
   branchNext: '次のバージョン',
   branchPosition: '{total} 件中 {index} 件目のバージョン',
-  confirm: '確定',
   promptQueueItemLabel: 'キュー内のプロンプト {index}',
   promptQueueActionLabel: '{action}、キュー内のプロンプト {index}',
   sendMessage: 'メッセージを送信',

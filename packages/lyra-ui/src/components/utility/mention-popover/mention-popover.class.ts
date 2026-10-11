@@ -22,7 +22,8 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mentionMoreResults, LYRA_DEFAULT_mentionResultCount, LYRA_DEFAULT_mentionResultPosition, LYRA_DEFAULT_mentionSuggestions, LYRA_DEFAULT_noMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_noMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_mentionMoreResults, LYRA_DEFAULT_mentionResultCount, LYRA_DEFAULT_mentionResultPosition, LYRA_DEFAULT_mentionSuggestions } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const MAX_VISIBLE_MENTION_ITEMS = 50;

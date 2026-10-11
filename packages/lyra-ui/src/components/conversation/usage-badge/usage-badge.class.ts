@@ -12,7 +12,8 @@ import { resolveIdReferencesIn, updateDescriptionBaseline } from '../../../inter
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_usageBadgeCostLabel, LYRA_DEFAULT_usageBadgeLabel, LYRA_DEFAULT_usageBadgeLatencyLabel, LYRA_DEFAULT_usageBadgeTokensIn, LYRA_DEFAULT_usageBadgeTokensInLabel, LYRA_DEFAULT_usageBadgeTokensOut, LYRA_DEFAULT_usageBadgeTokensOutLabel, LYRA_DEFAULT_usageBadgeTotalTokensLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_usageBadgeCostLabel, LYRA_DEFAULT_usageBadgeLabel, LYRA_DEFAULT_usageBadgeLatencyLabel, LYRA_DEFAULT_usageBadgeTokensIn, LYRA_DEFAULT_usageBadgeTokensInLabel, LYRA_DEFAULT_usageBadgeTokensOut, LYRA_DEFAULT_usageBadgeTokensOutLabel, LYRA_DEFAULT_usageBadgeTotalTokensLabel } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

@@ -41,8 +41,13 @@ interface PdfTextLayerApi {
 }
 
 /** Structural pdfjs-dist capability kept optional for core-package consumers. */
+export interface PdfLoadingTaskApi {
+  promise: Promise<PdfDocumentApi>;
+  destroy?(): Promise<void> | void;
+}
+
 export interface PdfJsApi {
-  getDocument(options: { data: ArrayBuffer }): { promise: Promise<PdfDocumentApi> };
+  getDocument(options: { data: ArrayBuffer }): PdfLoadingTaskApi;
   GlobalWorkerOptions: { workerSrc: string };
   TextLayer?: new (options: {
     textContentSource: unknown;

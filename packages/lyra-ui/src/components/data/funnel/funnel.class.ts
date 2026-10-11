@@ -10,7 +10,8 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_funnelComparisonShare, LYRA_DEFAULT_funnelDropoffDecreased, LYRA_DEFAULT_funnelDropoffIncreased, LYRA_DEFAULT_funnelStagesLimit, LYRA_DEFAULT_noData, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_funnelComparisonShare, LYRA_DEFAULT_funnelDropoffDecreased, LYRA_DEFAULT_funnelDropoffIncreased, LYRA_DEFAULT_funnelStagesLimit, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_comparePanel, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** One ordered step of a conversion funnel. */

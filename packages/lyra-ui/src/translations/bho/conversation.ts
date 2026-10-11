@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'पिछला संस्करण',
   branchNext: 'अगिला संस्करण',
   branchPosition: '{total} में संस्करण {index}',
-  confirm: 'पक्का करीं',
   promptQueueItemLabel: 'कतार में प्रॉम्प्ट {index}',
   promptQueueActionLabel: '{action}, कतार में प्रॉम्प्ट {index}',
   sendMessage: 'संदेश भेजीं',

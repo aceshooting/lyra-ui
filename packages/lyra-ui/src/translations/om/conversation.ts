@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Gosa duraa',
   branchNext: 'Gosa itti aanu',
   branchPosition: 'Gosa {index} keessaa {total}',
-  confirm: 'Mirkaneessi',
   promptQueueItemLabel: 'Ajaja eeggataa {index}',
   promptQueueActionLabel: '{action}, ajaja eeggataa {index}',
   sendMessage: 'Ergaa ergi',

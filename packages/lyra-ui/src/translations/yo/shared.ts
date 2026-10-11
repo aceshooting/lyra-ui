@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Ìtọ́ka ojúewé',
   paginationSummary: '{start}–{end} nínú {total} {itemLabel}',
   cancel: 'Fagilé',
+  confirm: 'Jẹ́rìí',
   search: 'Wá kiri',
   items: {
     other: 'ohun',

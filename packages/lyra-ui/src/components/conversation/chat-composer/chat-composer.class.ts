@@ -38,7 +38,8 @@ import {
 } from '../../../internal/aria-controls.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_sendMessage, LYRA_DEFAULT_stopGenerating, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_composerLabel, LYRA_DEFAULT_sendMessage, LYRA_DEFAULT_stopGenerating } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Whether the root draws itself as a bounded card — an alias of the shared {@linkcode LyraFrame},

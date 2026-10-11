@@ -29623,6 +29623,22 @@
             ]
           },
           {
+            "name": "formDisabledCallback",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "disabled",
+                    "type": "boolean",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
             "name": "formStateRestoreCallback",
             "overloads": [
               {

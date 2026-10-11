@@ -5,8 +5,10 @@
  * lookup that is orders of magnitude slower than reusing an existing
  * instance, and per-row template loops (table cells, chart points, feed
  * entries) would otherwise pay that cost once per row on every render pass.
- * One instance per locale + options pair is shared across all components on
- * the page.
+ * Primitive option values share one instance per locale + options pair across components on the
+ * page. Ordinary option bags are read into a bounded snapshot, including hidden and inherited
+ * values. Accessor and custom-prototype bags pass directly to Intl. Proxy-backed data options
+ * are supported by value; arbitrary proxy trap ordering is not part of the cache contract.
  *
  * Each kind keeps at most {@link MAX_ENTRIES_PER_KIND} entries, evicting the
  * least recently used beyond that, so pages that churn through many locales
@@ -92,19 +94,96 @@ function getCached<T>(cache: Map<string, T>, key: string, create: () => T): T {
 /** Per formatter kind: the previous lookup's `[locale, key, value, ...]` entries and its result. */
 const lastLookups = new Map<object, [readonly unknown[], unknown]>();
 
+// Keep each family's full option vocabulary: native constructors read supported option names,
+// including inherited/non-enumerable properties, rather than enumerating the supplied object.
+const numberOptions = [
+  'localeMatcher', 'numberingSystem', 'style', 'currency', 'currencyDisplay', 'currencySign',
+  'unit', 'unitDisplay', 'notation', 'minimumIntegerDigits', 'minimumFractionDigits',
+  'maximumFractionDigits', 'minimumSignificantDigits', 'maximumSignificantDigits',
+  'roundingIncrement', 'roundingMode', 'roundingPriority', 'trailingZeroDisplay', 'compactDisplay',
+  'useGrouping', 'signDisplay',
+] as const;
+const dateOptions = [
+  'localeMatcher', 'calendar', 'numberingSystem', 'hour12', 'hourCycle', 'timeZone', 'weekday',
+  'era', 'year', 'month', 'day', 'dayPeriod', 'hour', 'minute', 'second', 'fractionalSecondDigits',
+  'timeZoneName', 'formatMatcher', 'dateStyle', 'timeStyle',
+] as const;
+const pluralOptions = [
+  'localeMatcher', 'type', 'notation', 'compactDisplay', 'minimumIntegerDigits',
+  'minimumFractionDigits', 'maximumFractionDigits', 'minimumSignificantDigits',
+  'maximumSignificantDigits', 'roundingIncrement', 'roundingMode', 'roundingPriority',
+  'trailingZeroDisplay',
+] as const;
+const collatorOptions = [
+  'usage', 'localeMatcher', 'collation', 'numeric', 'caseFirst', 'sensitivity', 'ignorePunctuation',
+] as const;
+const displayNamesOptions = ['localeMatcher', 'style', 'type', 'fallback', 'languageDisplay'] as const;
+const listOptions = ['localeMatcher', 'type', 'style'] as const;
+const relativeOptions = ['localeMatcher', 'numberingSystem', 'style', 'numeric'] as const;
+const segmenterOptions = ['localeMatcher', 'granularity'] as const;
+
+interface CapturedFormatterOptions {
+  readonly options: object | undefined;
+  readonly entries?: readonly unknown[];
+}
+
+function isCacheableOptionValue(value: unknown): boolean {
+  return value === null || value === undefined ||
+    typeof value === 'string' || typeof value === 'boolean' ||
+    (typeof value === 'number' && Number.isFinite(value));
+}
+
+/** Capture values once so both the key and constructor see the same options. Descriptor checks
+ * only choose the native accessor path; descriptors are never a substitute for property reads,
+ * since a proxy may expose a different value. Coercible values are handed to Intl without caching. */
+function captureFormatterOptions(
+  locale: string,
+  options: object | undefined,
+  keys: readonly string[],
+): CapturedFormatterOptions {
+  const entries: unknown[] = [locale];
+  if (options === undefined) return { options, entries };
+  if (options === null || typeof options !== 'object') return { options };
+  try {
+    const prototype = Object.getPrototypeOf(options);
+    if (prototype !== null && prototype !== Object.prototype) return { options };
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(options, key) ??
+        (prototype === null ? undefined : Object.getOwnPropertyDescriptor(prototype, key));
+      if (descriptor && (!Object.hasOwn(descriptor, 'value') ||
+        !isCacheableOptionValue(descriptor.value))) return { options };
+    }
+  } catch {
+    // A proxy may reject reflection while still allowing the constructor's ordinary reads.
+    return { options };
+  }
+  const captured = Object.create(null) as Record<string, unknown>;
+  let cacheable = true;
+  for (const key of keys) {
+    const value: unknown = Reflect.get(options, key);
+    if (value === undefined) continue;
+    captured[key] = value;
+    if (!isCacheableOptionValue(value)) cacheable = false;
+    entries.push(key, value);
+  }
+  return { options: captured, entries: cacheable ? entries : undefined };
+}
+
 function getFormatter<T>(
   locale: string | undefined,
   options: object | undefined,
   cache: Map<string, T>,
-  create: (safeLocale: string) => T,
+  keys: readonly string[],
+  create: (safeLocale: string, capturedOptions: object | undefined) => T,
 ): T {
   const safeLocale = resolveIntlLocale(locale);
   // Per-row template loops repeat one lookup with a fresh but equal options literal. Comparing
   // its entries with the previous lookup's (by content, so a reused options object mutated in
   // between is still re-resolved) skips the sorted serialization and the LRU refresh; that entry
   // is already the most recently used one of its kind.
-  const entries: unknown[] = [safeLocale];
-  for (const key in options) entries.push(key, (options as Record<string, unknown>)[key]);
+  const captured = captureFormatterOptions(safeLocale, options, keys);
+  const entries = captured.entries;
+  if (!entries) return create(safeLocale, captured.options);
   const last = lastLookups.get(cache);
   if (
     last &&
@@ -113,7 +192,7 @@ function getFormatter<T>(
   ) {
     return last[1] as T;
   }
-  const value = getCached(cache, cacheKey(safeLocale, options), () => create(safeLocale));
+  const value = getCached(cache, cacheKey(safeLocale, captured.options), () => create(safeLocale, captured.options));
   lastLookups.set(cache, [entries, value]);
   return value;
 }
@@ -127,7 +206,8 @@ export function getNumberFormat(locale: string | undefined, options?: Intl.Numbe
     locale,
     options,
     numberFormatCache,
-    (safeLocale) => new Intl.NumberFormat(safeLocale, options),
+    numberOptions,
+    (safeLocale, captured) => new Intl.NumberFormat(safeLocale, captured),
   );
 }
 
@@ -137,7 +217,8 @@ export function getDateTimeFormat(locale: string | undefined, options?: Intl.Dat
     locale,
     options,
     dateTimeFormatCache,
-    (safeLocale) => new Intl.DateTimeFormat(safeLocale, options),
+    dateOptions,
+    (safeLocale, captured) => new Intl.DateTimeFormat(safeLocale, captured),
   );
 }
 
@@ -156,7 +237,8 @@ export function getDisplayNames(locale: string, options?: Intl.DisplayNamesOptio
     locale,
     options,
     displayNamesCache,
-    (safeLocale) => new Intl.DisplayNames([safeLocale], options as Intl.DisplayNamesOptions),
+    displayNamesOptions,
+    (safeLocale, captured) => new Intl.DisplayNames([safeLocale], captured as Intl.DisplayNamesOptions),
   );
 }
 
@@ -166,7 +248,8 @@ export function getListFormat(locale: string | undefined, options?: Intl.ListFor
     locale,
     options,
     listFormatCache,
-    (safeLocale) => new Intl.ListFormat(safeLocale, options),
+    listOptions,
+    (safeLocale, captured) => new Intl.ListFormat(safeLocale, captured),
   );
 }
 
@@ -179,7 +262,8 @@ export function getRelativeTimeFormat(
     locale,
     options,
     relativeTimeFormatCache,
-    (safeLocale) => new Intl.RelativeTimeFormat(safeLocale, options),
+    relativeOptions,
+    (safeLocale, captured) => new Intl.RelativeTimeFormat(safeLocale, captured),
   );
 }
 
@@ -189,7 +273,8 @@ export function getPluralRules(locale: string | undefined, options?: Intl.Plural
     locale,
     options,
     pluralRulesCache,
-    (safeLocale) => new Intl.PluralRules(safeLocale, options),
+    pluralOptions,
+    (safeLocale, captured) => new Intl.PluralRules(safeLocale, captured),
   );
 }
 
@@ -199,7 +284,8 @@ export function getCollator(locale: string | undefined, options?: Intl.CollatorO
     locale,
     options,
     collatorCache,
-    (safeLocale) => new Intl.Collator(safeLocale, options),
+    collatorOptions,
+    (safeLocale, captured) => new Intl.Collator(safeLocale, captured),
   );
 }
 
@@ -209,6 +295,7 @@ export function getSegmenter(locale: string | undefined, options?: Intl.Segmente
     locale,
     options,
     segmenterCache,
-    (safeLocale) => new Intl.Segmenter(safeLocale, options),
+    segmenterOptions,
+    (safeLocale, captured) => new Intl.Segmenter(safeLocale, captured),
   );
 }

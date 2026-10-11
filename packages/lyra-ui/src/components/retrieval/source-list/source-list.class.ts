@@ -9,7 +9,7 @@ import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { styles } from './source-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_sourceListDefaultLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface SourceListToggleDetail {

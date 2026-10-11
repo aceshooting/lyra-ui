@@ -8,7 +8,8 @@ import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_checkpointConfirmPrompt, LYRA_DEFAULT_checkpointLabel, LYRA_DEFAULT_checkpointRestore, LYRA_DEFAULT_checkpointRestoreWithContext, LYRA_DEFAULT_checkpointRestoring, LYRA_DEFAULT_confirm } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_checkpointConfirmPrompt, LYRA_DEFAULT_checkpointLabel, LYRA_DEFAULT_checkpointRestore, LYRA_DEFAULT_checkpointRestoreWithContext, LYRA_DEFAULT_checkpointRestoring } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_confirm } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface CheckpointRestoreDetail {

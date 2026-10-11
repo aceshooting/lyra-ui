@@ -28,7 +28,7 @@ import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styl
 import { styles } from './timeline.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_timeline, LYRA_DEFAULT_timelineClusterCount } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_timeline, LYRA_DEFAULT_timelineClusterCount } from '../../../internal/default-strings/data.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

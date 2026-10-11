@@ -9,7 +9,8 @@ import { FlowCanvasCompanionController } from '../flow-canvas/flow-companion-con
 import { styles } from './flow-controls.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_flowControlsLabel, LYRA_DEFAULT_flowLockCanvas, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomToFit } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_flowControlsLabel, LYRA_DEFAULT_flowLockCanvas, LYRA_DEFAULT_zoomToFit } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 interface FlowCanvasLike extends HTMLElement {

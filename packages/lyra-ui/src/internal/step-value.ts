@@ -27,18 +27,27 @@ export function clampSteppedValue(raw: number, min: number, max: number, step: n
   let stepped = safeRaw;
 
   if (safeStep > 0) {
-    const stepsFromLo = Math.round((safeRaw - lo) / safeStep);
+    const offset = safeRaw - lo;
+    // Opposite-signed finite values can overflow their difference. Divide each endpoint first
+    // in that case; the resolution guard above keeps these quotients representable.
+    const stepsFromLo = Math.round(Number.isFinite(offset)
+      ? offset / safeStep
+      : safeRaw / safeStep - lo / safeStep);
     if (Number.isFinite(stepsFromLo)) {
-      const candidate = lo + stepsFromLo * safeStep;
-      if (Number.isFinite(candidate)) {
-        stepped = candidate;
+      let candidate = lo + stepsFromLo * safeStep;
+      // The step product can overflow before an opposite-signed anchor brings it back into
+      // range. Combine in step units first, and clamp a result beyond finite bounds afterward.
+      if (!Number.isFinite(candidate)) candidate = (lo / safeStep + stepsFromLo) * safeStep;
+      if (!Number.isNaN(candidate)) {
+        stepped = Math.min(hi, Math.max(lo, candidate));
         // The grid starts at `lo`, not at absolute zero. Preserve every
         // decimal place needed by either term so a fractional anchor such as
         // 0.5 with a whole-number step remains 0.5 rather than rounding to 1.
         const precision = Math.max(decimalPlaces(lo), decimalPlaces(safeStep));
-        if (precision <= 15) {
+        // A clamped terminal endpoint need not belong to the grid's decimal precision.
+        if (candidate === stepped && precision <= 15) {
           const factor = 10 ** precision;
-          const rounded = Math.round(candidate * factor);
+          const rounded = Math.round(stepped * factor);
           if (Number.isSafeInteger(rounded)) stepped = rounded / factor;
         }
       }

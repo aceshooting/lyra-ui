@@ -11,7 +11,7 @@ import { styles } from './poll-status.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPaused, LYRA_DEFAULT_pollPausedAnnounce, LYRA_DEFAULT_pollRefresh, LYRA_DEFAULT_pollRefreshing, LYRA_DEFAULT_pollRefreshingAnnounce, LYRA_DEFAULT_pollResume, LYRA_DEFAULT_pollResumedAnnounce } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPaused, LYRA_DEFAULT_pollPausedAnnounce, LYRA_DEFAULT_pollRefresh, LYRA_DEFAULT_pollRefreshing, LYRA_DEFAULT_pollRefreshingAnnounce, LYRA_DEFAULT_pollResume, LYRA_DEFAULT_pollResumedAnnounce } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraPollStatusEventMap {

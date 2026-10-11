@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'ቀዳሚ ስሪት',
   branchNext: 'ቀጣይ ስሪት',
   branchPosition: 'ከ{total} ስሪቶች {index}ኛ',
-  confirm: 'አረጋግጥ',
   promptQueueItemLabel: 'በወረፋ ላይ ያለ ጥያቄ {index}',
   promptQueueActionLabel: '{action}፣ በወረፋ ላይ ያለ ጥያቄ {index}',
   sendMessage: 'መልዕክት ላክ',

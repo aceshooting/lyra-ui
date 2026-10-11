@@ -2376,6 +2376,50 @@ it("clears an interrupted keyboard commit when an input listener reparents the p
 // EyeDropper
 // ---------------------------------------------------------------------------
 
+for (const action of ['value', 'reset', 'restore', 'disabled', 'readonly', 'fieldset'] as const) {
+  it(`retires a pending eyedropper on ${action} before a late selection can commit`, async () => {
+    const globals = window as unknown as { EyeDropper?: unknown };
+    const saved = globals.EyeDropper;
+    let resolveSelection!: (value: { sRGBHex: string }) => void;
+    let signal: AbortSignal | undefined;
+    try {
+      globals.EyeDropper = class {
+        open(options?: { signal?: AbortSignal }): Promise<{ sRGBHex: string }> {
+          signal = options?.signal;
+          return new Promise(resolve => { resolveSelection = resolve; });
+        }
+      };
+      const form = await fixture<HTMLFormElement>(html`<form><fieldset><lr-color-picker inline .defaultValue=${'#ff0000'}></lr-color-picker></fieldset></form>`);
+      const el = form.querySelector('lr-color-picker') as LyraColorPicker;
+      const fieldset = form.querySelector('fieldset')!;
+      await el.updateComplete;
+      let inputs = 0;
+      let changes = 0;
+      el.addEventListener('lr-input', () => inputs++);
+      el.addEventListener('lr-change', () => changes++);
+      (part(el, 'eyedropper-button') as HTMLButtonElement).click();
+      if (action === 'value') el.value = '#0000ff';
+      else if (action === 'reset') form.reset();
+      else if (action === 'restore') el.formStateRestoreCallback('#0000ff', 'restore');
+      else if (action === 'disabled') { el.disabled = true; el.disabled = false; }
+      else if (action === 'readonly') { el.readonly = true; el.readonly = false; }
+      else { fieldset.disabled = true; fieldset.disabled = false; }
+      await el.updateComplete;
+      const expected = el.value;
+      expect(signal?.aborted).to.equal(true);
+      resolveSelection({ sRGBHex: '#00ff00' });
+      await new Promise(resolve => setTimeout(resolve, 0));
+      await el.updateComplete;
+      expect(el.value).to.equal(expected);
+      expect(inputs).to.equal(0);
+      expect(changes).to.equal(0);
+    } finally {
+      if (saved === undefined) delete globals.EyeDropper;
+      else globals.EyeDropper = saved;
+    }
+  });
+}
+
 it("omits the eyedropper button when the browser has no EyeDropper API", async () => {
   const globals = window as unknown as { EyeDropper?: unknown };
   const saved = globals.EyeDropper;

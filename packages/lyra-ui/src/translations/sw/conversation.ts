@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Toleo lililotangulia',
   branchNext: 'Toleo linalofuata',
   branchPosition: 'Toleo {index} kati ya {total}',
-  confirm: 'Thibitisha',
   promptQueueItemLabel: 'Agizo lililowekwa kwenye foleni {index}',
   promptQueueActionLabel: '{action}, agizo lililowekwa kwenye foleni {index}',
   sendMessage: 'Tuma ujumbe',

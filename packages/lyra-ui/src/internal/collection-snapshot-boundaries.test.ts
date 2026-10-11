@@ -27,6 +27,170 @@ class TruncationLog extends LyraElement {
 }
 customElements.define(tag('truncation-log-test'), TruncationLog);
 
+class SnapshotRoundTrip extends LyraElement {
+  protected static override collectionSupport = collectionSupport;
+  protected static override readonly ownedCollectionProperties = ['rows', 'registry', 'members'];
+  protected static override readonly identityCollectionProperties = ['registry', 'members'];
+  protected static override readonly immutableEventDetails = ['lr-round-trip'];
+
+  @property({ attribute: false }) rows: readonly unknown[] = [];
+  @property({ attribute: false }) registry: ReadonlyMap<string, object> = new Map();
+  @property({ attribute: false }) members: ReadonlySet<object> = new Set();
+
+  emitRows(): CustomEvent<{ rows: readonly unknown[] }> {
+    return this.emit('lr-round-trip', { rows: this.rows }) as CustomEvent<{ rows: readonly unknown[] }>;
+  }
+}
+customElements.define(tag('snapshot-round-trip-test'), SnapshotRoundTrip);
+
+describe('public collection snapshot round trips', () => {
+  it('retains readonly Dates across repeated snapshots without exposing native mutation', () => {
+    const time = Date.UTC(2026, 0, 2);
+    let rows = [{ when: new Date(time), invalid: new Date(NaN) }];
+    for (let pass = 0; pass < 3; pass += 1) {
+      const results: unknown[] = [];
+      rows = snapshotPublicCollection([...rows], undefined, {
+        onResult: result => results.push(result),
+      }) as typeof rows;
+      expect(Object.keys(rows)).to.deep.equal(['0']);
+      expect(rows[0]!.when.getTime()).to.equal(time);
+      expect(Number.isNaN(rows[0]!.invalid.getTime())).to.equal(true);
+      expect(Object.isFrozen(rows[0]!.when)).to.equal(true);
+      expect(() => rows[0]!.when.setTime(0)).to.throw(TypeError);
+      expect(() => Date.prototype.setTime.call(rows[0]!.when, 0)).to.throw(TypeError);
+      expect(results).to.deep.equal([{ invalid: false, truncated: false }]);
+    }
+  });
+
+  it('retains Map and Set contents, cycles and shared identities on a second snapshot', () => {
+    const shared = { when: new Date(123) };
+    const map = new Map<unknown, unknown>();
+    const set = new Set<unknown>();
+    map.set(shared, shared);
+    map.set('self', map);
+    map.set('set', set);
+    set.add(shared);
+    set.add(set);
+    set.add(map);
+    const source = { shared, map, set };
+    const first = snapshotPublicCollection(source) as typeof source;
+    const second = snapshotPublicCollection({ ...first }) as typeof source;
+    expect(second.map.size).to.equal(3);
+    expect(second.set.size).to.equal(3);
+    expect(second.map.get(second.shared) === second.shared).to.equal(true);
+    expect(second.map.get('self') === second.map).to.equal(true);
+    expect(second.map.get('set') === second.set).to.equal(true);
+    expect(second.set.has(second.shared)).to.equal(true);
+    expect(second.set.has(second.set)).to.equal(true);
+    expect(second.set.has(second.map)).to.equal(true);
+    expect(second.shared.when.getTime()).to.equal(123);
+    expect(second.shared === first.shared).to.equal(false);
+    expect(Object.isFrozen(second.map)).to.equal(true);
+    expect(Object.isFrozen(second.set)).to.equal(true);
+    expect('set' in second.map).to.equal(false);
+    expect('add' in second.set).to.equal(false);
+    expect(() => Map.prototype.set.call(second.map, 'extra', 1)).to.throw(TypeError);
+    expect(() => Set.prototype.add.call(second.set, 1)).to.throw(TypeError);
+  });
+
+  it('reapplies stricter entry, node and depth budgets to trusted Map and Set snapshots', () => {
+    for (const source of [new Map([[0, { a: 1 }], [1, { a: 2 }]]), new Set([{ a: 1 }, { a: 2 }])]) {
+      const first = snapshotPublicCollection(source);
+      for (const limits of [{ entries: 1 }, { nodes: 2 }]) {
+        const losses: CollectionTruncation[] = [];
+        const second = snapshotPublicCollection(first, undefined, {
+          limits, onTruncate: loss => losses.push(loss),
+        }) as ReadonlyMap<unknown, unknown> | ReadonlySet<unknown>;
+        expect(second.size).to.equal(1);
+        expect(losses).to.deep.equal([{ kept: 'oldest', retained: 1, source: 2 }]);
+      }
+      const deep = snapshotPublicCollection([first], undefined, { limits: { depth: 1 } });
+      expect(deep).to.deep.equal([]);
+    }
+  });
+
+  it('does not treat caller-frozen records or facade imitations as trusted snapshots', () => {
+    const nested = { count: 1 };
+    let reads = 0;
+    const imitation = Object.freeze({
+      nested,
+      get size() { reads += 1; return 10; },
+      [Symbol.iterator]() { reads += 1; throw new Error('must not iterate'); },
+    });
+    const copy = snapshotPublicCollection(imitation) as typeof imitation;
+    nested.count = 2;
+    expect(copy.nested.count).to.equal(1);
+    expect(reads).to.equal(0);
+    expect(Object.hasOwn(copy, 'size')).to.equal(false);
+    expect(Object.isFrozen(copy.nested)).to.equal(true);
+  });
+
+  it('reapplies record policy to payloads inside trusted facades', () => {
+    const first = snapshotPublicCollection(new Map([['item', { kept: 1, omitted: 2 }]]));
+    const second = snapshotPublicCollection(first, undefined, {
+      recordKey: key => key === 'omitted' ? 'omit' : 'copy',
+    }) as ReadonlyMap<string, object>;
+    expect(second.get('item')).to.deep.equal({ kept: 1 });
+  });
+
+  it('preserves values through public property, event and property reassignment', async () => {
+    const el = await fixture<SnapshotRoundTrip>(html`<lr-snapshot-round-trip-test></lr-snapshot-round-trip-test>`);
+    const source = { when: new Date(123), map: new Map([['item', { value: 1 }]]), set: new Set([2]) };
+    el.rows = [source];
+    el.rows = [...el.rows];
+    const event = el.emitRows();
+    el.rows = [...event.detail.rows];
+    const row = el.rows[0] as typeof source;
+    expect(row.when.getTime()).to.equal(123);
+    expect(row.map.get('item')).to.deep.equal({ value: 1 });
+    expect([...row.set]).to.deep.equal([2]);
+    expect(Object.isFrozen(row.map.get('item'))).to.equal(true);
+  });
+
+  it('retains identity facade values when reassigning them and detaches them at owned boundaries', async () => {
+    const el = await fixture<SnapshotRoundTrip>(html`<lr-snapshot-round-trip-test></lr-snapshot-round-trip-test>`);
+    const other = await fixture<SnapshotRoundTrip>(html`<lr-snapshot-round-trip-test></lr-snapshot-round-trip-test>`);
+    const item = { value: 1 };
+    el.registry = new Map([['item', item]]);
+    el.members = new Set([item]);
+    other.registry = el.registry;
+    other.members = el.members;
+    expect(other.registry.get('item') === item).to.equal(true);
+    expect(other.members.has(item)).to.equal(true);
+    other.rows = [other.registry, other.members];
+    item.value = 2;
+    const [map, set] = other.rows as [ReadonlyMap<string, typeof item>, ReadonlySet<typeof item>];
+    expect(map.get('item')).to.deep.equal({ value: 1 });
+    expect([...set]).to.deep.equal([{ value: 1 }]);
+    expect(map.get('item') === [...set][0]).to.equal(true);
+    expect(Object.isFrozen(item)).to.equal(false);
+  });
+
+  it('creates fresh wrappers and payloads in the destination realm', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const view = frame.contentWindow!;
+    const realm = view as unknown as { Date: DateConstructor; Object: ObjectConstructor; Array: ArrayConstructor };
+    const first = snapshotPublicCollection([{
+      when: new Date(123), map: new Map([['item', { value: 1 }]]), set: new Set([{ value: 2 }]),
+    }]);
+    const second = snapshotPublicCollection(first, view) as Array<{
+      when: Date; map: ReadonlyMap<string, object>; set: ReadonlySet<object>;
+    }>;
+    expect(Object.keys(second)).to.deep.equal(['0']);
+    expect(second instanceof realm.Array).to.equal(true);
+    expect(second[0]!.when instanceof realm.Date).to.equal(true);
+    expect(second[0]!.when.constructor === realm.Date).to.equal(true);
+    expect(second[0]!.when.getTime()).to.equal(123);
+    expect(second[0]!.map.size).to.equal(1);
+    expect(Object.getPrototypeOf(second[0]!.map) === realm.Object.prototype).to.equal(true);
+    expect(Object.getPrototypeOf(second[0]!.map.get('item')) === realm.Object.prototype).to.equal(true);
+    expect(Object.getPrototypeOf([...second[0]!.set][0]) === realm.Object.prototype).to.equal(true);
+    const third = snapshotPublicCollection(second) as typeof second;
+    expect(third[0]!.when instanceof Date).to.equal(true);
+    expect(third[0]!.map.size).to.equal(1);
+  });
+});
+
 /** Captures dev diagnostics for the duration of `run` (they are this suite's subject). */
 function captureWarnings(run: () => void): string[] {
   const warnings: string[] = [];

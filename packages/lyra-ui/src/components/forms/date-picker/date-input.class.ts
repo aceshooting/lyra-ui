@@ -92,7 +92,8 @@ import {
 } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chooseDate, LYRA_DEFAULT_clear, LYRA_DEFAULT_date, LYRA_DEFAULT_dateInputFutureDisabled, LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_dateInputPastDisabled, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_openCalendar } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chooseDate, LYRA_DEFAULT_dateInputFutureDisabled, LYRA_DEFAULT_dateInputPastDisabled, LYRA_DEFAULT_openCalendar } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_date, LYRA_DEFAULT_dateInputInvalid, LYRA_DEFAULT_dateInputMaxMessage, LYRA_DEFAULT_dateInputMinMessage, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 type DateField = LocaleDateField;
@@ -2102,11 +2103,8 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this._appliedPreset = undefined;
   }
 
-  formDisabledCallback(disabled: boolean): void {
-    const parent = Object.getPrototypeOf(LyraDateInput.prototype) as {
-      formDisabledCallback: (this: LyraDateInput, disabled: boolean) => void;
-    };
-    parent.formDisabledCallback.call(this, disabled);
+  override formDisabledCallback(disabled: boolean): void {
+    super.formDisabledCallback(disabled);
     if (disabled) this.forceClose();
     this.syncCustomStates();
   }

@@ -43,7 +43,8 @@ import {
 } from './toast-region-protocol.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWithTruncatedContext, LYRA_DEFAULT_toastContentIncomplete } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWithTruncatedContext, LYRA_DEFAULT_toastContentIncomplete } from '../../../internal/default-strings/overlays.generated.js';
+import { LYRA_DEFAULT_close } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The library's one semantic-tone vocabulary. */

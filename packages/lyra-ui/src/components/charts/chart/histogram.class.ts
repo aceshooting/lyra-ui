@@ -21,7 +21,7 @@ export { binnedBuckets } from './histogram-buckets.js';
 import { bidiStyles } from './chart-bidi.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_histogramFrequency } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_histogramFrequency } from '../../../internal/default-strings/charts.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

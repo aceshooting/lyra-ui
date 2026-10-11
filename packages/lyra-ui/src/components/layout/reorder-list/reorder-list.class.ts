@@ -18,7 +18,8 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './reorder-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_reorderItemMoved, LYRA_DEFAULT_reorderMoveCancelled, LYRA_DEFAULT_reorderMovePending } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_reorderMoveCancelled, LYRA_DEFAULT_reorderMovePending } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_reorderItemMoved } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraReorderDetail {

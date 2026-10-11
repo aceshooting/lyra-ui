@@ -27,7 +27,8 @@ import {
 } from '../../../internal/focus-navigation.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_chatViewportLabel, LYRA_DEFAULT_newMessages, LYRA_DEFAULT_newMessagesCount } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_jumpToLatest } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

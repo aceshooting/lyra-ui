@@ -14,7 +14,7 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_knowledgeBaseAdminIngestionTab, LYRA_DEFAULT_knowledgeBaseAdminLabel, LYRA_DEFAULT_knowledgeBaseAdminSourcesTab } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_knowledgeBaseAdminIngestionTab, LYRA_DEFAULT_knowledgeBaseAdminLabel, LYRA_DEFAULT_knowledgeBaseAdminSourcesTab } from '../../../internal/default-strings/retrieval.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type KnowledgeBaseAdminTab = 'sources' | 'ingestion';

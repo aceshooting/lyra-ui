@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'مخکینۍ بڼه',
   branchNext: 'راتلونکې بڼه',
   branchPosition: 'له {total} څخه بڼه {index}',
-  confirm: 'تاییدول',
   promptQueueItemLabel: 'په کتار کې غوښتنه {index}',
   promptQueueActionLabel: '{action}، په کتار کې غوښتنه {index}',
   sendMessage: 'پیغام لېږل',

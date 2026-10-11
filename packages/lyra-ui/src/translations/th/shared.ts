@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'การแบ่งหน้า',
   paginationSummary: '{start}–{end} จาก {total} {itemLabel}',
   cancel: 'ยกเลิก',
+  confirm: 'ยืนยัน',
   search: 'ค้นหา',
   items: {
     other: 'รายการ',

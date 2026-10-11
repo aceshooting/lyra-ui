@@ -24,7 +24,8 @@ import {
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_graphLegendLabel, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_graphLegendLabel } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';

@@ -5,7 +5,8 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './handoff-divider.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffLabel, LYRA_DEFAULT_handoffToAgent } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_handoffLabel } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

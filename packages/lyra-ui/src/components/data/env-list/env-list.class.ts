@@ -11,7 +11,8 @@ import {
 } from '../../../internal/clipboard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_envListCopy, LYRA_DEFAULT_envListHide, LYRA_DEFAULT_envListLabel, LYRA_DEFAULT_envListReveal, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_envListCopy, LYRA_DEFAULT_envListHide, LYRA_DEFAULT_envListLabel, LYRA_DEFAULT_envListReveal } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const MASK = '•'.repeat(8);

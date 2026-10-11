@@ -11,7 +11,8 @@ import { styles } from './stream-status.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamResume, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled, LYRA_DEFAULT_streamStatusConnecting, LYRA_DEFAULT_streamStatusIdle, LYRA_DEFAULT_streamStatusStalled } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamRecoverAnnounce, LYRA_DEFAULT_streamResume, LYRA_DEFAULT_streamStallAnnounce, LYRA_DEFAULT_streamStallClearedAnnounce, LYRA_DEFAULT_streamStalled, LYRA_DEFAULT_streamStatusConnecting, LYRA_DEFAULT_streamStatusIdle, LYRA_DEFAULT_streamStatusStalled } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type StreamConnectionState = Exclude<LyraStreamPhase, 'stalled'> | 'interrupted';

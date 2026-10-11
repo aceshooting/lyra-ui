@@ -18,7 +18,8 @@ import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/an
 import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_contactViewerAddressFormat, LYRA_DEFAULT_contactViewerAddressLabel, LYRA_DEFAULT_contactViewerEmailLabel, LYRA_DEFAULT_contactViewerLabel, LYRA_DEFAULT_contactViewerNoContacts, LYRA_DEFAULT_contactViewerOrganization, LYRA_DEFAULT_contactViewerPhoneLabel, LYRA_DEFAULT_contactViewerTypeCell, LYRA_DEFAULT_contactViewerTypeFax, LYRA_DEFAULT_contactViewerTypeHome, LYRA_DEFAULT_contactViewerTypeInternet, LYRA_DEFAULT_contactViewerTypePreferred, LYRA_DEFAULT_contactViewerTypeVoice, LYRA_DEFAULT_contactViewerTypeWork, LYRA_DEFAULT_contactViewerTypedValue, LYRA_DEFAULT_contactViewerUnnamedContact, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeContact, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loading, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_contactViewerAddressFormat, LYRA_DEFAULT_contactViewerAddressLabel, LYRA_DEFAULT_contactViewerEmailLabel, LYRA_DEFAULT_contactViewerLabel, LYRA_DEFAULT_contactViewerNoContacts, LYRA_DEFAULT_contactViewerOrganization, LYRA_DEFAULT_contactViewerPhoneLabel, LYRA_DEFAULT_contactViewerTypeCell, LYRA_DEFAULT_contactViewerTypeFax, LYRA_DEFAULT_contactViewerTypeHome, LYRA_DEFAULT_contactViewerTypeInternet, LYRA_DEFAULT_contactViewerTypePreferred, LYRA_DEFAULT_contactViewerTypeVoice, LYRA_DEFAULT_contactViewerTypeWork, LYRA_DEFAULT_contactViewerTypedValue, LYRA_DEFAULT_contactViewerUnnamedContact, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeContact, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -91,6 +92,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     contactViewerTypedValue: LYRA_DEFAULT_contactViewerTypedValue,
     contactViewerUnnamedContact: LYRA_DEFAULT_contactViewerUnnamedContact,
     copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
     documentPreviewEmpty: LYRA_DEFAULT_documentPreviewEmpty,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,

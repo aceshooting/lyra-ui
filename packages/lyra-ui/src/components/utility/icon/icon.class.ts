@@ -13,7 +13,7 @@ import { acquireSanitizedIconResource, IconResourceError } from './icon-resource
 import { styles } from './icon.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_iconLoadError, LYRA_DEFAULT_iconSanitizerMissing, LYRA_DEFAULT_iconTooLarge } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_iconLoadError, LYRA_DEFAULT_iconSanitizerMissing, LYRA_DEFAULT_iconTooLarge } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const PATHS: Record<string, string> = {

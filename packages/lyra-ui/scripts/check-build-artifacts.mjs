@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Emitted-artifact gate: `dist/` must contain no build-only fixtures, source maps, or map
-// references.
+// references. Native ESM graphs also enforce payload boundaries and reject tooling-only tokens.
 // package.json#files publishes `dist` and NOT `src`, so every `.js.map` / `.d.ts.map` tsc used to
 // emit pointed at a `../../../../src/**/*.ts` path that does not exist in an install and carried no
 // `sourcesContent`. That was 2070 files and ~13 MB of the tarball (32M -> 19M `dist`) which no
@@ -24,6 +24,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
 import { findDeclarationLinkFindings } from './check-declaration-links.mjs';
+import { findNativePayloadFindings } from './check-native-payloads.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -47,10 +48,10 @@ function walk(dir, files = []) {
 /**
  * @param {string[]} files absolute paths of every emitted file
  * @param {(file: string) => string} read
- * @param {{ packageDirectory?: string, exports?: Record<string, unknown> }} [options]
+ * @param {{ packageDirectory?: string, exports?: Record<string, unknown>, imports?: Record<string, unknown> }} [options]
  * @returns {string[]} findings, one per offending file
  */
-export function findBuildArtifactFindings(files, read, { packageDirectory, exports = {} } = {}) {
+export function findBuildArtifactFindings(files, read, { packageDirectory, exports = {}, imports = {} } = {}) {
   const findings = [];
   if (packageDirectory) {
     const emitted = new Set(files.map((file) => path.resolve(file)));
@@ -63,6 +64,7 @@ export function findBuildArtifactFindings(files, read, { packageDirectory, expor
     }
   }
   findings.push(...findDeclarationLinkFindings(files, read));
+  findings.push(...findNativePayloadFindings(files, read, { packageDirectory, imports }));
 
   for (const file of files.slice().sort()) {
     if (FIXTURE_DIRECTORY.test(file)) {
@@ -101,7 +103,7 @@ function run() {
   const files = walk(distDir);
   const manifest = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
   const findings = findBuildArtifactFindings(files, (file) => readFileSync(file, 'utf8'), {
-    packageDirectory: packageDir, exports: manifest.exports,
+    packageDirectory: packageDir, exports: manifest.exports, imports: manifest.imports,
   }).map((finding) =>
     finding.replace(`${packageDir}${path.sep}`, ''),
   );
@@ -110,7 +112,7 @@ function run() {
     console.error(`Build artifacts failed with ${findings.length} finding(s):`);
     for (const finding of findings) console.error(`- ${finding}`);
     console.error(
-      'Restore missing exported assets and declaration dependencies in the build. Build-only fixtures and source maps are excluded from the published emit in tsconfig.build.json; restore its `src/**/fixtures/**` exclusion and `sourceMap: false` / `declarationMap: false` settings rather than deleting emitted files by hand.',
+      'Restore missing exported assets and declaration dependencies in the build. Build-only fixtures, token records and source maps are excluded by tsconfig.build.json. Restore those exclusions and map settings rather than deleting emitted files by hand. Native ESM payload findings require restoring the family/shared and specialist module boundaries.',
     );
     process.exitCode = 1;
     return;

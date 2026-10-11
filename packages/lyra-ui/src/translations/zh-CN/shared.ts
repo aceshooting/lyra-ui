@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: '分页',
   paginationSummary: '{start}–{end}，共{total}{itemLabel}',
   cancel: '取消',
+  confirm: '确认',
   search: '搜索',
   items: {
     other: '项',

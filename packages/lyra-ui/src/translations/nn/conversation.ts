@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Førre versjon',
   branchNext: 'Neste versjon',
   branchPosition: 'Versjon {index} av {total}',
-  confirm: 'Stadfest',
   promptQueueItemLabel: 'Ledetekst {index} i køen',
   promptQueueActionLabel: '{action}, ledetekst {index} i køen',
   sendMessage: 'Send melding',

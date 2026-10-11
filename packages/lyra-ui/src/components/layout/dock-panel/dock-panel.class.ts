@@ -14,7 +14,8 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize, LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_dockPanelCollapse, LYRA_DEFAULT_dockPanelExpand, LYRA_DEFAULT_dockPanelResize } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_resizeValuePixels } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Which edge of the panel's own container it's docked to. `'start'`/`'end'`

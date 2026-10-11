@@ -24,7 +24,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Prethodna verzija',
   branchNext: 'Sljedeća verzija',
   branchPosition: 'Verzija {index} od {total}',
-  confirm: 'Potvrdi',
   promptQueueItemLabel: 'Upit u redu čekanja {index}',
   promptQueueActionLabel: '{action}, upit u redu čekanja {index}',
   sendMessage: 'Pošalji poruku',

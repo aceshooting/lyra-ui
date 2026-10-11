@@ -13,7 +13,8 @@
   // (tsconfig.type-tests.json extends it), docs and ad-hoc `tsc` debugging are
   // unaffected; only the published artifact drops them. Fixture sources and
   // deterministic assets likewise remain in src for tests and stories while
-  // their helper modules stay out of dist.
+  // their helper modules stay out of dist. The three per-mode token records are
+  // tooling inputs; runtime components use the generated document/specialist layers.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "sourceMap": false,
@@ -24,6 +25,9 @@
     "src/**/*.stories.ts",
     "src/**/fixtures/**",
     "src/components/conversation/markdown/markdown-streaming.ts",
-    "src/internal/strip-host-title.ts"
+    "src/internal/strip-host-title.ts",
+    "src/internal/tokens.styles.ts",
+    "src/internal/tokens/palette.styles.ts",
+    "src/internal/specialist-tokens.styles.ts"
   ]
 }

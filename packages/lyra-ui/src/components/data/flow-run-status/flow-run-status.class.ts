@@ -16,7 +16,8 @@ import { FlowCanvasCompanionController } from '../flow-canvas/flow-companion-con
 import { styles } from './flow-run-status.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_flowRunStatusCount, LYRA_DEFAULT_flowRunStatusLabel, LYRA_DEFAULT_flowRunStepStatus, LYRA_DEFAULT_flowRunSummary, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_flowRunStatusCount, LYRA_DEFAULT_flowRunStatusLabel, LYRA_DEFAULT_flowRunStepStatus, LYRA_DEFAULT_flowRunSummary } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const ALL_STATUSES: readonly LyraToolStatus[] = ['pending', 'running', 'success', 'error', 'denied'];

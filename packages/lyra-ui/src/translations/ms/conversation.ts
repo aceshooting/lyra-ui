@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Versi sebelumnya',
   branchNext: 'Versi seterusnya',
   branchPosition: 'Versi {index} daripada {total}',
-  confirm: 'Sahkan',
   promptQueueItemLabel: 'Prompt berbaris gilir {index}',
   promptQueueActionLabel: '{action}, prompt berbaris gilir {index}',
   sendMessage: 'Hantar mesej',

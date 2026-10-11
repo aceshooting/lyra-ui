@@ -21,7 +21,7 @@ import { SlottedOverlayController } from '../../../internal/slotted-overlay-cont
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_rename, LYRA_DEFAULT_untitledConversation } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_rename, LYRA_DEFAULT_untitledConversation } from '../../../internal/default-strings/conversation.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface ConversationItemRenameDetail {

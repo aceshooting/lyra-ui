@@ -3360,7 +3360,8 @@ arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementR
   (`next`); the `value` getter/setter (`next`); `defaultValue`; `customError`; `disabled`; `required`; readonly
   `effectiveDisabled`; the `form` getter/setter (`owner`); readonly `labels`, `validity`,
   `validationMessage`, and `willValidate`; `setFormValue(next)`; `getForm()`; `checkValidity()`;
-  `reportValidity()`; `setCustomValidity(message)`; `resetValidity()`; `formResetCallback()`; and
+  `reportValidity()`; `setCustomValidity(message)`; `resetValidity()`; `formResetCallback()`;
+  `formDisabledCallback(disabled)`; and
   `formStateRestoreCallback(state, reason)`.
   Writing `null` to `defaultValue` removes its markup value and resets the default to the adapter's
   empty value; reading it still returns `TValue`. This does not overwrite a dirty live value.
@@ -3383,7 +3384,8 @@ HTMLFormElement | null; set form(owner: FormOwnerValue); readonly labels: NodeLi
 validity: ValidityState; readonly validationMessage: string; readonly willValidate: boolean;
 setFormValue(next: TValue): void; getForm(): HTMLFormElement | null; checkValidity(): boolean;
 reportValidity(): boolean; setCustomValidity(message: string): void; resetValidity(): void;
-formResetCallback(): void; formStateRestoreCallback(state: FormSubmissionValue, reason:
+formResetCallback(): void; formDisabledCallback(disabled: boolean): void;
+formStateRestoreCallback(state: FormSubmissionValue, reason:
 'autocomplete' | 'restore'): void }`. The exported subclass seam is
   `FormAssociatedSubclassInterface<TValue> { protected captureLiveValueCheckpoint(): { readonly
 value: TValue; readonly dirty: boolean }; protected restoreLiveValueCheckpoint(checkpoint: {

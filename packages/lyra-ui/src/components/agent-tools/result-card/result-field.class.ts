@@ -6,7 +6,7 @@ import { hasRealContent } from '../../../internal/a11y.js';
 import { styles } from './result-field.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_resultFieldLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_resultFieldLabel } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

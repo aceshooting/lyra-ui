@@ -12,7 +12,8 @@ import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { styles } from './pan-zoom.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_resetZoom, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraImageFit } from '../../../internal/image-fit.js';

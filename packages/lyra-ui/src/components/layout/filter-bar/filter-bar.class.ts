@@ -22,7 +22,8 @@ import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './filter-bar.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_filterBarActiveFilters, LYRA_DEFAULT_filterBarReset } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 // Deliberately NOT a bare side-effect import of the composed controls' own `.class.js` modules

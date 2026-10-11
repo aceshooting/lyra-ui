@@ -18,6 +18,21 @@ it('formats plain numbers exactly like a direct Intl.NumberFormat call', () => {
   expect(formatNumber(0.25, 'en-US', { style: 'percent' })).to.equal('25%');
 });
 
+it('honors inherited and non-enumerable options through public formatting helpers', () => {
+  formatNumber(0.5, 'en-US', {});
+  expect(formatNumber(0.5, 'en-US', Object.create({ style: 'percent' }))).to.equal('50%');
+  const date = new Date('2020-01-15T12:00:00Z');
+  formatDate(date, 'en-US', {});
+  const options = Object.defineProperty({ timeZone: 'UTC' }, 'year', { value: 'numeric' });
+  expect(formatDate(date, 'en-US', options)).to.equal('2020');
+  const proxy = new Proxy({}, {
+    get(target, key, receiver) {
+      return key === 'style' ? 'percent' : Reflect.get(target, key, receiver);
+    },
+  });
+  expect(formatNumber(0.5, 'en-US', proxy)).to.equal('50%');
+});
+
 it('formatNumber shares the memoized Intl.NumberFormat instance across identical calls instead of constructing a new one', () => {
   const locale = 'en-US';
   const options = { style: 'decimal', maximumFractionDigits: 4 } as const;

@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Önceki sürüm',
   branchNext: 'Sonraki sürüm',
   branchPosition: '{total} sürümden {index}. sürüm',
-  confirm: 'Onayla',
   promptQueueItemLabel: 'Sıraya alınan {index}. istem',
   promptQueueActionLabel: '{action}, sıraya alınan {index}. istem',
   sendMessage: 'İleti gönder',

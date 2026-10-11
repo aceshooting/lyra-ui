@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Versi saméméhna',
   branchNext: 'Versi salajengna',
   branchPosition: 'Vérsi {index} tina {total}',
-  confirm: 'Konfirmasi',
   promptQueueItemLabel: 'Prompt dina antrian {index}',
   promptQueueActionLabel: '{action}, prompt dina antrian {index}',
   sendMessage: 'Kirim talatah',

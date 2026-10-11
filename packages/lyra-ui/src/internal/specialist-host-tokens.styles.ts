@@ -1,5 +1,5 @@
 import { unsafeCSS } from 'lit';
-import { SPECIALIST_TOKEN_CSS } from './document-tokens.generated.js';
+import { SPECIALIST_TOKEN_CSS } from './specialist-tokens.generated.js';
 
 /**
  * The chart, graph and terminal palettes, adopted per host by the components that draw with them

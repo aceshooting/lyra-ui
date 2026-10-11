@@ -14530,7 +14530,7 @@
       "module": "src/internal/form-associated.ts",
       "exportName": "FormAssociated",
       "kind": "function",
-      "fingerprint": "d61e4d606621109eaee2",
+      "fingerprint": "493ae80a8a7e1b3ec89c",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -14550,7 +14550,7 @@
       "module": "src/internal/form-associated.ts",
       "exportName": "FormAssociatedInterface",
       "kind": "interface",
-      "fingerprint": "a5f0805cf85491e9f1d0",
+      "fingerprint": "febb32b7509d0435c4b1",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",

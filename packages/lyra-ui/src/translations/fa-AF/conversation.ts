@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'نسخهٔ قبلی',
   branchNext: 'نسخهٔ بعدی',
   branchPosition: 'نسخهٔ {index} از {total}',
-  confirm: 'تأیید',
   promptQueueItemLabel: 'درخواست در صف {index}',
   promptQueueActionLabel: '{action}، درخواست در صف {index}',
   sendMessage: 'فرستادن پیام',

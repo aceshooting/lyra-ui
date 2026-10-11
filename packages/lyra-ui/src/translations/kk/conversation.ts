@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Алдыңғы нұсқа',
   branchNext: 'Келесі нұсқа',
   branchPosition: 'Нұсқа {index}, барлығы {total}',
-  confirm: 'Растау',
   promptQueueItemLabel: 'Кезектегі промпт {index}',
   promptQueueActionLabel: '{action}, кезектегі промпт {index}',
   sendMessage: 'Хабарлама жіберу',

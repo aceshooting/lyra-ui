@@ -27,7 +27,8 @@ import {
 import { styles } from './mind-map.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mindMapCollapsed, LYRA_DEFAULT_mindMapExpanded, LYRA_DEFAULT_mindMapLabel, LYRA_DEFAULT_mindMapLeafStatus, LYRA_DEFAULT_mindMapNodeLimit, LYRA_DEFAULT_mindMapTopicStatus, LYRA_DEFAULT_noData } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_mindMapCollapsed, LYRA_DEFAULT_mindMapExpanded, LYRA_DEFAULT_mindMapLabel, LYRA_DEFAULT_mindMapLeafStatus, LYRA_DEFAULT_mindMapNodeLimit, LYRA_DEFAULT_mindMapTopicStatus } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraTopic };

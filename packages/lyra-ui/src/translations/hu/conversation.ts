@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Előző verzió',
   branchNext: 'Következő verzió',
   branchPosition: '{index}/{total}. verzió',
-  confirm: 'Megerősítés',
   promptQueueItemLabel: '{index}. sorban álló prompt',
   promptQueueActionLabel: '{action}, {index}. sorban álló prompt',
   sendMessage: 'Üzenet küldése',

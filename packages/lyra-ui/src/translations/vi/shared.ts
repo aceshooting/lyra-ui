@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Phân trang',
   paginationSummary: '{start}–{end} trên tổng số {total} {itemLabel}',
   cancel: 'Hủy',
+  confirm: 'Xác nhận',
   search: 'Tìm kiếm',
   items: {
     other: 'mục',

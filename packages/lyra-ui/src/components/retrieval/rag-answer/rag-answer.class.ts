@@ -27,7 +27,7 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import '../../overlays/empty/empty.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerEmpty, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_ragAnswerCitations, LYRA_DEFAULT_ragAnswerEmpty, LYRA_DEFAULT_ragAnswerLabel, LYRA_DEFAULT_ragAnswerRetry, LYRA_DEFAULT_ragAnswerSources } from '../../../internal/default-strings/retrieval.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraRagAnswerState = 'idle' | 'loading' | 'answer' | 'error';

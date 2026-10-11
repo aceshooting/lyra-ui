@@ -14,7 +14,7 @@ import { styles } from './media-card.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mediaCardImageAttachment, LYRA_DEFAULT_mediaCardOpenFileAttachment, LYRA_DEFAULT_mediaCardOpenImageAttachment, LYRA_DEFAULT_mediaCardOpenName, LYRA_DEFAULT_mediaCardOpenVideoAttachment, LYRA_DEFAULT_mediaCardUntitledFile, LYRA_DEFAULT_mediaCardVideoAttachment } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_mediaCardImageAttachment, LYRA_DEFAULT_mediaCardOpenFileAttachment, LYRA_DEFAULT_mediaCardOpenImageAttachment, LYRA_DEFAULT_mediaCardOpenName, LYRA_DEFAULT_mediaCardOpenVideoAttachment, LYRA_DEFAULT_mediaCardUntitledFile, LYRA_DEFAULT_mediaCardVideoAttachment } from '../../../internal/default-strings/media.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraMediaCardKind = 'image' | 'video' | 'file';

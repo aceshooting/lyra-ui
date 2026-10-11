@@ -22,7 +22,7 @@ import {
 } from './toast-region-protocol.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_toastOverflow } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_toastOverflow } from '../../../internal/default-strings/overlays.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const MAX_VISIBLE_TOASTS = 3;

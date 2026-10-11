@@ -1626,3 +1626,46 @@ describe('lr-page-rail part reachability through the embedded virtual list', () 
     await expect(el).to.be.accessible();
   });
 });
+
+describe('thumbnail window ownership', () => {
+  it('releases states and callbacks when visited rows leave the mounted window', async () => {
+    const viewer = new StubViewer();
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+    const target = el as unknown as {
+      thumbnailRef(page: number): (element: Element | undefined) => void;
+      thumbnailRowRef(page: number): (element: Element | undefined) => void;
+      thumbnailRowRefs: Map<number, unknown>;
+      thumbnailStates: Map<number, unknown>;
+      thumbnailRefs: Map<number, unknown>;
+      thumbnailTargets: Map<number, unknown>;
+    };
+    for (let page = 1; page <= 100; page++) {
+      const row = target.thumbnailRowRef(page);
+      row(document.createElement('span'));
+      const ref = target.thumbnailRef(page);
+      ref(document.createElement('canvas'));
+      await Promise.resolve();
+      ref(undefined);
+      row(undefined);
+    }
+    expect(target.thumbnailTargets.size).to.equal(0);
+    expect(target.thumbnailStates.size).to.equal(0);
+    expect(target.thumbnailRefs.size).to.equal(0);
+    expect(target.thumbnailRowRefs.size).to.equal(0);
+  });
+
+  it('keeps an unavailable thumbnail settled without retrying its fallback', async () => {
+    const viewer = new StubViewer();
+    viewer.renderResult = false;
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+    viewer.emitLoad(1);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    await waitUntil(() => Boolean(list.shadowRoot?.querySelector('lr-file-icon')));
+    const calls = viewer.renderCalls.length;
+    el.label = 'Pages';
+    await el.updateComplete;
+    await aTimeout(50); // wait-reason: allow an accidental fallback retry loop to schedule
+    expect(viewer.renderCalls.length).to.equal(calls);
+    expect(list.shadowRoot!.querySelectorAll('lr-file-icon').length).to.equal(1);
+  });
+});

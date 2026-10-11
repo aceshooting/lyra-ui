@@ -108,6 +108,61 @@ async function countProbes(root: ShadowRoot, body: () => Promise<void>): Promise
 }
 
 describe('canvas color resolution', () => {
+  it('retires obsolete cached colors as a streamed palette changes', async () => {
+    const scope = await fixture<HTMLElement>(html`<div></div>`);
+    const cache = new ChartTokenCache(scope);
+    for (let draw = 0; draw < 20; draw += 1) {
+      cache.beginThemeDraw();
+      cache.resolveMany(Array.from({ length: 16 }, (_, index) => `rgb(${index}, ${draw}, 1)`), 'transparent');
+      cache.rememberTheme();
+      expect((cache as unknown as { values: Map<string, unknown> }).values.size).to.equal(16);
+    }
+    const root = scope.attachShadow({ mode: 'open' });
+    const probes = await countProbes(root, async () => {
+      cache.beginThemeDraw();
+      cache.resolveMany(Array.from({ length: 16 }, (_, index) => `rgb(${index}, 19, 1)`), 'transparent');
+      cache.rememberTheme();
+    });
+    expect(probes).to.equal(0);
+  });
+
+  it('automatically refreshes array series, point and segment colors when their inherited variables change', async () => {
+    const host = await fixture<HTMLElement>(html`<div style="--series-tint: rgb(10, 20, 30); --point-tint: rgb(40, 50, 60); --segment-tint: rgb(70, 80, 90)">
+      <lr-line-chart without-animation without-legend .labels=${['A', 'B']}
+        .datasets=${[{ label: 'S', data: [1, 2], color: ['var(--series-tint)'],
+          pointColors: ['var(--point-tint)'], segmentColors: ['var(--segment-tint)'] }]}></lr-line-chart>
+    </div>`);
+    const el = host.querySelector<LyraChart>('lr-line-chart')!;
+    await waitUntil(() => peer(el) !== undefined, 'chart did not initialize', { timeout: 5000 });
+    await el.updateComplete;
+    const dataset = () => (peer(el) as unknown as { data: { datasets: {
+      backgroundColor: string[]; pointBackgroundColor: string[];
+      segment: { borderColor(context: { p0DataIndex: number }): string };
+    }[] } }).data.datasets[0]!;
+    expect(dataset().backgroundColor[0]).to.equal('rgb(10, 20, 30)');
+    expect(dataset().pointBackgroundColor[0]).to.equal('rgb(40, 50, 60)');
+    expect(dataset().segment.borderColor({ p0DataIndex: 0 })).to.equal('rgb(70, 80, 90)');
+    host.style.setProperty('--series-tint', 'rgb(11, 21, 31)');
+    await waitUntil(() => dataset().backgroundColor[0] === 'rgb(11, 21, 31)', 'series array color did not refresh');
+    host.style.setProperty('--point-tint', 'rgb(41, 51, 61)');
+    await waitUntil(() => dataset().pointBackgroundColor[0] === 'rgb(41, 51, 61)', 'point array color did not refresh');
+    host.style.setProperty('--segment-tint', 'rgb(71, 81, 91)');
+    await waitUntil(() => dataset().segment.borderColor({ p0DataIndex: 0 }) === 'rgb(71, 81, 91)', 'segment array color did not refresh');
+  });
+
+  it('reuses literal array color probes on data-only updates', async () => {
+    const el = await fixture<LyraChart>(html`<lr-line-chart without-animation without-legend
+      .labels=${['A', 'B']} .datasets=${[{ label: 'S', data: [1, 2],
+        color: ['red', 'blue'], pointColors: ['green', 'green'], segmentColors: ['purple'] }]}></lr-line-chart>`);
+    await waitUntil(() => peer(el) !== undefined, 'chart did not initialize', { timeout: 5000 });
+    await el.updateComplete;
+    const probes = await countProbes(el.shadowRoot!, async () => {
+      el.appendData('C', [3]);
+      await el.updateComplete;
+    });
+    expect(probes).to.equal(0);
+  });
+
   it('tracks currentColor, authored CSS variables, and root rem context across theme notifications', async () => {
     const scope = await fixture<HTMLElement>(html`<div style="color: rgb(1, 2, 3); --chart-accent: rgb(4, 5, 6)"></div>`);
     const cache = new ChartTokenCache(scope);
@@ -312,6 +367,54 @@ describe('lr-histogram derived series', () => {
 });
 
 describe('chart synchronization idle cost', () => {
+  it('keeps duplicate-category eligibility live and refreshes its index after data replacement', async () => {
+    const el = await fixture<LyraChart>(html`<lr-line-chart without-animation
+      .labels=${['Same', 'Same']} .datasets=${[{ label: 'S', data: [1, 2] }]}></lr-line-chart>`);
+    await waitUntil(() => peer(el) !== undefined, 'chart did not initialize', { timeout: 5000 });
+    await el.updateComplete;
+    const runtime = peer(el)! as RuntimeProbe & {
+      tooltip: { getActiveElements(): { index: number }[] };
+    };
+    const present = () => (el as unknown as { syncPresentation(label: string): unknown }).syncPresentation('Same');
+    present();
+    expect(runtime.tooltip.getActiveElements().map((hit) => hit.index)).to.deep.equal([0]);
+    const first = runtime.getDatasetMeta(0).data[0]! as { x: number; y: number; skip: boolean };
+    first.skip = true;
+    present();
+    expect(runtime.tooltip.getActiveElements().map((hit) => hit.index)).to.deep.equal([1]);
+    el.labels = ['Other', 'Same'];
+    el.datasets = [{ label: 'S', data: [3, 4] }];
+    await el.updateComplete;
+    present();
+    expect(runtime.tooltip.getActiveElements().map((hit) => hit.index)).to.deep.equal([1]);
+  });
+
+  it('checks only the hit datum during repeated pointer moves over one category', async () => {
+    const el = await fixture<LyraChart>(html`<lr-line-chart without-animation sync-group="bounded-hit"
+      .labels=${labelsOf(1000)} .datasets=${seriesOf(1, 1000)}></lr-line-chart>`);
+    await waitUntil(() => peer(el) !== undefined, 'chart did not initialize', { timeout: 5000 });
+    await waitUntil(() => (el as unknown as { chartSync: { enabled: boolean } }).chartSync.enabled, 'sync did not initialize');
+    await el.updateComplete;
+    const runtime = peer(el)! as RuntimeProbe & {
+      getElementsAtEventForMode(): { datasetIndex: number; index: number }[];
+    };
+    const hitTest = runtime.getElementsAtEventForMode;
+    const getMeta = runtime.getDatasetMeta;
+    let reads = 0;
+    const move = () => (el as unknown as { onSyncPointerMove(event: PointerEvent): void })
+      .onSyncPointerMove(new PointerEvent('pointermove'));
+    try {
+      runtime.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 500 }];
+      move();
+      runtime.getDatasetMeta = function (index) { reads += 1; return getMeta.call(this, index); };
+      for (let index = 0; index < 20; index += 1) move();
+      expect(reads).to.be.at.most(40);
+    } finally {
+      runtime.getElementsAtEventForMode = hitTest;
+      runtime.getDatasetMeta = getMeta;
+    }
+  });
+
   it('does not repaint idle synchronized canvases on scroll', async () => {
     const host = await fixture<HTMLElement>(html`<div style="inline-size: 480px">
       <lr-line-chart without-animation sync-group="idle" .labels=${labelsOf(5)}

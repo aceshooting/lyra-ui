@@ -10,7 +10,7 @@ import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_changeReviewDiscard, LYRA_DEFAULT_changeReviewDiscarded, LYRA_DEFAULT_changeReviewEmpty, LYRA_DEFAULT_changeReviewHunk, LYRA_DEFAULT_changeReviewKeep, LYRA_DEFAULT_changeReviewKept, LYRA_DEFAULT_changeReviewLabel, LYRA_DEFAULT_changeReviewLimit, LYRA_DEFAULT_changeReviewPending } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_changeReviewDiscard, LYRA_DEFAULT_changeReviewDiscarded, LYRA_DEFAULT_changeReviewEmpty, LYRA_DEFAULT_changeReviewHunk, LYRA_DEFAULT_changeReviewKeep, LYRA_DEFAULT_changeReviewKept, LYRA_DEFAULT_changeReviewLabel, LYRA_DEFAULT_changeReviewLimit, LYRA_DEFAULT_changeReviewPending } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 

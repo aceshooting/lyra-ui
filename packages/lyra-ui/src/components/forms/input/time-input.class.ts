@@ -59,7 +59,8 @@ import { isDateObject } from '../../../internal/dom-guards.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_timeInputDayPeriod, LYRA_DEFAULT_timeInputEmptySegment, LYRA_DEFAULT_timeInputHour, LYRA_DEFAULT_timeInputInvalid, LYRA_DEFAULT_timeInputLabel, LYRA_DEFAULT_timeInputMaxMessage, LYRA_DEFAULT_timeInputMinMessage, LYRA_DEFAULT_timeInputMinute, LYRA_DEFAULT_timeInputNow, LYRA_DEFAULT_timeInputOpen, LYRA_DEFAULT_timeInputPopup, LYRA_DEFAULT_timeInputRangeMessage, LYRA_DEFAULT_timeInputSecond, LYRA_DEFAULT_timeInputStepMessage } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_timeInputDayPeriod, LYRA_DEFAULT_timeInputEmptySegment, LYRA_DEFAULT_timeInputHour, LYRA_DEFAULT_timeInputInvalid, LYRA_DEFAULT_timeInputLabel, LYRA_DEFAULT_timeInputMaxMessage, LYRA_DEFAULT_timeInputMinMessage, LYRA_DEFAULT_timeInputMinute, LYRA_DEFAULT_timeInputNow, LYRA_DEFAULT_timeInputOpen, LYRA_DEFAULT_timeInputPopup, LYRA_DEFAULT_timeInputRangeMessage, LYRA_DEFAULT_timeInputSecond, LYRA_DEFAULT_timeInputStepMessage } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraTimeInputHourFormat = TimeHourFormat;

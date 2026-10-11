@@ -7,7 +7,8 @@ import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { styles } from './sparkline.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_noData, LYRA_DEFAULT_trendOf } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_trendOf } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const VIEW = 100;

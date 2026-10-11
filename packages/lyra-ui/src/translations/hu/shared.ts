@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Lapozás',
   paginationSummary: '{start}–{end} / {total} {itemLabel}',
   cancel: 'Mégse',
+  confirm: 'Megerősítés',
   search: 'Keresés',
   items: {
     one: 'elem',

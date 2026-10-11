@@ -10,7 +10,7 @@ import { styles } from './split-panel.styles.js';
 import type { LyraSplitPanelSnapFunction } from './split-panel-snap.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_resizeDivider, LYRA_DEFAULT_resizeValuePercent } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_resizeDivider, LYRA_DEFAULT_resizeValuePercent } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const DEFAULT_POSITION = 50;

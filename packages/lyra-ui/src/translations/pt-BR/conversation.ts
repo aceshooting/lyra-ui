@@ -24,7 +24,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Versão anterior',
   branchNext: 'Próxima versão',
   branchPosition: 'Versão {index} de {total}',
-  confirm: 'Confirmar',
   promptQueueItemLabel: 'Prompt na fila {index}',
   promptQueueActionLabel: '{action}, prompt na fila {index}',
   sendMessage: 'Enviar mensagem',

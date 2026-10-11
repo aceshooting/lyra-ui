@@ -217,3 +217,52 @@ test('flags a built JSON import that lost its import attribute', () => {
   assert.equal(findings.length, 1);
   assert.match(findings[0], /dist\/a\.js: imports JSON without/);
 });
+
+test('rejects tooling-only token records in publish emit and runtime references to them', () => {
+  const modules = new Map([
+    ['/workspace/dist/internal/tokens.styles.js', 'export const tokens = 1;'],
+    ['/workspace/dist/internal/tokens/palette.styles.js', 'export const palette = 1;'],
+    ['/workspace/dist/internal/specialist-tokens.styles.js', 'export const specialist = 1;'],
+    ['/workspace/dist/consumer.js', "export { tokens } from './internal/tokens.styles.js';"],
+  ]);
+  const findings = findBuildArtifactFindings([...modules.keys()], (file) => modules.get(file));
+  assert.equal(findings.filter((finding) => finding.includes('tooling-only token record emitted')).length, 3);
+  assert.ok(findings.some((finding) => finding.includes('consumer.js') && finding.includes('references tooling-only token record')));
+});
+
+test('native ESM payload checks follow named imports, re-exports and production aliases without tree shaking', () => {
+  const card = '/workspace/dist/components/layout/card/card.class.js';
+  const base = '/workspace/dist/internal/base.js';
+  const defaults = '/workspace/dist/internal/default-strings/layout.generated.js';
+  const shared = '/workspace/dist/internal/default-strings/shared.generated.js';
+  const specialist = '/workspace/dist/internal/specialist-tokens.generated.js';
+  const modules = new Map([
+    [card, "import { label } from '../../../internal/default-strings/layout.generated.js'; import '#base';"],
+    [base, "export { unused } from './specialist-tokens.generated.js';"],
+    [defaults, "export const label = 'Open';"],
+    [shared, "export const unused = 'Unused';"],
+    [specialist, "export const unused = 'Specialist payload';"],
+  ]);
+  const options = { packageDirectory: '/workspace', imports: { '#base': { development: './src/base.ts', default: './dist/internal/base.js' } } };
+  const check = () => findBuildArtifactFindings([...modules.keys()], (file) => modules.get(file), options);
+  assert.ok(check().some((finding) => finding.includes('native ESM reaches unrelated full-catalog or specialist payload')));
+  modules.set(base, "export const unused = () => import('./specialist-tokens.generated.js');");
+  assert.deepEqual(check(), [], 'deferred imports are not part of the eager native download');
+  modules.set(defaults, "export const label = '" + 'a'.repeat(16000) + "';");
+  assert.ok(check().some((finding) => finding.includes('native English payload exceeds')));
+  modules.set(defaults, "export const label = 'Open'; export * from './shared.generated.js';");
+  assert.deepEqual(check(), [], 'two bounded physical modules are supported');
+  modules.set(shared, "export * from '../localization.js';");
+  modules.set('/workspace/dist/internal/localization.js', "export const full = 'Full catalog';");
+  assert.ok(check().some((finding) => finding.includes('native ESM reaches unrelated full-catalog')));
+});
+
+test('native ESM checks bound module count and reject retired catalog aggregates', () => {
+  const modules = new Map(Array.from({ length: 13 }, (_, index) => [
+    `/workspace/dist/internal/default-strings/family-${index}.generated.js`, 'export {};',
+  ]));
+  modules.set('/workspace/dist/internal/default-strings.generated.js', 'export {};');
+  const findings = findBuildArtifactFindings([...modules.keys()], (file) => modules.get(file));
+  assert.ok(findings.some((finding) => finding.includes('maximum is 12')));
+  assert.ok(findings.some((finding) => finding.includes('obsolete monolithic')));
+});

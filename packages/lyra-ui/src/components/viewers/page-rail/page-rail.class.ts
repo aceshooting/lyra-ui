@@ -27,7 +27,7 @@ import { snapshotLyraHighlights } from '../../../internal/highlight-collection.j
 import type { LyraPageViewerStatus, LyraPageViewerSnapshot } from './page-viewer-snapshot.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_pageRailLabel, LYRA_DEFAULT_pageRailPage, LYRA_DEFAULT_pageRailPageHighlighted } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_pageRailLabel, LYRA_DEFAULT_pageRailPage, LYRA_DEFAULT_pageRailPageHighlighted } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export { PageViewerSnapshotController } from './page-viewer-snapshot.js';
@@ -179,6 +179,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   @state() private thumbnailStates = new Map<number, ThumbnailState>();
   @state() private allocationWidth = DEFAULT_ALLOCATION_WIDTH;
 
+  private readonly thumbnailRowRefs = new Map<number, (el: Element | undefined) => void>();
   private readonly thumbnailRefs = new Map<number, (el: Element | undefined) => void>();
   private readonly thumbnailTargets = new Map<number, HTMLElement>();
   private readonly thumbnailHandles = new Map<number, PageThumbnailRenderHandle>();
@@ -444,17 +445,43 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     return this.pageSource;
   }
 
+  // A failure removes its canvas but keeps the row's fallback. Retire cached state only when
+  // that row leaves the window, so switching to the fallback never starts a retry loop.
+  private thumbnailRowRef(pageNumber: number): (el: Element | undefined) => void {
+    let callback = this.thumbnailRowRefs.get(pageNumber);
+    if (!callback) {
+      callback = (element) => {
+        if (element) {
+          this.thumbnailRowRefs.set(pageNumber, callback!);
+          return;
+        }
+        if (this.thumbnailRowRefs.get(pageNumber) !== callback) return;
+        this.thumbnailRowRefs.delete(pageNumber);
+        this.thumbnailRefs.delete(pageNumber);
+        this.thumbnailStates.delete(pageNumber);
+      };
+      this.thumbnailRowRefs.set(pageNumber, callback);
+    }
+    return callback;
+  }
+
   private thumbnailRef(pageNumber: number): (el: Element | undefined) => void {
     let cb = this.thumbnailRefs.get(pageNumber);
     if (!cb) {
+      let mounted: HTMLElement | undefined;
       cb = (el) => {
         if (!el) {
-          this.thumbnailTargets.delete(pageNumber);
-          this.disposeThumbnailHandle(pageNumber);
+          if (this.thumbnailTargets.get(pageNumber) === mounted) {
+            this.thumbnailTargets.delete(pageNumber);
+            this.disposeThumbnailHandle(pageNumber);
+          }
+          mounted = undefined;
           return;
         }
-        this.thumbnailTargets.set(pageNumber, el as HTMLElement);
-        void this.loadThumbnail(pageNumber, el as HTMLElement);
+        mounted = el as HTMLElement;
+        this.thumbnailRefs.set(pageNumber, cb!);
+        this.thumbnailTargets.set(pageNumber, mounted);
+        void this.loadThumbnail(pageNumber, mounted);
       };
       this.thumbnailRefs.set(pageNumber, cb);
     }
@@ -562,9 +589,8 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     const generation = this.thumbnailGeneration;
     const width = this.safeThumbWidth;
     this.disposeThumbnailHandle(pageNumber);
-    const pending = new Map(this.thumbnailStates);
-    pending.set(pageNumber, 'pending');
-    this.thumbnailStates = pending;
+    this.thumbnailStates.set(pageNumber, 'pending');
+    this.requestUpdate();
     let ok: boolean;
     let handle: PageThumbnailRenderHandle | undefined;
     try {
@@ -592,9 +618,8 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
       return;
     }
     if (handle) this.thumbnailHandles.set(pageNumber, handle);
-    const settled = new Map(this.thumbnailStates);
-    settled.set(pageNumber, ok ? 'ready' : 'unavailable');
-    this.thumbnailStates = settled;
+    this.thumbnailStates.set(pageNumber, ok ? 'ready' : 'unavailable');
+    this.requestUpdate();
   }
 
   private onPageActivate(pageNumber: number): void {
@@ -662,7 +687,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
         aria-current=${isCurrent ? 'true' : 'false'}
         @click=${() => this.onPageActivate(number)}
       >
-        <span part="thumbnail">
+        <span part="thumbnail" ${ref(this.thumbnailRowRef(number))}>
           ${this.boundViewer
             ? thumbState === 'unavailable'
               ? html`<lr-file-icon decorative></lr-file-icon>`

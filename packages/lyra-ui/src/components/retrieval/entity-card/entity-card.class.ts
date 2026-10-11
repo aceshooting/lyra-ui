@@ -17,7 +17,8 @@ import '../../overlays/empty/empty.class.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_entityCommunity, LYRA_DEFAULT_entityDegree, LYRA_DEFAULT_focusInGraph, LYRA_DEFAULT_noData, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_entityCommunity, LYRA_DEFAULT_entityDegree, LYRA_DEFAULT_focusInGraph, LYRA_DEFAULT_untitledEntity } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';

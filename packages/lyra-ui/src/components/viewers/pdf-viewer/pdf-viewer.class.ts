@@ -52,6 +52,7 @@ import {
   loadPdfJs,
   type PdfDocumentApi,
   type PdfJsApi,
+  type PdfLoadingTaskApi,
   type PdfOutlineEntryApi,
   type PdfPageApi,
   type PdfViewportApi,
@@ -65,7 +66,8 @@ import { wrapTextRangeInMarks, unwrapTextMark, type TextMarkPaintBudget } from '
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_pdfViewerLabel, LYRA_DEFAULT_pdfViewerMissingLibrary, LYRA_DEFAULT_pdfViewerNextPage, LYRA_DEFAULT_pdfViewerPageOf, LYRA_DEFAULT_pdfViewerPreviousPage, LYRA_DEFAULT_pdfViewerZoomIn, LYRA_DEFAULT_pdfViewerZoomOut } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -542,6 +544,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   @state() private scrollDrivenPage = false;
   private loadLibrary: (workerSrc?: string | null) => Promise<PdfJsApi | null> = loadPdfJs;
   private generation = 0;
+  private pendingDocument?: { task: PdfLoadingTaskApi; retired: boolean };
   private readonly pageCanvases = new Map<number, HTMLCanvasElement>();
   private readonly pageRenderTasks = new Map<number, { cancel(): void }>();
   private readonly pageRenderVersions = new Map<number, number>();
@@ -728,6 +731,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private teardownDetachedDocument(): void {
     this.generation++;
+    this.retirePendingDocument();
     this.resetSearchState();
     this.pendingSearchResetEvent = false;
     this.anchorOperationGeneration++;
@@ -770,6 +774,18 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (this.loadState.kind === 'ready') void this.loadState.doc.destroy?.();
   }
 
+  private retirePendingDocument(): void {
+    const pending = this.pendingDocument;
+    this.pendingDocument = undefined;
+    if (!pending || pending.retired) return;
+    pending.retired = true;
+    try {
+      void Promise.resolve(pending.task.destroy?.()).catch(() => {});
+    } catch {
+      // A broken peer teardown must not prevent a replacement document from loading.
+    }
+  }
+
   /** Clamps a candidate page number to `[1, pageCount]` (or `[1, 1]` before a document is loaded),
    *  rounding a fractional page to the nearest whole page and defaulting a non-finite/`NaN` page
    *  to `1` rather than letting it reach the virtualized page list unsanitized. */
@@ -807,6 +823,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    this.retirePendingDocument();
     this.pageViewerState.advance();
     const signal = this.beginAbortableLoad();
     this.destroyLoadedDoc();
@@ -840,9 +857,18 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         this.emit('lr-render-error', { error });
         return;
       }
-      const doc = await pdfjsLib.getDocument({ data }).promise;
+      const pending = { task: pdfjsLib.getDocument({ data }), retired: false };
+      this.pendingDocument = pending;
+      let doc: PdfDocumentApi;
+      try {
+        doc = await pending.task.promise;
+      } catch (error) {
+        if (this.pendingDocument === pending) this.retirePendingDocument();
+        throw error;
+      }
+      if (this.pendingDocument === pending) this.pendingDocument = undefined;
       if (!this.isConnected || generation !== this.generation) {
-        await doc.destroy?.();
+        if (!pending.retired || !pending.task.destroy) await doc.destroy?.();
         return;
       }
       const pageCount = finiteCount(doc.numPages, 0, MAX_PAGE_COUNT);

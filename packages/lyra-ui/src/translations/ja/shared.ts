@@ -39,6 +39,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'ページネーション',
   paginationSummary: '{total} {itemLabel}中 {start}–{end}',
   cancel: 'キャンセル',
+  confirm: '確定',
   search: '検索',
   items: {
     other: '件',

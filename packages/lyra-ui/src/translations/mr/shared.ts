@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'पृष्ठ नेव्हिगेशन',
   paginationSummary: 'एकूण {total} {itemLabel} पैकी {start}–{end}',
   cancel: 'रद्द करा',
+  confirm: 'पुष्टी करा',
   search: 'शोधा',
   items: {
     one: 'घटक',

@@ -21,6 +21,14 @@ const OMIT_COLLECTION_VALUE = Symbol('omit-public-collection-value');
 const EXHAUSTED_COLLECTION_VALUE = Symbol('exhausted-public-collection-value');
 const normalizedCollectionWrites = new WeakMap<LyraElement, Set<PropertyKey>>();
 
+/** Only wrappers created here can expose their native data to another snapshot pass. Their
+ * contents still cross the receiving boundary's policy, budgets and destination realm. */
+const readonlySnapshotWrappers = new WeakMap<object,
+  | { readonly kind: 'date'; readonly time: number }
+  | { readonly kind: 'map'; readonly backing: ReadonlyMap<unknown, unknown> }
+  | { readonly kind: 'set'; readonly backing: ReadonlySet<unknown> }
+>();
+
 /** Keep the last host-owned source when a component writes a normalized public value back through
  * the collection boundary. The write still snapshots and updates the public property; only the
  * unchanged host source remains eligible for the next declarative rebind no-op. */
@@ -199,6 +207,8 @@ const MUTATING_DATE_METHODS = new Set<PropertyKey>([
 ]);
 
 function nativeDateTime(value: object): number | typeof OMIT_COLLECTION_VALUE {
+  const wrapper = readonlySnapshotWrappers.get(value);
+  if (wrapper?.kind === 'date') return wrapper.time;
   try {
     return Date.prototype.getTime.call(value);
   } catch {
@@ -232,6 +242,7 @@ function snapshotReadonlyDate(
       return bound;
     },
   });
+  readonlySnapshotWrappers.set(snapshot, { kind: 'date', time });
   rememberSnapshot(budget, source, snapshot);
   return Object.freeze(snapshot);
 }
@@ -428,7 +439,9 @@ function snapshotCollectionValue(
 
   // Plain records dominate this hot path. Classify them before Map/Set brand probes so a normal
   // 10k-row assignment does not incur two caught TypeErrors for every row.
-  if (isRealmNeutralPlainRecord(value)) {
+  // Map/Set facades deliberately have an ordinary object prototype, but their data is held in
+  // a private native backing collection rather than enumerable own properties.
+  if (!readonlySnapshotWrappers.has(value) && isRealmNeutralPlainRecord(value)) {
     let prototype: object | null;
     try {
       prototype = Object.getPrototypeOf(value);
@@ -576,8 +589,9 @@ export function snapshotPublicCollection(
 function nativeMapEntries(
   value: object
 ): IterableIterator<readonly [unknown, unknown]> | undefined {
+  const wrapper = readonlySnapshotWrappers.get(value);
   try {
-    return Map.prototype.entries.call(value) as IterableIterator<
+    return Map.prototype.entries.call(wrapper?.kind === 'map' ? wrapper.backing : value) as IterableIterator<
       readonly [unknown, unknown]
     >;
   } catch {
@@ -586,8 +600,9 @@ function nativeMapEntries(
 }
 
 function nativeSetValues(value: object): IterableIterator<unknown> | undefined {
+  const wrapper = readonlySnapshotWrappers.get(value);
   try {
-    return Set.prototype.values.call(value) as IterableIterator<unknown>;
+    return Set.prototype.values.call(wrapper?.kind === 'set' ? wrapper.backing : value) as IterableIterator<unknown>;
   } catch {
     return undefined;
   }
@@ -663,6 +678,7 @@ function readonlyMapFacade(
     },
     [Symbol.iterator]: { value: () => backing[Symbol.iterator]() },
   });
+  readonlySnapshotWrappers.set(facade, { kind: 'map', backing });
   return Object.freeze(facade);
 }
 
@@ -693,6 +709,7 @@ function readonlySetFacade(
     },
     [Symbol.iterator]: { value: () => backing[Symbol.iterator]() },
   });
+  readonlySnapshotWrappers.set(facade, { kind: 'set', backing });
   return Object.freeze(facade);
 }
 
@@ -732,9 +749,10 @@ function snapshotIdentitySet(
 
 /** A native `Map`/`Set` size read through the platform getter, never through the object itself. */
 function nativeCollectionSize(source: object, kind: 'map' | 'set'): number | undefined {
+  const wrapper = readonlySnapshotWrappers.get(source);
   try {
     const size = Object.getOwnPropertyDescriptor(kind === 'map' ? Map.prototype : Set.prototype, 'size')
-      ?.get?.call(source) as unknown;
+      ?.get?.call(wrapper?.kind === kind ? wrapper.backing : source) as unknown;
     return typeof size === 'number' ? size : undefined;
   } catch {
     return undefined;

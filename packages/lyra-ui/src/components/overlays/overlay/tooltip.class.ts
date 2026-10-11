@@ -69,7 +69,7 @@ import {
 import { tooltipStyles } from './overlay.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_popover } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_popover } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Default delay (ms) before an interaction opens the tooltip. */

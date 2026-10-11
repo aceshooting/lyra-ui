@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Versi sebelumnya',
   branchNext: 'Versi berikutnya',
   branchPosition: 'Versi {index} dari {total}',
-  confirm: 'Konfirmasi',
   promptQueueItemLabel: 'Perintah dalam antrean {index}',
   promptQueueActionLabel: '{action}, perintah dalam antrean {index}',
   sendMessage: 'Kirim pesan',

@@ -14,6 +14,86 @@ import { VALIDITY_ANCHOR } from "../../../internal/anchored-validity.js";
 
 expectLocaleFallback('ar-EG', ['rangeEnd', 'rangeStart', 'rubricSubmit']);
 
+describe('schema-key and range normalization regressions', () => {
+  it('requires own answers for prototype-named fields and preserves their saved values', async () => {
+    const names = ['__proto__', 'constructor', 'toString'];
+    const keys: RubricKey[] = names.map(key => ({ key, type: 'comment', required: true }));
+    const form = await fixture<HTMLFormElement>(html`<form><lr-rubric-form name="answers" .keys=${keys}></lr-rubric-form></form>`);
+    const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
+    await el.updateComplete;
+    expect(el.checkValidity()).to.equal(false);
+    expect(Object.keys(el.errors)).to.deep.equal(names);
+    const answers = Object.fromEntries(names.map(key => [key, `Answer for ${key}`]));
+    el.defaultValue = answers;
+    await el.updateComplete;
+    expect(el.checkValidity()).to.equal(true);
+    expect(el.value).to.deep.equal(answers);
+    expect(JSON.parse(String(new FormData(form).get('answers')))).to.deep.equal(answers);
+    el.value = {};
+    expect(el.checkValidity()).to.equal(false);
+    form.reset();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(answers);
+    expect(el.checkValidity()).to.equal(true);
+  });
+
+  it('renders exactly the selected occurrence count of duplicate category values', async () => {
+    const keys: RubricKey[] = [{ key: 'category', type: 'category', multiple: true, options: [
+      { value: 'same', label: 'First' }, { value: 'same', label: 'Second' },
+    ] }];
+    const originalWarn = console.warn;
+    let el: LyraRubricForm;
+    console.warn = (...args: unknown[]) => {
+      if (args[0] === '<lr-checkbox-group>: duplicate child values make submitted FormData ambiguous; give each child a distinct value.') return;
+      originalWarn(...args);
+    };
+    try {
+      el = await fixture<LyraRubricForm>(html`<lr-rubric-form .keys=${keys} .value=${{ category: ['same'] }}></lr-rubric-form>`);
+    } finally {
+      console.warn = originalWarn;
+    }
+    const group = el.shadowRoot!.querySelector('lr-checkbox-group') as HTMLElement & { updateComplete: Promise<boolean>; value: readonly string[] };
+    const boxes = [...group.querySelectorAll('lr-checkbox')] as (HTMLElement & { checked: boolean; updateComplete: Promise<boolean> })[];
+    await Promise.all(boxes.map(box => box.updateComplete));
+    await group.updateComplete;
+    expect(boxes.map(box => box.checked)).to.deep.equal([true, false]);
+    expect(group.value).to.deep.equal(['same']);
+    expect(el.value).to.deep.equal({ category: ['same'] });
+    el.value = { category: ['same', 'same'] };
+    await el.updateComplete;
+    await Promise.all(boxes.map(box => box.updateComplete));
+    await group.updateComplete;
+    expect(boxes.map(box => box.checked)).to.deep.equal([true, true]);
+    expect(group.value).to.deep.equal(['same', 'same']);
+  });
+
+  it('records the finite rendered midpoint and retains extreme finite score endpoints', async () => {
+    const keys: RubricKey[] = [{ key: 'score', type: 'score', required: true, min: -Number.MAX_VALUE, max: Number.MAX_VALUE, step: 1 }];
+    const form = await fixture<HTMLFormElement>(html`<form><lr-rubric-form name="answers" .keys=${keys}></lr-rubric-form></form>`);
+    const el = form.querySelector('lr-rubric-form') as LyraRubricForm;
+    const slider = el.shadowRoot!.querySelector('lr-slider') as HTMLElement & { value: number; updateComplete: Promise<boolean> };
+    await slider.updateComplete;
+    expect(el.value).to.deep.equal({ score: 0 });
+    expect(slider.value).to.equal(0);
+    expect(el.checkValidity()).to.equal(true);
+    expect(JSON.parse(String(new FormData(form).get('answers')))).to.deep.equal({ score: 0 });
+    el.value = { score: Number.MAX_VALUE };
+    await el.updateComplete;
+    await slider.updateComplete;
+    expect(el.value['score']).to.equal(Number.MAX_VALUE);
+    expect(slider.value).to.equal(Number.MAX_VALUE);
+    form.reset();
+    await el.updateComplete;
+    expect(el.value['score']).to.equal(0);
+    el.keys = [{ ...keys[0]!, step: Number.MAX_VALUE } as RubricKey];
+    el.value = { score: 1e308 };
+    await el.updateComplete;
+    await slider.updateComplete;
+    expect(el.value['score']).to.equal(Number.MAX_VALUE);
+    expect(slider.value).to.equal(Number.MAX_VALUE);
+  });
+});
+
 it('uses shared button size and radius tokens on the native rubric actions', async () => {
   const keys: RubricKey[] = [{ key: 'comment', type: 'comment', label: 'Comment' }];
   const el = await fixture<LyraRubricForm>(html`

@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'ယခင်ဗားရှင်း',
   branchNext: 'နောက်ဗားရှင်း',
   branchPosition: 'ဗားရှင်း {total} ခုအနက် {index} ခုမြောက်',
-  confirm: 'အတည်ပြုရန်',
   promptQueueItemLabel: 'တန်းစီထားသော prompt {index}',
   promptQueueActionLabel: '{action}, တန်းစီထားသော prompt {index}',
   sendMessage: 'မက်ဆေ့ချ် ပို့ရန်',

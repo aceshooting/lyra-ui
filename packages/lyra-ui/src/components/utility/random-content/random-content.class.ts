@@ -14,7 +14,7 @@ import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './random-content.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_randomContentNext, LYRA_DEFAULT_randomContentPause, LYRA_DEFAULT_randomContentResume } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_randomContentNext, LYRA_DEFAULT_randomContentPause, LYRA_DEFAULT_randomContentResume } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraRandomContentAnimation = 'none' | 'fade' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right';

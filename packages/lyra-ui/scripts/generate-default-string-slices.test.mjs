@@ -67,6 +67,93 @@ const repositioned = rewriteClassSource(
 assert.match(repositioned, /  \}\n  protected static collectionSupport = true;/u);
 assert.doesNotMatch(repositioned, /  \}  protected static collectionSupport/u);
 
+// Authored helpers and tests import fallback constants without a generated class block.
+const helperImportFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-helper-import-'));
+try {
+  const internal = path.join(helperImportFixture, 'src/internal');
+  const forms = path.join(helperImportFixture, 'src/components/forms/sample');
+  const overlays = path.join(helperImportFixture, 'src/components/overlays/dialog');
+  await Promise.all([internal, forms, overlays].map((dir) => mkdir(dir, { recursive: true })));
+  await writeFile(path.join(internal, 'localization.ts'), `const DEFAULT_STRINGS = { label: 'Label', confirm: 'Confirm', helperOnly: 'Helper', internalOnly: 'Internal' };`);
+  await writeFile(path.join(forms, 'sample.class.ts'), `export class LyraSample extends LyraElement { render() { return this.localize('label') + this.localize('confirm'); } }`);
+  const helper = path.join(overlays, 'confirm.ts');
+  await writeFile(helper, `import { LYRA_DEFAULT_confirm as confirmed, LYRA_DEFAULT_helperOnly } from '../../../internal/default-strings.generated.js';
+export const defaults = { confirm: confirmed, helperOnly: LYRA_DEFAULT_helperOnly };
+`);
+  await writeFile(path.join(internal, 'helper.ts'), `import { LYRA_DEFAULT_internalOnly } from './default-strings.generated.js';
+export const defaults = { internalOnly: LYRA_DEFAULT_internalOnly };
+`);
+  const testFile = path.join(helperImportFixture, 'src/localization.test.ts');
+  await writeFile(testFile, `import { LYRA_DEFAULT_confirm, LYRA_DEFAULT_label } from './internal/default-strings.generated.js';
+`);
+  const result = await generateDefaultStringSlices({ packageDir: helperImportFixture, write: true, exclusions: {} });
+  const helperSource = await readFile(helper, 'utf8');
+  assert.doesNotMatch(helperSource, /default-strings\.generated/, 'standalone helper imports must not retain the retired aggregate');
+  assert.match(helperSource, /LYRA_DEFAULT_confirm as confirmed.*default-strings\/shared\.generated/);
+  assert.match(helperSource, /LYRA_DEFAULT_helperOnly.*default-strings\/overlays\.generated/);
+  assert.match(await readFile(path.join(internal, 'helper.ts'), 'utf8'), /default-strings\/shared\.generated/);
+  assert.doesNotMatch(await readFile(testFile, 'utf8'), /default-strings\.generated/);
+  assert.deepEqual(result.unusedKeys, [], 'helper-owned defaults are real catalog consumers');
+  const index = await computeFamilyKeyIndex({ packageDir: helperImportFixture, exclusions: {} });
+  assert.deepEqual([...index.keyToFamilies.get('confirm')].sort(), ['forms', 'overlays']);
+  assert.deepEqual([...index.keyToFamilies.get('label')], ['forms'], 'test imports do not widen runtime family ownership');
+  assert.equal((await generateDefaultStringSlices({ packageDir: helperImportFixture, exclusions: {} })).generatedChanged, false);
+  assert.equal((await generateDefaultStringSlices({ packageDir: helperImportFixture, exclusions: {} })).rewrittenFileCount, 0);
+} finally {
+  await rm(helperImportFixture, { recursive: true, force: true });
+}
+
+// Native ESM loads whole modules even when a class imports one named fallback.
+const partitionFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-partition-'));
+try {
+  const internal = path.join(partitionFixture, 'src', 'internal');
+  await mkdir(internal, { recursive: true });
+  await writeFile(path.join(internal, 'localization.ts'), `const DEFAULT_STRINGS = {
+    cancel: 'Cancel', formLabel: 'Form', chartLabel: 'Chart',
+    count: { one: '{count} item', other: '{count} items' },
+  };`);
+  // An obsolete generated aggregate must be removed, not left in the published emit.
+  await writeFile(path.join(internal, 'default-strings.generated.ts'), '// obsolete aggregate');
+  for (const [family, name, calls] of [
+    ['forms', 'input', "this.localize('cancel') + this.localize('formLabel') + this.localize('count')"],
+    ['charts', 'chart', "this.localize('cancel') + this.localize('chartLabel')"],
+  ]) {
+    const dir = path.join(partitionFixture, 'src', 'components', family, name);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, `${name}.class.ts`), `export class LyraSample extends LyraElement { render() { return ${calls}; } }`);
+  }
+  await generateDefaultStringSlices({ packageDir: partitionFixture, write: true, exclusions: {} });
+  const form = await readFile(path.join(partitionFixture, 'src/components/forms/input/input.class.ts'), 'utf8');
+  assert.match(form, /default-strings\/forms\.generated\.js/, 'class imports must point directly to their physical family module');
+  assert.match(form, /default-strings\/shared\.generated\.js/, 'cross-family keys share one physical module');
+  assert.doesNotMatch(form, /charts\.generated|default-strings\.generated/);
+  const family = await readFile(path.join(internal, 'default-strings/forms.generated.ts'), 'utf8');
+  const shared = await readFile(path.join(internal, 'default-strings/shared.generated.ts'), 'utf8');
+  assert.match(family, /LYRA_DEFAULT_count: LyraMessage = \{ one:/);
+  assert.match(family, /LYRA_DEFAULT_formLabel/);
+  assert.doesNotMatch(family, /LYRA_DEFAULT_(cancel|chartLabel)/);
+  assert.match(shared, /LYRA_DEFAULT_cancel/);
+  assert.doesNotMatch(shared, /LYRA_DEFAULT_(formLabel|chartLabel)/);
+  assert.equal(existsSync(path.join(internal, 'default-strings.generated.ts')), false);
+  assert.equal((await generateDefaultStringSlices({ packageDir: partitionFixture, exclusions: {} })).generatedChanged, false);
+  const stale = path.join(internal, 'default-strings/obsolete.generated.ts');
+  await writeFile(stale, '// stale family');
+  assert.equal((await generateDefaultStringSlices({ packageDir: partitionFixture, exclusions: {} })).generatedChanged, true);
+  await generateDefaultStringSlices({ packageDir: partitionFixture, write: true, exclusions: {} });
+  assert.equal(existsSync(stale), false, 'retired family payloads must not remain in the package');
+  const sharedFile = path.join(internal, 'default-strings/shared.generated.ts');
+  const beforeRace = await readFile(sharedFile, 'utf8');
+  await writeFile(sharedFile, '// stale shared output');
+  await assert.rejects(generateDefaultStringSlices({
+    packageDir: partitionFixture, write: true, exclusions: {},
+    beforeWrite: () => writeFile(sharedFile, '// concurrent generated edit'),
+  }), /shared\.generated\.ts changed while default-string slices were being generated/);
+  assert.equal(await readFile(sharedFile, 'utf8'), '// concurrent generated edit');
+  await writeFile(sharedFile, beforeRace);
+} finally {
+  await rm(partitionFixture, { recursive: true, force: true });
+}
+
 const fixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-slices-'));
 try {
   const internal = path.join(fixture, 'src', 'internal');
@@ -100,7 +187,7 @@ try {
   );
   const authored = await readFile(path.join(component, 'sample.class.ts'), 'utf8');
   assert.match(authored, /Concurrent authored prose must survive byte-for-byte/);
-  const generated = await readFile(path.join(internal, 'default-strings.generated.ts'), 'utf8');
+  const generated = await readFile(path.join(internal, 'default-strings/forms.generated.ts'), 'utf8');
   assert.match(generated, /LYRA_DEFAULT_itemCount: LyraMessage = \{ one:/);
   const second = await generateDefaultStringSlices({ packageDir: fixture, write: false, exclusions: {} });
   assert.equal(second.rewrittenFileCount, 0);
@@ -179,7 +266,7 @@ export class LyraGraphSample extends LyraElement {
 
   const result = await generateDefaultStringSlices({ packageDir: graphFixture, write: true, exclusions: {} });
   assert.equal(result.usedKeyCount, 4, 'type-only dependency edges must not enter runtime slices');
-  const generated = await readFile(path.join(internal, 'default-strings.generated.ts'), 'utf8');
+  const generated = await readFile(path.join(internal, 'default-strings/forms.generated.ts'), 'utf8');
   assert.match(generated, /LYRA_DEFAULT_direct/);
   assert.match(generated, /LYRA_DEFAULT_runtimeImport/);
   assert.match(generated, /LYRA_DEFAULT_runtimeExport/);
@@ -262,7 +349,7 @@ export class LyraFalsePositiveSample extends LyraElement {
     write: true,
     exclusions: {},
   });
-  const generated = await readFile(path.join(internal, 'default-strings.generated.ts'), 'utf8');
+  const generated = await readFile(path.join(internal, 'default-strings/utility.generated.ts'), 'utf8');
   assert.doesNotMatch(generated, /LYRA_DEFAULT_copy\b/, 'a type-union member must not be treated as a localize() key');
   assert.doesNotMatch(generated, /LYRA_DEFAULT_loading\b/, 'a discriminated-union tag must not be treated as a localize() key');
   assert.doesNotMatch(generated, /LYRA_DEFAULT_open\b/, 'a changed.get() literal must not be treated as a localize() key');

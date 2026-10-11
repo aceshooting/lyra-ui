@@ -60,7 +60,8 @@ import {
 } from './calendar-core.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_next, LYRA_DEFAULT_nextMonth, LYRA_DEFAULT_previous, LYRA_DEFAULT_previousMonth } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_nextMonth, LYRA_DEFAULT_previousMonth } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface DateRange {

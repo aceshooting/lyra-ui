@@ -109,10 +109,25 @@ export async function checkLocalizationSlices(packageDir) {
     name.endsWith('/internal/localization-runtime.js') && contribution.bytesInOutput > 0,
   ), 'the bundled scoped helper must retain the shared runtime');
   for (const [name, contribution] of emittedInputs) {
-    if (name.endsWith('/internal/localization.js') || name.endsWith('/internal/default-strings.generated.js')) {
+    if (name.endsWith('/internal/localization.js') || /\/internal\/default-strings\/[^/]+\.generated\.js$/.test(name)) {
       assert.equal(contribution.bytesInOutput, 0, `${name} must not contribute full-catalog bytes`);
     }
   }
+
+  const { LyraCard } = await import(pathToFileURL(path.join(dist, 'components/layout/card/card.class.js')));
+  assert.deepEqual(Object.keys(LyraCard.defaultStrings), ['open'],
+    'family modules must not enlarge the per-class English fallback object');
+  assert.equal(runtime.resolveLyraString(unregisteredHost, 'open', undefined, undefined, undefined, LyraCard.defaultStrings), 'Open');
+  const cardBundle = await build({
+    entryPoints: [path.join(dist, 'components/layout/card/card.class.js')],
+    bundle: true, write: false, metafile: true, format: 'esm', platform: 'browser', treeShaking: true,
+  });
+  const defaultContributions = Object.values(cardBundle.metafile.outputs).flatMap((output) =>
+    Object.entries(output.inputs).filter(([name]) => /\/internal\/default-strings\//.test(name)),
+  );
+  const defaultBytes = defaultContributions.reduce((total, [, input]) => total + input.bytesInOutput, 0);
+  assert.ok(defaultBytes > 0 && defaultBytes < 256,
+    `card's bundled default English must retain only its used message (${defaultBytes} bytes)`);
 
   const declaration = await readFile(
     path.join(dist, 'components', 'forms', 'button', 'button.class.d.ts'),

@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Oldingi versiya',
   branchNext: 'Keyingi versiya',
   branchPosition: '{total} tadan {index}-versiya',
-  confirm: 'Tasdiqlash',
   promptQueueItemLabel: 'Navbatdagi {index}-prompt',
   promptQueueActionLabel: '{action}, navbatdagi {index}-prompt',
   sendMessage: 'Xabar yuborish',

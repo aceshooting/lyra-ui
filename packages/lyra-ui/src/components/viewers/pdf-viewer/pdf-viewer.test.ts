@@ -5959,3 +5959,34 @@ describe('adversarial PDF search and paint boundaries', () => {
     target.resolveMountedPageHighlights();
   });
 });
+
+describe('PDF loading-task ownership', () => {
+  for (const action of ['failure', 'supersession', 'disconnect'] as const) {
+    it(`destroys the loading task on ${action} before a document is available`, async () => {
+      const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+      const restore = stubFetch();
+      const pending = deferred<ReturnType<typeof fakeDocument>>();
+      let started = false;
+      let destroys = 0;
+      (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = async () => ({
+        GlobalWorkerOptions: { workerSrc: '' },
+        getDocument: () => {
+          started = true;
+          return { promise: pending.promise, destroy: async () => { destroys++; } };
+        },
+      });
+      try {
+        el.src = 'https://example.test/pending.pdf';
+        await waitUntil(() => started);
+        if (action === 'failure') pending.reject(new Error('Invalid PDF'));
+        else if (action === 'supersession') el.src = '';
+        else el.remove();
+        await twoFrames();
+        expect(destroys).to.equal(1);
+        pending.reject(new Error('Canceled'));
+        await twoFrames();
+        expect(destroys).to.equal(1);
+      } finally { restore(); }
+    });
+  }
+});

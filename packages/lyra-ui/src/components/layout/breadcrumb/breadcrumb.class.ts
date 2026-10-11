@@ -5,7 +5,7 @@ import { tag } from '../../../internal/prefix.js';
 import { styles } from './breadcrumb.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_breadcrumb } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_breadcrumb } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const DECORATIVE_SEPARATOR_CLONE_ATTRIBUTE =

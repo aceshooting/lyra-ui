@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Di version before',
   branchNext: 'Di next version',
   branchPosition: 'Version {index} out of {total}',
-  confirm: 'Confirm am',
   promptQueueItemLabel: 'Prompt {index} wey dey queue',
   promptQueueActionLabel: '{action}, prompt {index} wey dey queue',
   sendMessage: 'Send di message',

@@ -8,7 +8,7 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '../../../interna
 import { styles } from './typing-indicator.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_thinking } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_thinking } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**

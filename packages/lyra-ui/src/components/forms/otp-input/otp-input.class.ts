@@ -25,7 +25,8 @@ import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_otpInputIncomplete, LYRA_DEFAULT_otpInputLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_otpInputIncomplete, LYRA_DEFAULT_otpInputLabel } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Which characters a segment accepts. */

@@ -27,7 +27,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'الإصدار السابق',
   branchNext: 'الإصدار التالي',
   branchPosition: 'الإصدار {index} من {total}',
-  confirm: 'تأكيد',
   promptQueueItemLabel: 'المُوجّه {index} في قائمة الانتظار',
   promptQueueActionLabel: '{action}، المُوجّه {index} في قائمة الانتظار',
   sendMessage: 'إرسال الرسالة',

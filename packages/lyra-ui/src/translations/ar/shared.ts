@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'ترقيم الصفحات',
   paginationSummary: '{start}–{end} من {total} {itemLabel}',
   cancel: 'إلغاء',
+  confirm: 'تأكيد',
   search: 'بحث',
   items: {
     zero: 'عنصر',

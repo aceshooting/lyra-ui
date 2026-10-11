@@ -1,7 +1,7 @@
 import { installFormControlLabelSupport } from './form-control-labels.js';
 import { FormControlController, reflectFormName } from './form-control-controller.js';
 import type { ComplexAttributeConverter, LitElement, PropertyValues } from 'lit';
-import { LYRA_DEFAULT_fieldRequired } from './default-strings.generated.js';
+import { LYRA_DEFAULT_fieldRequired } from './default-strings/shared.generated.js';
 import { resolveLyraString } from './localization-runtime.js';
 import type { LyraLocaleStrings } from './localization-types.js';
 import {
@@ -318,6 +318,7 @@ export interface FormAssociatedInterface<TValue = string> {
   setCustomValidity(message: string): void;
   resetValidity(): void;
   formResetCallback(): void;
+  formDisabledCallback(disabled: boolean): void;
   formStateRestoreCallback(
     state: FormSubmissionValue,
     reason: 'autocomplete' | 'restore',

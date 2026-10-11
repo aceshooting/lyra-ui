@@ -16,7 +16,7 @@ import { collectInitialSlotAssignment } from '../../../internal/initial-slot-col
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings/forms.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraIconButtonEventMap {

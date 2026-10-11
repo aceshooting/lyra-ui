@@ -41,6 +41,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'עימוד',
   paginationSummary: '{start}–{end} מתוך {total} {itemLabel}',
   cancel: 'בטל',
+  confirm: 'אשר',
   search: 'חפש',
   items: {
     one: 'פריט',

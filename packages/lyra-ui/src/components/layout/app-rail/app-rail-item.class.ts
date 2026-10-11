@@ -36,7 +36,7 @@ import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write
 import { styles } from './app-rail-item.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_appRailItemCollapse, LYRA_DEFAULT_appRailItemExpand } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_appRailItemCollapse, LYRA_DEFAULT_appRailItemExpand } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraAppRailItemToggleDetail {

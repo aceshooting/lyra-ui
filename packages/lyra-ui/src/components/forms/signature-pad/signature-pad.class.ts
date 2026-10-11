@@ -20,7 +20,8 @@ import { styles } from './signature-pad.styles.js';
 import { SIGNATURE_PAD_MAX_STROKES, SIGNATURE_PAD_MAX_POINTS } from './signature-pad-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_signaturePad, LYRA_DEFAULT_signaturePadEmpty, LYRA_DEFAULT_signaturePadInstructions, LYRA_DEFAULT_signaturePadLabel, LYRA_DEFAULT_signaturePadPenDown, LYRA_DEFAULT_signaturePadPenUp, LYRA_DEFAULT_signaturePadSigned } from '../../../internal/default-strings.generated.js';
+import { LYRA_DEFAULT_signaturePad, LYRA_DEFAULT_signaturePadEmpty, LYRA_DEFAULT_signaturePadInstructions, LYRA_DEFAULT_signaturePadLabel, LYRA_DEFAULT_signaturePadPenDown, LYRA_DEFAULT_signaturePadPenUp, LYRA_DEFAULT_signaturePadSigned } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export { SIGNATURE_PAD_MAX_STROKES, SIGNATURE_PAD_MAX_POINTS } from './signature-pad-limits.js';

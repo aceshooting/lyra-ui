@@ -40,6 +40,7 @@ const strings: LyraLocaleStrings = {
   paginationLabel: 'Sivutus',
   paginationSummary: '{start}–{end}/{total} {itemLabel}',
   cancel: 'Peruuta',
+  confirm: 'Vahvista',
   search: 'Hae',
   items: {
     one: 'kohde',

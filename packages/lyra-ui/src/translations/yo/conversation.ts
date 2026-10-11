@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   branchPrevious: 'Ẹ̀dà tẹ́lẹ̀',
   branchNext: 'Ẹ̀dà tó kàn',
   branchPosition: 'Ẹ̀dà {index} nínú {total}',
-  confirm: 'Jẹ́rìí',
   promptQueueItemLabel: 'Prompt {index} tó wà ní ìlà',
   promptQueueActionLabel: '{action}, prompt {index} tó wà ní ìlà',
   sendMessage: 'Fi ìfiránṣẹ́ ránṣẹ́',
