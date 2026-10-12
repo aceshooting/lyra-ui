@@ -1,4 +1,4 @@
-# Saved synthetic baseline
+# Saved synthetic baselines
 
 [2026-10-12-stress.json](2026-10-12-stress.json) records the published `@aceshooting/lyra-ui@28.1.0` package. It includes 16 workloads across Chromium, Firefox, WebKit, Chrome and Edge, with one discarded warmup and seven measured samples per scenario. The JSON contains each assertion, raw timing, count, version and fingerprint; its status fields are authoritative.
 
@@ -23,3 +23,16 @@ pnpm benchmark:compare benchmarks/baselines/2026-10-12-stress.json benchmarks/re
 Comparison requires matching browser versions, environment metadata and harness fingerprints. If the toolchain, machine or fixtures changed, run both the baseline package and candidate again in the new environment. `--package-dir` can select an independently installed published package; keep harness peers fixed. An explicit incompatible comparison is exploratory and cannot pass qualification.
 
 Keep the dated result unchanged when adding a later baseline. New ordinary results go to the ignored `benchmarks/results/` directory; promote a reviewed result under a new name. See the [benchmark guide](../README.md) for phase definitions, thresholds and validation commands.
+
+[2026-10-12-28.1.1-stress.json](2026-10-12-28.1.1-stress.json) preserves the 28.1.1 distribution measured later that day. All 80 workload/browser cases and 560 recorded samples passed their semantic checks. It retains the original raw samples and anonymous metadata, including `publicCommit: null`; no source commit has been inferred or added.
+
+The compatible comparison with the unchanged 28.1.0 baseline observed 84 regressed and 131 improved metric series out of 800, using the existing thresholds of more than 15% **and** 1 ms for median or p95. A series can appear in both groups. These measurements do not establish a uniform speedup or attribute timing changes to the library.
+
+Validate the saved run and reproduce that comparison without launching browsers:
+
+```sh
+node benchmarks/schema.mjs --validate benchmarks/baselines/2026-10-12-28.1.1-stress.json
+pnpm benchmark:compare benchmarks/baselines/2026-10-12-stress.json benchmarks/baselines/2026-10-12-28.1.1-stress.json
+```
+
+The original comparison exits with status 1 because timing regressions exceeded both thresholds; this does not mean the recorded semantic checks failed.
