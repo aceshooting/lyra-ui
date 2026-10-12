@@ -1,5 +1,44 @@
 # Changelog
 
+## 28.1.1
+
+### Patch Changes
+
+- 992d6a2: Close entity-chip and citation-badge previews in the same update when their last assigned content is removed alongside a label change. Clear the preview description while preserving keyboard focus.
+- 07d9075: Add scoped command discovery, search excerpts, a document outline, bounded document checks, comments and qualified tracked-text review to the DOCX editor. Add table formatting, insertion into qualified styled paragraphs and table-cell boundaries, and byte-only image replacement that preserves picture geometry and descriptions. New reports use revision-scoped identifiers, and editing actions retain their original selection intent.
+
+  Reuse graph hull paths and bounded heatmap label measurements during painting, with invalidation when geometry or text settings change.
+
+  Keep command descriptions and shortcuts readable through command-palette highlight transitions.
+
+  The production gzip cost is 376 bytes for the data family, 105 bytes for retrieval and 1 byte for layout. Complete registration adds 512 bytes; the standard and CDN autoloaders add 464 and 477 bytes, and SSR registration adds 496 bytes. Only these seven breached bundle ceilings move to their exact measured sizes, without extra allowance, for bounded text/path reuse and highlighted text contrast. Other bundle canaries and optional-peer exclusions remain unchanged.
+- c529f00: Normalize a navigation item's initial open state when its panel is removed before the first render, without emitting a toggle for a panel that was never shown.
+
+  Preserve the inherited lifecycle API and focus repair ordering by normalizing after slot presence refresh. The five affected bundle ceilings record the measured correctness fix with no added allowance; the complete bundle grows by 40 gzip bytes.
+- 7a28693: Keep newer dialogs interactive when an underlying overlay's native dialog is closed externally, and restore the underlying overlay after the covering dialogs leave. Cancel deferred restoration when its owner closes or disconnects.
+
+  Allow an already-mounted overlay to become interactive above another modal without inheriting the lower overlay's temporary inert state. Preserve explicitly authored inert states and restore them when overlays close.
+- 7a28693: Keep combobox `selectedRows` aligned with programmatically bound values when a search filters selected options out of the suggestion list.
+- 6ea4454: Reduce temporary allocations when selecting a small number of values from a large option list.
+
+  The allocation guard adds 15 gzip bytes to the direct select entry, 22 to its initial marginal route, and 17 to the complete registration barrel. Only breached bundle ceilings advance to their exact reviewed measurements, with no added allowance. The release version stamp adds one byte to the menu and tour marginal routes and two bytes to entity-chip; those three ceilings also match their exact measured sizes.
+- b582d6d: Reduce repeated option catalog scans, project only needed combobox rows, and skip unnecessary adornment serialization. Preserve duplicate selection identities, current option metadata, and form behavior.
+
+  Reuse accessible chart table rows during caption, description, and keyboard announcement updates while retaining explicit refresh and data-dependent invalidation. Avoid sorting non-median data-grid aggregates, normalize search text once, and resolve filter collators only when needed.
+
+  Resolve checkbox selection occurrences and gauge thresholds in linear passes, and reuse the inherited locale during neighbor sorting.
+
+  Index selected choices and hidden graph types once per render or search pass, preserving first-match labels, selection order, and current interaction state.
+
+  Replace repeated membership searches during retrieval, form, file, feedback, and layout updates with bounded lookup indexes. Preserve duplicate identities, validation priority, focus recovery, and source order, and release stale retrieval indexes when their content disappears.
+
+  Normalize picker searches once per pass, find synchronized chart points without sorting, and avoid repeated toolbar ownership scans. Keep toggle matching and batched tree metadata updates linear while preserving empty and singleton fast paths.
+
+  Keep virtualized emoji options connected while they own focus or the active-descendant reference. Correct metric, commit-summary, PDF zoom, and required-button accessibility semantics while preserving localized text and descriptions.
+
+  Keep bundle ceilings tied to exact reviewed gzip measurements for the added lookup indexes, chart caches, retained focus rows, and accessible descriptions, without extra allowance. Preserve passing ceilings, peer exclusions, and CSS budgets.
+- @aceshooting/lyra-translations@28.1.1
+
 ## 28.1.0
 
 ### Minor Changes
