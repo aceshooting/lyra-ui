@@ -1789,6 +1789,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.paintedTheme = undefined;
     this.canvasColorCache.clear();
     this.watchDpr();
+    if (this.drawDirty && !ResizeObserverCtor) this.scheduleDraw();
     // Theme watching is owned by the ThemeWatcher controller (connect/disconnect lifecycle too).
   }
 
@@ -2630,6 +2631,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   private requestDraw(): void {
     this.drawDirty = true;
+    if (!this.isConnected) return;
     if (this.canvasVisible) this.draw();
     else this.syncDeferredFitFrame(true);
   }

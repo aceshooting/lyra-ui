@@ -709,6 +709,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private chargeForce?: D3ForceManyBody<SimNode>;
   private linkForce?: D3ForceLink<SimNode, SimLink>;
   private d3?: D3Modules;
+  /** Reactive graph inputs consumed by Lit while detached need one connected pass to reach d3. */
+  private detachedGraphChanges = new Map<PropertyKey, unknown>();
   /** The `<svg>` (or, in `renderer="canvas"` mode, the `<canvas>`) currently wired up with d3-zoom
    *  (guards a one-time bind per element). */
   private zoomedEl?: SVGSVGElement | HTMLCanvasElement;
@@ -918,6 +920,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // A detached property can round-trip to its original value while replacing its render node.
+    // Even when every keyed request is a no-op, rebind d3 to the surviving renderer on reconnect.
+    if (this.detachedGraphChanges.size) {
+      for (const [key, previous] of this.detachedGraphChanges)
+        this.requestUpdate(key as keyof this, previous as this[keyof this]);
+      this.detachedGraphChanges.clear();
+      this.requestUpdate();
+    }
     this.reducedMotion = prefersReducedMotion(this);
     // Observed unconditionally (both first mount and any reconnect below) -- visibility gating
     // applies regardless of whether renderer="canvas" is active yet or d3 has finished loading.
@@ -2657,7 +2667,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       ? this.graphItemIdentity(previousIndex)
       : undefined;
 
-    if (structureChanged) {
+    if (structureChanged && this.isConnected) {
       this.rebuildSimulation();
       if (this.renderer === 'svg' && this.simNodes.length + this.simLinks.length > 1_000)
         devWarnOnce(
@@ -2730,6 +2740,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op today, but a future shared mixin under LyraElement must still run
+    if (!this.isConnected) {
+      for (const [key, previous] of changed)
+        if (!this.detachedGraphChanges.has(key)) this.detachedGraphChanges.set(key, previous);
+      return;
+    }
     this.setAttribute('aria-busy', String(this.loading));
 
     const announceGraphText =
@@ -2864,7 +2879,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (this.renderer !== 'svg') return;
 
     const svgEl = this.renderRoot.querySelector('svg');
-    if (svgEl && svgEl !== this.zoomedEl) {
+    const reboundSurface = svgEl && svgEl !== this.zoomedEl;
+    if (svgEl && reboundSurface) {
       // Binding a fresh svg means any previous renderer="canvas" surface is gone -- stop its
       // resize watcher now (it observes the host, not the removed <canvas>, so it would keep
       // firing markCanvasDirty() for as long as the element lives in svg mode). Routed through
@@ -2930,6 +2946,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
     if (
       !(
+        reboundSurface ||
         changed.has('simNodes') ||
         changed.has('simLinks') ||
         changed.has('nodeTypes') ||

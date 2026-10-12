@@ -23412,7 +23412,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph.class.ts",
-              "line": 991,
+              "line": 1001,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24346,7 +24346,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2384,
+              "line": 2385,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

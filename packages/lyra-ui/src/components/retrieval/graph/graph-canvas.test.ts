@@ -1642,6 +1642,123 @@ it('stops the force simulation on disconnect so a detached instance stops tickin
   expect(simulation.alpha()).to.equal(alphaAfterDisconnect);
 });
 
+it('does not recreate a force simulation when a structural update flushes after disconnect', async () => {
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.edges = links;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const internals = el as unknown as { simulation?: { stop(): void } };
+  const before = internals.simulation;
+  expect(before === undefined).to.equal(false);
+  const parent = el.parentNode!;
+  el.nodes = [...nodes, { id: 'c', label: 'C' }];
+  el.remove();
+  expect(el.isConnected).to.equal(false);
+  await el.updateComplete;
+  expect(el.isConnected).to.equal(false);
+  expect(internals.simulation === before, 'detached update must not start a replacement simulation').to.equal(true);
+  parent.appendChild(el);
+  try {
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+  } finally {
+    internals.simulation?.stop();
+  }
+});
+
+it('defers force retuning until reconnect when an update flushes while detached', async () => {
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.edges = links;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const internals = el as unknown as {
+    simulation: { restart(): unknown; stop(): void };
+    chargeForce: { strength(): () => number };
+  };
+  const simulation = internals.simulation;
+  const initialStrength = internals.chargeForce.strength()();
+  const originalRestart = simulation.restart.bind(simulation);
+  let detachedRestarts = 0;
+  simulation.restart = () => { detachedRestarts++; return originalRestart(); };
+  const parent = el.parentNode!;
+  el.chargeStrength = -900;
+  el.remove();
+  await el.updateComplete;
+  expect(el.isConnected).to.equal(false);
+  expect(internals.simulation === simulation).to.equal(true);
+  expect(detachedRestarts, 'detached update must not restart the stopped simulation').to.equal(0);
+  expect(internals.chargeForce.strength()()).to.equal(initialStrength);
+  parent.appendChild(el);
+  try {
+    await waitUntil(() => internals.chargeForce.strength()() === -900, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+  } finally {
+    internals.simulation.stop();
+  }
+});
+
+it('replays a detached focus-only update after reconnect', async () => {
+  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.edges = links;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const parent = el.parentNode!;
+  const internal = el as unknown as { lastAppliedFocusNodeId: string | null; simulation?: { stop(): void } };
+  el.focusNodeId = 'b';
+  el.remove();
+  await el.updateComplete;
+  expect(internal.lastAppliedFocusNodeId).to.equal(null);
+  parent.appendChild(el);
+  try {
+    await waitUntil(() => internal.lastAppliedFocusNodeId === 'b', undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+  } finally {
+    internal.simulation?.stop();
+  }
+});
+
+it('rebinds the final renderer after a detached renderer round trip', async () => {
+  const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.edges = links;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const internals = el as unknown as {
+    zoomedEl?: Element;
+    nodeEls: Element[];
+    simulation?: { stop(): void };
+  };
+  const oldSvg = el.shadowRoot!.querySelector('svg');
+  const parent = el.parentNode!;
+  el.remove();
+  el.renderer = 'canvas';
+  await el.updateComplete;
+  el.renderer = 'svg';
+  await el.updateComplete;
+  expect(el.isConnected).to.equal(false);
+  expect(el.shadowRoot!.querySelector('svg') === oldSvg).to.equal(false);
+  parent.appendChild(el);
+  try {
+    await waitUntil(() => internals.zoomedEl === el.shadowRoot!.querySelector('svg'), undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(internals.zoomedEl === el.shadowRoot!.querySelector('svg')).to.equal(true);
+    expect(internals.nodeEls[0] === el.shadowRoot!.querySelector('[part="node"]')).to.equal(true);
+  } finally {
+    internals.simulation?.stop();
+  }
+});
+
 it('does not restart the simulation from scratch on a reconnect (e.g. a drag-and-drop reparent)', async () => {
   // A seed converges the initial simulation synchronously. Reconnect continuity is proved by the
   // simulation object's identity below, so making this setup deterministic avoids spending almost
