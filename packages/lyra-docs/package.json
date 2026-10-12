@@ -76,7 +76,7 @@
     "@aceshooting/lyra-ui": "workspace:*",
     "@types/node": "26.6.5",
     "typescript": "^7.0.2",
-    "@docx-editor.dev/core": "2.27.0",
+    "@docx-editor.dev/core": "2.28.0",
     "axe-core": "^4.14.0",
     "playwright": "^1.64.0",
     "vite": "^8.3.4",
@@ -92,7 +92,7 @@
   },
   "peerDependencies": {
     "@aceshooting/lyra-ui": "workspace:^",
-    "@docx-editor.dev/core": "2.27.0"
+    "@docx-editor.dev/core": "2.28.0"
   },
   "peerDependenciesMeta": {
     "@docx-editor.dev/core": {

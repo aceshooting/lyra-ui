@@ -1,7 +1,7 @@
 # @aceshooting/lyra-docs
 
 `@aceshooting/lyra-docs` is a public, experimental companion package for the
-native Lyra DOCX editor. Its runtime uses the public `@docx-editor.dev/core@2.27.0`
+native Lyra DOCX editor. Its runtime uses the public `@docx-editor.dev/core@2.28.0`
 engine as an optional peer. Existing document viewers, including
 `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
@@ -16,7 +16,7 @@ Install the package with its `@aceshooting/lyra-ui` peer, and the optional docum
 when using the editor:
 
 ```sh
-pnpm add @aceshooting/lyra-docs @aceshooting/lyra-ui @docx-editor.dev/core@2.27.0
+pnpm add @aceshooting/lyra-docs @aceshooting/lyra-ui @docx-editor.dev/core@2.28.0
 ```
 
 ## Imports
@@ -46,7 +46,7 @@ Lyra controls inherit the public theme. The engine is dynamically loaded on the
 first open, so importing the session API or registering the custom element does
 not initialize it. Package admission and the controls that only appear in an open
 document (color, chart, checkbox and text-area controls) also load with the first open.
-`@docx-editor.dev/core` is an exact `2.27.0` peer dependency and development
+`@docx-editor.dev/core` is an exact `2.28.0` peer dependency and development
 dependency; consumers may omit it until they use the editor.
 
 ## Custom element

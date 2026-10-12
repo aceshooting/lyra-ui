@@ -22,6 +22,22 @@ function fixture(kind = 'image-simple') {
   const parsed = readOoxmlPackage(imageFixture(kind));
   assert(parsed.ok);
   const pkg = structuredClone(parsed.package), part = pkg.parts.get(pkg.mainDocumentPart)!;
+  // Core may share immutable empty arrays between nodes. Detach each fixture node's arrays so
+  // adversarial mutations below affect only the node named by the test.
+  function detachArrays(node: OoxmlNode): void {
+    if (node.kind === 'textValue') return;
+    const element = node as OoxmlElement;
+    Object.defineProperty(element, 'attributes', {
+      configurable: true, enumerable: true, writable: true,
+      value: element.attributes.map(attribute => ({ ...attribute }))
+    });
+    Object.defineProperty(element, 'children', {
+      configurable: true, enumerable: true, writable: true,
+      value: [...element.children]
+    });
+    element.children.forEach(detachArrays);
+  }
+  detachArrays(part.root);
   const nodes: OoxmlElement[] = [];
   function collect(node: OoxmlNode): void {
     if (node.kind === 'textValue') return;
