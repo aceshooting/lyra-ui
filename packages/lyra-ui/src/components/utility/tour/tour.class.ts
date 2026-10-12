@@ -1,7 +1,7 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { isCrossRealmPlainRecord } from '../../../internal/object-guards.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
-import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
+import { html, svg, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import type { Placement } from '@floating-ui/dom';
@@ -1085,8 +1085,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     return this.nativeModal.render(html`
       <svg part="backdrop" aria-hidden="true" @click=${this.onBackdropClick}>
         ${this.unanchored
-          ? html`<rect class="scrim" x="0" y="0" width="100%" height="100%"></rect>`
-          : html`
+          ? svg`<rect class="scrim" x="0" y="0" width="100%" height="100%"></rect>`
+          : svg`
               <defs>
                 <mask id=${this.maskId}>
                   <rect x="0" y="0" width="100%" height="100%" fill="white"></rect>

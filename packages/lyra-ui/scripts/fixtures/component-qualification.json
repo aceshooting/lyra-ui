@@ -53516,6 +53516,7 @@
         "tests": [
           "src/components/utility/tour/native-modal.test.ts",
           "src/components/utility/tour/positioning-strategy.test.ts",
+          "src/components/utility/tour/svg-backdrop.test.ts",
           "src/components/utility/tour/tour.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
