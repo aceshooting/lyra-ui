@@ -827,7 +827,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     const height = Math.max(0, rect.height + padding * 2);
 
     const backdrop = this.renderRoot.querySelector('[part="backdrop"]') as SVGSVGElement | null;
-    const cutout = this.renderRoot.querySelector('[part="backdrop"] .cutout') as SVGRectElement | null;
+    const cutout = backdrop?.querySelector('.cutout');
     const spotlight = this.renderRoot.querySelector('[part="spotlight"]') as HTMLElement | null;
 
     if (cutout) {
@@ -851,27 +851,19 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   private resetSpotlightGeometry(): void {
     this.spotlightPositioned = false;
-    const cutout = this.renderRoot?.querySelector(
-      '[part="backdrop"] .cutout',
-    ) as SVGRectElement | null;
     const spotlight = this.renderRoot?.querySelector(
       '[part="spotlight"]',
     ) as HTMLElement | null;
     const backdrop = this.renderRoot?.querySelector(
       '[part="backdrop"]',
     ) as SVGSVGElement | null;
+    const cutout = backdrop?.querySelector('.cutout');
     if (cutout) {
-      cutout.setAttribute('x', '0');
-      cutout.setAttribute('y', '0');
-      cutout.setAttribute('width', '0');
-      cutout.setAttribute('height', '0');
+      for (const attribute of ['x', 'y', 'width', 'height']) cutout.setAttribute(attribute, '0');
     }
     if (spotlight) {
       spotlight.hidden = true;
-      spotlight.style.removeProperty('left');
-      spotlight.style.removeProperty('top');
-      spotlight.style.removeProperty('width');
-      spotlight.style.removeProperty('height');
+      for (const property of ['left', 'top', 'width', 'height']) spotlight.style.removeProperty(property);
     }
     backdrop?.style.removeProperty('clip-path');
   }
@@ -1084,17 +1076,17 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
     return this.nativeModal.render(html`
       <svg part="backdrop" aria-hidden="true" @click=${this.onBackdropClick}>
-        ${this.unanchored
-          ? svg`<rect class="scrim" x="0" y="0" width="100%" height="100%"></rect>`
-          : svg`
+        ${!this.unanchored
+          ? svg`
               <defs>
                 <mask id=${this.maskId}>
                   <rect x="0" y="0" width="100%" height="100%" fill="white"></rect>
                   <rect class="cutout" x="0" y="0" width="0" height="0" fill="black"></rect>
                 </mask>
               </defs>
-              <rect class="scrim" x="0" y="0" width="100%" height="100%" mask="url(#${this.maskId})"></rect>
-            `}
+            `
+          : nothing}
+        <rect class="scrim" x="0" y="0" width="100%" height="100%" mask=${this.unanchored ? nothing : `url(#${this.maskId})`}></rect>
       </svg>
       <div
         part="spotlight"
@@ -1123,10 +1115,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
               ? html`
                   <div part="progress">
                     <span part="progress-text" id=${this.progressTextId}>
-                      ${this.localize('tourStepOf', undefined, {
-                        current: this.formatProgressNumber(this.activeIndex + 1),
-                        total: this.formatProgressNumber(total),
-                      })}
+                      ${fallbackName}
                     </span>
                     <span class="dots">
                       ${this.steps.map(
