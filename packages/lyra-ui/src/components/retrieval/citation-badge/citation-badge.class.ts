@@ -210,15 +210,20 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   // A rendered slot is never empty because the slot node itself is present;
   // the shared controller also counts bare, non-whitespace text content.
   private readonly slotPresence = new SlotPresenceController(this);
-  private readonly preview = new PreviewDisclosureController({
-    host: this,
-    button: () => this.buttonEl,
-    panel: () => this.popoverEl,
-    hasContent: () => this.hasPreviewSlot,
-    isOpen: () => this.popoverOpen,
-    setOpen: (open) => { this.popoverOpen = open; },
-    hideDelayMs: HIDE_DELAY_MS,
-  });
+  private readonly preview = (() => {
+    const preview = new PreviewDisclosureController({
+      host: this,
+      button: () => this.buttonEl,
+      panel: () => this.popoverEl,
+      hasContent: () => this.hasPreviewSlot,
+      isOpen: () => this.popoverOpen,
+      setOpen: (open) => { this.popoverOpen = open; },
+      hideDelayMs: HIDE_DELAY_MS,
+    });
+    // Slot presence refreshes first, then an empty open preview closes before render.
+    this.addController({ hostUpdate: () => preview.ensureContent() });
+    return preview;
+  })();
 
   private get hasPreviewSlot(): boolean {
     return this.slotPresence.has();
@@ -226,10 +231,6 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    // The slot can be emptied out from under an already-open popover (e.g. a
-    // consumer clearing preview content asynchronously) — nothing left to
-    // show, so don't leave an empty panel floating open.
-    this.preview.ensureContent();
   }
 
   protected override updated(changed: PropertyValues): void {

@@ -316,25 +316,47 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
   await check('oversized local files refuse before reading and malformed bytes show normalized feedback', async () => {
     const id = 'insert-ui-invalid'; await createPlain(page, id, createEditor);
     const before = await saveEditor(page, id), initial = await snapshot(page, id);
-    await page.evaluate(() => { window.__insertionArrayBuffer = File.prototype.arrayBuffer; window.__insertionArrayBufferDescriptor = Object.getOwnPropertyDescriptor(File.prototype, 'arrayBuffer'); window.__insertionReads = 0;
-      File.prototype.arrayBuffer = function () { window.__insertionReads++; return window.__insertionArrayBuffer.call(this); }; });
+    await page.evaluate(() => {
+      window.__insertionArrayBuffer = File.prototype.arrayBuffer;
+      window.__insertionArrayBufferDescriptor = Object.getOwnPropertyDescriptor(File.prototype, 'arrayBuffer');
+      window.__insertionReads = 0;
+      window.__rejectNextInsertionRead = false;
+      File.prototype.arrayBuffer = function () {
+        window.__insertionReads++;
+        if (window.__rejectNextInsertionRead) {
+          window.__rejectNextInsertionRead = false;
+          return Promise.reject(new Error('test read failure'));
+        }
+        return window.__insertionArrayBuffer.call(this);
+      };
+    });
     try {
       await choose(page, id, Buffer.alloc(4 * 1024 * 1024 + 1));
       await part(page, id, 'status').waitFor({ state: 'visible' });
       assert.equal(await page.evaluate(() => window.__insertionReads), 0);
-      await choose(page, id, Buffer.from('invalid image'));
+      const validPng = await source(page, 'png');
+      await page.evaluate(() => { window.__rejectNextInsertionRead = true; });
+      await choose(page, id, validPng);
       await part(page, id, 'status').waitFor({ state: 'visible' });
       assert.equal(await page.evaluate(() => window.__insertionReads), 1);
+      assert.equal(await part(page, id, 'width').count(), 0);
+      const readFailureText = await part(page, id, 'status').textContent();
+      assert.ok(readFailureText?.trim());
+      assert.ok(!readFailureText?.includes('test read failure'), 'private read errors are not exposed anywhere in the user-facing status text');
+      await unchanged(page, id, before, initial, saveEditor);
+      await choose(page, id, Buffer.from('invalid image'));
+      await part(page, id, 'status').waitFor({ state: 'visible' });
+      assert.equal(await page.evaluate(() => window.__insertionReads), 2);
       assert.equal(await part(page, id, 'width').count(), 0); await unchanged(page, id, before, initial, saveEditor);
       const jpeg = await source(page, 'jpeg');
       await choose(page, id, Buffer.concat([jpeg.subarray(0, 2), Buffer.from([255, 225, 0, 4, 0, 0]), jpeg.subarray(2)]));
-      await page.waitForFunction(() => window.__insertionReads === 2);
+      await page.waitForFunction(() => window.__insertionReads === 3);
       // A photo with camera metadata reaches the draft; the metadata is dropped rather than refused.
       await part(page, id, 'width').waitFor({ state: 'visible' });
       await part(page, id, 'cancel').click();
       await unchanged(page, id, before, initial, saveEditor);
     } finally {
-      await page.evaluate(() => { if (window.__insertionArrayBufferDescriptor) Object.defineProperty(File.prototype, 'arrayBuffer', window.__insertionArrayBufferDescriptor); else delete File.prototype.arrayBuffer; delete window.__insertionArrayBufferDescriptor; delete window.__insertionArrayBuffer; delete window.__insertionReads; });
+      await page.evaluate(() => { if (window.__insertionArrayBufferDescriptor) Object.defineProperty(File.prototype, 'arrayBuffer', window.__insertionArrayBufferDescriptor); else delete File.prototype.arrayBuffer; delete window.__insertionArrayBufferDescriptor; delete window.__insertionArrayBuffer; delete window.__insertionReads; delete window.__rejectNextInsertionRead; });
       await dispose(page, id);
     }
   });

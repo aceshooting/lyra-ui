@@ -1885,6 +1885,8 @@ it("shares the text-field native passthrough shape: boolean autocorrect, inputMo
   el.enterkeyhint = "go";
   await el.updateComplete;
   expect(el.autocorrect).to.equal(true);
+  expect(el.inputmode).to.equal("text");
+  expect(el.enterkeyhint).to.equal("go");
   expect(el.inputMode).to.equal("text");
   expect(native().getAttribute("inputmode")).to.equal("text");
   expect(native().getAttribute("enterkeyhint")).to.equal("go");

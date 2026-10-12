@@ -1970,6 +1970,9 @@ it("consumes nested control aliases and exposes the aggregate native and typed i
   );
 
   expect(events).to.deep.equal(["input", "lr-input"]);
+  native.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+  expect(events).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+  expect(el.value).to.deep.equal({ notes: 'Updated' });
 });
 
 it("keeps each keyed composed control with its logical field across reorder", async () => {

@@ -10031,6 +10031,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/retrieval/citation-badge/citation-badge-overlay-lifecycle.test.ts",
+          "src/components/retrieval/citation-badge/citation-badge-slot-lifecycle.test.ts",
           "src/components/retrieval/citation-badge/citation-badge.test.ts",
           "src/components/retrieval/citation-badge/positioning-strategy.test.ts"
         ],
@@ -12968,6 +12969,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/context-menu/context-menu-anchor-lifecycle.test.ts",
+          "src/components/overlays/context-menu/context-menu-resize-anchor.test.ts",
           "src/components/overlays/context-menu/context-menu-stable-anchor.test.ts",
           "src/components/overlays/context-menu/context-menu.test.ts"
         ],
@@ -19357,6 +19359,7 @@
         "tests": [
           "src/components/retrieval/entity-chip/entity-chip-overlay-lifecycle.test.ts",
           "src/components/retrieval/entity-chip/entity-chip-remediation.test.ts",
+          "src/components/retrieval/entity-chip/entity-chip-slot-lifecycle.test.ts",
           "src/components/retrieval/entity-chip/entity-chip.test.ts",
           "src/components/retrieval/entity-chip/positioning-strategy.test.ts"
         ],
@@ -53956,8 +53959,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/tree/tree-item.test.ts",
-              "test": "retains the timer owner while adopting and reads motion state from the new owner realm",
+              "file": "src/components/data/tree/tree-item-animation-target.test.ts",
+              "test": "ignores bubbled animationend from a nested child and settles on its own children animation",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -54066,6 +54069,7 @@
           "src/components/data/tree/tree-dirty-root-cost.test.ts",
           "src/components/data/tree/tree-dynamic-state.test.ts",
           "src/components/data/tree/tree-inert.test.ts",
+          "src/components/data/tree/tree-item-animation-target.test.ts",
           "src/components/data/tree/tree-item.test.ts",
           "src/components/data/tree/tree-lifecycle.test.ts",
           "src/components/data/tree/tree-navigation.test.ts",
@@ -54163,8 +54167,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/tree/tree-item.test.ts",
-              "test": "retains the timer owner while adopting and reads motion state from the new owner realm",
+              "file": "src/components/data/tree/tree-item-animation-target.test.ts",
+              "test": "ignores bubbled animationend from a nested child and settles on its own children animation",
               "kind": "reduced-motion test signal"
             }
           ]
@@ -54284,6 +54288,7 @@
           "src/components/data/tree/tree-dirty-root-cost.test.ts",
           "src/components/data/tree/tree-dynamic-state.test.ts",
           "src/components/data/tree/tree-inert.test.ts",
+          "src/components/data/tree/tree-item-animation-target.test.ts",
           "src/components/data/tree/tree-item.test.ts",
           "src/components/data/tree/tree-lifecycle.test.ts",
           "src/components/data/tree/tree-navigation.test.ts",

@@ -307,14 +307,65 @@ export async function runEditorLayout(page, check, { createEditor, saveEditor })
       return element.snapshot()?.revision?.value !== revision && Math.abs(picture?.getBoundingClientRect().width - width) < 1;
     }, { revision: dragged, width: image.width }, { timeout: 5000 });
     // A click racing the post-undo repaint can land beside the picture; select it through the API instead.
-    await page.waitForFunction(() => document.getElementById('layout-drag').selectImage('next').ok);
+    await page.waitForFunction(async () => {
+      const element = document.getElementById('layout-drag');
+      const result = element.selectImage('next');
+      if (!result.ok) return false;
+      await element.updateComplete;
+      return true;
+    });
+    await host.scrollIntoViewIfNeeded();
     await host.locator('[part="image-handle"][data-handle="e"]').waitFor({ state: 'visible' });
-    const edge = await host.locator('[part="image-handle"][data-handle="e"]').boundingBox();
+    await host.locator('[part="image-handle"][data-handle="s"]').waitFor({ state: 'visible' });
     const start = await host.evaluate(element => element.snapshot().image);
     assert.equal(start.widthPoints, before.widthPoints, 'one undo restores the dragged width');
-    await page.mouse.move(edge.x + edge.width / 2, edge.y + edge.height / 2);
+    const verticalRevision = await host.evaluate(element => element.snapshot().revision.value);
+    await handle.scrollIntoViewIfNeeded();
+    const verticalHandle = await handle.boundingBox();
+    const verticalStartFrame = await host.locator('[part="image-frame"]').boundingBox();
+    assert.ok(verticalHandle && verticalStartFrame, 'the selected image and southeast handle have layout boxes');
+    const southeastHit = await host.evaluate((element, point) =>
+      element.shadowRoot.elementFromPoint(point.x, point.y)?.closest('[part="image-handle"]')?.getAttribute('data-handle') ?? null,
+    { x: verticalHandle.x + verticalHandle.width / 2, y: verticalHandle.y + verticalHandle.height / 2 });
+    assert.equal(southeastHit, 'se', JSON.stringify({ verticalHandle, verticalStartFrame, southeastHit }));
+    await page.mouse.move(verticalHandle.x + verticalHandle.width / 2, verticalHandle.y + verticalHandle.height / 2);
     await page.mouse.down();
-    await page.mouse.move(edge.x + edge.width / 2 + 30, edge.y + edge.height / 2, { steps: 3 });
+    await host.locator('[part="image-frame"][data-dragging="true"]').waitFor({ state: 'visible' });
+    await page.mouse.move(verticalHandle.x + verticalHandle.width / 2 + 4,
+      verticalHandle.y + verticalHandle.height / 2 + 35, { steps: 5 });
+    await page.waitForFunction(({ id, height }) =>
+      document.getElementById(id).shadowRoot.querySelector('[part="image-frame"]')?.getBoundingClientRect().height > height + 15,
+      { id: 'layout-drag', height: verticalStartFrame.height });
+    await page.mouse.up();
+    await page.waitForFunction(({ id, revision }) => document.getElementById(id).snapshot()?.revision?.value > revision,
+      { id: 'layout-drag', revision: verticalRevision });
+    const verticalAfter = await host.evaluate(element => element.snapshot().image);
+    assert.ok(verticalAfter.widthPoints > start.widthPoints, JSON.stringify({ start, verticalAfter }));
+    assert.ok(verticalAfter.heightPoints > start.heightPoints, JSON.stringify({ start, verticalAfter }));
+    assert.ok(Math.abs(verticalAfter.widthPoints / verticalAfter.heightPoints - start.widthPoints / start.heightPoints) < 0.02,
+      JSON.stringify({ start, verticalAfter }));
+    const verticalChangedRevision = await host.evaluate(element => element.snapshot().revision.value);
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z');
+    await page.waitForFunction(({ id, revision }) => {
+      const snapshot = document.getElementById(id).snapshot();
+      return snapshot.revision.value !== revision && snapshot.commands.redo.enabled;
+    }, { id: 'layout-drag', revision: verticalChangedRevision });
+    const restoredSelection = await host.evaluate(async element => {
+      const result = element.selectImage('next');
+      await element.updateComplete;
+      return { result, image: element.snapshot().image };
+    });
+    assert.equal(restoredSelection.result.ok, true);
+    assert.deepEqual(restoredSelection.image, start, 'one undo restores the vertically resized image dimensions');
+    await host.locator('[part="image-handle"][data-handle="e"]').waitFor({ state: 'visible' });
+    const horizontalHandle = await host.locator('[part="image-handle"][data-handle="e"]').boundingBox();
+    const restoredFrame = await host.locator('[part="image-frame"]').boundingBox();
+    assert.ok(horizontalHandle && restoredFrame, 'horizontal resize geometry is present after vertical resize undo');
+    assert.ok(Math.abs(horizontalHandle.x + horizontalHandle.width / 2 - restoredFrame.x - restoredFrame.width) <= 1.5,
+      JSON.stringify({ horizontalHandle, restoredFrame }));
+    await page.mouse.move(horizontalHandle.x + horizontalHandle.width / 2, horizontalHandle.y + horizontalHandle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(horizontalHandle.x + horizontalHandle.width / 2 + 30, horizontalHandle.y + horizontalHandle.height / 2, { steps: 3 });
     await page.keyboard.press('Escape');
     await page.mouse.up();
     assert.deepEqual(await host.evaluate(element => element.snapshot().image), start, 'Escape cancels a drag without editing');

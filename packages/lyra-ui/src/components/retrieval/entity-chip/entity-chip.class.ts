@@ -94,15 +94,20 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
    *  same "does this slot carry real consumer content" question every other presence-driven
    *  component asks, seeded before the first render and kept live afterwards. */
   private readonly slotPresence = new SlotPresenceController(this);
-  private readonly preview = new PreviewDisclosureController({
-    host: this,
-    button: () => this.buttonEl,
-    panel: () => this.popoverEl,
-    hasContent: () => this.hasPreviewSlot,
-    isOpen: () => this.popoverOpen,
-    setOpen: (open) => { this.popoverOpen = open; },
-    hideDelayMs: HIDE_DELAY_MS,
-  });
+  private readonly preview = (() => {
+    const preview = new PreviewDisclosureController({
+      host: this,
+      button: () => this.buttonEl,
+      panel: () => this.popoverEl,
+      hasContent: () => this.hasPreviewSlot,
+      isOpen: () => this.popoverOpen,
+      setOpen: (open) => { this.popoverOpen = open; },
+      hideDelayMs: HIDE_DELAY_MS,
+    });
+    // Slot presence refreshes first, then an empty open preview closes before render.
+    this.addController({ hostUpdate: () => preview.ensureContent() });
+    return preview;
+  })();
 
   private get hasPreviewSlot(): boolean {
     return this.slotPresence.has();
@@ -110,10 +115,6 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    // The slot can be emptied out from under an already-open popover (e.g. a consumer clearing
-    // preview content asynchronously) -- nothing left to show, so don't leave an empty panel
-    // floating open.
-    this.preview.ensureContent();
   }
 
   protected override updated(changed: PropertyValues): void {

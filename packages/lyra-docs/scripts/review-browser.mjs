@@ -24,6 +24,19 @@ export async function runReview(page, check, { createEditor, saveEditor }) {
     const id = 'review-decisions'; await createEditor(page, id, 'review');
     try {
       const initial = await report(page, id), before = await saveEditor(page, id);
+      const comment = initial.items.find(item => item.kind === 'comment');
+      assert.ok(comment);
+      const navigation = await page.locator(`#${id}`).evaluate((element, itemId) => {
+        const before = element.snapshot();
+        const result = element.selectReviewItem(itemId, { expectedRevision: before.revision });
+        const after = element.snapshot();
+        return { result, before, after };
+      }, comment.id);
+      assert.deepEqual(navigation.result, { ok: true, value: undefined });
+      assert.deepEqual(navigation.after.revision, navigation.before.revision);
+      assert.equal(navigation.after.dirty, navigation.before.dirty);
+      assert.deepEqual(zipParts(await saveEditor(page, id)), zipParts(before),
+        'selecting a review target changes navigation only');
       assert.equal(initial.truncated, false); assert.equal(initial.trackingSupported, true);
       assert.deepEqual(initial.items.map(item => item.kind).sort(), ['comment', 'delete', 'insert']);
       const insertion = initial.items.find(item => item.kind === 'insert');

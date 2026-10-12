@@ -42,6 +42,52 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
     await remove(id);
   });
 
+  await check('Ctrl+S serializes the focused document and prevents browser default', async () => {
+    const id = 'commands-save-shortcut';
+    await createEditor(page, id);
+    try {
+      await host(id).locator('.docx-pages').click();
+      await page.keyboard.insertText('Shortcut save content');
+      await page.waitForFunction(id => document.getElementById(id).snapshot().dirty, id);
+      await host(id).evaluate(element => {
+        const state = { keydownPrevented: null, receipt: null, keydownListener: null };
+        const onKeyDown = event => {
+          if (event.key.toLowerCase() !== 's') return;
+          state.keydownPrevented = event.defaultPrevented;
+          element.removeEventListener('keydown', onKeyDown, true);
+        };
+        state.keydownListener = onKeyDown;
+        element.addEventListener('keydown', onKeyDown, true);
+        element.addEventListener('lr-save', event => {
+          state.receipt = {
+            revision: event.detail.receipt.revision,
+            bytes: [...event.detail.receipt.bytes]
+          };
+        }, { once: true });
+        window.__shortcutSaveState = state;
+      });
+      await page.keyboard.press('ControlOrMeta+s');
+      await page.waitForFunction(() => {
+        const state = window.__shortcutSaveState;
+        return Boolean(state && state.keydownPrevented !== null && state.receipt !== null);
+      }, null, { timeout: 5000 });
+      const observed = await page.evaluate(() => window.__shortcutSaveState);
+      assert.equal(observed.keydownPrevented, true, 'the editor owns the save chord while its document is focused');
+      assert.ok(observed.receipt.revision);
+      assert.ok(observed.receipt.bytes.length > 0);
+      assert.equal(wordText(zipEntry(observed.receipt.bytes, 'word/document.xml')), 'Shortcut save content');
+      assert.equal(await host(id).evaluate(element => element.snapshot().dirty), true,
+        'serialization alone is not persistence acknowledgement');
+    } finally {
+      await host(id).evaluate(element => {
+        const state = window.__shortcutSaveState;
+        if (state?.keydownListener) element.removeEventListener('keydown', state.keydownListener, true);
+        delete window.__shortcutSaveState;
+      });
+      await remove(id);
+    }
+  });
+
   await check('stale original selections and forged command rows cannot edit from the palette', async () => {
     const id = 'commands-stale';
     await createEditor(page, id);

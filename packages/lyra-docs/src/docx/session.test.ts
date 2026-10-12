@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createInternalDocxSession, refreshInternalDocxTableLabels } from './session.js';
+import {
+  createInternalDocxSession, internalDocxCharts, internalDocxSelectedImageElement,
+  refreshInternalDocxTableLabels, setInternalDocxZoom
+} from './session.js';
 import { imageFixture } from '../../test/corpus.js';
 import { unzipSync } from 'fflate';
 import type { DocxEngineImageInsertion } from './engine-port.js';
@@ -1225,6 +1228,30 @@ test('internal table label refresh is copied presentation state and stops at bus
   assert.equal(refreshInternalDocxTableLabels(session, labels), false);
   assert.equal(refreshInternalDocxTableLabels({} as never, labels), false);
   assert.equal(calls, 1);
+});
+
+test('presentation adapter catches optional chart, zoom and selected-image engine failures without mutation', async () => {
+  const { session, engine, f } = await opened();
+  const inspect = engine.inspect;
+  engine.inspect = () => ({
+    ...inspect(),
+    image: { widthPoints: 120, heightPoints: 60 },
+    imageReady: true
+  });
+  f.emit('state');
+  assert.deepEqual(session.snapshot().image, { widthPoints: 120, heightPoints: 60 });
+
+  engine.charts = () => { throw new Error('private chart failure'); };
+  engine.setZoom = () => { throw new Error('private zoom failure'); };
+  engine.selectedImageElement = () => { throw new Error('private image failure'); };
+  const before = session.snapshot();
+  assert.deepEqual(internalDocxCharts(session), []);
+  assert.equal(setInternalDocxZoom(session, 0.75), false);
+  assert.equal(internalDocxSelectedImageElement(session), null);
+  assert.equal(session.snapshot(), before, 'presentation adapter failures do not publish or mutate document state');
+  assert.equal(before.revision?.value, 0);
+  assert.equal(before.dirty, false);
+  assert.equal(f.executes, 0);
 });
 
 test('image snapshots contain frozen dimensions only and description reads preserve revision and leases', async () => {
