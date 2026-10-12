@@ -1735,8 +1735,17 @@ export class LyraFilterBar<
         : [];
       // Show each option's own label, not its raw value, when it's a known choice -- falls back
       // to the raw value verbatim for a value that no longer matches any declared option.
+      const optionLabels = values.length > 1 ? new Map<string, string>() : undefined;
+      if (optionLabels) {
+        for (const option of def.options ?? []) {
+          const optionValue = option.value;
+          if (!optionLabels.has(optionValue)) optionLabels.set(optionValue, option.label);
+        }
+      }
       const labels = values.map(
-        (v) => def.options?.find((o) => o.value === v)?.label ?? v
+        (v) => optionLabels
+          ? optionLabels.get(v) ?? v
+          : def.options?.find((o) => o.value === v)?.label ?? v
       );
       return labels.length > 1
         ? getListFormat(this.effectiveLocale, {
@@ -2053,6 +2062,7 @@ export class LyraFilterBar<
     const selected = Array.isArray(value)
       ? value.filter((entry): entry is string => typeof entry === 'string')
       : [];
+    const selectedValues = new Set(selected);
     const size = def.size ?? 'm';
     const routing = this.labelRouting(def);
     const summary = selected.length > 0
@@ -2101,7 +2111,7 @@ export class LyraFilterBar<
             part="filter-control-option"
             type="checkbox"
             value=${option.value}
-            ?checked=${selected.includes(option.value)}
+            ?checked=${selectedValues.has(option.value)}
             ?disabled=${option.disabled === true}
             @lr-menu-item-change-request=${(event: Event) => this.onCheckboxMenuToggle(def, event)}
             @lr-menu-item-change=${this.stopMenuItemChangeAlias}

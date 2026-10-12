@@ -759,15 +759,17 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (memo?.[0] === query && memo[1] === locale && memo[2] === model && memo[3] === hidden)
       return memo[4];
     const q = query.trim().toLocaleLowerCase(locale);
-    const matches = q
-      ? model.nodes.filter(
-          (node) =>
-            this.isVisibleGraphNode(node) &&
-            this.searchableNamesOf(node).some((name) =>
-              name.toLocaleLowerCase(locale).includes(q)
-            )
-        )
-      : undefined;
+    let matches: LyraGraphNode[] | undefined;
+    if (q) {
+      const hiddenTypes = new Set(hidden);
+      matches = model.nodes.filter(
+        (node) =>
+          (node.type == null || !hiddenTypes.has(node.type)) &&
+          this.searchableNamesOf(node).some((name) =>
+            name.toLocaleLowerCase(locale).includes(q)
+          )
+      );
+    }
     this.matchesMemo = [query, locale, model, hidden, matches];
     return matches;
   }

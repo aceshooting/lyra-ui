@@ -192,6 +192,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
       this.label == null ? this.localize('graphLegendLabel') : this.label
     );
     const groupRole = retrievalSemanticRole(this, 'group');
+    const hiddenTypes = new Set(canonicalIdentityList(this.hiddenTypes));
     return html`
       <div
         part="base"
@@ -199,7 +200,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
         aria-label=${groupLabel ?? nothing}
       >
         ${types.map((type, index) => {
-          const visible = this.isVisible(type.id);
+          const visible = !hiddenTypes.has(type.id);
           // The graph's own live palette, so a theme switch repaints both alike.
           const color = sanitizeCssColor(type.color) ?? `var(--lr-graph-cat-${(index % 8) + 1})`;
           const count = this.counts?.[type.id];

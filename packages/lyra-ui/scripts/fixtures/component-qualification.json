@@ -4851,6 +4851,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -5093,6 +5094,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -6030,6 +6032,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -8170,6 +8173,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -14580,6 +14584,7 @@
         "tests": [
           "src/components/data/data-grid/data-grid-boundaries.test.ts",
           "src/components/data/data-grid/data-grid-columns.test.ts",
+          "src/components/data/data-grid/data-grid-coverage.test.ts",
           "src/components/data/data-grid/data-grid-export.test.ts",
           "src/components/data/data-grid/data-grid-interaction.test.ts",
           "src/components/data/data-grid/data-grid-keyboard.test.ts",
@@ -17186,6 +17191,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -21016,6 +21022,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/filter-bar/filter-bar-choice-cost.test.ts",
           "src/components/layout/filter-bar/filter-bar-end-alignment.test.ts",
           "src/components/layout/filter-bar/filter-bar-remediation.test.ts",
           "src/components/layout/filter-bar/filter-bar.test.ts"
@@ -22832,6 +22839,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/gauge/gauge-remediation.test.ts",
+          "src/components/data/gauge/gauge-single-label.test.ts",
           "src/components/data/gauge/gauge-threshold-cost.test.ts",
           "src/components/data/gauge/gauge.test.ts"
         ],
@@ -23594,6 +23602,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/graph-legend/graph-legend-membership-cost.test.ts",
           "src/components/retrieval/graph-legend/graph-legend.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -23759,6 +23768,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/graph-query-builder/graph-query-builder-choice-cost.test.ts",
           "src/components/data/graph-query-builder/graph-query-builder-remediation.test.ts",
           "src/components/data/graph-query-builder/graph-query-builder.test.ts"
         ],
@@ -24349,6 +24359,7 @@
           "src/components/data/heatmap/calendar-grid.test.ts",
           "src/components/data/heatmap/heatmap-allocation-interaction.test.ts",
           "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
+          "src/components/data/heatmap/heatmap-export-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-focus-fallback.test.ts",
           "src/components/data/heatmap/heatmap-grid-navigation.test.ts",
           "src/components/data/heatmap/heatmap-i18n.test.ts",
@@ -24727,6 +24738,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -26638,6 +26650,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/utility/json-viewer/json-viewer-admission.test.ts",
+          "src/components/utility/json-viewer/json-viewer-coverage.test.ts",
           "src/components/utility/json-viewer/json-viewer-remediation.test.ts",
           "src/components/utility/json-viewer/json-viewer.test.ts"
         ],
@@ -27320,6 +27333,7 @@
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-aliases.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-rebinding.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-remediation.test.ts",
+          "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-search-cost.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -27858,6 +27872,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -28101,6 +28116,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -29790,8 +29806,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/utility/mention-popover/mention-popover-remediation.test.ts",
-              "test": "keeps the full match list readable while only fifty suggestions can render or commit",
+              "file": "src/components/utility/mention-popover/mention-popover-coverage.test.ts",
+              "test": "returns focus to the live anchor when every retained suggestion becomes disabled",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -29918,6 +29934,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/utility/mention-popover/mention-popover-closed-layout.test.ts",
+          "src/components/utility/mention-popover/mention-popover-coverage.test.ts",
           "src/components/utility/mention-popover/mention-popover-remediation.test.ts",
           "src/components/utility/mention-popover/mention-popover.test.ts",
           "src/components/utility/mention-popover/positioning-strategy.test.ts"
@@ -32443,6 +32460,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/mutation-observer/mutation-observer-coverage.test.ts",
           "src/components/utility/mutation-observer/mutation-observer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -35923,6 +35941,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -36141,6 +36160,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -38650,6 +38670,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -42532,6 +42553,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -45981,6 +46003,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/stat/stat-accessible-names.test.ts",
+          "src/components/data/stat/stat-boundaries.test.ts",
           "src/components/data/stat/stat-remediation.test.ts",
           "src/components/data/stat/stat.test.ts"
         ],

@@ -169,6 +169,95 @@ test('inherited overload groups compare as a whole and retain removals', () => {
 });
 
 
+function forwardingMethodFixture(own = '', base = "requestUpdate(...args: Parameters<External['requestUpdate']>): void;", parent = 'Base') {
+  return {
+    packageJson: { name: 'sample', version: '1.0.0', exports: { './sample.js': './dist/sample.js' } },
+    manifest: { modules: [] },
+    declarations: {
+      files: {
+        'dist/base.d.ts': `export declare class Base { ${base} }`,
+        'dist/sample.d.ts': `import { Base as Parent } from './base.js';
+          export declare class Sample extends ${parent === 'Base' ? 'Parent' : parent} { ${own} }
+          export type Props = Partial<Sample>;`,
+      },
+      packageFiles: ['dist/base.d.ts', 'dist/sample.d.ts', 'dist/sample.js'],
+    },
+  };
+}
+
+test('exact inherited parameter forwarding does not add a public API', () => {
+  const before = normalizePublicApi(forwardingMethodFixture());
+  const after = normalizePublicApi(forwardingMethodFixture(
+    "requestUpdate(...args: Parameters<Parent['requestUpdate']>): void;",
+  ));
+  assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'none');
+  assert.equal(minimumRequiredBump(diffPublicApi(after, before)), 'none');
+});
+
+test('parameter forwarding accepts a generic base only when its method is independent of type arguments', () => {
+  const input = (own) => {
+    const result = forwardingMethodFixture(own);
+    result.declarations.files['dist/base.d.ts'] = result.declarations.files['dist/base.d.ts']
+      .replace('class Base', 'class Base<Events = Record<string, Event>>');
+    result.declarations.files['dist/sample.d.ts'] = result.declarations.files['dist/sample.d.ts']
+      .replace('extends Parent', 'extends Parent<{ change: Event }>');
+    return normalizePublicApi(result);
+  };
+  const before = input('');
+  const after = input("requestUpdate(...args: Parameters<Parent['requestUpdate']>): void;");
+  assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'none');
+  assert.equal(minimumRequiredBump(diffPublicApi(after, before)), 'none');
+});
+
+test('forwarded primitive signatures retain inherited changes and removals', () => {
+  const forwarding = "requestUpdate(...args: Parameters<Parent['requestUpdate']>): void;";
+  const normalize = (own, base) => normalizePublicApi(forwardingMethodFixture(own, base));
+  const before = normalize('', 'requestUpdate(value?: string): void;');
+  const after = normalize(forwarding, 'requestUpdate(value?: string): void;');
+  assert.equal(minimumRequiredBump(diffPublicApi(before, after)), 'none');
+  assert.equal(minimumRequiredBump(diffPublicApi(after, before)), 'none');
+  assert.equal(minimumRequiredBump(diffPublicApi(after,
+    normalize(forwarding, 'requestUpdate(value: number): void;'))), 'major');
+  assert.equal(minimumRequiredBump(diffPublicApi(after, normalize('', ''))), 'major');
+});
+
+test('parameter forwarding retains changed signatures and unsupported inherited shapes', () => {
+  const forwarding = "requestUpdate(...args: Parameters<Parent['requestUpdate']>): void;";
+  const cases = [
+    { own: forwarding.replace('): void', '): string') },
+    { own: `protected ${forwarding}` },
+    { own: `static ${forwarding}` },
+    { own: forwarding.replace("['requestUpdate']", "['other']") },
+    { own: forwarding.replace('...args:', 'args:') },
+    { own: forwarding, base: 'requestUpdate<T>(value: T): void;' },
+    { own: forwarding, base: 'requestUpdate(): void; requestUpdate(value: string): void;' },
+    { own: forwarding, base: 'protected requestUpdate(value: string): void;' },
+    { own: forwarding, base: 'static requestUpdate(value: string): void;' },
+    { own: forwarding, base: 'requestUpdate(this: Base, value: string): void;' },
+    { own: forwarding, base: 'requestUpdate(value: this): void;' },
+    { own: forwarding, base: 'requestUpdate(value: typeof this): void;' },
+    { own: forwarding, base: 'requestUpdate(value: Array<T>): void;', generic: true },
+    { own: forwarding.replace('requestUpdate(', 'requestUpdate<T>(') },
+    { own: forwarding.replace('requestUpdate(', 'requestUpdate?(') },
+    { own: `${forwarding} requestUpdate(value: string): void;` },
+    { own: forwarding, base: 'requestUpdate(value: string): string;' },
+    { own: forwarding, tail: 'type Parameters<T> = [boolean];' },
+    { own: forwarding, base: 'requestUpdate(value: T): void;', generic: true },
+  ];
+  for (const entry of cases) {
+    const input = (own) => {
+      const result = forwardingMethodFixture(own, entry.base);
+      if (entry.tail) result.declarations.files['dist/sample.d.ts'] += entry.tail;
+      if (entry.generic) {
+        result.declarations.files['dist/base.d.ts'] = result.declarations.files['dist/base.d.ts'].replace('class Base', 'class Base<T>');
+        result.declarations.files['dist/sample.d.ts'] = result.declarations.files['dist/sample.d.ts'].replace('extends Parent', 'extends Parent<string>');
+      }
+      return normalizePublicApi(result);
+    };
+    assert.notEqual(minimumRequiredBump(diffPublicApi(input(''), input(entry.own))), 'none', JSON.stringify(entry));
+  }
+});
+
 test('classifies additive CEM, export, framework, and named-export surface as minor', () => {
   const changes = diffPublicApi(normalizePublicApi(baseline), normalizePublicApi(additive));
   assert.equal(minimumRequiredBump(changes), 'minor');

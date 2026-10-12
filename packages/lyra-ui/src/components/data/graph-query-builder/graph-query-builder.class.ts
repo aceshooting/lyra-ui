@@ -1031,10 +1031,6 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     return [...options].sort((a, b) => a - b);
   }
 
-  private labelForType(options: readonly GraphQueryTypeOption[], value: string): string {
-    return options.find((o) => o.value === value)?.label ?? value;
-  }
-
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     const root = super.createRenderRoot();
     for (const type of BUILDER_CHILD_EVENTS) root.addEventListener(type, containShadowChildEvent);
@@ -1055,7 +1051,14 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
       kind === 'relationship'
         ? this.localize('graphQueryRelationshipTypeLabel')
         : this.localize('graphQueryNodeTypeLabel');
-    const available = options.filter((o) => !selected.includes(o.value));
+    const selectedValues = new Set(selected);
+    const selectedLabels = new Map<string, string | undefined>();
+    const available = options.filter((option) => {
+      const value = option.value;
+      if (!selectedValues.has(value)) return true;
+      if (!selectedLabels.has(value)) selectedLabels.set(value, option.label);
+      return false;
+    });
     return html`
       <div part="filter-group" data-kind=${kind}>
         <lr-select
@@ -1084,7 +1087,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
                 event.stopPropagation();
                 remove(t);
               }}
-              >${this.labelForType(options, t)}</lr-chip
+              >${selectedLabels.get(t) ?? t}</lr-chip
             >`
           )}
         </lr-chip-group>

@@ -1795,17 +1795,69 @@ function scopeIndependentMethod(member) {
   return visit(member);
 }
 
+// A single nongeneric method returning void can forward the exact argument tuple of its
+// direct base method without adding a member. Parameters cannot preserve overloads, method
+// generics or explicit this parameters, so those shapes deliberately remain conservative.
+// A generic base is supported only when its type parameters do not occur in the method.
+function inheritedParameterForwarder(graph, resolved, primary, member) {
+  const method = member.value;
+  const ordinaryVoidMethod = (candidate) => candidate.type === 'MethodDefinition'
+    && candidate.kind === 'method' && !candidate.computed && !candidate.static
+    && !candidate.abstract && !candidate.optional && !candidate.decorators?.length
+    && (candidate.accessibility ?? 'public') === 'public'
+    && !candidate.value?.typeParameters?.params?.length
+    && candidate.value?.returnType?.typeAnnotation?.type === 'TSVoidKeyword';
+  if (!graph || !primary.superClass
+    || primary.typeParameters?.params?.length || resolved.records.length !== 1 || resolved.path?.length !== 1
+    || !ordinaryVoidMethod(member) || method.params.length !== 1) return false;
+  const parameter = method.params[0];
+  const type = parameter.typeAnnotation?.typeAnnotation;
+  if (parameter.type !== 'RestElement' || parameter.optional
+    || type?.type !== 'TSTypeReference' || type.typeName?.type !== 'Identifier'
+    || type.typeName.name !== 'Parameters' || type.typeArguments?.params?.length !== 1
+    || resolved.module.imports.has('Parameters')
+    || resolveTypeDependencies(graph, resolved, 'Parameters').length) return false;
+  const indexed = type.typeArguments.params[0];
+  const key = propertyName(member.key, resolved.module);
+  if (indexed.type !== 'TSIndexedAccessType'
+    || indexed.indexType?.type !== 'TSLiteralType' || indexed.indexType.literal?.value !== key
+    || indexed.objectType?.type !== 'TSTypeReference' || indexed.objectType.typeArguments) return false;
+  const heritage = entityNameParts(primary.superClass).join('.');
+  const target = entityNameParts(indexed.objectType.typeName).join('.');
+  if (!heritage || target !== heritage) return false;
+  const parents = resolveTypeDependencies(graph, resolved, heritage);
+  if (parents.length !== 1) return false;
+  const parent = parents[0].resolved;
+  if (parent.records.length !== 1) return false;
+  const parentClass = parent.records[0].node;
+  if (parentClass.type !== 'ClassDeclaration') return false;
+  const ownGroup = primary.body.body.filter((candidate) =>
+    propertyName(candidate.key, resolved.module) === key);
+  const inherited = parentClass.body.body.filter((candidate) =>
+    propertyName(candidate.key, parent.module) === key);
+  const parentParameters = new Set((parentClass.typeParameters?.params ?? []).map((type) => type.name.name));
+  const dependsOnInstance = (node) => node && typeof node === 'object'
+    && (node.type === 'TSThisType' || node.type === 'ThisExpression'
+      || (node.type === 'Identifier' && parentParameters.has(node.name))
+      || Object.values(node).some((value) =>
+        Array.isArray(value) ? value.some(dependsOnInstance) : dependsOnInstance(value)));
+  return ownGroup.length === 1 && inherited.length === 1 && ordinaryVoidMethod(inherited[0])
+    && !inherited[0].value.params.some((argument) => argument.name === 'this' || dependsOnInstance(argument));
+}
+
 /** Project provably scope-independent inherited methods into the effective class contract.
  * An explicit identical override then retains the same entries, while a changed override is
  * still compared with the inherited signature. Nearest declarations shadow whole overload
  * groups; unresolved/mixin heritage and signatures needing substitution stay conservative. */
 function addClassMemberSurfaces(entries, base, surface, label, resolved, primary, graph) {
-  addMemberSurfaces(entries, base, surface, label, resolved.module, primary.body?.body ?? []);
+  const ownMembers = (primary.body?.body ?? []).filter((member) =>
+    !inheritedParameterForwarder(graph, resolved, primary, member));
+  addMemberSurfaces(entries, base, surface, label, resolved.module, ownMembers);
   if (!graph || !primary.superClass) return;
   // Member entry IDs share a name across static and instance sides. Do not project an
   // inherited entry over a same-named own member; its static flag remains part of the diff.
   const memberKey = (module, member) => propertyName(member.key, module);
-  const shadowed = new Set((primary.body?.body ?? []).map((member) =>
+  const shadowed = new Set(ownMembers.map((member) =>
     memberKey(resolved.module, member)));
   let ancestor = resolved;
   let ancestorNode = primary;
