@@ -82,6 +82,8 @@ export async function runReview(page, check, { createEditor, saveEditor }) {
     const id = 'review-tracking'; await createEditor(page, id);
     try {
       await page.locator(`#${id} .docx-pages`).click(); await page.keyboard.insertText('Start');
+      // Native text input settles asynchronously before document queries become available.
+      await page.waitForFunction(id => document.getElementById(id).can({ type: 'track-changes', enabled: true, author: 'Named writer' }).enabled, id);
       const initial = await report(page, id); assert.equal(initial.enabled, false); assert.equal(initial.trackingSupported, true);
       assert.deepEqual((await act(page, id, { type: 'track-changes', enabled: true, author: '' })).result, { ok: false, code: 'invalid-option' });
       const enabled = await act(page, id, { type: 'track-changes', enabled: true, author: 'Named writer' });
@@ -89,6 +91,7 @@ export async function runReview(page, check, { createEditor, saveEditor }) {
       const tracking = await report(page, id); assert.equal(tracking.enabled, true); assert.equal(tracking.author, 'Named writer');
       await page.locator(`#${id} .docx-pages`).click(); await page.keyboard.press('ControlOrMeta+End');
       await page.keyboard.insertText(' suggested');
+      await page.waitForFunction(id => document.getElementById(id).can({ type: 'track-changes', enabled: true, author: 'Named writer' }).enabled, id);
       const changed = await report(page, id), insertion = changed.items.find(item => item.kind === 'insert');
       assert.ok(insertion); assert.equal(insertion.author, 'Named writer'); assert.ok(insertion.text.includes('suggested'));
       const disabled = await act(page, id, { type: 'track-changes', enabled: false, author: 'Named writer' });

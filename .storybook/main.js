@@ -8,6 +8,7 @@ import { codecovVitePlugin } from '@codecov/vite-plugin';
 import { componentImportsPlugin } from './component-imports.js';
 import { createGroupedStoryIndexer } from './story-indexer.js';
 import { storyTitlePlugin } from './story-title-plugin.js';
+import { sourcePackageExportsPlugin } from './source-package-exports.js';
 import { builderModulePreload, isDeferredLocaleModule } from './docs-load-boundaries.js';
 import { renderDocsManagerHead, resolveDocsPublicBase } from '../scripts/docs-public-base.mjs';
 
@@ -92,6 +93,9 @@ const config = {
     // read at build time from the same `llms/components/<tag>.md` files `check:llms-artifacts`
     // resolves. See .storybook/component-imports.js.
     viteConfig.plugins.push(componentImportsPlugin());
+    // Companion stories import the public package routes; resolve their committed source
+    // targets so the docs build remains independent of the library build.
+    viteConfig.plugins.push(sourcePackageExportsPlugin());
     // Storybook consumes source classes directly, including on a clean checkout without dist.
     // Resolve diagnostics to the matching source condition while package consumers use imports.
     let sourceDiagnosticCondition = 'production';
