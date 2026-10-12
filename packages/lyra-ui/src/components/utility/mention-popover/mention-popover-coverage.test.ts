@@ -6,7 +6,7 @@ import type { LyraMentionPopover } from './mention-popover.js';
 async function focusedPopover(textarea = false) {
   const root = await fixture<HTMLDivElement>(html`<div>
     ${textarea ? html`<textarea aria-label="Message">Hello</textarea>` : html`<input aria-label="Message">`}
-    <lr-mention-popover style="--lr-transition-fast:0s"></lr-mention-popover>
+    <lr-mention-popover data-lr-theme-scope style="--lr-transition-fast:0s"></lr-mention-popover>
   </div>`);
   const anchor = root.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea')!;
   const viewer = root.querySelector<LyraMentionPopover>('lr-mention-popover')!;
