@@ -2,7 +2,7 @@ import type { TableReaders } from './eigenpal-tables.js';
 import type { DocxEditorInstance, DocxEditorConfig } from '@docx-editor.dev/core';
 import { deriveImageInsertionEngine } from './engine-image-insertion-loader.js';
 import type { ImageInsertionEngine } from './engine-image-insertion-loader.js';
-import type { EigenpalReviewDependencies } from './eigenpal-review.js';
+import type { EigenpalReviewDependencies } from './eigenpal-review-model.js';
 
 const insertionCache = new WeakMap<object, { core: object; value: ImageInsertionEngine | undefined }>();
 
