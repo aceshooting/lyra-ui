@@ -1016,9 +1016,10 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
     const urlApi = this.ownerDocument.defaultView?.URL ?? globalThis.URL;
     const canCreate = typeof urlApi.createObjectURL === 'function';
     const canRevoke = typeof urlApi.revokeObjectURL === 'function';
+    const retainedFiles = new Set(this._files);
     let changed = false;
     for (const [file, thumbnail] of this.thumbnailUrls) {
-      if (!this._files.includes(file) || thumbnail.owner !== urlApi) {
+      if (!retainedFiles.has(file) || thumbnail.owner !== urlApi) {
         thumbnail.revoke();
         this.thumbnailUrls.delete(file);
         changed = true;

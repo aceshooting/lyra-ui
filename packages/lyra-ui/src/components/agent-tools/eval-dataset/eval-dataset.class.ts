@@ -273,9 +273,9 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
       if (this.selectedId !== null && !this.normalizedExamples.some((example) => example.id === this.selectedId)) {
         this.clearSelection();
       }
-      const available = this.allTags();
-      if ([...this.activeTags].some((tag) => !available.includes(tag))) {
-        this.activeTags = new Set([...this.activeTags].filter((tag) => available.includes(tag)));
+      const available = new Set(this.allTags());
+      if ([...this.activeTags].some((tag) => !available.has(tag))) {
+        this.activeTags = new Set([...this.activeTags].filter((tag) => available.has(tag)));
       }
     }
 

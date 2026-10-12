@@ -707,8 +707,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         focusedBefore === previouslyActive ||
         composedContains(previouslyActive!, focusedBefore));
     this.items = assigned;
+    const assignedItems = new Set(assigned);
     for (const item of previousItems) {
-      if (!this.items.includes(item)) this.releaseItemOwner(item);
+      if (!assignedItems.has(item)) this.releaseItemOwner(item);
     }
     for (const item of this.items) this.acquireItemOwner(item);
     this.applyDropdownSize();
@@ -830,7 +831,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   /** Repairs the roving stop when an active item becomes unavailable; move actual focus only
    * when that item held it, preserving outside and slotted region focus during background edits. */
   private onItemStateChange = (): void => {
-    const navigable = this.items.filter((item) => this.isNavigable(item));
+    const navigable: { item: LyraMenuItem; index: number }[] = [];
+    this.items.forEach((item, index) => {
+      if (this.isNavigable(item)) navigable.push({ item, index });
+    });
     if (
       this.activeIndex >= 0 &&
       !this.isNavigable(this.items[this.activeIndex]!)
@@ -844,8 +848,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         focused === displaced ||
         composedContains(displaced, focused);
       const next =
-        navigable.find((item) => this.items.indexOf(item) > current) ??
-        navigable.find((item) => this.items.indexOf(item) < current);
+        navigable.find(({ index }) => index > current)?.item ??
+        navigable.find(({ index }) => index < current)?.item;
       if (next) {
         this.setActiveItem(next, displacedHadFocus);
       } else {

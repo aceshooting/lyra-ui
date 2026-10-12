@@ -474,6 +474,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       )
     );
     await Promise.resolve();
+    // No asynchronous boundary separates this current snapshot from the roving writes.
     const buttons = this.actionButtons();
     if (
       request !== this.rovingGeneration ||
@@ -481,8 +482,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
       buttons.some(
         (button) =>
           !button.isConnected ||
-          button.ownerDocument !== this.ownerDocument ||
-          !this.ownsActionButton(button)
+          button.ownerDocument !== this.ownerDocument
       )
     )
       return undefined;
@@ -546,8 +546,9 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   private setRovingStops(buttons: HTMLElement[], index: number): void {
     this.actionObserver?.disconnect();
+    const nextStops = new Set(buttons);
     for (const previous of this.managedActionStops) {
-      if (!buttons.includes(previous)) this.releaseActionTabIndex(previous);
+      if (!nextStops.has(previous)) this.releaseActionTabIndex(previous);
     }
     this.activeActionIndex =
       buttons.length === 0
@@ -559,7 +560,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
         buttonIndex === this.activeActionIndex ? 0 : -1,
       );
     });
-    this.managedActionStops = new Set(buttons);
+    this.managedActionStops = nextStops;
     this.observeActionChanges(buttons);
   }
 

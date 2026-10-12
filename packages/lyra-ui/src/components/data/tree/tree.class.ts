@@ -1152,8 +1152,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     if (targeted) {
       const nodes = this.nodeElements;
       const count = nodes.length;
+      const positions = this.dirtyConfigureRoots.size > 1
+        ? new Map(nodes.map((node, index) => [node, index]))
+        : undefined;
       for (const node of this.dirtyConfigureRoots) {
-        const i = nodes.indexOf(node);
+        const i = positions ? positions.get(node) ?? -1 : nodes.indexOf(node);
         if (i < 0) continue;
         configureTreeItemOwner(node, {
           ...treeItemOwnerContext(node),

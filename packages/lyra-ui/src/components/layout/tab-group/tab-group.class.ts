@@ -474,9 +474,12 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   ): TabDef[] {
     const seen = new Set<string>();
     const next: TabDef[] = [];
-    const panels = children.filter(
-      (child) => child.localName === tag('tab-panel')
-    );
+    const panelsByName = new Map<string, Element>();
+    for (const child of children) {
+      if (child.localName !== tag('tab-panel')) continue;
+      const name = child.getAttribute('name');
+      if (name !== null && !panelsByName.has(name)) panelsByName.set(name, child);
+    }
     const authoredNames = new Set(
       children.flatMap((child) => {
         if (child.localName === tag('tab')) {
@@ -524,9 +527,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       // A named empty descriptor gets its author-provided panel key as a last-resort accessible
       // name; only an unpaneled descriptor is omitted for having no accessibility-exposed label.
       const label = visibleLabel || slotName;
-      const panel = panels.find(
-        (candidate) => candidate.getAttribute('name') === slotName
-      );
+      const panel = panelsByName.get(slotName);
       if (panel) this.projectSlot(panel, slotName, projectedSlots);
       next.push({
         slotName,
@@ -800,9 +801,15 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       ? before.findIndex((t) => t.slotName === outgoing)
       : -1;
     const renamed = at < 0 ? undefined : this.tabs.find((t) => t.element === before[at]!.element && this.isNavigable(t));
-    const candidates = at < 0
-      ? this.tabs
-      : [...before.slice(at + 1), ...before.slice(0, at).reverse()].map((t) => this.tabs.find((live) => live.slotName === t.slotName));
+    let candidates: (TabDef | undefined)[] = this.tabs;
+    if (at >= 0) {
+      const liveByName = new Map<string, TabDef>();
+      for (const tab of this.tabs) {
+        if (!liveByName.has(tab.slotName)) liveByName.set(tab.slotName, tab);
+      }
+      candidates = [...before.slice(at + 1), ...before.slice(0, at).reverse()]
+        .map((tab) => liveByName.get(tab.slotName));
+    }
     this.active = (renamed ?? candidates.find((t) => t && this.isNavigable(t)))?.slotName ?? '';
     this.focusedTab = this.active;
     if (at >= 0 && !renamed) {
@@ -860,9 +867,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   /** Mirrors selection onto public `active` hints for SSR-compatible tab/panel children. */
   private syncElementActiveState(): void {
+    const definitions = new Map<Element, TabDef>();
+    for (const tab of this.tabs) {
+      if (!definitions.has(tab.element)) definitions.set(tab.element, tab);
+    }
     for (const child of Array.from(this.children)) {
       if (child.localName === tag('tab')) {
-        const definition = this.tabs.find((tab) => tab.element === child);
+        const definition = definitions.get(child);
         child.toggleAttribute(
           'active',
           definition?.slotName === this.active

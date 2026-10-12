@@ -1940,7 +1940,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   private syncPresentation(label: string, sourceIndex?: number): ChartSyncPresentation | undefined {
     const marks = this.interactiveMarks();
-    const index = sourceIndex ?? marks.filter((mark) => mark.label === label).sort((a, b) => a.index - b.index)[0]?.index;
+    let index = sourceIndex ?? undefined;
+    if (index === undefined) {
+      for (const mark of marks) {
+        if (mark.label === label && (index === undefined || mark.index < index)) index = mark.index;
+      }
+    }
     if (index === undefined || this.labels[index] !== label) return undefined;
     const matched = marks.filter((mark) => mark.index === index);
     if (!matched.length || !this.svgEl) return undefined;

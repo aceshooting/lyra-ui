@@ -333,9 +333,18 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
 
   private firstInvalidField(): HTMLElement | undefined {
     if (!this.renderRoot) return undefined;
+    const [firstKey, ...remainingKeys] = Object.keys(this._errors);
+    if (firstKey === undefined) return undefined;
     const fields = Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part="field"]'));
-    for (const key of Object.keys(this._errors)) {
-      const field = fields.find((candidate) => candidate.dataset['key'] === key);
+    const first = fields.find((candidate) => candidate.dataset['key'] === firstKey);
+    if (first || remainingKeys.length === 0) return first;
+    const byKey = new Map<string, HTMLElement>();
+    for (const field of fields) {
+      const key = field.dataset['key'];
+      if (key !== undefined && !byKey.has(key)) byKey.set(key, field);
+    }
+    for (const key of remainingKeys) {
+      const field = byKey.get(key);
       if (field) return field;
     }
     return undefined;
@@ -1131,8 +1140,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
     return html`<p part="unsupported" class="unsupported" id=${fieldId}>${this.localize('unsupportedFieldType', undefined, { type: String((prop as { type?: unknown }).type) })}</p>`;
   }
 
-  private renderField(key: string, prop: ToolParamFormProperty, index: number): TemplateResult {
-    const required = this.requiredKeys.includes(key);
+  private renderField(key: string, prop: ToolParamFormProperty, index: number, required: boolean): TemplateResult {
     const label = prop.title ?? key;
     const fieldId = `${this.baseId}-f${index}`;
     const descId = prop.description ? `${fieldId}-desc` : '';
@@ -1169,6 +1177,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
   override render(): TemplateResult {
     const props = this.schemaProperties;
     const entries = Object.entries(props);
+    const required = entries.length > 1 ? new Set(this.requiredKeys) : undefined;
     const missingRequiredKeys = this.missingRequiredKeys.filter((key) => this.touchedFields.has(key));
     const hostLabel = this.getAttribute('aria-label');
     const groupInvalid = this.hasInteracted
@@ -1182,7 +1191,9 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
     >
       ${entries.length === 0
         ? html`<p part="empty">${this.localize('noData')}</p>`
-        : entries.map(([key, prop], i) => this.renderField(key, prop, i))}
+        : entries.map(([key, prop], i) => this.renderField(
+          key, prop, i, required ? required.has(key) : this.requiredKeys.includes(key),
+        ))}
       ${missingRequiredKeys.map(
         (key) => html`<p
           part="error"

@@ -304,8 +304,9 @@ function foldHtmlQuotes(
     forged.removeAttribute('data-email-chrome');
   }
   const blocks = doc.body.querySelectorAll(QUOTE_SELECTOR);
+  const expandedQuotes = new Set(expandedIndices);
   blocks.forEach((block, index) => {
-    const expanded = expandedIndices.includes(index);
+    const expanded = expandedQuotes.has(index);
     block.setAttribute('part', 'quoted');
     if (!expanded) block.setAttribute('hidden', '');
     block.setAttribute('data-quote-index', String(index));

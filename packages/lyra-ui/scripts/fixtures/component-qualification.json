@@ -3602,6 +3602,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/attachment-trigger/attachment-trigger-composition.test.ts",
+          "src/components/media/attachment-trigger/attachment-trigger-partition-cost.test.ts",
           "src/components/media/attachment-trigger/attachment-trigger.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -9870,6 +9871,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/chunk-inspector/chunk-inspector-membership-cost.test.ts",
           "src/components/retrieval/chunk-inspector/chunk-inspector.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18144,6 +18146,7 @@
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
           "src/components/layout/menu/menu.test.ts",
@@ -18489,6 +18492,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/email-viewer/email-loader.test.ts",
+          "src/components/viewers/email-viewer/email-viewer-quote-cost.test.ts",
           "src/components/viewers/email-viewer/email-viewer-remediation.test.ts",
           "src/components/viewers/email-viewer/email-viewer.test.ts"
         ],
@@ -19822,6 +19826,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/agent-tools/eval-dataset/eval-dataset-search-sizing.test.ts",
+          "src/components/agent-tools/eval-dataset/eval-dataset-tag-cost.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -20672,6 +20677,7 @@
           "src/components/media/file-input/accept.test.ts",
           "src/components/media/file-input/file-input-limits.test.ts",
           "src/components/media/file-input/file-input-remediation.test.ts",
+          "src/components/media/file-input/file-input-thumbnail-cost.test.ts",
           "src/components/media/file-input/file-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -26470,6 +26476,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/schema-viewer/schema-viewer-membership-cost.test.ts",
           "src/components/agent-tools/schema-viewer/schema-viewer-selection.test.ts",
           "src/components/agent-tools/schema-viewer/schema-viewer.test.ts"
         ],
@@ -28498,7 +28505,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 951,
+              "line": 953,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28539,6 +28546,7 @@
           "src/components/forms/locale-picker/locale-picker-remediation.test.ts",
           "src/components/forms/locale-picker/locale-picker-retry-layout.test.ts",
           "src/components/forms/locale-picker/locale-picker-row-comfort.test.ts",
+          "src/components/forms/locale-picker/locale-picker-search-cost.test.ts",
           "src/components/forms/locale-picker/locale-picker-search.test.ts",
           "src/components/forms/locale-picker/locale-picker.test.ts",
           "src/components/forms/locale-picker/positioning-strategy.test.ts",
@@ -30196,6 +30204,7 @@
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
           "src/components/layout/menu/menu.test.ts",
@@ -30436,6 +30445,7 @@
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
           "src/components/layout/menu/menu.test.ts",
@@ -30620,6 +30630,7 @@
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-submenu-lifecycle.test.ts",
           "src/components/layout/menu/menu.test.ts",
@@ -30829,6 +30840,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/menubar/menubar-item.test.ts",
+          "src/components/layout/menubar/menubar-reconcile-cost.test.ts",
           "src/components/layout/menubar/menubar.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -31033,6 +31045,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/menubar/menubar-item.test.ts",
+          "src/components/layout/menubar/menubar-reconcile-cost.test.ts",
           "src/components/layout/menubar/menubar.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -31370,6 +31383,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/message-feedback/message-feedback-boundaries.test.ts",
+          "src/components/conversation/message-feedback/message-feedback-reason-cost.test.ts",
           "src/components/conversation/message-feedback/message-feedback-remediation.test.ts",
           "src/components/conversation/message-feedback/message-feedback.test.ts"
         ],
@@ -34328,6 +34342,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/page/page-reconcile-cost.test.ts",
           "src/components/layout/page/page.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -41834,6 +41849,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/retrieval-results/retrieval-results-membership-cost.test.ts",
           "src/components/retrieval/retrieval-results/retrieval-results.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -43208,8 +43224,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/selection-toolbar/selection-toolbar.test.ts",
-              "test": "dismisses on Escape through the shared overlay manager",
+              "file": "src/components/conversation/selection-toolbar/selection-toolbar-reconciliation-cost.test.ts",
+              "test": "rechecks ownership before keyboard focus after an action leaves the toolbar",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -43295,7 +43311,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
-              "line": 901,
+              "line": 902,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43331,6 +43347,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/selection-toolbar/selection-toolbar-reconciliation-cost.test.ts",
           "src/components/conversation/selection-toolbar/selection-toolbar.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -44733,7 +44750,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 574,
+              "line": 570,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44768,6 +44785,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/source-picker/source-picker-filter-cost.test.ts",
           "src/components/retrieval/source-picker/source-picker-remediation.test.ts",
           "src/components/retrieval/source-picker/source-picker-search-sizing.test.ts",
           "src/components/retrieval/source-picker/source-picker.test.ts"
@@ -47849,6 +47867,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
@@ -48080,6 +48099,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
@@ -48306,6 +48326,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
@@ -51445,7 +51466,7 @@
           "evidence": [
             {
               "file": "src/components/forms/toggle-group/toggle-group.class.ts",
-              "line": 560,
+              "line": 587,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51480,6 +51501,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/toggle-group/toggle-group-collection-cost.test.ts",
           "src/components/forms/toggle-group/toggle-group-late-definition.test.ts",
           "src/components/forms/toggle-group/toggle-group.test.ts"
         ],
@@ -52360,6 +52382,7 @@
         "tests": [
           "src/components/agent-tools/tool-param-form/tool-param-constraints.test.ts",
           "src/components/agent-tools/tool-param-form/tool-param-form-elicitation.test.ts",
+          "src/components/agent-tools/tool-param-form/tool-param-form-membership-cost.test.ts",
           "src/components/agent-tools/tool-param-form/tool-param-form-remediation.test.ts",
           "src/components/agent-tools/tool-param-form/tool-param-form.test.ts"
         ],
@@ -53996,6 +54019,7 @@
         "tests": [
           "src/components/data/tree/tree-badges.test.ts",
           "src/components/data/tree/tree-declarative.test.ts",
+          "src/components/data/tree/tree-dirty-root-cost.test.ts",
           "src/components/data/tree/tree-dynamic-state.test.ts",
           "src/components/data/tree/tree-inert.test.ts",
           "src/components/data/tree/tree-item.test.ts",
@@ -54213,6 +54237,7 @@
         "tests": [
           "src/components/data/tree/tree-badges.test.ts",
           "src/components/data/tree/tree-declarative.test.ts",
+          "src/components/data/tree/tree-dirty-root-cost.test.ts",
           "src/components/data/tree/tree-dynamic-state.test.ts",
           "src/components/data/tree/tree-inert.test.ts",
           "src/components/data/tree/tree-item.test.ts",
@@ -55069,7 +55094,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 531,
+              "line": 532,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55104,6 +55129,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/video-playlist/video-playlist-reconcile-cost.test.ts",
           "src/components/media/video-playlist/video-playlist.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

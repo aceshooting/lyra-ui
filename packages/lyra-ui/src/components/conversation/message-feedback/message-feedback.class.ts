@@ -791,6 +791,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   }
 
   override render(): TemplateResult {
+    const selectedReasons = new Set(this.selectedReasonIds);
     return html`
       <div part="base">
         <div part="thumbs">${this.renderThumb('up')}${this.renderThumb('down')}</div>
@@ -813,7 +814,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                             (reason) => html`
                               <lr-chip
                                 toggleable
-                                ?selected=${this.selectedReasonIds.includes(reason.id)}
+                                ?selected=${selectedReasons.has(reason.id)}
                                 .disabled=${this.disabled || this.pending}
                                 @lr-chip-toggle-request=${(event: Event) => {
                                   event.stopPropagation();

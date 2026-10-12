@@ -329,6 +329,66 @@ describe('chart synchronization', () => {
     await waitUntil(() => !crosshair(peer!));
   });
 
+  it('selects the lowest eligible line category without sorting and preserves explicit source indices', async () => {
+    const chart = await fixture<LyraLiteChart>(html`<lr-lite-chart type="line" height="8rem"
+      .labels=${['Tie', 'Same', 'Same']}
+      .datasets=${[
+        { label: 'First', data: [1, null, 3] },
+        { label: 'Second', data: [2, 4, 5] },
+      ]}></lr-lite-chart>`);
+    await ready(chart);
+    const svg = chart.shadowRoot!.querySelector('svg')!;
+    const querySelector = svg.querySelector.bind(svg);
+    const selected: string[] = [];
+    Object.defineProperty(svg, 'querySelector', {
+      configurable: true,
+      value: (selector: string) => {
+        selected.push(selector);
+        return querySelector(selector);
+      },
+    });
+    const present = (label: string, sourceIndex?: number) =>
+      (chart as unknown as { syncPresentation(label: string, sourceIndex?: number): unknown })
+        .syncPresentation(label, sourceIndex);
+    const originalSort = Array.prototype.sort;
+    let sorts = 0;
+    try {
+      Array.prototype.sort = function (compare) {
+        sorts++;
+        return originalSort.call(this, compare);
+      };
+      present('Same');
+      expect(selected.at(-1)).to.equal('[data-dataset-index="1"][data-index="1"]');
+      expect(sorts).to.equal(0);
+    } finally {
+      Array.prototype.sort = originalSort;
+      Reflect.deleteProperty(svg, 'querySelector');
+    }
+
+    const selectedAfter = chart.shadowRoot!.querySelector('svg')!;
+    const originalQuery = selectedAfter.querySelector.bind(selectedAfter);
+    const explicit: string[] = [];
+    Object.defineProperty(selectedAfter, 'querySelector', {
+      configurable: true,
+      value: (selector: string) => {
+        explicit.push(selector);
+        return originalQuery(selector);
+      },
+    });
+    try {
+      present('Tie');
+      expect(explicit.at(-1)).to.equal('[data-dataset-index="0"][data-index="0"]');
+      present('Tie', 0);
+      expect(explicit.at(-1)).to.equal('[data-dataset-index="0"][data-index="0"]');
+      present('Same', null as unknown as number);
+      expect(explicit.at(-1)).to.equal('[data-dataset-index="1"][data-index="1"]');
+      present('Same', 2);
+      expect(explicit.at(-1)).to.equal('[data-dataset-index="0"][data-index="2"]');
+    } finally {
+      Reflect.deleteProperty(selectedAfter, 'querySelector');
+    }
+  });
+
   it('isolates group names and clears missing/nonfinite categories', async () => {
     const host = await fixture<HTMLDivElement>(html`<div style="width:600px">
       <lr-lite-chart height="8rem" sync-group="G" .labels=${['A', 'B']} .datasets=${[{ label: 'S', data: [1, 2] }]}></lr-lite-chart>

@@ -378,12 +378,6 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     return 'mixed';
   }
 
-  private matchesQuery(entry: LyraSourceEntry): boolean {
-    return entry.label
-      .toLocaleLowerCase(this.effectiveLocale)
-      .includes(this.query.trim().toLocaleLowerCase(this.effectiveLocale));
-  }
-
   private isFiltering(): boolean {
     return !this.withoutSearch && this.query.trim().length > 0;
   }
@@ -393,10 +387,12 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     const filtering = this.isFiltering();
     const matches = new Set<NormalizedSourceNode>();
     if (filtering) {
+      const locale = this.effectiveLocale;
+      const query = this.query.trim().toLocaleLowerCase(locale);
       for (let index = this.sourceModel.nodes.length - 1; index >= 0; index--) {
         const node = this.sourceModel.nodes[index]!;
         if (
-          this.matchesQuery(node.entry) ||
+          node.entry.label.toLocaleLowerCase(locale).includes(query) ||
           node.children.some((child) => matches.has(child))
         )
           matches.add(node);
@@ -505,16 +501,16 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     }
     // Ancestor folders remain visible for navigation but are not matches unless their own label
     // matches the query.
-    const count = this.visibleRows().filter((row) => this.matchesQuery(row.entry)).length;
-    const signature = `${this.query
-      .trim()
-      .toLocaleLowerCase(this.effectiveLocale)}\u0000${count}`;
+    const locale = this.effectiveLocale;
+    const query = this.query.trim().toLocaleLowerCase(locale);
+    const count = this.visibleRows().filter((row) => row.entry.label.toLocaleLowerCase(locale).includes(query)).length;
+    const signature = `${query}\u0000${count}`;
     if (signature === this.lastFilterAnnouncement) return;
     this.lastFilterAnnouncement = signature;
     this.announcementSink?.announce(count === 0
       ? this.localize('noMatches')
       : this.localize('sourcePickerMatches', undefined, {
-          count: getNumberFormat(this.effectiveLocale).format(count),
+          count: getNumberFormat(locale).format(count),
           pluralCount: count,
         }));
   }

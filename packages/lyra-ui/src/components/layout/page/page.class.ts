@@ -506,8 +506,9 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.customToggles = nextToggles;
     this.customToggle = nextToggles[0];
 
+    const nextToggleSet = new Set(nextToggles);
     for (const [host, ownership] of this.customToggleOwnership) {
-      if (nextToggles.includes(host)) continue;
+      if (nextToggleSet.has(host)) continue;
       ownership.accessibleAria?.release();
       ownership.hostAria.release();
       this.customToggleOwnership.delete(host);

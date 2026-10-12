@@ -456,8 +456,21 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     this.syncing = true;
     try {
       if (this.selectionMode === 'single') {
-        const wanted = requested.find((value) => toggles.some((toggle) => toggle.value === value));
-        const chosen = wanted === undefined ? undefined : toggles.find((toggle) => toggle.value === wanted);
+        let chosen: LyraToggle | undefined;
+        if (requested.length <= 1) {
+          const wanted = requested.find((value) => toggles.some((toggle) => toggle.value === value));
+          chosen = wanted === undefined ? undefined : toggles.find((toggle) => toggle.value === wanted);
+        } else {
+          const firstByValue = new Map<string, LyraToggle>();
+          for (const toggle of toggles) {
+            const value = toggle.value;
+            if (!firstByValue.has(value)) firstByValue.set(value, toggle);
+          }
+          for (const value of requested) {
+            chosen = firstByValue.get(value);
+            if (chosen) break;
+          }
+        }
         for (const toggle of toggles) toggle.pressed = toggle === chosen;
         if (chosen) this.lastPressed = chosen;
       } else {
@@ -507,12 +520,26 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
     if (anchor) {
       const index = this.previousOrder.indexOf(anchor);
       if (index >= 0) {
-        const after = this.previousOrder.slice(index + 1).find((toggle) => available.includes(toggle));
-        const before = this.previousOrder
-          .slice(0, index)
-          .reverse()
-          .find((toggle) => available.includes(toggle));
-        const clamped = after ?? before;
+        const availableSet = available.length > 1 ? new Set(available) : undefined;
+        const isAvailable = (toggle: LyraToggle): boolean =>
+          availableSet ? availableSet.has(toggle) : toggle === available[0];
+        let clamped: LyraToggle | undefined;
+        for (let next = index + 1; next < this.previousOrder.length; next += 1) {
+          const toggle = this.previousOrder[next]!;
+          if (isAvailable(toggle)) {
+            clamped = toggle;
+            break;
+          }
+        }
+        if (!clamped) {
+          for (let previous = index - 1; previous >= 0; previous -= 1) {
+            const toggle = this.previousOrder[previous]!;
+            if (isAvailable(toggle)) {
+              clamped = toggle;
+              break;
+            }
+          }
+        }
         if (clamped) {
           this.lastFocused = clamped;
           return clamped;

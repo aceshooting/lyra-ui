@@ -336,7 +336,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     const ordinalTotal = this.ordinalTotal === undefined
       ? this.sortedChunks().length
       : Math.max(ordinalIndex, finiteCount(this.ordinalTotal, ordinalIndex));
-    const expanded = this.expandedChunkIds.includes(chunk.id);
+    const expanded = this.isChunkExpanded(chunk.id);
     const current = this.activeChunkId === chunk.id;
     return html`
       <div
@@ -401,6 +401,21 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     `;
   }
 
+  private expandedMembership?: { source: readonly string[]; ids: ReadonlySet<string> };
+
+  private isChunkExpanded(id: string): boolean {
+    const source = this.expandedChunkIds;
+    // Embedded inspectors usually render one chunk from a much larger expansion collection.
+    if (source.length === 0 || this.sortedChunks().length <= 1) {
+      this.expandedMembership = undefined;
+      return source.includes(id);
+    }
+    if (this.expandedMembership?.source !== source) {
+      this.expandedMembership = { source, ids: new Set(source) };
+    }
+    return this.expandedMembership.ids.has(id);
+  }
+
   private renderChunk = (item: unknown): TemplateResult =>
     this.chunkTemplate(item as LyraChunk, this.ordinalIndex !== undefined);
 
@@ -426,6 +441,9 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
   override render(): TemplateResult {
     const sorted = this.sortedChunks();
+    if (this.expandedMembership?.source !== this.expandedChunkIds || sorted.length <= 1) {
+      this.expandedMembership = undefined;
+    }
     const label = retrievalSemanticLabel(
       this,
       this.label == null ? this.localize('chunkInspectorLabel') : this.label

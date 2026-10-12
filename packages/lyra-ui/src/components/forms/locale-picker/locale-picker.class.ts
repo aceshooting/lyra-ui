@@ -900,19 +900,21 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   private entriesCache?: { raw: unknown; tick: number; rows: NormalizedLocaleEntry[] };
   private visibleCache?: { rows: NormalizedLocaleEntry[]; query: string; locale: string; result: NormalizedLocaleEntry[] };
 
-  private normalizeSearch(text: string, locale = this.effectiveLocale): string {
+  private normalizeSearch(text: string, locale: string): string {
     return text.toLocaleLowerCase(resolveIntlLocale(locale))
       .normalize('NFKD').replace(/\p{M}/gu, '').trim();
   }
 
   private get visibleEntries(): NormalizedLocaleEntry[] {
     const rows = this.normalizedEntries;
-    const query = this.searchable ? this.normalizeSearch(this.searchQuery) : '';
+    if (!this.searchable) return rows;
+    const locale = this.effectiveLocale;
+    const query = this.normalizeSearch(this.searchQuery, locale);
     if (!query) return rows;
     const cached = this.visibleCache;
-    if (cached && cached.rows === rows && cached.query === this.searchQuery && cached.locale === this.effectiveLocale) return cached.result;
+    if (cached && cached.rows === rows && cached.query === this.searchQuery && cached.locale === locale) return cached.result;
     let names: Intl.DisplayNames | undefined;
-    try { names = getDisplayNames(this.effectiveLocale, { type: 'language' }); }
+    try { names = getDisplayNames(locale, { type: 'language' }); }
     catch { /* Tags, native names and caller labels remain available without Intl language names. */ }
     // English names are additional search data; visible language names retain the UI locale.
     let englishNames: Intl.DisplayNames | undefined;
@@ -927,10 +929,10 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
       try { englishName = englishNames?.of(row.tag) ?? ''; }
       catch { /* Malformed tags still match their literal tag and caller label. */ }
       return [row.label, localeNativeName(row.tag), localizedName]
-        .some(text => this.normalizeSearch(text).includes(query)) ||
+        .some(text => this.normalizeSearch(text, locale).includes(query)) ||
         [row.tag, englishName].some(text => this.normalizeSearch(text, 'en').includes(invariantQuery));
     });
-    this.visibleCache = { rows, query: this.searchQuery, locale: this.effectiveLocale, result };
+    this.visibleCache = { rows, query: this.searchQuery, locale, result };
     return result;
   }
 

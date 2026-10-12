@@ -745,6 +745,20 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     return renderRetrievalMetadata(metadata, this.effectiveLocale, this.localize('valueInvalid'), this.localize('valueTruncated'));
   }
 
+  private selectedMembership?: { source: readonly string[]; ids: ReadonlySet<string> };
+
+  private isChunkSelected(id: string): boolean {
+    const source = this.selectedChunkIds;
+    if (source.length === 0 || this.processedChunks.chunks.length <= 1) {
+      this.selectedMembership = undefined;
+      return source.includes(id);
+    }
+    if (this.selectedMembership?.source !== source) {
+      this.selectedMembership = { source, ids: new Set(source) };
+    }
+    return this.selectedMembership.ids.has(id);
+  }
+
   // Shared by both rendering paths (flat list and `<lr-virtual-list>`'s `renderItem`), exactly like
   // `<lr-chunk-inspector>`'s own `renderChunk` and `<lr-thread-list>`'s own `renderRow`. Returns
   // only the row's *content* (checkbox + body) -- the surrounding `role="listitem"`/`part="row"`
@@ -753,7 +767,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   // within the same shadow tree and duplicate `role="listitem"` semantics.
   private renderRow = (item: unknown, index: number, total: number): TemplateResult => {
     const chunk = item as RetrievalChunk;
-    const selected = this.selectedChunkIds.includes(chunk.id);
+    const selected = this.isChunkSelected(chunk.id);
     const rowLabel = chunk.source.name || this.localize('untitledSource');
     return html`
       ${!this.withoutSelection
@@ -832,6 +846,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   override render(): TemplateResult {
+    if (this.selectedMembership?.source !== this.selectedChunkIds || this.errorText || this.chunks.length <= 1) {
+      this.selectedMembership = undefined;
+    }
     const label = retrievalSemanticLabel(
       this,
       this.label == null ? this.localize('chunkInspectorLabel') : this.label
@@ -845,6 +862,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     }
 
     const processed = this.processedChunks;
+    if (processed.chunks.length <= 1) this.selectedMembership = undefined;
     if (processed.chunks.length === 0) {
       if (this.loading) {
         return html`<div part="base" tabindex="-1">

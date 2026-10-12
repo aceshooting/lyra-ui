@@ -500,20 +500,27 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
     // keep scanning past an exhausted budget until that reserved child is found (or the candidate
     // list runs out), instead of breaking on the first budget-exceeded child like the ordinary case.
     let pendingReservedChild = budget.reservedPaths.has(path) && path !== this.selectedPath;
+    const requiredKeys = Array.isArray(schema.required) ? schema.required : undefined;
+    let requiredLookups = 0;
+    let requiredMembership: ReadonlySet<string> | undefined;
     const addChild = (child: {
       name: string;
       node: JsonSchemaNode;
       path: string;
       required: boolean;
-    }): boolean => {
+    }, requiredKey?: string): boolean => {
       if (pendingReservedChild && budget.reservedPaths.has(child.path)) {
         pendingReservedChild = false;
-        children.push(child);
-        return true;
-      }
-      if (children.length >= budget.remaining) {
+      } else if (children.length >= budget.remaining) {
         budget.truncated = true;
         return pendingReservedChild;
+      }
+      // Resolve membership only for admitted properties; a lone child needs no full index.
+      if (requiredKey !== undefined && requiredKeys) {
+        requiredLookups += 1;
+        child.required = requiredLookups === 1
+          ? requiredKeys.includes(requiredKey)
+          : (requiredMembership ??= new Set(requiredKeys)).has(requiredKey);
       }
       children.push(child);
       return true;
@@ -529,9 +536,8 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
             name: key,
             node,
             path: `${path}/properties/${this.pointerSegment(key)}`,
-            required:
-              Array.isArray(schema.required) && schema.required.includes(key),
-          })
+            required: false,
+          }, key)
         )
           break;
       }

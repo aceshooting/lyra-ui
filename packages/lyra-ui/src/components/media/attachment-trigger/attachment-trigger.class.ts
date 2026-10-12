@@ -440,10 +440,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
       const accept = this.effectiveAccept(this.pendingCapability);
       const files = Array.from(selected);
       const matching = files.filter((file) => matchesAccept(file, accept));
+      const matchingFiles = new Set(matching);
       this.emit('lr-files', {
         capability: this.pendingCapability,
         files: matching,
-        rejected: files.filter((file) => !matching.includes(file)).map((file) => ({ file, reason: 'type' as const })),
+        rejected: files.filter((file) => !matchingFiles.has(file)).map((file) => ({ file, reason: 'type' as const })),
         remainingFiles: null,
         remainingTotalSize: null,
       });

@@ -326,11 +326,12 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     const navigationHadFocus =
       shadowFocusTarget(this)?.getAttribute('part') === 'playlist-item';
     const videos = this.directVideos();
+    const videoSet = new Set(videos);
     // Once any live child has been observed, it remains the source of truth even if all children
     // are later removed. This prevents stale first-render metadata from reappearing after removal.
     if (videos.length > 0 || this.liveChildrenReady) this.liveChildrenReady = true;
 
-    let active = previousActive && videos.includes(previousActive) && this.isEnabled(previousActive)
+    let active = previousActive && videoSet.has(previousActive) && this.isEnabled(previousActive)
       ? previousActive
       : undefined;
     let nextIndex = active ? videos.indexOf(active) : this.nearestEnabledIndex(videos, previousIndex);
@@ -338,7 +339,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     if (!active) nextIndex = -1;
 
     const activeChanged = active !== previousActive;
-    const outgoingWasRemoved = Boolean(previousActive && !videos.includes(previousActive));
+    const outgoingWasRemoved = Boolean(previousActive && !videoSet.has(previousActive));
     const resumePlayback = activeChanged && previousActive
       ? outgoingWasRemoved
         ? this.lastKnownPlaying.get(previousActive) ?? previousActive.getState().playing
@@ -351,7 +352,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       : undefined;
 
     for (const video of previousVideos) {
-      if (!videos.includes(video)) {
+      if (!videoSet.has(video)) {
         this.releaseVideo(video);
       }
     }
@@ -389,7 +390,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     }
 
     const keptNavigation = previousNavigation &&
-      videos.includes(previousNavigation) &&
+      videoSet.has(previousNavigation) &&
       this.isEnabled(previousNavigation)
       ? videos.indexOf(previousNavigation)
       : -1;

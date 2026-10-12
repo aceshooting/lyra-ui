@@ -142,13 +142,14 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
     const active = deepActiveElement(this.ownerDocument);
     const heldFocus = !!previous && (active === previous || (!!active && composedContains(previous, active)) ||
       (this.focusedItem === previous && (!active || active === this.ownerDocument.body)));
-    for (const item of this.items) if (!assigned.includes(item)) item[menubarItemOwner](null, this.owner);
+    const assignedItems = new Set(assigned);
+    for (const item of this.items) if (!assignedItems.has(item)) item[menubarItemOwner](null, this.owner);
     this.items = assigned;
     for (const item of this.items) item[menubarItemOwner](this.owner);
     this.observeItems();
-    if (previous && assigned.includes(previous) && this.isNavigable(previous)) this.setActive(previous);
+    if (previous && assignedItems.has(previous) && this.isNavigable(previous)) this.setActive(previous);
     else this.rehome(oldIndex, heldFocus);
-    if (this.expandedItem && !assigned.includes(this.expandedItem)) this.collapse();
+    if (this.expandedItem && !assignedItems.has(this.expandedItem)) this.collapse();
   };
 
   private rehome(index: number, focus: boolean): void {
