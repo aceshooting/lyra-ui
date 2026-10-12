@@ -1334,6 +1334,7 @@ export class LyraSelect<
     }
 
     // Index only this resolution: option values and catalog membership remain live between calls.
+    const requested = new Set(values);
     const catalog = new Set(this.options);
     const claimed = new Set<LyraOption>();
     type OccurrenceQueue = { options: LyraOption[]; next: number };
@@ -1342,6 +1343,7 @@ export class LyraSelect<
       for (const option of options) {
         if (!option) continue;
         const value = option.value;
+        if (!requested.has(value)) continue;
         let queue = queues.get(value);
         if (!queue) queues.set(value, (queue = { options: [], next: 0 }));
         queue.options.push(option);
