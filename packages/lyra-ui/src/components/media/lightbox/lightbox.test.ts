@@ -1274,6 +1274,43 @@ it('joins the top layer above an already open dialog and leaves it on close', as
   expect(lightbox.matches(':popover-open')).to.equal(false);
 });
 
+it('does not open when a show listener supersedes the request with close()', async () => {
+  const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
+  const lifecycle: string[] = [];
+  el.addEventListener('lr-show', () => {
+    lifecycle.push('show');
+    void el.close();
+  });
+  el.addEventListener('lr-after-show', () => lifecycle.push('after-show'));
+  el.addEventListener('lr-hide', () => lifecycle.push('hide'));
+
+  await el.show();
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+  expect(lifecycle).to.deep.equal(['show']);
+});
+
+it('keeps the lightbox open when a hide listener supersedes close() with show()', async () => {
+  const el = (await fixture(html`<lr-lightbox open .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
+  const lifecycle: string[] = [];
+  el.addEventListener('lr-hide', () => {
+    lifecycle.push('hide');
+    void el.show();
+  });
+  el.addEventListener('lr-close-request', () => lifecycle.push('close-request'));
+  el.addEventListener('lr-close', () => lifecycle.push('close'));
+  el.addEventListener('lr-after-hide', () => lifecycle.push('after-hide'));
+
+  await el.close();
+  await el.updateComplete;
+
+  expect(el.open).to.be.true;
+  expect(el.hasAttribute('open')).to.be.true;
+  expect(lifecycle).to.deep.equal(['hide']);
+});
+
 it('projects a host description onto the dialog panel', async function () {
   if (!('ariaDescribedByElements' in HTMLElement.prototype)) this.skip();
   const wrapper = await fixture<HTMLDivElement>(html`<div>

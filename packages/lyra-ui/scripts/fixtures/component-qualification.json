@@ -258,6 +258,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/details/accordion.test.ts",
+          "src/components/layout/details/details-coverage.test.ts",
           "src/components/layout/details/details.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -454,6 +455,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/details/accordion.test.ts",
+          "src/components/layout/details/details-coverage.test.ts",
           "src/components/layout/details/details.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -10781,6 +10783,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/color-picker/color-picker-coverage.test.ts",
+              "test": "omits a revoked palette and renders a later valid swatch list",
+              "target": "picker",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/color-picker/color-picker-remediation.test.ts",
               "test": "is one roving radiogroup with a single tab stop",
               "target": "picker",
@@ -10968,6 +10976,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/color-picker/color-core.test.ts",
+          "src/components/forms/color-picker/color-picker-coverage.test.ts",
           "src/components/forms/color-picker/color-picker-remediation.test.ts",
           "src/components/forms/color-picker/color-picker.test.ts"
         ],
@@ -11393,6 +11402,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/command-palette/command-palette-contrast.test.ts",
+          "src/components/layout/command-palette/command-palette-coverage.test.ts",
           "src/components/layout/command-palette/command-palette-native-scroll.test.ts",
           "src/components/layout/command-palette/command-palette-remediation.test.ts",
           "src/components/layout/command-palette/command-palette-search-sizing.test.ts",
@@ -13491,6 +13501,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/conversation-item/conversation-item-coverage.test.ts",
           "src/components/conversation/conversation-item/conversation-item-remediation.test.ts",
           "src/components/conversation/conversation-item/conversation-item.test.ts",
           "src/components/conversation/conversation-item/conversation-retirements.test.ts"
@@ -14235,8 +14246,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/dashboard-grid/dashboard-grid-remediation.test.ts",
-              "test": "leaves Alt+Arrow and Ctrl+Home/End to the browser",
+              "file": "src/components/layout/dashboard-grid/dashboard-grid-coverage.test.ts",
+              "test": "keeps projected cells and accessible labels after direct connected adoption",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -14356,6 +14367,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/dashboard-grid/dashboard-grid-coverage.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid-register.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid-remediation.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
@@ -15368,6 +15380,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/details/accordion.test.ts",
+          "src/components/layout/details/details-coverage.test.ts",
           "src/components/layout/details/details.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18143,6 +18156,7 @@
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-closed-layout.test.ts",
           "src/components/layout/menu/menu-content-contract.test.ts",
+          "src/components/layout/menu/menu-coverage.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -21687,6 +21701,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/flow-minimap/flow-minimap-coverage.test.ts",
           "src/components/data/flow-minimap/flow-minimap.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -23003,6 +23018,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/generation-metrics/generation-metrics-coverage.test.ts",
           "src/components/conversation/generation-metrics/generation-metrics-remediation.test.ts",
           "src/components/conversation/generation-metrics/generation-metrics.test.ts"
         ],
@@ -29021,6 +29037,7 @@
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
+          "src/components/conversation/markdown/markdown-progressive-coverage.test.ts",
           "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
@@ -29228,6 +29245,7 @@
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
+          "src/components/conversation/markdown/markdown-progressive-coverage.test.ts",
           "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
@@ -30201,6 +30219,7 @@
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-closed-layout.test.ts",
           "src/components/layout/menu/menu-content-contract.test.ts",
+          "src/components/layout/menu/menu-coverage.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -30442,6 +30461,7 @@
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-closed-layout.test.ts",
           "src/components/layout/menu/menu-content-contract.test.ts",
+          "src/components/layout/menu/menu-coverage.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -30627,6 +30647,7 @@
           "src/components/layout/menu/dropdown-item.test.ts",
           "src/components/layout/menu/menu-closed-layout.test.ts",
           "src/components/layout/menu/menu-content-contract.test.ts",
+          "src/components/layout/menu/menu-coverage.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -30839,6 +30860,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/menubar/menubar-item-coverage.test.ts",
           "src/components/layout/menubar/menubar-item.test.ts",
           "src/components/layout/menubar/menubar-reconcile-cost.test.ts",
           "src/components/layout/menubar/menubar.test.ts"
@@ -31044,6 +31066,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/menubar/menubar-item-coverage.test.ts",
           "src/components/layout/menubar/menubar-item.test.ts",
           "src/components/layout/menubar/menubar-reconcile-cost.test.ts",
           "src/components/layout/menubar/menubar.test.ts"
@@ -33034,6 +33057,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/navigation-menu-item/navigation-menu-item-coverage.test.ts",
           "src/components/layout/navigation-menu-item/navigation-menu-item.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -37806,6 +37830,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/prompt-queue/prompt-queue-coverage.test.ts",
           "src/components/conversation/prompt-queue/prompt-queue.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -37835,6 +37860,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/agent-tools/prompt-studio/prompt-studio-coverage.test.ts",
+              "test": "renders each supported native toolbar heading level",
+              "target": "studio",
+              "state": "populated"
+            },
             {
               "file": "src/components/agent-tools/prompt-studio/prompt-studio.test.ts",
               "test": "is accessible when populated and gates all editing controls while disabled",
@@ -37974,6 +38005,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/prompt-studio/prompt-studio-coverage.test.ts",
           "src/components/agent-tools/prompt-studio/prompt-studio-remediation.test.ts",
           "src/components/agent-tools/prompt-studio/prompt-studio.test.ts"
         ],
@@ -40465,6 +40497,7 @@
         "tests": [
           "src/components/layout/reorder-list/reorder-item-composition.test.ts",
           "src/components/layout/reorder-list/reorder-item.test.ts",
+          "src/components/layout/reorder-list/reorder-list-coverage.test.ts",
           "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
           "src/components/layout/reorder-list/reorder-list.test.ts"
         ],
@@ -40642,6 +40675,7 @@
         "tests": [
           "src/components/layout/reorder-list/reorder-item-composition.test.ts",
           "src/components/layout/reorder-list/reorder-item.test.ts",
+          "src/components/layout/reorder-list/reorder-list-coverage.test.ts",
           "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
           "src/components/layout/reorder-list/reorder-list.test.ts"
         ],
@@ -46221,6 +46255,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/stepper/stepper-coverage.test.ts",
           "src/components/layout/stepper/stepper.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -48978,6 +49013,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/agent-tools/terminal/terminal-coverage.test.ts",
+              "test": "gives a blank highlighted output line a localized accessible name",
+              "target": "terminal",
+              "state": "populated"
+            },
+            {
               "file": "src/components/agent-tools/terminal/terminal.test.ts",
               "test": "is accessible in the populated dense and plain states",
               "target": "compact",
@@ -49134,6 +49175,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/terminal/terminal-coverage.test.ts",
           "src/components/agent-tools/terminal/terminal-remediation.test.ts",
           "src/components/agent-tools/terminal/terminal.test.ts"
         ],
@@ -49883,6 +49925,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/thread-list/thread-list-coverage.test.ts",
           "src/components/conversation/thread-list/thread-list-remediation.test.ts",
           "src/components/conversation/thread-list/thread-list-search-size.test.ts",
           "src/components/conversation/thread-list/thread-list.test.ts"
@@ -52050,6 +52093,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-call-block/tool-call-block-coverage.test.ts",
           "src/components/agent-tools/tool-call-block/tool-call-block.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

@@ -3,6 +3,7 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/t
 import "./email-viewer.js";
 import type { LyraEmailViewer } from "./email-viewer.js";
 import { __setEmailDepsForTesting } from "./email-loader.js";
+import type { PostalMessageApi } from './email-loader.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js";
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from "../document-viewer/registry.js";
 import type { LyraHighlight } from "../document-viewer/anchors.js";
@@ -1968,6 +1969,39 @@ describe('message content and Lyra chrome', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="attachments-label"]') !== null);
       expect(getComputedStyle(el.shadowRoot!.querySelector('[part="attachments-label"]')!).textAlign).to.equal('start');
       expect(getComputedStyle(el.shadowRoot!.querySelector('[part="from-label"]')!).textAlign).to.equal('end');
+    } finally {
+      restore();
+    }
+  });
+
+  it('preserves safe message content when PostalMime returns revoked optional sender metadata', async () => {
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    __setEmailDepsForTesting({
+      PostalMime: {
+        parse: async () => ({
+          from: revoked.proxy as unknown as NonNullable<PostalMessageApi['from']>,
+          text: 'The safe message body remains available.',
+          date: 'not a parseable date',
+          attachments: [],
+        }),
+      },
+      DOMPurify: undefined,
+    });
+    const restore = stubFetch(SAMPLE_EML);
+    try {
+      const el = await fixture<LyraEmailViewer>(html`
+        <lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>
+      `);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body-text"]') !== null);
+
+      expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent).to.contain(
+        'The safe message body remains available.',
+      );
+      expect(el.shadowRoot!.querySelector('[part="from"]')!.textContent!.trim()).to.equal('');
+      expect(el.shadowRoot!.querySelector('[part="date"]')!.textContent!.trim()).to.equal(
+        'not a parseable date',
+      );
     } finally {
       restore();
     }

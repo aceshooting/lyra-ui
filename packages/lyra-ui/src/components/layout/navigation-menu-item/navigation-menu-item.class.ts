@@ -209,9 +209,35 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
   private morphCleanup?: () => void;
   private focusInPanel = false;
   private semanticFocusOrigin?: Element;
+  private hrefChangedThisUpdate = false;
 
   constructor() {
     super();
+    // SlotPresenceController refreshes first; normalize before Lit renders this same update.
+    this.addController({
+      hostUpdate: () => {
+        if (this._open && !this.canDisclose) {
+          if (this.liveOpen) {
+            this.closePanel('programmatic', { repairFocus: true, instant: true });
+          } else {
+            // Never rendered as an open panel: normalize without announcing a transition.
+            this._open = false;
+            this.interactionMode = undefined;
+            this.pendingShow = false;
+            this.pendingMorph = undefined;
+            this.requestUpdate('open', true);
+          }
+        }
+        if (this.hrefChangedThisUpdate) {
+          const previous = this.baseElement;
+          const nextKind = this.isLink ? 'a' : 'button';
+          this.semanticFocusOrigin =
+            previous && previous.localName !== nextKind && shadowFocusTarget(this) === previous
+              ? previous
+              : undefined;
+        }
+      },
+    });
     new GlassScrollLayer(this, '[part="panel"]', () => this.open);
     registerNavigationMenuItemController(this, {
       isTrigger: () => this.isTrigger,
@@ -317,26 +343,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (this._open && !this.canDisclose) {
-      if (this.liveOpen) {
-        this.closePanel('programmatic', { repairFocus: true, instant: true });
-      } else {
-        // Never rendered as an open panel: normalize without announcing a transition.
-        this._open = false;
-        this.interactionMode = undefined;
-        this.pendingShow = false;
-        this.pendingMorph = undefined;
-        this.requestUpdate('open', true);
-      }
-    }
-    if (changed.has('href')) {
-      const previous = this.baseElement;
-      const nextKind = this.isLink ? 'a' : 'button';
-      this.semanticFocusOrigin =
-        previous && previous.localName !== nextKind && shadowFocusTarget(this) === previous
-          ? previous
-          : undefined;
-    }
+    this.hrefChangedThisUpdate = changed.has('href');
   }
 
   protected override updated(changed: PropertyValues<this>): void {
