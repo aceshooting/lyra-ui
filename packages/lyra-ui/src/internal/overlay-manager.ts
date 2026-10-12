@@ -116,6 +116,15 @@ const EMPTY_STACK: OverlayStackSnapshot = {
 };
 const modalStates = new WeakMap<Document, ModalDocumentState>();
 
+/** The host's authored inert state, excluding this manager's temporary background lease. */
+export function authoredOverlayInert(host: HTMLElement): boolean {
+  const state = modalStates.get(host.ownerDocument);
+  if (!state) return host.inert;
+  const records = state.observer?.takeRecords();
+  if (records?.length) handleMutations(state, records);
+  return state.inerted.get(host) ?? host.inert;
+}
+
 function modalStateFor(doc: Document): ModalDocumentState {
   const existing = modalStates.get(doc);
   if (existing) return existing;

@@ -233,10 +233,13 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
     const ratio = Number(await part(page, id, 'width').locator('input').inputValue()) / Number(await part(page, id, 'height').locator('input').inputValue());
     await part(page, id, 'width').locator('input').fill('101.125');
     assert.equal(Number(await part(page, id, 'height').locator('input').inputValue()), 101.125 / ratio);
+    await part(page, id, 'height').locator('input').fill('55.5');
+    const widthFromHeight = Number(await part(page, id, 'width').locator('input').inputValue());
+    assert.ok(Math.abs(widthFromHeight - 55.5 * ratio) < 0.01, String(widthFromHeight));
     await part(page, id, 'ratio').click(); await part(page, id, 'height').locator('input').fill('37.75');
-    assert.equal(await part(page, id, 'width').locator('input').inputValue(), '101.125');
+    assert.equal(Number(await part(page, id, 'width').locator('input').inputValue()), widthFromHeight);
     await part(page, id, 'ratio').click();
-    assert.equal(Number(await part(page, id, 'height').locator('input').inputValue()), 101.125 / ratio);
+    assert.equal(Number(await part(page, id, 'height').locator('input').inputValue()), widthFromHeight / ratio);
     // Explicit composition-key stress: Escape must preserve the owned draft, not dismiss an IME.
     await part(page, id, 'description').locator('textarea').evaluate(element => {
       element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', isComposing: true, bubbles: true, composed: true }));
@@ -358,6 +361,65 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
     } finally {
       await page.evaluate(() => { if (window.__insertionArrayBufferDescriptor) Object.defineProperty(File.prototype, 'arrayBuffer', window.__insertionArrayBufferDescriptor); else delete File.prototype.arrayBuffer; delete window.__insertionArrayBufferDescriptor; delete window.__insertionArrayBuffer; delete window.__insertionReads; delete window.__rejectNextInsertionRead; });
       await dispose(page, id);
+    }
+  });
+  await check('native raster decoder rejection announces a localized refusal and preserves the document', async () => {
+    const id = 'insert-ui-native-decoder-rejection';
+    try {
+      await createPlain(page, id, createEditor);
+      const before = await saveEditor(page, id), initial = await snapshot(page, id), bytes = await source(page, 'png');
+      const message = 'This valid PNG could not be decoded by the browser.';
+      await host(page, id).evaluate(async (element, message) => {
+        element.strings = { ...element.strings, docxEditorImageInsertInvalid: message };
+        await element.updateComplete;
+      }, message);
+      await draft(page, id, bytes);
+      await page.evaluate(() => {
+        const descriptor = Object.getOwnPropertyDescriptor(window, 'createImageBitmap');
+        if (typeof window.createImageBitmap !== 'function' || (descriptor && !descriptor.configurable))
+          throw new Error('The owning window decoder is not safely replaceable in this browser.');
+        const state = window.__nativeImageDecoderFailure = { descriptor, calls: [] };
+        Object.defineProperty(window, 'createImageBitmap', { configurable: true, enumerable: descriptor?.enumerable ?? true, writable: true, value: function (blob, options) {
+          state.calls.push({ receiverIsOwner: this === window, blob, options });
+          return Promise.reject(new DOMException('test-only native decoder rejection', 'EncodingError'));
+        } });
+      });
+      assert.equal(await page.evaluate(() => window.__nativeImageDecoderFailure.calls.length), 0);
+      await part(page, id, 'apply').click();
+      await part(page, id, 'status').waitFor({ state: 'visible' });
+      await part(page, id, 'fields').waitFor({ state: 'hidden' });
+      await page.waitForFunction(message => [...document.querySelectorAll('[data-lr-live-region="assertive"]')]
+        .some(sink => [...sink.children].some(child => child.textContent === message)), message);
+      const invocation = await page.evaluate(async () => {
+        const state = window.__nativeImageDecoderFailure;
+        return { calls: await Promise.all(state.calls.map(async call => ({ receiverIsOwner: call.receiverIsOwner,
+          type: call.blob.type, bytes: [...new Uint8Array(await call.blob.arrayBuffer())], options: call.options }))) };
+      });
+      assert.equal(invocation.calls.length, 1);
+      assert.deepEqual(invocation.calls[0], { receiverIsOwner: true, type: 'image/png', bytes: [...bytes], options: { imageOrientation: 'from-image' } });
+      assert.equal(await part(page, id, 'status').textContent(), message);
+      const announcement = await page.evaluate(message => {
+        const sink = document.querySelector('[data-lr-live-region="assertive"]');
+        return { role: sink?.getAttribute('role'), politeness: sink?.getAttribute('aria-live'), message: [...(sink?.children ?? [])]
+          .map(child => child.textContent).find(text => text === message) ?? null,
+          messages: [...(sink?.children ?? [])].map(child => child.textContent ?? '') };
+      }, message);
+      assert.equal(announcement.role, 'alert'); assert.equal(announcement.politeness, 'assertive'); assert.equal(announcement.message, message);
+      assert.equal(announcement.messages.some(text => text.includes('test-only native decoder rejection')), false);
+      assert.equal(await part(page, id, 'width').count(), 0);
+      await unchanged(page, id, before, initial, saveEditor);
+    } finally {
+      try {
+        await page.evaluate(() => {
+          const state = window.__nativeImageDecoderFailure;
+          if (!state) return;
+          if (state.descriptor) Object.defineProperty(window, 'createImageBitmap', state.descriptor);
+          else delete window.createImageBitmap;
+          delete window.__nativeImageDecoderFailure;
+        });
+      } finally {
+        if (await host(page, id).count()) await dispose(page, id);
+      }
     }
   });
   await check('read-only and active composition disable the local image trigger', async () => {

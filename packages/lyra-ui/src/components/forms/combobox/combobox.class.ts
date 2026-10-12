@@ -1714,11 +1714,11 @@ export class LyraCombobox<
     return this.multiple ? this._selected : this._selected.slice(0, 1);
   }
 
-  /** The first current row per value, shown rows before the rest of the async catalogue. */
+  /** The first current row per value, independent of the current suggestion filter. */
   private rowsByValue(values: ReadonlySet<string>): Map<string, ComboboxSourceRow> {
     const rows = this.source
       ? new Map<string, ComboboxSourceRow>()
-      : this.localRowsByValue(values, this.filtered);
+      : this.localRowsByValue(values, this.options);
     for (const row of this.asyncRows) {
       if (values.has(row.value) && !rows.has(row.value)) rows.set(row.value, row);
     }

@@ -243,7 +243,8 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
     try {
       const entries = unzipSync(Uint8Array.from(source));
       entries['word/document.xml'] = strToU8(strFromU8(entries['word/document.xml'])
-        .replace('<w:p><w:r><w:t>Corpus opening', '<w:p><w:pPr><w:outlineLvl w:val="0"/></w:pPr><w:r><w:t>Corpus opening'));
+        .replace('<w:p><w:r><w:t>Corpus opening', '<w:p><w:pPr><w:outlineLvl w:val="0"/></w:pPr><w:r><w:t>Corpus opening')
+        .replace('</w:body>', '<w:p><w:pPr><w:pStyle w:val="MissingInspectionStyle"/></w:pPr><w:r><w:t>Unclassified heading</w:t></w:r></w:p></w:body>'));
       assert.equal((await host(id).evaluate((element, bytes) => element.open(Uint8Array.from(bytes)), [...zipSync(entries)])).ok, true);
       await host(id).getByRole('button', { name: 'Outline', exact: true }).click();
       assert.equal(await host(id).locator('[part="document-target"]').count(), 1);
@@ -257,6 +258,8 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
       assert.ok((await host(id).locator('[part="inspection-scope"]').textContent()).includes('not an accessibility certification'));
       assert.ok((await host(id).locator('[part="inspection-capabilities"]').textContent()).includes('unverified'));
       assert.ok(await host(id).locator('[part="diagnostic-target"]').count());
+      const diagnosticRows = await host(id).locator('[part="inspection-items"] li').allTextContents();
+      assert.ok(diagnosticRows.some(text => text.includes('Some Body headings content could not be inspected.')), diagnosticRows.join(' | '));
       await host(id).locator('[part="diagnostic-target"]').first().click();
       assert.deepEqual(await host(id).evaluate(element => element.snapshot().revision), before);
       await assertNoAxeViolations(page, id);

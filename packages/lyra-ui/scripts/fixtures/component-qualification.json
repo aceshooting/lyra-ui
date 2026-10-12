@@ -41051,8 +41051,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/responsive-panel/native-modal.test.ts",
-              "test": "${tag} accepts pointer and focus and returns to its native opener on Escape",
+              "file": "src/components/layout/responsive-panel/native-modal-coverage.test.ts",
+              "test": "${tag} restores an unexpected carrier close and honors Escape veto and acceptance",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -41079,8 +41079,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/responsive-panel/native-modal.test.ts",
-              "test": "${tag} accepts pointer and focus and returns to its native opener on Escape",
+              "file": "src/components/layout/responsive-panel/native-modal-coverage.test.ts",
+              "test": "${tag} restores an unexpected carrier close and honors Escape veto and acceptance",
               "kind": "320px allocation test signal"
             }
           ]
@@ -41183,6 +41183,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/responsive-panel/native-modal-coverage.test.ts",
+          "src/components/layout/responsive-panel/native-modal-premounted.test.ts",
+          "src/components/layout/responsive-panel/native-modal-recovery-lifecycle.test.ts",
           "src/components/layout/responsive-panel/native-modal.test.ts",
           "src/components/layout/responsive-panel/responsive-panel.test.ts"
         ],

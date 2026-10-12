@@ -85,6 +85,14 @@ afterEach(() => {
 });
 
 expectLocaleFallback('tr', ['clear', 'emojiPickerGridLabel', 'emojiPickerSearchLabel', 'emojiPickerSearchPlaceholder']);
+expectLocaleFallback('ja', [
+  'clear',
+  'emojiPickerEmpty',
+  'emojiPickerGridLabel',
+  'emojiPickerGroupSmileysEmotion',
+  'emojiPickerSearchLabel',
+  'emojiPickerSearchPlaceholder',
+]);
 
 it('contains a throwing shadow-root activeElement getter while replacing groups', async () => {
   const el = await connectEmojiPicker();
@@ -1100,6 +1108,37 @@ it('keeps a consumer-supplied label verbatim even for a built-in numeric key', a
   expect([...el.shadowRoot!.querySelectorAll('[part="group-label"]')].map((h) => h.textContent!.trim())).to.deep.equal([
     'My own zero group',
   ]);
+});
+
+it('loads and searches the real Japanese default emoji dataset through the public picker', async () => {
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+  el.setAttribute('lang', 'ja');
+  created.push(el);
+  document.body.append(el);
+
+  await waitUntil(
+    () => el.groups.some((group) => group.emojis.some(
+      (item) => item.emoji === '😀' && item.name === 'にっこり笑う',
+    )),
+    'the Japanese default emoji dataset did not load',
+  );
+
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search"]')!;
+  search.value = 'にっこり笑う';
+  search.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+
+  const options = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+  const option = options.find((candidate) => candidate.getAttribute('aria-label') === 'にっこり笑う') ?? null;
+  expect(option !== null, 'the localized emoji appears in the rendered search results').to.equal(true);
+  expect(options.map((candidate) => candidate.getAttribute('aria-label')).sort()).to.deep.equal([
+    'にっこり笑う',
+    'にっこり笑う猫',
+  ]);
+  expect(option!.textContent).to.equal('😀');
+  expect(option!.getAttribute('role')).to.equal('option');
+  expect(option!.getAttribute('aria-posinset')).to.equal(String(options.indexOf(option!) + 1));
+  expect(option!.getAttribute('aria-setsize')).to.equal(String(options.length));
 });
 
 describe('disabled', () => {

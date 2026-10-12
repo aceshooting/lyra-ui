@@ -1381,6 +1381,20 @@ describe('pan & zoom', () => {
     expect(el.viewport).to.deep.equal({ x: 40, y: -20, zoom: 2 });
   });
 
+  it('ignores a Lit binding to the read-only viewport and keeps setViewport as the mutator', async () => {
+    const requested = { x: 40, y: -20, zoom: 1.5 };
+    const el = (await fixture<LyraFlowCanvas>(html`
+      <lr-flow-canvas .viewport=${requested}></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    await el.updateComplete;
+
+    // The getter-shaped value is convenient to inspect, but writes through Lit are intentionally
+    // ignored; the explicit mutator remains the supported way to change the live viewport.
+    expect(el.viewport).to.deep.equal({ x: 0, y: 0, zoom: 1 });
+    el.setViewport(requested);
+    expect(el.viewport).to.deep.equal(requested);
+  });
+
   it('emits lr-viewport-change on setViewport', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;

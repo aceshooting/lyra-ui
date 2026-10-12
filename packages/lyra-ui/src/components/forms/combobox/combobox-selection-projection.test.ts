@@ -155,3 +155,37 @@ it('preserves deferred async source selection and opaque payload references', as
   expect((control.selectedRows[0]!.data as { revision: number }).revision).to.equal(2);
   expect(control.open).to.equal(false);
 });
+
+it('retains a pre-connected selected row when a query filters that option out', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div></div>`);
+  const control = document.createElement('lr-combobox') as LyraCombobox;
+  control.label = 'Choice';
+  control.multiple = true;
+  control.maxRender = 20;
+  const options = Array.from({ length: 100 }, (_, index) => {
+    const option = document.createElement('lr-option');
+    option.value = `v-${index}`;
+    option.label = `Option ${index}`;
+    option.data = { index };
+    return option;
+  });
+  control.append(...options);
+  control.value = ['v-99']; // Programmatic binding before local options connect.
+  host.append(control);
+  await Promise.all(options.map((option) => option.updateComplete));
+  await settle(control);
+
+  expect(control.selectedRows.map((row) => row.value)).to.deep.equal(['v-99']);
+  control.open = true;
+  control.inputValue = 'Option 1';
+  await settle(control);
+
+  expect(control.value).to.deep.equal(['v-99']);
+  expect(control.selectedRows.map((row) => row.value)).to.deep.equal(['v-99']);
+  expect(control.selectedRows[0]?.label).to.equal('Option 99');
+  expect(control.selectedRows[0]?.data).to.equal(options[99]!.data);
+
+  control.inputValue = '';
+  await settle(control);
+  expect(control.selectedRows.map((row) => row.value)).to.deep.equal(['v-99']);
+});
