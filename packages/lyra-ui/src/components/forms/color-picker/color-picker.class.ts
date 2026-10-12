@@ -1626,13 +1626,18 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     const labelledBy = !this.accessibleLabel && hasLabel ? this.labelId : '';
     const userInvalid = hasCustomState(this.internals, 'user-invalid');
     const invalid = hasError || userInvalid;
-    const describedBy = this.localDescriptionIds = [
+    const describedBy = [
       hasError ? this.errorId : '',
       hasHint ? this.hintId : '',
       this.valueTextId,
     ]
       .filter(Boolean)
       .join(' ');
+    const requiredTextId = `${this.triggerId}-required`;
+    const triggerDescribedBy = this.localDescriptionIds = [
+      this.required && !this.inline ? requiredTextId : '',
+      describedBy,
+    ].filter(Boolean).join(' ');
     return html`<div
       part="form-control base color-picker"
       @focus=${this.controlFocusListener}
@@ -1651,14 +1656,16 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           aria-haspopup="dialog"
           aria-expanded=${this.open ? 'true' : 'false'}
           aria-controls=${this.panelId}
-          aria-describedby=${describedBy}
-          aria-required=${this.required ? 'true' : 'false'}
+          aria-describedby=${triggerDescribedBy}
           aria-invalid=${invalid ? 'true' : 'false'}
           ?disabled=${this.effectiveDisabled}
           style=${styleMap({ '--lr-color-picker-swatch-color': cssColor(this.color) })}
           @click=${this.onTriggerClick}
         ></button>
       </div>`}
+      ${this.required && !this.inline
+        ? html`<span id=${requiredTextId} class="sr-only">${this.localize('fieldRequired')}</span>`
+        : nothing}
       <span id=${this.valueTextId} class="sr-only"
         >${this.localize('colorPickerCurrentValue', undefined, {
           color: this.value || this.getFormattedValue(this.activeFormat()),

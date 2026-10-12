@@ -51,12 +51,13 @@ const MAX_STAT_ROWS = 10_000;
  * pointer modifiers; the platform primary modifier and Shift preserve new-context activation.
  * @csspart base - The component's root wrapper (`<div>`, or a stretched real `<a>` when `href` is safe).
  * @csspart icon - Container for the `start` slot.
- * @csspart label - The label text. Hidden (and collapsed) whenever `label` is empty, so a
- *   label-less stat doesn't leave a blank line above the value.
+ * @csspart label - The label text, exposed as a term when present. Hidden (and collapsed) whenever
+ *   `label` is empty, so a label-less stat doesn't leave a blank line above the value.
  * @csspart value-row - Wrapper around the value and unit.
- * @csspart value - The value text. Accessibly labelled by the `label` part (via
- *   `aria-labelledby`) whenever `label` is set, so tabbing directly to this
- *   (focusable when `exactValue` is set) control still announces which metric and visible unit it is.
+ * @csspart value - The value text, exposed as a definition when labelled by a metric or unit.
+ *   Accessibly labelled by the `label` part (via `aria-labelledby`) whenever `label` is set, so
+ *   tabbing directly to this value (focusable when `exactValue` is set) still announces which
+ *   metric and visible unit it is.
  * @csspart unit - The unit text.
  * @csspart trend - The trend pill.
  * @csspart sub - Container for the `sub` attribute/slot.
@@ -64,10 +65,11 @@ const MAX_STAT_ROWS = 10_000;
  * @csspart caption - Container for the caption attribute/slot.
  * @csspart rows - Container for the `rows` breakdown list.
  * @csspart row - A single breakdown row (one per `rows` entry).
- * @csspart row-label - The label text of a breakdown row.
- * @csspart row-value - The value text of a breakdown row. Shows the row's `exactValue` (if any) as
- *   a hover/focus tooltip, same as the headline `value`, and is accessibly labelled by its
- *   `row-label` (via `aria-labelledby`) the same way the headline `value` is.
+ * @csspart row-label - The label text of a breakdown row, exposed as a term when present.
+ * @csspart row-value - The value text of a breakdown row, exposed as a definition when labelled.
+ *   Shows the row's `exactValue` (if any) as a hover/focus tooltip, same as the headline `value`,
+ *   and is accessibly labelled by its `row-label` (via `aria-labelledby`) the same way the
+ *   headline `value` is.
  * @cssprop [--lr-stat-bg=var(--lr-color-surface)] - Resting background of the card. The pressed
  *   fill of a linked card mixes from this value too, so one override retints both. `frame="plain"`
  *   still paints transparent.
@@ -398,11 +400,12 @@ export class LyraStat extends LyraElement {
         ><slot name="start" @slotchange=${this.onIconSlotChange}></slot
         ></span
       >
-      <span part="label" id=${this.labelId} ?hidden=${!this.label}>${this.label}</span>
+      <span part="label" id=${this.labelId} role=${this.label ? 'term' : nothing} ?hidden=${!this.label}>${this.label}</span>
       <div part="value-row">
         <span
           part="value"
           id=${this.valueId}
+          role=${this.label || this.unit ? 'definition' : nothing}
           title=${this.exactValue || nothing}
           tabindex=${this.exactValue && !linked ? '0' : nothing}
           aria-labelledby=${this.label || this.unit
@@ -437,10 +440,11 @@ export class LyraStat extends LyraElement {
           const rowValueId = `${rowLabelId}-value`;
           return html`
             <div part="row">
-              <span part="row-label" id=${rowLabelId}>${row.label}</span>
+              <span part="row-label" id=${rowLabelId} role=${row.label ? 'term' : nothing}>${row.label}</span>
               <span
                 part="row-value"
                 id=${rowValueId}
+                role=${row.label ? 'definition' : nothing}
                 title=${row.exactValue || nothing}
                 tabindex=${row.exactValue && !linked ? '0' : nothing}
                 aria-labelledby=${row.label ? `${rowLabelId} ${rowValueId}` : nothing}

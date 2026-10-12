@@ -325,7 +325,7 @@ describe('lr-commit-card', () => {
     const diffstat = el.shadowRoot!.querySelector('[part="diffstat"]')!;
     expect(diffstat.textContent).to.include('8');
     expect(diffstat.textContent).to.include('1');
-    expect(diffstat.getAttribute('aria-label')).to.be.a('string').and.not.equal('');
+    expect(diffstat.querySelector('.sr-only')?.textContent).to.be.a('string').and.not.equal('');
   });
 
   it('formats aggregate and per-file diff counts for the effective locale', async () => {
@@ -373,7 +373,7 @@ describe('lr-commit-card', () => {
     expect(fileDeletions).to.deep.equal(['-0', '-0']);
     expect(el.shadowRoot!.querySelector('[part="additions"]')?.textContent).to.equal('+2');
     expect(el.shadowRoot!.querySelector('[part="deletions"]')?.textContent).to.equal('-0');
-    const label = el.shadowRoot!.querySelector('[part="diffstat"]')?.getAttribute('aria-label') ?? '';
+    const label = el.shadowRoot!.querySelector('[part="diffstat"] .sr-only')?.textContent ?? '';
     expect(label).to.not.include('NaN');
     expect(label).to.not.include('Infinity');
   });
@@ -486,8 +486,8 @@ describe('lr-commit-card', () => {
     await el.updateComplete;
     const status = el.shadowRoot!.querySelector('[part="file-status"]')!;
     // The glyph stays the terse letter sighted users expect; the accessible name is the expansion.
-    expect(status.textContent!.trim()).to.equal('M');
-    expect(status.getAttribute('aria-label')).to.equal('Modified');
+    expect(status.querySelector('[aria-hidden="true"]')!.textContent).to.equal('M');
+    expect(status.querySelector('.sr-only')!.textContent).to.equal('Modified');
   });
 
   it('drops an unknown git status while retaining the file row', async () => {
@@ -517,7 +517,7 @@ describe('lr-commit-card', () => {
     `)) as LyraCommitCard;
     await el.updateComplete;
     const labels = [...el.shadowRoot!.querySelectorAll('[part="file-status"]')].map((s) =>
-      s.getAttribute('aria-label'),
+      s.querySelector('.sr-only')?.textContent,
     );
     expect(labels).to.deep.equal(['Modifié', 'Ajouté']);
   });

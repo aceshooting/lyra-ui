@@ -224,25 +224,21 @@ export class LyraGauge extends LyraElement {
     return finiteRatio(this.value, lo, hi);
   }
 
-  // The rule that serves both the higher-is-worse and higher-is-better examples in
-  // `LyraGaugeThreshold`'s own doc comment: sort ascending by `at` (never trusting authored
-  // order), then keep the LAST entry whose `at` is `<=` value -- inclusive, so a value exactly on
-  // a boundary takes that boundary's variant. An entry whose `at` is not finite (NaN/Infinity) is
-  // excluded up front, like this getter already excludes a non-finite `value` -- it can otherwise
-  // never legitimately compare below/above a real value, so letting it in would either silently
-  // never match (harmless) or, worse, collapse to a fallback that spuriously matches everything.
-  // Every surviving `at` still routes through `finiteNumber` before use in the sort/comparison,
-  // matching the rest of this file's own numeric-guard convention.
+  // Pick the greatest finite boundary at or below the value without reordering authored data.
+  // Equal boundaries keep the last authored variant, matching a stable ascending sort.
   private get effectiveVariant(): LyraProgressVariant {
     if (Number.isFinite(this.value) && this.thresholds.length > 0) {
-      const eligible = this.thresholds.filter((threshold) => Number.isFinite(threshold.at));
-      const sorted = [...eligible].sort(
-        (a, b) => finiteNumber(a.at, 0) - finiteNumber(b.at, 0),
-      );
+      let matchedAt = Number.NEGATIVE_INFINITY;
       let matched: LyraProgressVariant | undefined;
-      for (const threshold of sorted) {
-        if (finiteNumber(threshold.at, 0) <= this.value) matched = threshold.variant;
-      }
+      this.thresholds.forEach((threshold) => {
+        const rawAt = threshold.at;
+        if (!Number.isFinite(rawAt)) return;
+        const at = finiteNumber(rawAt, 0);
+        if (at <= this.value && at >= matchedAt) {
+          matchedAt = at;
+          matched = threshold.variant;
+        }
+      });
       if (matched) return matched;
     }
     return this.variant;

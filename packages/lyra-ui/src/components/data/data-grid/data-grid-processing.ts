@@ -74,9 +74,9 @@ function valuesFromCell(value: unknown): unknown[] {
   return [value];
 }
 
-function sameValue(left: unknown, right: unknown, locale: string): boolean {
+function sameValue(left: unknown, right: unknown, collator: () => Intl.Collator): boolean {
   if (Object.is(left, right)) return true;
-  return getCollator(locale, { sensitivity: 'base', numeric: true }).compare(
+  return collator().compare(
     comparableText(left),
     comparableText(right),
   ) === 0;
@@ -133,20 +133,21 @@ export function matchesFilter<Row>(
   const value = columnValue(column, row);
   if (column.filterFn) return Boolean(column.filterFn(value, filter, row));
   const type: DataGridFilterType = column.filterType ?? 'text';
-  const collator = getCollator(intlLocale, { sensitivity: 'base', numeric: true });
-
   if (type === 'number-range') return matchesRange(value, filter, false);
   if (type === 'date-range') return matchesRange(value, filter, true);
-  if (type === 'equals') return collator.compare(comparableText(value), comparableText(filter)) === 0;
+  let collator: Intl.Collator | undefined;
+  const comparison = (): Intl.Collator =>
+    collator ??= getCollator(intlLocale, { sensitivity: 'base', numeric: true });
+  if (type === 'equals') return comparison().compare(comparableText(value), comparableText(filter)) === 0;
 
   const needles = valuesFromFilter(filter);
   if (needles.length === 0) return true;
   const values = valuesFromCell(value);
   if (type === 'set' || type === 'includes-any') {
-    return needles.some((needle) => values.some((candidate) => sameValue(candidate, needle, locale)));
+    return needles.some((needle) => values.some((candidate) => sameValue(candidate, needle, comparison)));
   }
   if (type === 'includes-all') {
-    return needles.every((needle) => values.some((candidate) => sameValue(candidate, needle, locale)));
+    return needles.every((needle) => values.some((candidate) => sameValue(candidate, needle, comparison)));
   }
 
   return comparableText(value).toLocaleLowerCase(intlLocale).includes(
@@ -181,6 +182,7 @@ export function searchRows<Row>(
   const needle = term.trim();
   if (!needle) return [...rows];
   const searchable = columns.filter((column) => (column.field || column.value) && column.searchable !== false);
+  const normalizedNeedle = searchFn ? '' : needle.toLocaleLowerCase(intlLocale);
   return rows.filter((row) =>
     searchable.some((column) => {
       const value = columnValue(column, row);
@@ -188,7 +190,7 @@ export function searchRows<Row>(
         ? Boolean(searchFn(value, needle, row))
         : comparableText(value)
             .toLocaleLowerCase(intlLocale)
-            .includes(needle.toLocaleLowerCase(intlLocale));
+            .includes(normalizedNeedle);
     }),
   );
 }
@@ -310,24 +312,20 @@ export function aggregateValues<Row>(
   if (aggregation === 'uniqueCount') return new Set(defined).size;
   const numeric = defined.map(finiteValue).filter((value): value is number => value !== undefined);
   if (numeric.length === 0) return aggregation === 'extent' ? [] : undefined;
-  const sorted = [...numeric].sort((left, right) => left - right);
-  let scale = 0;
-  for (const value of numeric) scale = Math.max(scale, Math.abs(value));
-  let scaledTotal = 0;
-  if (scale > 0) {
-    for (const value of numeric) scaledTotal += value / scale;
-  }
-  if (aggregation === 'sum') {
-    const sum = scale === 0 ? 0 : scaledTotal * scale;
-    return Number.isFinite(sum) ? sum : undefined;
-  }
-  if (aggregation === 'min') return sorted[0];
-  if (aggregation === 'max') return sorted.at(-1);
-  if (aggregation === 'mean') {
-    const mean = scale === 0 ? 0 : (scaledTotal / numeric.length) * scale;
-    return Number.isFinite(mean) ? mean : undefined;
+  if (aggregation === 'sum' || aggregation === 'mean') {
+    let scale = 0;
+    for (const value of numeric) scale = Math.max(scale, Math.abs(value));
+    let scaledTotal = 0;
+    if (scale > 0) {
+      for (const value of numeric) scaledTotal += value / scale;
+    }
+    const result = scale === 0 ? 0 : aggregation === 'sum'
+      ? scaledTotal * scale
+      : (scaledTotal / numeric.length) * scale;
+    return Number.isFinite(result) ? result : undefined;
   }
   if (aggregation === 'median') {
+    const sorted = [...numeric].sort((left, right) => left - right);
     const middle = Math.floor(sorted.length / 2);
     if (sorted.length % 2 !== 0) return sorted[middle];
     const left = sorted[middle - 1] ?? 0;
@@ -337,7 +335,16 @@ export function aggregateValues<Row>(
       : left / 2 + right / 2;
     return Number.isFinite(median) ? median : undefined;
   }
-  return [sorted[0], sorted.at(-1)];
+  let minimum = numeric[0]!;
+  let maximum = minimum;
+  for (const value of numeric) {
+    // Stable sorting previously kept the first minimum and last maximum, including -0/0 ties.
+    if (value < minimum) minimum = value;
+    if (value >= maximum) maximum = value;
+  }
+  if (aggregation === 'min') return minimum;
+  if (aggregation === 'max') return maximum;
+  return [minimum, maximum];
 }
 
 function csvCell(value: unknown, delimiter: string, escapeFormulas: boolean): string {

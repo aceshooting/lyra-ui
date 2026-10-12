@@ -39,7 +39,6 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
   'src/components/forms/radio/radio-button.class.ts': Object.freeze(['fieldRequired']),
   'src/components/forms/radio/radio-group.class.ts': Object.freeze(['fieldRequired']),
   'src/components/forms/radio/radio.class.ts': Object.freeze(['fieldRequired']),
-  'src/components/forms/select/select.class.ts': Object.freeze(['fieldRequired']),
 
   // Not form-associated at all; form-associated.ts only reaches this graph transitively through
   // the composed form controls it renders, and each of those owns its own slice.

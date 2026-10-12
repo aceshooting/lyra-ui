@@ -7310,6 +7310,8 @@ combobox with a permanently inert popup state — opening a one-row list to pick
 choice is pure friction with no real decision behind it. It never changes `value`/validity defaults
 on its own: an unselected single-option select stays unselected (and a `required` one stays invalid)
 exactly like the multi-option case, until the trigger is actually activated.
+In this button mode, a required field is described with the localized `fieldRequired` message;
+the normal combobox trigger continues to expose `aria-required`.
 
 **Properties:**
 
@@ -12549,6 +12551,8 @@ visually-hidden span spelling the current value out in text, the panel shows it 
 field, and the selected palette swatch is marked with `aria-checked` plus a check mark rather than
 a tint alone. The palette is one roving `radiogroup` with a single tab stop: the arrow keys (Left/Right
 swap under RTL), Home and End move to and select the next enabled swatch, like `lr-swatch-picker`.
+When required, the trigger also includes the localized `fieldRequired` description; the editable
+value field exposes `aria-required`.
 
 Validation is projected onto both editing owners with an explicit stateful `aria-invalid`. A
 required empty picker starts pristine, so the popup trigger and panel value input both expose
@@ -14592,6 +14596,10 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K USD", including the visible unit,
 not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
+Present metric and row labels expose the `term` role; their named values expose `definition`,
+which supports these accessible names. A unit-only headline value also exposes `definition`
+and includes the unit in its name. Values without a label or unit remain plain text; setting
+`exactValue` still adds the existing focus stop and exact-value tooltip in an unlinked stat.
 
 **Themeable custom properties:** `--lr-stat-bg` (default `var(--lr-color-surface)`) is
 `[part="base"]`'s RESTING background — the tier a dashboard sits at all day, and the companion to
@@ -47207,8 +47215,9 @@ resolves successfully). A failed or unavailable write emits the compatibility `l
 
 `file-status` is the one-letter git-status badge (`A`/`M`/`D`/`R`/`U`/`C`/`!`) rendered inside
 `[part="file-path"]`, present only for a file that has a `status`. The letter alone is meaningless to
-a screen reader, so the element carries the localized expansion as its `aria-label` — "Modified",
-"Added", … — reusing `<lr-file-tree>`'s shared `gitStatusAdded`/`gitStatusModified`/
+a screen reader, so visually hidden text supplies the localized expansion — "Modified", "Added",
+… — in the file button's name, while the visual letter is hidden from assistive technology.
+It reuses `<lr-file-tree>`'s shared `gitStatusAdded`/`gitStatusModified`/
 `gitStatusDeleted`/`gitStatusRenamed`/`gitStatusUntracked`/`gitStatusConflicted`/`gitStatusIgnored`
 message keys, so one `registerLyraLocale()` registration (or one `.strings` override) translates the
 badge in both components at once.

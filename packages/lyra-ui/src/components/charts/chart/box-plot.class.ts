@@ -1337,10 +1337,51 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     return this.hasCustomDataTable() ? this.localize('chartPlotSampled') : this.localize('chartDataSampled');
   }
 
-  private renderDataTable(): TemplateResult {
+  private dataTableRows?: Array<TemplateResult | typeof nothing>;
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    // The keyboard announcement does not change table contents. Explicit refreshes still
+    // rebuild rows when a formatter captures state outside its arguments.
+    if (args[0] !== 'keyboardDatumAnnouncement') this.dataTableRows = undefined;
+    super.requestUpdate(...args);
+  }
+
+  private renderDataTableRows(): Array<TemplateResult | typeof nothing> {
+    if (this.dataTableRows) return this.dataTableRows;
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
     const sample = this.dataTableSample();
+    return this.dataTableRows = sample.seriesIndexes.flatMap((seriesIndex) => {
+      const series = this.datasets[seriesIndex]!;
+      return sample.rowIndexes.map(
+        (index) => {
+          const point = series.data[index];
+          const metadata: LyraChartFormatterMetadata = {
+            datasetIndex: seriesIndex,
+            index,
+            label: this.labels[index] || undefined,
+            seriesLabel: series.label,
+            axis: 'y',
+          };
+          return this.validPoint(point) ? html`
+          <tr>
+            <th scope="row">${isolateHtml(this.labels[index] || this.localize('chartPointLabel', undefined, {
+              n: numberFormat.format(index + 1),
+            }), direction)}</th>
+            <td>${isolateHtml(this.seriesDisplayLabel(series), direction)}</td>
+            <td>${isolateHtml(this.formatValue(point.min, 'table', { ...metadata, statistic: 'min' }), direction)}</td>
+            <td>${isolateHtml(this.formatValue(point.q1, 'table', { ...metadata, statistic: 'q1' }), direction)}</td>
+            <td>${isolateHtml(this.formatValue(point.median, 'table', { ...metadata, statistic: 'median' }), direction)}</td>
+            <td>${isolateHtml(this.formatValue(point.q3, 'table', { ...metadata, statistic: 'q3' }), direction)}</td>
+            <td>${isolateHtml(this.formatValue(point.max, 'table', { ...metadata, statistic: 'max' }), direction)}</td>
+          </tr>
+        ` : nothing;
+        },
+      );
+    });
+  }
+
+  private renderDataTable(): TemplateResult {
     return html`
       <table class=${this.dataTableVisible ? '' : 'sr-only'}>
         <caption>${this.accessibleName(this.localize('boxPlotData'))}</caption>
@@ -1356,34 +1397,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           </tr>
         </thead>
         <tbody>
-          ${sample.seriesIndexes.flatMap((seriesIndex) => {
-            const series = this.datasets[seriesIndex]!;
-            return sample.rowIndexes.map(
-              (index) => {
-                const point = series.data[index];
-                const metadata: LyraChartFormatterMetadata = {
-                  datasetIndex: seriesIndex,
-                  index,
-                  label: this.labels[index] || undefined,
-                  seriesLabel: series.label,
-                  axis: 'y',
-                };
-                return this.validPoint(point) ? html`
-                <tr>
-                  <th scope="row">${isolateHtml(this.labels[index] || this.localize('chartPointLabel', undefined, {
-                    n: numberFormat.format(index + 1),
-                  }), direction)}</th>
-                  <td>${isolateHtml(this.seriesDisplayLabel(series), direction)}</td>
-                  <td>${isolateHtml(this.formatValue(point.min, 'table', { ...metadata, statistic: 'min' }), direction)}</td>
-                  <td>${isolateHtml(this.formatValue(point.q1, 'table', { ...metadata, statistic: 'q1' }), direction)}</td>
-                  <td>${isolateHtml(this.formatValue(point.median, 'table', { ...metadata, statistic: 'median' }), direction)}</td>
-                  <td>${isolateHtml(this.formatValue(point.q3, 'table', { ...metadata, statistic: 'q3' }), direction)}</td>
-                  <td>${isolateHtml(this.formatValue(point.max, 'table', { ...metadata, statistic: 'max' }), direction)}</td>
-                </tr>
-              ` : nothing;
-              },
-            );
-          })}
+          ${this.renderDataTableRows()}
         </tbody>
       </table>
     `;

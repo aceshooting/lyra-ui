@@ -4690,8 +4690,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -4701,8 +4701,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -4835,6 +4835,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -4856,6 +4857,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -4864,6 +4866,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -4929,8 +4932,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -4940,8 +4943,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -5074,6 +5077,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -5095,6 +5099,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -5103,6 +5108,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -5863,8 +5869,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -5874,8 +5880,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -6008,6 +6014,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -6029,6 +6036,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -6037,6 +6045,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -7990,8 +7999,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -8001,8 +8010,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -8145,6 +8154,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -8166,6 +8176,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -8174,6 +8185,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -9080,6 +9092,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/checkbox-group/checkbox-group-selection-cost.test.ts",
           "src/components/forms/checkbox-group/checkbox-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -11135,7 +11148,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2740,
+              "line": 2750,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11172,9 +11185,11 @@
         "tests": [
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
+          "src/components/forms/combobox/combobox-projection.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
           "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
           "src/components/forms/combobox/combobox-selected-rows-runtime.test.ts",
+          "src/components/forms/combobox/combobox-selection-projection.test.ts",
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts",
@@ -11513,7 +11528,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.class.ts",
-              "line": 323,
+              "line": 324,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -11550,6 +11565,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/commit-card/commit-card-accessible-text.test.ts",
           "src/components/agent-tools/commit-card/commit-card-remediation.test.ts",
           "src/components/agent-tools/commit-card/commit-card.test.ts"
         ],
@@ -14570,6 +14586,7 @@
           "src/components/data/data-grid/data-grid-measured-shrink.test.ts",
           "src/components/data/data-grid/data-grid-ownership.test.ts",
           "src/components/data/data-grid/data-grid-pipeline.test.ts",
+          "src/components/data/data-grid/data-grid-processing-cost.test.ts",
           "src/components/data/data-grid/data-grid-processing.test.ts",
           "src/components/data/data-grid/data-grid-remediation.test.ts",
           "src/components/data/data-grid/data-grid-render-refresh.test.ts",
@@ -17008,8 +17025,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -17019,8 +17036,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -17153,6 +17170,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -17174,6 +17192,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -17182,6 +17201,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -18681,8 +18701,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/emoji-picker/emoji-picker-remediation.test.ts",
-              "test": "leaves search ${key} unconsumed during ${'isComposing' in composition ? 'composition' : 'legacy composition'}",
+              "file": "src/components/forms/emoji-picker/emoji-picker-active-reference.test.ts",
+              "test": "keeps the active search option mounted when the virtual window scrolls away",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -18704,8 +18724,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/emoji-picker/emoji-picker.test.ts",
-              "test": "derives the windowed column count from the pixel-resolved item size, not the raw rem number",
+              "file": "src/components/forms/emoji-picker/emoji-picker-active-reference.test.ts",
+              "test": "keeps the active search option mounted when the virtual window scrolls away",
               "kind": "320px allocation test signal"
             }
           ]
@@ -18805,6 +18825,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/emoji-picker/emoji-data-loader.test.ts",
+          "src/components/forms/emoji-picker/emoji-picker-active-reference.test.ts",
           "src/components/forms/emoji-picker/emoji-picker-remediation.test.ts",
           "src/components/forms/emoji-picker/emoji-picker-search-sizing.test.ts",
           "src/components/forms/emoji-picker/emoji-picker.test.ts"
@@ -22811,6 +22832,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/gauge/gauge-remediation.test.ts",
+          "src/components/data/gauge/gauge-threshold-cost.test.ts",
           "src/components/data/gauge/gauge.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -24327,6 +24349,7 @@
           "src/components/data/heatmap/calendar-grid.test.ts",
           "src/components/data/heatmap/heatmap-allocation-interaction.test.ts",
           "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
+          "src/components/data/heatmap/heatmap-focus-fallback.test.ts",
           "src/components/data/heatmap/heatmap-grid-navigation.test.ts",
           "src/components/data/heatmap/heatmap-i18n.test.ts",
           "src/components/data/heatmap/heatmap-label-cost.test.ts",
@@ -24543,8 +24566,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -24554,8 +24577,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -24688,6 +24711,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -24709,6 +24733,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -24717,6 +24742,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -27671,8 +27697,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -27682,8 +27708,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27816,6 +27842,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -27837,6 +27864,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -27845,6 +27873,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -27916,8 +27945,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -27927,8 +27956,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -28056,6 +28085,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -28077,6 +28107,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -28085,6 +28116,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -33143,6 +33175,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/retrieval/neighbor-list/neighbor-list-lazy.test.ts",
+          "src/components/retrieval/neighbor-list/neighbor-list-sort-cost.test.ts",
           "src/components/retrieval/neighbor-list/neighbor-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -33846,7 +33879,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2740,
+              "line": 2750,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33883,9 +33916,11 @@
         "tests": [
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
+          "src/components/forms/combobox/combobox-projection.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
           "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
           "src/components/forms/combobox/combobox-selected-rows-runtime.test.ts",
+          "src/components/forms/combobox/combobox-selection-projection.test.ts",
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
           "src/components/forms/combobox/option.test.ts",
@@ -35196,6 +35231,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/pdf-viewer/pdf-loader.test.ts",
+          "src/components/viewers/pdf-viewer/pdf-viewer-accessible-text.test.ts",
           "src/components/viewers/pdf-viewer/pdf-viewer-register.test.ts",
           "src/components/viewers/pdf-viewer/pdf-viewer.test.ts"
         ],
@@ -35718,8 +35754,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -35729,8 +35765,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -35871,6 +35907,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -35892,6 +35929,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -35900,6 +35938,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -35941,8 +35980,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -35952,8 +35991,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -36086,6 +36125,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -36107,6 +36147,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -36115,6 +36156,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -38447,8 +38489,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -38458,8 +38500,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -38592,6 +38634,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -38613,6 +38656,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -38621,6 +38665,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -42326,8 +42371,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "announces the focused box summary and walks boxes with Arrow/Home/End",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "announces and activates native keyboard navigation without reformatting the table",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -42337,8 +42382,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/charts/chart/box-plot.test.ts",
-              "test": "positions its y axis at logical start in RTL",
+              "file": "src/components/charts/chart/box-plot-table-updates.test.ts",
+              "test": "refreshes localized fallback labels, direction and visibility",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -42471,6 +42516,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-table-updates.test.ts",
           "src/components/charts/chart/box-plot-tooltip.test.ts",
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
@@ -42492,6 +42538,7 @@
           "src/components/charts/chart/chart-sync.test.ts",
           "src/components/charts/chart/chart-table-sampling.test.ts",
           "src/components/charts/chart/chart-table-toggle-layout.test.ts",
+          "src/components/charts/chart/chart-table-updates.test.ts",
           "src/components/charts/chart/chart-tooltip-boundaries.test.ts",
           "src/components/charts/chart/chart-value-format.test.ts",
           "src/components/charts/chart/chart.test.ts",
@@ -42500,6 +42547,7 @@
           "src/components/charts/chart/lite-chart-axis-label.test.ts",
           "src/components/charts/chart/lite-chart-forced-colors.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
+          "src/components/charts/chart/lite-chart-table-updates.test.ts",
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
@@ -43081,13 +43129,16 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/select/option-adornment-cost.test.ts",
           "src/components/forms/select/option-refresh.test.ts",
           "src/components/forms/select/option-title.test.ts",
           "src/components/forms/select/positioning-strategy.test.ts",
+          "src/components/forms/select/required-button-semantics.test.ts",
           "src/components/forms/select/select-change-request.test.ts",
           "src/components/forms/select/select-closed-layout.test.ts",
           "src/components/forms/select/select-form-lifecycle.test.ts",
           "src/components/forms/select/select-interaction.test.ts",
+          "src/components/forms/select/select-occurrence-cost.test.ts",
           "src/components/forms/select/select-rendering-a11y.test.ts",
           "src/components/forms/select/select-slot-observation.test.ts",
           "src/components/forms/select/select.test.ts",
@@ -45929,6 +45980,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/stat/stat-accessible-names.test.ts",
           "src/components/data/stat/stat-remediation.test.ts",
           "src/components/data/stat/stat.test.ts"
         ],

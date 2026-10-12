@@ -941,6 +941,8 @@ combobox with a permanently inert popup state — opening a one-row list to pick
 choice is pure friction with no real decision behind it. It never changes `value`/validity defaults
 on its own: an unselected single-option select stays unselected (and a `required` one stays invalid)
 exactly like the multi-option case, until the trigger is actually activated.
+In this button mode, a required field is described with the localized `fieldRequired` message;
+the normal combobox trigger continues to expose `aria-required`.
 
 **Properties:**
 
@@ -6180,6 +6182,8 @@ visually-hidden span spelling the current value out in text, the panel shows it 
 field, and the selected palette swatch is marked with `aria-checked` plus a check mark rather than
 a tint alone. The palette is one roving `radiogroup` with a single tab stop: the arrow keys (Left/Right
 swap under RTL), Home and End move to and select the next enabled swatch, like `lr-swatch-picker`.
+When required, the trigger also includes the localized `fieldRequired` description; the editable
+value field exposes `aria-required`.
 
 Validation is projected onto both editing owners with an explicit stateful `aria-invalid`. A
 required empty picker starts pristine, so the popup trigger and panel value input both expose

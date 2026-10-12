@@ -5284,20 +5284,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const effective = this.effectiveData();
     const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
     const sample = this.dataTableSample(effective);
-    const valuesBySeries = new Map(sample.seriesIndexes.map((index) =>
-      [index, this.datasetValues(effective.datasets[index]!)] as const,
-    ));
     const stackAxes = this.tableStackAxes();
-    const stackTotals = new Map(stackAxes.map((axis) => [axis, this.computeStackTotals(axis)]));
-    // A stack total sits on the same scale as the datasets it sums, so a dual-axis formatter picks
-    // the right unit for the total column as well as for the cells. Resolved from a dataset on that
-    // stack rather than from the axis id, because a horizontal bar/line plots its values on `x`.
-    const stackValueAxes = new Map(stackAxes.map((axis) => [
-      axis,
-      this.datasetValueAxis(
-        effective.datasets.find((dataset) => chartDatasetAxis(dataset) === axis),
-      ),
-    ]));
     return html`
       <table class=${this.dataTableVisible ? nothing : 'sr-only'}>
         <caption>${this.accessibleName(this.localize('chartData'))}</caption>
@@ -5315,67 +5302,103 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           </tr>
         </thead>
         <tbody>
-          ${sample.rowIndexes.map(
-            (index) => html`
-            <tr>
-              <th scope="row">${isolateHtml(labelText(effective.labels[index]) ||
-                sample.seriesIndexes
-                  .map((datasetIndex) =>
-                    normalizedChartPoint(valuesBySeries.get(datasetIndex)![index]),
-                  )
-                  .find((point): point is LyraChartPoint => point !== null)?.label ||
-                this.localize('chartPointLabel', undefined, {
-                  n: this.formatSummaryValue(index + 1),
-                }), direction)}</th>
-              ${sample.seriesIndexes.map((datasetIndex) => {
-                const dataset = effective.datasets[datasetIndex]!;
-                const datum = valuesBySeries.get(datasetIndex)![index];
-                const point = normalizedChartPoint(datum);
-                const value = point?.y ?? chartDatumNumericValue(datum);
-                if (value === undefined) {
-                  return html`<td>${this.localize('noData')}</td>`;
-                }
-                const detail: ChartDatum = {
-                  datasetIndex,
-                  index,
-                  label: point?.label ?? (labelText(effective.labels[index]) || undefined),
-                  value: datum,
-                };
-                const axis = this.datasetValueAxis(dataset);
-                const metadata: LyraChartFormatterMetadata = {
-                  datasetIndex,
-                  index,
-                  label: detail.label,
-                  seriesLabel: this.datasetLabel(dataset, datasetIndex),
-                  ...(axis === undefined ? {} : { axis }),
-                };
-                return html`<td><button
-                  type="button"
-                  tabindex=${this.dataTableVisible ? '0' : '-1'}
-                  @click=${() => this.activateDatum(detail)}
-                >${isolateHtml(point
-                  ? this.datumDisplayValue(datum, {
-                      surface: 'table',
-                      ...metadata,
-                    })
-                  : this.formatTableValue(value, metadata), direction)}</button></td>`;
-              })}
-              ${stackAxes.map((axis) => {
-                const total = stackTotals.get(axis)?.[index];
-                return html`<td>${isolateHtml(total == null
-                  ? this.localize('noData')
-                  : this.formatTableValue(total, this.stackTotalMetadata({
-                      index,
-                      label: labelText(effective.labels[index]) || undefined,
-                      axis: stackValueAxes.get(axis),
-                    })), direction)}</td>`;
-              })}
-            </tr>
-            `
-          )}
+          ${this.renderDataTableRows()}
         </tbody>
       </table>
     `;
+  }
+
+  private dataTableRows?: TemplateResult[];
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    // Caption, description and keyboard announcement edits do not change table rows. Every other
+    // request, including an explicit requestUpdate() coalesced with one of those edits,
+    // refreshes formatter closure state and all
+    // data, locale, direction, axis, and visibility dependencies. Formatters depending on a
+    // caption through captured state can request that explicit refresh as well.
+    if (args[0] !== 'label' && args[0] !== 'description' && args[0] !== 'keyboardDatumAnnouncement') {
+      this.dataTableRows = undefined;
+    }
+    super.requestUpdate(...args);
+  }
+
+  private renderDataTableRows(): TemplateResult[] {
+    if (this.dataTableRows) return this.dataTableRows;
+    const effective = this.effectiveData();
+    const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
+    const sample = this.dataTableSample(effective);
+    const valuesBySeries = new Map(sample.seriesIndexes.map((index) =>
+      [index, this.datasetValues(effective.datasets[index]!)] as const,
+    ));
+    const stackAxes = this.tableStackAxes();
+    const stackTotals = new Map(stackAxes.map((axis) => [axis, this.computeStackTotals(axis)]));
+    // A stack total sits on the same scale as the datasets it sums, so a dual-axis formatter picks
+    // the right unit for the total column as well as for the cells. Resolved from a dataset on that
+    // stack rather than from the axis id, because a horizontal bar/line plots its values on `x`.
+    const stackValueAxes = new Map(stackAxes.map((axis) => [
+      axis,
+      this.datasetValueAxis(
+        effective.datasets.find((dataset) => chartDatasetAxis(dataset) === axis),
+      ),
+    ]));
+    return this.dataTableRows = sample.rowIndexes.map(
+      (index) => html`
+      <tr>
+        <th scope="row">${isolateHtml(labelText(effective.labels[index]) ||
+          sample.seriesIndexes
+            .map((datasetIndex) =>
+              normalizedChartPoint(valuesBySeries.get(datasetIndex)![index]),
+            )
+            .find((point): point is LyraChartPoint => point !== null)?.label ||
+          this.localize('chartPointLabel', undefined, {
+            n: this.formatSummaryValue(index + 1),
+          }), direction)}</th>
+        ${sample.seriesIndexes.map((datasetIndex) => {
+          const dataset = effective.datasets[datasetIndex]!;
+          const datum = valuesBySeries.get(datasetIndex)![index];
+          const point = normalizedChartPoint(datum);
+          const value = point?.y ?? chartDatumNumericValue(datum);
+          if (value === undefined) {
+            return html`<td>${this.localize('noData')}</td>`;
+          }
+          const detail: ChartDatum = {
+            datasetIndex,
+            index,
+            label: point?.label ?? (labelText(effective.labels[index]) || undefined),
+            value: datum,
+          };
+          const axis = this.datasetValueAxis(dataset);
+          const metadata: LyraChartFormatterMetadata = {
+            datasetIndex,
+            index,
+            label: detail.label,
+            seriesLabel: this.datasetLabel(dataset, datasetIndex),
+            ...(axis === undefined ? {} : { axis }),
+          };
+          return html`<td><button
+            type="button"
+            tabindex=${this.dataTableVisible ? '0' : '-1'}
+            @click=${() => this.activateDatum(detail)}
+          >${isolateHtml(point
+            ? this.datumDisplayValue(datum, {
+                surface: 'table',
+                ...metadata,
+              })
+            : this.formatTableValue(value, metadata), direction)}</button></td>`;
+        })}
+        ${stackAxes.map((axis) => {
+          const total = stackTotals.get(axis)?.[index];
+          return html`<td>${isolateHtml(total == null
+            ? this.localize('noData')
+            : this.formatTableValue(total, this.stackTotalMetadata({
+                index,
+                label: labelText(effective.labels[index]) || undefined,
+                axis: stackValueAxes.get(axis),
+              })), direction)}</td>`;
+        })}
+      </tr>
+      `
+    );
   }
 
   private hasCustomDataTable(): boolean {

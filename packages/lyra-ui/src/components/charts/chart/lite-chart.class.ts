@@ -1043,8 +1043,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    // Arrowing only changes `activeMarkIndex`; every other change may alter the sentences.
-    for (const name of changed.keys()) if (name !== 'activeMarkIndex') this.dataListMemo = undefined;
     // Native SVG titles depend on subscription state. Prepare transitions before rendering so
     // the controller's synchronous notification joins this update; geometry refresh stays below
     // in updated(), after the current mark positions have been rendered.
@@ -1615,6 +1613,72 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       },
       isolated: ['series', 'label', 'value'],
     };
+  }
+
+  private dataTableRows?: TemplateResult[];
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    // Moving the active mark does not change table contents. Explicit refreshes still
+    // rebuild rows when a formatter captures state outside its arguments.
+    if (args[0] !== 'activeMarkIndex') {
+      this.dataTableRows = undefined;
+      this.dataListMemo = undefined;
+    }
+    super.requestUpdate(...args);
+  }
+
+  private renderDataTableRows(): TemplateResult[] {
+    if (this.dataTableRows) return this.dataTableRows;
+    const recordSample = this.recordSample();
+    const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
+    const tableNumberFormat = getNumberFormat(this.effectiveLocale);
+    const showTableTotals = this.effectiveType === 'bar' && this.stacked && this.tableTotals;
+    return this.dataTableRows = recordSample.rowIndexes.map(
+      (index) => {
+        const label = this.labels[index] ?? '';
+        return html`<tr>
+        <th scope="row">${isolateHtml(
+          label || getNumberFormat(this.effectiveLocale).format(index + 1),
+          direction,
+        )}</th>
+        ${recordSample.seriesIndexes.map((datasetIndex) => {
+          const series = this.datasets[datasetIndex]!;
+          const value = series.data[index];
+          return html`<td>${isolateHtml(value == null || !Number.isFinite(value)
+            ? ''
+            : this.formatTableCell(
+                value,
+                {
+                  kind: 'value',
+                  datasetIndex,
+                  index,
+                  label,
+                  seriesLabel: series.label,
+                },
+                tableNumberFormat,
+              ), direction)}</td>`;
+        })}
+        ${showTableTotals
+          ? (() => {
+              const total = this.tableTotalAt(index, recordSample.seriesIndexes);
+              return html`<td>${isolateHtml(total == null
+                ? ''
+                : this.formatTableCell(
+                    total,
+                    {
+                      kind: 'total',
+                      datasetIndex: null,
+                      index,
+                      label,
+                      seriesLabel: null,
+                    },
+                    tableNumberFormat,
+                  ), direction)}</td>`;
+            })()
+          : nothing}
+      </tr>`;
+      },
+    );
   }
 
   private dataListMemo?: { marks: readonly InteractiveMark[]; visible: boolean; value: TemplateResult[] };
@@ -2704,7 +2768,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           : '') ||
         this.localize('chart'));
     const marksForA11y = this.interactiveMarks();
-    const tableNumberFormat = getNumberFormat(this.effectiveLocale);
     const showTableTotals = this.effectiveType === 'bar' && this.stacked && this.tableTotals;
     const dataTruncation = this.dataTruncationMessage();
     const hasCustomDataTable = this.hasCustomDataTable();
@@ -2783,52 +2846,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                 </tr>
               </thead>
               <tbody>
-                ${recordSample.rowIndexes.map(
-                  (index) => {
-                    const label = this.labels[index] ?? '';
-                    return html`<tr>
-                    <th scope="row">${isolateHtml(
-                      label || getNumberFormat(this.effectiveLocale).format(index + 1),
-                      direction,
-                    )}</th>
-                    ${recordSample.seriesIndexes.map((datasetIndex) => {
-                      const series = this.datasets[datasetIndex]!;
-                      const value = series.data[index];
-                      return html`<td>${isolateHtml(value == null || !Number.isFinite(value)
-                        ? ''
-                        : this.formatTableCell(
-                            value,
-                            {
-                              kind: 'value',
-                              datasetIndex,
-                              index,
-                              label,
-                              seriesLabel: series.label,
-                            },
-                            tableNumberFormat,
-                          ), direction)}</td>`;
-                    })}
-                    ${showTableTotals
-                      ? (() => {
-                          const total = this.tableTotalAt(index, recordSample.seriesIndexes);
-                          return html`<td>${isolateHtml(total == null
-                            ? ''
-                            : this.formatTableCell(
-                                total,
-                                {
-                                  kind: 'total',
-                                  datasetIndex: null,
-                                  index,
-                                  label,
-                                  seriesLabel: null,
-                                },
-                                tableNumberFormat,
-                              ), direction)}</td>`;
-                        })()
-                      : nothing}
-                  </tr>`;
-                  },
-                )}
+                ${this.renderDataTableRows()}
               </tbody>
             </table>`
           : html`<ul

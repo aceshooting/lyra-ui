@@ -1603,7 +1603,7 @@ export class LyraCombobox<
     this._selected = normalizeSelectionValues(next);
     const selected = new Set(this._selected);
     if (selected.size > 0) {
-      const rows = this.rowsByValue();
+      const rows = this.rowsByValue(selected);
       for (const value of selected) {
         const row = rows.get(value);
         if (row) this._selectedRowCache.set(value, row);
@@ -1704,7 +1704,8 @@ export class LyraCombobox<
   private resolveSelectedRowSlots(): Array<ComboboxSourceRow | undefined> {
     let rows: Map<string, ComboboxSourceRow> | undefined;
     return this.committed.map(
-      (value) => this._selectedRowCache.get(value) ?? (rows ??= this.rowsByValue()).get(value)
+      (value) => this._selectedRowCache.get(value) ??
+        (rows ??= this.rowsByValue(new Set(this.committed))).get(value)
     );
   }
 
@@ -1714,9 +1715,24 @@ export class LyraCombobox<
   }
 
   /** The first current row per value, shown rows before the rest of the async catalogue. */
-  private rowsByValue(): Map<string, ComboboxSourceRow> {
+  private rowsByValue(values: ReadonlySet<string>): Map<string, ComboboxSourceRow> {
+    const rows = this.source
+      ? new Map<string, ComboboxSourceRow>()
+      : this.localRowsByValue(values, this.filtered);
+    for (const row of this.asyncRows) {
+      if (values.has(row.value) && !rows.has(row.value)) rows.set(row.value, row);
+    }
+    return rows;
+  }
+
+  /** Resolve first occurrences using cheap value reads; only requested rows need full snapshots. */
+  private localRowsByValue(values: ReadonlySet<string>, options: readonly LyraOption[]): Map<string, ComboboxSourceRow> {
     const rows = new Map<string, ComboboxSourceRow>();
-    for (const row of [...this.effectiveRows, ...this.asyncRows]) if (!rows.has(row.value)) rows.set(row.value, row);
+    if (values.size === 0) return rows;
+    for (const option of options) {
+      const value = option.value;
+      if (values.has(value) && !rows.has(value)) rows.set(value, this.rowForOption(option));
+    }
     return rows;
   }
 
@@ -1736,7 +1752,7 @@ export class LyraCombobox<
         values.push(value);
       }
     }
-    if (values.length > 0 && this.selectionSourceRows.length === 0) {
+    if (values.length > 0 && !this.hasSelectionSourceRows) {
       this.pendingSelectedRowValues = values;
       if (this.source && this.isConnected) {
         this._sourceWarmed = true;
@@ -2227,7 +2243,7 @@ export class LyraCombobox<
     // target's own listeners run before this slot listener.
     e.stopPropagation();
     const option = e.composedPath().find(isLyraOptionElement);
-    if (isLyraOptionElement(option) && this.options.includes(option) && isOptionSelectedWrite(e)) {
+    if (isOptionSelectedWrite(e) && isLyraOptionElement(option) && this.options.includes(option)) {
       if (this.multiple) {
         const next = option.selected
           ? this._selected.includes(option.value) ? this._selected : [...this._selected, option.value]
@@ -2244,9 +2260,9 @@ export class LyraCombobox<
       }
       return;
     }
-    if (isLyraOptionElement(option) &&
-        this.adornmentClones.get(option)?.markup !== this.adornmentMarkup(option)) {
-      this.adornmentClones.delete(option);
+    if (isLyraOptionElement(option)) {
+      const cached = this.adornmentClones.get(option);
+      if (cached && cached.markup !== this.adornmentMarkup(option)) this.adornmentClones.delete(option);
     }
     // Many options notify together during mounting or a catalog metadata refresh. Reconcile the
     // complete catalog once per microtask batch; explicit selected writes above remain immediate.
@@ -2352,9 +2368,8 @@ export class LyraCombobox<
     );
   }
 
-  /** The current row set in a source-agnostic shape, before capping. */
   /**
-   * Cloned adornment nodes, keyed by the option they came from. Cached because `effectiveRows` runs
+   * Cloned adornment nodes, keyed by the option they came from. Cached because rows are projected
    * on every render pass: handing Lit a fresh clone each time would rebuild the whole popup's
    * adornment DOM on every keystroke. Option notifications compare the authored markup snapshot
    * before invalidating it; changes to a label or secondary text leave unchanged clones intact.
@@ -2416,17 +2431,15 @@ export class LyraCombobox<
     return row;
   }
 
-  private get selectionSourceRows(): ComboboxSourceRow[] {
-    return this.source
-      ? this.asyncRows
-      : this.options.map((option) => this.rowForOption(option));
+  private get hasSelectionSourceRows(): boolean {
+    return (this.source ? this.asyncRows.length : this.options.length) > 0;
   }
 
   private applySelectedRowValues(values: readonly string[]): void {
-    const rowsByValue = new Map<string, ComboboxSourceRow>();
-    for (const row of this.selectionSourceRows) {
-      if (!rowsByValue.has(row.value)) rowsByValue.set(row.value, row);
-    }
+    const requested = new Set(values);
+    const rowsByValue = this.source
+      ? this.rowsByValue(requested)
+      : this.localRowsByValue(requested, this.options);
     const rows = values
       .map((value) => rowsByValue.get(value))
       .filter((row): row is ComboboxSourceRow => row !== undefined);
@@ -2441,7 +2454,7 @@ export class LyraCombobox<
   private applyPendingSelectedRows(acceptEmptySource = false): boolean {
     if (
       this.pendingSelectedRowValues === undefined ||
-      (!acceptEmptySource && this.selectionSourceRows.length === 0)
+      (!acceptEmptySource && !this.hasSelectionSourceRows)
     ) {
       return false;
     }
@@ -2449,11 +2462,6 @@ export class LyraCombobox<
     this.pendingSelectedRowValues = undefined;
     this.applySelectedRowValues(values);
     return true;
-  }
-
-  private get effectiveRows(): ComboboxSourceRow[] {
-    if (this.source) return this.asyncRows;
-    return this.filtered.map((option) => this.rowForOption(option));
   }
 
   /**
@@ -2520,19 +2528,10 @@ export class LyraCombobox<
     };
   }
 
-  /** `effectiveRows` capped to `maxRender`, always keeping the current selection visible. */
-  private get renderedRows(): { rows: ComboboxSourceRow[]; overflow: number } {
-    const all = this.effectiveRows;
-    const create = this.createRow;
-    const sourceOverflow = this.source
-      ? Math.max(0, this._sourceTotal - all.length)
-      : 0;
-    const unknown = this.unknownRows;
+  /** Cap source identities before projecting local option data and cloning adornments. */
+  private capRows<T extends { value: string }>(all: readonly T[]): { rows: T[]; overflow: number } {
     if (all.length <= this.maxRender) {
-      return {
-        rows: [...all, ...unknown, ...(create ? [create] : [])],
-        overflow: sourceOverflow,
-      };
+      return { rows: [...all], overflow: 0 };
     }
     const originalIndex = new Map(all.map((r, i) => [r, i]));
     const capped = all.slice(0, this.maxRender);
@@ -2555,15 +2554,26 @@ export class LyraCombobox<
       // time after whatever group happens to trail the cap.
       capped.sort((a, b) => originalIndex.get(a)! - originalIndex.get(b)!);
     }
-    // Appended AFTER the cap, exactly like the create row: a value the user has already committed
-    // must stay visible however long the match list is.
-    capped.push(...unknown);
-    if (create) capped.push(create);
-    return {
-      rows: capped,
-      overflow:
-        all.length - capped.length + unknown.length + (create ? 1 : 0) + sourceOverflow,
-    };
+    return { rows: capped, overflow: all.length - capped.length };
+  }
+
+  /** Filtered suggestions capped to `maxRender`, keeping the current selection visible. */
+  private get renderedRows(): { rows: ComboboxSourceRow[]; overflow: number } {
+    let rows: ComboboxSourceRow[];
+    let overflow: number;
+    if (this.source) {
+      ({ rows, overflow } = this.capRows(this.asyncRows));
+      overflow += Math.max(0, this._sourceTotal - this.asyncRows.length);
+    } else {
+      const capped = this.capRows(this.filtered);
+      rows = capped.rows.map((option) => this.rowForOption(option));
+      overflow = capped.overflow;
+    }
+    const create = this.createRow;
+    // Synthetic committed values and the create action do not consume the suggestion cap.
+    rows.push(...this.unknownRows);
+    if (create) rows.push(create);
+    return { rows, overflow };
   }
 
   /** Keeps the roving index inside the current source-agnostic enabled-row set without turning an

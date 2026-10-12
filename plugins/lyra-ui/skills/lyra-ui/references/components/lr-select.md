@@ -109,6 +109,8 @@ combobox with a permanently inert popup state — opening a one-row list to pick
 choice is pure friction with no real decision behind it. It never changes `value`/validity defaults
 on its own: an unselected single-option select stays unselected (and a `required` one stays invalid)
 exactly like the multi-option case, until the trigger is actually activated.
+In this button mode, a required field is described with the localized `fieldRequired` message;
+the normal combobox trigger continues to expose `aria-required`.
 
 **Properties:**
 

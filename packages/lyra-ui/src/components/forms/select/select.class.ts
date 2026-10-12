@@ -84,7 +84,7 @@ import {
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_selectValueMissing } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_loading, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 installFormControlLabelSupport();
@@ -480,6 +480,7 @@ export class LyraSelect<
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
+    fieldRequired: LYRA_DEFAULT_fieldRequired,
     loading: LYRA_DEFAULT_loading,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
@@ -1189,12 +1190,7 @@ export class LyraSelect<
     this._restoredStateActive = false;
     this._valueDirty = true;
     const values = normalizeSelectionValues(next);
-    this.setSelection(
-      values,
-      values.map((value) =>
-        this.options.find((option) => option.value === value)
-      )
-    );
+    this.setSelection(values);
   }
 
   /** Reset value, matching the mapped native-like select contract. The `default-value` attribute
@@ -1242,13 +1238,14 @@ export class LyraSelect<
     this._restoredStateActive = false;
     this._valueDirty = true;
     const candidates = Array.isArray(next) ? next : [];
-    const live = candidates.filter(
-      (option, index): option is LyraOption =>
-        isLyraOptionElement(option) &&
-        this.contains(option) &&
-        this.options.includes(option) &&
-        candidates.indexOf(option) === index
-    );
+    const catalog = candidates.length > 1 ? new Set(this.options) : undefined;
+    const seen = new Set<LyraOption>();
+    const live = candidates.filter((option): option is LyraOption => {
+      if (seen.has(option)) return false;
+      seen.add(option);
+      return isLyraOptionElement(option) && this.contains(option) &&
+        (catalog ? catalog.has(option) : this.options.includes(option));
+    });
     const selected = this.multiple ? live : live.slice(0, 1);
     this.setSelection(
       selected.map((option) => option.value),
@@ -1324,20 +1321,52 @@ export class LyraSelect<
     values: string[],
     preferred: Array<LyraOption | undefined> = []
   ): Array<LyraOption | undefined> {
+    if (values.length === 0) return [];
+    // Single selection needs no catalog-sized allocation, especially for an early match.
+    if (values.length === 1) {
+      const value = values[0]!;
+      const hint = preferred.length === 1
+        ? preferred[0]
+        : preferred.find((option) => option?.value === value);
+      return [hint && hint.value === value && this.options.includes(hint)
+        ? hint
+        : this.options.find((option) => option.value === value)];
+    }
+
+    // Index only this resolution: option values and catalog membership remain live between calls.
+    const catalog = new Set(this.options);
     const claimed = new Set<LyraOption>();
+    type OccurrenceQueue = { options: LyraOption[]; next: number };
+    const queuesFor = (options: readonly (LyraOption | undefined)[]): Map<string, OccurrenceQueue> => {
+      const queues = new Map<string, OccurrenceQueue>();
+      for (const option of options) {
+        if (!option) continue;
+        const value = option.value;
+        let queue = queues.get(value);
+        if (!queue) queues.set(value, (queue = { options: [], next: 0 }));
+        queue.options.push(option);
+      }
+      return queues;
+    };
+    const firstUnclaimed = (queues: Map<string, OccurrenceQueue>, value: string): LyraOption | undefined => {
+      const queue = queues.get(value);
+      if (!queue) return undefined;
+      while (queue.next < queue.options.length && claimed.has(queue.options[queue.next]!)) queue.next++;
+      return queue.options[queue.next];
+    };
+    const preferredQueues = preferred.length === values.length ? undefined : queuesFor(preferred);
+    let fallbackQueues: Map<string, OccurrenceQueue> | undefined;
     return values.map((value, index) => {
-      const hint = preferred.length === values.length
-        ? preferred[index]
-        : preferred.find((option) => option?.value === value && !claimed.has(option));
+      // A detached, unclaimed hint still wins the preferred search and then fails membership,
+      // falling back to source order. Do not discard it to expose a later preferred occurrence.
+      const hint = preferredQueues ? firstUnclaimed(preferredQueues, value) : preferred[index];
       const match =
         hint &&
         hint.value === value &&
-        this.options.includes(hint) &&
+        catalog.has(hint) &&
         !claimed.has(hint)
           ? hint
-          : this.options.find(
-              (option) => option.value === value && !claimed.has(option)
-            );
+          : firstUnclaimed(fallbackQueues ??= queuesFor(this.options), value);
       if (!match) return undefined;
       claimed.add(match);
       return match;
@@ -1952,7 +1981,7 @@ export class LyraSelect<
   private onOptionChange = (e: Event): void => {
     e.stopPropagation();
     const option = e.composedPath().find(isLyraOptionElement);
-    if (isLyraOptionElement(option) && this.options.includes(option) && isOptionSelectedWrite(e)) {
+    if (isOptionSelectedWrite(e) && isLyraOptionElement(option) && this.options.includes(option)) {
       markVetoGuardWrite(this.selectionWriteGuard);
       this._valueDirty = true;
       this._restoredStateActive = false;
@@ -1988,9 +2017,9 @@ export class LyraSelect<
       this.setSelection(values, preferred);
       return;
     }
-    if (isLyraOptionElement(option) &&
-        this.adornmentClones.get(option)?.markup !== this.adornmentMarkup(option)) {
-      this.adornmentClones.delete(option);
+    if (isLyraOptionElement(option)) {
+      const cached = this.adornmentClones.get(option);
+      if (cached && cached.markup !== this.adornmentMarkup(option)) this.adornmentClones.delete(option);
     }
     // Many options notify together during mounting or a catalog metadata refresh. Reconcile the
     // complete catalog once per microtask batch; explicit selected writes above remain immediate.
@@ -2710,13 +2739,6 @@ export class LyraSelect<
       this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
     const hasLabel =
       this.slotPresence.has('label') || (this.label ?? '').length > 0 || this.withLabel;
-    const describedBy = this.localDescriptionIds = [
-      this.multiple && hasValue ? this.valueTextId : '',
-      hasError ? 'select-error' : '',
-      hasHint ? 'select-hint' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
     // A single navigable option has no popup to expand into -- when opted in via
     // autoCommitSingleOption, the trigger commits it directly on activation (see
     // onTriggerClick/onKeyDown) instead of opening the listbox, so it's exposed as a plain
@@ -2726,6 +2748,15 @@ export class LyraSelect<
     // `false` and the normal combobox/listbox/chevron trigger renders regardless of option count.
     const isSingleOption =
       this.autoCommitSingleOption && navigable.length === 1;
+    const requiredTextId = `${this.triggerId}-required`;
+    const describedBy = this.localDescriptionIds = [
+      this.required && isSingleOption ? requiredTextId : '',
+      this.multiple && hasValue ? this.valueTextId : '',
+      hasError ? 'select-error' : '',
+      hasHint ? 'select-hint' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     return html`
       <div part="form-control">
@@ -2736,6 +2767,9 @@ export class LyraSelect<
         >
           <span part="label">${this.label}<slot name="label"></slot></span>
         </label>
+        ${this.required && isSingleOption
+          ? html`<span id=${requiredTextId} class="sr-only">${this.localize('fieldRequired')}</span>`
+          : nothing}
         <div
           class="control"
           part="combobox form-control-input"
@@ -2759,7 +2793,7 @@ export class LyraSelect<
             aria-label=${this.getAttribute('aria-label') ??
             (hasLabel ? nothing : this.placeholder || this.localize('select'))}
             aria-describedby=${describedBy || nothing}
-            aria-required=${this.required ? 'true' : 'false'}
+            aria-required=${isSingleOption ? nothing : this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid
               ? 'true'
               : 'false'}

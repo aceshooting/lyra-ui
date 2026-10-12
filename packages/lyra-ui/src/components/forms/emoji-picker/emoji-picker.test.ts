@@ -1835,14 +1835,15 @@ describe('virtualized scroll handling', () => {
     el.groups = manyEmojis();
     await el.updateComplete;
     const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
-    const before = rowOffsets(el)[0];
+    const before = rowOffsets(el).at(-1)!;
 
     grid.scrollTop = 3000;
     grid.dispatchEvent(new Event('scroll'));
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await el.updateComplete;
 
-    expect(rowOffsets(el)[0]).to.not.equal(before);
+    // The active first row remains mounted; the trailing row follows the new viewport.
+    expect(rowOffsets(el).at(-1)!).to.be.greaterThan(before);
   });
 
   it('cancels a pending virtual-scroll animation frame on disconnect instead of leaking it onto a detached element', async () => {

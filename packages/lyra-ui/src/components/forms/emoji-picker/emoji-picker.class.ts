@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
+import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
@@ -1271,11 +1272,24 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const end = Math.min(rows.length, Math.ceil((this.virtualScrollTop + viewportHeight) / rowHeight) + 3);
     const total = this.flatItems.length;
     const selectedIndex = this.selectedIndex;
+    const visibleRows = rows.slice(start, end).map((row, offset) => ({ row, index: start + offset }));
+    // Keep the active descendant and a focused option connected when scrolling moves their row
+    // outside the viewport. One extra row preserves the relationship without changing the scroll.
+    let low = 0;
+    let high = rows.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (rows[middle]!.items.at(-1)!.index < this.activeIndex) low = middle + 1;
+      else high = middle;
+    }
+    const activeRow = low < rows.length && rows[low]!.items[0]!.index <= this.activeIndex ? low : -1;
+    if (activeRow >= 0 && activeRow < start) visibleRows.unshift({ row: rows[activeRow]!, index: activeRow });
+    else if (activeRow >= end) visibleRows.push({ row: rows[activeRow]!, index: activeRow });
     return html`
       <div part="virtual-spacer" style=${`block-size: ${rows.length * rowHeight}px`}>
-        ${rows.slice(start, end).map(
-          (row, offset) => html`
-            <div part="virtual-row" role="group" aria-label=${this.groupLabel(row.heading)} style=${`transform: translateY(${(start + offset) * rowHeight}px)`}>
+        ${repeat(visibleRows, ({ index }) => index,
+          ({ row, index }) => html`
+            <div part="virtual-row" role="group" aria-label=${this.groupLabel(row.heading)} style=${`transform: translateY(${index * rowHeight}px)`}>
               ${row.group ? html`<div part="group-label">${this.groupLabel(row.group)}</div>` : html`<div part="virtual-label" aria-hidden="true"></div>`}
               <div part="virtual-items">
                 ${row.items.map(({ item, index }) => this.renderEmojiButton(item, index, total, selectedIndex))}

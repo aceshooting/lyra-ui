@@ -114,6 +114,10 @@ it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbin
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K USD", including the visible unit,
 not just the bare value); each
 `[part="row-value"]` is paired the same way with its own row's `[part="row-label"]`.
+Present metric and row labels expose the `term` role; their named values expose `definition`,
+which supports these accessible names. A unit-only headline value also exposes `definition`
+and includes the unit in its name. Values without a label or unit remain plain text; setting
+`exactValue` still adds the existing focus stop and exact-value tooltip in an unlinked stat.
 
 **Themeable custom properties:** `--lr-stat-bg` (default `var(--lr-color-surface)`) is
 `[part="base"]`'s RESTING background — the tier a dashboard sits at all day, and the companion to

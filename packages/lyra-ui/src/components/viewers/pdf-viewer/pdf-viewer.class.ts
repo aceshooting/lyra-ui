@@ -2067,7 +2067,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       })}</span>
       <button type="button" part="next-button" data-action="next" ?disabled=${this.page >= pageCount} @click=${this.nextPage}>${this.localize('pdfViewerNextPage')}</button>
       <button type="button" part="zoom-out-button" data-action="zoom-out" ?disabled=${this.zoom <= MIN_ZOOM} @click=${this.zoomOut}>${this.localize('pdfViewerZoomOut')}</button>
-      <span part="zoom-indicator" aria-label=${this.localize('pdfViewerCurrentZoom', undefined, { percent: formattedZoom })}>${this.localize('pdfViewerCurrentZoom', undefined, { percent: formattedZoom })}</span>
+      <span part="zoom-indicator">${this.localize('pdfViewerCurrentZoom', undefined, { percent: formattedZoom })}</span>
       <button type="button" part="zoom-in-button" data-action="zoom-in" ?disabled=${this.zoom >= MAX_ZOOM} @click=${this.zoomIn}>${this.localize('pdfViewerZoomIn')}</button>
     </div>`;
   }

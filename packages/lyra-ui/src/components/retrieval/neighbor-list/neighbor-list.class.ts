@@ -166,9 +166,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     if (!this.groupByRelation) return rows;
     // Array.prototype.sort is spec-guaranteed stable (ES2019+) -- rows sharing a relation keep
     // their original relative order.
-    return rows.sort((a, b) =>
-      getCollator(this.effectiveLocale).compare(a.relation, b.relation)
-    );
+    const compare = getCollator(this.effectiveLocale).compare;
+    return rows.sort((a, b) => compare(a.relation, b.relation));
   }
 
   private groups(

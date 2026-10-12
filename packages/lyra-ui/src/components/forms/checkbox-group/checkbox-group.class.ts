@@ -599,14 +599,15 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
   /** Checks exactly the children named by `values`, matching duplicates one-for-one, then re-syncs
    *  the owned value/validity. Shared by the `value` setter and by form restore. */
   private applyValues(values: readonly string[]): void {
-    const remaining = [...values];
+    const remaining = new Map<string, number>();
+    for (const value of values) remaining.set(value, (remaining.get(value) ?? 0) + 1);
     this.suppressCheckboxSync = true;
     try {
       for (const box of this.boxes) {
         const value = box.value ?? 'on';
-        const index = remaining.indexOf(value);
-        box.checked = index >= 0;
-        if (index >= 0) remaining.splice(index, 1);
+        const count = remaining.get(value) ?? 0;
+        box.checked = count > 0;
+        if (count > 0) remaining.set(value, count - 1);
       }
     } finally {
       this.suppressCheckboxSync = false;

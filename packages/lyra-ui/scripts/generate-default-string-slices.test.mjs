@@ -658,7 +658,7 @@ export class LyraKbd extends LyraElement {
   );
 
   // This case DOES exercise the real exclusion list -- the fixture mirrors the real source paths
-  // (forms/select, forms/radio, forms/input) precisely so the shipped entries apply to it. But the
+  // (forms/radio, forms/input) precisely so the shipped entries apply to it. But the
   // list also covers components this fixture does not contain, and validateConfiguredExclusions
   // fails closed on an entry it cannot find, so pass only the subset whose paths exist here. That
   // keeps the stale-entry guard armed for everything the fixture does model, without pinning the
@@ -683,7 +683,8 @@ export class LyraKbd extends LyraElement {
   ].map(async ([name, file]) => [name, await readFile(file, 'utf8')])));
 
   assert.match(slices.get('select'), /LYRA_DEFAULT_selectValueMissing\b/);
-  assert.doesNotMatch(slices.get('select'), /LYRA_DEFAULT_fieldRequired\b/);
+  assert.match(slices.get('select'), /LYRA_DEFAULT_fieldRequired\b/,
+    'select retains the required cue now that it resolves that message directly');
   assert.match(slices.get('radio'), /LYRA_DEFAULT_radioRequired\b/);
   assert.doesNotMatch(slices.get('radio'), /LYRA_DEFAULT_fieldRequired\b/);
   assert.match(slices.get('radioGroup'), /LYRA_DEFAULT_radioRequired\b/);

@@ -57,6 +57,8 @@ visually-hidden span spelling the current value out in text, the panel shows it 
 field, and the selected palette swatch is marked with `aria-checked` plus a check mark rather than
 a tint alone. The palette is one roving `radiogroup` with a single tab stop: the arrow keys (Left/Right
 swap under RTL), Home and End move to and select the next enabled swatch, like `lr-swatch-picker`.
+When required, the trigger also includes the localized `fieldRequired` description; the editable
+value field exposes `aria-required`.
 
 Validation is projected onto both editing owners with an explicit stateful `aria-invalid`. A
 required empty picker starts pristine, so the popup trigger and panel value input both expose

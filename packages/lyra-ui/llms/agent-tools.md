@@ -2156,8 +2156,9 @@ resolves successfully). A failed or unavailable write emits the compatibility `l
 
 `file-status` is the one-letter git-status badge (`A`/`M`/`D`/`R`/`U`/`C`/`!`) rendered inside
 `[part="file-path"]`, present only for a file that has a `status`. The letter alone is meaningless to
-a screen reader, so the element carries the localized expansion as its `aria-label` — "Modified",
-"Added", … — reusing `<lr-file-tree>`'s shared `gitStatusAdded`/`gitStatusModified`/
+a screen reader, so visually hidden text supplies the localized expansion — "Modified", "Added",
+… — in the file button's name, while the visual letter is hidden from assistive technology.
+It reuses `<lr-file-tree>`'s shared `gitStatusAdded`/`gitStatusModified`/
 `gitStatusDeleted`/`gitStatusRenamed`/`gitStatusUntracked`/`gitStatusConflicted`/`gitStatusIgnored`
 message keys, so one `registerLyraLocale()` registration (or one `.strings` override) translates the
 badge in both components at once.

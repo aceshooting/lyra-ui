@@ -2,6 +2,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
@@ -109,8 +110,8 @@ export interface LyraCommitCardEventMap {
  * @csspart file - A file row; carries `data-status`.
  * @csspart file-path - A file row's path text.
  * @csspart file-status - The one-letter git-status badge inside `[part="file-path"]`, present only
- *   when that file has a `status`. Carries the localized expansion (`Modified`, `Added`, ...) as its
- *   accessible name, so the bare letter never reaches assistive tech on its own.
+ *   when that file has a `status`. Includes visually hidden localized text (`Modified`, `Added`,
+ *   ...) in the file button's name; the visual letter is hidden from assistive technology.
  * @csspart file-additions - A file row's additions count.
  * @csspart file-deletions - A file row's deletions count.
  * @csspart limit - Visible notice when the expanded file list exceeds the render cap.
@@ -164,7 +165,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['files']);
 
-  static override styles = [LyraElement.styles, styles, agentActionButtonStyles];
+  static override styles = [LyraElement.styles, srOnly, styles, agentActionButtonStyles];
 
   private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
@@ -364,15 +365,14 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
               >`
             : nothing}
           ${files.length > 0
-            ? html`<span
-                part="diffstat"
-                aria-label=${this.localize('commitCardDiffSummary', undefined, {
+            ? html`<span part="diffstat"
+                ><span class="sr-only">${this.localize('commitCardDiffSummary', undefined, {
                   additions: this.formatCount(additions),
                   deletions: this.formatCount(deletions),
                   files: this.formatCount(files.length),
-                })}
-              >
-                <span part="additions">+${this.formatCount(additions)}</span> <span part="deletions">-${this.formatCount(deletions)}</span>
+                })}</span><span aria-hidden="true"
+                  ><span part="additions">+${this.formatCount(additions)}</span> <span part="deletions">-${this.formatCount(deletions)}</span></span
+                >
               </span>`
             : nothing}
           ${!this.withoutCopyButton && this.hash
@@ -422,8 +422,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                       >
                         <span part="file-path" dir="ltr"
                           >${f.status
-                            ? html`<span part="file-status" aria-label=${this.localize(GIT_STATUS_KEY[f.status])}
-                                  >${GIT_STATUS_LETTER[f.status]}</span
+                            ? html`<span part="file-status"
+                                  ><span aria-hidden="true">${GIT_STATUS_LETTER[f.status]}</span><span class="sr-only">${this.localize(GIT_STATUS_KEY[f.status])}</span></span
                                 > `
                             : ''}${f.path}</span
                         >
