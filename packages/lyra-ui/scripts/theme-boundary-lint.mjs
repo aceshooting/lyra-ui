@@ -7,8 +7,32 @@
 import { readDeclarations, splitTopLevel } from './css-declarations.mjs';
 
 const ALLOWED = new Set(['--lr-theme-shadow-color']);
-const ROOT_ONLY = /^(?::root|:where\(:root\))(?::where\([^)]*(?:\([^)]*\))*[^)]*\)|:not\([^)]*\))*$/;
 const references = (value) => [...value.matchAll(/var\(\s*(--[_a-zA-Z0-9-]+)/g)].map((match) => match[1]);
+
+// Only the root prefix and successive restrictions may occur outside parentheses. Scan once
+// rather than backtracking across nested functions; quoted and escaped parentheses are literal.
+function isRootOnlySelector(selector) {
+  let index = selector.startsWith(':where(:root)') ? 13 : selector.startsWith(':root') ? 5 : 0;
+  if (!index) return false;
+  while (index < selector.length) {
+    if (selector.startsWith(':where(', index)) index += 7;
+    else if (selector.startsWith(':not(', index)) index += 5;
+    else return false;
+    let depth = 1;
+    let quote = '';
+    while (index < selector.length && depth > 0) {
+      const character = selector[index++];
+      if (character === '\\') index += 1;
+      else if (quote) {
+        if (character === quote) quote = '';
+      } else if (character === '"' || character === "'") quote = character;
+      else if (character === '(') depth += 1;
+      else if (character === ')') depth -= 1;
+    }
+    if (depth !== 0) return false;
+  }
+  return true;
+}
 
 /** Violations as `selector: --name -> --referenced` strings. */
 export function rootResolvedReferenceViolations(css) {
@@ -17,7 +41,7 @@ export function rootResolvedReferenceViolations(css) {
   for (const declaration of readDeclarations(css)) {
     if (!declaration.property.startsWith('--') || !declaration.selector) continue;
     const selectors = splitTopLevel(declaration.selector, ',').map((selector) => selector.trim().replace(/\s+/g, ' '));
-    if (selectors.every((selector) => ROOT_ONLY.test(selector))) {
+    if (selectors.every(isRootOnlySelector)) {
       if (!rootOnly.has(declaration.property)) rootOnly.set(declaration.property, { selector: declaration.selector.trim(), refs: new Set() });
       for (const name of references(declaration.value)) rootOnly.get(declaration.property).refs.add(name);
     } else {

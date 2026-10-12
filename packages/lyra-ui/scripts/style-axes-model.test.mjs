@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { test } from 'node:test';
@@ -335,4 +336,50 @@ test('no root-only declaration in theme.css references a name a boundary re-decl
   // Transitive references through other root-only names count; the shadow colour is allowed.
   assert.deepEqual(rootResolvedReferenceViolations(':root { --_a: var(--_b); --_b: var(--x); } .lr-dark { --x: red; }'), [':root: --_a -> --x', ':root: --_b -> --x']);
   assert.deepEqual(rootResolvedReferenceViolations(':root { --_a: rgb(var(--lr-theme-shadow-color) / 0.1); } [data-lr-look] { --lr-theme-shadow-color: 0 0 0; }'), []);
+});
+
+test('root-only reference lint distinguishes root restrictions from descendant and mixed selectors', async () => {
+  const { rootResolvedReferenceViolations } = await import('./theme-boundary-lint.mjs');
+  for (const selector of [
+    ':root',
+    ':where(:root)',
+    ':root:where(:not([data-lr-look])):not([hidden])',
+    ':where(:root):not(:where([hidden], [data-mode="dark"]))',
+    ':root:where([data-value=")"]):not([hidden])',
+    String.raw`:root:where([data-value="\")"]):not([hidden])`,
+  ]) {
+    assert.deepEqual(
+      rootResolvedReferenceViolations(`${selector} { --a: var(--x); } .boundary { --x: red; }`),
+      [`${selector}: --a -> --x`],
+      selector,
+    );
+  }
+  for (const selector of [
+    ':root .scope',
+    ':where(:root) > .scope',
+    ':root:where(:not([hidden])) .scope',
+    ':root, .scope',
+    ':where(:root, .scope)',
+    '.scope:where(:root)',
+  ]) {
+    assert.deepEqual(rootResolvedReferenceViolations(`${selector} { --a: var(--x); } .boundary { --x: red; }`), [], selector);
+  }
+});
+
+test('root-only reference lint bounds deeply nested and backtracking-shaped selectors', () => {
+  // Isolate the timeout so a future backtracking regression cannot stall the test runner.
+  const moduleUrl = new URL('./theme-boundary-lint.mjs', import.meta.url).href;
+  const result = spawnSync(process.execPath, ['--input-type=module', '--eval', `
+    import assert from 'node:assert/strict';
+    import { rootResolvedReferenceViolations as check } from ${JSON.stringify(moduleUrl)};
+    const count = 10_000;
+    const hostile = ':root:where(' + '():not():where('.repeat(count) + ')'.repeat(count + 1) + ' .scope';
+    assert.deepEqual(check(hostile + ' { --a: var(--x); } .boundary { --x: red; }'), []);
+    const nested = ':root:where(' + ':not('.repeat(count) + '[hidden]' + ')'.repeat(count + 1);
+    const violations = check(nested + ' { --a: var(--x); } .boundary { --x: red; }');
+    assert.equal(violations.length, 1);
+    assert.ok(violations[0] === nested + ': --a -> --x');
+  `], { encoding: 'utf8', timeout: 5_000 });
+  assert.equal(result.error?.code, undefined, 'selector classification must finish within the child-process deadline');
+  assert.equal(result.status, 0, result.stderr);
 });
