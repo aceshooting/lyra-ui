@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { NODE_COUNT_TIMEOUT } from '../../../../test/graph-test-support.js';
 import type { CanvasScene } from './graph-canvas.js';
 import type { LyraGraph } from './graph.class.js';
 import './graph.js';
@@ -10,7 +11,9 @@ async function readyGraph(): Promise<LyraGraph> {
     width="320" height="240" style="width:320px;height:240px"></lr-graph>`);
   graph.nodes = [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }];
   graph.edges = [{ id: 'ab', source: 'a', target: 'b' }];
-  await waitUntil(() => !!graph.shadowRoot!.querySelector('[part="cursor-item"]'));
+  await waitUntil(() => !!graph.shadowRoot!.querySelector('[part="cursor-item"]'), 'canvas cursor is ready', {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
   return graph;
 }
 

@@ -3,6 +3,7 @@ import type { DocxAction, DocxCommand, DocxHighlight, DocxResult, DocxTableActio
 import { isSafeDocxHyperlink } from './hyperlink-policy.js';
 import { isDocxXmlText } from './xml-text.js';
 import { ownDataRecord } from './own-data-record.js';
+import { normalizeDocxReviewAction } from './review-types.js';
 
 export const DOCX_LIMITS = Object.freeze({
   styleId: 128, styleLabel: 128, styles: 256, fonts: 128, fontFamily: 64,
@@ -42,6 +43,11 @@ export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
     if (!action || typeof action['type'] !== 'string') return invalid;
     const type = action['type'];
     switch (type) {
+      case 'add-comment':
+      case 'reply-comment':
+      case 'review-decision':
+      case 'track-changes':
+        return normalizeDocxReviewAction(action);
       case 'resize-image': {
         if (!keys(action, ['type', 'widthPoints', 'heightPoints'])) return invalid;
         for (const value of [action['widthPoints'], action['heightPoints']]) {
@@ -75,6 +81,37 @@ export function normalizeDocxAction(value: unknown): DocxResult<DocxAction> {
       case 'insert-table-column':
         if (!keys(action, ['type', 'where']) || (action['where'] !== 'left' && action['where'] !== 'right')) return invalid;
         return success(Object.freeze({ type, where: action['where'] }));
+      case 'table-header-row':
+        if (!keys(action, ['type', 'enabled']) || typeof action['enabled'] !== 'boolean') return invalid;
+        return success(Object.freeze({ type, enabled: action['enabled'] }));
+      case 'table-cell-alignment':
+        if (!keys(action, ['type', 'value']) ||
+          (action['value'] !== 'top' && action['value'] !== 'center' && action['value'] !== 'bottom')) return invalid;
+        return success(Object.freeze({ type, value: action['value'] }));
+      case 'table-cell-shading': {
+        if (!keys(action, ['type', 'color']) || (action['color'] !== null &&
+          (typeof action['color'] !== 'string' || !/^#[0-9a-f]{6}$/i.test(action['color'])))) return invalid;
+        return success(Object.freeze({ type, color: action['color'] === null ? null : (action['color'] as string).toUpperCase() }));
+      }
+      case 'table-cell-borders': {
+        const target = action['target'], style = action['style'];
+        if (target !== 'all' && target !== 'outside' && target !== 'inside' && target !== 'top' &&
+          target !== 'bottom' && target !== 'left' && target !== 'right') return invalid;
+        if (style === 'none') return keys(action, ['type', 'target', 'style']) ? success(Object.freeze({ type, target, style })) : invalid;
+        if (!keys(action, ['type', 'target', 'style', 'widthPoints', 'color']) ||
+          (style !== 'single' && style !== 'dashed' && style !== 'dotted' && style !== 'double' && style !== 'triple' && style !== 'thick')) return invalid;
+        const width = action['widthPoints'], color = action['color'];
+        if (typeof width !== 'number' || !Number.isFinite(width) || width < 0.25 || !Number.isInteger(width * 8) ||
+          typeof color !== 'string' || (color !== 'auto' && !/^#[0-9a-f]{6}$/i.test(color))) return invalid;
+        if (width > 12) return limited;
+        return success(Object.freeze({ type, target, style, widthPoints: width, color: color === 'auto' ? color : color.toUpperCase() }));
+      }
+      case 'table-width': {
+        const width = action['widthPoints'];
+        if (!keys(action, ['type', 'widthPoints']) || typeof width !== 'number' || !Number.isFinite(width) || width < 15 ||
+          Math.abs(width * 20 - Math.round(width * 20)) > 1e-9) return invalid;
+        return width > 1440 ? limited : success(Object.freeze({ type, widthPoints: width }));
+      }
       case 'delete-table-row':
       case 'delete-table-column':
       case 'delete-table':
@@ -162,7 +199,8 @@ export function normalizeDocxReplacement(value: unknown): DocxResult<string> {
 export function isDocxTableAction(action: DocxAction): action is DocxTableAction {
   return typeof action !== 'string' && (action.type === 'insert-table' || action.type === 'insert-table-row' ||
     action.type === 'insert-table-column' || action.type === 'delete-table-row' ||
-    action.type === 'delete-table-column' || action.type === 'delete-table');
+    action.type === 'delete-table-column' || action.type === 'delete-table' || action.type === 'table-header-row' ||
+    action.type === 'table-cell-alignment' || action.type === 'table-cell-shading' || action.type === 'table-cell-borders' || action.type === 'table-width');
 }
 
 export function isDocxImageAction(action: DocxAction): action is DocxImageAction {

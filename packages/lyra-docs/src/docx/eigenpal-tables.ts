@@ -3,9 +3,11 @@ import type { OoxmlElement, OoxmlNode } from '@docx-editor.dev/core/store';
 import type { DocxCommandAvailability, DocxResult, DocxTableAction, DocxTableContext } from './types.js';
 import { DOCX_LIMITS } from './commands.js';
 import { OOXML_TREE_LIMITS, WORD_NS as WORD } from './ooxml.js';
+import { qualifyTableFormatting } from './eigenpal-table-formatting.js';
+import type { TableFormatting } from './eigenpal-table-formatting.js';
 
 export type TableReaders = Pick<typeof import('@docx-editor.dev/core/store'), 'findNode' | 'parentNodeOf'>;
-const TABLE_READ_LIMITS = Object.freeze({ ...OOXML_TREE_LIMITS, cells: 4_000 });
+const TABLE_READ_LIMITS: Readonly<typeof OOXML_TREE_LIMITS & { cells: number }> = Object.freeze({ ...OOXML_TREE_LIMITS, cells: 4_000 });
 const word = (node: OoxmlNode, name: string): node is OoxmlElement =>
   node.kind !== 'textValue' && node.namespaceUri === WORD && node.localName === name;
 const refusal = (code: 'unsupported' | 'resource-limit' | 'stale-selection'): DocxResult<never> => ({ ok: false, code });
@@ -35,7 +37,7 @@ export function tableAvailability(editor: DocxEditorInstance, action: DocxTableA
 
 /** Explicit-operation guard. The upstream ancestry index can do a cold whole-part build. */
 export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableReaders, action: DocxTableAction,
-  limits: Partial<typeof TABLE_READ_LIMITS> = {}): DocxResult<{ command: EditorCommand; valid(): boolean }> {
+  limits: Partial<typeof TABLE_READ_LIMITS> = {}): DocxResult<TableFormatting & { valid(): boolean }> {
   const readLimits = { ...TABLE_READ_LIMITS, ...limits };
   const surface = editor.surface;
   if (!surface) return refusal('unsupported');
@@ -47,7 +49,7 @@ export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableRe
   const paragraphId = initial.selection.head.paragraphId, offset = initial.selection.head.offset;
   const valid = () => {
     if (editor.surface !== surface || editor.mountGeneration !== generation || surface.session !== session ||
-      session.packageRevision() !== revision || surface.storyScope().kind !== 'body') return false;
+      session.packageRevision() !== revision || session.part() !== part || surface.storyScope().kind !== 'body') return false;
     const state = surface.state();
     return state.cellSelection === null && state.selection.anchor.paragraphId === paragraphId &&
       state.selection.head.paragraphId === paragraphId && state.selection.anchor.offset === offset && state.selection.head.offset === offset;
@@ -80,6 +82,7 @@ export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableRe
   const table = ancestors[2]!, selectedRow = ancestors[3]!, selectedCell = ancestors[4]!;
   let nodes = 0, cells = 0, rows = 0, columns = 0, rowIndex = -1, columnIndex = -1;
   const ids = new Set<string>(), rowSizes: number[] = [], gridIds: string[] = [];
+  const rowNodes: OoxmlElement[] = [], cellNodes: OoxmlElement[] = [], gridNodes: OoxmlElement[] = [];
   const stack: { node: OoxmlNode; depth: number; parent: string; row: number }[] = [{ node: table, depth: 3, parent: 'body', row: -1 }];
   const forbidden = new Set(['gridSpan', 'vMerge', 'hMerge', 'gridBefore', 'gridAfter', 'sdt', 'ins', 'del', 'moveFrom', 'moveTo', 'tblPrChange', 'trPrChange', 'tcPrChange']);
   while (stack.length) {
@@ -92,6 +95,12 @@ export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableRe
       continue;
     }
     if (node.attributes.length > readLimits.attributes || node.children.length + stack.length > readLimits.nodes - nodes) return refusal('resource-limit');
+    const attributeKeys = new Set<string>();
+    for (const attribute of node.attributes) {
+      const key = `${attribute.namespaceUri}\0${attribute.localName}`;
+      if (attributeKeys.has(key)) return refusal('unsupported');
+      attributeKeys.add(key);
+    }
     if (forbidden.has(node.localName)) return refusal('unsupported');
     if (['tbl', 'tr', 'tc', 'tblGrid', 'gridCol'].includes(node.localName) && node.namespaceUri !== WORD) return refusal('unsupported');
     const name = node.namespaceUri === WORD ? node.localName : '';
@@ -110,19 +119,28 @@ export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableRe
         }
       }
     }
+    if (name === 'tblPr' || name === 'trPr' || name === 'tcPr' || name === 'tcBorders') {
+      const seen = new Set<string>();
+      for (const child of node.children) if (child.kind !== 'textValue' && child.namespaceUri === WORD) {
+        if (seen.has(child.localName)) return refusal('unsupported');
+        seen.add(child.localName);
+      }
+    }
     if (name === 'tr') {
+      rowNodes.push(node);
       frame.row = rows++;
       rowSizes.push(0);
       if (node === selectedRow) rowIndex = frame.row;
     }
     if (name === 'tc') {
+      cellNodes.push(node);
       if (++cells > readLimits.cells) return refusal('resource-limit');
       const index = rowSizes[frame.row]!;
       rowSizes[frame.row] = index + 1;
       if (node === selectedCell) columnIndex = index;
       if (!node.children.some(child => word(child, 'p'))) return refusal('unsupported');
     }
-    if (name === 'gridCol') gridIds.push(node.id);
+    if (name === 'gridCol') { gridIds.push(node.id); gridNodes.push(node); }
     for (let index = node.children.length - 1; index >= 0; index--) {
       stack.push({ node: node.children[index]!, depth: frame.depth + 1, parent: name, row: frame.row });
     }
@@ -131,6 +149,12 @@ export function qualifyTableCommand(editor: DocxEditorInstance, readers: TableRe
   if (!rows || !columns || rowIndex < 0 || columnIndex < 0 || rowSizes.some(size => size !== columns)) return refusal('unsupported');
   if ((action.type === 'insert-table-row' && (rows + 1 > DOCX_LIMITS.tableRows || columns > DOCX_LIMITS.tableColumns || (rows + 1) * columns > DOCX_LIMITS.tableCells)) ||
     (action.type === 'insert-table-column' && (rows > DOCX_LIMITS.tableRows || columns + 1 > DOCX_LIMITS.tableColumns || rows * (columns + 1) > DOCX_LIMITS.tableCells))) return refusal('resource-limit');
+  if (action.type === 'table-header-row' || action.type === 'table-width' || action.type === 'table-cell-alignment' ||
+    action.type === 'table-cell-shading' || action.type === 'table-cell-borders') {
+    const formatting = qualifyTableFormatting(action, table, rowNodes, cellNodes, gridNodes, selectedCell);
+    if (!formatting.ok) return formatting;
+    return valid() ? { ok: true, value: { ...formatting.value, valid } } : refusal('stale-selection');
+  }
   const rowTarget = { sourceRevision: revision, tableId: table.id, rowId: selectedRow.id, isHeaderRepeat: false };
   const columnTarget = gridIds[columnIndex] ? { sourceRevision: revision, tableId: table.id, gridColumnId: gridIds[columnIndex]!, isHeaderRepeat: false } : undefined;
   let command: EditorCommand;

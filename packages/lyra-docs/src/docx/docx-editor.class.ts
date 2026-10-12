@@ -9,11 +9,15 @@ import { acquireAnnouncementSink, type AnnouncementSink } from '@aceshooting/lyr
 import { formatNumber } from '@aceshooting/lyra-ui/utilities/format.js';
 import { nextId } from '@aceshooting/lyra-ui/utilities/a11y.js';
 import { createDocxSession } from './create-session.js';
-import { loadDocumentControls } from './editor-controls.js';
+import { loadDocumentControls, replacementSearchIndex } from './editor-controls.js';
 import { internalDocxCharts, internalDocxSelectedImageElement, refreshInternalDocxTableLabels, setInternalDocxZoom } from './session.js';
 import type { DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxChartModel } from './chart-model.js';
 import { DOCX_LIMITS } from './commands.js';
+import { DOCX_COMMAND_CATALOG, buildDocxCommandAction, type DocxCommandDescriptor } from './command-catalog.js';
+import type { LyraCommand } from '@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js';
+import type { DocxOutline, DocxDocumentInspection, DocxDocumentDiagnostic, DocxDocumentCapability } from './document-inspection-types.js';
+import { DOCX_REVIEW_LIMITS, type DocxReviewReport, type DocxReviewDecision } from './review-types.js';
 import { captureTableToolIntent, tableInsertDraft } from './table-tools.js';
 import {
   captureImageToolIntent, imageDescriptionDraft, imageDimensionDraft,
@@ -24,7 +28,7 @@ import { AvailabilityMemo } from './availability-memo.js';
 import { returnFocusAfterHide, trackDeferredFocusReturn } from './deferred-focus-return.js';
 import { inspectDocxImageForInsertion } from './image-bytes.js';
 import type {
-  DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
+  DocxAction, DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
   DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
   DocxImageAction, DocxImageDescription, DocxImageDirection, DocxImageSource, DocxInsertImageOptions, DocxCommandAvailability,
   DocxHighlight,
@@ -55,6 +59,12 @@ const toolIcons = {
   new: { path: 'M14 2H5v20h14V7z M14 2v6h5 M8 14h8 M12 10v8', label: 'docxEditorNew' },
   open: { path: 'M3 7V4h6l3 3h9v3 M3 7v13h16l3-10H7L3 20', label: 'docxEditorOpen' },
   save: { path: 'M3 3h15l3 3v15H3z M7 3v6h10V3 M7 21v-8h10v8', label: 'docxEditorSave' },
+  commands: { path: 'M4 5h16v14H4z M7 9l3 3-3 3 M13 15h4', label: 'docxEditorCommands' },
+  outline: { path: 'M4 5h3 M11 5h9 M4 12h3 M11 12h9 M4 19h3 M11 19h9', label: 'docxEditorOutline' },
+  checks: { path: 'M4 4h16v16H4z M7 12l3 3 7-7', label: 'docxEditorChecks' },
+  review: { path: 'M3 4h18v13H9l-6 4z M7 8h10 M7 12h7', label: 'docxEditorReview' },
+  'table-format': { path: 'M3 3h18v18H3z M3 9h18 M3 15h18 M9 3v18 M15 3v18', label: 'docxEditorTableFormat' },
+  'image-replace': { path: 'M3 3h18v18H3z M3 16l5-5 5 5 M15 7h5 M18 4l3 3-3 3', label: 'docxEditorReplaceImage' },
   'bold': { path: 'M6 4h7a4 4 0 0 1 0 8H6z M6 12h8a4 4 0 0 1 0 8H6z', label: 'docxEditorBold' },
   'italic': { path: 'M11 4h8 M5 20h8 M15 4 9 20', label: 'docxEditorItalic' },
   'underline': { path: 'M6 3v7a6 6 0 0 0 12 0V3 M4 21h16', label: 'docxEditorUnderline' },
@@ -94,7 +104,7 @@ const toolIcons = {
   'table-delete-table': { path: 'M3 3h18v18H3z M3 9h18 M9 3v18 M13 13l6 6 M19 13l-6 6', label: 'docxEditorTableDelete' },
 } as const;
 /** Tools rendered only in a matching context own their tooltip next to the trigger. */
-const contextualToolIcons = new Set<string>(['image-resize', 'image-description', 'image-delete', 'table-row-above',
+const contextualToolIcons = new Set<string>(['table-format', 'image-resize', 'image-description', 'image-delete', 'table-row-above',
   'table-row-below', 'table-column-left', 'table-column-right', 'table-delete-row', 'table-delete-column', 'table-delete-table']);
 const isToolActivationKey = (event: KeyboardEvent): boolean =>
   (event.key === 'Enter' || event.key === ' ') && !event.isComposing && event.keyCode !== 229;
@@ -156,6 +166,15 @@ const popoverTag = unsafeStatic(tag('popover'));
 const inputTag = unsafeStatic(tag('input'));
 const checkboxTag = unsafeStatic(tag('checkbox'));
 const textareaTag = unsafeStatic(tag('textarea'));
+const commandPaletteTag = unsafeStatic(tag('command-palette'));
+type EditorCommandPalette = HTMLElement & { open: boolean; openPalette(): void; close(): void };
+type DocumentPanel = 'outline' | 'checks' | 'review';
+interface CommandIntent {
+  session: DocxSession | null;
+  revision: DocxRevision | null;
+  selectionVersion: number;
+  lease: DocxSelectionLease | null;
+}
 const alignments = ['left', 'center', 'right', 'justify'] as const;
 const listKinds = ['bullet', 'numbered'] as const;
 const tableActions = [
@@ -205,6 +224,12 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @slot new-icon - Decorative icon for the new action; the editor retains its accessible name.
  * @slot open-icon - Decorative icon for the open action; the editor retains its accessible name.
  * @slot save-icon - Decorative icon for the save action; the editor retains its accessible name.
+ * @slot commands-icon - Decorative icon for command discovery; the editor retains its accessible name.
+ * @slot outline-icon - Decorative icon for the document outline; the editor retains its accessible name.
+ * @slot checks-icon - Decorative icon for document checks; the editor retains its accessible name.
+ * @slot review-icon - Decorative icon for document review; the editor retains its accessible name.
+ * @slot image-replace-icon - Decorative icon for image replacement; the editor retains its accessible name.
+ * @slot table-format-icon - Decorative icon for table formatting; the editor retains its accessible name.
  * @slot bold-icon - Decorative icon for the bold action; the editor retains its accessible name.
  * @slot italic-icon - Decorative icon for the italic action; the editor retains its accessible name.
  * @slot underline-icon - Decorative icon for the underline action; the editor retains its accessible name.
@@ -336,6 +361,60 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * @csspart image-insert-apply - Inserts the original local image at the retained caret.
  * @csspart image-insert-cancel - Cancels picking, reading or editing a local image draft.
  * @csspart image-insert-status - Local image preparation or refusal feedback.
+ * @csspart navigation-tools - Stable command, navigation, review and image replacement bar.
+ * @csspart document-panel-toggle - Opens a document metadata or review panel.
+ * @csspart document-panel - Outline, checks or review panel.
+ * @csspart document-panel-heading - Programmatically focused panel heading.
+ * @csspart document-panel-header - Panel title, refresh and close controls.
+ * @csspart document-panel-refresh - Refreshes the current bounded report.
+ * @csspart document-panel-close - Closes the current panel.
+ * @csspart document-panel-content - Scrollable bounded panel content.
+ * @csspart document-panel-limit - Report truncation notice.
+ * @csspart document-target - Navigates to an authentic outline heading.
+ * @csspart outline-items - Document heading list.
+ * @csspart inspection-scope - Body metadata check scope.
+ * @csspart inspection-items - Body metadata diagnostics.
+ * @csspart inspection-capabilities - Explicit preservation, rendering and editing facts.
+ * @csspart diagnostic-target - Navigates to an authentic diagnostic location.
+ * @csspart review-draft - Explicit review author and comment inputs.
+ * @csspart review-author - Author name stored with new review content.
+ * @csspart review-text - Bounded comment or reply text.
+ * @csspart review-submit - Adds a comment or reply.
+ * @csspart review-reply-cancel - Cancels reply mode.
+ * @csspart review-track - Starts or stops tracked changes.
+ * @csspart review-unsupported - Unsupported review content notice.
+ * @csspart review-items - Copied comments and tracked changes.
+ * @csspart review-item-text - Plain review text.
+ * @csspart review-actions - Review item actions.
+ * @csspart review-target - Navigates to an authentic review item.
+ * @csspart review-reply - Chooses the comment to reply to.
+ * @csspart review-decision - Accepts, rejects, resolves, reopens or deletes the authentic item.
+ * @csspart table-format-popover - Original-table formatting dialog.
+ * @csspart table-format-trigger - Opens table formatting.
+ * @csspart table-format-fields - Requested table formatting values.
+ * @csspart table-format-actions - Formatting actions.
+ * @csspart table-header-on - Marks the first row as header.
+ * @csspart table-header-off - Removes repeated header markers.
+ * @csspart table-vertical - Requested vertical cell alignment.
+ * @csspart table-alignment-apply - Applies cell alignment.
+ * @csspart table-shading - Requested direct cell shading.
+ * @csspart table-shading-apply - Applies cell shading.
+ * @csspart table-shading-clear - Clears direct shading.
+ * @csspart table-width - Requested equally distributed total table width.
+ * @csspart table-width-apply - Applies total width.
+ * @csspart table-border-target - Borders to change.
+ * @csspart table-border-style - Requested border style.
+ * @csspart table-border-width - Requested border width.
+ * @csspart table-border-color - Requested border color.
+ * @csspart table-border-apply - Applies borders.
+ * @csspart image-replace-trigger - Opens the byte replacement file picker.
+ * @csspart image-replace-file - Native replacement image file picker.
+ * @csspart image-replace-status - Localized replacement progress or refusal.
+ * @csspart commands-button - Opens editor-scoped searchable commands.
+ * @csspart command-palette - Searchable command surface.
+ * @csspart find-results - Numbered bounded context excerpts.
+ * @csspart find-match - Selects a current revision-scoped search result.
+ * @csspart find-current - Current selected match position.
  * @csspart find - On-demand search and single-match replacement surface.
  * @csspart find-toggle - Opens and closes the find surface.
  * @csspart find-query - Search query field.
@@ -385,6 +464,23 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   @state() private paragraphStyleItems: readonly { id: string; label: string }[] = [];
   @state() private fontFamilyItems: readonly string[] = [];
   @state() private findOpen = false;
+  @state() private commandsOpen = false;
+  private commandIntent: CommandIntent | null = null;
+  private commandRows: readonly LyraCommand[] = [];
+  private commandSources = new Map<LyraCommand, DocxCommandDescriptor>();
+  private selectedCommand: DocxCommandDescriptor | null = null;
+  private commandGeneration = 0;
+  @state() private documentPanel: DocumentPanel | null = null;
+  @state() private outlineReport: DocxOutline | null = null;
+  @state() private inspectionReport: DocxDocumentInspection | null = null;
+  @state() private reviewReport: DocxReviewReport | null = null;
+  @state() private reviewAuthor = '';
+  @state() private reviewText = '';
+  @state() private reviewReplyId: string | null = null;
+  @state() private reviewHadTextSelection = false;
+  private reviewIntent: CommandIntent | null = null;
+  private documentPanelGeneration = 0;
+  private cancelDocumentPanelFocus: (() => void) | null = null;
   @state() private searchResults: DocxSearchResults | null = null;
   @state() private searchIndex = -1;
   @state() private query = '';
@@ -406,6 +502,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private tableDialogGeneration = 0;
   private cancelTableFocusReturn: (() => void) | null = null;
   private tableLabelState: { session: DocxSession; row: string; column: string } | null = null;
+  @state() private tableFormattingOpen = false;
+  @state() private tableVertical: 'top' | 'center' | 'bottom' = 'top';
+  @state() private tableShading = '';
+  @state() private tableWidth = '';
+  @state() private tableBorderTarget: 'all' | 'outside' | 'inside' | 'top' | 'bottom' | 'left' | 'right' = 'all';
+  @state() private tableBorderStyle: 'none' | 'single' | 'dashed' | 'dotted' | 'double' | 'triple' | 'thick' = 'single';
+  @state() private tableBorderWidth = '1';
+  @state() private tableBorderColor = 'auto';
+  private tableFormattingIntent: ReturnType<typeof captureTableToolIntent> = null;
   @state() private imageDialog: 'resize' | 'description' | null = null;
   @state() private imageWidth = '';
   @state() private imageHeight = '';
@@ -429,6 +534,11 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private insertionGeneration = 0;
   private insertionAwaitingPicker = false;
   private cancelInsertionFocusReturn: (() => void) | null = null;
+  @state() private imageReplacementPhase: 'idle' | 'reading' | 'replacing' | 'done' | 'error' = 'idle';
+  @state() private imageReplacementError: DocxRefusalCode | null = null;
+  private imageReplacementIntent: CommandIntent | null = null;
+  private imageReplacementGeneration = 0;
+  private imageReplacementAbort: AbortController | null = null;
 
   private mount: HTMLDivElement | null = null;
   private hint: HTMLSpanElement | null = null;
@@ -515,6 +625,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    if (this.commandsOpen && (changed.has('strings') || changed.has('locale'))) {
+      this.refreshCommands();
+      this.requestUpdate();
+    }
     this.refreshTableLabels();
     this.applyZoom();
     const overlayOnly = [...(changed as Map<PropertyKey, unknown>).keys()].every(key => key === 'imageClip' || key === 'chartLayer');
@@ -552,6 +666,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private clearEditingDrafts(): void {
+    this.resetImageReplacement();
+    this.resetCommands();
+    this.closeDocumentPanel();
+    this.outlineReport = null;
+    this.inspectionReport = null;
+    this.reviewReport = null;
+    this.reviewText = '';
     this.resetImageInsertion();
     this.imageDialogGeneration++;
     this.cancelImageFocusReturn?.();
@@ -565,6 +686,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.imageNavigationEmpty = false;
     for (const kind of ['resize', 'description'] as const) void this.imagePopover(kind)?.hide({ focusTrigger: false });
     this.tableDialogGeneration++;
+    this.tableFormattingIntent?.release();
+    this.tableFormattingIntent = null;
+    this.tableFormattingOpen = false;
+    void this.findEditorPopover('table-format-popover')?.hide({ focusTrigger: false });
     this.cancelTableFocusReturn?.();
     this.releaseTableIntent();
     this.tableDialogOpen = false;
@@ -595,19 +720,30 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         next.revision?.documentId !== previous?.revision?.documentId || next.revision?.value !== previous?.revision?.value)
       this.releaseToolbarSelection();
     if (this.tableIntent && !this.tableIntent.valid(owner)) this.tableIntent.release();
+    if (this.tableFormattingIntent && !this.tableFormattingIntent.valid(owner)) this.tableFormattingIntent.release();
     if (this.imageIntent && !this.imageIntent.valid(owner)) this.imageIntent.release();
     if (this.insertionIntent && !this.insertionIntent.valid(owner)) {
       if (this.insertionPhase === 'reading' || this.insertionPhase === 'idle') this.cancelImageInsertion(false);
       else this.insertionIntent.release();
     }
     if (!this.isConnected || this.session !== owner || this.currentSnapshot !== previous || owner.snapshot() !== next) return;
+    if (this.reviewIntent && (next.selection.version !== this.reviewIntent.selectionVersion ||
+        next.revision?.documentId !== this.reviewIntent.revision?.documentId || next.revision?.value !== this.reviewIntent.revision?.value)) {
+      this.reviewIntent.lease?.release();
+      this.reviewIntent.lease = null;
+    }
     this.currentSnapshot = next;
+    this.refreshCommands();
     const current = () => this.isConnected && this.session === owner && this.currentSnapshot === next && owner.snapshot() === next;
     if (next.image) this.imageNavigationEmpty = false;
     if (previous?.revision?.documentId !== next.revision?.documentId ||
         previous?.revision?.value !== next.revision?.value) {
       this.searchResults = null;
       this.searchIndex = -1;
+      this.outlineReport = null;
+      this.inspectionReport = null;
+      this.reviewReport = null;
+      this.reviewReplyId = null;
     }
     this.emit('lr-change', { snapshot: next });
     if (!current()) return;
@@ -617,6 +753,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.politeSink?.announce(this.localize('docxEditorSaving'));
     if (this.announcementsArmed && next.activity === 'inserting-image' && previous?.activity !== 'inserting-image')
       this.politeSink?.announce(this.localize('docxEditorInsertingImage'));
+    if (this.announcementsArmed && next.activity === 'replacing-image' && previous?.activity !== 'replacing-image')
+      this.politeSink?.announce(this.localize('docxEditorReplacingImage'));
     if (next.status === 'ready' && previous?.status !== 'ready' && next.revision) {
       this.emit('lr-ready', { revision: next.revision });
       if (!current()) return;
@@ -745,7 +883,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return this.load({ kind: 'blank' }, '', options.signal);
   }
 
-  can(command: DocxCommand | DocxEdit) {
+  can(command: DocxAction) {
     return this.session?.can(command) ?? { enabled: false, reason: 'not-ready' as const };
   }
 
@@ -769,10 +907,15 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   /** Execute a supported formatting, editing or history command. */
-  execute(command: DocxCommand | DocxEdit, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease } = {}): DocxResult<DocxRevision> {
-    if (!this.session) return refused('not-ready');
-    const result = this.session.execute(command, options);
-    this.syncSession();
+  execute(command: DocxAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease } = {}): DocxResult<DocxRevision> {
+    const owner = this.session;
+    if (!owner) return refused('not-ready');
+    const result = owner.execute(command, options);
+    if (this.isConnected && this.session === owner) {
+      this.syncSession();
+      if (result.ok && this.isConnected && this.session === owner && this.documentPanel === 'review')
+        this.refreshDocumentPanel();
+    }
     return result;
   }
 
@@ -1060,7 +1203,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.releaseTableIntent();
   }
 
-  private beginFocusReturn(slot: 'cancelTableFocusReturn' | 'cancelImageFocusReturn' | 'cancelInsertionFocusReturn') {
+  private beginFocusReturn(slot: 'cancelTableFocusReturn' | 'cancelImageFocusReturn' | 'cancelInsertionFocusReturn' | 'cancelDocumentPanelFocus') {
     const focus = trackDeferredFocusReturn(this.ownerDocument, () => { if (this[slot] === focus.cancel) this[slot] = null; });
     this[slot] = focus.cancel;
     return focus;
@@ -1668,10 +1811,152 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     </div>`;
   }
 
+  private palette(): EditorCommandPalette | null {
+    return this.renderRoot.querySelector<EditorCommandPalette>('[part="command-palette"]');
+  }
+
+  private resetCommands(): void {
+    this.commandGeneration++;
+    this.commandsOpen = false;
+    this.selectedCommand = null;
+    this.commandIntent?.lease?.release();
+    this.commandIntent = null;
+    this.commandRows = [];
+    this.commandSources.clear();
+    this.palette()?.close();
+  }
+
+  private commandIntentValid(): boolean {
+    const intent = this.commandIntent;
+    if (!intent || !this.isConnected || intent.session !== this.session) return false;
+    const state = this.session?.snapshot();
+    return (state?.revision?.documentId ?? null) === (intent.revision?.documentId ?? null) &&
+      (state?.revision?.value ?? null) === (intent.revision?.value ?? null) &&
+      (state?.selection.version ?? 0) === intent.selectionVersion;
+  }
+
+  private commandAvailability(item: DocxCommandDescriptor): DocxCommandAvailability {
+    const state = this.currentSnapshot;
+    if (!this.commandIntentValid()) return { enabled: false, reason: 'stale-selection' };
+    if (this.openInProgress || state?.activity) return { enabled: false, reason: 'busy' };
+    if (state?.composing) return { enabled: false, reason: 'composing' };
+    if (item.intent === 'new' || item.intent === 'open') return { enabled: true };
+    if (state?.status !== 'ready') return { enabled: false, reason: 'not-ready' };
+    if (item.action) {
+      if (state.readOnly) return { enabled: false, reason: 'read-only' };
+      if (!this.commandIntent?.lease && item.action !== 'undo' && item.action !== 'redo')
+        return { enabled: false, reason: 'no-selection' };
+      return this.can(item.action);
+    }
+    return { enabled: true };
+  }
+
+  private reasonText(reason: DocxRefusalCode): string {
+    const key = reason === 'read-only' ? 'docxEditorReasonReadOnly' : reason === 'busy' ? 'docxEditorReasonBusy' :
+      reason === 'composing' ? 'docxEditorReasonComposing' : reason === 'not-ready' || reason === 'destroyed' ? 'docxEditorReasonNotReady' :
+      reason.startsWith('stale-') ? 'docxEditorReasonStale' : reason === 'no-selection' ? 'docxEditorReasonSelection' : 'docxEditorReasonUnsupported';
+    return this.localize(key);
+  }
+
+  private refreshCommands(): void {
+    if (!this.commandsOpen) return;
+    const sources = new Map<LyraCommand, DocxCommandDescriptor>();
+    this.commandRows = Object.freeze(DOCX_COMMAND_CATALOG.map(item => {
+      const availability = this.commandAvailability(item);
+      const description = this.localize(item.descriptionKey);
+      const row: LyraCommand = Object.freeze({ commandId: item.id, label: this.localize(item.labelKey),
+        group: this.localize(`docxEditorCommand${item.group[0]!.toUpperCase()}${item.group.slice(1)}`),
+        description: availability.enabled ? description : this.localize('docxEditorCommandUnavailable', undefined,
+          { description, reason: this.reasonText(availability.reason ?? 'unsupported') }),
+        disabled: !availability.enabled, ...(item.shortcut ? { shortcut: item.shortcut } : {}) });
+      sources.set(row, item);
+      return row;
+    }));
+    this.commandSources = sources;
+  }
+
+  /** Open searchable commands for this editor, retaining the original document selection. */
+  openCommands(): void {
+    if (!this.isConnected || this.commandsOpen || this.currentSnapshot?.composing || this.currentSnapshot?.activity || this.openInProgress) return;
+    this.releaseToolbarSelection();
+    const owner = this.session, retained = owner?.retainSelection();
+    if (!this.isConnected || this.session !== owner) { if (retained?.ok) retained.value.release(); return; }
+    const state = owner?.snapshot();
+    this.commandIntent = { session: owner, revision: state?.revision ?? null,
+      selectionVersion: state?.selection.version ?? 0, lease: retained?.ok ? retained.value : null };
+    this.commandsOpen = true;
+    this.selectedCommand = null;
+    this.refreshCommands();
+    const generation = ++this.commandGeneration;
+    void this.updateComplete.then(() => {
+      if (generation !== this.commandGeneration || !this.isConnected || !this.commandsOpen) return;
+      const palette = this.palette();
+      // Return the modal to its command trigger; refocusing the document can collapse its retained selection.
+      this.renderRoot.querySelector<HTMLElement>('[part="commands-button"]')?.focus({ preventScroll: true });
+      if (generation !== this.commandGeneration || !this.isConnected || !this.commandsOpen) return;
+      palette?.openPalette();
+      if (!palette?.open) this.resetCommands();
+    });
+  }
+
+  private onCommandSelected = (event: CustomEvent<{ command: LyraCommand }>): void => {
+    event.stopPropagation();
+    const item = this.commandSources.get(event.detail.command);
+    if (!item || !this.commandAvailability(item).enabled) return;
+    this.selectedCommand = item;
+  };
+
+  private onCommandsHidden = (event: Event): void => {
+    event.stopPropagation();
+    if (!this.commandsOpen) return;
+    const item = this.selectedCommand, intent = this.commandIntent;
+    const available = item && this.commandAvailability(item).enabled;
+    this.commandsOpen = false;
+    this.selectedCommand = null;
+    this.commandIntent = null;
+    this.commandSources.clear();
+    this.commandRows = [];
+    this.commandGeneration++;
+    if (!item || !intent || !available) { intent?.lease?.release(); return; }
+    const action = buildDocxCommandAction(item.id);
+    if (action && intent.session) {
+      const result = intent.session.execute(action, { expectedRevision: intent.revision ?? undefined,
+        selection: intent.lease ?? undefined });
+      intent.lease?.release();
+      if (!this.isConnected || this.session !== intent.session) return;
+      this.syncSession();
+      if (!result.ok) this.reportEditRefusal(result.code);
+      else { this.editError = null; this.focusEditor(); }
+      return;
+    }
+    if (item.intent === 'outline' || item.intent === 'checks' || item.intent === 'review') {
+      this.showDocumentPanel(item.intent, intent); return;
+    }
+    intent.lease?.release();
+    if (item.intent === 'new' || item.intent === 'open') this.requestToolbarAction(item.intent);
+    else if (item.intent === 'save') void this.save();
+    else if (item.intent === 'find') this.showFind();
+  };
+
+  private showFind(): void {
+    if (!this.findActionAvailable()) return;
+    this.findOpen = true;
+    const owner = this.session;
+    void this.updateComplete.then(() => {
+      if (this.isConnected && this.session === owner && this.findOpen)
+        this.renderRoot.querySelector<HTMLElement>('[part="find-query"]')?.focus();
+    });
+  }
+
   private runFind(): void {
     if (!this.findActionAvailable() || !this.query) return;
-    const result = this.find(this.query, { matchCase: this.matchCase, wholeWord: this.wholeWord, limit: 100 });
+    const owner = this.session;
+    const query = this.query, matchCase = this.matchCase, wholeWord = this.wholeWord;
+    const result = this.find(query, { matchCase, wholeWord, limit: DOCX_LIMITS.matches });
+    if (!this.isConnected || this.session !== owner || query !== this.query || matchCase !== this.matchCase || wholeWord !== this.wholeWord) return;
     if (!result.ok) { this.reportEditRefusal(result.code); return; }
+    const revision = owner?.snapshot().revision;
+    if (!revision || revision.documentId !== result.value.revision.documentId || revision.value !== result.value.revision.value) return;
     this.editError = null;
     this.searchResults = result.value;
     this.searchIndex = -1;
@@ -1679,31 +1964,49 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       { count: result.value.matches.length }));
   }
 
-  private navigateMatch(direction: -1 | 1): void {
+  private chooseMatch(index: number): void {
     if (!this.findActionAvailable()) return;
-    const results = this.searchResults;
-    if (!results?.matches.length) return;
-    const index = this.searchIndex < 0 && direction === -1 ? results.matches.length - 1 :
-      (this.searchIndex + direction + results.matches.length) % results.matches.length;
-    const match = results.matches[index];
-    if (!match) return;
+    const owner = this.session, results = this.searchResults;
+    const match = results?.matches[index];
+    if (!match || !results) return;
     const result = this.selectMatch(match.id, { expectedRevision: results.revision });
+    if (!this.isConnected || this.session !== owner || this.searchResults !== results) return;
     if (result.ok) { this.searchIndex = index; this.editError = null; }
     else { this.searchResults = null; this.searchIndex = -1; this.reportEditRefusal(result.code); }
   }
 
+  private navigateMatch(direction: -1 | 1): void {
+    const results = this.searchResults;
+    if (!results?.matches.length) return;
+    const index = this.searchIndex < 0 && direction === -1 ? results.matches.length - 1 :
+      (this.searchIndex + direction + results.matches.length) % results.matches.length;
+    this.chooseMatch(index);
+  }
+
   private replaceCurrentMatch(): void {
     if (!this.findActionAvailable(true)) return;
-    const results = this.searchResults;
-    const match = results?.matches[this.searchIndex];
-    if (!match || !results) return;
-    const result = this.replaceMatch(match.id, this.replacement, { expectedRevision: results.revision });
-    if (result.ok) {
-      this.searchResults = null;
-      this.searchIndex = -1;
-      this.editError = null;
-      if (this.announcementsArmed) this.politeSink?.announce(this.localize('docxEditorReplaced'));
-    } else this.reportEditRefusal(result.code);
+    const owner = this.session, results = this.searchResults, index = this.searchIndex;
+    const match = results?.matches[index];
+    if (!owner || !match || !results) return;
+    const query = this.query, matchCase = this.matchCase, wholeWord = this.wholeWord, replacement = this.replacement;
+    const result = this.replaceMatch(match.id, replacement, { expectedRevision: results.revision });
+    if (!this.isConnected || this.session !== owner) return;
+    if (!result.ok) { this.reportEditRefusal(result.code); return; }
+    const revision = owner.snapshot().revision;
+    if (!revision || revision.documentId !== result.value.documentId || revision.value !== result.value.value ||
+        query !== this.query || matchCase !== this.matchCase || wholeWord !== this.wholeWord) return;
+    this.searchResults = null;
+    this.searchIndex = -1;
+    this.editError = null;
+    // Replacing invalidates every old match id. Advance only within a newly qualified result set.
+    this.runFind();
+    const fresh = this.searchResults as DocxSearchResults | null;
+    if (fresh?.matches.length) {
+      const next = replacementSearchIndex({ query, replacement, before: match.before, after: match.after, matchCase, wholeWord,
+        previousCount: results.matches.length, nextCount: fresh.matches.length, index, truncated: results.truncated || fresh.truncated });
+      if (next >= 0) this.chooseMatch(next);
+    }
+    if (this.announcementsArmed) this.politeSink?.announce(this.localize('docxEditorReplaced'));
   }
 
   private findActionAvailable(replacing = false): boolean {
@@ -1713,6 +2016,26 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private onHostKeyDown = (event: KeyboardEvent): void => {
+    if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
+    const documentTarget = event.composedPath().some(node => node === this.mount ||
+      node instanceof Node && Boolean(this.mount?.contains(node)));
+    // The editor owns chords only while its document or its command trigger has focus.
+    const mod = event.ctrlKey !== event.metaKey;
+    if (!event.defaultPrevented && !event.repeat && !event.isComposing && event.keyCode !== 229 &&
+        mod && !event.altKey && !event.shiftKey) {
+      const key = event.key.toLowerCase();
+      const commandTrigger = event.composedPath().some(node => node instanceof HTMLElement &&
+        node.getAttribute('part') === 'commands-button');
+      if (key === 'k' && (documentTarget || commandTrigger) && !this.currentSnapshot?.composing && !this.currentSnapshot?.activity) {
+        event.preventDefault(); event.stopPropagation(); this.openCommands(); return;
+      }
+      if (documentTarget && !this.commandsOpen && key === 'f' && this.findActionAvailable()) {
+        event.preventDefault(); event.stopPropagation(); this.showFind(); return;
+      }
+      if (documentTarget && !this.commandsOpen && key === 's' && this.findActionAvailable()) {
+        event.preventDefault(); event.stopPropagation(); void this.save(); return;
+      }
+    }
     if (event.key === 'Escape' && this.imageDrag) {
       event.preventDefault(); event.stopPropagation(); this.cancelImageDrag(); return;
     }
@@ -1733,7 +2056,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       return;
     }
     if ((event.isComposing || event.keyCode === 229) && event.composedPath().some(node => node instanceof HTMLElement &&
-      ['table-insert-popover', 'image-resize-popover', 'image-description-popover', 'image-insert-dialog'].includes(node.getAttribute('part') ?? ''))) return;
+      ['table-insert-popover', 'table-format-popover', 'image-resize-popover', 'image-description-popover', 'image-insert-dialog'].includes(node.getAttribute('part') ?? ''))) return;
     if (event.key === 'Escape' && this.imageDialog && event.composedPath().some(node => node instanceof HTMLElement &&
       node.getAttribute('part') === `image-${this.imageDialog}-popover`)) {
       event.preventDefault(); event.stopPropagation(); this.closeImageDialog(false); return;
@@ -1771,7 +2094,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       return;
     }
     // An open tool panel closes itself and returns focus to its trigger, even while its trigger keeps focus.
-    if (event.key === 'Escape' && ['text-color-popover', 'highlight-popover', 'line-spacing-popover'].some(part =>
+    if (event.key === 'Escape' && ['text-color-popover', 'highlight-popover', 'line-spacing-popover', 'table-format-popover'].some(part =>
       Boolean(this.renderRoot.querySelector<HTMLElement & { open?: boolean }>(`[part="${part}"]`)?.open))) {
       this.pickerFocusReturn = false;
       return;
@@ -1890,6 +2213,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const snapshot = this.currentSnapshot;
     if (this.openingFile || snapshot?.status === 'opening') return this.localize('docxEditorOpening');
     if (snapshot?.activity === 'inserting-image') return this.localize('docxEditorInsertingImage');
+    if (snapshot?.activity === 'replacing-image') return this.localize('docxEditorReplacingImage');
     if (snapshot?.activity === 'saving') return this.localize('docxEditorSaving');
     if (snapshot?.status === 'error' || this.localError) return this.localize('docxEditorError');
     if (snapshot?.status === 'destroyed') return this.localize('docxEditorDisconnected');
@@ -2087,8 +2411,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       <${buttonTag} part="find-toggle" id="tool-find" aria-label=${this.localize(toolIcons['find'].label)} data-tool-key="find" size="s" appearance=${this.findOpen ? 'filled' : 'quiet'}
         tabindex=${this.toolbarKey === 'find' ? '0' : '-1'}
         .pressed=${this.findOpen} ?disabled=${!ready}
-        @click=${() => { this.findOpen = !this.findOpen; if (this.findOpen) void this.updateComplete.then(() =>
-          this.renderRoot.querySelector<HTMLElement>('[part="find-query"]')?.focus()); }}>
+        @click=${() => { if (this.findOpen) this.findOpen = false; else this.showFind(); }}>
         ${this.renderToolIcon('find')}
       </${buttonTag}>
       </div>
@@ -2193,6 +2516,103 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     ${this.insertionError ? html`<p part="image-insert-status">${this.insertionFeedback(this.insertionError)}</p>` : nothing}`;
   }
 
+  private prepareTableFormatting(): void {
+    if (this.tableFormattingIntent?.valid(this.session)) return;
+    this.tableFormattingIntent?.release();
+    this.tableFormattingIntent = captureTableToolIntent(this.session);
+  }
+
+  private runTableFormatting(action: DocxTableAction): void {
+    const owner = this.session, intent = this.tableFormattingIntent;
+    if (!intent?.valid(owner)) return;
+    const result = intent.execute(owner, action);
+    if (!this.isConnected || this.session !== owner) return;
+    this.syncSession();
+    if (!result.ok) { this.reportEditRefusal(result.code); return; }
+    this.editError = null;
+    intent.release();
+    this.tableFormattingIntent = null;
+    this.tableFormattingOpen = false;
+    const popover = this.findEditorPopover('table-format-popover');
+    if (!popover) return;
+    const version = owner?.snapshot().selection.version;
+    const focus = trackDeferredFocusReturn(this.ownerDocument, () => undefined);
+    returnFocusAfterHide(popover.hide({ focusTrigger: false }), focus, () => this.isConnected && this.session === owner &&
+      !popover.open && owner?.snapshot().selection.version === version, () => this.focusEditor());
+  }
+
+  private renderTableFormatting(): TemplateResult {
+    if (!this.currentSnapshot?.table) return html``;
+    const valid = this.tableFormattingIntent?.valid(this.session) ?? false;
+    const enabled = (action: DocxTableAction) => valid && this.available(action);
+    const number = (value: string) => /^\d+(?:\.\d{1,3})?$/.test(value) ? Number(value) : NaN;
+    const shading: DocxTableAction = { type: 'table-cell-shading', color: this.tableShading };
+    const alignment: DocxTableAction = { type: 'table-cell-alignment', value: this.tableVertical };
+    const width: DocxTableAction = { type: 'table-width', widthPoints: number(this.tableWidth) };
+    const border: DocxTableAction = this.tableBorderStyle === 'none' ? { type: 'table-cell-borders', target: this.tableBorderTarget, style: 'none' } :
+      { type: 'table-cell-borders', target: this.tableBorderTarget, style: this.tableBorderStyle,
+        widthPoints: number(this.tableBorderWidth), color: this.tableBorderColor };
+    const apply = (action: DocxTableAction, key: string, part: string) => html`<${buttonTag} part=${part} size="s" appearance="quiet"
+      ?disabled=${!enabled(action)} @click=${() => this.runTableFormatting(action)}>${this.localize(key)}</${buttonTag}>`;
+    return html`<${popoverTag} part="table-format-popover" popup-role="dialog" placement="bottom-start" top-layer
+      aria-label=${this.localize('docxEditorTableFormat')}
+      @lr-show=${(event: Event) => {
+        if (event.target !== event.currentTarget) return;
+        this.prepareTableFormatting();
+        if (!this.tableFormattingIntent?.valid(this.session)) event.preventDefault();
+        else this.tableFormattingOpen = true;
+      }}
+      @lr-after-hide=${(event: Event) => {
+        if (event.target !== event.currentTarget) return;
+        this.tableFormattingOpen = false;
+        this.tableFormattingIntent?.release();
+        this.tableFormattingIntent = null;
+      }}>
+      <${buttonTag} slot="trigger" part="table-format-trigger" size="s" appearance="quiet" id="tool-table-format" data-tool-key="table-format" aria-label=${this.localize('docxEditorTableFormat')}
+        tabindex=${this.toolbarKey === 'table-format' ? '0' : '-1'} ?disabled=${!this.available({ type: 'table-cell-alignment', value: 'top' })}
+        @pointerdown=${() => this.prepareTableFormatting()} @focusin=${() => this.prepareTableFormatting()}
+        @keydown=${(event: KeyboardEvent) => { if (isToolActivationKey(event)) this.prepareTableFormatting(); }}>${this.renderToolIcon('table-format')}</${buttonTag}>
+      <div part="table-format-fields">
+        <p>${this.localize(this.tableFormattingOpen && !valid ? 'docxEditorTableStale' : 'docxEditorTableFormatHint')}</p>
+        <div part="table-format-actions">
+          ${apply({ type: 'table-header-row', enabled: true }, 'docxEditorTableHeaderOn', 'table-header-on')}
+          ${apply({ type: 'table-header-row', enabled: false }, 'docxEditorTableHeaderOff', 'table-header-off')}
+        </div>
+        <${selectTag} part="table-vertical" size="s" label=${this.localize('docxEditorTableVertical')} .value=${this.tableVertical}
+          ?disabled=${!valid} @lr-change=${(event: CustomEvent<{ value: string }>) => {
+            if (['top', 'center', 'bottom'].includes(event.detail.value)) this.tableVertical = event.detail.value as typeof this.tableVertical;
+          }}>${(['top', 'center', 'bottom'] as const).map(value => html`<${optionTag} value=${value}>
+            ${this.localize(value === 'top' ? 'docxEditorTableTop' : value === 'center' ? 'docxEditorTableMiddle' : 'docxEditorTableBottom')}</${optionTag}>`)}</${selectTag}>
+        ${apply(alignment, 'docxEditorTableApplyAlignment', 'table-alignment-apply')}
+        <${inputTag} part="table-shading" size="s" label=${this.localize('docxEditorTableShading')} .value=${this.tableShading}
+          maxlength="7" ?disabled=${!valid} @lr-input=${(event: CustomEvent<{ value: string }>) => { this.tableShading = event.detail.value; }}></${inputTag}>
+        <div part="table-format-actions">${apply(shading, 'docxEditorTableApplyShading', 'table-shading-apply')}
+          ${apply({ type: 'table-cell-shading', color: null }, 'docxEditorTableClearShading', 'table-shading-clear')}</div>
+        <${numberInputTag} part="table-width" size="s" label=${this.localize('docxEditorTableWidth')} hint=${this.localize('docxEditorTableWidthHint')}
+          min="15" max="1440" step="0.05" .value=${this.tableWidth} ?disabled=${!valid}
+          @lr-input=${(event: CustomEvent<{ value: string }>) => { this.tableWidth = event.detail.value; }}></${numberInputTag}>
+        ${apply(width, 'docxEditorTableApplyWidth', 'table-width-apply')}
+        <${selectTag} part="table-border-target" size="s" label=${this.localize('docxEditorTableBorderTarget')} .value=${this.tableBorderTarget}
+          ?disabled=${!valid} @lr-change=${(event: CustomEvent<{ value: string }>) => {
+            if (['all', 'outside', 'inside', 'top', 'bottom', 'left', 'right'].includes(event.detail.value)) this.tableBorderTarget = event.detail.value as typeof this.tableBorderTarget;
+          }}>${(['all', 'outside', 'inside', 'top', 'bottom', 'left', 'right'] as const).map(value => html`<${optionTag} value=${value}>
+            ${this.localize(`docxEditorTableBorder${value[0]!.toUpperCase()}${value.slice(1)}`)}</${optionTag}>`)}</${selectTag}>
+        <${selectTag} part="table-border-style" size="s" label=${this.localize('docxEditorTableBorderStyle')} .value=${this.tableBorderStyle}
+          ?disabled=${!valid} @lr-change=${(event: CustomEvent<{ value: string }>) => {
+            if (['none', 'single', 'dashed', 'dotted', 'double', 'triple', 'thick'].includes(event.detail.value)) this.tableBorderStyle = event.detail.value as typeof this.tableBorderStyle;
+          }}>${(['none', 'single', 'dashed', 'dotted', 'double', 'triple', 'thick'] as const).map(value => html`<${optionTag} value=${value}>
+            ${this.localize(`docxEditorTableBorder${value[0]!.toUpperCase()}${value.slice(1)}`)}</${optionTag}>`)}</${selectTag}>
+        <${numberInputTag} part="table-border-width" size="s" label=${this.localize('docxEditorTableBorderWidth')}
+          min="0.25" max="12" step="0.125" .value=${this.tableBorderWidth} ?disabled=${!valid || this.tableBorderStyle === 'none'}
+          @lr-input=${(event: CustomEvent<{ value: string }>) => { this.tableBorderWidth = event.detail.value; }}></${numberInputTag}>
+        <${inputTag} part="table-border-color" size="s" label=${this.localize('docxEditorTableBorderColor')} maxlength="7"
+          .value=${this.tableBorderColor} ?disabled=${!valid || this.tableBorderStyle === 'none'}
+          @lr-input=${(event: CustomEvent<{ value: string }>) => { this.tableBorderColor = event.detail.value; }}></${inputTag}>
+        ${apply(border, 'docxEditorTableApplyBorders', 'table-border-apply')}
+      </div>
+    </${popoverTag}><span class="tooltips">${this.renderTooltip('table-format')}</span>`;
+  }
+
   private renderTableTools(): TemplateResult {
     const draft = tableInsertDraft(this.tableRows, this.tableColumns);
     const intentValid = this.tableIntent?.valid(this.session) ?? false;
@@ -2241,9 +2661,100 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
             @pointerdown=${() => this.prepareTableIntent()} @focusin=${() => this.prepareTableIntent()}
             @keydown=${(event: KeyboardEvent) => this.onTableActivationKey(event)}
             @click=${() => this.runTableEdit(action)}>${this.renderToolIcon(`table-${key}`)}</${buttonTag}>`)}
-          <span class="tooltips">${tableActions.map(([key]) => this.renderTooltip(`table-${key}`))}</span></div>` : nothing}
+          <span class="tooltips">${tableActions.map(([key]) => this.renderTooltip(`table-${key}`))}</span>${this.renderTableFormatting()}</div>` : nothing}
     </div>`;
   }
+
+  /** Advisory eligibility for byte replacement of the selected plain inline image. */
+  canReplaceImage(): DocxCommandAvailability {
+    return this.session?.canReplaceImage() ?? { enabled: false, reason: 'not-ready' };
+  }
+
+  /** Replace image bytes while preserving its original dimensions and descriptions. */
+  async replaceImage(bytes: Uint8Array, options: DocxInsertImageOptions = {}): Promise<DocxResult<DocxRevision>> {
+    const owner = this.session;
+    if (!owner) return refused('not-ready');
+    const result = await owner.replaceImage(bytes, options);
+    if (this.isConnected && this.session === owner) this.syncSession();
+    return result;
+  }
+
+  private resetImageReplacement(): void {
+    this.imageReplacementGeneration++;
+    this.imageReplacementAbort?.abort();
+    this.imageReplacementAbort = null;
+    this.imageReplacementIntent?.lease?.release();
+    this.imageReplacementIntent = null;
+    this.imageReplacementPhase = 'idle';
+    this.imageReplacementError = null;
+    const input = this.renderRoot.querySelector<HTMLInputElement>('[part="image-replace-file"]');
+    if (input) input.value = '';
+  }
+
+  private prepareImageReplacement(): void {
+    if (this.imageReplacementPhase === 'reading' || this.imageReplacementPhase === 'replacing') return;
+    if (this.intentValid(this.imageReplacementIntent)) return;
+    this.resetImageReplacement();
+    this.releaseToolbarSelection();
+    const owner = this.session, retained = owner?.retainSelection(), snapshot = owner?.snapshot();
+    if (!this.isConnected || this.session !== owner || !snapshot?.image || !this.canReplaceImage().enabled || !retained?.ok) {
+      if (retained?.ok) retained.value.release(); return;
+    }
+    this.imageReplacementIntent = { session: owner, revision: snapshot.revision,
+      selectionVersion: snapshot.selection.version, lease: retained.value };
+  }
+
+  private chooseReplacementFile(): void {
+    this.prepareImageReplacement();
+    if (!this.intentValid(this.imageReplacementIntent) || !this.canReplaceImage().enabled) return;
+    const input = this.renderRoot.querySelector<HTMLInputElement>('[part="image-replace-file"]');
+    if (!input) return;
+    input.value = '';
+    this.imageReplacementPhase = 'reading';
+    input.click();
+  }
+
+  private replacementFeedback(code: DocxRefusalCode): string {
+    return code === 'stale-selection' || code === 'stale-revision' ? this.localize('docxEditorReplaceImageStale') :
+      code === 'resource-limit' || code === 'invalid-document' || code === 'unsupported' ? this.insertionFeedback(code) :
+        this.localize('docxEditorReplaceImageRefused');
+  }
+
+  private readReplacementFile = async (event: Event): Promise<void> => {
+    const input = event.currentTarget as HTMLInputElement, file = input.files?.item(0);
+    input.value = '';
+    if (this.imageReplacementPhase !== 'reading') return;
+    if (!file) { this.resetImageReplacement(); return; }
+    const owner = this.session, intent = this.imageReplacementIntent, generation = this.imageReplacementGeneration;
+    const current = () => this.isConnected && this.session === owner && generation === this.imageReplacementGeneration && this.imageReplacementIntent === intent;
+    const fail = (code: DocxRefusalCode) => {
+      if (!current()) return;
+      intent?.lease?.release(); this.imageReplacementIntent = null;
+      this.imageReplacementPhase = 'error'; this.imageReplacementError = code;
+      this.reportEditRefusal(code);
+    };
+    try {
+      if (!this.intentValid(intent)) { fail('stale-selection'); return; }
+      if (!Number.isSafeInteger(file.size) || file.size < 1 || file.size > maxImageBytes) { fail('resource-limit'); return; }
+      const buffer = await file.arrayBuffer();
+      if (!current()) return;
+      if (!this.intentValid(intent)) { fail('stale-selection'); return; }
+      if (!(buffer instanceof ArrayBuffer) || buffer.byteLength < 1 || buffer.byteLength > maxImageBytes) { fail('resource-limit'); return; }
+      const inspected = inspectDocxImageForInsertion(new Uint8Array(buffer));
+      if (!inspected.ok) { fail(inspected.code); return; }
+      if (!current() || !this.intentValid(intent) || !owner || !intent?.lease || !intent.revision) { fail('stale-selection'); return; }
+      this.imageReplacementPhase = 'replacing';
+      const abort = new AbortController(); this.imageReplacementAbort = abort;
+      const result = await this.replaceImage(inspected.value.bytes, { expectedRevision: intent.revision, selection: intent.lease, signal: abort.signal });
+      intent.lease.release();
+      if (!current()) return;
+      this.imageReplacementAbort = null;
+      this.imageReplacementIntent = null;
+      if (!result.ok) { this.imageReplacementPhase = 'error'; this.imageReplacementError = result.code; this.reportEditRefusal(result.code); return; }
+      this.imageReplacementPhase = 'done'; this.imageReplacementError = null; this.editError = null;
+      if (this.announcementsArmed) this.politeSink?.announce(this.localize('docxEditorImageReplaced'));
+    } catch { fail('invalid-document'); }
+  };
 
   private renderImageTools(): TemplateResult {
     const image = this.currentSnapshot?.image;
@@ -2343,6 +2854,237 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     </div>`;
   }
 
+  /** Read a bounded body heading outline without editing or exporting. */
+  outline() { return this.session?.outline() ?? refused<DocxOutline>('not-ready'); }
+
+  /** Navigate to a current authentic outline id without editing. */
+  selectOutlineItem(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
+    const result = this.session?.selectOutlineItem(id, options) ?? refused<void>('not-ready');
+    this.syncSession(); return result;
+  }
+
+  /** Inspect bounded body metadata; this is not an accessibility certification. */
+  inspectDocument() { return this.session?.inspectDocument() ?? refused<DocxDocumentInspection>('not-ready'); }
+
+  /** Navigate to an authentic current diagnostic location without editing. */
+  selectDiagnostic(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
+    const result = this.session?.selectDiagnostic(id, options) ?? refused<void>('not-ready');
+    this.syncSession(); return result;
+  }
+
+  /** Read bounded comments and tracked changes without changing the document. */
+  review() { return this.session?.review() ?? refused<DocxReviewReport>('not-ready'); }
+
+  /** Navigate to a current authentic review item without editing. */
+  selectReviewItem(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
+    const result = this.session?.selectReviewItem(id, options) ?? refused<void>('not-ready');
+    this.syncSession(); return result;
+  }
+
+  private intentValid(intent: CommandIntent | null): boolean {
+    const snapshot = this.session?.snapshot();
+    return Boolean(intent && this.isConnected && intent.session === this.session &&
+      snapshot?.revision?.documentId === intent.revision?.documentId && snapshot?.revision?.value === intent.revision?.value &&
+      snapshot?.selection.version === intent.selectionVersion);
+  }
+
+  private closeDocumentPanel(): void {
+    this.documentPanelGeneration++;
+    this.cancelDocumentPanelFocus?.();
+    this.documentPanel = null;
+    this.reviewIntent?.lease?.release();
+    this.reviewIntent = null;
+    this.reviewReplyId = null;
+    this.reviewHadTextSelection = false;
+  }
+
+  private showDocumentPanel(panel: DocumentPanel, original?: CommandIntent): void {
+    if (!this.findActionAvailable()) { original?.lease?.release(); return; }
+    this.closeDocumentPanel();
+    const owner = this.session;
+    if (panel === 'review') {
+      const retained = original ? null : owner?.retainSelection();
+      const snapshot = owner?.snapshot();
+      this.reviewHadTextSelection = snapshot?.selection.kind === 'text';
+      this.reviewIntent = original ?? { session: owner, revision: snapshot?.revision ?? null,
+        selectionVersion: snapshot?.selection.version ?? 0, lease: retained?.ok ? retained.value : null };
+    } else original?.lease?.release();
+    if (!this.isConnected || this.session !== owner) { this.closeDocumentPanel(); return; }
+    const generation = this.documentPanelGeneration;
+    const focus = this.beginFocusReturn('cancelDocumentPanelFocus');
+    this.documentPanel = panel;
+    this.refreshDocumentPanel();
+    void this.updateComplete.then(() => {
+      const current = !focus.cancelled && this.isConnected && this.session === owner && this.documentPanel === panel &&
+        generation === this.documentPanelGeneration;
+      focus.cancel();
+      if (current) this.renderRoot.querySelector<HTMLElement>('[part="document-panel-heading"]')?.focus();
+    }, focus.cancel);
+  }
+
+  private refreshDocumentPanel(): void {
+    if (!this.findActionAvailable() || !this.documentPanel) return;
+    const owner = this.session, panel = this.documentPanel;
+    const result = panel === 'outline' ? this.outline() : panel === 'checks' ? this.inspectDocument() : this.review();
+    if (!this.isConnected || this.session !== owner || this.documentPanel !== panel) return;
+    if (!result.ok) { this.reportEditRefusal(result.code); return; }
+    const revision = owner?.snapshot().revision;
+    if (!revision || revision.documentId !== result.value.revision.documentId || revision.value !== result.value.revision.value) return;
+    if (panel === 'outline') this.outlineReport = result.value as DocxOutline;
+    if (panel === 'checks') this.inspectionReport = result.value as DocxDocumentInspection;
+    if (panel === 'review') { this.reviewReport = result.value as DocxReviewReport; this.reviewReplyId = null; }
+    this.editError = null;
+  }
+
+  private navigateDocumentTarget(kind: DocumentPanel, id: string, revision: DocxRevision): void {
+    if (!this.findActionAvailable()) return;
+    const owner = this.session;
+    const result = kind === 'outline' ? owner?.selectOutlineItem(id, { expectedRevision: revision }) :
+      kind === 'checks' ? owner?.selectDiagnostic(id, { expectedRevision: revision }) : owner?.selectReviewItem(id, { expectedRevision: revision });
+    if (!this.isConnected || this.session !== owner || !result) return;
+    if (!result.ok) this.reportEditRefusal(result.code);
+    else { this.editError = null; this.focusEditor(); }
+  }
+
+  private diagnosticText(item: DocxDocumentDiagnostic): string {
+    if (item.rule === 'heading-level-skipped') return this.localize('docxEditorCheckHeading', undefined, { ...item.data });
+    if (item.rule === 'image-description-missing') return this.localize('docxEditorCheckImage');
+    if (item.rule === 'table-header-missing') return this.localize('docxEditorCheckTable');
+    const code = item.data['family'];
+    const family = this.localize(code === 'body-headings' ? 'docxEditorCapabilityHeadings' :
+      code === 'inline-image-descriptions' ? 'docxEditorCapabilityImages' : 'docxEditorCapabilityTables');
+    return this.localize('docxEditorCheckUnsupported', undefined, { family });
+  }
+
+  private capabilityText(item: DocxDocumentCapability): string {
+    const name = this.localize(item.code === 'body-headings' ? 'docxEditorCapabilityHeadings' :
+      item.code === 'inline-image-descriptions' ? 'docxEditorCapabilityImages' : 'docxEditorCapabilityTables');
+    const fact = (value: DocxDocumentCapability['preserved']) => this.localize(value === 'supported' ?
+      'docxEditorCapabilitySupported' : value === 'unsupported' ? 'docxEditorCapabilityUnsupported' : 'docxEditorCapabilityUnverified');
+    return this.localize('docxEditorCapabilityFact', undefined, { name, count: item.count,
+      preserved: fact(item.preserved), renderable: fact(item.renderable), editable: fact(item.editable) });
+  }
+
+  private chooseReviewReply(id: string, report: DocxReviewReport): void {
+    const owner = this.session, focus = trackDeferredFocusReturn(this.ownerDocument, () => undefined);
+    this.reviewReplyId = id;
+    void this.updateComplete.then(() => {
+      const valid = !focus.cancelled && this.isConnected && this.session === owner && this.documentPanel === 'review' &&
+        this.reviewReplyId === id && this.reviewReport === report;
+      focus.cancel();
+      if (valid) this.renderRoot.querySelector<HTMLElement>('[part="review-text"]')?.focus();
+    }, focus.cancel);
+  }
+
+  private reviewAction(): DocxAction | null {
+    if (!this.reviewAuthor.trim() || !this.reviewText.trim() || !this.reviewReport) return null;
+    return this.reviewReplyId ? { type: 'reply-comment', id: this.reviewReplyId, author: this.reviewAuthor, text: this.reviewText } :
+      { type: 'add-comment', author: this.reviewAuthor, text: this.reviewText };
+  }
+
+  private reviewActionAvailable(action: DocxAction): boolean {
+    if (!this.findActionAvailable(true) || !this.reviewReport) return false;
+    if (typeof action !== 'string' && action.type === 'add-comment' && (!this.intentValid(this.reviewIntent) || !this.reviewIntent?.lease)) return false;
+    return this.can(action).enabled;
+  }
+
+  private runReviewAction(action: DocxAction): void {
+    const owner = this.session, report = this.reviewReport;
+    if (!owner || !report || !this.reviewActionAvailable(action)) return;
+    const adding = typeof action !== 'string' && action.type === 'add-comment';
+    const result = this.execute(action, { expectedRevision: report.revision,
+      ...(adding && this.reviewIntent?.lease ? { selection: this.reviewIntent.lease } : {}) });
+    if (!this.isConnected || this.session !== owner) return;
+    if (!result.ok) { this.reportEditRefusal(result.code); return; }
+    this.editError = null;
+    this.reviewText = '';
+    // Public execution already refreshed the report, including changes with an unchanged snapshot.
+  }
+
+  private renderDocumentPanel(): TemplateResult {
+    const panel = this.documentPanel;
+    if (!panel) return html``;
+    const ready = this.findActionAvailable(), report = panel === 'outline' ? this.outlineReport : panel === 'checks' ? this.inspectionReport : this.reviewReport;
+    const label = this.localize(panel === 'outline' ? 'docxEditorOutline' : panel === 'checks' ? 'docxEditorChecks' : 'docxEditorReview');
+    return html`<section part="document-panel" aria-label=${label}>
+      <div part="document-panel-header"><h3 part="document-panel-heading" tabindex="-1">${label}</h3>
+        <${buttonTag} part="document-panel-refresh" size="s" appearance="quiet" ?disabled=${!ready}
+          @click=${() => this.refreshDocumentPanel()}>${this.localize('docxEditorRefresh')}</${buttonTag}>
+        <${buttonTag} part="document-panel-close" size="s" appearance="quiet"
+          @click=${() => { this.closeDocumentPanel(); this.focusEditor(); }}>${this.localize('docxEditorClosePanel')}</${buttonTag}></div>
+      <div part="document-panel-content">
+        ${!report ? html`<p>${this.localize('docxEditorPanelRefreshHint')}</p>` : nothing}
+        ${panel === 'outline' && this.outlineReport ? html`
+          ${this.outlineReport.items.length ? html`<ol part="outline-items">${this.outlineReport.items.map(item => html`<li>
+            <button part="document-target" type="button" ?disabled=${!ready}
+              @click=${() => { if (this.outlineReport) this.navigateDocumentTarget('outline', item.id, this.outlineReport.revision); }}>
+              <span>${this.localize('docxEditorOutlineHeading', undefined, { level: item.level, text: item.text })}${item.textTruncated ? '…' : nothing}</span></button></li>`)}</ol>` : html`<p>${this.localize('docxEditorOutlineEmpty')}</p>`}` : nothing}
+        ${panel === 'checks' ? html`<p part="inspection-scope">${this.localize('docxEditorChecksScope')}</p>
+          ${this.inspectionReport ? html`
+            ${this.inspectionReport.diagnostics.length ? html`<ul part="inspection-items">${this.inspectionReport.diagnostics.map(item => html`<li>
+              <p>${this.diagnosticText(item)}</p>${item.locationId ? html`<${buttonTag} part="diagnostic-target" size="s" appearance="quiet"
+                ?disabled=${!ready} @click=${() => { if (this.inspectionReport && item.locationId) this.navigateDocumentTarget('checks', item.locationId, this.inspectionReport.revision); }}>
+                ${this.localize('docxEditorCheckGo')}</${buttonTag}>` : nothing}</li>`)}</ul>` : html`<p>${this.localize('docxEditorChecksEmpty')}</p>`}
+            <ul part="inspection-capabilities">${this.inspectionReport.capabilities.map(item => html`<li>${this.capabilityText(item)}
+              ${item.refused ? html`<p>${this.localize('docxEditorCapabilityRefused')}</p>` : nothing}</li>`)}</ul>` : nothing}` : nothing}
+        ${panel === 'review' ? this.renderReviewPanel() : nothing}
+        ${report?.truncated ? html`<p part="document-panel-limit">${this.localize('docxEditorQueryTruncated')}</p>` : nothing}
+      </div>
+    </section>`;
+  }
+
+  private renderReviewPanel(): TemplateResult {
+    const report = this.reviewReport;
+    if (!report) return html``;
+    const available = this.findActionAvailable(true), draft = this.reviewAction();
+    const track: DocxAction = { type: 'track-changes', enabled: !report.enabled, author: this.reviewAuthor };
+    const reply = report.items.find(item => item.id === this.reviewReplyId);
+    const decisions = (id: string, kind: string, resolved: boolean | undefined) => {
+      const options: readonly (readonly [DocxReviewDecision, string])[] = kind === 'comment' ? [
+        [resolved ? 'reopen' : 'resolve', resolved ? 'docxEditorReviewReopen' : 'docxEditorReviewResolve'], ['delete', 'docxEditorReviewRemove']
+      ] : [['accept', 'docxEditorReviewAccept'], ['reject', 'docxEditorReviewReject']];
+      return options.map(([decision, key]) => {
+        const action: DocxAction = { type: 'review-decision', id, decision };
+        return html`<${buttonTag} part="review-decision" size="s" appearance="quiet" ?disabled=${!this.reviewActionAvailable(action)}
+          @click=${() => this.runReviewAction(action)}>${this.localize(key)}</${buttonTag}>`;
+      });
+    };
+    return html`
+      ${report.hasUnsupported ? html`<p part="review-unsupported">${this.localize('docxEditorReviewUnsupported')}</p>` : nothing}
+      <div part="review-draft">
+        <${inputTag} part="review-author" size="s" label=${this.localize('docxEditorReviewAuthor')} hint=${this.localize('docxEditorReviewAuthorHint')}
+          maxlength=${DOCX_REVIEW_LIMITS.author} .value=${this.reviewAuthor} ?disabled=${!available}
+          @lr-input=${(event: CustomEvent<{ value: string }>) => { this.reviewAuthor = event.detail.value; }}></${inputTag}>
+        ${report.trackingSupported || report.enabled ? html`<${buttonTag} part="review-track" size="s" appearance="quiet" .pressed=${report.enabled}
+          ?disabled=${!this.reviewActionAvailable(track)} @click=${() => this.runReviewAction(track)}>
+          ${this.localize(report.enabled ? 'docxEditorReviewTrackOff' : 'docxEditorReviewTrackOn')}</${buttonTag}>` : html`<p>${this.localize('docxEditorReviewTrackingUnavailable')}</p>`}
+        ${report.enabled ? html`<p>${this.localize('docxEditorReviewTracking', undefined, { author: report.author ?? '' })}</p>` : nothing}
+        ${reply ? html`<p>${this.localize('docxEditorReviewReplying', undefined, { author: reply.author })}</p>` : nothing}
+        <${textareaTag} part="review-text" size="s" label=${this.localize('docxEditorReviewText')} maxlength=${DOCX_REVIEW_LIMITS.text}
+          .value=${this.reviewText} ?disabled=${!available}
+          @lr-input=${(event: CustomEvent<{ value: string }>) => { this.reviewText = event.detail.value; }}></${textareaTag}>
+        ${!this.reviewReplyId && !this.intentValid(this.reviewIntent) ? html`<p>${this.localize('docxEditorReviewStale')}</p>` : nothing}
+        ${!this.reviewReplyId && this.intentValid(this.reviewIntent) && !this.reviewHadTextSelection ?
+          html`<p>${this.localize('docxEditorReviewSelectText')}</p>` : nothing}
+        <${buttonTag} part="review-submit" size="s" appearance="quiet" ?disabled=${!draft || !this.reviewActionAvailable(draft)}
+          @click=${() => { if (draft) this.runReviewAction(draft); }}>${this.localize(this.reviewReplyId ? 'docxEditorReviewSend' : 'docxEditorReviewAdd')}</${buttonTag}>
+        ${this.reviewReplyId ? html`<${buttonTag} part="review-reply-cancel" size="s" appearance="quiet"
+          @click=${() => { this.reviewReplyId = null; }}>${this.localize('docxEditorCancel')}</${buttonTag}>` : nothing}
+      </div>
+      ${report.items.length ? html`<ol part="review-items">${report.items.map(item => html`<li>
+        <p><strong>${this.localize(item.kind === 'comment' ? 'docxEditorReviewComment' : item.kind === 'insert' ? 'docxEditorReviewInsert' :
+          item.kind === 'delete' ? 'docxEditorReviewDelete' : 'docxEditorReviewUnknown')}</strong> <bdi>${item.author}</bdi></p>
+        <p part="review-item-text">${item.text}</p>${item.orphaned ? html`<p>${this.localize('docxEditorReviewOrphan')}</p>` : nothing}
+        <div part="review-actions">
+          ${item.navigable ? html`<${buttonTag} part="review-target" size="s" appearance="quiet" ?disabled=${!this.findActionAvailable()}
+            @click=${() => this.navigateDocumentTarget('review', item.id, report.revision)}>${this.localize('docxEditorReviewGo')}</${buttonTag}>` : nothing}
+          ${item.kind === 'comment' && !item.readOnly ? html`<${buttonTag} part="review-reply" size="s" appearance="quiet" ?disabled=${!available}
+            @click=${() => this.chooseReviewReply(item.id, report)}>
+            ${this.localize('docxEditorReviewReply')}</${buttonTag}>` : nothing}
+          ${!item.readOnly && item.kind !== 'unsupported' ? decisions(item.id, item.kind, item.resolved) : nothing}
+        </div></li>`)}</ol>` : html`<p>${this.localize('docxEditorReviewEmpty')}</p>`}`;
+  }
+
   private renderFind(): TemplateResult {
     if (!this.findOpen) return html``;
     const results = this.searchResults;
@@ -2359,15 +3101,17 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         }}></${inputTag}>
       <${checkboxTag} part="find-match-case" size="s" .checked=${this.matchCase}
         @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
-          this.matchCase = event.detail.checked; this.searchResults = null;
+          this.matchCase = event.detail.checked; this.searchResults = null; this.searchIndex = -1;
         }}>${this.localize('docxEditorMatchCase')}</${checkboxTag}>
       <${checkboxTag} part="find-whole-word" size="s" .checked=${this.wholeWord}
         @lr-change=${(event: CustomEvent<{ checked: boolean }>) => {
-          this.wholeWord = event.detail.checked; this.searchResults = null;
+          this.wholeWord = event.detail.checked; this.searchResults = null; this.searchIndex = -1;
         }}>${this.localize('docxEditorWholeWord')}</${checkboxTag}>
       <${buttonTag} part="find-submit" size="s" appearance="quiet"
         ?disabled=${!this.query || !available}
         @click=${() => this.runFind()}>${this.localize('docxEditorFindSubmit')}</${buttonTag}>
+      <span part="find-current">${count && this.searchIndex >= 0 ? this.localize('docxEditorFindCurrent', undefined,
+        { current: this.searchIndex + 1, count }) : nothing}</span>
       <span part="find-count">${results ? this.localize('docxEditorFindCount', undefined, { count }) : nothing}
         ${results?.truncated ? this.localize('docxEditorFindTruncated') : nothing}</span>
       <${buttonTag} part="find-previous" size="s" appearance="quiet" ?disabled=${!count || !available}
@@ -2380,7 +3124,39 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         @lr-input=${(event: CustomEvent<{ value: string }>) => { this.replacement = event.detail.value; }}></${inputTag}>
       <${buttonTag} part="find-replace-button" size="s" appearance="quiet"
         ?disabled=${!replaceAvailable || this.searchIndex < 0 || !count}
-        @click=${() => this.replaceCurrentMatch()}>${this.localize('docxEditorReplace')}</${buttonTag}>
+        @click=${() => this.replaceCurrentMatch()}>${this.localize('docxEditorReplaceAdvance')}</${buttonTag}>
+      ${results ? html`<ol part="find-results" aria-label=${this.localize('docxEditorFindResults')}>${results.matches.map((match, index) => html`
+        <li><button part="find-match" type="button" ?disabled=${!available}
+          aria-current=${this.searchIndex === index ? 'true' : 'false'}
+          aria-description=${this.localize('docxEditorFindCurrent', undefined, { current: index + 1, count })}
+          @click=${() => this.chooseMatch(index)}><span>${index + 1}.</span>
+          <span>${match.before}<mark>${match.text}</mark>${match.after}</span></button></li>`)}</ol>` : nothing}
+    </div>`;
+  }
+
+  private renderNavigationTools(): TemplateResult {
+    return html`<div part="navigation-tools" role="group" aria-label=${this.localize('docxEditorCommandNavigate')}>
+            <${buttonTag} part="commands-button" id="tool-commands" size="s" appearance="quiet" aria-keyshortcuts="Control+K Meta+K"
+              aria-label=${this.localize('docxEditorCommands')}
+              ?disabled=${this.openInProgress || Boolean(this.currentSnapshot?.activity) || Boolean(this.currentSnapshot?.composing)}
+              @pointerdown=${(event: PointerEvent) => { if (event.button === 0 && event.isPrimary) this.openCommands(); }} @click=${() => this.openCommands()}>${this.renderToolIcon('commands')}</${buttonTag}>
+            ${(['outline', 'checks', 'review'] as const).map(panel => html`<${buttonTag} part="document-panel-toggle" size="s" appearance="quiet"
+              id=${`tool-${panel}`} aria-label=${this.localize(toolIcons[panel].label)}
+              .pressed=${this.documentPanel === panel} ?disabled=${!this.findActionAvailable()}
+              @pointerdown=${(event: PointerEvent) => { if (event.button === 0 && event.isPrimary && panel === 'review' && this.documentPanel !== panel) this.showDocumentPanel(panel); }}
+              @click=${() => { if (this.documentPanel === panel) { if (panel !== 'review') this.closeDocumentPanel(); }
+                else this.showDocumentPanel(panel); }}>${this.renderToolIcon(panel)}</${buttonTag}>`)}
+      <${buttonTag} part="image-replace-trigger" id="tool-image-replace" size="s" appearance="quiet"
+        title=${this.localize('docxEditorReplaceImageHint')}
+        ?disabled=${!this.canReplaceImage().enabled || this.imageReplacementPhase === 'reading' || this.imageReplacementPhase === 'replacing'}
+        @pointerdown=${() => this.prepareImageReplacement()} @focusin=${() => this.prepareImageReplacement()}
+        @keydown=${(event: KeyboardEvent) => { if (isToolActivationKey(event)) this.prepareImageReplacement(); }}
+        aria-label=${this.localize('docxEditorReplaceImage')}
+        @click=${() => this.chooseReplacementFile()}>${this.renderToolIcon('image-replace')}</${buttonTag}>
+      <input part="image-replace-file" type="file" accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif" tabindex="-1" aria-hidden="true"
+        @change=${this.readReplacementFile} @cancel=${() => this.resetImageReplacement()}>
+      ${this.imageReplacementPhase !== 'idle' ? html`<p part="image-replace-status">${this.imageReplacementError ? this.replacementFeedback(this.imageReplacementError) :
+        this.localize(this.imageReplacementPhase === 'reading' ? 'docxEditorReadingImage' : this.imageReplacementPhase === 'replacing' ? 'docxEditorReplacingImage' : 'docxEditorImageReplaced')}</p>` : nothing}
     </div>`;
   }
 
@@ -2389,6 +3165,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     const hasError = this.currentSnapshot?.status === 'error' || this.currentSnapshot?.status === 'destroyed' || this.localError !== null;
     return html`
       <section part="base" aria-label=${this.editorLabel()}>
+        ${this.renderNavigationTools()}
         <div part="toolbar" role="toolbar" aria-label=${this.localize('docxEditorToolbar')}
           @focusin=${this.onToolbarFocusIn} @pointerdown=${(event: PointerEvent) => this.handoffImageInsertion(event)}
           @lr-show=${this.onToolbarPanelShow} @lr-after-hide=${this.onToolbarPanelHidden}>
@@ -2425,7 +3202,12 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
               @click=${() => { this.pendingAction = null; this.focusEditor(); }}>${this.localize('docxEditorKeep')}</${buttonTag}>
           </div>
         ` : nothing}
+        <${commandPaletteTag} part="command-palette" hotkey="" aria-label=${this.localize('docxEditorCommands')}
+          .locale=${this.effectiveLocale} .strings=${this.strings}
+          .commands=${this.commandRows} @lr-select=${this.onCommandSelected} @lr-after-hide=${this.onCommandsHidden}
+          @lr-close=${stopEvent} @lr-close-request=${stopEvent}></${commandPaletteTag}>
         ${this.renderFind()}
+        ${this.renderDocumentPanel()}
         <div part="document"><slot name="document"></slot>${this.renderCharts()}${this.renderImageHandles()}</div>
         ${hasError ? html`<p part="error">${this.errorMessage()}</p>` : nothing}
         ${this.editError ? html`<p part="edit-error">${this.localize('docxEditorEditUnavailable')}</p>` : nothing}

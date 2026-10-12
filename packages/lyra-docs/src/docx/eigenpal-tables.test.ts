@@ -2,17 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { DocxEditorInstance } from '@docx-editor.dev/core';
 import type { OoxmlElement, OoxmlNode, OoxmlPart } from '@docx-editor.dev/core/store';
+const { applyTreeOp, findNode, serializeOoxmlPart } = await import('@docx-editor.dev/core/store');
+import type { TreeDocOp } from '@docx-editor.dev/core/store';
+import { qualifyTableFormatting } from './eigenpal-table-formatting.js';
 import { qualifyTableCommand, tableAvailability, tableContext } from './eigenpal-tables.js';
 import type { DocxTableAction } from './types.js';
 
 const WORD = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 function fixture(rows = 2, columns = 2) {
   let id = 0;
+  const kinds: Record<string, string> = { document: 'document', body: 'body', tbl: 'table', tr: 'tableRow', tc: 'tableCell', tblGrid: 'tableGrid', tblPr: 'tableProperties', p: 'paragraph' };
   const el = (name: string, children: OoxmlNode[] = [], namespaceUri = WORD): OoxmlElement =>
-    ({ id: String(++id), kind: 'generic', namespaceUri, localName: name, prefix: 'x', namespaceBindings: [], attributes: [], children } as OoxmlElement);
+    ({ id: String(++id), kind: namespaceUri === WORD ? kinds[name] ?? 'generic' : 'generic', namespaceUri, localName: name, prefix: 'x', namespaceBindings: [], attributes: [], children } as OoxmlElement);
   const grid = el('tblGrid', Array.from({ length: columns }, () => el('gridCol')));
   const rowNodes = Array.from({ length: rows }, () => el('tr', Array.from({ length: columns }, () => el('tc', [el('tcPr'), el('p')]))));
   const table = el('tbl', [el('tblPr'), grid, ...rowNodes]), outside = el('p'), body = el('body', [outside, table]), root = el('document', [body]);
+  Object.assign(root, { namespaceBindings: [{ prefix: 'x', namespaceUri: WORD }] });
   const part = { id: 'body', name: '/word/document.xml', contentType: '', root } as OoxmlPart;
   const nodes = new Map<string, OoxmlElement>(), parents = new Map<string, OoxmlElement>();
   const index = (node: OoxmlElement) => { nodes.set(node.id, node); for (const child of node.children) { parents.set(child.id, node); if (child.kind !== 'textValue') index(child); } };
@@ -72,7 +77,7 @@ test('qualified actions use exact canonical row/grid identities and retain a pur
     const result = h.qualify(action); assert.equal(result.ok, true); if (!result.ok) continue;
     assert.equal(result.value.valid(), true);
     assert.equal(h.f.revision, 0);
-    if ('target' in result.value.command && typeof result.value.command.target === 'object' && 'tableId' in result.value.command.target) assert.equal(result.value.command.target?.tableId, h.table.id);
+    if (result.value.command && 'target' in result.value.command && typeof result.value.command.target === 'object' && 'tableId' in result.value.command.target) assert.equal(result.value.command.target?.tableId, h.table.id);
     h.f.revision++; assert.equal(result.value.valid(), false); h.f.revision--;
     h.f.generation++; assert.equal(result.value.valid(), false); h.f.generation--;
     h.f.end++; assert.equal(result.value.valid(), false); h.f.end--;
@@ -147,5 +152,113 @@ test('deleting the final column uses one whole-table command after simple topolo
     if (result.ok) assert.deepEqual(result.value.command, { type: 'deleteTable' });
     children(children(h.rows[0]!)[0]!)[0] = h.el('tcPr', [h.el('vMerge')]);
     assert.deepEqual(h.qualify({ type: 'delete-table-column' }), { ok: false, code: 'unsupported' });
+  }
+});
+
+test('richer table actions retain original caret and use one command or public transaction plan', () => {
+  const h = fixture();
+  const actions = [
+    { type: 'table-header-row', enabled: true }, { type: 'table-width', widthPoints: 100.05 },
+    { type: 'table-cell-alignment', value: 'bottom' }, { type: 'table-cell-shading', color: '#ABCDEF' },
+    { type: 'table-cell-borders', target: 'outside', style: 'double', widthPoints: 1.5, color: 'auto' },
+    { type: 'table-cell-borders', target: 'top', style: 'none' },
+  ] as const;
+  for (const action of actions) {
+    const result = h.qualify(action); assert.equal(result.ok, true); if (!result.ok) continue;
+    assert.equal(result.value.valid(), true);
+    if (action.type === 'table-header-row' || action.type === 'table-width') {
+      assert.equal(result.value.command, undefined);
+      assert.deepEqual(result.value.plan, { ok: true, selection: { kind: 'preserveSelection' }, ops: [
+        { op: 'setTableProperties', tableId: h.table.id, ...(action.type === 'table-header-row' ? { headerRowCount: 1 } : { columnWidthsTwips: [1001, 1000] }) },
+      ] });
+    } else assert.equal(result.value.plan, undefined);
+    h.f.end++; assert.equal(result.value.valid(), false); h.f.end--;
+    h.f.revision++; assert.equal(result.value.valid(), false); h.f.revision--;
+    h.f.offset++; h.f.end++; assert.equal(result.value.valid(), false); h.f.offset--; h.f.end--;
+    assert.equal(h.f.revision, 0);
+  }
+  assert.equal(h.qualify({ type: 'table-width', widthPoints: 29.95 }).ok, false);
+});
+
+test('all richer formatting actions refuse merges, wrappers, ranges and bounded resource excess', () => {
+  for (const action of [
+    { type: 'table-header-row', enabled: true }, { type: 'table-width', widthPoints: 100 },
+    { type: 'table-cell-alignment', value: 'center' }, { type: 'table-cell-shading', color: null },
+    { type: 'table-cell-borders', target: 'all', style: 'none' },
+  ] as const) {
+    const h = fixture();
+    assert.deepEqual(h.qualify(action, { cells: 1 }), { ok: false, code: 'resource-limit' });
+    children(children(h.rows[1]!)[1]!)[0] = h.el('tcPr', [h.el('gridSpan')]);
+    assert.deepEqual(h.qualify(action), { ok: false, code: 'unsupported' });
+    const plain = fixture(); plain.f.end = 1;
+    assert.deepEqual(plain.qualify(action), { ok: false, code: 'unsupported' });
+  }
+});
+
+function prop(h: ReturnType<typeof fixture>, name: string, attributes: Record<string, string>) {
+  const node = h.el(name);
+  Object.assign(node, { attributes: Object.entries(attributes).map(([localName, value]) => ({ kind: 'genericExtension', namespaceUri: WORD, localName, value, prefix: 'x' })) });
+  return node;
+}
+
+test('canonical matching values report unchanged without consulting rendered context', () => {
+  const h = fixture(), cell = children(h.rows[0]!)[0]! as OoxmlElement, properties = children(cell)[0]!;
+  children(properties).push(prop(h, 'vAlign', { val: 'center' }), prop(h, 'shd', { val: 'clear', fill: 'ABCDEF' }),
+    h.el('tcBorders', ['top', 'left', 'bottom', 'right'].map(edge => prop(h, edge, { val: 'single', sz: '8', color: 'auto' }))));
+  children(h.rows[0]!).unshift(h.el('trPr', [prop(h, 'tblHeader', { val: '1' })]));
+  for (const action of [
+    { type: 'table-header-row', enabled: true }, { type: 'table-cell-alignment', value: 'center' },
+    { type: 'table-cell-shading', color: '#ABCDEF' },
+    { type: 'table-cell-borders', target: 'all', style: 'single', widthPoints: 1, color: 'auto' },
+    { type: 'table-cell-borders', target: 'inside', style: 'none' },
+  ] as const) {
+    h.f.tables = null;
+    const result = h.qualify(action); assert.equal(result.ok, true);
+    if (result.ok) assert.equal(result.value.unchanged, true, action.type);
+  }
+  children(properties).push(prop(h, 'vAlign', { val: 'bottom' }));
+  assert.deepEqual(h.qualify({ type: 'table-cell-alignment', value: 'center' }), { ok: false, code: 'unsupported' });
+});
+
+test('public core table store operations preserve existing records and produce canonical no-op values', () => {
+  for (const action of [
+    { type: 'table-header-row', enabled: true }, { type: 'table-width', widthPoints: 100.05 },
+    { type: 'table-cell-alignment', value: 'bottom' }, { type: 'table-cell-shading', color: '#ABCDEF' },
+    { type: 'table-cell-borders', target: 'all', style: 'double', widthPoints: 1.5, color: '#123456' },
+    { type: 'table-cell-borders', target: 'top', style: 'none' },
+  ] as const) {
+    const h = fixture();
+    const selectedCell = children(h.rows[0]!)[0]! as OoxmlElement;
+    children(h.table)[0] = h.el('tblPr', [prop(h, 'tblCaption', { val: 'Keep table caption' })]);
+    children(selectedCell).push(h.el('p'));
+    const before = serializeOoxmlPart(h.part), result = h.qualify(action);
+    assert.equal(result.ok, true); if (!result.ok) continue;
+    const command = result.value.command;
+    let op: TreeDocOp;
+    if (result.value.plan?.ok) op = result.value.plan.ops[0]!;
+    else if (command?.type === 'setCellFill') {
+      if (command.color?.kind === 'theme' || command.color?.kind === 'auto') throw Error('Only explicit hex colors are authored');
+      op = { op: 'setTableCellFill', tableId: h.table.id, cellIds: [selectedCell.id], color: command.color };
+    }
+    else if (command?.type === 'setTableCellVerticalAlignment') op = { op: 'setTableCellVerticalAlignment', tableId: h.table.id, cellIds: [selectedCell.id], alignment: command.alignment };
+    else if (command?.type === 'setTableBorders') {
+      if (command.scope === 'none') op = { op: 'setTableCellBorders', tableId: h.table.id, cellIds: [selectedCell.id], scope: command.scope, target: command.target };
+      else {
+        if (command.spec.color.kind === 'theme' || command.spec.color.kind === 'auto') throw Error('Only explicit colors are authored');
+        op = { op: 'setTableCellBorders', tableId: h.table.id, cellIds: [selectedCell.id], scope: command.scope, spec: { ...command.spec, color: command.spec.color } };
+      }
+    }
+    else throw Error('Expected one supported table formatting operation');
+    const applied = applyTreeOp(h.part, op);
+    assert.equal(applied.ok, true, JSON.stringify(applied)); if (!applied.ok) continue;
+    assert.equal(serializeOoxmlPart(h.part), before);
+    assert.match(serializeOoxmlPart(applied.part), /Keep table caption/u);
+    const table = findNode(applied.part, h.table.id) as OoxmlElement;
+    const rows = children(table).filter((node): node is OoxmlElement => node.kind !== 'textValue' && node.localName === 'tr');
+    const cells = rows.flatMap(row => children(row).filter((node): node is OoxmlElement => node.kind !== 'textValue' && node.localName === 'tc'));
+    const grid = table.children.find(node => node.kind !== 'textValue' && node.localName === 'tblGrid') as OoxmlElement;
+    const aligned = qualifyTableFormatting(action, table, rows, cells, grid.children as OoxmlElement[], findNode(applied.part, selectedCell.id) as OoxmlElement);
+    assert.equal(aligned.ok && aligned.value.unchanged, true, action.type);
+    assert.deepEqual(cells.map(cell => cell.children.filter(node => node.kind !== 'textValue' && node.localName === 'p').length), [2, 1, 1, 1]);
   }
 });

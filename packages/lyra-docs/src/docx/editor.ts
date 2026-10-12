@@ -11,6 +11,7 @@ import '@aceshooting/lyra-ui/components/lr-combobox.js';
 import '@aceshooting/lyra-ui/components/lr-number-input.js';
 import '@aceshooting/lyra-ui/components/lr-popover.js';
 import '@aceshooting/lyra-ui/components/lr-input.js';
+import '@aceshooting/lyra-ui/components/lr-command-palette.js';
 
 provideDocumentControls({
   checkbox: () => import('@aceshooting/lyra-ui/components/lr-checkbox.js'),

@@ -191,6 +191,7 @@ function sameStyle(left: OoxmlPart, right: OoxmlPart): boolean {
 }
 
 const PROPERTY_ATTRIBUTES: Readonly<Record<string, readonly string[]>> = {
+  pStyle: ['val'], rStyle: ['val'], outlineLvl: ['val'],
   spacing: ['before', 'after', 'line', 'lineRule', 'beforeAutospacing', 'afterAutospacing'],
   ind: ['left', 'right', 'start', 'end', 'firstLine', 'hanging'], jc: ['val'], bidi: ['val'], keepNext: ['val'], keepLines: ['val'],
   widowControl: ['val'], contextualSpacing: ['val'], b: ['val'], i: ['val'], bCs: ['val'], iCs: ['val'], rtl: ['val'],
@@ -198,14 +199,16 @@ const PROPERTY_ATTRIBUTES: Readonly<Record<string, readonly string[]>> = {
   pgSz: ['w', 'h', 'orient'], pgMar: ['top', 'right', 'bottom', 'left', 'header', 'footer', 'gutter'],
   cols: ['num', 'space', 'equalWidth'], docGrid: ['type', 'linePitch', 'charSpace']
 };
-const P_ORDER = ['keepNext', 'keepLines', 'widowControl', 'bidi', 'spacing', 'ind', 'contextualSpacing', 'jc'];
-const R_ORDER = ['rFonts', 'b', 'bCs', 'i', 'iCs', 'color', 'sz', 'szCs', 'u', 'rtl', 'lang'];
+const P_ORDER = ['pStyle', 'keepNext', 'keepLines', 'widowControl', 'bidi', 'spacing', 'ind', 'contextualSpacing', 'jc', 'outlineLvl'];
+const R_ORDER = ['rStyle', 'rFonts', 'b', 'bCs', 'i', 'iCs', 'color', 'sz', 'szCs', 'u', 'rtl', 'lang'];
 const SECTION_ORDER = ['pgSz', 'pgMar', 'cols', 'docGrid'];
 const BOOLEANS = ['bidi', 'keepNext', 'keepLines', 'widowControl', 'contextualSpacing', 'b', 'i', 'bCs', 'iCs', 'rtl'];
 function integer(value: string, minimum = -1000000, maximum = 1000000): boolean {
   return /^-?(0|[1-9]\d*)$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) >= minimum && Number(value) <= maximum;
 }
 function propertyValue(local: string, name: string, value: string): boolean {
+  if (local === 'pStyle' || local === 'rStyle') return value.length > 0 && value.length <= 128;
+  if (local === 'outlineLvl') return integer(value, 0, 9);
   if (BOOLEANS.includes(local) || name.endsWith('Autospacing') || name === 'equalWidth') return ['0', '1', 'true', 'false', 'on', 'off'].includes(value);
   if (local === 'rFonts') return value.length <= 64;
   if (local === 'lang') return /^[A-Za-z0-9-]{1,64}$/.test(value);
@@ -220,20 +223,111 @@ function propertyValue(local: string, name: string, value: string): boolean {
   if (local === 'pgSz' && (name === 'w' || name === 'h')) return integer(value, 1);
   return integer(value, local === 'spacing' ? 0 : -1000000);
 }
-function properties(node: OoxmlElement, order: readonly string[]): void {
+function properties(node: OoxmlElement, order: readonly string[], styles: ReadonlyMap<string, string> = new Map()): void {
   attributes(node, []); whitespace(node); let previous = -1;
   for (const child of elements(node)) {
     const rank = order.indexOf(child.localName); requireProfile(child.namespaceUri === W && rank > previous); previous = rank;
     requireProfile(child.children.length === 0); attributes(child, PROPERTY_ATTRIBUTES[child.localName]!, W);
     for (const attr of child.attributes) requireProfile(propertyValue(child.localName, attr.localName, attr.value));
+    if (child.localName === 'pStyle' || child.localName === 'rStyle') {
+      requireProfile(styles.get(attribute(child, 'val', W) ?? '') === (child.localName === 'pStyle' ? 'paragraph' : 'character'));
+    }
     if (['jc', 'color', 'sz', 'szCs', 'u'].includes(child.localName)) requireProfile(attribute(child, 'val', W) !== undefined);
   }
 }
-function checkBody(part: OoxmlPart, target: Readonly<{ paragraphId: string; offset: number }>, candidates: ReadonlyMap<string, string>): void {
+/** Preserve public defaults and admit only finite, visible paragraph/character style definitions. */
+function styleCatalog(styles: OoxmlPart, reference: OoxmlPart): ReadonlyMap<string, string> {
+  requireProfile(is(styles.root, W, 'styles')); attributes(styles.root, []); whitespace(styles.root);
+  const names = new Map<string, string>(), definitions = new Map<string, OoxmlElement>();
+  const entries = elements(styles.root); bounded(entries.length, 0, 256);
+  for (const node of entries) if (is(node, W, 'style')) {
+    const id = attribute(node, 'styleId', W), type = attribute(node, 'type', W);
+    requireProfile(id && id.length <= 128 && type && !names.has(id)); names.set(id, type); definitions.set(id, node);
+  }
+  const same = (a: OoxmlElement, b: OoxmlElement): boolean => sameStyle({ ...styles, root: a }, { ...reference, root: b });
+  let defaults = false;
+  for (const node of entries) {
+    const canonical = elements(reference.root).find(value => value.localName === node.localName &&
+      attribute(value, 'styleId', W) === attribute(node, 'styleId', W));
+    if (is(node, W, 'docDefaults')) {
+      requireProfile(!defaults && canonical && same(node, canonical)); defaults = true; continue;
+    }
+    requireProfile(is(node, W, 'style'));
+    if (canonical && same(node, canonical)) continue;
+    attributes(node, ['type', 'styleId', 'default', 'customStyle'], W); whitespace(node);
+    const type = attribute(node, 'type', W); requireProfile(type === 'paragraph' || type === 'character');
+    for (const key of ['default', 'customStyle']) { const value = attribute(node, key, W); requireProfile(value === undefined || ['0', '1', 'true', 'false', 'on', 'off'].includes(value)); }
+    const seen = new Set<string>();
+    for (const child of elements(node)) {
+      requireProfile(child.namespaceUri === W && !seen.has(child.localName)); seen.add(child.localName);
+      if (child.localName === 'pPr') { requireProfile(type === 'paragraph'); properties(child, P_ORDER, names); }
+      else if (child.localName === 'rPr') properties(child, R_ORDER, names);
+      else {
+        requireProfile(['name', 'basedOn', 'next', 'uiPriority', 'qFormat', 'semiHidden', 'unhideWhenUsed'].includes(child.localName));
+        requireProfile(child.children.length === 0); attributes(child, ['val'], W);
+        const value = attribute(child, 'val', W);
+        if (child.localName === 'basedOn' || child.localName === 'next') requireProfile(value && names.get(value) === (child.localName === 'next' ? 'paragraph' : type));
+        else if (child.localName === 'name') requireProfile(value && value.length <= 256);
+        else if (child.localName === 'uiPriority') requireProfile(value && integer(value, 0, 99));
+        else requireProfile(value === undefined || ['0', '1', 'true', 'false', 'on', 'off'].includes(value));
+      }
+    }
+  }
+  for (const [id, definition] of definitions) {
+    const visited = new Set<string>([id]); let current = definition;
+    for (;;) {
+      const parent = elements(current).find(node => is(node, W, 'basedOn'));
+      if (!parent) break;
+      const parentId = attribute(parent, 'val', W); requireProfile(parentId && !visited.has(parentId) && names.get(parentId) === names.get(id));
+      visited.add(parentId); const next = definitions.get(parentId); requireProfile(next); current = next;
+    }
+  }
+  return names;
+}
+/** Flatten only explicit, rectangular, unnested table cells; paragraph rules remain shared. */
+function bodyParagraphs(body: OoxmlElement, cellParagraphs: Set<string>): OoxmlElement[] {
+  const result: OoxmlElement[] = [];
+  const width = (node: OoxmlElement): void => {
+    attributes(node, ['w', 'type'], W); requireProfile(node.children.length === 0);
+    requireProfile(['auto', 'dxa', 'pct'].includes(attribute(node, 'type', W) ?? '') && integer(attribute(node, 'w', W) ?? '', 0, 1000000));
+  };
+  for (const block of elements(body)) {
+    if (!is(block, W, 'tbl')) { result.push(block); continue; }
+    attributes(block, []); whitespace(block);
+    const content = elements(block); let index = 0;
+    if (content[index] && is(content[index]!, W, 'tblPr')) {
+      const props = content[index++]!; attributes(props, []); whitespace(props);
+      const children = elements(props); requireProfile(children.length <= 1);
+      for (const child of children) { requireProfile(is(child, W, 'tblW')); width(child); }
+    }
+    const grid = content[index++]; requireProfile(grid && is(grid, W, 'tblGrid')); attributes(grid, []); whitespace(grid);
+    const columns = elements(grid); bounded(columns.length, 1, 20);
+    for (const column of columns) { requireProfile(is(column, W, 'gridCol') && column.children.length === 0); attributes(column, ['w'], W); requireProfile(integer(attribute(column, 'w', W) ?? '', 1, 1000000)); }
+    const rows = content.slice(index); bounded(rows.length, 1, 20);
+    for (const row of rows) {
+      requireProfile(is(row, W, 'tr')); attributes(row, []); whitespace(row);
+      const cells = elements(row); requireProfile(cells.length === columns.length);
+      for (const cell of cells) {
+        requireProfile(is(cell, W, 'tc')); attributes(cell, []); whitespace(cell);
+        const children = elements(cell); let start = 0;
+        if (children[0] && is(children[0], W, 'tcPr')) {
+          const props = children[start++]!; attributes(props, []); whitespace(props);
+          const values = elements(props); requireProfile(values.length <= 1);
+          for (const value of values) { requireProfile(is(value, W, 'tcW')); width(value); }
+        }
+        requireProfile(children.length > start);
+        for (const paragraph of children.slice(start)) { requireProfile(is(paragraph, W, 'p')); cellParagraphs.add(paragraph.id); result.push(paragraph); }
+      }
+    }
+  }
+  return result;
+}
+function checkBody(part: OoxmlPart, target: Readonly<{ paragraphId: string; offset: number }>, candidates: ReadonlyMap<string, string>, styles: ReadonlyMap<string, string>): void {
   const root = part.root; requireProfile(is(root, W, 'document')); attributes(root, []); whitespace(root);
   requireProfile(root.namespaceBindings.filter(binding => binding.namespaceUri === W14 && binding.prefix !== '').length === 1);
   const roots = elements(root); requireProfile(roots.length === 1 && is(roots[0]!, W, 'body')); const body = roots[0]!;
-  attributes(body, []); whitespace(body); const paragraphs = elements(body), identities = new Set<string>();
+  attributes(body, []); whitespace(body); const cellParagraphs = new Set<string>();
+  const paragraphs = bodyParagraphs(body, cellParagraphs), identities = new Set<string>();
   let paragraphCount = 0, targetText: string | undefined;
   const encountered = new Set<string>();
   for (const [index, paragraph] of paragraphs.entries()) {
@@ -243,11 +337,12 @@ function checkBody(part: OoxmlPart, target: Readonly<{ paragraphId: string; offs
     requireProfile(paragraph.attributes.length === 2 && id !== undefined && /^[0-9A-F]{8}$/.test(id) &&
       Number.parseInt(id, 16) > 0 && Number.parseInt(id, 16) < 2147483648 && id === attribute(paragraph, 'textId', W14) && !identities.has(id));
     identities.add(id); whitespace(paragraph); let text = '', drawing = false;
+    const boundaries = new Set<number>([0]);
     for (const [runIndex, run] of elements(paragraph).entries()) {
-      if (is(run, W, 'pPr')) { requireProfile(runIndex === 0); properties(run, P_ORDER); continue; }
-      requireProfile(is(run, W, 'r')); attributes(run, []); whitespace(run);
+      if (is(run, W, 'pPr')) { requireProfile(runIndex === 0); properties(run, P_ORDER, styles); continue; }
+      requireProfile(is(run, W, 'r')); attributes(run, []); whitespace(run); boundaries.add(text.length);
       for (const [childIndex, child] of elements(run).entries()) {
-        if (is(child, W, 'rPr')) { requireProfile(childIndex === 0); properties(child, R_ORDER); }
+        if (is(child, W, 'rPr')) { requireProfile(childIndex === 0); properties(child, R_ORDER, styles); }
         else if (is(child, W, 't')) {
           attributes(child, ['space'], XML); const space = attribute(child, 'space', XML);
           requireProfile(space === undefined || space === 'default' || space === 'preserve');
@@ -261,7 +356,11 @@ function checkBody(part: OoxmlPart, target: Readonly<{ paragraphId: string; offs
         }
       }
     }
-    if (paragraph.id === target.paragraphId) { requireProfile(!drawing); targetText = text; }
+    if (paragraph.id === target.paragraphId) {
+      requireProfile(!drawing); boundaries.add(text.length);
+      // The public core only inserts drawings at existing text-run boundaries in cells.
+      requireProfile(!cellParagraphs.has(paragraph.id) || boundaries.has(target.offset)); targetText = text;
+    }
   }
   requireProfile(paragraphCount > 0 && encountered.size === candidates.size && targetText !== undefined);
   requireProfile(Number.isSafeInteger(target.offset) && target.offset >= 0 && target.offset <= targetText.length);
@@ -351,9 +450,10 @@ function qualify(pkg: OoxmlPackage, target: Readonly<{ paragraphId: string; offs
   add(pixels, candidatePixels, 32000000); requireProfile(pkg.externalTargets.length === 0);
   checkRelationships(pkg, names, media, embeds);
   const styles = pkg.parts.get(STYLES);
+  let styleNames: ReadonlyMap<string, string> = new Map();
   if (styles) {
     const reference = dependencies.defaultStylesPart; requireProfile(reference.name === STYLES && reference.contentType === STYLES_MIME);
-    scanPart(reference, newCensus(), 1024, 32); requireProfile(sameStyle(styles, reference));
+    scanPart(reference, newCensus(), 1024, 32); styleNames = styleCatalog(styles, reference);
   }
   const main = pkg.parts.get(MAIN); requireProfile(main !== undefined);
   const candidates = imageCandidatesInPackage(pkg, main, { candidates: 128, attempts: 128, mediaBytes: MAX_ZIP });
@@ -361,7 +461,7 @@ function qualify(pkg: OoxmlPackage, target: Readonly<{ paragraphId: string; offs
   const candidateMap = new Map<string, string>();
   for (const candidate of candidates.value) { requireProfile(!candidateMap.has(candidate.drawingId)); candidateMap.set(candidate.drawingId, candidate.paragraphId); }
   requireProfile(candidateMap.size === drawings.length && drawings.every(drawing => candidateMap.has(drawing.id)));
-  checkBody(main, target, candidateMap);
+  checkBody(main, target, candidateMap, styleNames);
   // Reserve insertion growth independently in the three XML entries the engine can update.
   const reserve = 88554 + 6 * (input.titleLength + input.descriptionLength);
   for (const name of [MAIN, TYPES, MAIN_RELS]) sizes.set(name, add(sizes.get(name) ?? 0, reserve, MAX_ZIP));

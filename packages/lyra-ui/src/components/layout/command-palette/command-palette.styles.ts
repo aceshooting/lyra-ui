@@ -246,13 +246,13 @@ export const styles = css`
   }
   [part="description"] {
     flex: 1 1000 auto;
-    color: var(--lr-color-text-quiet);
+    color: inherit;
     font-size: var(--lr-font-size-sm);
   }
   [part="shortcut"] {
     flex: 0 1 auto;
     max-inline-size: 40%;
-    color: var(--lr-color-text-quiet);
+    color: inherit;
     font-family: var(--lr-font-mono);
     font-size: var(--lr-font-size-sm);
   }

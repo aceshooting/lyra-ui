@@ -53,6 +53,7 @@ import {
 } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { HeatmapLabelCache } from './heatmap-label-cache.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import {
@@ -983,7 +984,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     let widest = 0;
     const interval = finiteInteger(this.colLabelInterval, 1, 1);
     for (let index = 0; index < labels.length; index += interval) {
-      widest = Math.max(widest, ctx.measureText(labels[index]!).width);
+      widest = Math.max(widest, this.labelWidth(ctx, labels[index]!));
     }
     // Horizontal labels need only their line box, so the built-in band already covers them; a
     // rotated label's vertical extent is its width projected through the rotation.
@@ -1006,27 +1007,45 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!ctx) return PAD_LEFT;
     ctx.font = this.labelFont(cs);
     let widest = 0;
-    for (const label of labels) widest = Math.max(widest, ctx.measureText(label).width);
+    for (const label of labels) widest = Math.max(widest, this.labelWidth(ctx, label));
     const hostWidth = this.clientWidth || 0;
     const cap = hostWidth > 0 ? hostWidth * MAX_ROW_LABEL_FRACTION : Number.POSITIVE_INFINITY;
     return Math.min(Math.max(PAD_LEFT, Math.ceil(widest) + ROW_LABEL_INSET * 2), cap);
   }
 
+  private labelCache?: HeatmapLabelCache;
+
+  /** A paint never retains metrics across font loading, layout, theme or document changes. */
+  private withLabelCache(paint: () => void): void {
+    const previous = this.labelCache;
+    this.labelCache = new HeatmapLabelCache();
+    try { paint(); } finally { this.labelCache = previous; }
+  }
+
+  private labelWidth(ctx: CanvasRenderingContext2D, label: string): number {
+    return this.labelCache?.width(ctx, label) ?? ctx.measureText(label).width;
+  }
+
+  private ellipsize(ctx: CanvasRenderingContext2D, label: string, maxWidth: number): string {
+    return this.labelCache?.clip(ctx, label, maxWidth, () => this.ellipsizeLabel(ctx, label, maxWidth)) ??
+      this.ellipsizeLabel(ctx, label, maxWidth);
+  }
+
   /** Trims `label` to fit `maxWidth`, ending in an ellipsis. Returns `''` when not even one
    *  character plus the ellipsis fits, which is honest: a single clipped glyph reads as data. */
-  private ellipsize(ctx: CanvasRenderingContext2D, label: string, maxWidth: number): string {
+  private ellipsizeLabel(ctx: CanvasRenderingContext2D, label: string, maxWidth: number): string {
     if (maxWidth <= 0) return '';
-    if (ctx.measureText(label).width <= maxWidth) return label;
+    if (this.labelWidth(ctx, label) <= maxWidth) return label;
     const characters = [...label];
     const shortened = (kept: number): string => `${characters.slice(0, kept).join('')}…`;
     let fits = 0;
     let most = characters.length - 1;
     while (fits < most) {
       const kept = (fits + most + 1) >> 1;
-      if (ctx.measureText(shortened(kept)).width <= maxWidth) fits = kept;
+      if (this.labelWidth(ctx, shortened(kept)) <= maxWidth) fits = kept;
       else most = kept - 1;
     }
-    return fits > 0 || ctx.measureText('…').width <= maxWidth ? shortened(fits) : '';
+    return fits > 0 || this.labelWidth(ctx, '…') <= maxWidth ? shortened(fits) : '';
   }
 
   /** Calendar weekday gutter resolved by the last draw. Keeping the measured `'auto'` value as
@@ -1050,7 +1069,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     ctx.font = this.labelFont(cs);
     let widest = 0;
     for (const label of this.weekdayLabels(firstWeekStart)) {
-      if (label) widest = Math.max(widest, ctx.measureText(label).width);
+      if (label) widest = Math.max(widest, this.labelWidth(ctx, label));
     }
     const hostWidth = this.clientWidth || 0;
     const cap =
@@ -2974,7 +2993,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       monthLabels.forEach((month, index) => {
         const label = this.ellipsize(ctx, month.label, canvasRight);
         if (!label) return;
-        const width = ctx.measureText(label).width;
+        const width = this.labelWidth(ctx, label);
         // The canvas ends exactly at the last week column, so a label anchored there is shifted back
         // inside (never past the start edge). When two labels would touch, the month covering fewer
         // week columns (a partial month at either edge) yields; on a tie the earlier label stays.
@@ -3007,6 +3026,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private drawCalendar(): void {
+    this.withLabelCache(() => this.paintCalendar());
+  }
+
+  private paintCalendar(): void {
     if (!this.canvas) return;
     const { weekCount, firstWeekStart, monthLabels } = this.cachedCalendarGrid;
     // Resolve the same label font before geometry: an auto gutter changes the first cell's x-origin,
@@ -3339,6 +3362,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private repaintMatrixFocusCell(pos: MatrixCellPos | null): void {
+    this.withLabelCache(() => this.paintMatrixFocusCell(pos));
+  }
+
+  private paintMatrixFocusCell(pos: MatrixCellPos | null): void {
     if (!pos || !this.canvas) return;
     const rows = this.matrixRowLabels.length;
     const cols = this.matrixColLabels.length;
@@ -3562,6 +3589,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private repaintCalendarFocusCell(pos: CalendarCellPos | null): void {
+    this.withLabelCache(() => this.paintCalendarFocusCell(pos));
+  }
+
+  private paintCalendarFocusCell(pos: CalendarCellPos | null): void {
     if (!pos || !this.canvas) return;
     const { weekCount, firstWeekStart } = this.cachedCalendarGrid;
     if (
@@ -3614,6 +3645,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private drawMatrix(): void {
+    this.withLabelCache(() => this.paintMatrix());
+  }
+
+  private paintMatrix(): void {
     if (!this.canvas) return;
     const rows = this.matrixRowLabels.length;
     const cols = this.matrixColLabels.length;

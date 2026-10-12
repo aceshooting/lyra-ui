@@ -18,6 +18,16 @@ interface CanvasHull {
   fill: string;
 }
 const NO_DASH: readonly number[] = [];
+const hullPaths = new WeakMap<object, { d: string; path: Path2D }>();
+
+/** Scene objects own their parsed geometry; changed path text always replaces the cached path. */
+function hullPath(hull: { d: string }): Path2D {
+  const cached = hullPaths.get(hull);
+  if (cached?.d === hull.d) return cached.path;
+  const path = new Path2D(hull.d);
+  hullPaths.set(hull, { d: hull.d, path });
+  return path;
+}
 
 interface CanvasLink {
   x1: number;
@@ -206,7 +216,7 @@ function drawKeyboardFocusCue(
   }
   if (scene.keyboardFocusHull) {
     ctx.lineWidth = 4;
-    ctx.stroke(new Path2D(scene.keyboardFocusHull.d));
+    ctx.stroke(hullPath(scene.keyboardFocusHull));
   }
   ctx.setLineDash([]);
   if (scene.keyboardFocusRing)
@@ -230,7 +240,7 @@ export function drawGraphScene(
 
   const hullOpacity = scene.hullOpacity ?? 0.12;
   for (const hull of scene.hulls) {
-    const path = new Path2D(hull.d);
+    const path = hullPath(hull);
     ctx.globalAlpha = hullOpacity;
     ctx.fillStyle = hull.fill;
     ctx.strokeStyle = hull.fill;
@@ -397,7 +407,7 @@ export function drawPickingScene(
   let idx = 0;
   for (const hull of scene.hulls) {
     const color = indexToPickColor(idx++);
-    const path = new Path2D(hull.d);
+    const path = hullPath(hull);
     ctx.fillStyle = color;
     ctx.strokeStyle = color;
     ctx.lineWidth = Math.max(HULL_STROKE_WIDTH, minimumWorldStroke);

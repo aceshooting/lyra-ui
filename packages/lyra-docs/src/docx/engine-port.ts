@@ -1,13 +1,18 @@
+import type { DocxEngineOutlineReport, DocxEngineInspectionReport } from './eigenpal-document-inspection.js';
+import type { EigenpalReviewReport } from './eigenpal-review.js';
+import type { DocxReviewAction } from './review-types.js';
 import type { DocxChartPlacement } from './eigenpal-charts.js';
 import type {
   DocxAction, DocxCommandAvailability, DocxResult, DocxSelection,
   DocxSource, DocxFormatting, DocxParagraphStyles, DocxFontFamilies, DocxTableContext, DocxImageContext, DocxImageDescription, DocxImageDirection
 } from './types.js';
-import type { OwnedDocxImageInput } from './image-insertion-input.js';
+import type { OwnedDocxImageInput, OwnedDocxImageReplacement } from './image-insertion-input.js';
 
-export interface DocxEngineImageInsertion {
+export type DocxEngineImageInsertion = DocxEngineImageOperation<OwnedDocxImageInput>;
+export type DocxEngineImageReplacement = DocxEngineImageOperation<OwnedDocxImageReplacement>;
+export interface DocxEngineImageOperation<T> {
   validate(retainedSelection?: object): DocxResult<void>;
-  execute(source: OwnedDocxImageInput, operation: {
+  execute(source: T, operation: {
     readonly retainedSelection?: object;
     readonly signal: AbortSignal;
     validateOriginal(): DocxResult<void>;
@@ -51,6 +56,8 @@ export type DocxTableLabels = Readonly<{ insertRowBelow: string; insertColumnRig
 export interface DocxEnginePort {
   /** Capture immutable native intent before caller reflection or notifications. */
   beginImageInsertion?(): DocxResult<DocxEngineImageInsertion>;
+  /** Capture the original selected image before caller reflection or notifications. */
+  beginImageReplacement?(): DocxResult<DocxEngineImageReplacement>;
   inspect(): DocxEngineState;
   /** Presentation only; must not lay out, flush input or mutate the document. */
   refreshTableLabels?(labels: DocxTableLabels): boolean;
@@ -64,6 +71,14 @@ export interface DocxEnginePort {
   subscribe(listener: (event: DocxEngineEvent) => void): () => void;
   can(command: DocxAction): DocxCommandAvailability;
   execute(command: DocxAction, retainedSelection?: object, validateSettled?: () => DocxResult<void>): DocxResult<void>;
+  outline?(): DocxResult<DocxEngineOutlineReport>;
+  inspectDocument?(): DocxResult<DocxEngineInspectionReport>;
+  selectDocumentTarget?(token: object): DocxResult<void>;
+  review?(): DocxResult<EigenpalReviewReport>;
+  selectReviewItem?(token: object): DocxResult<void>;
+  canReview?(action: DocxReviewAction, token?: object): DocxCommandAvailability;
+  executeReview?(action: DocxReviewAction, token: object | undefined,
+    retainedSelection?: object, validateSettled?: () => DocxResult<void>): DocxResult<void>;
   selectImage?(direction: DocxImageDirection): DocxResult<void>;
   imageDescription?(): DocxResult<Readonly<DocxImageDescription>>;
   paragraphStyles(): DocxParagraphStyles;

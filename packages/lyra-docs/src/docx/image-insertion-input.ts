@@ -3,13 +3,15 @@ import { inspectDocxImageForInsertion } from './image-bytes.js';
 import { isDocxXmlText } from './xml-text.js';
 import type { DocxInsertImageOptions, DocxResult } from './types.js';
 
-export interface OwnedDocxImageInput {
+export interface OwnedDocxImageReplacement {
   readonly bytes: Uint8Array;
+  readonly metadata: Readonly<DocxImageMetadata>;
+}
+export interface OwnedDocxImageInput extends OwnedDocxImageReplacement {
   readonly widthPoints: number;
   readonly heightPoints: number;
   readonly title: string;
   readonly description: string;
-  readonly metadata: Readonly<DocxImageMetadata>;
 }
 interface NormalizedImageInsertion {
   readonly source: OwnedDocxImageInput;
@@ -39,10 +41,22 @@ export function listenImageInsertionAbort(signal: AbortSignal, listener: () => v
   return () => { apply(unlisten, signal, ['abort', listener]); };
 }
 
+/** Copy and validate local replacement bytes without changing picture properties. */
+export function normalizeImageReplacement(bytes: unknown, options: unknown,
+  validate: () => DocxResult<void>, acceptOptions: (options: Readonly<DocxInsertImageOptions>) => DocxResult<void> = validate
+): DocxResult<{ readonly source: OwnedDocxImageReplacement; readonly options: Readonly<DocxInsertImageOptions> }> {
+  return normalizeImageInput(bytes, options, validate, acceptOptions, true);
+}
+
 /** Reflection is sequenced under the original insertion owner. */
 export function normalizeImageInsertion(source: unknown, options: unknown,
   validate: () => DocxResult<void>, acceptOptions: (options: Readonly<DocxInsertImageOptions>) => DocxResult<void> = validate
 ): DocxResult<NormalizedImageInsertion> {
+  return normalizeImageInput(source, options, validate, acceptOptions, false) as DocxResult<NormalizedImageInsertion>;
+}
+function normalizeImageInput(source: unknown, options: unknown,
+  validate: () => DocxResult<void>, acceptOptions: (options: Readonly<DocxInsertImageOptions>) => DocxResult<void>, replacement: boolean
+): DocxResult<{ readonly source: OwnedDocxImageReplacement; readonly options: Readonly<DocxInsertImageOptions> }> {
   const data = (value: unknown, allowed: readonly string[]): DocxResult<Record<string, unknown>> => {
     const initial = validate(); if (!initial.ok) return initial;
     if (!value || typeof value !== 'object') return invalid();
@@ -84,14 +98,15 @@ export function normalizeImageInsertion(source: unknown, options: unknown,
     }
     const copiedOptions = Object.freeze(normalized), authorized = acceptOptions(copiedOptions);
     if (!authorized.ok) return authorized;
-    const checked = data(source, ['bytes', 'widthPoints', 'heightPoints', 'title', 'description']);
+    const checked = replacement ? { ok: true as const, value: { bytes: source } as Record<string, unknown> } :
+      data(source, ['bytes', 'widthPoints', 'heightPoints', 'title', 'description']);
     if (!checked.ok) return checked;
     const input = checked.value;
-    for (const key of ['widthPoints', 'heightPoints']) {
+    if (!replacement) for (const key of ['widthPoints', 'heightPoints']) {
       const value = input[key];
       if (typeof value !== 'number' || !Number.isFinite(value) || value < 1 || value > 1440) return invalid();
     }
-    for (const [key, maximum] of [['title', 256], ['description', 2048]] as const) {
+    if (!replacement) for (const [key, maximum] of [['title', 256], ['description', 2048]] as const) {
       if (!Object.hasOwn(input, key)) input[key] = '';
       const value = input[key];
       if (typeof value !== 'string' || value.length > maximum || value.includes('\r') || !isDocxXmlText(value)) return invalid();
@@ -108,6 +123,8 @@ export function normalizeImageInsertion(source: unknown, options: unknown,
     const { bytes, metadata } = inspected.value;
     const final = validate(); if (!final.ok) return final;
     if (normalized.signal && imageInsertionAborted(normalized.signal)) return { ok: false, code: 'aborted' };
+    if (replacement) return { ok: true, value: Object.freeze({ options: copiedOptions,
+      source: Object.freeze({ bytes, metadata: Object.freeze({ ...metadata }) }) }) };
     return { ok: true, value: Object.freeze({ options: copiedOptions, source: Object.freeze({ bytes,
       widthPoints: input['widthPoints'] as number, heightPoints: input['heightPoints'] as number,
       title: input['title'] as string, description: input['description'] as string, metadata: Object.freeze({ ...metadata }) }) }) };

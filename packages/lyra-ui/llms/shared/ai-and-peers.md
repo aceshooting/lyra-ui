@@ -130,3 +130,47 @@ sanitizer is unavailable. Some components additionally issue a deduped warning. 
 component section instead of assuming every peer user renders an `<lr-skeleton>` or the same
 degraded state. `lr-phone-input` is the exception to dynamic peer import: it takes a consumer-built
 adapter (`loadLibphonenumberAdapter()`) rather than importing `libphonenumber-js` itself.
+
+### Experimental DOCX editing companion
+
+Use `@aceshooting/lyra-docs` for editing; `lr-docx-viewer` remains a viewer in Lyra UI.
+The companion uses optional `@docx-editor.dev/core@2.27.0`. Its installed README owns
+installation, admission limits, lifecycle, exact supported structures and save receipts.
+
+```ts
+import '@aceshooting/lyra-ui/theme.css';
+import '@aceshooting/lyra-docs/docx/editor';
+import '@aceshooting/lyra-docs/docx/editor.css';
+import { createDocxSession } from '@aceshooting/lyra-docs/docx';
+```
+
+`lr-docx-editor` provides command search (Ctrl/Command+K), bounded find excerpts and
+replace-and-advance, Outline, Checks and Review panels, table formatting and local raster
+image tools. `createDocxSession({ mount })` supports a host-owned toolbar; it requires a
+connected empty light-DOM mount. Both routes expose `can()`/`execute()`, `find()`/
+`selectMatch()`/`replaceMatch()`, `outline()`/`selectOutlineItem()`, `inspectDocument()`/
+`selectDiagnostic()`, and `review()`/`selectReviewItem()`. Query rows are copied, bounded
+and revision-scoped; refresh after edits and pass the returned `expectedRevision` when
+navigating. Queries do not save or fetch. Inspection covers body metadata only; capability
+fields `preserved`, `renderable` and `editable` remain `unverified`, and the report is not
+an accessibility certification.
+
+`insertImage(source, options)` copies local raster bytes and requires explicit dimensions;
+its narrow package profile includes visible styles and plain table cells at existing
+paragraph/run boundaries. `replaceImage(bytes, options)` preserves selected image size,
+title and description. Both use `DocxInsertImageOptions` for retained selection, revision
+and cancellation. `canInsertImage()` and `canReplaceImage()` are advisory; unsupported
+content refuses unchanged after canonical qualification.
+
+Table actions cover simple topology, explicit first-row headers, current-cell vertical
+alignment/shading/borders, and equal-column table width. Adding or replying to comments
+and changing tracking mode require an explicit author; supported comments can be replied
+to, resolved/reopened and deleted.
+Only bounded simple body text insertion/deletion revisions support accept/reject;
+unsupported revisions remain `readOnly`. These contracts do not qualify every native
+engine gesture or promise arbitrary DOCX fidelity.
+
+The host persists bytes explicitly: `save()` returns a receipt; call
+`acknowledgeSaved(receipt)` only after durable persistence. Disconnect destroys the
+session and undo history. See the [companion README](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-docs/README.md)
+for complete public types, bounds and guarded examples.

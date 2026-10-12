@@ -1365,9 +1365,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 50223,
+        "bytes": 50224,
         "kib": 49,
-        "bundleSha256": "2bf090fc1d8908504055b31867f19aad0a95206d5093d813ab53940818ab0d4f",
+        "bundleSha256": "ef17658cb3783b9a1dd7d4669d4307805f14f4e4400aec7a4b4e5e3316e70caa",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3020,9 +3020,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 60459,
-        "kib": 59,
-        "bundleSha256": "9c42195f329e884ee9988dabe26fbafe7b97bc7e4154b7f92a21749113233645",
+        "bytes": 60519,
+        "kib": 59.1,
+        "bundleSha256": "d6851954cf236d124caa1e4d260419fceb309d7c5b496a4e51e6e5cad4ad6f46",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3133,9 +3133,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 56749,
-        "kib": 55.4,
-        "bundleSha256": "14adcbe3765325c60db5d549e0b6fce80d3b62c69cb5ba313a2a6c8ef341e6ea",
+        "bytes": 57161,
+        "kib": 55.8,
+        "bundleSha256": "f9da1ae68abd32f7330dc77561a3787a051dbad5d1c189c430b0af78b2e015f4",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3554,9 +3554,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 156466,
-        "kib": 152.8,
-        "bundleSha256": "6810b16624bb941f5bbe37d09121c33198888ba799aa3dc053ce0572432f61f5",
+        "bytes": 156576,
+        "kib": 152.9,
+        "bundleSha256": "940e7fb21d908111740d02b3fea722c4554b1388e3dc747a37d7156612ef08c7",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },

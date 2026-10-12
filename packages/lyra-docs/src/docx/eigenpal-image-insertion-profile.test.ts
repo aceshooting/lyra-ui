@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { zipSync, strToU8, strFromU8, unzipSync } from 'fflate';
-import { imageFixture } from '../../test/corpus.js';
+import { imageFixture, imageInsertionBytes } from '../../test/corpus.js';
 import type { OoxmlElement, OoxmlNode } from '@docx-editor.dev/core/store';
-const { readOoxmlPackage, readOoxmlPart, writeOoxmlPackage } = await import('@docx-editor.dev/core/store');
+const { readOoxmlPackage, readOoxmlPart, writeOoxmlPackage, TreePackageStore } = await import('@docx-editor.dev/core/store');
 const { blankDocumentBytes } = await import('@docx-editor.dev/core/editor');
+import { admitDocx } from './admission.js';
 import { qualifyImageInsertionPackage } from './eigenpal-image-insertion-profile.js';
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const W14 = 'http://schemas.microsoft.com/office/word/2010/wordml';
@@ -224,4 +225,85 @@ test('content types reject mixed text and nonempty declaration leaves before pub
     assert.deepEqual(result, unsupported, label); assert.equal(calls, 0, label);
     assert.equal(h.pkg.parts.has(TYPES), false); assert.deepEqual(h.pkg, before, label);
   }
+});
+
+function styledCell(table = false) {
+  const h = withStyles(), main = h.pkg.parts.get(MAIN)!;
+  const content = `<w:p w14:paraId="00000001" w14:textId="00000001"><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:rPr><w:rStyle w:val="DefaultParagraphFont"/></w:rPr><w:t>alpha</w:t></w:r></w:p>`;
+  const parsed = readOoxmlPart(`<w:document xmlns:w="${W}" xmlns:w14="${W14}"><w:body>${table ? `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid><w:gridCol w:w="2400"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="2400" w:type="dxa"/></w:tcPr>${content}</w:tc></w:tr></w:tbl>` : content}</w:body></w:document>`, { name: MAIN, contentType: main.contentType });
+  assert(parsed.ok); const part = structuredClone(parsed.part); (h.pkg.parts as Map<string, unknown>).set(MAIN, part);
+  const nodes: OoxmlElement[] = [], stack: OoxmlNode[] = [part.root];
+  while (stack.length) { const n = stack.pop()!; if (n.kind !== 'textValue') { nodes.push(n); stack.push(...n.children); } }
+  h.target.paragraphId = nodes.find(n => n.localName === 'p')!.id; if (table) h.target.offset = 0;
+  return { ...h, nodes };
+}
+test('named paragraph and character styles qualify in body paragraphs and plain table cells', () => {
+  for (const table of [false, true]) { const h = styledCell(table), before = structuredClone(h.pkg); assert(h.check().ok); assert.deepEqual(h.pkg, before); }
+});
+test('style references must exist with the correct kind and plain tables reject merges and nesting', () => {
+  for (const value of ['missing', 'DefaultParagraphFont']) { const h = styledCell(); attrs(h.nodes.find(n => n.localName === 'pStyle')!)[0]!.value = value; assert.deepEqual(h.check(), unsupported); }
+  for (const localName of ['gridSpan', 'vMerge', 'sdt', 'tbl']) {
+    const h = styledCell(true), cell = h.nodes.find(n => n.localName === 'tc')!;
+    children(cell).push({ ...cell, id: 'unsupported-cell-child', localName, children: [] } as OoxmlElement); assert.deepEqual(h.check(), unsupported);
+  }
+});
+
+function customStyledCell(properties = '<w:rPr><w:b/></w:rPr>', basedOn = 'Normal') {
+  const h = styledCell(), styles = h.pkg.parts.get('/word/styles.xml')!;
+  const parsed = readOoxmlPart(`<w:style xmlns:w="${W}" w:type="paragraph" w:styleId="Custom"><w:name w:val="Custom"/><w:basedOn w:val="${basedOn}"/>${properties}</w:style>`, { name: '/style.xml', contentType: 'application/xml' }); assert(parsed.ok);
+  children(styles.root).push(structuredClone(parsed.part.root)); attrs(h.nodes.find(n => n.localName === 'pStyle')!)[0]!.value = 'Custom'; return h;
+}
+test('bounded visible custom paragraph styles qualify while hidden inheritance, missing parents and cycles refuse', () => {
+  const h = customStyledCell(), before = structuredClone(h.pkg); assert(h.check().ok); assert.deepEqual(h.pkg, before);
+  for (const hidden of ['vanish', 'webHidden', 'specVanish']) assert.deepEqual(customStyledCell(`<w:rPr><w:${hidden}/></w:rPr>`).check(), unsupported);
+  assert.deepEqual(customStyledCell('', 'missing').check(), unsupported); assert.deepEqual(customStyledCell('', 'Custom').check(), unsupported);
+});
+test('custom style UI priority accepts bounded integers and refuses malformed or absent values without mutation', () => {
+  for (const value of ['0', '1', '99', undefined, '', '-1', '100', '1.5', '01', ' 1', '1e1', '9007199254740992']) {
+    const h = customStyledCell(`<w:uiPriority${value === undefined ? '' : ` w:val="${value}"`}/>`), before = structuredClone(h.pkg);
+    if (value === '0' || value === '1' || value === '99') assert(h.check().ok, value);
+    else assert.deepEqual(h.check(), unsupported, String(value));
+    assert.deepEqual(h.pkg, before, String(value));
+  }
+});
+test('custom style visibility metadata accepts only boolean leaves without changing document visibility', () => {
+  for (const name of ['qFormat', 'semiHidden', 'unhideWhenUsed']) {
+    for (const value of [undefined, '0', '1', 'true', 'false', 'on', 'off', '', '2', 'TRUE', 'yes', ' true']) {
+      const h = customStyledCell(`<w:${name}${value === undefined ? '' : ` w:val="${value}"`}/>`), before = structuredClone(h.pkg);
+      const label = `${name}: ${String(value)}`;
+      if (value === undefined || ['0', '1', 'true', 'false', 'on', 'off'].includes(value)) assert(h.check().ok, label);
+      else assert.deepEqual(h.check(), unsupported, label);
+      assert.deepEqual(h.pkg, before, label);
+    }
+    for (const metadata of [`<w:${name}/><w:${name}/>`, `<w:${name} w:unknown="1"/>`, `<w:${name}><w:b/></w:${name}>`]) {
+      const h = customStyledCell(metadata), before = structuredClone(h.pkg);
+      assert.deepEqual(h.check(), unsupported, metadata); assert.deepEqual(h.pkg, before, metadata);
+    }
+  }
+});
+
+
+test('styled paragraph and table insertion preserve text, styles and original package through one undo and admitted reopen', async () => {
+  for (const table of [false, true]) {
+    const h = styledCell(table), before = writeOoxmlPackage(h.pkg), engine = new TreePackageStore(h.pkg, h.pkg.parts.get(MAIN)!, { historyLimit: 10 });
+    assert(h.check().ok);
+    const result = await engine.insertImage({ kind: 'body' }, { ...h.target, bytes: imageInsertionBytes('png'), mime: 'image/png',
+      widthPoints: 48, heightPoints: 24, expectedPackageRevision: 0,
+      decodePort: { async decode() { return { pixelWidth: 64, pixelHeight: 32, dpiX: 96, dpiY: 96 }; } } });
+    assert(result.ok && result.change, JSON.stringify({ table, result }));
+    const saved = writeOoxmlPackage(engine.currentPackage()), entries = unzipSync(saved), xml = strFromU8(entries['word/document.xml']!);
+    if (table) assert.match(xml, /<w:t[^>]*>alpha<\/w:t>/u);
+    else { assert.match(xml, /<w:t[^>]*>al<\/w:t>/u); assert.match(xml, /<w:t[^>]*>pha<\/w:t>/u); }
+    assert(xml.includes('w:pStyle w:val="Heading1"')); assert.deepEqual(entries['word/styles.xml'], unzipSync(before)['word/styles.xml']);
+    assert((await admitDocx(saved, new AbortController().signal)).ok); assert(readOoxmlPackage(saved).ok);
+    assert(engine.undo()); assert.deepEqual(writeOoxmlPackage(engine.currentPackage()), before); assert.equal(engine.undo(), null);
+    assert(engine.redo()); assert.deepEqual(writeOoxmlPackage(engine.currentPackage()), saved); assert.deepEqual(writeOoxmlPackage(h.pkg), before);
+  }
+});
+
+
+test('plain cell insertion refuses an interior text-run caret without relocation', () => {
+  const h = styledCell(true); h.target.offset = 2; const before = structuredClone(h.pkg);
+  assert.deepEqual(h.check(), unsupported); assert.deepEqual(h.pkg, before);
+  h.target.offset = 5; assert(h.check().ok);
 });

@@ -3,14 +3,18 @@ import { isDocxImageAction, isDocxTableAction, normalizeDocxAction } from './com
 import { captureImageIntent, copyImage, qualifyImageCommand } from './eigenpal-images.js';
 import { selectImageTarget } from './eigenpal-image-navigation.js';
 import { preflightImageInsertion } from './eigenpal-image-insertion.js';
+import { preflightImageReplacement } from './eigenpal-image-replacement.js';
 import { qualifyImageLayout } from './eigenpal-image-layout.js';
 import type { ImageCopy, ImageIntent } from './eigenpal-images.js';
 import { tableAvailability, tableContext, qualifyTableCommand } from './eigenpal-tables.js';
 import { loadDocxEngine } from './engine-loader.js';
 import { createEigenpalEditing, eigenpalCommand } from './eigenpal-editing.js';
+import { createDocumentInspection } from './eigenpal-document-inspection.js';
+import { createEigenpalReview, createLyraReviewModule } from './eigenpal-review.js';
+import { isDocxReviewAction, normalizeDocxReviewAction } from './review-types.js';
 import { chartPlacements, type DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxEngineModule } from './engine-loader.js';
-import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion } from './engine-port.js';
+import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion, DocxEngineImageReplacement } from './engine-port.js';
 import type { DocxResult, DocxSelection, DocxSessionOptions, DocxSource } from './types.js';
 
 /** Raster decode without `convertPreserved`, so Windows metafiles stay unparsed placeholders. */
@@ -182,6 +186,51 @@ export async function openEigenpalDocument(
     if (!owned()) return { ok: false, code: 'destroyed' };
     return { ok: true, value: undefined };
   });
+  const documentReadiness = (): DocxResult<void> => {
+    if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+    if (fault) return { ok: false, code: 'engine-failed' };
+    if (saving || executingGuarded || nativeSettling || nativeDispatching()) return { ok: false, code: 'busy' };
+    if (composing) return { ok: false, code: 'composing' };
+    return { ok: true, value: undefined };
+  };
+  let reviewGuard: (() => DocxResult<void>) | null = null;
+  const navigateDocument = (action: () => DocxResult<void>): DocxResult<void> => {
+    const ready = documentReadiness();
+    if (!ready.ok) return ready;
+    const active = current(), surface = active.surface;
+    if (!surface) return { ok: false, code: 'unsupported' };
+    const session = surface.session, generation = active.mountGeneration, revision = session.packageRevision();
+    const guard = (): DocxResult<void> => {
+      if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+      if (fault) return { ok: false, code: 'engine-failed' };
+      if (composing) return { ok: false, code: 'composing' };
+      if (editor !== active || active.surface !== surface || surface.session !== session ||
+        active.mountGeneration !== generation || session.packageRevision() !== revision) return { ok: false, code: 'stale-revision' };
+      return { ok: true, value: undefined };
+    };
+    executingGuarded = true;
+    muteSelection++;
+    reviewGuard = guard;
+    let result: DocxResult<void>;
+    try {
+      result = guard();
+      if (result.ok) result = action();
+      if (result.ok) result = guard();
+    } finally { reviewGuard = null; muteSelection--; executingGuarded = false; }
+    if (result.ok) {
+      const epoch = ++selectionEpoch;
+      emit('user-selection');
+      if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+      if (epoch !== selectionEpoch) return { ok: false, code: 'stale-selection' };
+    }
+    return result;
+  };
+  const inspection = createDocumentInspection(current, navigateDocument);
+  const review = module.review ? createEigenpalReview(current, {
+    navigate: navigateDocument,
+    mutate: action => reviewGuard ? action() : { ok: false, code: 'busy' },
+    guard: () => reviewGuard?.() ?? documentReadiness(),
+  }, module.review) : null;
   const destroy = () => {
     if (destroyed) return;
     destroyed = true;
@@ -197,6 +246,8 @@ export async function openEigenpalDocument(
     inspected = null;
     image = null;
     editing.dispose();
+    inspection.dispose();
+    review?.dispose();
     const previous = editor;
     editor = null;
     try { previous?.destroy(); }
@@ -259,10 +310,13 @@ export async function openEigenpalDocument(
   try {
     editor = module.createDocxEditor({ container: mount, mode: operation.readOnly ? 'view' : 'edit',
       zoomMode: { type: 'fixed' }, locale: options.locale, translate: options.translate,
+      ...(module.review ? { modules: [createLyraReviewModule(module.review)] } : {}),
       imageDecodePort: rasterDecodePort(options.mount.ownerDocument.defaultView) });
     releases.push(editor.on('change', change => {
       if (ready && !change.source) {
         editing.invalidateSearch();
+        inspection.invalidate();
+        review?.invalidate();
         // The core commits before finalizing selection formatting. Record the revision
         // now, then read derived state after command dispatch or native input settles.
         refreshAfterChange();
@@ -375,6 +429,91 @@ export async function openEigenpalDocument(
       }
     };
 
+    const beginImageReplacement = (): DocxResult<DocxEngineImageReplacement> => {
+      if (destroyed || !checkOwned()) return { ok: false, code: 'destroyed' };
+      if (fault) return { ok: false, code: 'engine-failed' };
+      if (saving || executingGuarded || nativeDispatching()) return { ok: false, code: 'busy' };
+      if (composing) return { ok: false, code: 'composing' };
+      if (operation.readOnly) return { ok: false, code: 'read-only' };
+      if (!image) return { ok: false, code: 'no-selection' };
+      if (!image.description.ok) return image.description;
+      if (!image.supported || !module.imageInsertion) return { ok: false, code: 'unsupported' };
+      const dependencies = module.imageInsertion;
+      const owner = {}, active = current(), epoch = selectionEpoch, composition = compositionVersion;
+      const intent = captureImageIntent(active, image), surface = active.surface;
+      if (!intent || !surface || !intent.valid()) return { ok: false, code: 'stale-selection' };
+      const generation = active.mountGeneration, session = surface.session;
+      const pkg = session.currentPackage(), revision = session.packageRevision(), part = session.part();
+      let terminal = false, executed = false;
+      const release = () => {
+        if (terminal) return;
+        terminal = true;
+        if (insertionOwner === owner) {
+          insertionOwner = null; releaseInsertion = null; executingGuarded = false;
+        }
+      };
+      insertionOwner = owner; releaseInsertion = release; executingGuarded = true;
+      const validate = (retainedSelection?: object): DocxResult<void> => {
+        const scalar = (): DocxResult<void> => {
+          if (destroyed || !checkOwned()) return { ok: false, code: 'destroyed' };
+          if (fault) return { ok: false, code: 'engine-failed' };
+          if (terminal || insertionOwner !== owner || editor !== active || active.surface !== surface ||
+            active.mountGeneration !== generation || surface.session !== session || selectionEpoch !== epoch ||
+            compositionVersion !== composition) return { ok: false, code: 'stale-selection' };
+          if (composing) return { ok: false, code: 'composing' };
+          return { ok: true, value: undefined };
+        };
+        const before = scalar(); if (!before.ok) return before;
+        if (session.currentPackage() !== pkg || session.packageRevision() !== revision || session.part() !== part)
+          return { ok: false, code: 'stale-revision' };
+        if (!intent.valid()) return { ok: false, code: 'stale-selection' };
+        if (retainedSelection !== undefined) {
+          const retained = pins.get(retainedSelection);
+          if (!retained || retained.epoch !== epoch || retained.image?.id !== intent.id || !retained.image.valid())
+            return { ok: false, code: 'stale-selection' };
+        }
+        return scalar();
+      };
+      try {
+        const captured = validate(); if (!captured.ok) { release(); return captured; }
+        return { ok: true, value: {
+          validate, release,
+          async execute(source, request) {
+            if (executed) return { ok: false, code: 'stale-selection' };
+            executed = true;
+            const valid = (): DocxResult<void> => {
+              const local = validate(request.retainedSelection);
+              return local.ok ? request.validateOriginal() : local;
+            };
+            try {
+              const original = valid(); if (!original.ok) return original;
+              if (request.signal.aborted) return { ok: false, code: 'aborted' };
+              surface.flushPendingInput(); clearNativeSettlement();
+              const settled = valid(); if (!settled.ok) return settled;
+              const decodePort = surface.imageDecodePort();
+              const decoding = valid(); if (!decoding.ok) return decoding;
+              const candidate = await preflightImageReplacement(pkg, { drawingId: intent.id, paragraphId: intent.paragraphId },
+                source, dependencies, decodePort, valid, request.signal);
+              if (!candidate.ok) return candidate;
+              const prepared = valid(); if (!prepared.ok) return prepared;
+              if (request.signal.aborted) return { ok: false, code: 'aborted' };
+              const armed = request.armCommit(); if (!armed.ok) return armed;
+              const result = await surface.replaceImage(intent.id, source.bytes, source.metadata.mimeType,
+                { expectedPackageRevision: revision, commitGuard: () => valid().ok });
+              if (result.ok && result.change) return { ok: true, value: undefined };
+              const refused = valid(); if (!refused.ok) return refused;
+              return { ok: false, code: !result.ok && result.reason === 'resource-limit' ? 'resource-limit' :
+                !result.ok && result.reason === 'invalidArgs' && result.detail === 'invalid-image' ? 'invalid-document' : 'engine-failed' };
+            } catch {
+              const refused = valid(); return refused.ok ? { ok: false, code: 'engine-failed' } : refused;
+            }
+          },
+        } };
+      } catch {
+        release(); return { ok: false, code: destroyed || !checkOwned() ? 'destroyed' : 'engine-failed' };
+      }
+    };
+
     const port: DocxEnginePort = {
       inspect() {
         // Layout-derived public getters flush pending text. Keep the last copied
@@ -405,6 +544,91 @@ export async function openEigenpalDocument(
         };
       },
       beginImageInsertion: module.imageInsertion ? beginImageInsertion : undefined,
+      beginImageReplacement: module.imageInsertion ? beginImageReplacement : undefined,
+      outline() {
+        const ready = documentReadiness();
+        return ready.ok ? inspection.outline() : ready;
+      },
+      inspectDocument() {
+        const ready = documentReadiness();
+        return ready.ok ? inspection.inspectDocument() : ready;
+      },
+      selectDocumentTarget: token => inspection.select(token),
+      review() {
+        const ready = documentReadiness();
+        return !ready.ok ? ready : review ? { ok: true, value: review.query() } : { ok: false, code: 'unsupported' };
+      },
+      selectReviewItem(token) {
+        const ready = documentReadiness();
+        return !ready.ok ? ready : review ? review.navigate(token) : { ok: false, code: 'unsupported' };
+      },
+      canReview(action, token) {
+        const ready = documentReadiness();
+        if (!ready.ok) return { enabled: false, reason: ready.code };
+        if (operation.readOnly) return { enabled: false, reason: 'read-only' };
+        if (action.type === 'add-comment') {
+          const state = current().surface?.state();
+          if (!state || state.cellSelection || state.selection.anchor.paragraphId === state.selection.head.paragraphId &&
+            state.selection.anchor.offset === state.selection.head.offset) return { enabled: false, reason: 'no-selection' };
+        }
+        return review?.can(action, token) ?? { enabled: false, reason: 'unsupported' };
+      },
+      executeReview(action, target, retainedSelection, validateSettled) {
+        const normalized = normalizeDocxReviewAction(action);
+        if (!normalized.ok) return normalized;
+        action = normalized.value;
+        if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+        if (fault) return { ok: false, code: 'engine-failed' };
+        if (saving || executingGuarded || nativeDispatching()) return { ok: false, code: 'busy' };
+        if (composing) return { ok: false, code: 'composing' };
+        if (operation.readOnly) return { ok: false, code: 'read-only' };
+        if (!review || !validateSettled) return { ok: false, code: 'unsupported' };
+        const active = current(), surface = active.surface;
+        if (!surface) return { ok: false, code: 'unsupported' };
+        const session = surface.session, generation = active.mountGeneration, revision = session.packageRevision();
+        const pkg = session.currentPackage(), epoch = selectionEpoch;
+        if (retainedSelection && pins.get(retainedSelection)?.epoch !== epoch) return { ok: false, code: 'stale-selection' };
+        const validate = (): DocxResult<void> => {
+          if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+          if (fault) return { ok: false, code: 'engine-failed' };
+          if (composing) return { ok: false, code: 'composing' };
+          if (editor !== active || active.surface !== surface || surface.session !== session ||
+            active.mountGeneration !== generation || session.packageRevision() !== revision || session.currentPackage() !== pkg)
+            return { ok: false, code: 'stale-revision' };
+          // Tracking changes document policy; the core may announce selection while setting its author.
+          if (action.type !== 'track-changes' && (selectionEpoch !== epoch || retainedSelection && pins.get(retainedSelection)?.epoch !== epoch))
+            return { ok: false, code: 'stale-selection' };
+          return validateSettled();
+        };
+        executingGuarded = true;
+        suppressSelection++;
+        reviewGuard = validate;
+        try {
+          surface.flushPendingInput();
+          clearNativeSettlement();
+          refreshState();
+          const settled = validate();
+          if (!settled.ok) return settled;
+          if (action.type === 'add-comment') {
+            const state = surface.state();
+            if (state.cellSelection || state.selection.anchor.paragraphId === state.selection.head.paragraphId &&
+              state.selection.anchor.offset === state.selection.head.offset) return { ok: false, code: 'no-selection' };
+          }
+          const capability = review.can(action, target);
+          const after = validate();
+          if (!after.ok) return after;
+          if (!capability.enabled) return { ok: false, code: capability.reason ?? 'unsupported' };
+          let result: DocxResult<void>;
+          switch (action.type) {
+            case 'add-comment': result = review.addComment(action.text, action.author); break;
+            case 'reply-comment': result = target ? review.reply(target, action.text, action.author) : { ok: false, code: 'stale-revision' }; break;
+            case 'review-decision': result = target ? review.decide(target, action.decision) : { ok: false, code: 'stale-revision' }; break;
+            case 'track-changes': result = review.setTracking(action.enabled, action.author); break;
+          }
+          if (!destroyed) refreshState();
+          return result;
+        } finally { reviewGuard = null; suppressSelection--; executingGuarded = false; }
+      },
       imageDescription() {
         if (destroyed) return { ok: false, code: 'destroyed' };
         if (nativeSettling || saving || executingGuarded) return { ok: false, code: 'busy' };
@@ -412,6 +636,7 @@ export async function openEigenpalDocument(
         return image?.description ?? { ok: false, code: 'no-selection' };
       },
       can(command) {
+        if (isDocxReviewAction(command)) return { enabled: false, reason: 'unsupported' };
         if (isDocxImageAction(command)) {
           if (nativeSettling || saving || executingGuarded) return { enabled: false, reason: 'busy' };
           if (!image) return { enabled: false, reason: 'no-selection' };
@@ -425,6 +650,7 @@ export async function openEigenpalDocument(
         const normalized = normalizeDocxAction(command);
         if (!normalized.ok) return normalized;
         command = normalized.value;
+        if (isDocxReviewAction(command)) return { ok: false, code: 'unsupported' };
         if (nativeDispatching()) return { ok: false, code: 'busy' };
         const editReadiness = (): DocxResult<void> => {
           if (saving || executingGuarded) return { ok: false, code: 'busy' };
@@ -509,11 +735,17 @@ export async function openEigenpalDocument(
             };
             const before = validate();
             if (!before.ok) return before;
-            const capable = active.can(qualified.value.command);
-            const after = validate();
-            if (!after.ok) return after;
-            if (!capable.ok) return { ok: false, code: 'unsupported' };
-            const result = active.exec(qualified.value.command);
+            if (qualified.value.unchanged) return { ok: true, value: undefined };
+            let result;
+            if (qualified.value.command) {
+              const capable = active.can(qualified.value.command);
+              const after = validate();
+              if (!after.ok) return after;
+              if (!capable.ok) return { ok: false, code: 'unsupported' };
+              result = active.exec(qualified.value.command);
+            } else if (qualified.value.plan) {
+              result = surface.applyTableCommandPlan(qualified.value.plan);
+            } else return { ok: false, code: 'unsupported' };
             if (!destroyed) refreshState();
             return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
           } finally { suppressSelection--; executingGuarded = false; }

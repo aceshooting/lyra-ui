@@ -109,7 +109,7 @@ export async function runEditorContracts(page, check, { createEditor }) {
         documentPart: ['role', 'tabindex', 'aria-label'].map(name => documentPart.getAttribute(name)), title: mount.getAttribute('title'),
         description: document.getElementById(mount.getAttribute('aria-describedby'))?.textContent ?? null };
     }), { base: 'Document editor', toolbar: 'Editing tools', documentPart: [null, null, null], title: null,
-      description: 'Press Alt+F10 to reach the toolbar.' });
+      description: 'Press Alt+F10 to reach the toolbar or Mod+K to search commands.' });
     await remove(id);
   });
 

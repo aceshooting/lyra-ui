@@ -1,3 +1,5 @@
+import type { DocxOutline, DocxDocumentInspection } from './document-inspection-types.js';
+import type { DocxReviewAction, DocxReviewReport } from './review-types.js';
 /** Lifecycle of one document session. Destruction is terminal. */
 export type DocxStatus = 'idle' | 'opening' | 'ready' | 'error' | 'destroyed';
 export type DocxCommand = 'bold' | 'italic' | 'underline' | 'strikethrough' | 'superscript' | 'subscript' | 'undo' | 'redo';
@@ -31,6 +33,9 @@ export type DocxEdit =
   | Readonly<{ type: 'remove-link' }>
   | DocxTableAction
   | DocxImageAction;
+/** Border edges of the current cell; inside has no edges for a collapsed caret. */
+export type DocxTableBorderTarget = 'all' | 'outside' | 'inside' | 'top' | 'bottom' | 'left' | 'right';
+export type DocxTableBorderStyle = 'single' | 'dashed' | 'dotted' | 'double' | 'triple' | 'thick';
 /** Simple, unnested table authoring. Inserted/grown tables are at most 20 by 20 cells. */
 export type DocxTableAction =
   | Readonly<{ type: 'insert-table'; rows: number; columns: number }>
@@ -38,7 +43,17 @@ export type DocxTableAction =
   | Readonly<{ type: 'insert-table-column'; where: 'left' | 'right' }>
   | Readonly<{ type: 'delete-table-row' }>
   | Readonly<{ type: 'delete-table-column' }>
-  | Readonly<{ type: 'delete-table' }>;
+  | Readonly<{ type: 'delete-table' }>
+  /** Repeat the first row as a header; false clears repeated-header flags. */
+  | Readonly<{ type: 'table-header-row'; enabled: boolean }>
+  | Readonly<{ type: 'table-cell-alignment'; value: 'top' | 'center' | 'bottom' }>
+  /** A six-digit hex fill, or null to clear direct cell shading. */
+  | Readonly<{ type: 'table-cell-shading'; color: string | null }>
+  | Readonly<{ type: 'table-cell-borders'; target: DocxTableBorderTarget; style: 'none' }>
+  /** Border width: 0.25–12 points in eighth-point steps; color: #RRGGBB or auto. */
+  | Readonly<{ type: 'table-cell-borders'; target: DocxTableBorderTarget; style: DocxTableBorderStyle; widthPoints: number; color: string }>
+  /** Total width: 15–1440 points in twentieth-point steps, at least 15 per column. Columns become equal widths. */
+  | Readonly<{ type: 'table-width'; widthPoints: number }>;
 /** Existing plain body inline images; resize uses 1–1440 points on each axis. */
 export type DocxImageAction =
   | Readonly<{ type: 'resize-image'; widthPoints: number; heightPoints: number }>
@@ -69,7 +84,7 @@ export interface DocxInsertImageOptions {
   readonly selection?: DocxSelectionLease;
   readonly signal?: AbortSignal;
 }
-export type DocxAction = DocxCommand | DocxEdit;
+export type DocxAction = DocxCommand | DocxEdit | DocxReviewAction;
 /** Rendered selection context, advisory only; execution checks canonical topology. */
 export interface DocxTableContext {
   readonly rows: number;
@@ -147,7 +162,7 @@ export interface DocxSearchResults {
 }
 export interface DocxSnapshot {
   readonly status: DocxStatus;
-  readonly activity: 'saving' | 'inserting-image' | null;
+  readonly activity: 'saving' | 'inserting-image' | 'replacing-image' | null;
   readonly revision: DocxRevision | null;
   readonly dirty: boolean;
   readonly readOnly: boolean;
@@ -179,6 +194,10 @@ export interface DocxSession {
   can(command: DocxAction): DocxCommandAvailability;
   /** Cached caret availability; insertion separately qualifies the current package. */
   canInsertImage(): DocxCommandAvailability;
+  /** Cached selected-image availability; replacement preserves its size and description. */
+  canReplaceImage(): DocxCommandAvailability;
+  /** Replace the original selected image with owned raster bytes in one undoable edit. */
+  replaceImage(bytes: Uint8Array, options?: DocxInsertImageOptions): Promise<DocxResult<DocxRevision>>;
   /** Insert one owned raster at the original caret; success identifies its committed revision. */
   insertImage(source: DocxImageSource, options?: DocxInsertImageOptions): Promise<DocxResult<DocxRevision>>;
   retainSelection(): DocxResult<DocxSelectionLease>;
@@ -194,6 +213,15 @@ export interface DocxSession {
   selectImage(direction: DocxImageDirection): DocxResult<void>;
   /** On-demand font choices; at most 128 entries, without downloading fonts. */
   fontFamilies(): DocxResult<DocxFontFamilies>;
+  /** Bounded body headings; identifiers expire after a new outline query or content edit. */
+  outline(): DocxResult<DocxOutline>;
+  /** Bounded body diagnostics, with opaque revision-scoped navigation identifiers. */
+  inspectDocument(): DocxResult<DocxDocumentInspection>;
+  selectOutlineItem(id: string, options?: { expectedRevision?: DocxRevision }): DocxResult<void>;
+  selectDiagnostic(id: string, options?: { expectedRevision?: DocxRevision }): DocxResult<void>;
+  /** Copied comments and tracked changes; reading never saves or settles pending input. */
+  review(): DocxResult<DocxReviewReport>;
+  selectReviewItem(id: string, options?: { expectedRevision?: DocxRevision }): DocxResult<void>;
   /** Literal search, 1–256 code units. A new search invalidates previous match ids. */
   find(query: string, options?: DocxSearchOptions): DocxResult<DocxSearchResults>;
   /** Read-only navigation does not dirty the document. Foreign, forged or invalidated ids return stale-search. */

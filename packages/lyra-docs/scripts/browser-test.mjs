@@ -16,6 +16,11 @@ import { runEditorLayout } from './layout-browser.mjs';
 import { runFormattingTools } from './formatting-browser.mjs';
 import { runTableEditing } from './tables-browser.mjs';
 import { runEditorContracts } from './editor-contracts-browser.mjs';
+import { runCommandsAndSearch } from './commands-search-browser.mjs';
+import { runDocumentInspection } from './document-inspection-browser.mjs';
+import { runReview } from './review-browser.mjs';
+import { runTableFormatting } from './tables-formatting-browser.mjs';
+import { runImageExtensions } from './image-extensions-browser.mjs';
 import { filesUnder, serveStatic } from './lib/static-files.mjs';
 import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
 
@@ -32,6 +37,7 @@ const SELECTORS = {
   DOCX_FORMATTING_ONLY: ['1'],
   DOCX_INSERTION_ONLY: ['core', 'ui', 'all'],
   DOCX_IMAGES_ONLY: ['core', 'ui', 'all'],
+  DOCX_DOCUMENT_TOOLS_ONLY: ['1', 'inspection', 'review', 'tables', 'images', 'commands'],
 };
 const selection = Object.fromEntries(Object.entries(SELECTORS)
   .filter(([variable]) => (process.env[variable] ?? '') !== '')
@@ -1325,12 +1331,26 @@ async function runSharedSuites(page, check, { record }) {
   await runImageInsertion(page, check, { createEditor, saveEditor, assertProtectedParts });
   await runImageInsertionTools(page, check, { createEditor, saveEditor, assertProtectedParts });
   await runEditorContracts(page, check, { createEditor });
+  await runDocumentTools(page, check);
+}
+
+async function runDocumentTools(page, check) {
+  const selected = process.env.DOCX_DOCUMENT_TOOLS_ONLY;
+  assert.ok(!selected || ['1', 'inspection', 'review', 'tables', 'images', 'commands'].includes(selected));
+  const includes = name => !selected || selected === '1' || selected === name;
+  if (includes('inspection')) await runDocumentInspection(page, check, { createEditor, saveEditor });
+  if (includes('review')) await runReview(page, check, { createEditor, saveEditor });
+  if (includes('tables')) await runTableFormatting(page, check, { createEditor, saveEditor, assertProtectedParts });
+  if (includes('images')) await runImageExtensions(page, check, { createEditor, saveEditor });
+  if (includes('commands')) await runCommandsAndSearch(page, check, { createEditor, saveEditor });
 }
 
 // A DOCX_*_ONLY selector narrows the run to one suite family.
 async function runSelectedSuite(page, check) {
   if (process.env.DOCX_LAYOUT_ONLY) {
     await runEditorLayout(page, check, { createEditor, saveEditor });
+  } else if (process.env.DOCX_DOCUMENT_TOOLS_ONLY) {
+    await runDocumentTools(page, check);
   } else if (process.env.DOCX_FORMATTING_ONLY) {
     await runFormattingTools(page, check, { saveEditor });
   } else if (process.env.DOCX_INSERTION_ONLY) {
@@ -1392,7 +1412,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
       assert.deepEqual(await page.evaluate(() => ['lr-checkbox', 'lr-color-picker', 'lr-lite-chart', 'lr-swatch-picker', 'lr-textarea']
         .filter(name => customElements.get(name))), []);
     });
-    const selected = ['LAYOUT', 'FORMATTING', 'INSERTION', 'IMAGES'].some(key => process.env[`DOCX_${key}_ONLY`]);
+    const selected = Object.keys(selection).length > 0;
     if (selected) {
       await runSelectedSuite(page, check);
     } else {

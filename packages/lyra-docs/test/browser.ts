@@ -19,7 +19,8 @@ const test = {
   async imageBytes(kind: 'png' | 'jpeg' | 'gif') {
     return (await import('./corpus.js')).imageInsertionBytes(kind);
   },
-  async fixture(kind: `image-${string}` | `table-${string}` | 'accepted' | 'external' | 'malformed' | 'representative' | 'basic-editing' | 'mixed-formatting' | 'search-limit' | 'chart') {
+  async fixture(kind: `image-${string}` | `table-${string}` | 'accepted' | 'external' | 'malformed' | 'representative' | 'basic-editing' | 'mixed-formatting' | 'search-limit' | 'chart' | 'review') {
+    if (kind === 'review') return (await import('./review-fixtures.js')).reviewFixture();
     if (kind === 'chart') return (await import('./corpus.js')).chartFixture();
     if (kind.startsWith('image-')) return (await import('./corpus.js')).imageFixture(kind);
     if (kind.startsWith('table-')) return (await import('./corpus.js')).tableFixture(kind);

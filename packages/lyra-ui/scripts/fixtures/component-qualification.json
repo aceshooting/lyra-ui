@@ -11207,6 +11207,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/layout/command-palette/command-palette-contrast.test.ts",
+              "test": "keeps highlighted command descriptions and shortcuts readable in ${mode} mode",
+              "target": "palette",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/command-palette/command-palette-search-sizing.test.ts",
               "test": "keeps the sized query row accessible with commands rendered",
               "target": "el",
@@ -11244,8 +11250,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/command-palette/command-palette-native-scroll.test.ts",
-              "test": "keeps keyboard selection visible while coalescing actual result-list scroll events",
+              "file": "src/components/layout/command-palette/command-palette-contrast.test.ts",
+              "test": "keeps highlighted command descriptions and shortcuts readable in ${mode} mode",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -11365,6 +11371,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/command-palette/command-palette-contrast.test.ts",
           "src/components/layout/command-palette/command-palette-native-scroll.test.ts",
           "src/components/layout/command-palette/command-palette-remediation.test.ts",
           "src/components/layout/command-palette/command-palette-search-sizing.test.ts",
@@ -24282,7 +24289,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2365,
+              "line": 2384,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24322,6 +24329,7 @@
           "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
           "src/components/data/heatmap/heatmap-grid-navigation.test.ts",
           "src/components/data/heatmap/heatmap-i18n.test.ts",
+          "src/components/data/heatmap/heatmap-label-cost.test.ts",
           "src/components/data/heatmap/heatmap-legend-visibility.test.ts",
           "src/components/data/heatmap/heatmap-matrix-presentation.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas-dev-gate.test.ts",

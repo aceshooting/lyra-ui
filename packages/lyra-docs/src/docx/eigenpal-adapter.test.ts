@@ -4,7 +4,7 @@ import type { DocxEditorInstance, DocxEditorConfig, EditorEvents } from '@docx-e
 import { openEigenpalDocument } from './eigenpal-adapter.js';
 import type { DocxEngineEvent } from './engine-port.js';
 import { deriveImageInsertionEngine } from './engine-image-insertion-loader.js';
-import { normalizeImageInsertion } from './image-insertion-input.js';
+import { normalizeImageInsertion, normalizeImageReplacement } from './image-insertion-input.js';
 import type { DocxResult } from './types.js';
 
 function deferred<T>() {
@@ -547,8 +547,9 @@ test('table labels update through the public editor without inspection or mutati
   assert.equal(opened.value.refreshTableLabels?.(labels), false);
 });
 
-async function imageHarness(options = { kind: 'image-simple', readOnly: false }) {
-  const { readOoxmlPackage } = await import('@docx-editor.dev/core/store');
+async function imageHarness(options = { kind: 'image-simple', readOnly: false }, imageOperations = false) {
+  const store = await import('@docx-editor.dev/core/store');
+  const { readOoxmlPackage } = store;
   const { imageFixture } = await import('../../test/corpus.js');
   const parsed = readOoxmlPackage(imageFixture(options.kind)); assert(parsed.ok);
   const pkg = parsed.package, part = pkg.parts.get(pkg.mainDocumentPart)!;
@@ -575,11 +576,208 @@ async function imageHarness(options = { kind: 'image-simple', readOnly: false })
   can: () => { f.calls++; f.onCan(); return { ok: true }; },
   exec: () => { f.dispatches++; f.revision++; h.emit('change', { revision: f.revision }); return { ok: true }; } });
   h.saveWith(() => { f.saves++; return Promise.resolve(new Uint8Array().buffer); });
-  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' }, { readOnly: options.readOnly, signal: new AbortController().signal }, () => f.owned, h.loader); assert(opened.ok);
+  const imageInsertion = imageOperations ? deriveImageInsertionEngine((await import('@docx-editor.dev/core/editor')).blankDocumentBytes, store) : undefined;
+  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' }, { readOnly: options.readOnly, signal: new AbortController().signal }, () => f.owned,
+    async () => ({ ...await h.loader(), ...(imageInsertion ? { imageInsertion } : {}) })); assert(opened.ok);
   const port = opened.value;
   port.subscribe(() => { port.inspect(); }); port.inspect();
   return { ...h, port, f, image, nodes };
 }
+
+test('replacement adapter captures the original selected image without settling input and owns the barrier', async () => {
+  const h = await imageHarness(undefined, true);
+  const captured = h.port.beginImageReplacement?.(); assert(captured?.ok);
+  assert.equal(h.f.flushes, 0);
+  assert.equal(captured.value.validate().ok, true);
+  const blocked = new Event('beforeinput', { cancelable: true }); h.child.dispatchEvent(blocked);
+  assert.equal(blocked.defaultPrevented, true);
+  h.f.offset++;
+  assert.deepEqual(captured.value.validate(), { ok: false, code: 'stale-selection' });
+  captured.value.release(); captured.value.release();
+  assert.equal(captured.value.validate().ok, false);
+  h.port.destroy();
+});
+
+test('replacement adapter refuses prior typing that changes the captured revision before image dispatch', async () => {
+  const h = await imageHarness(undefined, true);
+  const { imageInsertionBytes } = await import('../../test/corpus.js');
+  const source = normalizeImageReplacement(imageInsertionBytes('png'), {}, () => ({ ok: true, value: undefined })); assert(source.ok);
+  let dispatched = 0;
+  h.engine.surface!.replaceImage = async () => { dispatched++; return { ok: false, reason: 'unsupported' }; };
+  h.f.onFlush = () => { h.f.revision++; h.emit('change', { revision: h.f.revision }); };
+  const captured = h.port.beginImageReplacement?.(); assert(captured?.ok);
+  const result = await captured.value.execute(source.value.source, { signal: new AbortController().signal,
+    validateOriginal: () => ({ ok: true, value: undefined }), armCommit: () => ({ ok: true, value: undefined }) });
+  assert.equal(result.ok, false); assert.equal(dispatched, 0); assert.equal(h.f.flushes, 1);
+  captured.value.release(); h.port.destroy();
+});
+
+test('replacement adapter refuses read-only and missing image contexts without acquiring a barrier', async () => {
+  const readonly = await imageHarness({ kind: 'image-simple', readOnly: true }, true);
+  assert.deepEqual(readonly.port.beginImageReplacement?.(), { ok: false, code: 'read-only' });
+  readonly.port.destroy();
+  const h = await imageHarness(undefined, true); h.f.id = ''; h.port.inspect();
+  assert.deepEqual(h.port.beginImageReplacement?.(), { ok: false, code: 'no-selection' });
+  const input = new Event('beforeinput', { cancelable: true }); h.child.dispatchEvent(input);
+  assert.equal(input.defaultPrevented, false); h.port.destroy();
+});
+
+async function replacementHarness() {
+  const h = await imageHarness(undefined, true), store = await import('@docx-editor.dev/core/store');
+  const surface = h.engine.surface!, pkg = surface.session.currentPackage();
+  const live = new store.TreePackageStore(pkg, pkg.parts.get(pkg.mainDocumentPart)!);
+  const counts = { decodes: 0, dispatches: 0, armed: 0, onDecode: async () => {}, onLive() {} };
+  const decodePort = { async decode() { counts.decodes++; await counts.onDecode(); return { pixelWidth: 64, pixelHeight: 32, dpiX: 96, dpiY: 96 }; } };
+  Object.assign(surface, { imageDecodePort: () => decodePort, session: {
+    currentPackage: () => live.currentPackage(), part: () => live.currentPackage().parts.get(pkg.mainDocumentPart)!, packageRevision: () => live.packageRevision,
+  } });
+  surface.replaceImage = async (id, bytes, type, options) => {
+    counts.dispatches++; counts.onLive();
+    const result = await live.replaceImage({ kind: 'body' }, id, bytes, type, decodePort, options);
+    if (result.ok && result.change) h.emit('change', { revision: live.packageRevision });
+    return result;
+  };
+  const { imageInsertionBytes } = await import('../../test/corpus.js');
+  const normalized = normalizeImageReplacement(imageInsertionBytes('png'), {}, () => ({ ok: true, value: undefined })); assert(normalized.ok);
+  const operation = () => ({ signal: new AbortController().signal, validateOriginal: (): DocxResult<void> => ({ ok: true, value: undefined }),
+    armCommit: (): DocxResult<void> => { counts.armed++; return { ok: true, value: undefined }; } });
+  return { ...h, live, counts, source: normalized.value.source, operation };
+}
+
+test('replacement commits once with the native input barrier held across candidate and live decode', async () => {
+  const h = await replacementHarness(), captured = h.port.beginImageReplacement!(); assert(captured.ok);
+  h.counts.onDecode = async () => { const input = new Event('pointerdown', { cancelable: true }); h.child.dispatchEvent(input); assert(input.defaultPrevented); };
+  assert.deepEqual(await captured.value.execute(h.source, h.operation()), { ok: true, value: undefined });
+  assert.equal(h.live.packageRevision, 1); assert.equal(h.counts.decodes, 2); assert.equal(h.counts.dispatches, 1); assert.equal(h.counts.armed, 1);
+  captured.value.release();
+  const input = new Event('pointerdown', { cancelable: true }); h.child.dispatchEvent(input); assert.equal(input.defaultPrevented, false);
+  h.port.destroy();
+});
+
+test('replacement refuses original selection drift during either decode without committing', async () => {
+  for (const phase of [1, 2]) {
+    const h = await replacementHarness(), captured = h.port.beginImageReplacement!(); assert(captured.ok);
+    h.counts.onDecode = async () => { if (h.counts.decodes === phase) { h.f.offset++; h.emit('selectionChange'); h.f.offset--; h.emit('selectionChange'); } };
+    assert.deepEqual(await captured.value.execute(h.source, h.operation()), { ok: false, code: 'stale-selection' });
+    assert.equal(h.live.packageRevision, 0); assert.equal(h.counts.dispatches, phase - 1);
+    captured.value.release(); h.port.destroy();
+  }
+});
+
+test('replacement cancellation and destruction during preparation cannot reach the live package', async () => {
+  for (const terminal of ['abort', 'destroy']) {
+    const h = await replacementHarness(), captured = h.port.beginImageReplacement!(); assert(captured.ok);
+    const wait = deferred<void>(), entered = deferred<void>(), controller = new AbortController();
+    h.counts.onDecode = async () => { entered.resolve(); await wait.promise; };
+    const pending = captured.value.execute(h.source, { ...h.operation(), signal: controller.signal });
+    await entered.promise;
+    if (terminal === 'abort') controller.abort(); else h.port.destroy();
+    wait.resolve();
+    assert.deepEqual(await pending, { ok: false, code: terminal === 'abort' ? 'aborted' : 'destroyed' });
+    assert.equal(h.live.packageRevision, 0); assert.equal(h.counts.dispatches, 0); assert.equal(h.counts.armed, 0);
+    captured.value.release(); h.port.destroy();
+  }
+});
+
+test('replacement ignores cancellation after the commit barrier but rejects live decode failures', async () => {
+  const h = await replacementHarness(), captured = h.port.beginImageReplacement!(); assert(captured.ok);
+  const controller = new AbortController(); h.counts.onLive = () => controller.abort();
+  assert.deepEqual(await captured.value.execute(h.source, { ...h.operation(), signal: controller.signal }), { ok: true, value: undefined });
+  assert.equal(h.live.packageRevision, 1); captured.value.release(); h.port.destroy();
+  const failed = await replacementHarness(), attempt = failed.port.beginImageReplacement!(); assert(attempt.ok);
+  failed.counts.onDecode = async () => { if (failed.counts.decodes === 2) throw new Error('decode failed'); };
+  assert.deepEqual(await attempt.value.execute(failed.source, failed.operation()), { ok: false, code: 'invalid-document' });
+  assert.equal(failed.live.packageRevision, 0); attempt.value.release(); failed.port.destroy();
+});
+
+test('replacement normalizes live dispatch exceptions without hiding original selection invalidation', async () => {
+  for (const selectionChanged of [false, true]) {
+    const h = await replacementHarness(), before = h.live.currentPackage();
+    const captured = h.port.beginImageReplacement!(); assert(captured.ok);
+    h.engine.surface!.replaceImage = async () => {
+      if (selectionChanged) { h.f.offset++; h.emit('selectionChange'); }
+      throw new Error('dispatch failed');
+    };
+    assert.deepEqual(await captured.value.execute(h.source, h.operation()),
+      { ok: false, code: selectionChanged ? 'stale-selection' : 'engine-failed' });
+    assert.equal(h.live.currentPackage(), before); assert.equal(h.live.packageRevision, 0);
+    assert.equal(h.counts.armed, 1);
+    captured.value.release();
+    const input = new Event('pointerdown', { cancelable: true }); h.child.dispatchEvent(input);
+    assert.equal(input.defaultPrevented, false);
+    h.port.destroy();
+  }
+});
+
+async function documentToolsHarness(readOnly = false) {
+  const h = harness(), store = await import('@docx-editor.dev/core/store');
+  const { reviewFixture } = await import('../../test/review-fixtures.js');
+  const parsed = store.readOoxmlPackage(reviewFixture()); assert(parsed.ok);
+  const pkg = parsed.package, part = pkg.parts.get(pkg.mainDocumentPart)!;
+  const state = { revision: 0, comments: 0, flushes: 0, navigations: 0, owned: true, rangeEnd: 1, mode: 'editing', onFlush() {} };
+  Object.assign(h.engine, { mountGeneration: 0, surface: { session: { currentPackage: () => pkg, part: () => part,
+    packageRevision: () => state.revision, storyParts: () => [part] }, flushPendingInput() { state.flushes++; state.onFlush(); },
+    state: () => ({ selection: { anchor: { paragraphId: 'paragraph', offset: 0 }, head: { paragraphId: 'paragraph', offset: state.rangeEnd } }, cellSelection: null }) },
+    getEditingMode: () => state.mode,
+    setAuthor() { h.emit('selectionChange'); },
+    exec(command: { type: string; mode?: string }) { if (command.type === 'setEditingMode') { state.mode = command.mode!; return { ok: true, changed: false }; } return { ok: false, reason: 'unsupported' }; },
+    addComment() { state.comments++; state.revision++; h.emit('change', { revision: state.revision }); return { ok: true, changed: true }; },
+    setActiveReviewItem() { state.navigations++; h.emit('selectionChange'); return { ok: true, changed: false }; },
+  });
+  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' }, { readOnly, signal: new AbortController().signal },
+    () => state.owned, async () => ({ ...await h.loader(), review: store })); assert(opened.ok);
+  const port = opened.value; port.subscribe(() => {});
+  return { ...h, port, state };
+}
+
+test('review adapter registers the public module and allows read-only queries and navigation without edits', async () => {
+  const h = await documentToolsHarness(true);
+  assert.equal(h.creation()?.modules?.[0]?.id, 'lyra-review');
+  const result = h.port.review!(); assert(result.ok); assert(result.value.items.length > 0);
+  const target = result.value.items.find(item => item.navigable)!;
+  assert.deepEqual(h.port.selectReviewItem!(target.token), { ok: true, value: undefined });
+  assert.equal(h.state.navigations, 1); assert.equal(h.state.revision, 0); assert.equal(h.state.flushes, 0);
+  assert.deepEqual(h.port.canReview!({ type: 'add-comment', text: 'Note', author: 'Editor' }), { enabled: false, reason: 'read-only' });
+  h.port.destroy(); assert.deepEqual(h.port.review!(), { ok: false, code: 'destroyed' });
+});
+
+test('review adapter refuses a retained pin whose original engine selection epoch has changed', async () => {
+  const h = await documentToolsHarness(), pin = h.port.retainSelection();
+  h.emit('selectionChange');
+  assert.deepEqual(h.port.executeReview!({ type: 'add-comment', text: 'Original target', author: 'Editor' }, undefined, pin,
+    () => ({ ok: true, value: undefined })), { ok: false, code: 'stale-selection' });
+  assert.equal(h.state.comments, 0); assert.equal(h.state.flushes, 0); h.port.destroy();
+});
+
+test('review adapter requires a selected text range for new comments', async () => {
+  const h = await documentToolsHarness(); h.state.rangeEnd = 0;
+  const command = { type: 'add-comment', text: 'Note', author: 'Writer' } as const;
+  assert.deepEqual(h.port.canReview!(command), { enabled: false, reason: 'no-selection' });
+  assert.deepEqual(h.port.executeReview!(command, undefined, undefined, () => ({ ok: true, value: undefined })), { ok: false, code: 'no-selection' });
+  h.state.rangeEnd = 1;
+  assert.deepEqual(h.port.canReview!(command), { enabled: true });
+  assert.deepEqual(h.port.executeReview!(command, undefined, undefined, () => ({ ok: true, value: undefined })), { ok: true, value: undefined });
+  assert.equal(h.state.comments, 1); h.port.destroy();
+});
+
+test('tracking mode tolerates the public author selection notification without changing document content', async () => {
+  const h = await documentToolsHarness();
+  assert.deepEqual(h.port.executeReview!({ type: 'track-changes', enabled: true, author: 'Writer' }, undefined, undefined,
+    () => ({ ok: true, value: undefined })), { ok: true, value: undefined });
+  const report = h.port.review!(); assert(report.ok); assert.equal(report.value.enabled, true); assert.equal(report.value.author, 'Writer');
+  assert.equal(h.state.revision, 0); h.port.destroy();
+});
+
+test('review adapter authenticates revision targets and refuses input settled after action capture', async () => {
+  const h = await documentToolsHarness(), report = h.port.review!(); assert(report.ok);
+  assert.deepEqual(h.port.selectReviewItem!({}), { ok: false, code: 'stale-revision' });
+  h.state.onFlush = () => { h.state.revision++; h.emit('change', { revision: h.state.revision }); };
+  assert.deepEqual(h.port.executeReview!({ type: 'add-comment', text: 'Note', author: 'Editor' }, undefined, undefined,
+    () => ({ ok: true, value: undefined })), { ok: false, code: 'stale-revision' });
+  assert.equal(h.state.comments, 0);
+  assert.deepEqual(h.port.selectReviewItem!(report.value.items[0]!.token), { ok: false, code: 'stale-revision' });
+  h.port.destroy();
+});
 
 test('image adapter compares identical values before core capability or mutation and returns copied metadata', async () => {
   const h = await imageHarness();

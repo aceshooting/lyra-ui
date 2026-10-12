@@ -2,6 +2,7 @@ import type { DocxEditorInstance, EditorCommand } from '@docx-editor.dev/core';
 import { DOCX_LIMITS, normalizeDocxAction } from './commands.js';
 import type { DocxAction, DocxTableAction, DocxImageAction, DocxCommandAvailability, DocxFormatting, DocxParagraphStyles, DocxResult } from './types.js';
 import type { DocxEngineSearchOptions } from './engine-port.js';
+import type { DocxReviewAction } from './review-types.js';
 
 /** Clip display context without dividing a UTF-16 surrogate pair. */
 function clip(value: string, limit: number, tail = false): string {
@@ -16,7 +17,7 @@ function clip(value: string, limit: number, tail = false): string {
   return value.slice(0, end);
 }
 
-export function eigenpalCommand(action: Exclude<DocxAction, DocxTableAction | DocxImageAction>): EditorCommand {
+export function eigenpalCommand(action: Exclude<DocxAction, DocxTableAction | DocxImageAction | DocxReviewAction>): EditorCommand {
   if (typeof action === 'string') return action === 'undo' || action === 'redo' ? { type: action } :
     { type: 'toggleMark', mark: action === 'strikethrough' ? 'strike' : action };
   switch (action.type) {
@@ -86,7 +87,7 @@ export function createEigenpalEditing(
       const valid = choices.filter(family => normalizeDocxAction({ type: 'font-family', family }).ok);
       return Object.freeze({ items: Object.freeze(valid.slice(0, DOCX_LIMITS.fonts)), truncated: valid.length > DOCX_LIMITS.fonts || valid.length !== choices.length });
     },
-    can(action: Exclude<DocxAction, DocxTableAction | DocxImageAction>): DocxCommandAvailability {
+    can(action: Exclude<DocxAction, DocxTableAction | DocxImageAction | DocxReviewAction>): DocxCommandAvailability {
       if (typeof action !== 'string' && action.type === 'paragraph-style') {
         paragraphStyles();
         if (!styleIds.has(action.styleId)) return { enabled: false, reason: 'invalid-option' };

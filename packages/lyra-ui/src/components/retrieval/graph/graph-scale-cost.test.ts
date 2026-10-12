@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { LyraGraph, type LyraGraphEdge, type LyraGraphNode } from './graph.js';
-import { drawGraphScene } from './graph-canvas.js';
+import { drawGraphScene, type CanvasScene } from './graph-canvas.js';
 
 const NODE_COUNT = 300;
 const LINK_COUNT = 600;
@@ -180,4 +180,38 @@ it('hands each link its own dash array to the canvas and draws nodes without Pat
   }
   expect(paths).to.equal(0);
   expect(dashes.includes(dash)).to.equal(true);
+});
+
+it('reuses hull paths across camera paints and reparses changed geometry', () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 200; canvas.height = 200;
+  const context = canvas.getContext('2d')!;
+  const hull = { d: 'M60 60L100 60L100 100L60 100Z', fill: 'red' };
+  const scene: CanvasScene = {
+    hulls: [hull], links: [], nodes: [], edgeLabels: [], nodeLabels: [],
+    showNodeLabels: false, haloColor: 'black', selectedColor: 'black',
+    labelColor: 'black', labelHaloColor: 'white', font: '10px sans-serif', hullOpacity: 1,
+  };
+  const OriginalPath2D = window.Path2D;
+  let paths = 0;
+  window.Path2D = class extends OriginalPath2D {
+    constructor(...args: ConstructorParameters<typeof Path2D>) { super(...args); paths += 1; }
+  } as typeof Path2D;
+  try {
+    drawGraphScene(context, { k: 1, x: 0, y: 0 }, scene);
+    const first = canvas.toDataURL();
+    context.clearRect(0, 0, 200, 200);
+    drawGraphScene(context, { k: 1, x: 10, y: 0 }, scene);
+    expect(context.getImageData(105, 80, 1, 1).data[0]).to.equal(255);
+    context.clearRect(0, 0, 200, 200);
+    drawGraphScene(context, { k: 1, x: 0, y: 0 }, scene);
+    expect(canvas.toDataURL()).to.equal(first);
+    expect(paths).to.equal(1);
+    hull.d = 'M130 130L160 130L160 160L130 160Z';
+    context.clearRect(0, 0, 200, 200);
+    drawGraphScene(context, { k: 1, x: 0, y: 0 }, scene);
+    expect(paths).to.equal(2);
+    expect(context.getImageData(80, 80, 1, 1).data[3]).to.equal(0);
+    expect(context.getImageData(145, 145, 1, 1).data[0]).to.equal(255);
+  } finally { window.Path2D = OriginalPath2D; }
 });

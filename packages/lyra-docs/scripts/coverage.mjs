@@ -37,7 +37,7 @@ const unitStatus = run(process.execPath, [
 // Always the complete suite: clear any narrowing selector left in the shell.
 const browserStatus = run(process.execPath, ['scripts/browser-test.mjs'], {
   DOCX_COVERAGE: '1', DOCX_BROWSERS: 'chromium', DOCX_PERFORMANCE: '0',
-  DOCX_LAYOUT_ONLY: '', DOCX_FORMATTING_ONLY: '', DOCX_INSERTION_ONLY: '', DOCX_IMAGES_ONLY: '',
+  DOCX_LAYOUT_ONLY: '', DOCX_FORMATTING_ONLY: '', DOCX_INSERTION_ONLY: '', DOCX_IMAGES_ONLY: '', DOCX_DOCUMENT_TOOLS_ONLY: '',
 });
 const metadata = await reportCoverage({ root, unitStatus, browserStatus });
 process.exitCode = unitStatus || browserStatus;

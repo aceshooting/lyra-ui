@@ -6,10 +6,11 @@ engine as an optional peer. Existing document viewers, including
 `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
 The editor supports opening local DOCX files or caller-provided bytes, a blank
-document, paragraph and text formatting, bounded find and replace-one, and
-explicit save receipts. This first release covers the bounded inputs and actions
-documented here. It does not
-establish general Word compatibility or a broader format support commitment.
+document, paragraph and text formatting, command search, bounded find and replace-one,
+body outline and checks, selected image and table tools, comments and bounded tracked
+text review, and explicit save receipts. The supported inputs and actions are
+documented here; they do not establish general Word compatibility or a broader
+format support commitment.
 
 Install the package with its `@aceshooting/lyra-ui` peer, and the optional document engine
 when using the editor:
@@ -55,6 +56,30 @@ The toolbar has **New**, **Open**, and **Save**, plus **Bold**, **Italic**,
 **Undo**, and **Redo**. Its editing tools also support paragraph styles, alignment,
 bullet and numbered lists, indent and outdent, line spacing, font family and size, text
 color and highlight, page breaks, hyperlinks, and find/replace-one.
+
+**Search commands** (Ctrl+K or Command+K from the document or command trigger)
+searches a fixed command catalog with localized labels and availability explanations. Formatting
+commands retain the original selection while the palette has focus. Actions
+that need entered values remain in their tool panels. Escape closes the palette. **Find**
+(Ctrl+F or Command+F from the document) shows clickable numbered excerpts and the current match.
+**Replace and advance** replaces one selected match, refreshes the bounded results,
+and advances when the fresh match order can be established. Truncated results or
+ambiguous changes require choosing a match again; it does not replace every occurrence.
+
+Custom toolbars can import `DOCX_COMMAND_CATALOG`, `buildDocxCommandAction`, and the
+`DocxCommandDescriptor` type from `@aceshooting/lyra-docs/docx`. The catalog contains
+localization keys, groups, shortcut hints, actions, and host intents. Check each
+action with `session.can()` before offering it, and execute it through the normal
+revision and retained-selection contracts.
+
+**Outline**, **Document checks**, and **Review** open on-demand panels. Outline links to
+qualified body headings. Checks reports skipped heading levels, missing inline
+image descriptions, missing first-row table header flags, and content it could not
+check. These are bounded metadata checks, not accessibility certification. Review
+shows copied comments and revisions, with explicit author and comment fields,
+reply/resolve/reopen/delete controls, and accept/reject for supported tracked text.
+Unsupported or orphaned review records remain visible without edit actions.
+Refresh a panel after editing; its location identifiers expire with the revision.
 
 Text color and highlight are Word-style panels: a palette of Word's standard colors (or
 its highlight colors), **Automatic color** or **No highlight**, and for text an inline
@@ -107,7 +132,7 @@ action. Paragraph style and font catalogs are read only when requested (for
 example, when a picker opens), not on each keystroke. A style action must refer
 to a style present in the open document.
 
-The component's localizable messages use these keys through Lyra's inherited
+The component's localizable messages include these keys through Lyra's inherited
 `strings` property:
 
 ```text
@@ -153,7 +178,15 @@ docxEditorCancel, docxEditorFind, docxEditorFindQuery,
 docxEditorFindSubmit, docxEditorMatchCase, docxEditorWholeWord,
 docxEditorFindCount, docxEditorFindSelectMatch, docxEditorFindTruncated, docxEditorPrevious,
 docxEditorNext, docxEditorReplacement, docxEditorReplace,
-docxEditorReplaced, docxEditorEditUnavailable
+docxEditorReplaced, docxEditorEditUnavailable,
+docxEditorCommands, docxEditorCommand*, docxEditorReason*,
+docxEditorFindCurrent, docxEditorFindResults, docxEditorFindMatch, docxEditorReplaceAdvance,
+docxEditorOutline, docxEditorOutlineEmpty, docxEditorOutlineHeading,
+docxEditorChecks, docxEditorChecksScope, docxEditorChecksEmpty, docxEditorCheck*,
+docxEditorCapability*, docxEditorQueryTruncated, docxEditorRefresh, docxEditorClosePanel,
+docxEditorReview*, docxEditorTableFormat*, docxEditorTableHeader*,
+docxEditorTableVertical, docxEditorTableShading, docxEditorTableWidth*, docxEditorTableBorder*,
+docxEditorReplaceImage, docxEditorReplacingImage, docxEditorImageReplaced, docxEditorReplaceImageHint
 ```
 
 Press **Alt+F10** to move focus from the document to the toolbar. The arrow keys
@@ -180,8 +213,9 @@ Table parts include `table-tools`, `table-insert-popover`, `table-insert-trigger
 `table-dialog-actions`, `table-insert-apply`, `table-insert-cancel`,
 `table-context`, `table-actions`, and `table-button`.
 
-**Insert image** opens a local file picker at the original plain paragraph
-caret. Choose a PNG, JPEG, or single-frame GIF of up to 4 MiB. A JPEG's APP1
+**Insert image** opens a local file picker at the original supported paragraph
+caret, including bounded styled paragraphs and plain table-cell boundaries. Choose
+a PNG, JPEG, or single-frame GIF of up to 4 MiB. A JPEG's APP1
 camera metadata (EXIF and XMP, which can include location) is removed before
 insertion; EXIF orientation is therefore not applied. The file name and declared file type do not
 supply image metadata or establish its format. The dialog offers width and
@@ -206,6 +240,12 @@ including read-only documents, and report when no image is available for the
 tools. Navigation changes selection without changing document content or history;
 selecting the sole already selected target is unchanged. Use **Alt+F10** and the
 toolbar's arrow keys to reach them without a pointer.
+
+**Replace image** opens a local PNG/JPEG/static-GIF picker for the selected
+eligible picture. It replaces only the encoded raster: layout dimensions, inner
+shape dimensions, title, and description remain unchanged. The picker retains
+the original image, revision and selection lease. A changed or disconnected
+document refuses a late result; successful replacement adds one undo unit.
 
 Word bar, column, line and area charts are painted from the document's own cached
 values with Lyra's `<lr-lite-chart>`, in Office's default series colors, over the engine's
@@ -257,14 +297,17 @@ confirmation; use the cancelable `lr-before-open` event to apply a host policy.
 The component exposes `snapshot()`, `open(input, options)`,
 `newDocument(options)`, `can(action)`, `execute(action, options)`,
 `paragraphStyles()`, `fontFamilies()`, `imageDescription()`, `selectImage(direction)`,
-`canInsertImage()`, `insertImage(source, options)`, `find(query, options)`,
+`canInsertImage()`, `insertImage(source, options)`, `canReplaceImage()`,
+`replaceImage(bytes, options)`, `outline()`, `inspectDocument()`, `review()`,
+`selectOutlineItem(id, options)`, `selectDiagnostic(id, options)`,
+`selectReviewItem(id, options)`, `find(query, options)`,
 `selectMatch(id, options)`, `replaceMatch(id, text, options)`, `save(options)`,
 `acknowledgeSaved(receipt)`, and `focusEditor()`. The editing and search
 methods use the same action, result, revision, and bounds contract described
 in the session API below. `open()` accepts a `Uint8Array` or `File`;
 `newDocument()` opens a blank document. These methods return `DocxResult`
 values except `snapshot()`; `open()`, `newDocument()`, and `save()` return
-`Promise<DocxResult<...>>`.
+`Promise<DocxResult<...>>`; image insertion and replacement are also asynchronous.
 
 ### Styling hooks
 
@@ -275,7 +318,10 @@ mounts are unsupported. Render `<lr-docx-editor>` itself outside other component
 shadow roots too: there, every open is refused with `invalid-mount` and a message saying so.
 
 Common formatting, alignment, list, insertion and history actions use icons with localized
-accessible names and keyboard/hover tooltips. Wide allocations place file, history,
+accessible names and keyboard/hover tooltips. A compact document-tools group above the
+editing toolbar provides Commands, Outline, Checks, Review and Replace image. The
+replacement action stays present and disabled until an eligible image is selected.
+Wide allocations place file, history,
 insertion, font and paragraph formatting tools on one row; narrower allocations use
 two rows. Contextual image and table actions are compact icon buttons with localized
 tooltips, so they fit beside the file and insertion tools; only very narrow allocations
@@ -289,14 +335,15 @@ Replace a toolbar glyph with a decorative SVG or icon assigned to its named slot
 </lr-docx-editor>
 ```
 
-Icon slots: `new-icon`, `open-icon`, `save-icon`, `undo-icon`, `redo-icon`,
+Icon slots: `new-icon`, `open-icon`, `save-icon`, `commands-icon`, `outline-icon`,
+`checks-icon`, `review-icon`, `undo-icon`, `redo-icon`,
 `bold-icon`, `italic-icon`, `underline-icon`, `strikethrough-icon`, `superscript-icon`,
 `subscript-icon`, `clear-formatting-icon`, `text-color-icon`, `highlight-icon`,
 `indent-increase-icon`, `indent-decrease-icon`, `line-spacing-icon`, `page-break-icon`,
 `alignment-left-icon`,
 `alignment-center-icon`, `alignment-right-icon`, `alignment-justify-icon`,
 `list-bullet-icon`, `list-numbered-icon`, `link-icon`, `find-icon`,
-`image-insert-icon`, `table-insert-icon`, `image-previous-icon`, `image-next-icon`,
+`image-insert-icon`, `image-replace-icon`, `table-insert-icon`, `table-format-icon`, `image-previous-icon`, `image-next-icon`,
 `image-resize-icon`, `image-description-icon`, `image-delete-icon`,
 `table-row-above-icon`, `table-row-below-icon`, `table-column-left-icon`,
 `table-column-right-icon`, `table-delete-row-icon`, `table-delete-column-icon`, and
@@ -339,6 +386,14 @@ bringing an offscreen target into view then depends on the host's scroll layout.
 | `image-resize-popover`, `image-resize-trigger`, `image-resize-fields`, `image-width`, `image-height`, `image-ratio`, `image-resize-hint`, `image-resize-actions`, `image-resize-apply`, `image-resize-cancel` | Image dimensions dialog and original aspect-ratio option |
 | `image-description-popover`, `image-description-trigger`, `image-description-fields`, `image-title`, `image-description`, `image-description-hint`, `image-description-actions`, `image-description-apply`, `image-description-cancel` | Bounded title and multiline description dialog |
 | `find-toggle`, `find`, `find-query`, `find-match-case`, `find-whole-word`, `find-submit`, `find-count`, `find-previous`, `find-next`, `find-replace`, `find-replace-button` | Demand-driven find and replace-one controls |
+| `commands-button`, `command-palette` | Command discovery trigger and searchable palette |
+| `navigation-tools` | Compact document-tools group above the editing toolbar |
+| `find-results`, `find-match`, `find-current` | Clickable bounded excerpts and current result |
+| `document-panel-toggle`, `document-panel`, `document-panel-heading`, `document-panel-refresh`, `document-panel-close` | Outline, checks and review panel controls |
+| `outline-items`, `document-target`, `inspection-items`, `diagnostic-target` | Heading and diagnostic navigation |
+| `review-author`, `review-text`, `review-submit`, `review-track`, `review-items`, `review-target`, `review-reply`, `review-decision` | Review drafts, copied items and actions |
+| `table-format-trigger`, `table-format-popover`, `table-format-fields`, `table-vertical`, `table-shading`, `table-width`, `table-border-target`, `table-border-style`, `table-border-width`, `table-border-color` | Explicit table and cell formatting |
+| `image-replace-trigger`, `image-replace-file`, `image-replace-status` | Local image replacement picker and feedback |
 | `document` | Scrollable document surface |
 | `error`, `edit-error`, `status`, `filename`, `state`, `zoom` | Load/save or edit error, file name, editor state, and the page zoom select |
 
@@ -404,7 +459,7 @@ type DocxEdit =
   | { type: 'resize-image'; widthPoints: number; heightPoints: number }
   | { type: 'image-description'; title: string; description: string }
   | { type: 'delete-image' };
-type DocxAction = DocxCommand | DocxEdit;
+type DocxAction = DocxCommand | DocxEdit | DocxReviewAction;
 interface DocxFormatting {
   readonly paragraphStyleId: string | null;
   readonly alignment: 'left' | 'center' | 'right' | 'justify' | null;
@@ -461,6 +516,95 @@ calling the engine. Link destinations, link text, and replacement text must
 contain valid XML 1.0 characters. TAB, LF, and CR are accepted; forbidden
 control characters, U+FFFE/U+FFFF, and unpaired UTF-16 surrogates are refused
 before the document changes.
+
+### Outline, body checks, and review
+
+Both the session and component provide these on-demand queries and navigation methods:
+
+```ts
+const outline = editor.outline();
+if (outline.ok && outline.value.items[0]) {
+  editor.selectOutlineItem(outline.value.items[0].id, {
+    expectedRevision: outline.value.revision,
+  });
+}
+const checks = editor.inspectDocument();
+const review = editor.review();
+```
+
+Results are copied and revision-scoped. A new query replaces that query's previous
+identifiers; any content edit invalidates them. `selectDiagnostic(locationId, options)`
+and `selectReviewItem(id, options)` use the same optional `expectedRevision` guard.
+Navigation does not edit or dirty the document. Queries neither save nor fetch,
+and refuse `busy` or `composing` while native input cannot be inspected safely.
+Read-only sessions may read reports and navigate.
+
+`outline()` returns `{ revision, items, truncated }`, with at most 512 body headings.
+Each item has `id`, `level` (1–9), `text` (at most 256 UTF-16 code units), and
+`textTruncated`. The supported profile resolves direct outline levels and bounded
+paragraph-style inheritance; it does not infer headings from font size or bold text.
+Headings in cells, other stories, hidden content or complex revision/field structures
+are outside this profile.
+
+`inspectDocument()` returns `{ revision, scope: 'body', diagnostics, capabilities,
+truncated }`, with at most 256 diagnostics. Rules are `heading-level-skipped`,
+`image-description-missing`, `table-header-missing`, and `unsupported-content`.
+A diagnostic has copied substitution `data` and a nullable `locationId`; a null
+location must not be presented as a navigable target. Inspection bounds include
+128 canonical parts, 20,000 nodes, depth 64, 64 attributes per element, one million
+text/attribute code units. Exhausting a traversal bound refuses the query;
+exhausting a result count sets `truncated`. The table-header check qualifies at
+most 4,000 cells per table; larger or complex tables produce an
+`unsupported-content` coverage limitation. It checks the first row's repeating-header
+flag, not the table's complete accessible semantics.
+
+Capability rows identify `body-headings`, `inline-image-descriptions`, and
+`simple-table-headers`, with inspected `count` and `refused` indicators. Their
+`preserved`, `renderable`, and `editable` fields are **`unverified`**: these queries
+perform no round trip, rendering qualification or editing preflight. Counts do
+not establish those capabilities or overall document accessibility.
+
+`review()` returns `{ revision, items, truncated, hasUnsupported, trackingSupported,
+enabled, author }`. At most 100 copied rows expose an opaque `id`, `kind`, text,
+author, optional date/thread/resolved metadata, `readOnly`, `orphaned`, and
+`navigable`. Row text is clipped to 4,096 UTF-16 code units, author to 128, and
+date to 64; these display fields do not divide a surrogate pair. Derivation scans
+at most 64 relevant parts, 30,000 nodes, depth 64, and one million text/attribute
+code units. An exceeded traversal bound returns an empty, truncated report with
+unsupported content indicated. Derivation keeps at most 1,000 review records;
+excess records or more than 100 copied rows set `truncated`. Internal drawing,
+XML and engine objects are never returned. Use `navigable` before offering a
+location action and
+`readOnly` before offering mutation controls.
+
+Review edits use `execute()` and its existing revision/retained-selection options:
+
+```ts
+const report = editor.review();
+if (report.ok) {
+  const comment = report.value.items.find(item => item.kind === 'comment' && !item.readOnly);
+  if (comment) editor.execute({ type: 'review-decision', id: comment.id, decision: 'resolve' }, {
+    expectedRevision: report.value.revision,
+  });
+}
+// Refresh review() before another action that uses a review item id.
+```
+
+Use `{ type: 'add-comment', text, author }` for the current or retained selection,
+`{ type: 'reply-comment', id, text, author }` for a current comment id, and
+`{ type: 'track-changes', enabled, author }` to change tracking mode.
+Authors are explicit, nonblank XML text of at most 128 UTF-16 code units; comment
+text is nonblank XML text of at most 4,096. Neither is inferred from account data.
+Comments support `resolve`, `reopen`, and `delete`; eligible text revisions support
+`accept` and `reject`. Each committed content edit is undoable. Changing tracking
+mode alone is session state, not a document edit.
+
+Tracked acceptance/rejection is limited to uniquely addressed, unnested insertion
+or deletion wrappers within one ordinary body paragraph. Moves, formatting and
+paragraph-mark revisions, nested/ambiguous revisions, and revisions in other stories
+remain `readOnly`; they are not silently accepted or discarded. Enabling tracking
+also requires the report's bounded simple-body profile. This contract does not
+qualify every native engine gesture or promise full Word review interoperability.
 
 Use `retainSelection()` when host controls need to preserve an editor selection
 while focus moves outside the document surface. `focus()` returns focus to the
@@ -552,6 +696,21 @@ rectangular, unnested tables. Merge markers, nested tables, structural wrappers,
 ambiguous structures, non-body selections, and cell rectangles are refused.
 Growth is limited to 20 rows, 20 columns, and 400 cells; larger imported simple
 tables may be reduced within the bounded inspection limits.
+
+The **Format table** panel and `execute()` also expose:
+
+| Action | Scope and values |
+| --- | --- |
+| `table-header-row` | `enabled: true` repeats the first row; `false` clears repeated-header flags. |
+| `table-cell-alignment` | Current cell, `value`: `top`, `center`, or `bottom`. |
+| `table-cell-shading` | Current cell, `color: '#RRGGBB'` or `null` to clear direct shading. |
+| `table-cell-borders` | Current cell edges: `target` is `all`, `outside`, `inside`, `top`, `bottom`, `left`, or `right`. `style: 'none'` explicitly disables the selected border; otherwise supply `single`, `dashed`, `dotted`, `double`, `triple`, or `thick`, `widthPoints` (0.25–12 in eighth-point steps), and `color` (`#RRGGBB` or `auto`). `inside` has no edges for a collapsed single-cell caret. |
+| `table-width` | `widthPoints` (15–1440 in twentieth-point steps), at least 15 per column; sets the total table width and distributes columns equally to the nearest twentieth of a point. |
+
+These actions retain the original table selection and qualify the canonical
+simple topology before dispatch. Identical committed formatting is a no-op;
+a real change is one undo unit. Cell rectangles, merges and nested tables remain
+unsupported. Table width intentionally replaces unequal column widths.
 
 These bounds and simple-topology checks apply to the session/element actions and
 Lyra toolbar controls. Core-owned table insertion furniture and native resize
@@ -653,7 +812,7 @@ committed dimensions or metadata are successful no-ops only for an eligible
 live original intent, with no command dispatch or history/dirty/revision change.
 
 These guards cover the Lyra session/element actions and contextual controls.
-Replacement, native resize handles, paste/drop, floating layout, and broad
+Native resize handles, paste/drop, floating layout, and broad
 native gesture policy remain outside this selected-image contract. Local byte
 insertion has the separate bounded contract below. The admission
 input ceiling equals the 16 MiB export ceiling, so a saved package reopens. The package remains experimental.
@@ -700,10 +859,16 @@ image admission limits apply: 4 MiB encoded bytes, 8192 pixels per axis and
 16 million pixels per image. `canInsertImage()` reads cached caret/lifecycle
 state without reading bytes or validating the whole document.
 
-Insertion accepts the editor's normalized default document followed by ordinary
-body typing, plus a narrow package grammar. Tables, auxiliary stories, style
-references, fields, controls, tracked changes and a target paragraph already
-containing an image refuse unchanged. Other plain body paragraphs may contain
+Insertion accepts a bounded package grammar with ordinary styled body paragraphs
+and plain rectangular, unnested tables up to 20 rows and 20 columns. Table and cell
+properties are limited to the admitted width records. In cells, the original caret
+must be at the paragraph start/end or an existing text-run boundary; an interior-run
+caret refuses unchanged. No caret relocation or preparatory edit occurs.
+Paragraph and character style references must resolve to public default styles or
+bounded visible custom definitions. Missing/cyclic bases, hidden rules, unsupported
+style constructs, auxiliary stories, fields, controls, tracked changes and a target
+paragraph already containing an image refuse unchanged. Other package parts and
+relationships still have to satisfy the narrow insertion grammar. Other plain body paragraphs may contain
 supported inline pictures. A validated insertion commits only when its immediate
 serialized package is at most 16 MiB and passes the existing admission and engine
 ZIP reader. This bound applies to that committed revision; later edits and the
@@ -719,3 +884,21 @@ are guarded by the original owner. During `activity: 'inserting-image'`, methods
 that change selection, focus, package or save refuse `busy`; snapshots and pure
 availability remain readable. No URL, preview, clipboard or drop insertion is
 provided.
+
+### Local image replacement
+
+`canReplaceImage()` reports cached advisory availability for the selected image.
+`replaceImage(bytes: Uint8Array, options?: DocxInsertImageOptions)` replaces that
+original eligible inline raster with local PNG, JPEG or static GIF bytes. It uses
+the insertion byte-copy, format, decode, cancellation, revision and selection-lease
+rules, including APP1 removal from JPEG. `activity: 'replacing-image'` gates concurrent
+editing, navigation and save. There is no URL, clipboard or drop input.
+
+Replacement preserves the outer layout extent, inner shape extent, title and
+description; replacement pixel dimensions do not infer new document dimensions.
+Use separate explicit resize/description actions if those properties should change.
+Preflight operates on an isolated candidate, qualifies the selected picture,
+checks that dimensions and metadata stay equal, and admits the serialized package
+within 16 MiB before live dispatch. Its bounded package scan permits opaque parts;
+the preservation and one-undo round trips apply to the exercised fixtures, not to
+arbitrary DOCX extensions. Unsupported pictures refuse without modification.

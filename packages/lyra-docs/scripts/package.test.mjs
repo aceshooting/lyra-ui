@@ -12,7 +12,7 @@ test('root and session entries resolve without a DOM, engine, fetch or styleshee
       globalThis.HTMLElement = undefined;
       globalThis.fetch = () => { throw new Error('Unexpected fetch'); };
       const entry = await import(${JSON.stringify(specifier)});
-      const expected = ${JSON.stringify(specifier)}.endsWith('/docx') ? ['createDocxSession'] : [];
+      const expected = ${JSON.stringify(specifier)}.endsWith('/docx') ? ['DOCX_COMMAND_CATALOG', 'buildDocxCommandAction', 'createDocxSession'] : [];
       if (JSON.stringify(Object.keys(entry).sort()) !== JSON.stringify(expected)) throw new Error('Unexpected runtime export');
       if (entry.createDocxSession) {
         const result = entry.createDocxSession({ mount: {} });

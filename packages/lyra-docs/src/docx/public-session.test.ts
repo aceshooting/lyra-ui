@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import * as publicSession from './index.js';
 
-test('public session entry remains usable without a DOM and exposes only its session constructor', () => {
-  assert.deepEqual(Object.keys(publicSession), ['createDocxSession']);
+test('public session entry and command metadata remain usable without a DOM', () => {
+  assert.deepEqual(Object.keys(publicSession).sort(), ['DOCX_COMMAND_CATALOG', 'buildDocxCommandAction', 'createDocxSession']);
   assert.deepEqual(publicSession.createDocxSession({ mount: {} as HTMLElement }),
     { ok: false, code: 'invalid-mount' });
 });
