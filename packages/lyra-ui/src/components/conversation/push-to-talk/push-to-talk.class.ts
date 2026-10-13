@@ -209,7 +209,8 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   /** Additional audio constraints (`echoCancellation`, …). `deviceId` has one authority: the
    *  top-level `deviceId` property. */
   @property({ attribute: false }) audioConstraints?: PushToTalkAudioConstraints;
-  /** Enables `lr-level` sampling. Changes take effect immediately during an active recording. */
+  /** Enables `lr-level` sampling. Changes take effect immediately during an active recording.
+   *  If audio analysis cannot initialize, recording continues without level events. */
   @property({ type: Boolean, attribute: 'level-events' }) levelEvents = false;
   /** `> 0` auto-stops the take at this many milliseconds (a stuck-key guard); `0` (the default)
    *  never auto-stops. Clamped to `[1, MAX_TIMEOUT_MS]` at the point it's handed to `setTimeout()`
@@ -842,16 +843,21 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private startLevelMeter(stream: MediaStream, owner: PushToTalkWindow): void {
     const AudioCtxCtor = owner.AudioContext ?? owner.webkitAudioContext;
     if (!AudioCtxCtor) return;
-    const audioCtx = new AudioCtxCtor();
-    void audioCtx.resume().catch(() => {});
-    this.audioCtx = audioCtx;
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    this.analyser = analyser;
-    analyser.fftSize = 256;
-    source.connect(analyser);
-    this.levelData = new owner.Uint8Array(analyser.frequencyBinCount);
-    this.sampleLevel(owner);
+    try {
+      const audioCtx = new AudioCtxCtor();
+      this.audioCtx = audioCtx;
+      void audioCtx.resume().catch(() => {});
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      this.analyser = analyser;
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      this.levelData = new owner.Uint8Array(analyser.frequencyBinCount);
+      this.sampleLevel(owner);
+    } catch {
+      // Optional analysis must not interrupt capture or retain a partially initialized context.
+      this.stopLevelMeter();
+    }
   }
 
   private sampleLevel(owner: PushToTalkWindow): void {

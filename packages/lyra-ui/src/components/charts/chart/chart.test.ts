@@ -2830,6 +2830,28 @@ it('applies one valueFormatter to numeric ticks, tooltips, and legend values', a
   expect(labels[0].text).to.equal('Revenue: legend:30');
 });
 
+it('shows the raw value and locale share in value-percentage legends when valueFormatter is unset', async () => {
+  const el = (await fixture(html`<lr-chart
+    type="doughnut"
+    locale="en-US"
+    legend-mode="datum"
+    legend-display="value-percentage"
+    .labels=${['Subscriptions', 'Services']}
+    .datasets=${[{ label: 'Current', data: [1, 3] }]}
+  ></lr-chart>`)) as LyraChart;
+
+  await waitUntil(
+    () => el.shadowRoot?.querySelectorAll('[part~="legend-item"]').length === 2,
+    'value-percentage legend entries never rendered',
+  );
+  await el.updateComplete;
+
+  expect(el.valueFormatter).to.be.undefined;
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part~="legend-item"]')].map((item) => item.textContent?.trim()),
+  ).to.deep.equal(['Subscriptions: 1 (25%)', 'Services: 3 (75%)']);
+});
+
 it('does not run category-axis tick labels through valueFormatter', async () => {
   const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
   el.labels = ['Jan', 'Feb', 'Mar'];

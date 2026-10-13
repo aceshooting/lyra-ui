@@ -2167,6 +2167,60 @@ describe("data mode", () => {
       expect(firstRow.shadowRoot!.activeElement != null).to.equal(true);
     });
 
+    it("scrolls back to and focuses the first row when ArrowDown starts from a virtualized search result window", async () => {
+      const wrapper = await fixture(html`
+        <div>
+          <style>
+            lr-thread-list::part(row) {
+              block-size: 48px;
+              overflow: hidden;
+            }
+          </style>
+          <lr-thread-list
+            style="block-size:200px"
+            grouping="none"
+            searchable
+            .threads=${manyThreads.slice(0, 20)}
+          ></lr-thread-list>
+        </div>
+      `);
+      const el = wrapper.querySelector("lr-thread-list") as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+
+      const list = el.shadowRoot!.querySelector("lr-virtual-list") as LyraVirtualList;
+      list.scrollToIndex(10, { align: "start", behavior: "auto" });
+      await nextFrame();
+      await list.updateComplete;
+      expect(dataRows(el).some((row) => row.conversationId === "m0")).to.equal(false);
+      expect(viewportEl(el).scrollTop).to.be.greaterThan(0);
+
+      const input = el.shadowRoot!.querySelector(
+        '[part="search-input"]'
+      ) as HTMLInputElement;
+      await focusByKeyboard(input);
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowDown",
+          bubbles: true,
+          composed: true,
+        })
+      );
+
+      await waitUntil(
+        () =>
+          dataRows(el).some(
+            (row) =>
+              row.conversationId === "m0" &&
+              row.shadowRoot!.activeElement?.getAttribute("part") ===
+                "select-button"
+          ),
+        "ArrowDown from search did not scroll to and focus the first thread",
+        { timeout: 3000 }
+      );
+      expect(viewportEl(el).scrollTop).to.equal(0);
+    });
+
     it("colors the search-input's placeholder text instead of leaving the UA default", async () => {
       const el = (await fixture(
         html`<lr-thread-list

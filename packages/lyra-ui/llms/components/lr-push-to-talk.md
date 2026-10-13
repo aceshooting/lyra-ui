@@ -51,6 +51,9 @@ them starts or stops their audio-analysis, deadline, or elapsed-time work immedi
 maximum remains measured from the original recording start rather than granting a fresh duration;
 setting it to `0` removes the deadline.
 
+Audio-level analysis is optional: if its audio context or analysis nodes cannot initialize,
+recording continues without `lr-level` events. Any partially initialized audio context is closed.
+
 **Methods:** `start()`, `stop()`, and `cancel()` drive the capture lifecycle imperatively (mirroring
 the pointer/keyboard gestures).
 

@@ -217,6 +217,45 @@ describe('ZIP resource guard', () => {
     });
   });
 
+  it('rejects an entry that exceeds its individual byte limit', async () => {
+    await expectLimit(await buildZip('12345'), /oversized entry/, { maxEntryBytes: 4 });
+  });
+
+  it('rejects malformed and encrypted central-directory extra fields', async () => {
+    const entry = await zipEntry('x', 'payload');
+
+    const malformedExtra = extraField(0x0042, new Uint8Array([1]));
+    const malformedCentral = centralRecord(entry, 0, { extra: malformedExtra });
+    const malformedLocal = localRecord(entry);
+    new DataView(malformedCentral.buffer).setUint16(46 + 1 + 2, 0xffff, true);
+    await expectLimit(toArrayBuffer(concatBytes(
+      malformedLocal,
+      malformedCentral,
+      endRecord({ records: 1, directorySize: malformedCentral.length, directoryOffset: malformedLocal.length }),
+    )), /malformed/);
+
+    const encryptedExtra = extraField(0x9901, new Uint8Array(7));
+    const encryptedCentral = centralRecord(entry, 0, { extra: encryptedExtra });
+    const local = localRecord(entry);
+    await expectLimit(toArrayBuffer(concatBytes(
+      local,
+      encryptedCentral,
+      endRecord({ records: 1, directorySize: encryptedCentral.length, directoryOffset: local.length }),
+    )), /Encrypted/);
+  });
+
+  it('rejects a mismatched entry checksum when CRC verification is enabled', async () => {
+    const entry = await zipEntry('x', 'payload');
+    const wrongCrc = entry.crc ^ 1;
+    const local = localRecord(entry, { crc: wrongCrc });
+    const central = centralRecord(entry, 0, { crc: wrongCrc });
+    await expectLimit(toArrayBuffer(concatBytes(
+      local,
+      central,
+      endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+    )), /invalid entry checksum/, { verifyCrc: true });
+  });
+
   it('rejects malformed, encrypted, and inconsistent local headers', async () => {
     const badLocal = await buildZip();
     new DataView(badLocal).setUint32(offsets(badLocal).local, 0, true);
@@ -619,6 +658,41 @@ describe('ZIP resource guard agrees with the archive the peer readers open', () 
         endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
       )), /ZIP64/);
     }
+  });
+
+  it('accepts matching ZIP64 extended-information fields and streams the declared entry', async () => {
+    const content = '<root><row>ok</row></root>';
+    const entry = await zipEntry('document.xml', content);
+    const sizes = new Uint8Array(16);
+    const sizeView = new DataView(sizes.buffer);
+    sizeView.setUint32(0, entry.uncompressedSize, true);
+    sizeView.setUint32(8, entry.compressedSize, true);
+    const extra = extraField(0x0001, sizes);
+    const local = localRecord(entry, { extra });
+    const central = centralRecord(entry, 0, { extra });
+    const source = toArrayBuffer(concatBytes(
+      local,
+      central,
+      endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+    ));
+    const chunks: string[] = [];
+    let measured: { name: string; compressedBytes: number; uncompressedBytes: number } | undefined;
+
+    await assertZipArchiveWithinLimits(source, {
+      ...options,
+      createInspector: (parsed) => {
+        measured = parsed;
+        return {
+          write: (chunk) => chunks.push(new TextDecoder().decode(chunk)),
+          close: () => {},
+        };
+      },
+    });
+
+    expect(measured?.name).to.equal('document.xml');
+    expect(measured?.compressedBytes).to.equal(entry.compressedSize);
+    expect(measured?.uncompressedBytes).to.equal(entry.uncompressedSize);
+    expect(chunks.join('')).to.equal(content);
   });
 
   it('rejects overlapping entries before inflating any of them', async () => {

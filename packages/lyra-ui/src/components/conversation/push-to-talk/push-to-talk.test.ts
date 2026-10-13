@@ -1884,6 +1884,47 @@ it("stops the granted stream when MediaRecorder construction fails", async () =>
   }
 });
 
+it("stops the granted stream and reports an error when MediaRecorder.start fails", async () => {
+  const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
+  const originalMediaRecorder = window.MediaRecorder;
+  const stream = new FakeStream();
+  let errors = 0;
+  let starts = 0;
+  let stops = 0;
+  let receivedError: Error | undefined;
+  const startError = new Error("recorder start failed");
+  navigator.mediaDevices.getUserMedia = (async () =>
+    stream as unknown as MediaStream) as typeof navigator.mediaDevices.getUserMedia;
+  window.MediaRecorder = class extends FakeMediaRecorder {
+    override start(): void {
+      throw startError;
+    }
+  } as unknown as typeof MediaRecorder;
+  try {
+    const el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    el.addEventListener("lr-record-error", (event) => {
+      errors++;
+      receivedError = (event as CustomEvent<{ error: Error }>).detail.error;
+    });
+    el.addEventListener("lr-record-start", () => starts++);
+    el.addEventListener("lr-record-stop", () => stops++);
+
+    expect(await el.start()).to.equal(false);
+    expect(el.state).to.equal("error");
+    expect(el.stream).to.be.null;
+    expect(stream.getTracks()[0]?.stopped).to.be.true;
+    expect(errors).to.equal(1);
+    expect(receivedError).to.equal(startError);
+    expect(starts).to.equal(0);
+    expect(stops).to.equal(0);
+  } finally {
+    navigator.mediaDevices.getUserMedia = originalGetUserMedia;
+    window.MediaRecorder = originalMediaRecorder;
+  }
+});
+
 it("handles an asynchronous MediaRecorder failure exactly once and ignores late terminal callbacks", async () => {
   const restore = stubSuccessfulCapture();
   try {
@@ -2025,6 +2066,116 @@ it("emits no lr-level when level-events is unset (the default)", async () => {
     await aTimeout(50);
     expect(fired).to.be.false;
   } finally {
+    restore();
+  }
+});
+
+it("continues recording when the optional level meter cannot create an AudioContext", async () => {
+  const restore = stubSuccessfulCapture();
+  window.AudioContext = class {
+    constructor() {
+      throw new Error("audio analysis is unavailable");
+    }
+  } as unknown as typeof AudioContext;
+  try {
+    const el = (await fixture(
+      html`<lr-push-to-talk level-events></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    let starts = 0;
+    let errors = 0;
+    el.addEventListener("lr-record-start", () => starts++);
+    el.addEventListener("lr-record-error", () => errors++);
+
+    expect(await el.start()).to.equal(true);
+    expect(el.state).to.equal("recording");
+    expect(el.stream).to.not.be.null;
+    expect(starts).to.equal(1);
+    expect(errors).to.equal(0);
+    const stream = el.stream as unknown as FakeStream;
+    const stopped = oneEvent(el, "lr-record-stop");
+    el.stop();
+    await stopped;
+    expect(el.state).to.equal("idle");
+    expect(stream.getTracks()[0]?.stopped).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
+it("keeps capture active and closes a partially initialized level meter when its source fails", async () => {
+  const restore = stubSuccessfulCapture();
+  let contextsClosed = 0;
+  window.AudioContext = class extends FakeAudioContext {
+    override createMediaStreamSource(): never {
+      throw new Error("audio source is unavailable");
+    }
+    override close(): Promise<void> {
+      contextsClosed++;
+      return Promise.resolve();
+    }
+  } as unknown as typeof AudioContext;
+  try {
+    const el = (await fixture(
+      html`<lr-push-to-talk level-events></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    let errors = 0;
+    el.addEventListener("lr-record-error", () => errors++);
+
+    expect(await el.start()).to.equal(true);
+    expect(el.state).to.equal("recording");
+    expect(el.stream).to.not.be.null;
+    expect(contextsClosed).to.equal(1);
+    expect(errors).to.equal(0);
+
+    const stream = el.stream as unknown as FakeStream;
+    const stopped = oneEvent(el, "lr-record-stop");
+    el.stop();
+    await stopped;
+    expect(el.state).to.equal("idle");
+    expect(stream.getTracks()[0]?.stopped).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
+it("keeps an active capture usable when enabling the level meter fails during update", async () => {
+  const restore = stubSuccessfulCapture();
+  window.AudioContext = class {
+    constructor() {
+      throw new Error("audio analysis is unavailable");
+    }
+  } as unknown as typeof AudioContext;
+  let el: LyraPushToTalk | undefined;
+  try {
+    el = (await fixture(
+      html`<lr-push-to-talk></lr-push-to-talk>`
+    )) as LyraPushToTalk;
+    let errors = 0;
+    el.addEventListener("lr-record-error", () => errors++);
+    expect(await el.start()).to.equal(true);
+    await el.updateComplete;
+    const stream = el.stream as unknown as FakeStream;
+
+    el.levelEvents = true;
+    let updateError: unknown;
+    try {
+      await el.updateComplete;
+    } catch (error) {
+      updateError = error;
+    }
+
+    expect(updateError).to.equal(undefined);
+    expect(el.state).to.equal("recording");
+    expect(el.stream).to.not.be.null;
+    expect(stream.getTracks()[0]?.stopped).to.be.false;
+    expect(errors).to.equal(0);
+    const stopped = oneEvent(el, "lr-record-stop");
+    el.stop();
+    await stopped;
+    expect(el.state).to.equal("idle");
+    expect(stream.getTracks()[0]?.stopped).to.be.true;
+  } finally {
+    el?.cancel();
     restore();
   }
 });
