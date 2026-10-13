@@ -70,38 +70,44 @@ it('projects live external descriptions before textarea guidance without losing 
   await waitUntil(() => descriptions(owner).join(' ') === 'textarea-error');
 });
 
-it('rebinds textarea descriptions after reconnect and adoption into a different root', async () => {
-  const wrapper = await fixture<HTMLElement>(html`<div>
-    <span id="editor-realm-guidance">Original guidance</span>
-    <lr-code-editor aria-describedby="editor-realm-guidance" hint="Local hint"></lr-code-editor>
-  </div>`);
-  const el = wrapper.querySelector('lr-code-editor')!;
-  const owner = el.input!;
-  const source = wrapper.querySelector('#editor-realm-guidance')!;
-  if (!Reflect.has(owner, 'ariaDescribedByElements')) return;
-  await waitUntil(() => owner.ariaDescribedByElements?.[0] === source);
-  el.remove();
-  wrapper.append(el);
-  await waitUntil(() => owner.ariaDescribedByElements?.[0] === source);
-  const frame = document.createElement('iframe');
-  document.body.append(frame);
-  const foreignDocument = frame.contentDocument!;
-  const foreignSource = foreignDocument.createElement('span');
-  foreignSource.id = source.id;
-  foreignSource.textContent = 'Adopted guidance';
-  foreignDocument.body.append(foreignSource);
-  try {
-    foreignDocument.body.append(foreignDocument.adoptNode(el));
-    await waitUntil(() => owner.ariaDescribedByElements?.[0] === foreignSource);
-    foreignSource.remove();
-    await waitUntil(() => descriptions(owner).join(' ') === 'textarea-hint');
+for (const adoptionPath of ['explicit-adopt', 'direct-append'] as const) {
+  it(`${adoptionPath}: rebinds textarea descriptions after reconnect and adoption into a different root`, async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <span id="editor-realm-guidance">Original guidance</span>
+      <lr-code-editor aria-describedby="editor-realm-guidance" hint="Local hint"></lr-code-editor>
+    </div>`);
+    const el = wrapper.querySelector('lr-code-editor')!;
+    const owner = el.input!;
+    const source = wrapper.querySelector('#editor-realm-guidance')!;
+    if (!Reflect.has(owner, 'ariaDescribedByElements')) return;
+    await waitUntil(() => owner.ariaDescribedByElements?.[0] === source);
+    el.remove();
+    wrapper.append(el);
+    await waitUntil(() => owner.ariaDescribedByElements?.[0] === source);
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const foreignDocument = frame.contentDocument!;
+    const foreignSource = foreignDocument.createElement('span');
+    foreignSource.id = source.id;
+    foreignSource.textContent = 'Adopted guidance';
     foreignDocument.body.append(foreignSource);
-    await waitUntil(() => owner.ariaDescribedByElements?.[0] === foreignSource);
-  } finally {
-    wrapper.append(document.adoptNode(el));
-    frame.remove();
-  }
-});
+    try {
+      if (adoptionPath === 'explicit-adopt') {
+        foreignDocument.body.append(foreignDocument.adoptNode(el));
+      } else {
+        foreignDocument.body.append(el);
+      }
+      await waitUntil(() => owner.ariaDescribedByElements?.[0] === foreignSource);
+      foreignSource.remove();
+      await waitUntil(() => descriptions(owner).join(' ') === 'textarea-hint');
+      foreignDocument.body.append(foreignSource);
+      await waitUntil(() => owner.ariaDescribedByElements?.[0] === foreignSource);
+    } finally {
+      wrapper.append(document.adoptNode(el));
+      frame.remove();
+    }
+  });
+}
 
 it('resets local touched feedback while retaining required/custom constraints and restoring defaults', async () => {
   const form = await fixture<HTMLFormElement>(html`<form>

@@ -351,15 +351,18 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   override disconnectedCallback(): void {
-    this.nativeModal.hide();
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = undefined;
-    this.resizeView?.removeEventListener('resize', this.onWindowResize);
-    this.resizeView = undefined;
-    this.overlayHandle?.suspend();
-    cancelDeferredFocusReturn(this);
+    // Finish connection cleanup before overlay teardown can flush a queued reconnect.
     this.resetOwnerRealmWork();
+    const resizeObserver = this.resizeObserver;
+    this.resizeObserver = undefined;
+    const resizeView = this.resizeView;
+    this.resizeView = undefined;
+    resizeObserver?.disconnect();
+    resizeView?.removeEventListener('resize', this.onWindowResize);
+    cancelDeferredFocusReturn(this);
     super.disconnectedCallback();
+    this.nativeModal.hide();
+    this.overlayHandle?.suspend();
   }
 
   override adoptedCallback(): void {

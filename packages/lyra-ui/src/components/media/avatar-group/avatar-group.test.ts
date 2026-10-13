@@ -704,39 +704,45 @@ it('ignores a stale slotchange after disconnection instead of reclaiming restore
   expect(avatars.every((avatar) => !avatar.hasAttribute('size'))).to.equal(true);
 });
 
-it('reconnects its avatar attribute observer to the adopted owner realm', async () => {
-  const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
-  const frameDocument = frame.contentDocument!;
-  const frameWindow = frame.contentWindow!;
-  const el = (await fixture(html`
-    <lr-avatar-group>
-      <lr-avatar id="a" initials="A"></lr-avatar>
-      <lr-avatar id="b" initials="B"></lr-avatar>
-    </lr-avatar-group>
-  `)) as LyraAvatarGroup;
-  await el.updateComplete;
-  const a = el.querySelector('#a') as HTMLElement;
-  const b = el.querySelector('#b') as HTMLElement;
-  expect(a.hasAttribute('data-lr-avatar-group-first')).to.be.true;
-  expect(b.hasAttribute('data-lr-avatar-group-first')).to.be.false;
-
-  try {
-    frameDocument.body.append(frameDocument.adoptNode(el));
+for (const adoptionPath of ['explicit-adopt', 'direct-append'] as const) {
+  it(`${adoptionPath}: reconnects its avatar attribute observer to the adopted owner realm`, async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frame.contentWindow!;
+    const el = (await fixture(html`
+      <lr-avatar-group>
+        <lr-avatar id="a" initials="A"></lr-avatar>
+        <lr-avatar id="b" initials="B"></lr-avatar>
+      </lr-avatar-group>
+    `)) as LyraAvatarGroup;
     await el.updateComplete;
+    const a = el.querySelector('#a') as HTMLElement;
+    const b = el.querySelector('#b') as HTMLElement;
+    expect(a.hasAttribute('data-lr-avatar-group-first')).to.be.true;
+    expect(b.hasAttribute('data-lr-avatar-group-first')).to.be.false;
 
-    // A live attribute mutation in the NEW owner document must still reach the group's
-    // MutationObserver -- proving adoptedCallback() actually rebound observation to the adopted
-    // realm rather than leaving a dead observer bound to the original document.
-    a.setAttribute('hidden', '');
-    await new Promise<void>((resolve) => frameWindow.queueMicrotask(resolve));
-    await el.updateComplete;
+    try {
+      if (adoptionPath === 'explicit-adopt') {
+        frameDocument.body.append(frameDocument.adoptNode(el));
+      } else {
+        frameDocument.body.append(el);
+      }
+      await el.updateComplete;
 
-    expect(a.hasAttribute('data-lr-avatar-group-first')).to.be.false;
-    expect(b.hasAttribute('data-lr-avatar-group-first')).to.be.true;
-  } finally {
-    el.remove();
-  }
-});
+      // A live attribute mutation in the NEW owner document must still reach the group's
+      // MutationObserver -- proving adoptedCallback() actually rebound observation to the adopted
+      // realm rather than leaving a dead observer bound to the original document.
+      a.setAttribute('hidden', '');
+      await new Promise<void>((resolve) => frameWindow.queueMicrotask(resolve));
+      await el.updateComplete;
+
+      expect(a.hasAttribute('data-lr-avatar-group-first')).to.be.false;
+      expect(b.hasAttribute('data-lr-avatar-group-first')).to.be.true;
+    } finally {
+      el.remove();
+    }
+  });
+}
 
 it('counts only author-visible, non-inert avatars and leaves invalid children untouched', async () => {
   const el = (await fixture(html`

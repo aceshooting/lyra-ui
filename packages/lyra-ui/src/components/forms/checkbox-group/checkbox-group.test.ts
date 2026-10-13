@@ -314,133 +314,137 @@ it('keeps checkbox-group host descriptions live across late resolution and recon
   );
 });
 
-it('releases and reacquires host descriptions through the adopted owner realm', async () => {
-  const originalSourceMutationObserver = window.MutationObserver;
-  let sourceRelationshipObserver: SourceMutationObserver | undefined;
-  const disconnectedSourceRelationshipObservers = new Set<MutationObserver>();
-  class SourceMutationObserver extends originalSourceMutationObserver {
-    private observesHostRelationship = false;
+for (const adoptionPath of ['explicit-adopt', 'direct-append'] as const) {
+  it(`${adoptionPath}: releases and reacquires host descriptions through the adopted owner realm`, async () => {
+    const originalSourceMutationObserver = window.MutationObserver;
+    let sourceRelationshipObserver: SourceMutationObserver | undefined;
+    const disconnectedSourceRelationshipObservers = new Set<MutationObserver>();
+    class SourceMutationObserver extends originalSourceMutationObserver {
+      private observesHostRelationship = false;
 
-    override observe(target: Node, options: MutationObserverInit): void {
-      super.observe(target, options);
-      if (
-        target instanceof HTMLElement &&
-        target.localName === 'lr-checkbox-group' &&
-        options.attributeFilter?.includes('aria-describedby')
-      ) {
-        this.observesHostRelationship = true;
-        sourceRelationshipObserver = this;
-      }
-    }
-
-    override disconnect(): void {
-      if (this.observesHostRelationship) disconnectedSourceRelationshipObservers.add(this);
-      super.disconnect();
-    }
-  }
-  window.MutationObserver = SourceMutationObserver;
-  let wrapper: HTMLDivElement | undefined;
-  let el: LyraCheckboxGroup | undefined;
-  let frame: HTMLIFrameElement | undefined;
-  let frameWindow: Window | null | undefined;
-  let originalDestinationMutationObserver: typeof MutationObserver | undefined;
-  let relationshipObservations = 0;
-  let destinationRootObservations = 0;
-
-  try {
-    wrapper = await fixture<HTMLDivElement>(html`
-      <div>
-        <span id="checkbox-group-adopted-description">Original group guidance</span>
-        <lr-checkbox-group aria-describedby="checkbox-group-adopted-description" hint="Choose any topic">
-          <lr-checkbox value="a">A</lr-checkbox>
-        </lr-checkbox-group>
-      </div>
-    `);
-    el = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
-    const source = wrapper.querySelector('#checkbox-group-adopted-description')!;
-    const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
-    const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
-
-    if (!hasDescribedByElementReflection(fieldset)) {
-      expect(describedByIds(fieldset)).to.deep.equal([hint.id]);
-      return;
-    }
-
-    expect(fieldset.ariaDescribedByElements?.[0] === source).to.equal(true);
-    const activeSourceRelationshipObserver = sourceRelationshipObserver;
-    expect(activeSourceRelationshipObserver !== undefined).to.equal(true);
-    if (!activeSourceRelationshipObserver) {
-      throw new Error('The source resolved-description observer was not identified.');
-    }
-    expect(
-      disconnectedSourceRelationshipObservers.has(activeSourceRelationshipObserver),
-    ).to.equal(false);
-
-    frame = document.createElement('iframe');
-    document.body.append(frame);
-    const frameDocument = frame.contentDocument;
-    frameWindow = frame.contentWindow;
-    if (!frameDocument || !frameWindow) {
-      throw new Error('The iframe realm was unavailable.');
-    }
-    const destinationSource = frameDocument.createElement('span');
-    destinationSource.id = source.id;
-    destinationSource.textContent = 'Adopted group guidance';
-    frameDocument.body.append(destinationSource);
-    originalDestinationMutationObserver = frameWindow.MutationObserver;
-    class OwnerMutationObserver extends originalDestinationMutationObserver {
       override observe(target: Node, options: MutationObserverInit): void {
-        if (target === el && options.attributeFilter?.includes('aria-describedby')) {
-          relationshipObservations += 1;
-        }
-        if (
-          (target === frameDocument || target === frameDocument?.documentElement) &&
-          options.childList &&
-          options.subtree &&
-          options.attributeFilter?.includes('id')
-        ) {
-          destinationRootObservations += 1;
-        }
         super.observe(target, options);
+        if (
+          target instanceof HTMLElement &&
+          target.localName === 'lr-checkbox-group' &&
+          options.attributeFilter?.includes('aria-describedby')
+        ) {
+          this.observesHostRelationship = true;
+          sourceRelationshipObserver = this;
+        }
+      }
+
+      override disconnect(): void {
+        if (this.observesHostRelationship) disconnectedSourceRelationshipObservers.add(this);
+        super.disconnect();
       }
     }
-    frameWindow.MutationObserver = OwnerMutationObserver;
+    window.MutationObserver = SourceMutationObserver;
+    let wrapper: HTMLDivElement | undefined;
+    let el: LyraCheckboxGroup | undefined;
+    let frame: HTMLIFrameElement | undefined;
+    let frameWindow: Window | null | undefined;
+    let originalDestinationMutationObserver: typeof MutationObserver | undefined;
+    let relationshipObservations = 0;
+    let destinationRootObservations = 0;
 
-    frameDocument.adoptNode(el);
-    expect(
-      disconnectedSourceRelationshipObservers.has(activeSourceRelationshipObserver),
-    ).to.equal(true);
-    expect(describedByIds(fieldset)).to.deep.equal([hint.id]);
+    try {
+      wrapper = await fixture<HTMLDivElement>(html`
+        <div>
+          <span id="checkbox-group-adopted-description">Original group guidance</span>
+          <lr-checkbox-group aria-describedby="checkbox-group-adopted-description" hint="Choose any topic">
+            <lr-checkbox value="a">A</lr-checkbox>
+          </lr-checkbox-group>
+        </div>
+      `);
+      el = wrapper.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+      const source = wrapper.querySelector('#checkbox-group-adopted-description')!;
+      const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
+      const hint = el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!;
 
-    frameDocument.body.append(el);
-    await waitUntil(
-      () => fieldset.ariaDescribedByElements?.[0] === destinationSource,
-      'the adopted description was not reacquired from the destination document',
-    );
-    expect(relationshipObservations).to.be.greaterThan(0);
-    expect(destinationRootObservations).to.be.greaterThan(0);
+      if (!hasDescribedByElementReflection(fieldset)) {
+        expect(describedByIds(fieldset)).to.deep.equal([hint.id]);
+        return;
+      }
 
-    const replacement = frameDocument.createElement('span');
-    replacement.id = destinationSource.id;
-    replacement.textContent = 'Replacement group guidance';
-    const authoredDescription = el.getAttribute('aria-describedby');
-    destinationSource.replaceWith(replacement);
-    expect(el.getAttribute('aria-describedby')).to.equal(authoredDescription);
-    await waitUntil(
-      () => fieldset.ariaDescribedByElements?.[0] === replacement,
-      'the destination relationship observer did not refresh the replaced source',
-    );
-  } finally {
-    window.MutationObserver = originalSourceMutationObserver;
-    if (frameWindow && originalDestinationMutationObserver) {
-      frameWindow.MutationObserver = originalDestinationMutationObserver;
+      expect(fieldset.ariaDescribedByElements?.[0] === source).to.equal(true);
+      const activeSourceRelationshipObserver = sourceRelationshipObserver;
+      expect(activeSourceRelationshipObserver !== undefined).to.equal(true);
+      if (!activeSourceRelationshipObserver) {
+        throw new Error('The source resolved-description observer was not identified.');
+      }
+      expect(
+        disconnectedSourceRelationshipObservers.has(activeSourceRelationshipObserver),
+      ).to.equal(false);
+
+      frame = document.createElement('iframe');
+      document.body.append(frame);
+      const frameDocument = frame.contentDocument;
+      frameWindow = frame.contentWindow;
+      if (!frameDocument || !frameWindow) {
+        throw new Error('The iframe realm was unavailable.');
+      }
+      const destinationSource = frameDocument.createElement('span');
+      destinationSource.id = source.id;
+      destinationSource.textContent = 'Adopted group guidance';
+      frameDocument.body.append(destinationSource);
+      originalDestinationMutationObserver = frameWindow.MutationObserver;
+      class OwnerMutationObserver extends originalDestinationMutationObserver {
+        override observe(target: Node, options: MutationObserverInit): void {
+          if (target === el && options.attributeFilter?.includes('aria-describedby')) {
+            relationshipObservations += 1;
+          }
+          if (
+            (target === frameDocument || target === frameDocument?.documentElement) &&
+            options.childList &&
+            options.subtree &&
+            options.attributeFilter?.includes('id')
+          ) {
+            destinationRootObservations += 1;
+          }
+          super.observe(target, options);
+        }
+      }
+      frameWindow.MutationObserver = OwnerMutationObserver;
+
+      if (adoptionPath === 'explicit-adopt') {
+        frameDocument.adoptNode(el);
+        expect(
+          disconnectedSourceRelationshipObservers.has(activeSourceRelationshipObserver),
+        ).to.equal(true);
+        expect(describedByIds(fieldset)).to.deep.equal([hint.id]);
+      }
+
+      frameDocument.body.append(el);
+      await waitUntil(
+        () => fieldset.ariaDescribedByElements?.[0] === destinationSource,
+        'the adopted description was not reacquired from the destination document',
+      );
+      expect(relationshipObservations).to.be.greaterThan(0);
+      expect(destinationRootObservations).to.be.greaterThan(0);
+
+      const replacement = frameDocument.createElement('span');
+      replacement.id = destinationSource.id;
+      replacement.textContent = 'Replacement group guidance';
+      const authoredDescription = el.getAttribute('aria-describedby');
+      destinationSource.replaceWith(replacement);
+      expect(el.getAttribute('aria-describedby')).to.equal(authoredDescription);
+      await waitUntil(
+        () => fieldset.ariaDescribedByElements?.[0] === replacement,
+        'the destination relationship observer did not refresh the replaced source',
+      );
+    } finally {
+      window.MutationObserver = originalSourceMutationObserver;
+      if (frameWindow && originalDestinationMutationObserver) {
+        frameWindow.MutationObserver = originalDestinationMutationObserver;
+      }
+      if (el && el.ownerDocument !== document) document.adoptNode(el);
+      el?.remove();
+      wrapper?.remove();
+      frame?.remove();
     }
-    if (el && el.ownerDocument !== document) document.adoptNode(el);
-    el?.remove();
-    wrapper?.remove();
-    frame?.remove();
-  }
-});
+  });
+}
 
 it('projects visible property and slotted errors onto the fieldset without rewriting validity', async () => {
   const el = (await fixture(html`

@@ -465,6 +465,78 @@ describe("rich label/sublabel", () => {
       iframe.remove();
     }
   });
+
+  it("updates the fullscreen dialog name after a connected cross-document move", async () => {
+    const el = (await fixture(html`
+      <lr-widget expandable fullscreen
+        ><span slot="label">Owner label</span>content</lr-widget
+      >
+    `)) as LyraWidget;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute("aria-label")).to.equal("Owner label");
+    expect(Boolean(el.shadowRoot!.querySelector('[data-native-modal-carrier]'))).to.equal(false);
+
+    const label = el.querySelector('[slot="label"]')!;
+    const iframe = document.createElement("iframe");
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument;
+    if (!frameDocument) {
+      iframe.remove();
+      throw new Error("The iframe document was unavailable.");
+    }
+
+    try {
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      label.textContent = "Updated owner label";
+      await waitUntil(
+        () => base.getAttribute("aria-label") === "Updated owner label",
+        "the adopted fullscreen label was not reflected in the dialog name"
+      );
+    } finally {
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      el.remove();
+      iframe.remove();
+    }
+  });
+
+  it("updates its inherited fullscreen name after a connected cross-document move", async () => {
+    const locale = "qab-x-wgadopt";
+    registerLyraLocale(locale, {
+      widgetFullscreenPanel: "Panneau plein écran adopté",
+      widgetExitFullscreen: "Quitter le plein écran",
+      widgetExpandToFullscreen: "Passer en plein écran",
+    });
+    const el = (await fixture(html`
+      <lr-widget expandable fullscreen>Content</lr-widget>
+    `)) as LyraWidget;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute("aria-label")).to.equal("Fullscreen panel");
+
+    const iframe = document.createElement("iframe");
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument;
+    if (!frameDocument) {
+      iframe.remove();
+      throw new Error("The iframe document was unavailable.");
+    }
+
+    try {
+      frameDocument.body.append(el);
+      await el.updateComplete;
+      frameDocument.body.lang = locale;
+      await waitUntil(
+        () => base.getAttribute("aria-label") === "Panneau plein écran adopté",
+        "the destination language did not update the rendered fullscreen name"
+      );
+    } finally {
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      el.remove();
+      iframe.remove();
+    }
+  });
 });
 
 describe("views", () => {

@@ -657,53 +657,59 @@ it('keeps the dialog name synchronized when an already-slotted heading text node
   expect(panel.getAttribute('aria-label')).to.equal('Updated heading');
 });
 
-it('recreates its heading observer in the adopted owner realm', async () => {
-  const el = (await fixture(html`<lr-dialog><h2>Owner heading</h2></lr-dialog>`)) as LyraDialog;
-  await el.updateComplete;
-  el.remove();
-  const iframe = document.createElement('iframe');
-  document.body.append(iframe);
-  const frameDocument = iframe.contentDocument;
-  const frameWindow = iframe.contentWindow;
-  if (!frameDocument || !frameWindow) {
-    iframe.remove();
-    throw new Error('The iframe realm was unavailable.');
-  }
-  const originalMutationObserver = frameWindow.MutationObserver;
-  let observations = 0;
-  let disconnects = 0;
-  let ownerCallback: MutationCallback | undefined;
-  let ownerObserver: MutationObserver | undefined;
-  class OwnerMutationObserver implements MutationObserver {
-    private observesHeading = false;
-    constructor(callback: MutationCallback) {
-      ownerCallback = callback;
-      ownerObserver = this;
+for (const adoptionPath of ['explicit-adopt', 'direct-append'] as const) {
+  it(`${adoptionPath}: recreates its heading observer in the adopted owner realm`, async () => {
+    const el = (await fixture(html`<lr-dialog><h2>Owner heading</h2></lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    if (adoptionPath === 'explicit-adopt') el.remove();
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument;
+    const frameWindow = iframe.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      iframe.remove();
+      throw new Error('The iframe realm was unavailable.');
     }
-    observe(target: Node, options?: MutationObserverInit): void {
-      if (target === el && options?.childList) {
-        this.observesHeading = true;
-        observations += 1;
+    const originalMutationObserver = frameWindow.MutationObserver;
+    let observations = 0;
+    let disconnects = 0;
+    let ownerCallback: MutationCallback | undefined;
+    let ownerObserver: MutationObserver | undefined;
+    class OwnerMutationObserver implements MutationObserver {
+      private observesHeading = false;
+      constructor(callback: MutationCallback) {
+        ownerCallback = callback;
+        ownerObserver = this;
       }
+      observe(target: Node, options?: MutationObserverInit): void {
+        if (target === el && options?.childList) {
+          this.observesHeading = true;
+          observations += 1;
+        }
+      }
+      takeRecords(): MutationRecord[] { return []; }
+      disconnect(): void { if (this.observesHeading) disconnects += 1; }
     }
-    takeRecords(): MutationRecord[] { return []; }
-    disconnect(): void { if (this.observesHeading) disconnects += 1; }
-  }
-  frameWindow.MutationObserver = OwnerMutationObserver;
+    frameWindow.MutationObserver = OwnerMutationObserver;
 
-  try {
-    frameDocument.body.append(frameDocument.adoptNode(el));
-    expect(observations, 'the destination window observes dialog headings').to.equal(1);
-    document.adoptNode(el);
-    expect(disconnects, 'adoption disconnects the old owner observer').to.equal(1);
-    expect(() => ownerCallback?.([], ownerObserver!)).to.not.throw();
-  } finally {
-    frameWindow.MutationObserver = originalMutationObserver;
-    if (el.ownerDocument !== document) document.adoptNode(el);
-    el.remove();
-    iframe.remove();
-  }
-});
+    try {
+      if (adoptionPath === 'explicit-adopt') {
+        frameDocument.body.append(frameDocument.adoptNode(el));
+      } else {
+        frameDocument.body.append(el);
+      }
+      expect(observations, 'the destination window observes dialog headings').to.equal(1);
+      document.adoptNode(el);
+      expect(disconnects, 'adoption disconnects the old owner observer').to.equal(1);
+      expect(() => ownerCallback?.([], ownerObserver!)).to.not.throw();
+    } finally {
+      frameWindow.MutationObserver = originalMutationObserver;
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      el.remove();
+      iframe.remove();
+    }
+  });
+}
 
 it('renders a visible header with the heading text and uses it for aria-labelledby when no heading is slotted', async () => {
   const el = (await fixture(html`<lr-dialog heading="Title">body</lr-dialog>`)) as LyraDialog;

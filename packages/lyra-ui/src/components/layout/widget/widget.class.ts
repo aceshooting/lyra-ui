@@ -594,11 +594,12 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.nativeModal.hide();
-    super.disconnectedCallback();
-    this.overlayHandle?.suspend();
-    cancelDeferredFocusReturn(this);
+    // Finish connection cleanup before overlay teardown can flush a queued reconnect.
     this.resetOwnerRealmWork();
+    cancelDeferredFocusReturn(this);
+    super.disconnectedCallback();
+    this.nativeModal.hide();
+    this.overlayHandle?.suspend();
   }
 
   override adoptedCallback(): void {

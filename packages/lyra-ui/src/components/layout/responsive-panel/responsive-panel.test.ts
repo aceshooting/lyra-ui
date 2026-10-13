@@ -1,5 +1,6 @@
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from "@open-wc/testing";
+import { registerLyraLocale } from "../../../internal/localization.js";
 import "./responsive-panel.js";
 import type {
   LyraResponsivePanel,
@@ -981,47 +982,118 @@ it("restores header text observation after reconnect", async () => {
   expect(panel.getAttribute("aria-label")).to.equal("After reconnect");
 });
 
-it("recreates its header observer in the adopted owner realm", async () => {
+for (const adoptionPath of ['explicit-adopt', 'direct-append'] as const) {
+  it(`${adoptionPath}: recreates its header observer in the adopted owner realm`, async () => {
+    const el = (await fixture(
+      html`<lr-responsive-panel mode="overlay" open><span slot="header">Owner heading</span></lr-responsive-panel>`,
+    )) as LyraResponsivePanel;
+    await el.updateComplete;
+    const heading = el.querySelector('[slot="header"]')!;
+    if (adoptionPath === 'explicit-adopt') el.remove();
+    const iframe = document.createElement("iframe");
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument;
+    const frameWindow = iframe.contentWindow;
+    if (!frameDocument || !frameWindow) {
+      iframe.remove();
+      throw new Error("The iframe realm was unavailable.");
+    }
+    const originalMutationObserver = frameWindow.MutationObserver;
+    let observations = 0;
+    let disconnects = 0;
+    class OwnerMutationObserver implements MutationObserver {
+      private observesHeading = false;
+      constructor(_callback: MutationCallback) {}
+      observe(target: Node): void {
+        if (target === heading) {
+          this.observesHeading = true;
+          observations += 1;
+        }
+      }
+      takeRecords(): MutationRecord[] { return []; }
+      disconnect(): void { if (this.observesHeading) disconnects += 1; }
+    }
+    frameWindow.MutationObserver = OwnerMutationObserver;
+
+    try {
+      if (adoptionPath === 'explicit-adopt') {
+        frameDocument.body.append(frameDocument.adoptNode(el));
+      } else {
+        frameDocument.body.append(el);
+      }
+      await el.updateComplete;
+      await waitUntil(
+        () => observations > 0,
+        'the destination header observer was not registered',
+      );
+      expect(observations, "the destination window observes the slotted header").to.be.greaterThan(0);
+      document.adoptNode(el);
+      expect(disconnects, "adoption disconnects the old header observer").to.be.greaterThan(0);
+    } finally {
+      frameWindow.MutationObserver = originalMutationObserver;
+      if (el.ownerDocument !== document) document.adoptNode(el);
+      el.remove();
+      iframe.remove();
+    }
+  });
+}
+
+it('keeps the accessible name synchronized after a connected cross-document move', async () => {
   const el = (await fixture(
     html`<lr-responsive-panel mode="overlay" open><span slot="header">Owner heading</span></lr-responsive-panel>`,
   )) as LyraResponsivePanel;
-  await el.updateComplete;
   const heading = el.querySelector('[slot="header"]')!;
-  el.remove();
-  const iframe = document.createElement("iframe");
+  const iframe = document.createElement('iframe');
   document.body.append(iframe);
   const frameDocument = iframe.contentDocument;
-  const frameWindow = iframe.contentWindow;
-  if (!frameDocument || !frameWindow) {
+  if (!frameDocument) {
     iframe.remove();
-    throw new Error("The iframe realm was unavailable.");
+    throw new Error('The iframe document was unavailable.');
   }
-  const originalMutationObserver = frameWindow.MutationObserver;
-  let observations = 0;
-  let disconnects = 0;
-  class OwnerMutationObserver implements MutationObserver {
-    private observesHeading = false;
-    constructor(_callback: MutationCallback) {}
-    observe(target: Node): void {
-      if (target === heading) {
-        this.observesHeading = true;
-        observations += 1;
-      }
-    }
-    takeRecords(): MutationRecord[] { return []; }
-    disconnect(): void { if (this.observesHeading) disconnects += 1; }
-  }
-  frameWindow.MutationObserver = OwnerMutationObserver;
 
   try {
-    frameDocument.body.append(frameDocument.adoptNode(el));
+    expect(Boolean(el.shadowRoot!.querySelector('[data-native-modal-carrier]'))).to.equal(false);
+    frameDocument.body.append(el);
     await el.updateComplete;
-    await Promise.resolve();
-    expect(observations, "the destination window observes the slotted header").to.be.greaterThan(0);
-    document.adoptNode(el);
-    expect(disconnects, "adoption disconnects the old header observer").to.be.greaterThan(0);
+    heading.textContent = 'Updated owner heading';
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('[part="panel"]')?.getAttribute('aria-label') === 'Updated owner heading',
+      'the adopted header text was not reflected in the panel name',
+    );
   } finally {
-    frameWindow.MutationObserver = originalMutationObserver;
+    if (el.ownerDocument !== document) document.adoptNode(el);
+    el.remove();
+    iframe.remove();
+  }
+});
+
+it('updates its inherited localized name after a connected cross-document move', async () => {
+  const locale = 'qaa-x-rpadopt';
+  registerLyraLocale(locale, { responsivePanel: 'Panneau adopté' });
+  const el = (await fixture(
+    html`<lr-responsive-panel mode="overlay" open>Content</lr-responsive-panel>`,
+  )) as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.getAttribute('aria-label')).to.equal('Panel');
+
+  const iframe = document.createElement('iframe');
+  document.body.append(iframe);
+  const frameDocument = iframe.contentDocument;
+  if (!frameDocument) {
+    iframe.remove();
+    throw new Error('The iframe document was unavailable.');
+  }
+
+  try {
+    frameDocument.body.append(el);
+    await el.updateComplete;
+    frameDocument.body.lang = locale;
+    await waitUntil(
+      () => panel.getAttribute('aria-label') === 'Panneau adopté',
+      'the destination language did not update the rendered panel name',
+    );
+  } finally {
     if (el.ownerDocument !== document) document.adoptNode(el);
     el.remove();
     iframe.remove();

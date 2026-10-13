@@ -1451,6 +1451,21 @@ describe('search', () => {
     expect(await el.search('Figure size')).to.equal(1);
   });
 
+  it('searches visible text after a closed HTML comment without indexing the comment', async () => {
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', source: 'render()', outputs: [{
+        output_type: 'execute_result',
+        data: { 'text/html': '<p>Visible output</p><!-- hidden-comment-needle --><div>trailing-visible-needle</div> after-markup-needle' },
+      }] }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+
+    expect(await el.search('trailing-visible-needle')).to.equal(1);
+    expect(await el.search('after-markup-needle')).to.equal(1);
+    expect(await el.search('hidden-comment-needle')).to.equal(0);
+  });
+
   it('keeps output search linear on markup made of unterminated tags and comments', async () => {
     const hostile = '<'.repeat(400_000) + '<!--'.repeat(100_000) + '<style>'.repeat(50_000);
     const notebook = {
