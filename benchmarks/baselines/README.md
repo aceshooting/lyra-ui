@@ -36,3 +36,15 @@ pnpm benchmark:compare benchmarks/baselines/2026-10-12-stress.json benchmarks/ba
 ```
 
 The original comparison exits with status 1 because timing regressions exceeded both thresholds; this does not mean the recorded semantic checks failed.
+
+[2026-10-13-28.1.1-stress.json](2026-10-13-28.1.1-stress.json) and [2026-10-13-28.1.2-stress.json](2026-10-13-28.1.2-stress.json) preserve a same-day comparison with matching harness and fixture fingerprints, browser versions and environment metadata. Each run contains 80 workload/browser cases and 560 measured samples; all 160 cases and 1,120 samples passed their semantic checks. Both files retain their exact raw bytes and anonymous metadata, including `publicCommit: null`.
+
+Comparing only this pair with the unchanged thresholds observed 101 regressed and 85 improved metric series out of 800. A series can appear in both groups. The original strict comparison exits with status 1 because timing increases exceed both 15% **and** 1 ms for median or p95; the semantic checks remain passed. These observations do not establish a uniform speedup or attribute timing differences to the library.
+
+Validate both saved runs and reproduce their comparison without launching browsers:
+
+```sh
+node benchmarks/schema.mjs --validate benchmarks/baselines/2026-10-13-28.1.1-stress.json
+node benchmarks/schema.mjs --validate benchmarks/baselines/2026-10-13-28.1.2-stress.json
+pnpm benchmark:compare benchmarks/baselines/2026-10-13-28.1.1-stress.json benchmarks/baselines/2026-10-13-28.1.2-stress.json
+```
