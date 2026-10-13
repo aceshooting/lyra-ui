@@ -357,7 +357,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     if (this.hasUpdated) {
       const slot =
         this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
-      if (slot) this.syncItemsFromSlot(slot);
+      if (slot) this.syncItemsFromSlot(slot, true);
     }
   }
 
@@ -669,7 +669,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.syncItemsFromSlot(e.target as HTMLSlotElement);
   };
 
-  private syncItemsFromSlot(slot: HTMLSlotElement): void {
+  private syncItemsFromSlot(slot: HTMLSlotElement, reconnect = false): void {
+    if (!this.isConnected) return;
     const assigned = slot
       .assignedElements({ flatten: true })
       .filter(isLyraMenuItemElement);
@@ -689,6 +690,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       assigned.length === this.items.length &&
       assigned.every((item, index) => item === this.items[index])
     ) {
+      if (reconnect) {
+        this.observeItems();
+        this.syncPresentationState();
+      }
       return;
     }
     this.itemStateObserver?.disconnect();
@@ -711,26 +716,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     for (const item of previousItems) {
       if (!assignedItems.has(item)) this.releaseItemOwner(item);
     }
-    for (const item of this.items) this.acquireItemOwner(item);
-    this.applyDropdownSize();
-    const MutationObserverCtor =
-      this.ownerDocument.defaultView?.MutationObserver;
-    if (MutationObserverCtor) {
-      const owner = this.ownerDocument;
-      let observer: MutationObserver;
-      observer = new MutationObserverCtor(() => {
-        if (this.itemStateObserver !== observer || this.ownerDocument !== owner)
-          return;
-        this.onItemStateChange();
-      });
-      this.itemStateObserver = observer;
-      for (const item of this.items) {
-        this.itemStateObserver.observe(item, {
-          attributes: true,
-          attributeFilter: ['disabled', 'hidden', 'aria-hidden', 'inert'],
-        });
-      }
-    }
+    this.observeItems();
     this.activeIndex = previouslyActive
       ? this.items.indexOf(previouslyActive)
       : -1;
@@ -761,6 +747,29 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
           // parked on slotted non-item content, which stays within this element.
           this.items[this.activeIndex]!.focus();
         }
+      }
+    }
+  }
+
+  private observeItems(): void {
+    for (const item of this.items) this.acquireItemOwner(item);
+    this.applyDropdownSize();
+    const MutationObserverCtor =
+      this.ownerDocument.defaultView?.MutationObserver;
+    if (MutationObserverCtor) {
+      const owner = this.ownerDocument;
+      let observer: MutationObserver;
+      observer = new MutationObserverCtor(() => {
+        if (this.itemStateObserver !== observer || this.ownerDocument !== owner)
+          return;
+        this.onItemStateChange();
+      });
+      this.itemStateObserver = observer;
+      for (const item of this.items) {
+        this.itemStateObserver.observe(item, {
+          attributes: true,
+          attributeFilter: ['disabled', 'hidden', 'aria-hidden', 'inert'],
+        });
       }
     }
   }

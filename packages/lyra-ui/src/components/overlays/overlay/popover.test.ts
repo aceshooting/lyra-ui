@@ -530,3 +530,20 @@ it('positions only the current owner document after adoption while the runtime i
     frame.remove();
   }
 });
+
+
+it('does not bind a trigger after removal before its first update', async () => {
+  const parent = await fixture<HTMLDivElement>(html`<div></div>`);
+  const el = document.createElement('lr-popover') as LyraPopover;
+  el.innerHTML = '<button slot="trigger">Open</button><p>Content</p>';
+  parent.append(el);
+  el.remove();
+  await el.updateComplete;
+  await Promise.resolve();
+  expect((el as any).triggerElement === undefined, 'detached initial collection must not bind trigger interactions').to.equal(true);
+  parent.append(el);
+  await el.updateComplete;
+  await waitUntil(() => (el as any).triggerElement === el.querySelector('button'));
+  el.querySelector('button')!.click();
+  await waitUntil(() => el.open);
+});

@@ -1487,3 +1487,60 @@ it('keeps ordinary submenus beside their parent with the menubar attachment opti
   expect(event.defaultPrevented).to.equal(true);
   expect(share.submenuOpen).to.equal(false);
 });
+
+
+it('does not recreate item observation when initial collection runs after removal', async () => {
+  const parent = await fixture<HTMLDivElement>(html`<div></div>`);
+  const el = document.createElement('lr-menu') as LyraMenu;
+  el.innerHTML = '<lr-menu-item>First</lr-menu-item><lr-menu-item>Second</lr-menu-item>';
+  parent.append(el);
+  el.remove();
+  await el.updateComplete;
+  await Promise.resolve();
+  const state = el as unknown as { itemStateObserver?: MutationObserver };
+  expect(state.itemStateObserver === undefined, 'queued initial collection must not rearm detached observation').to.equal(true);
+  parent.append(el);
+  await el.updateComplete;
+  await waitUntil(() => state.itemStateObserver !== undefined);
+  expect(el.querySelectorAll('lr-menu-item').length).to.equal(2);
+});
+
+it('rearms item-state observation when reconnecting unchanged slot members', async () => {
+  const el = await fixture<LyraMenu>(html`<lr-menu><lr-menu-item>First</lr-menu-item><lr-menu-item>Second</lr-menu-item></lr-menu>`);
+  const state = el as unknown as { itemStateObserver?: MutationObserver; activeIndex: number };
+  await waitUntil(() => state.itemStateObserver !== undefined);
+  const previous = state.itemStateObserver;
+  const parent = el.parentNode!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(state.itemStateObserver !== undefined && state.itemStateObserver !== previous,
+    'unchanged members still need a new observer after teardown').to.equal(true);
+  const first = el.querySelector('lr-menu-item') as LyraMenuItem;
+  first.disabled = true;
+  await first.updateComplete;
+  await waitUntil(() => state.activeIndex === 1, 'reconnected menu must respond to disabled item state');
+});
+
+it('rearms unchanged menu items without taking focus on reconnect', async () => {
+  const parent = await fixture<HTMLDivElement>(html`<div>
+    <button>Elsewhere</button>
+    <lr-menu><lr-menu-item>First</lr-menu-item><lr-menu-item>Second</lr-menu-item></lr-menu>
+  </div>`);
+  const el = parent.querySelector('lr-menu') as LyraMenu;
+  const outside = parent.querySelector('button')!;
+  await el.updateComplete;
+  await focusByKeyboard(outside);
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(document.activeElement === outside, 'external focus stays outside after reconnect').to.equal(true);
+  outside.remove();
+  expect(document.activeElement === document.body).to.equal(true);
+  el.remove();
+  (el.querySelector('lr-menu-item') as LyraMenuItem).hidden = true;
+  parent.append(el);
+  await el.updateComplete;
+  expect(document.activeElement === document.body, 'bare reconnect must not take focus from the document').to.equal(true);
+  expect((el as any).activeIndex, 'reconnect uses availability changed while detached').to.equal(1);
+});

@@ -2382,3 +2382,73 @@ it('lets native inline resize dimensions drive an unsized field and its chrome',
   expect(ta.getBoundingClientRect().height, 'resized height shrinks').to.be.closeTo(before.height + 20, 1);
   expect(hint.getBoundingClientRect().top, 'chrome follows shrink').to.be.closeTo(hintTop + 20, 1);
 });
+
+
+it('defers auto sizing after removal while native editing and value updates remain live', async () => {
+  const el = await fixture<LyraTextarea>(html`<lr-textarea resize="auto" rows="1" style="inline-size:300px" value="short"></lr-textarea>`);
+  const ta = el.shadowRoot!.querySelector('textarea')!;
+  const state = el as unknown as { resizeObserver?: ResizeObserver; resizeRaf: { pending: boolean } };
+  await waitUntil(() => state.resizeObserver !== undefined && ta.getBoundingClientRect().height > 0);
+  const parent = el.parentNode!;
+  const initialHeight = ta.getBoundingClientRect().height;
+  const initialBlockSize = ta.style.blockSize;
+  el.value = 'queued value';
+  el.rows = 2;
+  el.remove();
+  await el.updateComplete;
+  expect(state.resizeObserver === undefined, 'detached update must not recreate auto-size observation').to.equal(true);
+  expect(state.resizeRaf.pending).to.equal(false);
+  expect(ta.style.blockSize).to.equal(initialBlockSize);
+  expect(ta.value).to.equal('queued value');
+  expect(ta.rows).to.equal(2);
+  const latest = Array.from({ length: 8 }, (_, index) => `latest line ${index}`).join('\n');
+  el.setRangeText(latest, 0, ta.value.length);
+  await el.updateComplete;
+  expect(el.value).to.equal(latest);
+  expect(ta.value).to.equal(latest);
+  expect(ta.style.blockSize, 'detached native editing must not measure and fit geometry').to.equal(initialBlockSize);
+  parent.appendChild(el);
+  await waitUntil(() => state.resizeObserver !== undefined && ta.getBoundingClientRect().height > initialHeight);
+  expect(ta.scrollHeight).to.be.at.most(ta.clientHeight + 1);
+  expect(ta.value).to.equal(latest);
+});
+
+it('ignores a retired auto-size observer after same-document reconnect', async () => {
+  const original = window.ResizeObserver;
+  const records: Array<{ callback: ResizeObserverCallback; observer: ResizeObserver }> = [];
+  window.ResizeObserver = class extends original {
+    constructor(callback: ResizeObserverCallback) {
+      super(callback);
+      records.push({ callback, observer: this });
+    }
+  };
+  let el: LyraTextarea | undefined;
+  try {
+    el = await fixture<LyraTextarea>(html`<lr-textarea resize="auto" value="content"></lr-textarea>`);
+    const state = el as unknown as {
+      resizeObserver?: ResizeObserver;
+      lastObservedWidth?: number;
+      resizeRaf: { pending: boolean; cancel(): void };
+    };
+    await waitUntil(() => state.resizeObserver !== undefined);
+    const retired = records.find(record => record.observer === state.resizeObserver)!;
+    const parent = el.parentNode!;
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+    const current = records.find(record => record.observer === state.resizeObserver)!;
+    expect(current.observer === retired.observer).to.equal(false);
+    state.resizeRaf.cancel();
+    const width = state.lastObservedWidth!;
+    const entry = { target: el.shadowRoot!.querySelector('textarea')!, contentRect: { width: width + 17 } } as unknown as ResizeObserverEntry;
+    retired.callback([entry], retired.observer);
+    expect(state.lastObservedWidth, 'retired observer must not overwrite the current width baseline').to.equal(width);
+    expect(state.resizeRaf.pending).to.equal(false);
+    current.callback([entry], current.observer);
+    expect(state.lastObservedWidth).to.equal(width + 17);
+    expect(state.resizeRaf.pending).to.equal(true);
+  } finally {
+    el?.remove();
+    window.ResizeObserver = original;
+  }
+});

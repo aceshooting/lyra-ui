@@ -489,6 +489,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
   };
 
   #bindPanelsFromSlot(slot: HTMLSlotElement): void {
+    if (!this.isConnected) return;
     this.#bindPanels(slot.assignedElements({ flatten: true }));
   }
 

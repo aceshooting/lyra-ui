@@ -19,6 +19,7 @@ import { cancelDeferredFocusReturn, type DeferredFocusReturnPass } from '../../.
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { menuIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import {
   activateOverlay,
@@ -240,6 +241,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     | string
     | null = this.getAttribute('tabindex') ?? '-1';
   private resizeObserver?: ResizeObserver;
+  private readonly allocationFrame = new OwnedFrame(this);
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
   private readonly nativeModal = new NativeModalCarrier(this, {
@@ -286,6 +288,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.nativeModal.hide();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
+    this.allocationFrame.cancel();
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     this.overlayHandle?.suspend();
@@ -351,18 +354,20 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     const view = this.ownerDocument.defaultView;
     const ResizeObserverConstructor = view?.ResizeObserver;
     if (ResizeObserverConstructor) {
-      this.resizeObserver ??= new ResizeObserverConstructor((entries) => {
-        const entry =
-          entries.find((candidate) => candidate.target === this) ?? entries[0];
-        const inlineSize =
-          entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
-        // Next frame: the flip changes this host's block size, which loops the observer if done inside it.
-        if (inlineSize !== undefined) {
-          view?.requestAnimationFrame(() => {
-            if (this.isConnected) this.applyMeasuredInlineSize(inlineSize);
-          });
-        }
-      });
+      if (!this.resizeObserver) {
+        const observer = new ResizeObserverConstructor((entries) => {
+          if (!this.isConnected || this.ownerDocument.defaultView !== view || this.resizeObserver !== observer) return;
+          const entry =
+            entries.find((candidate) => candidate.target === this) ?? entries[0];
+          const inlineSize =
+            entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
+          // Next frame: the flip changes this host's block size, which loops the observer if done inside it.
+          if (inlineSize !== undefined) {
+            this.allocationFrame.schedule(() => this.applyMeasuredInlineSize(inlineSize));
+          }
+        });
+        this.resizeObserver = observer;
+      }
       this.resizeObserver.observe(this);
       return;
     }

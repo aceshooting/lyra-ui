@@ -2233,3 +2233,54 @@ describe('mobile navigation focus return to a host-hidden trigger', () => {
     });
   }
 });
+
+
+it('retires an allocation frame queued before adoption and measures the new owner', async () => {
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe style="width:900px;height:500px"></iframe>`);
+  const OriginalObserver = window.ResizeObserver;
+  const originalFrame = window.requestAnimationFrame;
+  let el: LyraPage | undefined;
+  let capturing = false;
+  let adopted = false;
+  let retired: { callback: FrameRequestCallback; handle: number } | undefined;
+  window.requestAnimationFrame = callback => {
+    const handle = originalFrame.call(window, callback);
+    if (capturing) retired = { callback, handle };
+    return handle;
+  };
+  window.ResizeObserver = class extends OriginalObserver {
+    constructor(callback: ResizeObserverCallback) {
+      super((entries, observer) => {
+        const measurement = entries.find(entry => entry.target === el);
+        capturing = !adopted && !!measurement && Math.abs(measurement.contentRect.width - 200) < 1;
+        callback(entries, observer);
+        capturing = false;
+        if (!adopted && retired && el) {
+          el.style.inlineSize = '800px';
+          frame.contentDocument!.body.append(frame.contentDocument!.adoptNode(el));
+          adopted = true;
+        }
+      });
+    }
+  };
+  try {
+    el = await fixture<LyraPage>(html`<lr-page mobile-breakpoint="400px" style="display:block;inline-size:800px"></lr-page>`);
+    await waitUntil(() => el!.view === 'desktop');
+    el.style.inlineSize = '200px';
+    // A real ResizeObserver delivery queues the old frame before the synchronous adoption above.
+    await waitUntil(() => adopted && retired !== undefined, 'old allocation did not queue a frame');
+    const oldFrame = retired!;
+    window.cancelAnimationFrame(oldFrame.handle);
+    await waitUntil(() => el!.view === 'desktop', 'new owner must measure its current allocation');
+    // Also exercise an already-queued callback after cancellation, as OwnedFrame promises to reject it.
+    oldFrame.callback(0);
+    expect(el.view, 'old allocation must not overwrite the new owner classification').to.equal('desktop');
+    el.style.inlineSize = '200px';
+    await waitUntil(() => el!.view === 'mobile', 'current owner must still observe allocation changes');
+  } finally {
+    el?.remove();
+    if (retired) window.cancelAnimationFrame(retired.handle);
+    window.ResizeObserver = OriginalObserver;
+    window.requestAnimationFrame = originalFrame;
+  }
+});

@@ -933,6 +933,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   }
 
   private syncInteractionTrigger(): void {
+    if (!this.isConnected) return;
     const next = this.resolveInteractionTrigger();
     if (next === this.triggerElement) {
       // Re-resolve a custom trigger's real focus target after late upgrade without interpreting an

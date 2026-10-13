@@ -1763,3 +1763,20 @@ describe('accordion events, keys, availability and findability', () => {
     expect(Number.parseFloat(style.transitionDuration)).to.be.greaterThan(0);
   });
 });
+
+
+it('does not reacquire item ownership after removal before its first update', async () => {
+  const parent = await fixture<HTMLDivElement>(html`<div></div>`);
+  const el = document.createElement('lr-accordion') as LyraAccordion;
+  el.innerHTML = '<lr-accordion-item label="First">First</lr-accordion-item>';
+  parent.append(el);
+  el.remove();
+  await el.updateComplete;
+  await Promise.resolve();
+  expect((el as any).panels.size, 'detached initial collection must leave item ownership released').to.equal(0);
+  el.innerHTML = '<lr-accordion-item label="Latest">Latest</lr-accordion-item><lr-accordion-item label="Second">Second</lr-accordion-item>';
+  parent.append(el);
+  await el.updateComplete;
+  await waitUntil(() => (el as any).panels.size === 2);
+  expect([...((el as any).panels as Set<LyraAccordionItem>)].map(item => item.label)).to.deep.equal(['Latest', 'Second']);
+});

@@ -1310,3 +1310,21 @@ it('uses without-arrow as the dropdown arrow control', async () => {
   expect(el.shadowRoot!.querySelector('[part~="arrow"]') !== null).to.equal(true);
   expect(el.withoutArrow).to.equal(false);
 });
+
+
+it('does not reacquire consumer menu ownership after removal before its first update', async () => {
+  const parent = await fixture<HTMLDivElement>(html`<div></div>`);
+  const el = document.createElement('lr-dropdown') as LyraDropdown;
+  el.innerHTML = '<button slot="trigger">Actions</button><lr-menu><lr-menu-item>First</lr-menu-item></lr-menu>';
+  const menu = el.querySelector('lr-menu') as LyraMenu;
+  parent.append(el);
+  el.remove();
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(menu.dropdownOwner === null, 'detached initial collection must leave consumer ownership released').to.equal(true);
+  expect(menu.dropdownContained).to.equal(false);
+  parent.append(el);
+  await el.updateComplete;
+  await waitUntil(() => menu.dropdownOwner === el && menu.dropdownContained);
+  expect(el.getMenu() === menu).to.equal(true);
+});

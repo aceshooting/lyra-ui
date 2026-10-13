@@ -659,14 +659,15 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   private armResizeObserver(): void {
+    if (!this.isConnected) return;
     const textarea = this.textareaEl;
     if (this.resizeObserver || !textarea) return;
     const view = this.ownerDocument.defaultView;
     const ResizeObserverCtor = view?.ResizeObserver;
     if (!view || !ResizeObserverCtor) return;
     this.lastObservedWidth = textarea.getBoundingClientRect().width;
-    this.resizeObserver = new ResizeObserverCtor((entries) => {
-      if (!this.isConnected || this.ownerDocument.defaultView !== view) return;
+    const observer = new ResizeObserverCtor((entries) => {
+      if (!this.isConnected || this.ownerDocument.defaultView !== view || this.resizeObserver !== observer) return;
       const width = entries[0]?.contentRect.width;
       // fitToContent() itself writes a *block*-size (height) change to the observed element,
       // which would otherwise re-trigger this same observer every tick -- only re-fit when the
@@ -684,12 +685,13 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
         this.fitToContent();
       });
     });
-    this.resizeObserver.observe(textarea);
+    this.resizeObserver = observer;
+    observer.observe(textarea);
   }
 
   private fitToContent(): void {
     const ta = this.textareaEl;
-    if (!ta || this.resize !== 'auto') return;
+    if (!this.isConnected || !ta || this.resize !== 'auto') return;
     // Collapse first so a shrinking edit (e.g. deleting a wrapped line) can shrink the box back
     // down too, not just grow it -- scrollHeight never reports smaller than the box's current
     // height otherwise.

@@ -242,7 +242,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
   }
 
   private configureMenu(menu: LyraMenu | undefined): void {
-    if (!menu) return;
+    if (!this.isConnected || !menu) return;
     if (menu === this.consumerMenu && !this.consumerMenuSnapshot) {
       this.consumerMenuSnapshot = {
         dropdownOwner: menu.dropdownOwner,
