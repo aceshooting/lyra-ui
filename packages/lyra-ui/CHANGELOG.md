@@ -1,5 +1,16 @@
 # Changelog
 
+## 28.1.3
+
+### Patch Changes
+
+- 53edd10: Package the default syntax-highlighting engine's reviewed WebAssembly asset beside its lazy loader. Markdown and code components now build without an unresolved asset warning when the optional Shiki peer is absent. The asset is fetched only when default-engine highlighting is requested and Shiki is available; JavaScript-engine and plain-text rendering do not fetch it. Include the upstream licenses and artifact provenance with the binary.
+
+  The portable asset reference and optional-engine capability check add 20–75 gzip bytes to ten direct JavaScript entries, 41 bytes to the component percentile and 46 bytes to its maximum. After removing an unnecessary loader module, those twelve breached bundle canaries advance to their exact measured bytes, with no added headroom. The release version string alone also changes gzip compression by 1–2 bytes in five entries; their breached ceilings advance by only 1–2 bytes to the exact measurements. All other ceilings, CSS budgets and optional-peer exclusions remain unchanged.
+
+  Packed consumer measurements include the reviewed 466,610-byte binary in their complete emitted-file totals. The core and code-block checks retain their existing non-asset ceilings and gain only that exact required-asset allowance; they also verify the emitted binary against the packaged asset, rejecting missing, changed, duplicate or additional WASM files. This does not grant extra JavaScript headroom. The package download grows by approximately 162 kB and remains within its unchanged delivery limits.
+- @aceshooting/lyra-translations@28.1.3
+
 ## 28.1.2
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @aceshooting/lyra-docs
 
+## 0.5.1
+
+### Patch Changes
+
+- 287505f: Update the optional DOCX engine to 2.29.0 and refresh its exact peer documentation, stylesheet, and third-party notices.
+- Updated dependencies [53edd10]
+  - @aceshooting/lyra-ui@28.1.3
+
 ## 0.5.0
 
 ### Minor Changes
