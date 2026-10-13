@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { relativeSpecifiersOutsideCatalog } from '../../lyra-ui/scripts/translations-companion.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 const repoRoot = path.resolve(packageRoot, '../..');
@@ -52,7 +53,7 @@ if (existsSync(dist)) {
   }
   for (const file of files.filter((name) => name.endsWith('.js'))) {
     const source = readFileSync(path.join(dist, file), 'utf8');
-    assert.equal(/["']\.\.\//u.test(source), false, `${file} must not import outside the package`);
+    assert.deepEqual(relativeSpecifiersOutsideCatalog(source, file), [], `${file} must not import outside the package`);
     assert.equal(source.includes('internal/localization-runtime'), false, `${file} must use the public localization entry`);
   }
 }

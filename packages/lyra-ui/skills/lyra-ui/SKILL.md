@@ -85,7 +85,9 @@ the exact recipe, labels and persistence; read it before changing startup or per
 
 ## Companion packages
 
-Install each at the same version as `@aceshooting/lyra-ui`.
+Install `@aceshooting/lyra-ide` and `@aceshooting/lyra-translations` at the same version as
+`@aceshooting/lyra-ui`. `@aceshooting/lyra-flags` and `@aceshooting/lyra-docs` are versioned
+independently; choose releases compatible with the installed packages and their declared peer ranges.
 
 - **`@aceshooting/lyra-translations`** (optional peer): the 66 locale catalogs. Import
   `@aceshooting/lyra-translations/<locale>.js` (or `<locale>/<family>.js` slices); it is also what

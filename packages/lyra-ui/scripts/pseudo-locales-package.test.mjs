@@ -9,10 +9,14 @@ import { sideEffectsCover } from './side-effects-patterns.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const pkg = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
+const locales = JSON.parse(readFileSync(path.join(packageDir, 'locales.json'), 'utf8'));
 // The real catalogs publish from @aceshooting/lyra-translations; only the pseudo-locales (which need
 // private runtime helpers) stay in this package, as exact subpath exports.
 assert.equal(pkg.exports?.['./translations/*'], undefined);
 for (const name of ['en-XA', 'ar-XB']) {
+  const entry = locales.locales.find((entry) => entry.locale === name);
+  assert.equal(entry.aggregateImport, `@aceshooting/lyra-ui/translations/pseudo/${name}.js`);
+  assert.equal(pkg.exports[entry.aggregateImport.replace('@aceshooting/lyra-ui/', './')], `./dist/translations/pseudo/${name}.js`);
   assert.equal(pkg.exports[`./translations/pseudo/${name}.js`], `./dist/translations/pseudo/${name}.js`);
 }
 

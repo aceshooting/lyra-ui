@@ -21,3 +21,12 @@ test('locale loaders import the companion package', () => {
     '{fr:()=>import("@aceshooting/lyra-translations/fr.js"),"de-CH":()=>import("@aceshooting/lyra-translations/de-CH.js")}',
   );
 });
+
+test('catalog boundary accepts sibling imports and rejects traversal in module specifiers', () => {
+  assert.deepEqual(relativeSpecifiersOutsideCatalog('import "../de/forms.js"; const text = "../outside.js";', 'de-CH/forms.js'), []);
+  for (const specifier of ['../../outside.js', './../../../outside.js', './x/../../../outside.js']) {
+    assert.deepEqual(relativeSpecifiersOutsideCatalog(`import "${specifier}";`, 'de-CH/forms.js'), [specifier]);
+  }
+  assert.deepEqual(relativeSpecifiersOutsideCatalog('export { x } from "../../outside.js";', 'de-CH/forms.js'), ['../../outside.js']);
+  assert.deepEqual(relativeSpecifiersOutsideCatalog('import("../../outside.js")', 'de-CH/forms.js'), ['../../outside.js']);
+});

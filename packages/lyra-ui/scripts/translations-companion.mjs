@@ -23,8 +23,8 @@ export function retargetLocaleLoaders(source) {
  * still resolves inside the tree, such as `../de/forms.js`, is fine; without it every `../` counts.
  */
 export function relativeSpecifiersOutsideCatalog(source, file) {
-  const specifiers = [...source.matchAll(/(?:from|import)\s*\(?\s*(["'])(\.\.\/[^"']*)\1/gu)].map((match) => match[2]);
-  if (file === undefined) return specifiers;
+  const specifiers = [...source.matchAll(/(?:from|import)\s*\(?\s*(["'])(\.{1,2}\/[^"']*)\1/gu)].map((match) => match[2]);
+  if (file === undefined) return specifiers.filter((specifier) => specifier.startsWith('../'));
   const depth = file.split('/').length - 1;
   return specifiers.filter((specifier) => {
     let level = depth;

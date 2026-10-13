@@ -30,6 +30,11 @@ test('manifest and loader map preserve authored aliases while publishing canonic
   const byLocale = new Map(manifest.locales.map((entry) => [entry.locale, entry]));
 
   assert.equal(inventory.catalogs.size, 66);
+  for (const locale of ['en-XA', 'ar-XB']) {
+    assert.equal(byLocale.get(locale).aggregateImport, `@aceshooting/lyra-ui/translations/pseudo/${locale}.js`);
+    assert.equal(byLocale.get(locale).kind, 'testing-only');
+    assert.deepEqual(byLocale.get(locale).familyImports, {});
+  }
   assert.equal(byLocale.get('fil').sourceLocale, 'tl');
   assert.equal(byLocale.get('fil').aggregateImport, '@aceshooting/lyra-translations/tl.js');
   assert.equal(byLocale.get('lah').sourceLocale, 'pnb');

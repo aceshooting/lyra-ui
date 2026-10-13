@@ -115,7 +115,7 @@ function pseudoEntry({ module, sourceKeys, pluralPin }) {
     direction: module.direction,
     script: localeScript(locale),
     parent: 'en',
-    aggregateImport: packageSpecifier(`translations/${module.aggregatePath.replace(/^\.\//u, '')}`),
+    aggregateImport: `@aceshooting/lyra-ui/translations/${module.aggregatePath.replace(/^\.\//u, '')}`,
     familyImports: {},
     sourceKeyCount: sourceKeys.length,
     translatedOwnKeyCount: 0,
