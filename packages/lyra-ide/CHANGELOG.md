@@ -1,5 +1,13 @@
 # @aceshooting/lyra-ide
 
+## 28.1.4
+
+### Patch Changes
+
+- Updated dependencies [edae457]
+- Updated dependencies [edae457]
+  - @aceshooting/lyra-ui@28.1.4
+
 ## 28.1.3
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @aceshooting/lyra-translations
 
+## 28.1.4
+
+### Patch Changes
+
+- edae457: Correct pseudo-locale manifest imports to point to their Lyra UI exports. Allow valid regional catalog imports within the translations package while continuing to reject imports that escape the package.
+- Updated dependencies [edae457]
+- Updated dependencies [edae457]
+  - @aceshooting/lyra-ui@28.1.4
+
 ## 28.1.3
 
 ### Patch Changes
