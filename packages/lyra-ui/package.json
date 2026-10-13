@@ -2954,7 +2954,7 @@
     "mammoth": "^1.13.0",
     "maplibre-gl": "^6.14.0",
     "marked": "^18.1.1",
-    "oxc-parser": "^0.153.0",
+    "oxc-parser": "^0.154.0",
     "papaparse": "^5.7.0",
     "pdfjs-dist": "^6.4.299",
     "pixelmatch": "^8.0.0",
@@ -2966,7 +2966,7 @@
     "shiki": "^4.5.0",
     "svelte": "^5.57.2",
     "typescript": "^7.0.2",
-    "vue": "^3.5.43",
+    "vue": "^3.5.44",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "packageManager": "pnpm@12.11.2"
