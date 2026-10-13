@@ -107,6 +107,10 @@ const FIXED_TIME_ZONE = 'UTC';
 const FONT_OVERRIDE_CSS = `:root {
   --lr-theme-font-family-body: 'Liberation Sans', sans-serif;
   --lr-theme-font-family-mono: 'Liberation Mono', monospace;
+}
+/* Scoped looks replace the inherited root font; retain the reviewed Shadcn metrics. */
+[data-lr-look='shadcn'] {
+  --lr-theme-font-family-body: 'DejaVu Sans', sans-serif;
 }`;
 
 const VIEWPORT = { width: 1280, height: 800 };
