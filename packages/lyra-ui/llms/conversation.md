@@ -482,7 +482,7 @@ rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
-`shiki/core`, `shiki/engine/oniguruma`, the binary `shiki/onig.wasm` asset (the default; select
+`shiki/core`, `shiki/engine/oniguruma`, Lyra’s packaged Oniguruma binary (the default; select
 `shiki/engine/javascript` instead via `setShikiCoreEngine('javascript')`), and
 `shiki/themes/github-{light,dark}.mjs`, the same fine-grained subset `<lr-code-block-core>` depends
 on.
@@ -2354,8 +2354,8 @@ for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must 
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
 explicitly sized host gives it too, identically to `<lr-code-block>` above.
 
-**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, the binary
-`shiki/onig.wasm` asset (the default; select `shiki/engine/javascript` instead via
+**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, Lyra’s packaged
+Oniguruma binary (the default; select `shiki/engine/javascript` instead via
 `setShikiCoreEngine('javascript')`), and `shiki/themes/github-{light,dark}.mjs` subpaths — never
 `shiki`'s main entry point, which is what carries the ~200-language table this component exists to
 avoid). Building the
@@ -4625,10 +4625,14 @@ These named interfaces and helper signatures are available to typed integrations
   `shiki-types.js` itself is an internal support module with no package subpath export.
   `setShikiCoreEngine(engine: ShikiEngineOption): void`
   Selects the regex-scanning engine every subsequent `loadShikiHighlighterCore()` call builds its
-  `HighlighterCore` with. `'oniguruma'` (the default) fetches the binary `shiki/onig.wasm` asset;
+  `HighlighterCore` with. `'oniguruma'` (the default) fetches Lyra’s packaged Oniguruma binary;
   `'javascript'` selects shiki's pure-JS engine instead, avoiding WebAssembly entirely. A function
   value is called on first use per distinct `languages` object and may return the engine
   synchronously or via a promise.
+  The binary is emitted as a separate asset (about 467 KB raw, 148 KB gzip), including when Shiki
+  is omitted from a consumer build. It is fetched only when Oniguruma highlighting is requested
+  and the optional engine is available; plain rendering and the JavaScript engine do not fetch it.
+  The package includes the binary's license notices and version/hash provenance beside the asset.
   Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
   `.../markdown/markdown-core.js`).
   `ShikiEngineOption = 'oniguruma' | 'javascript' | ShikiRegexEngineFactory`

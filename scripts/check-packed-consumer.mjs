@@ -11,6 +11,7 @@ import { PACKED_TARBALL_ENVIRONMENT, packedManifest, suppliedPackedTarball } fro
 import { checkPublishedCompatibilitySync, readCurrentCompatibilityContext } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
 import { checkPublishedFieldHistorySync } from '../packages/lyra-ui/scripts/published-field-compatibility-io.mjs';
 import { preservePackedTarball, verifyPackedMigrationConsumers, writeResolvedMigrationEntry, verifyResolvedMigrationBrowser } from './packed-migration-consumer.mjs';
+import { verifyPackedShikiConsumer } from './packed-shiki-consumer.mjs';
 import {
   parsePerformanceQualificationOptions,
   runPackedHydrationSmoke,
@@ -147,12 +148,15 @@ const rootHelperRegisteredTags = [];
 // all 49 emitted files, including signature-pad and shared accessibility, data ownership,
 // tree-focus, and document resource guards. The same Vite 8.1.5 measurement of published
 // 25.5.0 is 4,897,936 raw bytes; the prior reviewed measurement was 4,897,862 bytes.
-// Retain the existing 16,000-byte regression headroom (less than 0.5%); only the core
-// raw baseline changes. Peer exclusions, other profiles, and the complete file sum stay fixed.
+// Retain this original non-asset baseline and 16,000-byte regression headroom (less than 0.5%).
+// The separately reviewed Oniguruma asset allowance is available only
+// for one emitted binary identical to the installed package; non-asset bytes retain their original
+// ceiling. Peer exclusions and the complete file sum stay fixed.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
   reviewedCoreMeasurementBytes: 4_977_154,
+  reviewedRequiredShikiAssetBytes: 466_610,
   selectedRegressionHeadroomBytes: 16_000,
 };
 
@@ -183,7 +187,12 @@ const bundleEntries = {
     // has its separate tree-shaking canary below. The reviewed raw sum includes every emitted file.
     maxRawBytes:
       coreRawBudget.reviewedCoreMeasurementBytes +
+      coreRawBudget.selectedRegressionHeadroomBytes +
+      coreRawBudget.reviewedRequiredShikiAssetBytes,
+    maxNonAssetRawBytes:
+      coreRawBudget.reviewedCoreMeasurementBytes +
       coreRawBudget.selectedRegressionHeadroomBytes,
+    requiredShikiWasmBytes: coreRawBudget.reviewedRequiredShikiAssetBytes,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to
@@ -288,7 +297,9 @@ const bundleEntries = {
   },
   codeBlock: {
     fixture: 'core',
-    maxRawBytes: 600_000,
+    maxRawBytes: 600_000 + coreRawBudget.reviewedRequiredShikiAssetBytes,
+    maxNonAssetRawBytes: 600_000,
+    requiredShikiWasmBytes: coreRawBudget.reviewedRequiredShikiAssetBytes,
   },
   chart: {
     fixture: 'optional',
@@ -1247,6 +1258,29 @@ async function bundleSize(directory) {
   return { rawBytes, gzipBytes, files };
 }
 
+/** Allow only the one byte-identical packaged binary, without increasing the remaining graph's cap. */
+function requiredShikiAssetFindings({ rawBytes, wasmFiles, packagedWasm, requiredBytes, maxNonAssetRawBytes }) {
+  const findings = [];
+  const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+  if (packagedWasm.length !== requiredBytes) {
+    findings.push(`packaged Shiki WASM is ${packagedWasm.length} bytes; reviewed asset allowance is ${requiredBytes}`);
+  }
+  if (wasmFiles.length !== 1) {
+    findings.push(`expected exactly one emitted Shiki WASM asset, found ${wasmFiles.length}`);
+  }
+  const asset = wasmFiles[0];
+  const identical = wasmFiles.length === 1 && packagedWasm.length === requiredBytes &&
+    asset.bytes.length === requiredBytes && digest(asset.bytes) === digest(packagedWasm);
+  if (wasmFiles.length === 1 && !identical) {
+    findings.push('emitted Shiki WASM asset differs from the installed packaged binary');
+  }
+  const nonAssetRawBytes = rawBytes - (identical ? requiredBytes : 0);
+  if (nonAssetRawBytes > maxNonAssetRawBytes) {
+    findings.push(`non-asset raw ${nonAssetRawBytes} bytes exceeds unchanged budget ${maxNonAssetRawBytes} bytes`);
+  }
+  return findings;
+}
+
 function formatBytes(bytes) {
   return `${(bytes / 1024).toFixed(1)} KiB`;
 }
@@ -1518,6 +1552,17 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
       violations.push(`the bare ${entry} import emitted no retained Lyra styles`);
     }
   }
+  if (config.requiredShikiWasmBytes != null) {
+    const packagedWasm = await readFile(join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui',
+      'dist', 'components', 'conversation', 'code-block', 'onig.wasm'));
+    const wasmFiles = await Promise.all(output.files.filter(file => file.endsWith('.wasm'))
+      .map(async file => ({ bytes: await readFile(file) })));
+    violations.push(...requiredShikiAssetFindings({
+      rawBytes: output.rawBytes, wasmFiles, packagedWasm,
+      requiredBytes: config.requiredShikiWasmBytes,
+      maxNonAssetRawBytes: config.maxNonAssetRawBytes,
+    }));
+  }
   if (config.maxRawBytes != null && output.rawBytes > config.maxRawBytes) {
     violations.push(`raw ${formatBytes(output.rawBytes)} exceeds budget ${formatBytes(config.maxRawBytes)}`);
   }
@@ -1710,6 +1755,9 @@ async function main() {
     await verifyNoWorkspaceProtocolLeaked(coreFixture);
     await verifyNoWorkspaceProtocolLeaked(maplibreV5Fixture);
 
+    await verifyPackedShikiConsumer({ fixtureDir: coreFixture, withShiki: false });
+    await verifyPackedShikiConsumer({ fixtureDir: optionalFixture, withShiki: true });
+
     await verifyPackedMigrationCli(coreFixture);
     await verifyPackedInitAgents(coreFixture);
     const compatibilityHistoryDirectory = join(uiPackage, 'scripts/fixtures/compatibility-history');
@@ -1812,6 +1860,13 @@ async function main() {
         });
       }
     }
+
+    // Reuse the disposable optional fixture after its current-peer checks are complete.
+    const shikiFloor = /^\^(\d+\.\d+\.\d+)$/.exec(uiPackageJson.peerDependencies.shiki)?.[1];
+    assert.ok(shikiFloor, 'Update the Shiki floor fixture for the declared peer range');
+    await run(pnpm, ['add', '--save-dev', '--save-exact', `shiki@${shikiFloor}`, '--ignore-scripts', '--config.auto-install-peers=false'],
+      optionalFixture, 'Shiki peer-floor install');
+    await verifyPackedShikiConsumer({ fixtureDir: optionalFixture, withShiki: true, expectedShikiVersion: shikiFloor });
 
     console.log('Packed-consumer checks passed.');
   } finally {

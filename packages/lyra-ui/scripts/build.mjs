@@ -18,6 +18,7 @@ import {
 import { stripCssComments } from './strip-css-comments.mjs';
 import { generateThemeBootstrapAsset } from './generate-theme-bootstrap.mjs';
 import { retargetLocaleLoaders } from './translations-companion.mjs';
+import { generateShikiWasm } from './generate-shiki-wasm.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const tsc = join(
@@ -84,6 +85,8 @@ await Promise.all(
     cp(join(packageDir, 'src', 'styles', name), join(stylesDir, name)),
   ),
 );
+
+await generateShikiWasm(packageDir);
 
 const compacted = await compactBuildJavaScript(join(packageDir, 'dist'));
 console.log(

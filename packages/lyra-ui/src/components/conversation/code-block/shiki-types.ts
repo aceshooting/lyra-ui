@@ -127,20 +127,21 @@ export type ShikiRegexEngineFactory = () => ShikiRegexEngine | Promise<ShikiRege
  *  supplied factory for a pre-instantiated engine or a WASM asset served from elsewhere. */
 export type ShikiEngineOption = 'oniguruma' | 'javascript' | ShikiRegexEngineFactory;
 
-/**
- * The Oniguruma engine, fetching the binary `shiki/onig.wasm` asset rather than importing
- * `shiki/wasm` (the base64-inlined module that specifier resolves to by default) -- streaming-
- * compilable and roughly 82 KB gzip smaller. `new URL('shiki/onig.wasm', import.meta.url)` is the
- * pattern a bundler statically detects and rewrites to the real built/served asset URL (Vite and
- * webpack 5 both support it); a bundler that does not support it makes the `fetch()` below reject,
- * which `loadShikiHighlighterCore()`'s own `.catch()` already degrades to the documented
- * plain-text fallback, so an unsupported bundler fails closed rather than throwing.
- */
+/** The default engine uses the reviewed binary packaged beside its lazy asset loader. */
 function defaultOnigurumaEngineFactory(): Promise<ShikiRegexEngine> {
-  return import('shiki/engine/oniguruma').then(
-    ({ createOnigurumaEngine }) =>
-      createOnigurumaEngine(fetch(new URL('shiki/onig.wasm', import.meta.url))) as unknown as Promise<ShikiRegexEngine>,
-  );
+  return import('shiki/engine/oniguruma').then((module) => {
+    const candidate = typeof module.createOnigurumaEngine === 'function'
+      ? module
+      : unwrapOptionalPeerDefault(module) as {
+        createOnigurumaEngine?: (wasm: Promise<Response>) => Promise<ShikiRegexEngine>;
+      } | null;
+    const createEngine = candidate?.createOnigurumaEngine;
+    if (typeof createEngine !== 'function') {
+      throw new Error('Invalid optional peer shiki: an Oniguruma engine factory is required.');
+    }
+    // Validate the optional peer before fetching the packaged binary.
+    return createEngine(fetch(new URL('./onig.wasm', import.meta.url))) as unknown as Promise<ShikiRegexEngine>;
+  });
 }
 
 /** The pure-JS regex engine -- no WebAssembly at all, at the cost of not every TextMate grammar

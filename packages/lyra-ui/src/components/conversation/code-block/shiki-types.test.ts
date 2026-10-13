@@ -184,23 +184,6 @@ describe('setShikiCoreEngine()', () => {
   });
 });
 
-describe('default engine build output', () => {
-  it('never textually references the base64-inlined shiki/wasm specifier', async () => {
-    // Reads this module's own served source rather than the (dynamically imported, not statically
-    // analyzable from here) shiki module graph -- a "bundle analysis" proxy for what a real
-    // bundler's static import scan would see: `shiki/wasm` never appears as an import specifier in
-    // this file's own source text once the default engine fetches the binary `shiki/onig.wasm`
-    // asset instead. Checked as a bare substring, quote-style-independent, since the dev server's
-    // esbuild transform re-quotes string literals.
-    const source = await fetch(new URL('./shiki-types.ts', import.meta.url)).then((response) =>
-      response.text(),
-    );
-    expect(source).to.not.contain('shiki/wasm"').and.not.contain("shiki/wasm'");
-    expect(source).to.contain('shiki/onig.wasm');
-  });
-});
-
-
 describe('fine-grained highlighter failure caching', () => {
   it('keeps rejected engines as a plain-text fallback without sharing failed frozen snapshots', async () => {
     const originalWarn = console.warn;

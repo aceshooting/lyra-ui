@@ -123,8 +123,8 @@ for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must 
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
 explicitly sized host gives it too, identically to `<lr-code-block>` above.
 
-**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, the binary
-`shiki/onig.wasm` asset (the default; select `shiki/engine/javascript` instead via
+**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, Lyra’s packaged
+Oniguruma binary (the default; select `shiki/engine/javascript` instead via
 `setShikiCoreEngine('javascript')`), and `shiki/themes/github-{light,dark}.mjs` subpaths — never
 `shiki`'s main entry point, which is what carries the ~200-language table this component exists to
 avoid). Building the

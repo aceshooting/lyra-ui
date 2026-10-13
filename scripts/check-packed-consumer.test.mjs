@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { copyFile, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,7 +21,7 @@ const bundleBudgets = JSON.parse(
   ),
 );
 
-test('caps the packed core raw sum at the reviewed core measurement plus unchanged headroom', () => {
+test('caps the full core graph with an exact binary allowance and unchanged non-asset headroom', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
   assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable measured budget');
 
@@ -30,17 +31,24 @@ test('caps the packed core raw sum at the reviewed core measurement plus unchang
   );
   assert.deepEqual(terms, {
     reviewedCoreMeasurementBytes: 4_977_154,
+    reviewedRequiredShikiAssetBytes: 466_610,
     selectedRegressionHeadroomBytes: 16_000,
   });
-  const ceiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
-  assert.equal(ceiling, 4_993_154);
+  const nonAssetCeiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
+  const ceiling = nonAssetCeiling + terms.reviewedRequiredShikiAssetBytes;
+  assert.equal(nonAssetCeiling, 4_993_154);
+  assert.equal(ceiling, 5_459_764);
   assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedCoreMeasurementBytes < 0.005,
     'the existing raw regression headroom must remain below 0.5%');
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.reviewedCoreMeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*,/u,
+    /maxRawBytes:\s*coreRawBudget\.reviewedCoreMeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*\+\s*coreRawBudget\.reviewedRequiredShikiAssetBytes\s*,/u,
     'the core bundle entry must use the exact reviewed measurement and selected headroom',
   );
+  assert.match(checkerSource,
+    /maxNonAssetRawBytes:\s*coreRawBudget\.reviewedCoreMeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*,/u);
+  assert.match(checkerSource,
+    /codeBlock:\s*\{[^}]*maxRawBytes:\s*600_000 \+ coreRawBudget\.reviewedRequiredShikiAssetBytes,[^}]*maxNonAssetRawBytes:\s*600_000,[^}]*requiredShikiWasmBytes:\s*coreRawBudget\.reviewedRequiredShikiAssetBytes,/u);
   const overageGate = checkerSource.match(/if \(config\.maxRawBytes != null && output\.rawBytes > config\.maxRawBytes\) \{[\s\S]*?\n  \}/u)?.[0];
   assert.ok(overageGate, 'the packed raw-byte gate must remain inspectable');
   const inspectOverage = new Function('output', 'config', 'formatBytes', `const violations = []; ${overageGate}\nreturn violations;`);
@@ -48,6 +56,47 @@ test('caps the packed core raw sum at the reviewed core measurement plus unchang
   const overage = inspectOverage({ rawBytes: ceiling + 1 }, { maxRawBytes: ceiling }, String);
   assert.equal(overage.length, 1, 'one byte above the reviewed raw ceiling must fail');
   assert.match(overage[0], /exceeds budget/u);
+});
+
+test('the asset allowance rejects missing, duplicate, corrupt, or resized binaries and cannot fund JavaScript growth', () => {
+  const source = checkerSource.match(/function requiredShikiAssetFindings\([^]*?\n\}/u)?.[0];
+  assert.ok(source, 'required asset accounting must remain independently testable');
+  assert.match(checkerSource, /violations\.push\(\.\.\.requiredShikiAssetFindings\(/u,
+    'the packed bundle gate must enforce the required asset findings');
+  const inspect = new Function('createHash', `return (${source});`)(createHash);
+  const requiredBytes = 466_610;
+  const packagedWasm = Buffer.alloc(requiredBytes, 7);
+  const originalCap = 4_993_154;
+  const input = {
+    rawBytes: originalCap + requiredBytes,
+    wasmFiles: [{ bytes: Buffer.from(packagedWasm) }],
+    packagedWasm, requiredBytes, maxNonAssetRawBytes: originalCap,
+  };
+  assert.deepEqual(inspect(input), [], 'the exact asset plus original non-asset ceiling fits');
+  assert.ok(inspect({ ...input, wasmFiles: [] }).some(message => message.includes('exactly one')));
+  assert.ok(inspect({ ...input, wasmFiles: [...input.wasmFiles, ...input.wasmFiles] })
+    .some(message => message.includes('exactly one')));
+  const corrupt = Buffer.from(packagedWasm);
+  corrupt[0] ^= 1;
+  assert.ok(inspect({ ...input, wasmFiles: [{ bytes: corrupt }] })
+    .some(message => message.includes('differs')));
+  assert.ok(inspect({ ...input, wasmFiles: [{ bytes: packagedWasm.subarray(1) }] })
+    .some(message => message.includes('differs')));
+  assert.ok(inspect({ ...input, packagedWasm: packagedWasm.subarray(1) })
+    .some(message => message.includes('reviewed asset allowance')));
+  assert.ok(inspect({ ...input, rawBytes: input.rawBytes + 1 })
+    .some(message => message.includes('non-asset raw')));
+  // Without the binary, excess JS could fit beneath the aggregate ceiling alone.
+  const hiddenGrowth = { ...input, rawBytes: originalCap + 1, wasmFiles: [] };
+  assert.ok(hiddenGrowth.rawBytes < input.rawBytes);
+  assert.ok(inspect(hiddenGrowth).some(message => message.includes('non-asset raw')));
+  const smallBinary = Buffer.alloc(1);
+  assert.ok(inspect({ ...hiddenGrowth, wasmFiles: [{ bytes: smallBinary }] })
+    .some(message => message.includes('non-asset raw')));
+  // The same allowance leaves the separate code-block JavaScript limit unchanged.
+  assert.deepEqual(inspect({ ...input, rawBytes: 600_000 + requiredBytes, maxNonAssetRawBytes: 600_000 }), []);
+  assert.ok(inspect({ ...input, rawBytes: 600_001 + requiredBytes, maxNonAssetRawBytes: 600_000 })
+    .some(message => message.includes('non-asset raw')));
 });
 
 test('keeps the packed button canary aligned with the authoritative granular hard budget', () => {

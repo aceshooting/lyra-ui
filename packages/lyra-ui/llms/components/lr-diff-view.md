@@ -129,8 +129,8 @@ shared tokens `--lr-color-border`/`-border-subtle`/`-surface`/`-success`/`-succe
 `-danger-quiet`/`-text`, `--lr-radius`, `--lr-space-xs`/`-s`, `--lr-font-size-sm`,
 `--lr-line-height-snug`, `--lr-focus-ring-*`.
 
-**Optional peer deps:** `shiki` (the same fine-grained `shiki/core`/`shiki/engine/oniguruma`/binary
-`shiki/onig.wasm` subset `lr-code-block-core` uses by default, never `shiki`'s full ~200-language
+**Optional peer deps:** `shiki` (the same fine-grained `shiki/core`/`shiki/engine/oniguruma` subset and packaged Oniguruma
+binary `lr-code-block-core` uses by default, never `shiki`'s full ~200-language
 main entry point) — only loaded once both `language` and a matching `languages` entry are set;
 unset/unmatched leaves the plain unhighlighted diff text untouched.
 
