@@ -4671,3 +4671,68 @@ describe('deprecated locked alias', () => {
   });
 
 });
+
+
+it('defers companion notifications from detached updates and delivers latest state on reconnect', async () => {
+  const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`);
+  const snapshots: FlowStructureSnapshot[] = [];
+  const unsubscribe = el.registerCompanion(snapshot => snapshots.push(snapshot));
+  try {
+    await waitUntil(() => snapshots.length > 0);
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    const parent = el.parentNode!;
+    const count = snapshots.length;
+    el.readonly = true;
+    el.remove();
+    await el.updateComplete;
+    expect((el as unknown as { companionRaf: unknown }).companionRaf === null,
+      'detached update must not queue companion notification').to.equal(true);
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(snapshots.length).to.equal(count);
+    parent.appendChild(el);
+    await waitUntil(() => snapshots.length > count);
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(snapshots.length).to.equal(count + 1);
+    expect(snapshots.at(-1)?.locked).to.equal(true);
+    unsubscribe();
+    el.readonly = false;
+    await el.updateComplete;
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    expect(snapshots.length).to.equal(count + 1);
+  } finally {
+    unsubscribe();
+  }
+});
+
+
+it('rejects a retired companion frame without clearing the adopted owner frame', async () => {
+  const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas></lr-flow-canvas>`);
+  const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const state = el as unknown as {
+    companionRaf: { owner: Window; handle: number } | null;
+    requestOwnerAnimationFrame(callback: FrameRequestCallback): { owner: Window; handle: number } | null;
+  };
+  const original = state.requestOwnerAnimationFrame;
+  const callbacks: FrameRequestCallback[] = [];
+  state.requestOwnerAnimationFrame = function (callback) {
+    callbacks.push(callback);
+    return original.call(this, callback);
+  };
+  const snapshots: FlowStructureSnapshot[] = [];
+  const unsubscribe = el.registerCompanion(snapshot => snapshots.push(snapshot));
+  try {
+    const retired = callbacks.at(-1)!;
+    iframe.contentDocument!.adoptNode(el);
+    iframe.contentDocument!.body.append(el);
+    const current = state.companionRaf;
+    expect(current?.owner === iframe.contentWindow).to.equal(true);
+    retired(0);
+    expect(snapshots.length).to.equal(0);
+    expect(state.companionRaf === current).to.equal(true);
+    await waitUntil(() => snapshots.length > 0);
+  } finally {
+    unsubscribe();
+    el.remove();
+    state.requestOwnerAnimationFrame = original;
+  }
+});

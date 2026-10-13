@@ -441,6 +441,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
 
   private scheduleMediaLayoutSize(width: number, height: number): void {
+    if (!this.isConnected) return;
     const view = this.ownerDocument.defaultView;
     if (!view) {
       this.updateMediaLayoutSize(width, height);
@@ -448,27 +449,34 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     }
     if (this.geometryFrame !== undefined) this.geometryFrameOwner?.cancelAnimationFrame(this.geometryFrame);
     this.geometryFrameOwner = view;
-    this.geometryFrame = view.requestAnimationFrame(() => {
+    const frame = view.requestAnimationFrame(() => {
+      if (!this.isConnected || this.ownerDocument.defaultView !== view ||
+          this.geometryFrameOwner !== view || this.geometryFrame !== frame) return;
       this.geometryFrame = undefined;
       this.geometryFrameOwner = undefined;
       this.updateMediaLayoutSize(Math.round(width * 100) / 100, Math.round(height * 100) / 100);
     });
+    this.geometryFrame = frame;
   }
 
   private syncGeometryObserver(): void {
+    if (!this.isConnected) return;
     const wrapper = this.wrapperEl;
     if (wrapper === this.observedWrapper) return;
     this.disconnectGeometryObserver();
     if (!wrapper) return;
     this.observedWrapper = wrapper;
     this.scheduleMediaLayoutSize(wrapper.offsetWidth, wrapper.offsetHeight);
-    const ResizeObserverConstructor = this.ownerDocument.defaultView?.ResizeObserver;
+    const owner = this.ownerDocument.defaultView;
+    const ResizeObserverConstructor = owner?.ResizeObserver;
     if (!ResizeObserverConstructor) return;
-    this.geometryObserver = new ResizeObserverConstructor((entries) => {
+    const observer = new ResizeObserverConstructor((entries) => {
+      if (!this.isConnected || this.ownerDocument.defaultView !== owner || this.geometryObserver !== observer) return;
       const entry = entries.find((candidate) => candidate.target === this.observedWrapper);
       if (entry) this.scheduleMediaLayoutSize(entry.contentRect.width, entry.contentRect.height);
     });
-    this.geometryObserver.observe(wrapper);
+    this.geometryObserver = observer;
+    observer.observe(wrapper);
   }
 
   private announceLoadError(): void {

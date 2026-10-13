@@ -634,6 +634,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.bindAuthoredCardObserver();
     this.syncAuthoredCards();
     this.pushCardPropsAll();
+    this.scheduleCompanionNotify();
     // updated() only runs on renders -- a disconnect/reconnect (e.g. a reparenting move) that
     // changes no reactive property never triggers one, which would leave every already-rendered
     // wrapper unwatched by the freshly created observer above, so re-observe directly here.
@@ -1415,12 +1416,15 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private scheduleCompanionNotify(structural = true): void {
     if (structural) this.companionStructure = undefined;
-    if (this.companionRaf != null || this.companionCallbacks.size === 0) return;
-    this.companionRaf = this.requestOwnerAnimationFrame(() => {
+    if (!this.isConnected || this.companionRaf != null || this.companionCallbacks.size === 0) return;
+    const request = this.requestOwnerAnimationFrame(() => {
+      if (this.companionRaf !== request) return;
       this.companionRaf = null;
+      if (!this.isConnected || this.ownerDocument.defaultView !== request?.owner) return;
       // Each observer receives its own frozen snapshot; the deeply frozen nodes/edges are shared.
       for (const cb of this.companionCallbacks) cb(this.buildSnapshot());
     });
+    this.companionRaf = request;
   }
 
   private buildSnapshot(): FlowStructureSnapshot {

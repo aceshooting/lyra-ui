@@ -990,3 +990,77 @@ describe('lr-span-waterfall label', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
   });
 });
+
+
+it('does not recreate axis observation when a pending update completes detached', async () => {
+  const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall style="width:480px" .spans=${SPANS}></lr-span-waterfall>`);
+  const state = el as unknown as { axisObserver?: ResizeObserver; observedAxis?: Element };
+  await waitUntil(() => state.axisObserver !== undefined);
+  const parent = el.parentNode!;
+  el.spans = [{ id: 'latest', name: 'Latest span', kind: 'agent', startMs: 0, endMs: 1_230_000, status: 'success' }];
+  el.remove();
+  await el.updateComplete;
+  expect(state.axisObserver === undefined, 'detached update must not recreate axis observation').to.equal(true);
+  expect(state.observedAxis === undefined).to.equal(true);
+  parent.appendChild(el);
+  await waitUntil(() => state.axisObserver !== undefined);
+  el.style.width = '300px';
+  await waitUntil(() => {
+    const axis = el.shadowRoot!.querySelector<HTMLElement>('[part="axis"]')!;
+    const bounds = axis.getBoundingClientRect();
+    const labels = [...axis.querySelectorAll<HTMLElement>('[part="tick-label"]')]
+      .filter(label => !label.hasAttribute('data-collapsed'));
+    return bounds.width > 0 && labels.length > 1 && labels.every(label => {
+      const rect = label.getBoundingClientRect();
+      return rect.left >= bounds.left - 0.5 && rect.right <= bounds.right + 0.5;
+    });
+  }, 'reconnected axis should fit the latest span extent after resizing');
+  expect(el.spans[0]?.id).to.equal('latest');
+});
+
+
+it('rejects a retired geometry observer after adoption into a new owner window', async () => {
+  const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+  const nextWindow = iframe.contentWindow! as Window & typeof globalThis;
+  const records: Array<{ callback: ResizeObserverCallback; observer: ResizeObserver; owner: Window }> = [];
+  const original = window.ResizeObserver;
+  const nextOriginal = nextWindow.ResizeObserver;
+  const instrument = (owner: Window, Constructor: typeof ResizeObserver): typeof ResizeObserver =>
+    class extends Constructor {
+      constructor(callback: ResizeObserverCallback) {
+        super(callback);
+        records.push({ callback, observer: this, owner });
+      }
+    };
+  window.ResizeObserver = instrument(window, original);
+  nextWindow.ResizeObserver = instrument(nextWindow, nextOriginal);
+  let el: LyraSpanWaterfall | undefined;
+  try {
+    el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`);
+    const state = el as unknown as { axisObserver?: ResizeObserver; geometryFrame?: number };
+    await waitUntil(() => state.axisObserver !== undefined);
+    const retired = records.find(record => record.observer === state.axisObserver)!;
+    iframe.contentDocument!.adoptNode(el);
+    iframe.contentDocument!.body.append(el);
+    await el.updateComplete;
+    await waitUntil(() => state.axisObserver !== undefined && state.axisObserver !== retired.observer);
+    const current = records.find(record => record.observer === state.axisObserver)!;
+    expect(current.owner === nextWindow).to.equal(true);
+    const target = el.shadowRoot!.querySelector<HTMLElement>('[part="axis"]')!;
+    let measurements = 0;
+    const originalRect = target.getBoundingClientRect;
+    target.getBoundingClientRect = () => { measurements++; return originalRect.call(target); };
+    try {
+      retired.callback([], retired.observer);
+      expect(measurements, 'retired observer must not fit the adopted axis').to.equal(0);
+      current.callback([], current.observer);
+      expect(measurements, 'current owner observer must still fit labels').to.be.greaterThan(0);
+    } finally {
+      target.getBoundingClientRect = originalRect;
+    }
+  } finally {
+    el?.remove();
+    window.ResizeObserver = original;
+    nextWindow.ResizeObserver = nextOriginal;
+  }
+});

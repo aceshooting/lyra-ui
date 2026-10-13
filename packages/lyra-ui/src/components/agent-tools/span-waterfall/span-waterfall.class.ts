@@ -414,20 +414,27 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private observeAxis(): void {
+    if (!this.isConnected) return;
     const axis = this.renderRoot.querySelector('[part="axis"]') ?? undefined;
     if (axis === this.observedAxis) return;
     this.axisObserver?.disconnect();
     this.observedAxis = axis;
-    const ResizeObserverCtor = this.ownerDocument.defaultView?.ResizeObserver;
+    const owner = this.ownerDocument.defaultView;
+    const ResizeObserverCtor = owner?.ResizeObserver;
     if (!axis || !ResizeObserverCtor) return;
-    this.axisObserver ??= new ResizeObserverCtor(() => this.fitAxisLabels());
-    this.axisObserver.observe(axis);
+    const observer = new ResizeObserverCtor(() => {
+      if (!this.isConnected || this.ownerDocument.defaultView !== owner || this.axisObserver !== observer) return;
+      this.fitAxisLabels();
+    });
+    this.axisObserver = observer;
+    observer.observe(axis);
   }
 
   /** Re-anchors a tick label that would leave the axis at its inline-end edge and hides any label
    *  that would overprint its neighbour; the terminal label wins over the interior label it collides
    *  with. */
   private fitAxisLabels(): void {
+    if (!this.isConnected) return;
     const axis = this.renderRoot.querySelector<HTMLElement>('[part="axis"]');
     if (!axis) return;
     const ticks = Array.from(axis.querySelectorAll<HTMLElement>('[part="tick"]'));
