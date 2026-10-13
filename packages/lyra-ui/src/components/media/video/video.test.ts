@@ -530,29 +530,64 @@ describe('lr-video public contract', () => {
     // so the real HTML seeking algorithm (which queues BOTH a 'timeupdate' and a 'seeked' native
     // event once a seek completes) actually runs.
     const fixtureUrl = new URL('../media-card/fixtures/sample.mp4', import.meta.url).href;
-    const el = await fixture<LyraVideo>(html`<lr-video src=${fixtureUrl}></lr-video>`);
-    const media = nativeVideo(el);
-
-    await new Promise<void>((resolve) => {
-      if (media.readyState >= HTMLMediaElement.HAVE_METADATA) resolve();
-      else media.addEventListener('loadedmetadata', () => resolve(), { once: true });
-    });
-    expect(media.duration, 'the real fixture must report a finite, positive duration').to.be.greaterThan(0);
-
+    let media: HTMLVideoElement | undefined;
     const received: Event[] = [];
-    el.addEventListener('timeupdate', (event) => received.push(event));
+    const events: string[] = [];
+    const cleanups: (() => void)[] = [];
+    let phase = 'fixture';
+    const diagnostic = () => JSON.stringify({
+      phase, readyState: media?.readyState, networkState: media?.networkState,
+      error: media?.error && { code: media.error.code, message: media.error.message },
+      duration: String(media?.duration), currentTime: media?.currentTime, seeking: media?.seeking,
+      preload: media?.preload, hostTimeupdates: received.length, events,
+    });
+    let rejectFailure!: (error: Error) => void;
+    const failure = new Promise<never>((_resolve, reject) => { rejectFailure = reject; });
+    // Leave time for an actionable failure and cleanup before the runner's outer deadline.
+    const deadline = window.setTimeout(() => {
+      rejectFailure(new Error(`Real video phase deadline: ${diagnostic()}`));
+    }, 4500);
+    try {
+      const el = await Promise.race([
+        fixture<LyraVideo>(html`<lr-video src=${fixtureUrl}></lr-video>`), failure,
+      ]);
+      const native = nativeVideo(el);
+      media = native;
+      phase = 'metadata';
+      const nextNativeEvent = (type: string) => new Promise<Event>((resolve) => {
+        const listener = (event: Event) => { events.push(event.type); resolve(event); };
+        native.addEventListener(type, listener, { once: true });
+        cleanups.push(() => native.removeEventListener(type, listener));
+      });
+      const onError = () => rejectFailure(new Error(`Real video media error: ${diagnostic()}`));
+      native.addEventListener('error', onError);
+      cleanups.push(() => native.removeEventListener('error', onError));
+      if (media.error) onError();
+      await Promise.race([
+        media.readyState >= HTMLMediaElement.HAVE_METADATA
+          ? Promise.resolve() : nextNativeEvent('loadedmetadata'),
+        failure,
+      ]);
+      expect(Number.isFinite(media.duration), 'the real fixture must report a finite duration').to.be.true;
+      expect(media.duration, 'the real fixture must report a positive duration').to.be.greaterThan(0);
 
-    const target = media.duration / 2;
-    const nativeTimeupdate = oneEvent(media, 'timeupdate');
-    const seeked = oneEvent(media, 'seeked');
-    el.seek(target);
-    expect(received.length, 'seek() dispatches its own synchronous host timeupdate').to.equal(1);
+      const collect = (event: Event) => received.push(event);
+      el.addEventListener('timeupdate', collect);
+      cleanups.push(() => el.removeEventListener('timeupdate', collect));
+      const target = media.duration / 2;
+      const nativeTimeupdate = nextNativeEvent('timeupdate');
+      const seeked = nextNativeEvent('seeked');
+      phase = 'seek-completion';
+      el.seek(target);
+      expect(received.length, 'seek() dispatches its own synchronous host timeupdate').to.equal(1);
 
-    // Observe both real native events from the underlying seek. Their listeners must exist before
-    // currentTime changes: a fast local resource can complete the seek before a later subscription.
-    await Promise.all([nativeTimeupdate, seeked]);
-
-    expect(received.length, 'seek() must not double-fire host timeupdate via the native relay').to.equal(1);
+      // Both native listeners must exist before currentTime changes; a fast seek can finish early.
+      await Promise.race([Promise.all([nativeTimeupdate, seeked]), failure]);
+      expect(received.length, 'seek() must not double-fire host timeupdate via the native relay').to.equal(1);
+    } finally {
+      window.clearTimeout(deadline);
+      for (const cleanup of cleanups) cleanup();
+    }
   });
 
   it('mirrors native playback into currentTime without seeking the media element', async () => {

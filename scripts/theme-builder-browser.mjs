@@ -60,11 +60,33 @@ page.on('console', message => {
 });
 page.on('requestfailed', request => { if (!intentionalFailures.has(request.url())) unexpectedNetworkFailures.push(request.url()); });
 page.on('request', request => { if (!request.url().startsWith(`http://127.0.0.1:${port}/`) && !request.url().startsWith('data:')) external.push(request.url()); });
+const pendingRequests = new Map();
+const failedResponses = [];
+const lifecycle = [];
+let phase = 'ordinary-story-navigation';
+let pendingRequestsTruncated = false;
+page.on('request', request => {
+  if (pendingRequests.size >= 64) { pendingRequestsTruncated = true; return; }
+  pendingRequests.set(request, { url: request.url(), type: request.resourceType(), startedMs: Date.now() - started });
+});
+page.on('requestfinished', request => pendingRequests.delete(request));
+page.on('requestfailed', request => pendingRequests.delete(request));
+page.on('response', response => {
+  if (response.status() >= 400) {
+    failedResponses.push({ url: response.url(), status: response.status() });
+    if (failedResponses.length > 32) failedResponses.shift();
+  }
+});
+for (const event of ['domcontentloaded', 'load']) page.on(event, () => {
+  lifecycle.push({ event, elapsedMs: Date.now() - started });
+  if (lifecycle.length > 16) lifecycle.shift();
+});
 const check = (condition, message) => assert.ok(condition, message);
 let checks = 0;
 async function verify(name, work) { await work(); checks++; console.log(`PASS ${name}`); }
 const evaluate = (fn, data) => page.evaluate(fn, data);
 const wait = () => page.waitForTimeout(260);
+let failed = false;
 try {
   const inspectedModules = [];
   const inspectModule = response => {
@@ -72,9 +94,11 @@ try {
   };
   page.on('response', inspectModule);
   await page.goto(`http://127.0.0.1:${port}/iframe.html?id=theming-composable-styles--playground&viewMode=story`);
+  phase = 'ordinary-story-rendered-target';
   await page.locator('[data-style-demo]').waitFor(); await page.waitForTimeout(200);
   page.off('response', inspectModule);
   await verify('ordinary story does not load the builder view or tooling interchange', async () => assert.equal((await Promise.all(inspectedModules)).some(Boolean), false));
+  phase = 'builder-checks';
   await page.goto(`http://127.0.0.1:${port}/iframe.html?id=theming-theme-builder--editor&viewMode=story`);
   await page.waitForFunction(() => Boolean(document.querySelector('[data-theme-builder]')?.themeBuilder), { timeout: 60000 });
   await wait();
@@ -749,4 +773,20 @@ try {
   assert.deepEqual(errors, []); assert.deepEqual(external, []); assert.deepEqual(unexpectedNetworkFailures, []);
   console.log(JSON.stringify({ engine, checks, errors, external, intentionalModuleFailures: injectedModuleFailures, intentionalLocaleFailures: localeFailureRequests.length, expectedConsole, pages: 1, elapsedMs: Date.now() - started }));
   }
-} finally { await browser.close(); await new Promise(done => server.close(done)); }
+} catch (error) {
+  failed = true;
+  try {
+    console.error(JSON.stringify({ engine, phase, checks, elapsedMs: Date.now() - started,
+      url: page.url(), lifecycle, pendingRequests: [...pendingRequests.values()], pendingRequestsTruncated,
+      failedResponses, errors: errors.slice(-32), external: external.slice(-32),
+      unexpectedNetworkFailures: unexpectedNetworkFailures.slice(-32) }));
+  } finally { throw error; }
+} finally {
+  const cleanup = await Promise.allSettled([
+    browser.close(), new Promise((accept, reject) => server.close(error => error ? reject(error) : accept())),
+  ]);
+  for (const result of cleanup) if (result.status === 'rejected') {
+    if (!failed) throw result.reason;
+    console.error('Theme browser cleanup failed:', result.reason);
+  }
+}
