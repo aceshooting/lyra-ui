@@ -557,6 +557,7 @@ jobs:
           pnpm --filter @aceshooting/lyra-docs build
           (cd packages/lyra-docs && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-translations assemble
+          pnpm --filter @aceshooting/lyra-translations lint
           (cd packages/lyra-translations && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-ide sync
           (cd packages/lyra-ide && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
