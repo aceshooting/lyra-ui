@@ -1,5 +1,31 @@
 # Changelog
 
+## 28.1.2
+
+### Patch Changes
+
+- The release version stamp changes compressed bundle measurements by 1–3 bytes. Two direct-entry and five initial-marginal ceilings advance to those exact measurements without added allowance; bundle inputs and all passing ceilings remain unchanged.
+
+- ea2a845: Avoid a redundant Chart.js update after accepted dataset legend actions in charts and box plots. Visibility still updates synchronously before the committed event; coalesced data changes, controlled resets, inherited context, accessible tables, and synchronization continue to reconcile normally.
+
+  Six aggregate bundle ceilings increase by 69–359 gzip bytes to their exact measured sizes, with no added headroom, for the peer and visibility checks that prevent duplicate updates. Individual-component and initial-route ceilings remain unchanged.
+- 4ceefc4: Keep slotted accessible names current when responsive panels and widgets move between connected documents, and restore inherited locale updates for responsive panels. Owner-realm subscriptions now finish teardown before overlay teardown, allowing the connected destination to bind its own observations.
+
+  The connection cleanup ordering adds 28–33 gzip bytes to five aggregate entry bundles and 3 bytes to the component percentile. Their reviewed ceilings advance to those exact measurements without extra allowance; other bundle ceilings and measurement options are unchanged.
+- 7a119cc: Keep textarea auto sizing, page allocation frames, and initial menu, popover, dropdown, and accordion ownership inactive while disconnected. Restore current content and geometry on reconnect, and ignore callbacks retired by reconnection or document adoption.
+
+  The lifecycle guards add 81 gzip bytes to the complete registration bundle and 30 bytes to the menu's initial route. Only breached bundle ceilings advance to their exact measured sizes, with no added allowance.
+- b3cc650: Keep heatmap PNG export empty while detached, including when a pending update flushes after removal, and repaint current data on reconnect. Defer graph simulation and force updates until reconnect, then rebind the current renderer and its interaction targets. Six aggregate bundle ceilings rise only to their measured gzip bytes for these lifecycle guards; component, CSS, and initial-route ceilings remain unchanged.
+- 829c00d: Keep image-viewer geometry observers, span-waterfall axis observers, and flow-canvas companion notifications inactive while detached, including pending updates that finish after removal. Restore current geometry and companion snapshots on reconnect, and ignore stale callbacks from a previous document or observation. Eight aggregate bundle ceilings increase only to the measured gzip bytes required by these lifecycle guards, without added headroom; passing component, CSS, and initial-route ceilings remain unchanged.
+- e607435: Avoid development warnings for the standard `form` owner attribute on form-associated custom elements.
+- bfd071f: Keep push-to-talk recording active when its optional audio-level analysis cannot initialize, including when level events are enabled during capture. Close partially initialized audio contexts without reporting a recorder failure or rejecting the component update; microphone capture and normal stop behavior remain available.
+
+  The optional-analysis guard adds 7–10 gzip bytes to five complete or conversation entry bundles. Their previously exact ceilings advance only to the reviewed measurements, with no extra allowance; passing ceilings and optional-peer exclusions remain unchanged.
+- e449f0b: Restore the tour backdrop and spotlight cutout by rendering their shapes in the SVG namespace. Keep the spotlight aligned when its target resizes, and fill the backdrop when the target is missing.
+
+  Reuse one scrim, formatted progress text and scoped geometry lookups to reduce repeated rendering work. The corrected SVG rendering requires three additional gzip bytes in the complete registration bundle and four in the tour initial marginal bundle after these reductions. Their reviewed ceilings advance to exactly 1,269,107 and 18,769 bytes, with no additional allowance; other budgets and measurement inputs are unchanged.
+- @aceshooting/lyra-translations@28.1.2
+
 ## 28.1.1
 
 ### Patch Changes

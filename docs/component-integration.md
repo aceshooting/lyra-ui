@@ -45,7 +45,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-box-plot"></a>`lr-box-plot` | charts | `import '@aceshooting/lyra-ui/components/lr-box-plot.js';` | `@sgratzl/chartjs-chart-boxplot`, `chart.js` | `lr-skeleton` | none | 49.2 KiB |
 | <a id="lr-branch-picker"></a>`lr-branch-picker` | conversation | `import '@aceshooting/lyra-ui/components/lr-branch-picker.js';` | none | `lr-live-region` | none | 27.8 KiB |
 | <a id="lr-breadcrumb"></a>`lr-breadcrumb` | layout | `import '@aceshooting/lyra-ui/components/lr-breadcrumb.js';` | none | none | none | 22.8 KiB |
-| <a id="lr-breadcrumb-item"></a>`lr-breadcrumb-item` | layout | `import '@aceshooting/lyra-ui/components/lr-breadcrumb-item.js';` | none | none | none | 24.4 KiB |
+| <a id="lr-breadcrumb-item"></a>`lr-breadcrumb-item` | layout | `import '@aceshooting/lyra-ui/components/lr-breadcrumb-item.js';` | none | none | none | 24.3 KiB |
 | <a id="lr-browser-frame"></a>`lr-browser-frame` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-browser-frame.js';` | none | none | none | 32.6 KiB |
 | <a id="lr-bubble-chart"></a>`lr-bubble-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-bubble-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 68.2 KiB |
 | <a id="lr-budget-meter"></a>`lr-budget-meter` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-budget-meter.js';` | none | none | none | 23.8 KiB |
@@ -261,7 +261,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-source-list"></a>`lr-source-list` | retrieval | `import '@aceshooting/lyra-ui/components/lr-source-list.js';` | none | none | none | 24.4 KiB |
 | <a id="lr-source-picker"></a>`lr-source-picker` | retrieval | `import '@aceshooting/lyra-ui/components/lr-source-picker.js';` | none | `lr-checkbox`, `lr-empty`, `lr-file-icon`, `lr-input` | none | 66.6 KiB |
 | <a id="lr-span-waterfall"></a>`lr-span-waterfall` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-span-waterfall.js';` | none | `lr-empty` | none | 40.6 KiB |
-| <a id="lr-sparkline"></a>`lr-sparkline` | data | `import '@aceshooting/lyra-ui/components/lr-sparkline.js';` | none | none | none | 24.3 KiB |
+| <a id="lr-sparkline"></a>`lr-sparkline` | data | `import '@aceshooting/lyra-ui/components/lr-sparkline.js';` | none | none | none | 24.2 KiB |
 | <a id="lr-spinner"></a>`lr-spinner` | overlays | `import '@aceshooting/lyra-ui/components/lr-spinner.js';` | none | none | none | 28.1 KiB |
 | <a id="lr-split-panel"></a>`lr-split-panel` | layout | `import '@aceshooting/lyra-ui/components/lr-split-panel.js';` | none | none | none | 27.8 KiB |
 | <a id="lr-spreadsheet-viewer"></a>`lr-spreadsheet-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-spreadsheet-viewer.js';` | `xlsx` | `lr-tab`, `lr-tab-group`, `lr-tab-panel`, `lr-virtual-list` | none | 67.1 KiB |
