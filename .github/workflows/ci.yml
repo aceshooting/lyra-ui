@@ -98,6 +98,7 @@ jobs:
       - run: pnpm check:release-qualification
       - run: pnpm check:release-tooling
       - run: node --test scripts/ci-change-scope.test.mjs
+      - run: pnpm test:benchmarks
       # test:public-api and test:pinned-upstream-manifests are contract-policy members (lint).
       # Fetches exact public npm tarballs with lifecycle scripts impossible, validates their
       # identities plus SHA-512/SHA-256 pins, and feeds only custom-elements.json into the strict

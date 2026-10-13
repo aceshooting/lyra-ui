@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { makeSchema, validateResult } from './lib/results.mjs';
 import * as catalog from './fixtures/catalog.mjs';
 
@@ -15,7 +15,13 @@ export async function main(args) {
   else throw new Error('invalid-options');
   process.stdout.write('Benchmark schema validation passed.\n');
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+function isMainModule() {
+  if (!process.argv[1]) return false;
+  try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); }
+  catch { return false; }
+}
+
+if (isMainModule()) {
   try { await main(process.argv.slice(2)); }
   catch { process.stderr.write('Benchmark schema validation failed.\n'); process.exitCode = 1; }
 }

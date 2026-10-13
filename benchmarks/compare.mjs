@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { BROWSERS, aggregate, validateResult } from './lib/results.mjs';
 
 const equal = (left, right) => JSON.stringify(left) === JSON.stringify(right);
@@ -131,7 +131,13 @@ async function main(args) {
   process.stdout.write(jsonOutput ? json : renderComparisonSummary(comparison, catalog));
   return comparison.status === 'passed' ? 0 : comparison.status === 'regression' ? 1 : 2;
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+function isMainModule() {
+  if (!process.argv[1]) return false;
+  try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); }
+  catch { return false; }
+}
+
+if (isMainModule()) {
   try { process.exitCode = await main(process.argv.slice(2)); }
   catch { process.stderr.write('Benchmark comparison failed: invalid input, schema, options, or output.\n'); process.exitCode = 3; }
 }

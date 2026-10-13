@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, symlink } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { aggregate, validateSample, validateResult, makeSchema } from './lib/results.mjs';
 import { compareResults, renderComparisonSummary } from './compare.mjs';
 import { parseOptions } from './lib/options.mjs';
@@ -9,6 +14,8 @@ const catalog = {
   CHECK_IDS: ['mounted'], METRICS: { assignmentMs: { unit: 'ms' }, totalMs: { unit: 'ms' } }, COUNT_KEYS: ['rendered'], ERROR_CODES: ['assertion-failed'],
 };
 const hash = 'a'.repeat(64);
+const benchmarksDirectory = dirname(fileURLToPath(import.meta.url));
+const repositoryDirectory = dirname(benchmarksDirectory);
 function sample(value = 2) { return { status: 'passed', code: null, metrics: { assignmentMs: value, totalMs: value + 1 }, assertions: [{ id: 'mounted', passed: true }], counts: { rendered: 1 } }; }
 function result(value = 2) {
   return { schemaVersion: 1, recordedAt: '2026-10-12T12:00:00.000Z', harness: { hash, fixturesHash: hash }, library: { version: '28.1.0', distHash: hash, publicCommit: null },
@@ -59,6 +66,41 @@ test('CLI constrains workloads, sample counts and sequential browser selection',
   const opts = parseOptions(['--profile', 'stress', '--browsers', 'chromium,firefox', '--samples', '7']);
   assert.equal(opts.profile, 'stress'); assert.deepEqual(opts.browsers, ['chromium', 'firefox']);
   assert.throws(() => parseOptions(['--samples', '0'])); assert.throws(() => parseOptions(['--browsers', 'unknown'])); assert.throws(() => parseOptions(['--profile', 'unknown']));
+});
+
+test('benchmark CLI guards recognize symlinked directory and file invocations', async t => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'lyra-benchmark-cli-'));
+  t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+
+  const linkedDirectory = join(temporaryDirectory, 'linked-benchmarks');
+  const linkedFile = join(temporaryDirectory, 'compare-link.mjs');
+  await symlink(benchmarksDirectory, linkedDirectory, 'dir');
+  await symlink(join(benchmarksDirectory, 'compare.mjs'), linkedFile, 'file');
+
+  await t.test('run help works through a symlinked directory', () => {
+    const result = spawnSync(process.execPath, [join(linkedDirectory, 'run.mjs'), '--help'], { cwd: repositoryDirectory, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /^Usage: node benchmarks\/run\.mjs/m);
+  });
+
+  await t.test('schema check works through a symlinked directory', () => {
+    const result = spawnSync(process.execPath, [join(linkedDirectory, 'schema.mjs'), '--check'], { cwd: repositoryDirectory, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Benchmark schema validation passed/);
+  });
+
+  await t.test('compare reports invalid input through a symlinked file', () => {
+    const result = spawnSync(process.execPath, [linkedFile], { cwd: repositoryDirectory, encoding: 'utf8' });
+    assert.equal(result.status, 3, result.stderr);
+    assert.match(result.stderr, /Benchmark comparison failed/);
+  });
+});
+
+test('importing a CLI stays inert when argv points to a missing path', () => {
+  const importModule = `await import(${JSON.stringify(new URL('./schema.mjs', import.meta.url).href)})`;
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', importModule, 'missing-entry.mjs'], { cwd: repositoryDirectory, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, '');
 });
 
 test('p95 catches a tail regression even when median stays unchanged', () => {

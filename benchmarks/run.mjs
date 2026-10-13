@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir, readdir, stat, realpath, mkdtemp, rm, rename } from 'node:fs/promises';
 import { cpus, totalmem, platform, arch, release } from 'node:os';
 import { dirname, resolve, join, relative, extname, sep } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { parseOptions } from './lib/options.mjs';
 import { HARNESS_CODES, failureSample, validateSample, validateResult } from './lib/results.mjs';
@@ -224,7 +225,13 @@ export async function run(options) {
   return result.status === 'passed' ? 0 : result.status === 'failed' ? 1 : 2;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+function isMainModule() {
+  if (!process.argv[1]) return false;
+  try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); }
+  catch { return false; }
+}
+
+if (isMainModule()) {
   try {
     const options = parseOptions(process.argv.slice(2));
     if (options.help) process.stdout.write('Usage: node benchmarks/run.mjs [--profile quick|stress] [--browsers chromium,firefox,webkit,chrome,edge] [--samples 7] [--warmups 1] [--timeout-ms 30000] [--scenarios ID,...] [--package-dir DIR] [--output FILE] [--headed] [--software-rendering]\n');
