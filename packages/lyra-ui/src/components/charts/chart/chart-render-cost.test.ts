@@ -458,3 +458,97 @@ describe('chart synchronization idle cost', () => {
     expect(counter.count).to.equal(0);
   });
 });
+
+
+describe('dataset legend peer updates', () => {
+  for (const replaceData of [false, true]) {
+    it(`updates accepted visibility synchronously and preserves ${replaceData ? 'coalesced data' : 'the settled projection'}`, async () => {
+      const el = await fixture<LyraChart>(html`<lr-line-chart without-animation
+        .labels=${['A', 'B']} .datasets=${seriesOf(2, 2)}></lr-line-chart>`);
+      await waitUntil(() => peer(el) !== undefined, 'chart did not initialize', { timeout: 5000 });
+      await el.updateComplete;
+      // wait-reason: Allow native observer/task delivery before measuring or rejecting a deferred peer update.
+      await aTimeout(100);
+      const runtime = peer(el)! as RuntimeProbe & {
+        update(mode?: string): void;
+        isDatasetVisible(index: number): boolean;
+        data: { datasets: { data: unknown[] }[] };
+      };
+      const originalUpdate = runtime.update;
+      const originalData = runtime.data;
+      let calls = 0;
+      const committed: unknown[] = [];
+      runtime.update = function (mode?: string) {
+        calls++;
+        originalUpdate.call(this, mode);
+      };
+      el.addEventListener('lr-legend-visibility-change', (event) => {
+        committed.push({
+          calls,
+          visible: runtime.isDatasetVisible(0),
+          hiddenDatasets: el.hiddenDatasets === undefined ? undefined : [...el.hiddenDatasets],
+          detail: (event as CustomEvent).detail,
+        });
+        if (replaceData) el.datasets = [{ label: 'New', data: [90, 91] }];
+      }, { once: true });
+      try {
+        el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="legend-item"]')!.click();
+        expect(committed).to.deep.equal([{
+          calls: 1, visible: false, hiddenDatasets: [0],
+          detail: { datasetIndex: 0, visible: false, hiddenDatasets: [0] },
+        }]);
+        await el.updateComplete;
+        // wait-reason: Allow native observer/task delivery before measuring or rejecting a deferred peer update.
+        await aTimeout(100);
+        expect(calls).to.equal(replaceData ? 2 : 1);
+        expect(runtime.isDatasetVisible(0)).to.equal(false);
+        if (replaceData) expect(runtime.data.datasets[0]!.data).to.deep.equal([90, 91]);
+        else expect(runtime.data === originalData).to.equal(true);
+        expect(el.shadowRoot!.querySelector('[part~="legend-item"]')!.getAttribute('aria-pressed')).to.equal('false');
+        expect(el.shadowRoot!.querySelectorAll('table').length).to.equal(1);
+      } finally {
+        runtime.update = originalUpdate;
+      }
+    });
+  }
+});
+
+for (const replaceData of [false, true]) {
+  it(`updates an accepted box-plot legend action once while preserving ${replaceData ? 'coalesced boxes' : 'the settled projection'}`, async () => {
+    const box = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
+    const el = await fixture<LyraBoxPlot>(html`<lr-box-plot with-legend .labels=${['A']}
+      .datasets=${[{ label: 'Series', data: [box] }]}></lr-box-plot>`);
+    const getPeer = () => (el as unknown as { chart?: RuntimeProbe & {
+      update(mode?: string): void;
+      isDatasetVisible(index: number): boolean;
+      data: { datasets: { data: unknown[] }[] };
+    } }).chart;
+    await waitUntil(() => getPeer() !== undefined, 'box plot did not initialize', { timeout: 5000 });
+    await el.updateComplete;
+    // wait-reason: Allow native observer/task delivery before measuring or rejecting a deferred peer update.
+    await aTimeout(100);
+    const runtime = getPeer()!;
+    const original = runtime.update;
+    const data = runtime.data;
+    let calls = 0;
+    const observations: unknown[] = [];
+    runtime.update = function (mode?: string) { calls++; original.call(this, mode); };
+    el.addEventListener('lr-legend-visibility-change', (event) => {
+      observations.push({ calls, visible: runtime.isDatasetVisible(0), detail: (event as CustomEvent).detail });
+      if (replaceData) el.datasets = [{ label: 'Latest', data: [{ ...box, median: 3.5 }] }];
+    }, { once: true });
+    try {
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="legend-item"]')!.click();
+      expect(observations).to.deep.equal([{
+        calls: 1, visible: false, detail: { datasetIndex: 0, visible: false, hiddenDatasets: [0] },
+      }]);
+      await el.updateComplete;
+      // wait-reason: Allow native observer/task delivery before measuring or rejecting a deferred peer update.
+      await aTimeout(100);
+      expect(calls).to.equal(replaceData ? 2 : 1);
+      expect(runtime.isDatasetVisible(0)).to.equal(false);
+      if (replaceData) expect(runtime.data.datasets[0]!.data).to.deep.equal([{ ...box, median: 3.5, whiskerMin: 1, whiskerMax: 5 }]);
+      else expect(runtime.data === data).to.equal(true);
+    } finally { runtime.update = original; }
+  });
+}

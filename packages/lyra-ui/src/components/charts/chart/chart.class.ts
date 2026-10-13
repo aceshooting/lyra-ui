@@ -1666,6 +1666,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     source: unknown;
     value: readonly LyraChartAnnotation[];
   };
+  private appliedLegendVisibility?: { chart: RuntimeChart; hidden: readonly number[] | undefined };
   private hiddenDatasetsSnapshot?: {
     source: unknown;
     value: readonly number[] | undefined;
@@ -2925,9 +2926,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // catch this, since both persist on a disconnected-but-intact element.
     // If the component is reconnected later, `connectedCallback()` re-kicks
     // its own load/draw sequence, so nothing is lost by bailing out here.
+    const appliedVisibility = this.appliedLegendVisibility;
+    this.appliedLegendVisibility = undefined;
     if (!this.isConnected) return;
-    const contentChanged = this.chartContentChanged(changed);
-    const syncDataChanged = contentChanged || changed.has('hiddenDatums');
+    let canvasChanges = changed;
+    if (
+      changed.has('hiddenDatasets') && appliedVisibility !== undefined &&
+      appliedVisibility.chart === this.chart &&
+      appliedVisibility.hidden === this.canonicalHiddenDatasets()
+    ) {
+      // The accepted legend action already updated this peer synchronously. Preserve every
+      // other pending input, including subclass inputs, for the normal content gate.
+      canvasChanges = new Map(changed);
+      canvasChanges.delete('hiddenDatasets');
+    }
+    const contentChanged = this.chartContentChanged(canvasChanges);
+    const syncDataChanged = contentChanged || changed.has('hiddenDatasets') || changed.has('hiddenDatums');
     this.chartSync.update(this.syncGroup, typeof this.syncGroup === 'string' && this.syncGroup.trim() !== '' && this.syncCompatible(), syncDataChanged);
     const wasMounting = this.isMounting;
     this.isMounting = false;
@@ -5000,6 +5014,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /** Destroys the peer instance and reconciles the Lyra-owned zoom state in one place. */
   private discardChart(announceZoomReset: boolean): void {
+    this.appliedLegendVisibility = undefined;
     this.chartSync.disconnect();
     this.chart?.destroy();
     this.chart = undefined;
@@ -5515,8 +5530,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // Materialize the full effective snapshot, including any configured-hidden peers, so an
     // accepted user choice survives Chart.js reconstruction and can be persisted by a host.
     this.hiddenDatasets = nextHidden;
+    const appliedVisibility = { chart: this.chart, hidden: this.canonicalHiddenDatasets() };
     this.applyDatasetVisibility();
     this.chart.update('none');
+    this.appliedLegendVisibility = appliedVisibility;
     this.requestUpdate();
     this.emit(
       'lr-legend-visibility-change',

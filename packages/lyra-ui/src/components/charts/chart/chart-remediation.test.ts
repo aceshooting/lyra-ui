@@ -581,3 +581,52 @@ for (const values of [[1, 11], [7, 10], [0.01, 0.1, 1], [Number.MIN_VALUE, Numbe
     expect(Math.min(...tops)).to.equal(8);
   });
 }
+
+for (const tag of ['lr-chart', 'lr-box-plot']) for (const reconnect of [false, true]) {
+  it(`${tag} preserves coalesced legend/data updates through ${reconnect ? 'disconnect and reconnect' : 'observer hide and reveal'}`, async () => {
+    const original = window.IntersectionObserver;
+    HeldIntersectionObserver.instances = [];
+    window.IntersectionObserver = HeldIntersectionObserver;
+    let el: LyraChart | LyraBoxPlot | undefined;
+    try {
+      el = mountChart(tag);
+      const current = el;
+      current.labels = tag === 'lr-chart' ? ['A', 'B'] : ['A'];
+      const box = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
+      if ('withLegend' in current) {
+        current.withLegend = true;
+        current.datasets = [{ label: 'Original', data: [box] }];
+      } else current.datasets = [{ label: 'Original', data: [1, 2] }];
+      await waitUntil(() => (current as unknown as { chartJsModule?: unknown }).chartJsModule !== undefined);
+      const observer = HeldIntersectionObserver.instances.find((item) => item.target === current)!;
+      observer.deliver(true);
+      const previous = await liveChart(current);
+      observer.deliver(false);
+      current.addEventListener('lr-legend-visibility-change', () => {
+        if ('withLegend' in current) current.datasets = [{ label: 'Latest', data: [{ ...box, median: 3.5 }] }];
+        else current.datasets = [{ label: 'Latest', data: [90, 91] }];
+        if (reconnect) current.remove();
+      }, { once: true });
+      current.shadowRoot!.querySelector<HTMLButtonElement>('[part~="legend-item"]')!.click();
+      await current.updateComplete;
+      if (reconnect) {
+        expect(peer(current) === undefined).to.equal(true);
+        document.body.append(current);
+        await current.updateComplete;
+        expect(peer(current) === undefined).to.equal(true);
+        HeldIntersectionObserver.instances.filter((item) => item.target === current).at(-1)!.deliver(true);
+      } else {
+        expect(previous.data.datasets[0]!.label).to.equal('Original');
+        observer.deliver(true);
+      }
+      const latest = await liveChart(current);
+      expect(latest === previous).to.equal(!reconnect);
+      expect(latest.data.datasets[0]!.label).to.equal('Latest');
+      expect(latest.data.datasets[0]!.data).to.deep.equal(tag === 'lr-chart' ? [90, 91] : [{ ...box, median: 3.5, whiskerMin: 1, whiskerMax: 5 }]);
+      expect(latest.isDatasetVisible(0)).to.equal(false);
+    } finally {
+      el?.remove();
+      window.IntersectionObserver = original;
+    }
+  });
+}

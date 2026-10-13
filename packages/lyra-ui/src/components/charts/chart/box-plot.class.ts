@@ -339,6 +339,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   /** Canvas colors and lengths resolved since the last theme notification. */
   private readonly canvasTokens = new ChartTokenCache(this);
+  private appliedLegendVisibility?: { chart: BoxPlotChartRuntime; hidden: readonly number[] | undefined };
 
   @property({ attribute: false }) labels: readonly string[] = [];
   private _datasets: readonly LyraBoxPlotSeries[] = Object.freeze([]);
@@ -522,6 +523,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.loading = false;
     if (!boxMod) {
       this.loadFailed = true;
+      this.appliedLegendVisibility = undefined;
       this.chart?.destroy();
       this.chart = undefined;
       this.chartJsModule = undefined;
@@ -541,6 +543,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.lastDataTruncationAnnouncement = '';
     this.isMounting = true;
     this.loadGeneration += 1;
+    this.appliedLegendVisibility = undefined;
     this.chart?.destroy();
     this.chart = undefined;
     this.intersectionObserver?.disconnect();
@@ -598,6 +601,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const appliedVisibility = this.appliedLegendVisibility;
+    this.appliedLegendVisibility = undefined;
     if (!this.isConnected) return;
     const wasMounting = this.isMounting;
     this.isMounting = false;
@@ -634,8 +639,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
       else this.style.removeProperty('--_lr-chart-height');
     }
     if (this.loading) return;
+    const visibilityAlreadyApplied = appliedVisibility !== undefined &&
+      appliedVisibility.chart === this.chart && appliedVisibility.hidden === this.hiddenDatasets;
     const contentChanged = ['labels', 'datasets', 'hiddenDatasets', 'withLegend', 'legendPosition', 'height', 'xLabel', 'yLabel', 'withoutZeroBaseline', 'valueFormatter', 'formatter', 'locale', 'strings', 'loading'].some((name) =>
-      changed.has(name),
+      changed.has(name) && (name !== 'hiddenDatasets' || !visibilityAlreadyApplied),
     );
     const direction = this.effectiveDirection;
     const locale = this.effectiveLocale;
@@ -984,6 +991,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    */
   private rebuildAfterAnnotationRegistration(): void {
     if (!this.chart) return;
+    this.appliedLegendVisibility = undefined;
     this.chart.destroy();
     this.chart = undefined;
     this.drawIfVisible();
@@ -1424,8 +1432,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     );
     if (proposed.defaultPrevented) return;
     this.hiddenDatasets = nextHidden;
+    const appliedVisibility = { chart: this.chart, hidden: this.hiddenDatasets };
     this.applyDatasetVisibility();
     this.chart.update('none');
+    this.appliedLegendVisibility = appliedVisibility;
     this.requestUpdate();
     this.emit('lr-legend-visibility-change', legendVisibilityDetail(index, visible, nextHidden));
   }

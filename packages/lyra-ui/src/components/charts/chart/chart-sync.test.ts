@@ -619,3 +619,22 @@ describe('chart synchronization', () => {
   });
 
 });
+
+it('clears active synchronization when an accepted dataset legend action hides its owner series', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div style="width:600px">
+    <lr-chart without-animation height="8rem" sync-group="legend-owner" .labels=${['A']}
+      .datasets=${[{ label: 'Owner', data: [1] }]}></lr-chart>
+    <lr-lite-chart height="8rem" sync-group="legend-owner" .labels=${['A']}
+      .datasets=${[{ label: 'Recipient', data: [4] }]}></lr-lite-chart>
+  </div>`);
+  const owner = host.querySelector<LyraChart>('lr-chart')!;
+  const recipient = host.querySelector<LyraLiteChart>('lr-lite-chart')!;
+  await ready(owner); await ready(recipient);
+  await focusByKeyboard(owner.shadowRoot!.querySelector('canvas')!);
+  await waitUntil(() => tooltip(recipient).includes('4'));
+  owner.shadowRoot!.querySelector<HTMLButtonElement>('[part~="legend-item"]')!.click();
+  await owner.updateComplete;
+  await waitUntil(() => !crosshair(recipient));
+  expect(tooltip(recipient)).to.equal('');
+  expect(owner.hiddenDatasets).to.deep.equal([0]);
+});

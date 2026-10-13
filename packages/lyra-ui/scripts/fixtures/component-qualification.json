@@ -4802,7 +4802,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -4854,6 +4854,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -5045,7 +5046,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5097,6 +5098,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -5983,7 +5985,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6035,6 +6037,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -8116,7 +8119,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8176,6 +8179,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -17156,7 +17160,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17208,6 +17212,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -24711,7 +24716,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24763,6 +24768,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -27846,7 +27852,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27898,6 +27904,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -28090,7 +28097,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28142,6 +28149,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -35924,7 +35932,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35983,6 +35991,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -36150,7 +36159,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -36202,6 +36211,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -38668,7 +38678,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38720,6 +38730,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
@@ -42557,7 +42568,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 510,
+              "line": 511,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42609,6 +42620,7 @@
           "src/components/charts/chart/chart-formatter-metadata.test.ts",
           "src/components/charts/chart/chart-input-cap.test.ts",
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
+          "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
