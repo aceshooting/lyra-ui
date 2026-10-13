@@ -671,7 +671,7 @@ export async function verifyResolvedMigrationBrowser({ bundleDir, proof, artifac
   const { chromium, firefox, webkit } = await import('playwright');
   const root = resolve(bundleDir);
   const features = { type: 'FeatureCollection', features: [0, 1].map(index => ({ type: 'Feature', properties: { name: `Consumer feature ${index + 1}` }, geometry: { type: 'Point', coordinates: [6.1 + index / 100, 49.6] } })) };
-  const mime = { '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+  const mime = { '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.wasm': 'application/wasm', '.woff2': 'font/woff2' };
   const server = createServer(async (request, response) => {
     try {
       const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);

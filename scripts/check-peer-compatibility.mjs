@@ -2039,6 +2039,7 @@ const contentTypes = new Map([
   ['.json', 'application/json; charset=utf-8'],
   ['.map', 'application/json; charset=utf-8'],
   ['.svg', 'image/svg+xml'],
+  ['.wasm', 'application/wasm'],
   ['.woff2', 'font/woff2'],
 ]);
 const contractDeadline = Date.now() + ${BROWSER_CONTRACT_DEADLINE_MS};

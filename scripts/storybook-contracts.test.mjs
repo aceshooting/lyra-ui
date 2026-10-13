@@ -170,6 +170,7 @@ test('serves cacheable bundles with their byte length before Chromium starts cac
   await mkdir(join(directory, 'assets'));
   const body = 'globalThis.componentLabel = "é";';
   await writeFile(join(directory, 'assets', 'components.js'), body);
+  await writeFile(join(directory, 'assets', 'engine.wasm'), Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]));
   const server = createServer((request, response) => serve(request, response, directory));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
@@ -179,6 +180,9 @@ test('serves cacheable bundles with their byte length before Chromium starts cac
   assert.equal(response.headers.get('transfer-encoding'), null);
   assert.equal(response.headers.get('cache-control'), 'public, max-age=31536000, immutable');
   assert.equal(await response.text(), body);
+  const wasm = await fetch(`http://127.0.0.1:${server.address().port}/assets/engine.wasm`);
+  assert.equal(wasm.headers.get('content-type'), 'application/wasm');
+  assert.ok(await WebAssembly.compileStreaming(wasm) instanceof WebAssembly.Module);
 });
 
 test('keeps failed bundle diagnostics when the docs wrapper never mounts', async (t) => {

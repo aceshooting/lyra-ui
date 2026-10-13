@@ -13,7 +13,7 @@ const directory = resolve(option('--storybook-dir', 'storybook-static'));
 const port = Number(option('--port', '8350'));
 // This URL is served by the test HTTP server, not resolved as a Node module.
 const diagnosticsRoute = '/__builder_diagnostics.js';
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.png': 'image/png' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.svg': 'image/svg+xml', '.wasm': 'application/wasm', '.woff2': 'font/woff2', '.png': 'image/png' };
 let failBuilderModule = false;
 let builderFaultCss;
 let delayBuilderModule = false;

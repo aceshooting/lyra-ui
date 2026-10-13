@@ -27,6 +27,7 @@ if (!baseUrl) {
     '.json': 'application/json',
     '.mjs': 'text/javascript',
     '.svg': 'image/svg+xml',
+    '.wasm': 'application/wasm',
     '.woff2': 'font/woff2',
   };
   localServer = createServer((request, response) => {

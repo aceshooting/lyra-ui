@@ -40,6 +40,7 @@ const mimeTypes = new Map([
   ['.mjs', 'text/javascript'],
   ['.json', 'application/json'],
   ['.svg', 'image/svg+xml'],
+  ['.wasm', 'application/wasm'],
   ['.woff2', 'font/woff2'],
 ]);
 

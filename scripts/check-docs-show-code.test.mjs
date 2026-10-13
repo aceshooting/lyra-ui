@@ -1,10 +1,46 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const checker = fileURLToPath(new URL('./check-docs-show-code.mjs', import.meta.url));
+
+test('the local docs server supports streaming WebAssembly compilation', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-show-code-wasm-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  await writeFile(join(directory, 'index.json'), JSON.stringify({ entries: {
+    fixture: { id: 'fixture--docs', type: 'docs', title: 'Fixture', importPath: './src/components/fixture.stories.ts' },
+  } }));
+  await writeFile(join(directory, 'engine.wasm'), Buffer.from([0, 97, 115, 109, 1, 0, 0, 0]));
+  await writeFile(join(directory, 'iframe.html'), `<!doctype html>
+    <button role="switch" aria-controls="source" onclick="this.textContent='Hide code'">Show code</button>
+    <pre id="source">WebAssembly compiled</pre>
+    <script type="module">
+      try { await WebAssembly.compileStreaming(fetch('./engine.wasm')); }
+      catch (error) { console.error(String(error)); }
+      finally { document.body.className = 'sb-show-main'; }
+    </script>`);
+  const result = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [checker, '--concurrency=1'], {
+      env: { ...process.env, STORYBOOK_STATIC_DIR: directory, DOCS_URL: '' },
+      stdio: ['ignore', 'pipe', 'pipe'], timeout: 30_000,
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.on('error', reject);
+    child.on('close', code => resolve({ code, stdout, stderr }));
+  });
+  assert.equal(result.code, 0, result.stdout || result.stderr);
+  const summary = JSON.parse(result.stdout);
+  assert.equal(summary.clicked, 1);
+  assert.deepEqual(summary.diagnosticFailures, []);
+});
 
 async function inspectFixture(t, { delayedSource = false, initialDelay = 0, neverRender = false }) {
   const server = createServer((request, response) => {
