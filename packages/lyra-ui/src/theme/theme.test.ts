@@ -2083,6 +2083,21 @@ describe('lyraThemeBootstrap token maps', () => {
     });
   }
 
+  it('keeps modern absolute accent colors consistent in the pre-paint bootstrap', function () {
+    const accent = 'color(display-p3 1 0 0)';
+    if (!CSS.supports('color', accent)) this.skip();
+
+    const { expected, actual } = runtimeThenBootstrap({ mode: 'light', accent });
+    const accentValue = expected.inline[T('accent')];
+    const loud = expected.inline[T('color-brand-fill-loud')] ?? '';
+    expect(accentValue).to.be.a('string').and.not.empty;
+    expect(loud).to.be.a('string').and.not.empty;
+    const [red, green, blue] = parseColor(loud);
+    expect(red).to.be.greaterThan(green);
+    expect(red).to.be.greaterThan(blue);
+    expect(actual).to.deep.equal(expected);
+  });
+
   for (const look of ['shadcn', 'lyra']) {
     it(`uses the selected raised surface in runtime and bootstrap: ${look}`, () => {
       setLyraStyle({ look, mode: 'dark', accent: null, overrides: { [T('color-text-quiet')]: '#8a8a8a' } });

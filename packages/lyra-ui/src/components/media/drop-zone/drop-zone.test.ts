@@ -477,3 +477,11 @@ it('treats multiple="false" as false on lr-file-input like on lr-drop-zone', asy
   const input = await fixture<LyraFileInput>(html`<lr-file-input multiple="false"></lr-file-input>`);
   expect(input.multiple).to.equal(false);
 });
+it('suppresses browser dragover navigation even while disabled', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone disabled><div>region</div></lr-drop-zone>`);
+  const event = new DragEvent('dragover', { bubbles: true, cancelable: true });
+
+  base(el).dispatchEvent(event);
+
+  expect(event.defaultPrevented).to.equal(true);
+});

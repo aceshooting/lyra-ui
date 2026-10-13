@@ -11,6 +11,16 @@ import {
 
 type LitWarningGlobal = { litIssuedWarnings?: Set<string> };
 
+class FormAssociatedWarningFixture extends HTMLElement {
+  static formAssociated = true;
+
+  readonly internals = this.attachInternals();
+}
+
+if (!customElements.get('lr-form-associated-warning-fixture')) {
+  customElements.define('lr-form-associated-warning-fixture', FormAssociatedWarningFixture);
+}
+
 function withDevMode(): Set<string> {
   const warnings = new Set<string>();
   (globalThis as LitWarningGlobal).litIssuedWarnings = warnings;
@@ -115,6 +125,39 @@ describe('warnUnknownAttributes', () => {
     host.setAttribute('known-attr', '');
     warnUnknownAttributes(host, ['known-attr']);
     expect(warnStub.calls).to.have.length(0);
+  });
+
+  it('accepts the native form owner attribute for form-associated custom elements on the cached path', () => {
+    withDevMode();
+    const host = document.createElement('lr-form-associated-warning-fixture');
+    host.setAttribute('form', 'owner');
+
+    warnUnknownAttributes(host);
+
+    expect(warnStub.calls).to.have.length(0);
+  });
+
+  it('accepts form on the explicit path while retaining warnings for other attributes', () => {
+    withDevMode();
+    const host = document.createElement('lr-form-associated-warning-fixture');
+    host.setAttribute('form', 'owner');
+    host.setAttribute('formm', 'owner');
+
+    warnUnknownAttributes(host, [], []);
+
+    expect(warnStub.calls).to.have.length(1);
+    expect(warnStub.calls[0]![0]).to.contain("unknown attribute 'formm'");
+  });
+
+  it('still warns about form on an ordinary non-form-associated element', () => {
+    withDevMode();
+    const host = document.createElement('div');
+    host.setAttribute('form', 'owner');
+
+    warnUnknownAttributes(host, []);
+
+    expect(warnStub.calls).to.have.length(1);
+    expect(warnStub.calls[0]![0]).to.contain("unknown attribute 'form'");
   });
 
   it('exempts data-*, aria-*, and the hardcoded global attribute list', () => {

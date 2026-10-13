@@ -266,6 +266,18 @@ it('falls back safely for invalid Intl number/date/relative-time option values',
   expect(bytes.shadowRoot?.textContent?.trim()).to.match(/^1\s?kB$/i);
 });
 
+it('uses the runtime locale when lr-format-date receives a malformed locale', async () => {
+  const date = new Date('2024-01-01T12:00:00.000Z');
+  const el = (await fixture(html`
+    <lr-format-date .date=${date} locale="not_a_locale"></lr-format-date>
+  `)) as LyraFormatDate;
+  await el.updateComplete;
+
+  const time = el.shadowRoot?.querySelector('time');
+  expect(time?.textContent?.trim()).to.not.equal('');
+  expect(time?.getAttribute('datetime')).to.equal(date.toISOString());
+});
+
 it('falls back safely when an explicit locale is invalid', async () => {
   const el = (await fixture(html`
     <lr-format-number value="1234" locale="not_a_locale"></lr-format-number>

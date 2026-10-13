@@ -303,6 +303,37 @@ it('closes on Escape and emits lr-close with the escape reason', async () => {
   expect(detail).to.equal('escape');
 });
 
+it('routes a native-modal close request through the Lightbox Escape lifecycle without closing its parent dialog', async function () {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <dialog><button>Background dialog</button></dialog>
+    <lr-lightbox style="--lr-transition-base: 0ms" .images=${[image]}></lr-lightbox>
+  </div>`);
+  const underlying = wrapper.querySelector<HTMLDialogElement>('dialog')!;
+  const el = wrapper.querySelector<LyraLightbox>('lr-lightbox')!;
+
+  try {
+    underlying.showModal();
+    el.open = true;
+    await el.updateComplete;
+    const carrier = el.shadowRoot!.querySelector<HTMLDialogElement>('[data-native-modal-carrier]')!;
+    await waitUntil(() => carrier.matches(':modal'), 'the lightbox establishes native modality');
+    if (typeof carrier.requestClose !== 'function') this.skip();
+
+    const cancel = oneEvent(carrier, 'cancel');
+    const closed = oneEvent<CustomEvent<{ reason: string }>>(el, 'lr-close');
+    carrier.requestClose();
+    await cancel;
+    const event = await closed;
+
+    expect(event.detail.reason).to.equal('escape');
+    expect(el.open).to.be.false;
+    expect(underlying.open).to.be.true;
+  } finally {
+    el.open = false;
+    underlying.close();
+  }
+});
+
 it('does not respond to Escape while closed', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
   let fired = false;

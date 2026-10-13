@@ -189,8 +189,9 @@ export function warnUnknownAttributes(
       ...(knownUnobservedAttributes ?? (host.constructor as Partial<KnownUnobservedAttributeHost>).knownUnobservedAttributes ?? []),
     ]);
   }
+  const isFormAssociated = (host.constructor as { formAssociated?: boolean }).formAssociated === true;
   for (const name of names) {
-    if (observedSet.has(name) || isExemptAttribute(name)) continue;
+    if (observedSet.has(name) || (name === 'form' && isFormAssociated) || isExemptAttribute(name)) continue;
     const key = `lyra-unknown-attribute:${host.localName}:${name}`;
     if (warnings.has(key)) continue;
     warnings.add(key);

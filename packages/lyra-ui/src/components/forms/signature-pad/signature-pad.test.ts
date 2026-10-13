@@ -207,6 +207,24 @@ describe('<lr-signature-pad>', () => {
     expect(new FormData(form).get('signature') === el.value).to.be.true;
   });
 
+  it('uses an external form owner supplied by the form attribute', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div>
+        <form id="signature-owner"></form>
+        <lr-signature-pad form="signature-owner" name="signature"></lr-signature-pad>
+      </div>
+    `);
+    const form = wrapper.querySelector('form')!;
+    const el = wrapper.querySelector<LyraSignaturePad>('lr-signature-pad')!;
+
+    expect(el.form === form).to.be.true;
+    el.strokes = LINE;
+    const value = el.value;
+    expect(value).to.match(/^data:image\/png;base64,/);
+    expect(value.length).to.be.greaterThan('data:image/png;base64,'.length);
+    expect(new FormData(form).get('signature') === value).to.be.true;
+  });
+
   it('resets to empty and restores validated strokes from saved form state', async () => {
     const form = await fixture<HTMLFormElement>(
       html`<form><lr-signature-pad name="signature" required></lr-signature-pad></form>`,
