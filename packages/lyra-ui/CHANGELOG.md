@@ -4,6 +4,8 @@
 
 ### Patch Changes
 
+- The release version stamp changes gzip compression by one byte in the utility family and two bytes in the curated root. Only those two bundle ceilings advance to their exact measured sizes, without additional allowance; all other ceilings and measurement inputs remain unchanged.
+
 - edae457: Correct companion installation guidance: Lyra IDE and translations share the UI version, while Flags and Docs use independently versioned compatible releases.
 - edae457: Correct pseudo-locale manifest imports to point to their Lyra UI exports. Allow valid regional catalog imports within the translations package while continuing to reject imports that escape the package.
 - Updated dependencies [edae457]
