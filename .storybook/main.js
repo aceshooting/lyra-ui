@@ -9,6 +9,7 @@ import { componentImportsPlugin } from './component-imports.js';
 import { createGroupedStoryIndexer } from './story-indexer.js';
 import { storyTitlePlugin } from './story-title-plugin.js';
 import { sourcePackageExportsPlugin } from './source-package-exports.js';
+import { sourceShikiWasmPlugin } from './source-shiki-wasm.js';
 import { builderModulePreload, isDeferredLocaleModule } from './docs-load-boundaries.js';
 import { renderDocsManagerHead, resolveDocsPublicBase } from '../scripts/docs-public-base.mjs';
 
@@ -96,6 +97,7 @@ const config = {
     // Companion stories import the public package routes; resolve their committed source
     // targets so the docs build remains independent of the library build.
     viteConfig.plugins.push(sourcePackageExportsPlugin());
+    viteConfig.plugins.push(sourceShikiWasmPlugin());
     // Storybook consumes source classes directly, including on a clean checkout without dist.
     // Resolve diagnostics to the matching source condition while package consumers use imports.
     let sourceDiagnosticCondition = 'production';

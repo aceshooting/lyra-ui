@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import '../.storybook/source-package-exports.test.js';
+import '../.storybook/source-shiki-wasm.test.js';
 
 import {
   buildStorybookDocsAuditPlan,

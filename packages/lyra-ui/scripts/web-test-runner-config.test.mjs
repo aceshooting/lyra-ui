@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { reviewedSha256 } from './generate-shiki-wasm.mjs';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { availableParallelism, tmpdir } from 'node:os';
@@ -722,4 +725,38 @@ test('does not attribute a nested unrelated error to an outer ResizeObserver not
   outer.defaultPrevented = true;
   outer.eventPhase = 0;
   await assert.rejects(launcher.stopSession('nested-unrelated-error'), /Unexpected browser console.error: null/u);
+});
+
+test('serves reviewed source Shiki WASM without reading build output', () => {
+  const source = readFileSync(new URL('../web-test-runner.config.js', import.meta.url), 'utf8');
+  const declaration = source.slice(source.indexOf('const shikiOnigWasmAssetPlugin ='),
+    source.indexOf('const mouseButtons ='));
+  const require = createRequire(new URL('../package.json', import.meta.url));
+  const binaryPath = require.resolve('shiki/onig.wasm');
+  const reads = [];
+  const plugin = runInNewContext(`${declaration.replaceAll('import.meta.url', JSON.stringify(configUrl))} shikiOnigWasmAssetPlugin;`, {
+    assert, createHash, reviewedSha256, require, URL,
+    readFileSync(path) {
+      assert.equal(path, binaryPath, 'source server must only read the installed peer asset');
+      reads.push(path);
+      return readFileSync(path);
+    },
+  });
+  const context = { path: '/src/components/conversation/code-block/onig.wasm' };
+  plugin.serve(context);
+  assert.equal(context.status, 200);
+  assert.equal(context.type, 'application/wasm');
+  assert.equal(createHash('sha256').update(context.body).digest('hex'), reviewedSha256);
+  assert.equal(reads.length, 1);
+  const changedPlugin = runInNewContext(`${declaration.replaceAll('import.meta.url', JSON.stringify(configUrl))} shikiOnigWasmAssetPlugin;`, {
+    assert, createHash, reviewedSha256, require, URL,
+    readFileSync() { return Buffer.from('unreviewed binary'); },
+  });
+  const changed = { path: context.path };
+  assert.throws(() => changedPlugin.serve(changed), /review engine compatibility and notices/);
+  assert.equal(changed.status, undefined, 'unreviewed bytes must not receive a success response');
+  const unrelated = { path: '/unrelated/onig.wasm' };
+  plugin.serve(unrelated);
+  assert.equal(unrelated.status, undefined);
+  assert.equal(reads.length, 1);
 });

@@ -371,6 +371,10 @@ export const EXEMPTIONS = Object.freeze({
     'scripts/build.mjs itself; verified by check:theme-bootstrap, which is chained into `build` ' +
     '(like check:build-artifacts), never into contract-policy, so there is no committed source ' +
     'artifact for `regen` to refresh.',
+  'generate-shiki-wasm.mjs':
+    'writes the reviewed WASM binary, license and provenance only to dist/ inside scripts/build.mjs; ' +
+    'check:build-artifacts verifies those build outputs, and there is no committed source artifact ' +
+    'for `regen` to refresh.',
   'generate-side-effects.mjs':
     'its generateSideEffects() is invoked internally by generate-registration-artifacts.mjs, which ' +
     '`registrations` (already in `regen`) runs; the standalone CLI is a manual escape hatch for the ' +

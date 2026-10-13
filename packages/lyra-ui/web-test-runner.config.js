@@ -1,4 +1,9 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { reviewedSha256 } from './scripts/generate-shiki-wasm.mjs';
+
 import { availableParallelism } from 'node:os';
 import { defaultReporter } from '@web/test-runner';
 import { sendKeysPlugin } from '@web/test-runner-commands/plugins';
@@ -6,6 +11,8 @@ import { playwrightLauncher } from '@web/test-runner-playwright';
 import { junitReporter } from '@web/test-runner-junit-reporter';
 import { esbuildPlugin } from '@web/dev-server-esbuild';
 import { timingReporter } from './scripts/wtr-timing-reporter.mjs';
+
+const require = createRequire(import.meta.url);
 
 // Read rather than `import ... with { type: 'json' }`: import attributes are
 // still gated behind a Node version this repo does not pin (engines: >=20).
@@ -94,14 +101,17 @@ const echartsProcessInteropPlugin = {
   },
 };
 
-/** Source tests use the same relative binary asset that the production build packages. */
+/** Source tests serve the reviewed peer binary without requiring production artifacts. */
 const shikiOnigWasmAssetPlugin = {
   name: 'shiki-onig-wasm-asset',
   serve(context) {
     if (context.path.endsWith('/code-block/onig.wasm')) {
+      const binary = readFileSync(require.resolve('shiki/onig.wasm'));
+      assert.equal(createHash('sha256').update(binary).digest('hex'), reviewedSha256,
+        'Shiki WASM changed: review engine compatibility and notices before serving source tests');
       context.status = 200;
       context.type = 'application/wasm';
-      context.body = readFileSync(new URL('./dist/components/conversation/code-block/onig.wasm', import.meta.url));
+      context.body = binary;
     }
   },
 };

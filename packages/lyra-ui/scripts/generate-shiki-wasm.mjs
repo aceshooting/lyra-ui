@@ -8,7 +8,7 @@ import { isMainModule } from './is-main-module.mjs';
 
 // Reviewed vscode-oniguruma 1.7.0 binary shipped unchanged by Shiki 4.4.3 and 4.5.0.
 // A different binary requires compatibility and attribution review before updating this value.
-const reviewedSha256 = 'fd885c2d12e5951e59d761ebd4a006e06254b1491fd6f530c92b69fb4d8d77d9';
+export const reviewedSha256 = 'fd885c2d12e5951e59d761ebd4a006e06254b1491fd6f530c92b69fb4d8d77d9';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 export async function generateShikiWasm(packageDir, { check = false } = {}) {
