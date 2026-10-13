@@ -1011,11 +1011,13 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     return series.label || this.localize('chartSeriesLabel');
   }
 
+  private formatValue(value: number, surface: 'export', metadata?: LyraChartFormatterMetadata): string | number;
+  private formatValue(value: number, surface: Exclude<LyraChartFormatSurface, 'export'>, metadata?: LyraChartFormatterMetadata): string;
   private formatValue(
     value: number,
     surface: LyraChartFormatSurface,
     metadata: LyraChartFormatterMetadata = {},
-  ): string {
+  ): string | number {
     const legacyContext: LyraChartValueFormatterContext | undefined =
       surface === 'export' || surface === 'spoken'
         ? 'table'
@@ -1024,10 +1026,11 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
           : surface;
     return this.formatter?.({ value, surface, ...metadata }) ??
       (legacyContext ? this.valueFormatter?.(value, legacyContext) : undefined) ??
-      formatChartValue(value, this.effectiveLocale);
+      (surface === 'export' ? value : formatChartValue(value, this.effectiveLocale));
   }
 
-  /** Returns a spreadsheet-safe CSV snapshot or the current canvas PNG data URL. */
+  /** Returns a spreadsheet-safe CSV snapshot or the current canvas PNG data URL.
+   * CSV preserves raw summary precision unless `formatter` or `valueFormatter` supplies text. */
   exportData(format: 'csv' | 'png'): string {
     if (format === 'png') {
       return (this.chart as BoxPlotChartRuntime & { toBase64Image?(): string } | undefined)

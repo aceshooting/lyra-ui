@@ -2006,6 +2006,40 @@ describe('per-box interactivity', () => {
 describe('bounded box-plot fallback paths', () => {
   const point = { min: 1, q1: 2, median: 3, q3: 4, max: 5 };
 
+  for (const locale of ['en-US', 'de-DE', 'ar-EG']) {
+    it(`preserves default CSV summary precision and string guards under ${locale}`, () => {
+      const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+      el.locale = locale;
+      el.labels = ['+category', 'invalid', 'non-finite'];
+      el.datasets = [{ label: '=series', data: [
+        { min: -1.23456789, q1: -0.0004, median: 0.000123456, q3: 1.23456789, max: 1234.56789 },
+        { min: 5, q1: 4, median: 3, q3: 2, max: 1 },
+        { min: 1, q1: 2, median: 3, q3: 4, max: Infinity },
+      ] }];
+      expect(el.exportData('csv')).to.equal([
+        'category,series,min,q1,median,q3,max',
+        "'+category,'=series,-1.23456789,-0.0004,0.000123456,1.23456789,1234.56789",
+      ].join('\r\n'));
+    });
+  }
+
+  it('preserves explicit export formatter precedence, empty strings, and formula guards', () => {
+    const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'Series', data: [point] }];
+    el.valueFormatter = (value, context) => `+${context}:${value}`;
+    el.formatter = context => context.statistic === 'median' ? '' : `=${context.surface}:${context.value}`;
+    expect(el.exportData('csv').split('\r\n')[1]).to.equal(
+      "A,Series,'=export:1,'=export:2,,'=export:4,'=export:5",
+    );
+    el.formatter = undefined;
+    expect(el.exportData('csv').split('\r\n')[1]).to.equal(
+      "A,Series,'+table:1,'+table:2,'+table:3,'+table:4,'+table:5",
+    );
+    el.valueFormatter = () => '';
+    expect(el.exportData('csv').split('\r\n')[1]).to.equal('A,Series,,,,,');
+  });
+
   it('exports both absent and present PNG snapshots and skips invalid CSV summaries', () => {
     const el = document.createElement('lr-box-plot') as LyraBoxPlot;
     el.labels = [];

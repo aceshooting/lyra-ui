@@ -188,6 +188,47 @@ it('exports calendar data as CSV, skipping no-data days', async () => {
   );
 });
 
+for (const locale of ['en-US', 'de-DE', 'ar-EG']) {
+  it(`preserves matrix CSV numeric precision and string guards under ${locale}`, () => {
+    const el = document.createElement('lr-heatmap') as LyraHeatmap;
+    el.locale = locale;
+    el.data = {
+      kind: 'matrix', rowLabels: ['=row'],
+      colLabels: ['+tiny', '@precise', 'large', 'negative', 'sentinel', 'nan', 'infinity', 'negative infinity'],
+      values: [[0.0004, 1.23456789, 1234.56789, -0.0004, -1, Number.NaN, Infinity, -Infinity]],
+    };
+    const positiveRows = ['row,column,value', "'=row,'+tiny,0.0004", "'=row,'@precise,1.23456789", "'=row,large,1234.56789"];
+    expect(el.exportData('csv')).to.equal(positiveRows.join('\r\n'));
+    el.domain = [-2, 2000];
+    expect(el.exportData('csv')).to.equal([
+      ...positiveRows, "'=row,negative,-0.0004", "'=row,sentinel,-1",
+    ].join('\r\n'));
+  });
+
+  it(`preserves calendar CSV numeric precision and date guards under ${locale}`, () => {
+    const el = document.createElement('lr-heatmap') as LyraHeatmap;
+    el.locale = locale;
+    el.data = {
+      kind: 'calendar', days: [
+        { date: '2026-01-01', value: 0.0004 },
+        { date: '=1+1', value: 1.23456789 },
+        { date: '@date', value: 1234.56789 },
+        { date: '2026-01-04', value: -0.0004 },
+        { date: '2026-01-05', value: -1 },
+        { date: '2026-01-06', value: Number.NaN },
+        { date: '2026-01-07', value: Infinity },
+        { date: '2026-01-08', value: -Infinity },
+      ],
+    };
+    const positiveRows = ['date,value', '2026-01-01,0.0004', "'=1+1,1.23456789", "'@date,1234.56789"];
+    expect(el.exportData('csv')).to.equal(positiveRows.join('\r\n'));
+    el.midpoint = 0;
+    expect(el.exportData('csv')).to.equal([
+      ...positiveRows, '2026-01-04,-0.0004', '2026-01-05,-1',
+    ].join('\r\n'));
+  });
+}
+
 it('scales a single square cell with its container and bounds invalid presentation values', async () => {
   const el = await matrix();
   el.data = { kind: 'matrix', rowLabels: ['Row'], colLabels: ['Column'], values: [[1]] };

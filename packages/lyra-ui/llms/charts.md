@@ -1487,6 +1487,10 @@ appends finite raw samples and rebins the retained window of at most 10,000 samp
 or the current SVG markup. `lr-chart.exportData('csv' | 'png')` returns a CSV snapshot or Chart.js's
 current PNG data URL when the optional peer is loaded; point datasets expand x/y and optional
 radius/point-label columns. `lr-box-plot.exportData('csv'|'png')` exports all five summary values.
+Its default CSV cells preserve numeric precision without display rounding or locale formatting.
+An explicit `formatter` still receives the `export` surface and takes precedence over the legacy
+`valueFormatter` (`table` context); returned text, including empty strings, is preserved and guarded
+against spreadsheet formulas.
 These helpers do not download files; compose them with
 `lr-export-button` so the host owns filenames and download policy.
 

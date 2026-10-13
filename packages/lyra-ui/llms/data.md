@@ -2350,7 +2350,9 @@ color?: string; label?: string; partOfRamp?: boolean }`: a discrete legend key r
 **Getters/methods:** `exportData('csv'|'png')` returns a spreadsheet-safe CSV snapshot of the
 underlying matrix/calendar values or a PNG data URL for the most recently completed canvas paint.
 The CSV form reads `data` directly (not any bounded render cache) and omits no-data cells — one
-`row,column,value` row per real matrix cell, or `date,value` per real calendar day. The PNG form
+`row,column,value` row per real matrix cell, or `date,value` per real calendar day. Finite numeric
+values retain their precision without display rounding or locale formatting; text cells remain
+guarded against spreadsheet formulas. The PNG form
 includes the painted axes, cells, focus/selection/annotation overlays, and frozen
 label bands while `stickyLabels` is enabled; the DOM legend, tooltip, and accessible-cell buttons
 are deliberately excluded. It returns `''` before a completed paint, while rendering is deferred or

@@ -907,7 +907,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * intentionally omitted. An empty PNG string means the component has not completed a paint yet,
    * its canvas has no dimensions, it is waiting for deferred visibility, or the browser could not
    * encode the snapshot. The CSV snapshot reads `data` directly (unbounded by the render cap) and
-   * omits no-data cells (the `-1`/non-finite sentinel `isNoData()` already honors for painting),
+   * preserves finite numeric values without display rounding or locale formatting. Text cells
+   * remain guarded against spreadsheet formulas. It omits no-data cells (the `-1`/non-finite
+   * sentinel `isNoData()` already honors for painting),
    * the same way the canvas draw path skips them.
    */
   exportData(format: LyraHeatmapExportFormat): string {
@@ -943,7 +945,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       const header = ['date', 'value'].map(escapeCsvField).join(',');
       const rows = data.days
         .filter((day) => !this.isNoData(day.value))
-        .map((day) => [day.date, this.formatNumericValue(day.value)].map(escapeCsvField).join(','));
+        .map((day) => [day.date, day.value].map(escapeCsvField).join(','));
       return [header, ...rows].join('\r\n');
     }
     const header = ['row', 'column', 'value'].map(escapeCsvField).join(',');
@@ -953,7 +955,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       rowValues.forEach((value, colIndex) => {
         if (this.isNoData(value)) return;
         const colLabel = data.colLabels[colIndex] ?? '';
-        rows.push([rowLabel, colLabel, this.formatNumericValue(value)].map(escapeCsvField).join(','));
+        rows.push([rowLabel, colLabel, value].map(escapeCsvField).join(','));
       });
     });
     return [header, ...rows].join('\r\n');

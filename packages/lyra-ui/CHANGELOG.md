@@ -4,6 +4,10 @@
 
 ### Patch Changes
 
+- Preserve the original finite numeric values in heatmap and box-plot CSV exports. Default CSV numbers no longer pass through display rounding or locale-specific formatting; explicit box-plot export formatters, string formula-injection guards and no-data filtering remain in place.
+
+  Three aggregate bundle ceilings advance by only 2, 5 and 4 gzip bytes to the exact measured sizes required by the export correction. Other bundle limits remain unchanged.
+
 - 53edd10: Package the default syntax-highlighting engine's reviewed WebAssembly asset beside its lazy loader. Markdown and code components now build without an unresolved asset warning when the optional Shiki peer is absent. The asset is fetched only when default-engine highlighting is requested and Shiki is available; JavaScript-engine and plain-text rendering do not fetch it. Include the upstream licenses and artifact provenance with the binary.
 
   The portable asset reference and optional-engine capability check add 20–75 gzip bytes to ten direct JavaScript entries, 41 bytes to the component percentile and 46 bytes to its maximum. After removing an unnecessary loader module, those twelve breached bundle canaries advance to their exact measured bytes, with no added headroom. The release version string alone also changes gzip compression by 1–2 bytes in five entries; their breached ceilings advance by only 1–2 bytes to the exact measurements. All other ceilings, CSS budgets and optional-peer exclusions remain unchanged.
