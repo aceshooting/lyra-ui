@@ -4,6 +4,10 @@
 
 ### Patch Changes
 
+- Preserve accessible names from nested tab labels when tabs first mount or are added later, including labeled tabs without an explicit panel. Keep hidden label content excluded, preserve focus during descriptor changes, and restore author-owned slots when descriptors leave the group. Deduplicate late-registration observation without retaining removed tabs.
+
+  Advance only breached aggregate bundle ceilings to their exact measured sizes for the projection and lifecycle corrections, without added headroom. Passing ceilings and measurement settings remain unchanged.
+
 - Preserve browser-sweep diagnostic logs when interrupted by termination, interrupt, or hangup signals, while continuing to remove logs after successful runs.
 
 - 1910139: Prevent visually hidden content from creating blank document scroll areas outside nested scroll containers. Keep pagination's hidden page mirror within its navigation wrapper, and anchor shared hidden text, announcement sinks and hidden utilities without changing keyboard reveal or page announcements.

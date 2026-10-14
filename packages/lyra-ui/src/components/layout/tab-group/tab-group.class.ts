@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
 import { nextId } from '../../../internal/a11y.js';
 import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
+import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -301,6 +302,20 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private mutationObserver?: MutationObserver;
   private mutationObserverDocument?: Document;
   private mutationObserverGeneration = 0;
+  private projectionGeneration = 0;
+  private projectionTimer?: number;
+  private projectionTimerWindow?: Window;
+  private projectionPending = false;
+  @state() private stagingSlotName = 'tab-group-sources';
+  private pendingDescriptorUpdates = new WeakSet<LyraTab>();
+  /** Final rendered rejection stays settled until consumer content or visibility changes. */
+  private readonly excludedUnnamedDescriptors = new Set<Element>();
+  private readonly descriptorUpgrades = new CustomElementUpgradeObserver(() => {
+    this.excludedUnnamedDescriptors.clear();
+    this.queueProjectionReconciliation();
+  });
+  private readonly restoredSourceInertWrites = new Map<Element, string | null>();
+  private readonly restoredSlotWrites = new Map<Element, string | null>();
   private readonly projectedSourceSnapshots = new Map<
     Element,
     ProjectedSourceSnapshot
@@ -384,11 +399,27 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
         ) {
           return false;
         }
+        if (record.attributeName === 'inert' && this.restoredSourceInertWrites.has(record.target as Element) &&
+          (record.target as Element).getAttribute('inert') === this.restoredSourceInertWrites.get(record.target as Element))
+          return false;
+        if (record.attributeName === 'slot') {
+          if (this.restoredSlotWrites.has(record.target as Element) &&
+            (record.target as Element).getAttribute('slot') === this.restoredSlotWrites.get(record.target as Element))
+            return false;
+          const snapshot = this.projectedSlotSnapshots.get(record.target as Element);
+          if (snapshot && (record.target as Element).getAttribute('slot') === snapshot.appliedSlot)
+            return false;
+        }
         return (
           isDirectChild(record.target) || isElementTabContent(record.target)
         );
       });
-      if (relevant) this.syncTabs();
+      this.restoredSourceInertWrites.clear();
+      this.restoredSlotWrites.clear();
+      if (relevant) {
+        this.excludedUnnamedDescriptors.clear();
+        this.syncTabs();
+      }
     });
     this.mutationObserver = observer;
     this.mutationObserverDocument = ownerDocument;
@@ -419,6 +450,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.resetProjectionReconciliation();
     this.resetMutationObserver();
     this.resetProjectedSourceObserver();
     this.restoreProjectedSources();
@@ -430,6 +462,59 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     super.adoptedCallback();
     this.resetMutationObserver();
     this.resetProjectedSourceObserver();
+    this.resetProjectionReconciliation();
+  }
+
+  private resetProjectionReconciliation(): void {
+    this.projectionGeneration += 1;
+    if (this.projectionTimer !== undefined)
+      this.projectionTimerWindow?.clearTimeout(this.projectionTimer);
+    this.projectionTimer = undefined;
+    this.projectionTimerWindow = undefined;
+    this.projectionPending = false;
+    this.pendingDescriptorUpdates = new WeakSet();
+    this.descriptorUpgrades.disconnect();
+    this.restoredSourceInertWrites.clear();
+    this.restoredSlotWrites.clear();
+    this.excludedUnnamedDescriptors.clear();
+  }
+
+  /** One assignment batch can signal many slots; settle it once after all signals land. */
+  private queueProjectionReconciliation = (): void => {
+    if (!this.isConnected || this.projectionTimer !== undefined) return;
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const generation = this.projectionGeneration;
+    this.projectionTimerWindow = ownerWindow;
+    this.projectionTimer = ownerWindow.setTimeout(() => {
+      if (generation !== this.projectionGeneration || this.ownerDocument !== ownerDocument || !this.isConnected)
+        return;
+      this.projectionTimer = undefined;
+      this.projectionTimerWindow = undefined;
+      this.updateBrowserDerivedState(this.syncTabs);
+    }, 0);
+  };
+
+  private waitForDescriptorUpdate(tab: LyraTab): boolean {
+    if (tab.hasUpdated === true) return false;
+    const updateComplete = tab.updateComplete;
+    if (!updateComplete) {
+      this.descriptorUpgrades.observeElement(tab);
+      return false;
+    }
+    if (!this.pendingDescriptorUpdates.has(tab)) {
+      this.pendingDescriptorUpdates.add(tab);
+      const generation = this.projectionGeneration;
+      const ownerDocument = this.ownerDocument;
+      void updateComplete.then(() => {
+        if (generation === this.projectionGeneration && this.ownerDocument === ownerDocument) {
+          this.pendingDescriptorUpdates.delete(tab);
+          if (tab.parentNode === this) this.queueProjectionReconciliation();
+        }
+      });
+    }
+    return true;
   }
 
   private resetMutationObserver(): void {
@@ -446,14 +531,23 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     this.adoptProjectedSourceInertStates();
     this.adoptProjectedSlotStates();
     const projectedSlots = new Set<Element>();
+    const wasPending = this.projectionPending;
     const next = this.readElementModel(children, projectedSlots);
     this.syncProjectedSlots(projectedSlots);
-    this.syncProjectedSources(next);
+    this.syncProjectedSources(next.filter(tab => tab.element.parentNode === this));
     const liveSlots = new Set(next.map((tab) => tab.slotName));
     for (const slotName of this.idsBySlot.keys()) {
       if (!liveSlots.has(slotName)) this.idsBySlot.delete(slotName);
     }
-    this.tabs = next;
+    if (
+      next.length !== this.tabs.length ||
+      (wasPending && !this.projectionPending) ||
+      next.some((tab, index) => {
+        const previous = this.tabs[index]!;
+        return tab.element !== previous.element || tab.slotName !== previous.slotName ||
+          tab.label !== previous.label || tab.disabled !== previous.disabled || tab.inert !== previous.inert;
+      })
+    ) this.tabs = next;
   };
 
   /**
@@ -472,6 +566,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     children: Element[],
     projectedSlots: Set<Element>
   ): TabDef[] {
+    this.projectionPending = false;
     const seen = new Set<string>();
     const next: TabDef[] = [];
     const panelsByName = new Map<string, Element>();
@@ -493,6 +588,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
         return [];
       })
     );
+    let stagingName = 'tab-group-sources';
+    while (authoredNames.has(stagingName))
+      stagingName += '-sources';
+    this.stagingSlotName = stagingName;
     let index = 0;
     for (const child of children) {
       if (child.localName !== tag('tab')) continue;
@@ -506,24 +605,31 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
         }
       }
       index += 1;
-      if (
-        !authoredPanel &&
-        !this.readElementLabel(child as LyraTab, { allowUnprojected: true })
-      ) {
-        continue;
-      }
       if (seen.has(slotName)) continue;
       seen.add(slotName);
       const tabSlot = this.tabSlotName(slotName);
-      // Project before reading: the descriptor's default-slot content must be in the same
-      // composed tree as the real tab button before the visibility-aware text walk can inspect
-      // it. The unprojected preflight above ignores only the descriptor's currently-unrendered
-      // ancestor path; each label branch's own hidden/inert/CSS state still excludes it. That lets
-      // an omitted descriptor stay in its author slot and re-enrol after a later content mutation,
-      // without a project/restore mutation loop.
-      this.projectSlot(child, tabSlot, projectedSlots);
+      const assignedSlot = child.assignedSlot;
+      const assignedHere = assignedSlot?.getRootNode() === this.renderRoot &&
+        (assignedSlot.name === tabSlot || assignedSlot.name === this.stagingSlotName);
+      // A real staging assignment lets CSS-hidden branches be assessed before an unnamed tab
+      // has earned its semantic button. Omitted descriptors stay assigned for later label edits.
+      if (!assignedHere || (!authoredPanel && this.excludedUnnamedDescriptors.has(child))) {
+        this.projectSlot(child, this.stagingSlotName, projectedSlots);
+        if (!assignedHere) this.projectionPending = true;
+        continue;
+      }
+      if (this.waitForDescriptorUpdate(child as LyraTab)) {
+        this.projectionPending = true;
+        this.projectSlot(child, this.stagingSlotName, projectedSlots);
+        continue;
+      }
       const visibleLabel = this.readElementLabel(child as LyraTab);
-      if (!authoredPanel && !visibleLabel) continue;
+      if (!authoredPanel && !visibleLabel) {
+        this.excludedUnnamedDescriptors.add(child);
+        this.projectSlot(child, this.stagingSlotName, projectedSlots);
+        continue;
+      }
+      projectedSlots.add(child);
       // A named empty descriptor gets its author-provided panel key as a last-resort accessible
       // name; only an unpaneled descriptor is omitted for having no accessibility-exposed label.
       const label = visibleLabel || slotName;
@@ -538,6 +644,16 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       });
       if (!this.active && child.hasAttribute('active')) this.active = slotName;
     }
+    // Keep the complete existing semantic batch while assignment or child upgrade is unresolved;
+    // a temporary restaging must not move active selection or erase an unread SSR active hint.
+    if (this.projectionPending) {
+      for (const child of children) {
+        if (this.projectedSlotSnapshots.has(child)) projectedSlots.add(child);
+      }
+      return this.tabs;
+    }
+    for (const tab of next)
+      this.projectSlot(tab.element, this.tabSlotName(tab.slotName), projectedSlots);
     return next;
   }
 
@@ -546,8 +662,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    * label text. Read that text through the same flattened slot shape while preserving every
    * author-owned accessibility exclusion. */
   private readElementLabel(
-    tab: LyraTab,
-    options: { allowUnprojected?: boolean } = {}
+    tab: LyraTab
   ): string {
     const labelNodes = Array.from(tab.childNodes).filter(
       (node) =>
@@ -558,8 +673,6 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     return composedAccessibilityText(labelNodes, {
       ancestorBoundary: tab,
       isSubtreeExcluded: (element) => this.isTabLabelSubtreeExcluded(element),
-      requireRendered: !options.allowUnprojected,
-      skipRootAncestorValidation: options.allowUnprojected,
       // A tab's name comes from its own label text, not from whether the group is currently
       // displayed; without this a hidden group falls back to the bare panel id.
       ignoreInheritedVisibility: true,
@@ -613,8 +726,11 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     snapshot: ProjectedSourceSnapshot
   ): void {
     this.adoptProjectedSourceInert(source, snapshot);
+    const before = source.getAttribute('inert');
     if (snapshot.inert === null) source.removeAttribute('inert');
     else source.setAttribute('inert', snapshot.inert);
+    if (this.mutationObserver && this.contains(source) && source.getAttribute('inert') !== before)
+      this.restoredSourceInertWrites.set(source, source.getAttribute('inert'));
   }
 
   private restoreProjectedSources(): void {
@@ -746,8 +862,11 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     snapshot: ProjectedSlotSnapshot
   ): void {
     this.adoptProjectedSlot(source, snapshot);
+    const before = source.getAttribute('slot');
     if (snapshot.slot === null) source.removeAttribute('slot');
     else source.setAttribute('slot', snapshot.slot);
+    if (this.mutationObserver && this.contains(source) && source.getAttribute('slot') !== before)
+      this.restoredSlotWrites.set(source, source.getAttribute('slot'));
   }
 
   private syncProjectedSlots(projectedSlots: ReadonlySet<Element>): void {
@@ -781,6 +900,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   /** Keeps `active` resolved to a real, navigable tab -- covers the initial default, a tab disappearing/becoming disabled or inert underneath the current selection, and a consumer assigning `.active` directly. Only a rendered selection displaced by its tab leaving reports `lr-tab-hide`/`lr-tab-show`, moving to the following tab (else the preceding one); the initial default and a direct `.active` write stay silent. Reading the focused element *before* the render that marks the outgoing button `inert` is what lets `updated()` rehome real focus rather than leaving it stranded on `<body>`. */
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // Assignment must settle before the initial active value or source SSR hints are repaired.
+    if (this.projectionPending) return;
     if (!changed.has('tabs') && !changed.has('active')) return;
     // Manual activation can focus an unselected occurrence: its removal needs focus repair even
     // while the selected tab remains valid. Inspect the old button before keyed rendering removes it.
@@ -820,7 +941,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('active') || changed.has('tabs'))
+    if (!this.projectionPending && (changed.has('active') || changed.has('tabs')))
       this.syncElementActiveState();
     // Each tab's own intrinsic geometry (a label, image, font, or slot change) can alter scroll
     // reachability without the fixed-width tablist's own border box changing at all -- the shared
@@ -1189,7 +1310,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       tabindex=${tab.slotName === this.rovingTab ? '0' : '-1'}
       @click=${() => this.activateTab(tab)}
     >
-      <span data-tab-label><slot name=${this.tabSlotName(tab.slotName)}></slot></span>${tab.label
+      <span data-tab-label><slot name=${this.tabSlotName(tab.slotName)} @slotchange=${this.queueProjectionReconciliation}></slot></span>${tab.label
         ? html`<span hidden aria-hidden="true">${tab.label}</span>`
         : nothing}${selected
         ? html`<span part="active-tab-indicator" aria-hidden="true"></span>`
@@ -1224,6 +1345,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       <slot ?hidden=${this.tabs.length > 0}></slot>
       <div part="base tab-group">
         <div part="nav">
+          <div data-descriptor-staging inert aria-hidden="true"><slot name=${this.stagingSlotName} @slotchange=${this.queueProjectionReconciliation}></slot></div>
           ${this.renderScrollControl('start')}
           <div
             part="tablist tabs"

@@ -22,10 +22,20 @@ export const styles = css`
      container without becoming children of role="tablist", whose only legal children are tabs.
      min-inline-size: 0 lets the tablist shrink below its content width and scroll at all. */
   [part="nav"] {
+    position: relative;
     display: flex;
     align-items: stretch;
     min-inline-size: 0;
     min-block-size: 0;
+  }
+  /* Keep descriptor CSS measurable without painting, accepting input, or extending scrollable
+     document bounds. This box introduces no containment or container-query context. */
+  [data-descriptor-staging] {
+    position: absolute;
+    inset: 0;
+    overflow: clip;
+    opacity: 0;
+    pointer-events: none;
   }
   [part~="tablist"] {
     display: flex;
