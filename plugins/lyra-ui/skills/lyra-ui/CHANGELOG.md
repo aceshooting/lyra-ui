@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Preserve accessible names from nested tab labels when tabs first mount or are added later, including labeled tabs without an explicit panel. Keep hidden label content excluded, preserve focus during descriptor changes, and restore author-owned slots when descriptors leave the group. Deduplicate late-registration observation without retaining removed tabs.
+- Preserve accessible names from nested tab labels when tabs first mount or are added later, including labeled tabs without an explicit panel. Keep hidden label content excluded, preserve focus during descriptor changes, and restore author-owned slots when descriptors leave the group. Deduplicate late-registration observation without retaining removed tabs. Make browser update completion wait for projected names and tab buttons so immediate programmatic selection works, including dynamic additions. Release pending completion on disconnect or adoption, and keep unrelated selection updates and unregistered descriptors nonblocking.
 
   Advance only breached aggregate bundle ceilings to their exact measured sizes for the projection and lifecycle corrections, without added headroom. Passing ceilings and measurement settings remain unchanged.
 

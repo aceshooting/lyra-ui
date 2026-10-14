@@ -11,6 +11,51 @@ function names(group: LyraTabGroup): string[] {
     .map(button => button.getAttribute('aria-label')!);
 }
 
+for (const rich of [false, true]) {
+  it(`makes ${rich ? 'rich' : 'plain'} first-mount tabs available to show() after one updateComplete`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+    const group = document.createElement('lr-tab-group');
+    group.innerHTML = rich
+      ? '<lr-tab panel="first"><span>First label</span></lr-tab><lr-tab panel="second"><span>Second label</span></lr-tab>'
+      : '<lr-tab panel="first">First label</lr-tab><lr-tab panel="second">Second label</lr-tab>';
+    group.insertAdjacentHTML('beforeend', '<lr-tab-panel name="first">First body</lr-tab-panel><lr-tab-panel name="second">Second body</lr-tab-panel>');
+    wrapper.append(group);
+    await group.updateComplete;
+    expect(names(group)).to.deep.equal(['First label', 'Second label']);
+    const events: string[] = [];
+    group.addEventListener('lr-tab-hide', event => events.push(`hide:${event.detail.name}`));
+    group.addEventListener('lr-tab-show', event => events.push(`show:${event.detail.name}`));
+    group.show('second');
+    expect(group.active).to.equal('second');
+    await group.updateComplete;
+    expect(group.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('data-slot')).to.equal('second');
+    expect(events).to.deep.equal(['hide:first', 'show:second']);
+  });
+}
+
+it('makes a dynamically appended upgraded rich tab available after one updateComplete', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div><lr-tab-group>
+    <lr-tab panel="first">First label</lr-tab><lr-tab-panel name="first">First body</lr-tab-panel>
+  </lr-tab-group></div>`);
+  const group = wrapper.querySelector<LyraTabGroup>('lr-tab-group')!;
+  await waitUntil(() => names(group).includes('First label'));
+  const addition = document.createElement('lr-tab');
+  addition.panel = 'second';
+  addition.innerHTML = '<span>Second label</span>';
+  const panel = document.createElement('lr-tab-panel');
+  panel.name = 'second';
+  panel.textContent = 'Second body';
+  wrapper.append(addition, panel);
+  await Promise.all([addition.updateComplete, panel.updateComplete]);
+  group.append(addition, panel);
+  await group.updateComplete;
+  group.show('second');
+  expect(group.active).to.equal('second');
+  await group.updateComplete;
+  expect(names(group)).to.deep.equal(['First label', 'Second label']);
+  expect(group.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('data-slot')).to.equal('second');
+});
+
 async function mountReadyDescriptors() {
   const wrapper = await fixture<HTMLDivElement>(html`<div>
     <lr-tab panel="purchase-order"><span>Purchase order</span></lr-tab>
@@ -172,17 +217,22 @@ it('rearms an unresolved child update after disconnect and adoption', async () =
   const group = document.createElement('lr-tab-group');
   group.append(tab);
   wrapper.append(group);
-  await group.updateComplete;
-  await nextFrame();
+  let oldReadySettled = false;
+  const oldReady = group.updateComplete.then(() => { oldReadySettled = true; });
+  await waitUntil(() => tab.assignedSlot?.parentElement?.hasAttribute('data-descriptor-staging') === true);
+  expect(oldReadySettled).to.equal(false);
   expect(names(group)).to.deep.equal([]);
   group.remove();
+  await oldReady;
+  expect(oldReadySettled).to.equal(true);
   const frame = document.createElement('iframe');
   wrapper.append(frame);
   try {
     frame.contentDocument!.body.append(group);
-    await nextFrame();
+    const newReady = group.updateComplete;
     release();
-    await waitUntil(() => names(group).includes('Delayed label'));
+    await newReady;
+    expect(names(group)).to.include('Delayed label');
   } finally {
     release();
     updating.scheduleUpdate = original;
@@ -245,7 +295,8 @@ it('renders unregistered descriptor light DOM and refreshes it after child regis
   try {
     await waitUntil(() => !!frame.contentWindow?.customElements.get('lr-tab-group'));
     const group = frame.contentDocument!.querySelector('lr-tab-group') as LyraTabGroup;
-    await waitUntil(() => names(group).length === 2);
+    await group.updateComplete;
+    expect(names(group)).to.have.length(2);
     expect(frame.contentWindow!.customElements.get('lr-tab')).to.equal(undefined);
     expect(names(group)).to.deep.equal(['Unregistered named', 'Unregistered unnamed']);
     for (let index = 0; index < 3; index++) {
@@ -288,6 +339,38 @@ it('releases detached descriptor references after the final removal batch settle
   expect(bookkeeping.restoredSlotWrites.size).to.equal(0);
   expect(bookkeeping.restoredSourceInertWrites.size).to.equal(0);
   expect(names(group)).to.deep.equal([]);
+});
+
+it('completes its render after adoption into a connected document without a browsing context', async () => {
+  const { group } = await mountReadyDescriptors();
+  const destination = document.implementation.createHTMLDocument();
+  destination.body.append(group);
+  try {
+    expect(group.ownerDocument.defaultView).to.equal(null);
+    let settled = false;
+    const ready = group.updateComplete.then(() => { settled = true; });
+    await waitUntil(() => settled, 'render completion needs no unavailable document timer');
+    await ready;
+  } finally {
+    group.remove();
+  }
+});
+
+it('settles a no-op descriptor class mutation followed by an active render', async () => {
+  const { group } = await mountReadyDescriptors();
+  group.querySelector('lr-tab[panel="purchase-order"]')!.classList.add('consumer-decoration');
+  group.active = 'direct';
+  try {
+    let settled = false;
+    const ready = group.updateComplete.then(() => { settled = true; });
+    await waitUntil(() => settled, 'an ordinary active render must not leave projection work pending');
+    await ready;
+    expect(group.active).to.equal('direct');
+    expect(group.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('data-slot')).to.equal('direct');
+    expect(names(group)[0]).to.equal('Purchase order');
+  } finally {
+    group.remove();
+  }
 });
 
 it('cancels pending projection work on disconnect and safely resumes after adoption', async () => {

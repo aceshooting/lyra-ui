@@ -306,6 +306,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private projectionTimer?: number;
   private projectionTimerWindow?: Window;
   private projectionPending = false;
+  private projectionSettlement?: Promise<void>;
+  private resolveProjectionSettlement?: () => void;
   @state() private stagingSlotName = 'tab-group-sources';
   private pendingDescriptorUpdates = new WeakSet<LyraTab>();
   /** Final rendered rejection stays settled until consumer content or visibility changes. */
@@ -477,6 +479,45 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     this.restoredSourceInertWrites.clear();
     this.restoredSlotWrites.clear();
     this.excludedUnnamedDescriptors.clear();
+    this.settleProjection();
+  }
+
+  private beginProjectionSettlement(): void {
+    if (this.projectionSettlement) return;
+    this.projectionSettlement = new Promise(resolve => {
+      this.resolveProjectionSettlement = resolve;
+    });
+  }
+
+  private settleProjection(): void {
+    const resolve = this.resolveProjectionSettlement;
+    this.resolveProjectionSettlement = undefined;
+    this.projectionSettlement = undefined;
+    resolve?.();
+  }
+
+  /** @internal Browser completion includes the actual descriptor assignment and final rendered names. */
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const generation = this.projectionGeneration;
+    const ownerDocument = this.ownerDocument;
+    let complete = await super.getUpdateComplete();
+    // The base hydration seed observes this first promise before it can start browser projection.
+    if (this.renderSlotPresence(false) || !ownerDocument.defaultView) return complete;
+    const current = (): boolean => this.isConnected &&
+      generation === this.projectionGeneration && this.ownerDocument === ownerDocument;
+    while (current()) {
+      const settlement = this.projectionSettlement;
+      if (settlement) {
+        await settlement;
+        if (!current()) return complete;
+        complete = await super.getUpdateComplete();
+      } else if (this.isUpdatePending) {
+        complete = await super.getUpdateComplete();
+      } else {
+        return complete;
+      }
+    }
+    return complete;
   }
 
   /** One assignment batch can signal many slots; settle it once after all signals land. */
@@ -486,6 +527,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     const ownerWindow = ownerDocument.defaultView;
     if (!ownerWindow) return;
     const generation = this.projectionGeneration;
+    this.beginProjectionSettlement();
     this.projectionTimerWindow = ownerWindow;
     this.projectionTimer = ownerWindow.setTimeout(() => {
       if (generation !== this.projectionGeneration || this.ownerDocument !== ownerDocument || !this.isConnected)
@@ -548,6 +590,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
           tab.label !== previous.label || tab.disabled !== previous.disabled || tab.inert !== previous.inert;
       })
     ) this.tabs = next;
+    if (this.projectionPending || this.projectionTimer !== undefined)
+      this.beginProjectionSettlement();
+    else this.settleProjection();
   };
 
   /**
@@ -941,6 +986,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('tabs')) this.queueProjectionReconciliation();
     if (!this.projectionPending && (changed.has('active') || changed.has('tabs')))
       this.syncElementActiveState();
     // Each tab's own intrinsic geometry (a label, image, font, or slot change) can alter scroll

@@ -47892,7 +47892,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 491,
+              "line": 533,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48131,7 +48131,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 491,
+              "line": 533,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48365,7 +48365,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 491,
+              "line": 533,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
