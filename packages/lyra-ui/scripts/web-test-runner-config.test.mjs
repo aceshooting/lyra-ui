@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { reviewedSha256 } from './generate-shiki-wasm.mjs';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { copyFileSync, existsSync, readdirSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
 import { availableParallelism, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
@@ -523,6 +523,7 @@ fi
       status: result.status,
       output: `${result.stdout}${result.stderr}`.replace(/\u001b\[[0-9;]*m/gu, ''),
       calls: readFileSync(join(directory, 'calls'), 'utf8').trim().split('\n'),
+      remainingLogDirectories: readdirSync(join(directory, 'logs')).length,
     };
   } finally {
     rmSync(directory, { recursive: true, force: true });
@@ -535,6 +536,7 @@ for (const serial of [false, true]) {
     test(`the ${mode} full sweep preserves ${failure} failure before coverage floors`, () => {
       const result = runAggregateFixture('test.sh', serial, failure);
       assert.equal(result.status, 1, result.output);
+    assert.ok(result.remainingLogDirectories > 0, 'failed sweep preserves lane logs');
       assert.match(result.output, /FAIL\s+chromium/u);
       assert.ok(!result.calls.some((call) => call.includes('check:coverage-floors')));
       assert.match(result.output, /PASS\s+workspace/u, 'other lanes still run');
@@ -543,12 +545,14 @@ for (const serial of [false, true]) {
   test(`the ${mode} full sweep stops a visual lane when its build fails`, () => {
     const result = runAggregateFixture('test.sh', serial, 'docs:build');
     assert.equal(result.status, 1, result.output);
+    assert.ok(result.remainingLogDirectories > 0, 'failed sweep preserves lane logs');
     assert.match(result.output, /FAIL\s+visual/u);
     assert.ok(!result.calls.some((call) => call.includes('test:visual')));
   });
   test(`the ${mode} browser sweep retains a failed first shard`, () => {
     const result = runAggregateFixture('test_all_browsers.sh', serial, 'test:full-engine-shard');
     assert.equal(result.status, 1, result.output);
+    assert.ok(result.remainingLogDirectories > 0, 'failed sweep preserves lane logs');
     const shardCalls = result.calls.filter((call) => call.includes('test:full-engine-shard'));
     assert.equal(shardCalls.length, 5, 'each browser stops after its failed first shard');
     assert.ok(shardCalls.every((call) => call.endsWith('|1')));
@@ -558,6 +562,7 @@ for (const serial of [false, true]) {
     test(`the ${mode} ${script} sweep reports success when every command succeeds`, () => {
       const result = runAggregateFixture(script, serial);
       assert.equal(result.status, 0, result.output);
+      assert.equal(result.remainingLogDirectories, 0, 'successful sweep removes lane logs');
       assert.doesNotMatch(result.output, /FAIL\s+/u);
       assert.equal((result.output.match(/PASS\s+/gu) ?? []).length, 5);
     });
@@ -760,3 +765,81 @@ test('serves reviewed source Shiki WASM without reading build output', () => {
   assert.equal(unrelated.status, undefined);
   assert.equal(reads.length, 1);
 });
+
+for (const script of ['test.sh', 'test_all_browsers.sh']) {
+  for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
+    test(`${script} preserves original lane logs when interrupted by ${signal}`, async () => {
+      const directory = mkdtempSync(join(tmpdir(), 'lyra-aggregate-signal-'));
+      let child;
+      let closed;
+      try {
+        for (const name of ['scripts', 'bin', 'logs']) mkdirSync(join(directory, name));
+        copyFileSync(resolve(packageDirectory, '../../scripts', script), join(directory, 'scripts', script));
+        const packageManager = JSON.parse(readFileSync(resolve(packageDirectory, '../../package.json'), 'utf8')).packageManager;
+        writeFileSync(join(directory, 'package.json'), JSON.stringify({ packageManager }));
+        writeFileSync(join(directory, 'bin/pnpm'), `#!/bin/bash
+if [[ "$*" == --version ]]; then echo '${packageManager.replace(/^pnpm@/u, '')}'; exit; fi
+if [[ "$*" == *test:* || "$*" == *check:component-quality* ]]; then
+ echo ORIGINAL_LANE_DIAGNOSTIC
+ sleep 300
+fi
+`, { mode: 0o755 });
+        child = spawn('bash', [join(directory, 'scripts', script)], {
+          detached: true,
+          env: {
+            ...process.env,
+            PATH: `${join(directory, 'bin')}:${dirname(process.execPath)}:${process.env.PATH}`,
+            TMPDIR: join(directory, 'logs'),
+            TEST_SH_SKIP_INSTALL: '1',
+            TEST_ALL_BROWSERS_SKIP_INSTALL: '1',
+            TEST_SH_ENGINE_SHARDS: '1',
+          },
+        });
+        let output = '';
+        child.stdout.on('data', bytes => { output += bytes; });
+        child.stderr.on('data', bytes => { output += bytes; });
+        const finished = new Promise((resolveDone, reject) => {
+          child.once('error', reject);
+          child.once('exit', (code, receivedSignal) => resolveDone({ code, receivedSignal }));
+        });
+        finished.catch(() => {});
+        closed = new Promise(resolveClosed => child.once('close', resolveClosed));
+        const deadline = Date.now() + 5000;
+        let laneDirectory;
+        let diagnosticObserved = false;
+        while (Date.now() < deadline) {
+          const match = output.match(/lane logs: (.+)/u);
+          if (match) {
+            laneDirectory = match[1];
+            diagnosticObserved = readdirSync(laneDirectory).some(name => readFileSync(join(laneDirectory, name), 'utf8').includes('ORIGINAL_LANE_DIAGNOSTIC'));
+            if (diagnosticObserved) break;
+          }
+          await new Promise(resolveWait => setTimeout(resolveWait, 20));
+        }
+        assert.ok(diagnosticObserved, output);
+        assert.ok(Number.isInteger(child.pid) && child.pid > 0);
+        process.kill(-child.pid, signal);
+        let timer;
+        const result = await Promise.race([finished, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('aggregate signal deadline')), 5000); })]).finally(() => clearTimeout(timer));
+        assert.equal(result.code, { SIGTERM: 143, SIGINT: 130, SIGHUP: 129 }[signal], output);
+        assert.equal(existsSync(laneDirectory), true, output);
+        assert.ok(readdirSync(laneDirectory).some(name => readFileSync(join(laneDirectory, name), 'utf8').includes('ORIGINAL_LANE_DIAGNOSTIC')));
+      } finally {
+        if (Number.isInteger(child?.pid) && child.pid > 0) {
+          try { process.kill(-child.pid, 'SIGKILL'); }
+          catch (error) { if (error.code !== 'ESRCH') throw error; }
+        }
+        if (closed) {
+          let cleanupTimer;
+          await Promise.race([
+            closed,
+            new Promise((_, reject) => {
+              cleanupTimer = setTimeout(() => reject(new Error('aggregate cleanup deadline')), 5000);
+            }),
+          ]).finally(() => clearTimeout(cleanupTimer));
+        }
+        rmSync(directory, { recursive: true, force: true });
+      }
+    });
+  }
+}

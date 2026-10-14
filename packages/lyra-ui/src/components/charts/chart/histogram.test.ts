@@ -105,7 +105,9 @@ it('visually hides the fallback data table via the sr-only sheet when with-data-
   const computed = getComputedStyle(table);
   expect(computed.position).to.equal('absolute');
   expect(computed.overflow).to.equal('hidden');
-  expect(computed.margin).to.equal('-1px');
+  expect(computed.margin).to.equal('0px');
+  expect(computed.insetBlockStart).to.equal('0px');
+  expect(computed.insetInlineStart).to.equal('0px');
 
   el.withDataTable = true;
   await el.updateComplete;

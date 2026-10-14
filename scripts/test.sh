@@ -123,6 +123,9 @@ cleanup_logs() {
   exit "$exit_status"
 }
 
+trap 'exit 143' TERM
+trap 'exit 130' INT
+trap 'exit 129' HUP
 trap cleanup_logs EXIT
 echo "lane logs: $LOG_DIR"
 

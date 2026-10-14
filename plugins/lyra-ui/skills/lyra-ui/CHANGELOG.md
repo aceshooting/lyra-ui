@@ -4,6 +4,8 @@
 
 ### Patch Changes
 
+- Preserve browser-sweep diagnostic logs when interrupted by termination, interrupt, or hangup signals, while continuing to remove logs after successful runs.
+
 - 1910139: Prevent visually hidden content from creating blank document scroll areas outside nested scroll containers. Keep pagination's hidden page mirror within its navigation wrapper, and anchor shared hidden text, announcement sinks and hidden utilities without changing keyboard reveal or page announcements.
 
   Refresh affected bundle-size canaries from the rebuilt outputs to account for the shared accessibility styles, retaining zero additional headroom and unchanged measurement settings.
