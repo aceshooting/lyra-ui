@@ -1,5 +1,13 @@
 # @aceshooting/lyra-docs
 
+## 0.5.2
+
+### Patch Changes
+
+- f919d8f: Update the exact optional DOCX engine peer to 2.30.0 and synchronize its bundled stylesheet, license notices, and installation documentation.
+- Updated dependencies [91e0b33]
+  - @aceshooting/lyra-ui@28.1.6
+
 ## 0.5.1
 
 ### Patch Changes

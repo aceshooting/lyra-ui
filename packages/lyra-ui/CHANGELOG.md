@@ -1,5 +1,12 @@
 # Changelog
 
+## 28.1.6
+
+### Patch Changes
+
+- 91e0b33: Reduce work when updating explicit option labels in large select and combobox catalogs by preserving unchanged accessible-text observation. Content mutations, fallback labels, slot changes, and lifecycle transitions continue to refresh observation.
+- @aceshooting/lyra-translations@28.1.6
+
 ## 28.1.5
 
 ### Patch Changes
