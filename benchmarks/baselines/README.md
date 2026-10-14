@@ -48,3 +48,12 @@ node benchmarks/schema.mjs --validate benchmarks/baselines/2026-10-13-28.1.1-str
 node benchmarks/schema.mjs --validate benchmarks/baselines/2026-10-13-28.1.2-stress.json
 pnpm benchmark:compare benchmarks/baselines/2026-10-13-28.1.1-stress.json benchmarks/baselines/2026-10-13-28.1.2-stress.json
 ```
+
+[2026-10-14-28.1.5-stress.json](2026-10-14-28.1.5-stress.json) preserves the 28.1.5 distribution measured on October 14. All 80 workload/browser cases and 560 measured samples passed their semantic checks across the five channels. The original bytes, raw samples and anonymous metadata are retained, including `publicCommit: null`. Million-record cases retain the bounded table and caller-controlled pagination scope described above.
+
+Comparing this run with the October 13 28.1.2 baseline matches the recorded compatibility fields and observes 105 regressed and 89 improved metric series out of 800. The strict comparison exits with status 1 under the unchanged thresholds; semantic checks passed. Complete measured-bundle dependency equivalence with that historical run is not established, so these observations do not attribute changes to Lyra or establish a uniform speedup. Rerun both versions with one frozen dependency environment when investigating a regression.
+
+```sh
+node benchmarks/schema.mjs --validate benchmarks/baselines/2026-10-14-28.1.5-stress.json
+pnpm benchmark:compare benchmarks/baselines/2026-10-13-28.1.2-stress.json benchmarks/baselines/2026-10-14-28.1.5-stress.json
+```
