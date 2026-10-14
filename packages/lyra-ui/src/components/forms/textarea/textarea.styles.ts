@@ -133,7 +133,6 @@ export const styles = css`
      while the spoken copy is appended to the shared light-DOM polite sink. */
   .count-announcement {
     ${visuallyHidden}
-    margin: var(--lr-size-neg-1px);
   }
   [part="form-control"],
   [part="form-control-label"],

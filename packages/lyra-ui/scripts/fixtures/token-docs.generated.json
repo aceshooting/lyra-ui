@@ -4473,12 +4473,9 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/data/pagination/pagination.styles.ts",
         "src/components/forms/date-picker/date-picker.styles.ts",
-        "src/components/forms/textarea/textarea.styles.ts",
         "src/components/layout/app-rail/app-rail-item.styles.ts",
-        "src/components/layout/tab-group/tab-group.styles.ts",
-        "src/components/utility/copy-button/copy-button.styles.ts"
+        "src/components/layout/tab-group/tab-group.styles.ts"
       ]
     },
     {

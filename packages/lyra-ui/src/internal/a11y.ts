@@ -144,22 +144,27 @@ export function resolveAccessibleTrigger(trigger: HTMLElement): HTMLElement {
 /** Visually-hidden-but-screen-reader-available helper class.
  *
  * The hairline box is sized from the shared --lr-size-1px token and the logical
- * inline-size/block-size/margin-inline/margin-block properties rather than raw 1px literals and
- * physical width/height/margin, matching every component stylesheet in the library -- this module
+ * inline-size/block-size properties rather than raw 1px literals and physical width/height,
+ * matching every component stylesheet in the library -- this module
  * is shared by dozens of components, so an untokenized copy here would exempt all of them at once
  * from the token scale -- and no automated gate would notice, since check-style-policy.mjs only
  * walks component-level `.styles.ts` files and never this directory.
  *
  * Clipping uses `clip-path: inset(50%)`, not the deprecated `clip: rect(0 0 0 0)` shorthand --
  * matching `styles/utilities.css`'s `.lr-visually-hidden` and every component stylesheet that
- * ships its own copy. Two consequences worth knowing: a consumer that reveals a `.sr-only`
- * element on focus resets `clip-path: none` rather than `clip: auto`, and `clip-path` (unlike
- * `clip`) establishes a containing block for absolutely-positioned descendants. */
+ * ships its own copy. A consumer that reveals a `.sr-only`
+ * element on focus resets `clip-path: none` rather than `clip: auto`. Clipping does not establish
+ * an absolute-position containing block. Explicit logical start insets avoid static-position
+ * boxes escaping an intervening unpositioned scrollport and extending the document. Zero margin
+ * also keeps an RTL hidden box inside an LTR containing block's inline-end edge. */
 export const visuallyHidden = css`
   position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
   inline-size: var(--lr-size-1px);
   block-size: var(--lr-size-1px);
   padding: 0;
+  margin: 0;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
@@ -169,7 +174,5 @@ export const visuallyHidden = css`
 export const srOnly = css`
   .sr-only {
     ${visuallyHidden}
-    margin-inline: calc(-1 * var(--lr-size-1px));
-    margin-block: calc(-1 * var(--lr-size-1px));
   }
 `;

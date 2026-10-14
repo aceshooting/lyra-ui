@@ -6,6 +6,8 @@ export const styles = css`
      assistive technology still reaches it. */
   :host {
     position: absolute !important;
+    inset-block-start: 0 !important;
+    inset-inline-start: 0 !important;
     inline-size: var(--lr-size-1px) !important;
     block-size: var(--lr-size-1px) !important;
     clip-path: inset(50%) !important;

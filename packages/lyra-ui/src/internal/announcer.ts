@@ -315,7 +315,7 @@ const MAX_PENDING_MESSAGES_PER_SINK = 128;
 // stylesheets apply. Clipping is `clip-path: inset(50%)`, not the deprecated `clip` shorthand --
 // the same spelling `srOnly` and `styles/utilities.css` use.
 const SINK_HIDDEN_CSS_TEXT =
-  'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;' +
+  'position:absolute;inset-block-start:0;inset-inline-start:0;width:1px;height:1px;padding:0;margin:0;overflow:hidden;' +
   'clip-path:inset(50%);white-space:nowrap;border:0;';
 
 interface PendingAnnouncement {

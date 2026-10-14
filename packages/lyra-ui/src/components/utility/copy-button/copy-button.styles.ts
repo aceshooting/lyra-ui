@@ -78,6 +78,5 @@ export const styles = css`
      assistive technology alone. Same clipped-1px pattern lr-pagination's live region uses. */
   [part='feedback'] {
     ${visuallyHidden}
-    margin: var(--lr-size-neg-1px);
   }
 `;

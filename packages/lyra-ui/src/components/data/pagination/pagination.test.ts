@@ -1,3 +1,5 @@
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
@@ -2716,4 +2718,30 @@ describe('compact page field gap', () => {
       expect(spacing(el, dir === 'rtl')).to.be.closeTo(7, 0.5);
     });
   }
+});
+
+it('keeps its hidden page mirror inside an unpositioned ancestor scrollport', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="max-block-size: 200px; overflow: auto; inline-size: 320px; max-inline-size: 100%">
+      <div style="block-size: 1600px"></div>
+      <lr-pagination total="100" page-size="10"></lr-pagination>
+    </div>
+  `);
+  const el = wrapper.querySelector<LyraPagination>('lr-pagination')!;
+  await el.updateComplete;
+  const mirror = el.shadowRoot!.querySelector<HTMLElement>('[part="live-region"]')!;
+  const documentLimit = Math.max(innerHeight, Math.ceil(wrapper.getBoundingClientRect().bottom + scrollY) + 20);
+  expect(wrapper.scrollHeight).to.be.greaterThan(wrapper.clientHeight);
+  expect(document.documentElement.scrollHeight, 'hidden mirror must not extend the outer page').to.be.at.most(documentLimit);
+  expect(mirror.getAttribute('aria-hidden')).to.equal('true');
+  expect(mirror.hasAttribute('aria-live')).to.equal(false);
+  wrapper.scrollTop = wrapper.scrollHeight;
+  const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next-button"]')!;
+  el.addEventListener('lr-page-change', (event) => { el.page = event.detail.page; });
+  await focusByKeyboard(next);
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  await waitUntil(() => sinkTexts('polite').some((text) => text.includes('Page 2')));
+  expect(el.page).to.equal(2);
+  expect(document.documentElement.scrollHeight).to.be.at.most(documentLimit);
 });

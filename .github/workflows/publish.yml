@@ -251,3 +251,22 @@ jobs:
             exit 1
           fi
           npm publish "$TARBALL" --access public --provenance
+
+  dispatch-freshness:
+    needs: [verify, publish]
+    if: ${{ needs.publish.result == 'success' && (github.event_name == 'release' || inputs.dry_run != true) && (startsWith(needs.verify.outputs.tag, 'lyra-ui@') || startsWith(needs.verify.outputs.tag, 'lyra-flags@')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Schedule the published upgrade feed check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISHED_TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$PUBLISHED_TAG" =~ ^lyra-(ui|flags)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Expected a verified stable UI or flags release tag."
+            exit 1
+          fi
+          gh workflow run release-feed-freshness.yml --repo "$GITHUB_REPOSITORY" --ref main -f published_tag="$PUBLISHED_TAG"

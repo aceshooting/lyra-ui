@@ -1920,9 +1920,31 @@ test('initial document release selects its existing version without releasing an
   assert.throws(() => planReleaseTags({ packages, existingTags: ['lyra-docs@0.1.0'], selection: 'lyra-docs' }), /already exists/u);
 });
 
-test('document companion publishing does not schedule the UI website feed check', () => {
-  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/release-feed-freshness.yml'), 'utf8');
-  assert.match(workflow, /if: \$\{\{ github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.workflow_run\.conclusion == 'success' && !startsWith\(github\.event\.workflow_run\.head_branch, 'lyra-docs@'\) && !startsWith\(github\.event\.workflow_run\.head_branch, 'lyra-ide@'\) && !startsWith\(github\.event\.workflow_run\.head_branch, 'lyra-translations@'\)\) \}\}/u);
+test('freshness dispatch is isolated and only follows real UI or flags publication', () => {
+  const publish = readFileSync(path.join(repoRoot, '.github/workflows/publish.yml'), 'utf8');
+  const dispatch = publish.slice(publish.indexOf('\n  dispatch-freshness:'));
+  assert.match(dispatch, /needs: \[verify, publish\]/u);
+  assert.match(dispatch, /needs\.publish\.result == 'success'/u);
+  assert.match(dispatch, /github\.event_name == 'release' \|\| inputs\.dry_run != true/u);
+  assert.match(dispatch, /startsWith\(needs\.verify\.outputs\.tag, 'lyra-ui@'\) \|\| startsWith\(needs\.verify\.outputs\.tag, 'lyra-flags@'\)/u);
+  const condition = dispatch.match(/    if: \$\{\{ (.*) \}\}/u)[1];
+  const shouldDispatch = new Function('needs', 'github', 'inputs', 'startsWith', `return (${condition});`);
+  for (const event of ['release', 'workflow_dispatch']) {
+    for (const result of ['success', 'failure', 'cancelled', 'skipped']) {
+      for (const tag of ['lyra-ui@28.1.4', 'lyra-flags@2.3.0', 'lyra-docs@0.5.1', 'lyra-ide@28.1.4', 'lyra-translations@28.1.4']) {
+        for (const dryRun of [false, true]) {
+          assert.equal(shouldDispatch({ publish: { result }, verify: { outputs: { tag } } }, { event_name: event }, { dry_run: dryRun }, (value, prefix) => value.startsWith(prefix)),
+            result === 'success' && (event === 'release' || !dryRun) && /^(?:lyra-ui|lyra-flags)@/u.test(tag));
+        }
+      }
+    }
+  }
+  assert.match(dispatch, /permissions:\n      actions: write\n    steps:/u);
+  assert.doesNotMatch(dispatch, /checkout@|npm |pnpm|id-token|contents:|secrets\.|environment:|download-artifact/u);
+  const freshness = readFileSync(path.join(repoRoot, '.github/workflows/release-feed-freshness.yml'), 'utf8');
+  assert.doesNotMatch(freshness, /workflow_run|id-token|actions: write|secrets\./u);
+  assert.match(freshness, /permissions:\n  contents: read/u);
+  assert.match(freshness, /ref: main\n          persist-credentials: false/u);
 });
 
 test('binds privileged workflow context to the requested peeled tag', () => {
@@ -3530,4 +3552,107 @@ test('serial browser sweep keeps shard failures fatal with a mocked actual runne
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+{
+  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/release-feed-freshness.yml'), 'utf8');
+  const body = workflow.match(/        run: \|\n([\s\S]*)$/u)?.[1];
+  assert.ok(body, 'freshness shell step exists');
+  const script = body.replace(/^          /gmu, '');
+
+  function execute({ event = 'workflow_dispatch', tag = 'lyra-ui@28.1.4', requested = '', latest = '28.1.3', feed = latest, npmStatus = '0' } = {}) {
+    const root = mkdtempSync(path.join(tmpdir(), 'lyra-feed-version-'));
+    try {
+      writeFileSync(path.join(root, 'npm'), `#!/bin/bash\nprintf '%s\\n' "$*" >> "$CALLS/npm.log"\n[[ "$*" == 'view @aceshooting/lyra-ui dist-tags.latest' ]] || exit 90\nprintf '%s\\n' "$LATEST"\nexit "$NPM_STATUS"\n`);
+      writeFileSync(path.join(root, 'node'), `#!/bin/bash\nprintf '%s\\n' "$@" > "$CALLS/node.log"\n[[ "$1" == scripts/release-integrity.mjs && "$2" == verify-site-freshness ]] || exit 91\nshift 2\nwhile [[ $# -gt 0 ]]; do\n  if [[ "$1" == --version ]]; then version="$2"; fi\n  shift\ndone\n[[ "$version" == "$LATEST" && "$version" == "$FEED" ]]\n`);
+      for (const name of ['npm', 'node']) chmodSync(path.join(root, name), 0o755);
+      const result = spawnSync('bash', ['-c', script], { encoding: 'utf8', timeout: 5000,
+        env: { ...process.env, PATH: `${root}:${process.env.PATH}`, CALLS: root, GITHUB_EVENT_NAME: event,
+          PUBLISHED_TAG: tag, REQUESTED_VERSION: requested, LATEST: latest, FEED: feed, NPM_STATUS: npmStatus } });
+      assert.equal(result.error, undefined, result.error?.message);
+      const read = (name) => { try { return readFileSync(path.join(root, name), 'utf8'); } catch { return ''; } };
+      return { status: result.status, output: result.stdout + result.stderr, npm: read('npm.log'), node: read('node.log') };
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+
+  test('UI tag fixes the expected version even while registry and feed both lag', () => {
+    const result = execute();
+    assert.notEqual(result.status, 0, result.output);
+    assert.match(result.node, /--version\n28\.1\.4\n/u);
+    assert.equal(result.npm, '');
+  });
+  test('UI completion requires both registry and feed to catch up', () => {
+    for (const [latest, feed, success] of [['28.1.4', '28.1.3', false], ['28.1.3', '28.1.4', false], ['28.1.4', '28.1.4', true]]) {
+      const result = execute({ latest, feed });
+      assert.equal(result.status === 0, success, result.output);
+      assert.match(result.node, /--version\n28\.1\.4\n/u);
+    }
+  });
+  test('manual explicit version selects the requested target and never consults npm for selection', () => {
+    const result = execute({ event: 'workflow_dispatch', tag: '', requested: '27.0.0', latest: '27.0.0' });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.node, /--version\n27\.0\.0\n/u);
+    assert.equal(result.npm, '');
+  });
+  test('flags publication checks current UI latest, not the flags version', () => {
+    const result = execute({ tag: 'lyra-flags@2.3.0' });
+    assert.equal(result.status, 0, result.output);
+    assert.match(result.node, /--version\n28\.1\.3\n/u);
+    assert.notEqual(result.npm, '');
+  });
+  test('invalid or absent tags fail before checking the feed or querying npm', () => {
+    for (const tag of ['', 'main', 'lyra-ui@28.1.4-beta.1', 'lyra-ui@028.1.4', 'lyra-ui@28.1.4+meta', 'lyra-docs@0.1.0', 'lyra-ide@28.1.4', 'lyra-translations@28.1.4', 'other@1.0.0', 'lyra-flags@2.03.0']) {
+      const result = execute({ tag });
+      assert.notEqual(result.status, 0, tag);
+      assert.equal(result.node, '', tag);
+      assert.equal(result.npm, '', tag);
+    }
+  });
+  test('empty or malformed manual versions fail closed without registry fallback', () => {
+    for (const requested of ['', '28.1.4-beta.1', '28.01.4', '$(touch forbidden)', '28.1.4\n']) {
+      const result = execute({ event: 'workflow_dispatch', tag: '', requested });
+      assert.notEqual(result.status, 0, requested);
+      assert.equal(result.node, '');
+      assert.equal(result.npm, '');
+    }
+  });
+  test('manual version and published tag cannot both select the target', () => {
+    const result = execute({ requested: '28.1.4' });
+    assert.notEqual(result.status, 0);
+    assert.equal(result.npm, '');
+    assert.equal(result.node, '');
+  });
+  test('unexpected event fails before npm or feed execution', () => {
+    const result = execute({ event: 'push' });
+    assert.notEqual(result.status, 0);
+    assert.equal(result.npm, '');
+    assert.equal(result.node, '');
+  });
+  test('flags fallback fails closed on unavailable or malformed registry metadata', () => {
+    for (const overrides of [{ latest: '' }, { latest: 'not-a-version' }, { npmStatus: '1' }]) {
+      const result = execute({ tag: 'lyra-flags@2.3.0', ...overrides });
+      assert.notEqual(result.status, 0, result.output);
+      assert.equal(result.node, '');
+    }
+  });
+}
+
+test('post-publish dispatch validates the tag and propagates scheduling failure', () => {
+  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/publish.yml'), 'utf8');
+  const job = workflow.slice(workflow.indexOf('\n  dispatch-freshness:'));
+  const script = job.match(/        run: \|\n([\s\S]*)$/u)[1].replace(/^          /gmu, '');
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-feed-dispatch-'));
+  try {
+    writeFileSync(path.join(root, 'gh'), '#!/bin/bash\nprintf "%s\\n" "$@" > "$CALLS"\nexit "$GH_STATUS"\n');
+    chmodSync(path.join(root, 'gh'), 0o755);
+    for (const [tag, status, expected] of [['lyra-ui@28.1.4', '0', true], ['lyra-flags@2.3.0', '0', true], ['lyra-ui@28.1.4', '1', false], ['lyra-docs@0.5.1', '0', false], ['lyra-ide@28.1.4', '0', false], ['lyra-translations@28.1.4', '0', false], ['lyra-ui@028.1.4', '0', false], ['lyra-ui@28.1.4-beta.1', '0', false], ['', '0', false]]) {
+      const calls = path.join(root, 'calls');
+      rmSync(calls, { force: true });
+      const result = spawnSync('bash', ['-c', script], { encoding: 'utf8', env: { ...process.env, PATH: `${root}:${process.env.PATH}`, CALLS: calls, GH_STATUS: status, PUBLISHED_TAG: tag, GITHUB_REPOSITORY: 'example/components' } });
+      assert.equal(result.status === 0, expected, tag);
+      if (tag === 'lyra-ui@28.1.4' || tag === 'lyra-flags@2.3.0') {
+        assert.equal(readFileSync(calls, 'utf8'), `workflow\nrun\nrelease-feed-freshness.yml\n--repo\nexample/components\n--ref\nmain\n-f\npublished_tag=${tag}\n`);
+      } else assert.equal(existsSync(calls), false);
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

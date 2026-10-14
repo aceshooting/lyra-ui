@@ -51,6 +51,8 @@ export const styles = css`
     --_lr-pagination-control-border-color-default: var(--lr-color-brand);
   }
   [part~="base"] {
+    /* Keep the hidden page mirror inside any ancestor scrollport. */
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -381,7 +383,6 @@ export const styles = css`
   }
   [part="live-region"].sr-only {
     ${visuallyHidden}
-    margin: var(--lr-size-neg-1px);
   }
   /* Container-query lengths cannot reference custom properties; the documented
      320px narrow-allocation baseline is written in root-relative units so it

@@ -1801,3 +1801,41 @@ describe('decorative edges versus control boundaries', () => {
     expect(getComputedStyle(errorCell).borderBottomColor, 'error row rule').to.equal(subtle);
   });
 });
+
+it('keeps capped paginated rows and expanded details from extending the outer page', async () => {
+  const el = await fixture<LyraTable<Row>>(html`
+    <lr-table page-size="50" style="--lr-table-max-height: 220px; inline-size: 320px; max-inline-size: 100%"></lr-table>
+  `);
+  el.columns = columns;
+  const allRows = Array.from({ length: 100 }, (_, index) => ({ id: String(index + 1), name: `Account ${index + 1}`, score: index }));
+  el.rows = allRows;
+  await el.updateComplete;
+  const pagination = el.shadowRoot!.querySelector('lr-pagination') as HTMLElement & { updateComplete: Promise<boolean> };
+  await pagination.updateComplete;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const documentLimit = () => Math.max(innerHeight, Math.ceil(el.getBoundingClientRect().bottom + scrollY) + 20);
+  expect(base.scrollHeight).to.be.greaterThan(base.clientHeight);
+  expect(document.documentElement.scrollHeight, 'pagination mirror must stay inside the capped table').to.be.at.most(documentLimit());
+  el.style.inlineSize = '1200px';
+  expect(document.documentElement.scrollHeight).to.be.at.most(documentLimit());
+  el.expandedContent = () => html`<div style="block-size: 600px">Expanded account details</div>`;
+  el.rowKey = (row) => row.id;
+  el.expandedRowKeys = new Set(['1']);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(1);
+  expect(document.documentElement.scrollHeight).to.be.at.most(documentLimit());
+  base.scrollTop = base.scrollHeight;
+  expect(base.scrollTop).to.be.greaterThan(0);
+  el.filterable = true;
+  el.filterText = 'no matching account';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(0);
+  expect(document.documentElement.scrollHeight).to.be.at.most(documentLimit());
+  el.filterText = '';
+  for (const visibleRows of [allRows.slice(0, 2), []]) {
+    el.expandedRowKeys = new Set();
+    el.rows = visibleRows;
+    await el.updateComplete;
+    expect(document.documentElement.scrollHeight).to.be.at.most(documentLimit());
+  }
+});
