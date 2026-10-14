@@ -98,6 +98,54 @@ it('accepts label as a settable property and notifies an owning picker', async (
   expect(changes).to.equal(1);
 });
 
+it('keeps content observation active without registering it again for explicit label updates', async () => {
+  const el = await fixture<LyraOption>(html`<lr-option label="Manual"><span>Original</span></lr-option>`);
+  await nextFrame();
+  const observe = MutationObserver.prototype.observe;
+  let registrations = 0;
+  MutationObserver.prototype.observe = function (target, options) {
+    if (target === el) registrations += 1;
+    return observe.call(this, target, options);
+  };
+  try {
+    el.label = 'Changed manual';
+    await el.updateComplete;
+    expect(el.label).to.equal('Changed manual');
+    expect(registrations, 'metadata does not change the observed content tree').to.equal(0);
+    el.querySelector('span')!.textContent = 'Changed content';
+    await waitUntil(() => el.defaultLabel === 'Changed content');
+    expect(el.getTextLabel()).to.equal('Changed content');
+    expect(el.label).to.equal('Changed manual');
+    el.label = '';
+    await el.updateComplete;
+    expect(el.label).to.equal('Changed content');
+  } finally {
+    MutationObserver.prototype.observe = observe;
+  }
+});
+
+it('keeps newly assigned label descendants observed after a simultaneous explicit label update and synchronous read', async () => {
+  const el = await fixture<LyraOption>(html`<lr-option label="Manual">Original</lr-option>`);
+  await nextFrame();
+  const nested = document.createElement('span');
+  nested.attachShadow({ mode: 'open' }).innerHTML = '<span>Nested label</span>';
+  el.replaceChildren(nested);
+  el.label = 'Updated manual';
+  expect(el.defaultLabel).to.equal('Nested label');
+  await el.updateComplete;
+  await nextFrame();
+  nested.shadowRoot!.querySelector('span')!.textContent = 'Changed nested label';
+  await waitUntil(() => el.defaultLabel === 'Changed nested label');
+  expect(el.getTextLabel()).to.equal('Changed nested label');
+  el.label = '';
+  await el.updateComplete;
+  expect(el.label).to.equal('Changed nested label');
+  nested.hidden = true;
+  await waitUntil(() => el.label === '');
+  nested.hidden = false;
+  await waitUntil(() => el.label === 'Changed nested label');
+});
+
 it('derives defaultLabel and getTextLabel() from plain default-slot text only', async () => {
   const el = (await fixture(html`
     <lr-option value="a">

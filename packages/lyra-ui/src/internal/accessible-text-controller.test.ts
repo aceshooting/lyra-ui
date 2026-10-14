@@ -11,6 +11,42 @@ function controllerHost(onAdd: (controller: ReactiveController) => void): HTMLEl
   });
 }
 
+it('resumes label observation after disabling and reconnecting a preserved binding', async () => {
+  const host = controllerHost(() => undefined);
+  host.textContent = 'Initial';
+  document.body.append(host);
+  let changes = 0;
+  const controller = new AccessibleTextController(host, [], () => { changes += 1; });
+  const turn = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+  try {
+    controller.hostConnected();
+    controller.preserveBindingForNextUpdate();
+    controller.hostUpdated();
+    controller.setEnabled(false);
+    host.textContent = 'Disabled';
+    await turn();
+    expect(changes).to.equal(0);
+    controller.setEnabled(true);
+    host.textContent = 'Enabled';
+    await turn();
+    expect(changes).to.be.greaterThan(0);
+    expect(controller.text()).to.equal('Enabled');
+    controller.preserveBindingForNextUpdate();
+    controller.hostDisconnected();
+    host.textContent = 'Disconnected';
+    controller.hostConnected();
+    controller.hostUpdated();
+    const before = changes;
+    host.textContent = 'Reconnected';
+    await turn();
+    expect(changes).to.be.greaterThan(before);
+    expect(controller.text()).to.equal('Reconnected');
+  } finally {
+    controller.hostDisconnected();
+    host.remove();
+  }
+});
+
 for (const shadow of [false, true]) {
   it(`reads only selected light-DOM label content when ${shadow ? 'the shadow root has no matching slot' : 'no shadow root exists'}`, () => {
     const host = controllerHost(() => undefined);

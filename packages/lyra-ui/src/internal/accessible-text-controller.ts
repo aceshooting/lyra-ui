@@ -19,6 +19,8 @@ export class AccessibleTextController implements ReactiveController {
   private active = false;
   private readonly references?: AccessibleTextReferences;
   private slotRoot?: ShadowRoot;
+  private preserveNextBinding = false;
+  private drainedRecords = false;
   private readonly onSlotChange = (event: Event): void => {
     // Forwarded slotchange events retain the forwarding slot as their target. Its name
     // belongs to the outer host; the slot in our own root determines which content changed.
@@ -52,13 +54,17 @@ export class AccessibleTextController implements ReactiveController {
   }
 
   hostUpdated(): void {
+    const preserveBinding = this.preserveNextBinding;
+    this.preserveNextBinding = false;
     if (this.active && this.enabled) {
       const observer = this.observer;
       const pending = observer?.takeRecords() ?? [];
       const relevant = observer && pending.length > 0 && this.recordsMatter(pending) &&
         accessibleTextRecordsMatter(observer, pending);
+      const previousRoot = this.slotRoot;
       this.bindSlotRoot();
-      this.bind();
+      if (!preserveBinding || pending.length > 0 || this.drainedRecords || previousRoot !== this.slotRoot)
+        this.bind();
       if (relevant) queueMicrotask(() => {
         if (this.active && this.enabled && this.observer === observer && this.host.isConnected)
           this.notify(pending);
@@ -68,6 +74,7 @@ export class AccessibleTextController implements ReactiveController {
 
   hostDisconnected(): void {
     this.active = false;
+    this.preserveNextBinding = false;
     this.cancelVisibilityRefresh();
     this.slotRoot?.removeEventListener('slotchange', this.onSlotChange);
     this.slotRoot = undefined;
@@ -103,10 +110,19 @@ export class AccessibleTextController implements ReactiveController {
   /** Rebind after a render path or assigned content changes. */
   bind(): void {
     bindAccessibleTextObserver(this.observer, this.host, this.extraAttributes, this.upgrades, this.references);
+    this.drainedRecords = false;
   }
 
+  /** Preserve observation for one render known not to change content or its exposure. Pending
+   * mutations and a newly attached shadow root still require a fresh binding. */
+  preserveBindingForNextUpdate(): void { this.preserveNextBinding = true; }
+
   /** Drains pending records for synchronous label getters. */
-  takeRecords(): MutationRecord[] { return this.observer?.takeRecords() ?? []; }
+  takeRecords(): MutationRecord[] {
+    const records = this.observer?.takeRecords() ?? [];
+    if (records.length > 0) this.drainedRecords = true;
+    return records;
+  }
 
   text(): string {
     const root = this.host.shadowRoot;

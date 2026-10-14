@@ -397,6 +397,13 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.handleLabelMutation(presentationChanged);
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    // An explicit label is picker metadata: it neither renders into this option's static slots
+    // nor changes the accessible fallback content. Other updates retain normal observation work.
+    if (this.hasUpdated && changed.size === 1 && changed.has('label')) this.labelTextObserver.preserveBindingForNextUpdate();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('disabled') && this.disabled) this.hasCurrent = false;
