@@ -449,13 +449,11 @@ assert.throws(
 const reviewedCeilingKeys = Object.keys(budgets)
   .filter((key) => key.startsWith('dist/') || key === '$componentP95GzipKb' || key === '$componentMaxGzipKb')
   .sort();
-// Correct Intl option capture measures 35,455 gzip bytes for standalone button registration; the
-// Chromium-only root re-derivation key brings it to 35,657, and deferring that key to the first
-// root change to 35,800. The canary sits at that exact ceiling
-// and still catches shared-base growth.
+// Standalone button registration measures 35,749 gzip bytes. Its existing 35,800-byte ceiling
+// remains unchanged and still catches shared-base growth.
 test('standalone button retains its reviewed gzip measurement and tight canary', () => {
   const entry = 'dist/components/forms/button/button.js';
-  assert.equal(budgets.$reviewedGzipBytes[entry], 35_800);
+  assert.equal(budgets.$reviewedGzipBytes[entry], 35_749);
   assert.ok(
     budgets[entry] <= 35_800 / 1024,
     'the standalone button registration must remain at or below 35,800 gzip bytes',
