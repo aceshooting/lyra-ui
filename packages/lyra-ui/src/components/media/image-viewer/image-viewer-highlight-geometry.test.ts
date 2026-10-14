@@ -49,6 +49,14 @@ async function viewer(
   );
   await el.updateComplete;
   await paint();
+  // The measured frame starts a wrapper transform transition; settle it before
+  // comparing separately sampled child and layer rectangles.
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('[part="rotation-frame"]')!.hasAttribute('data-measured')
+      && el.shadowRoot!.querySelector('[part="image-wrapper"]')!.getAnimations()
+        .every(animation => !animation.pending && animation.playState !== 'running'),
+    'the measured image wrapper transform should settle',
+  );
   return el;
 }
 
