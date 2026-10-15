@@ -17,6 +17,87 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
   }
+  .spatial-base {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    overflow: hidden;
+  }
+  [part="spatial-toolbar"],
+  [part="spatial-pagination"] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-s);
+    padding: var(--lr-space-s);
+  }
+  [part="spatial-control"],
+  [part="spatial-list-item"] {
+    --_lr-spatial-fill: var(--lr-color-neutral-fill-quiet);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-s) var(--lr-space-m);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    background: var(--_lr-spatial-fill);
+    color: var(--lr-color-text);
+    font: inherit;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+    overflow-wrap: anywhere;
+  }
+  [part="spatial-control"]:where([aria-pressed="true"]),
+  [part="spatial-list-item"]:where([aria-pressed="true"], [aria-current="true"]) {
+    --_lr-spatial-fill: var(--lr-color-brand-fill-quiet);
+  }
+  [part="spatial-control"]:hover:where(:not(:disabled)),
+  [part="spatial-list-item"]:hover {
+    background: color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part="spatial-control"]:active:where(:not(:disabled)),
+  [part="spatial-list-item"]:active {
+    background: color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part="spatial-control"]:focus-visible,
+  [part="spatial-list-item"]:focus-visible,
+  [part="spatial-canvas"]:focus-visible {
+    ${focusRing}
+  }
+  [part="spatial-control"]:disabled {
+    cursor: default;
+    opacity: var(--lr-opacity-disabled);
+  }
+  [part="spatial-instructions"],
+  [part="spatial-page-count"] {
+    margin: 0;
+    padding: var(--lr-space-s);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
+  [part="spatial-canvas"] {
+    min-inline-size: var(--lr-icon-button-size);
+    display: block;
+    flex: 1 1 auto;
+    inline-size: 100%;
+    block-size: 0;
+    min-block-size: var(--lr-icon-button-size);
+    touch-action: none;
+    transition: var(--lr-transition-interactive);
+  }
+  [part="spatial-list"] {
+    min-block-size: 0;
+    overflow: auto;
+    padding: var(--lr-space-s);
+  }
+  [part="spatial-list"] ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  [part="spatial-list-item"] {
+    inline-size: 100%;
+    text-align: start;
+    margin-block-end: var(--lr-space-xs);
+  }
   svg {
     display: block;
     inline-size: 100%;
@@ -37,10 +118,11 @@ export const styles = css`
      a pure-white or pure-black one. The canvas is transparent wherever nothing is drawn, so a
      background tints only the empty plot area.
 
-     no-pressed-state: d3-zoom binds its pan/drag to this canvas, so a pressed wash would sit under
-     the whole graph for the entire pan and dim the data being dragged into view; a press here also
-     lands on a painted node, which is not a DOM element and cannot carry :active. */
-  [part="canvas"]:hover {
+     no-pressed-state: both d3-zoom and the spatial camera bind pan/drag to their canvas, so a
+     pressed wash would sit under the whole graph for the entire gesture and dim the data being
+     moved into view; a press also lands on a painted node, which cannot carry DOM :active. */
+  [part="canvas"]:hover,
+  [part="spatial-canvas"]:hover {
     background: color-mix(
       in oklab,
       transparent,

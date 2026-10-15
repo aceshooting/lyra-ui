@@ -557,6 +557,7 @@ export type {
   LyraBoxPlotEventMap,
 } from './components/charts/chart/box-plot.class.js';
 export type {
+  LyraGraphCamera,
   LyraGraphCommunity,
   LyraGraphEdge,
   LyraGraphFit,
@@ -564,8 +565,10 @@ export type {
   LyraGraphNode,
   LyraGraphNodeLabelsMode,
   LyraGraphPickKind,
+  LyraGraphPosition,
   LyraGraphRenderer,
   LyraGraphSelectionMode,
+  LyraGraphView,
   LyraScoreThresholds,
 } from './components/retrieval/graph/graph.class.js';
 export type { LyraNodeTypeStyle } from './internal/node-type-style.js';

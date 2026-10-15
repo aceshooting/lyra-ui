@@ -23284,6 +23284,18 @@
               "state": "populated"
             },
             {
+              "file": "src/components/retrieval/graph/graph-spatial-interaction.test.ts",
+              "test": "makes every item reachable through visible list pages and retains node activation",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/retrieval/graph/graph-spatial-interaction.test.ts",
+              "test": "wraps localized controls within a narrow allocation and keeps a populated accessible view",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/retrieval/graph/graph-virtual-cursor.test.ts",
               "test": "keeps a single focused cursor across RTL navigation, selection and identity-preserving reorder",
               "target": "graph",
@@ -23405,7 +23417,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph-fallbacks.test.ts",
-              "line": 147,
+              "line": 165,
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -23417,7 +23429,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph.class.ts",
-              "line": 1001,
+              "line": 1168,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23465,6 +23477,8 @@
           "src/components/retrieval/graph/graph-rebinding.test.ts",
           "src/components/retrieval/graph/graph-remediation.test.ts",
           "src/components/retrieval/graph/graph-scale-cost.test.ts",
+          "src/components/retrieval/graph/graph-spatial-interaction.test.ts",
+          "src/components/retrieval/graph/graph-spatial.test.ts",
           "src/components/retrieval/graph/graph-virtual-cursor.test.ts",
           "src/components/retrieval/graph/graph.test.ts",
           "src/components/retrieval/graph/retrieval-retirements.test.ts"
@@ -27327,7 +27341,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 539,
+              "line": 587,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27366,6 +27380,7 @@
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-rebinding.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-remediation.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-search-cost.test.ts",
+          "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-spatial.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

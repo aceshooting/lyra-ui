@@ -5745,6 +5745,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraGraph,
       | 'accessibleLabel'
+      | 'camera'
       | 'chargeStrength'
       | 'communities'
       | 'dimmedEdgeIds'
@@ -5770,12 +5771,14 @@ export interface LyraComponentTypeMap {
       | 'selectedNodeIds'
       | 'selectionMode'
       | 'strings'
+      | 'view'
       | 'width'
       | 'withEdgeLabels',
       {}
     >;
     events: LyraGraphEventMap;
-    eventNames:       | 'lr-community-activate'
+    eventNames:       | 'lr-camera-change'
+      | 'lr-community-activate'
       | 'lr-edge-activate'
       | 'lr-edge-enter'
       | 'lr-edge-leave'
@@ -5784,6 +5787,7 @@ export interface LyraComponentTypeMap {
       | 'lr-node-expand'
       | 'lr-node-leave'
       | 'lr-selection-change'
+      | 'lr-view-change'
       | 'lr-viewport-change';
     cssNames:       | '--lr-canvas-reserved-height'
       | '--lr-graph-cat-1'
@@ -6737,6 +6741,7 @@ export interface LyraComponentTypeMap {
     element: LyraKnowledgeGraphExplorer;
     properties: LyraElementProperties<
       LyraKnowledgeGraphExplorer,
+      | 'camera'
       | 'communities'
       | 'edges'
       | 'entityDetails'
@@ -6755,11 +6760,13 @@ export interface LyraComponentTypeMap {
       | 'renderer'
       | 'selectedNodeId'
       | 'strings'
+      | 'view'
       | 'width',
       {}
     >;
     events: LyraKnowledgeGraphExplorerEventMap;
-    eventNames:       | 'lr-community-activate'
+    eventNames:       | 'lr-camera-change'
+      | 'lr-community-activate'
       | 'lr-edge-activate'
       | 'lr-hidden-types-change'
       | 'lr-node-activate'
@@ -6768,7 +6775,8 @@ export interface LyraComponentTypeMap {
       | 'lr-pin-change'
       | 'lr-relation-activate'
       | 'lr-search-change'
-      | 'lr-selection-change';
+      | 'lr-selection-change'
+      | 'lr-view-change';
     cssNames:       | '--lr-canvas-reserved-height';
     attributeAliases: {
       'fit-to'?: LyraKnowledgeGraphExplorer['fitTo'];

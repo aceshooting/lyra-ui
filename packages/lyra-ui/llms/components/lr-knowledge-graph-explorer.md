@@ -28,6 +28,15 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
 `lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
 `query`, `matchCount`, `matchCountExact`, and `activeIndex: -1`.
 
+`view: LyraGraphView = '2d'` and `camera?: LyraGraphCamera` forward the graph's spatial/list
+options. `nodes[].position` supplies real x/y/z coordinates. The default remains the existing 2D
+view; spatial/list views need no d3 peer. Search, filtering, selection, pinning and neighborhood
+controls work with all views. User toolbar changes update the explorer's `view` before
+`lr-view-change { view }` bubbles. `lr-camera-change { camera }` bubbles unchanged, and spatial
+popovers use `getNodeScreenPosition()` so their viewport anchor follows the projected node after
+orbit, pan, dolly or focus. Spatial node activation includes optional world `z`; it never substitutes
+screen pixels for the existing event's coordinate domain.
+
 **Properties:** (host-supplied data, identity-normalized before rendering)
 
 - `nodes: LyraGraphNode[] = []`, `edges: LyraGraphEdge[] = []`, `nodeTypes: LyraNodeTypeStyle[] = []`,
@@ -35,7 +44,7 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
   projected through `lr-graph`'s shared nonblank, first-wins identity policy before derived lookups
   and forwarding: `LyraGraphNode { id: string; label?: string; accessibleLabel?: string;
   description?: string; radius?: number; color?: string; type?: string; expandable?: boolean;
-  communityId?: string }`, `LyraGraphEdge { id?: string; source: string; target: string; width?:
+  communityId?: string; position?: LyraGraphPosition }`, `LyraGraphEdge { id?: string; source: string; target: string; width?:
   number; label?: string; accessibleLabel?: string; description?: string; directed?: boolean;
   color?: string; dash?: number[] }` (source/target are node ids), `LyraNodeTypeStyle { id: string;
   label: string; color?: string; shape?: 'circle' | 'square' | 'diamond' }`, and
@@ -120,6 +129,10 @@ filtered-out id). None change `selectedNodeId` or filters.
 - `lr-hidden-types-change` (`detail: { hiddenTypes: string[] }`) — a node type's visibility changed
   via the composed legend. Follows the same self-toggle-then-emit contract as `lr-pin-change`/
   `lr-search-change`, so reassigning back is optional.
+- `lr-camera-change` (`detail: { camera: LyraGraphCamera }`) — bubbles unchanged from the graph;
+  spatial detail popovers follow the newly projected node position.
+- `lr-view-change` (`detail: { view: LyraGraphView }`) — bubbles from the graph toolbar after the
+  explorer updates its own view. Direct view and camera property assignments are silent.
 - `lr-search-change` (`detail: { query: string; matchCount: number; matchCountExact: boolean }`) —
   the user typed in the toolbar's search box. `query` is the canonical `LyraSearchChangeDetail`
   field name. `matchCount` is the same live node-filter total the result list and its live-region
@@ -129,7 +142,7 @@ filtered-out id). None change `selectedNodeId` or filters.
   has already applied the query to its own `query` property before emitting, so reassigning
   it back is optional and a direct host assignment stays silent.
 - Bubbling straight through from composed children, unmodified: `lr-node-activate`
-  (`detail: { nodeId, x, y }`), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
+  (`detail: { nodeId, x, y, z? }`, world coordinates with z in spatial/list views), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
 

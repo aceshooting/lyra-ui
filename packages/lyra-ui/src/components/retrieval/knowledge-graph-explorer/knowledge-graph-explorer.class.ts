@@ -17,6 +17,8 @@ import {
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
 import type {
+  LyraGraphCamera,
+  LyraGraphView,
   LyraGraphCommunity,
   LyraGraphFit,
   LyraGraphNodeLabelsMode,
@@ -52,8 +54,8 @@ import '../../forms/button/button.class.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Search results rendered at once; the match count still covers every match. */
@@ -128,7 +130,9 @@ export interface LyraKnowledgeGraphExplorerEventMap {
   'lr-hidden-types-change': CustomEvent<
     LyraEventDetailSnapshot<{ hiddenTypes: string[] }>
   >;
-  'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number }>;
+  'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>;
+  'lr-camera-change': CustomEvent<{ camera: LyraGraphCamera }>;
+  'lr-view-change': CustomEvent<{ view: LyraGraphView }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
   'lr-node-expand': CustomEvent<{ nodeId: string }>;
   /** Bubbles unchanged from the composed `lr-graph`. */
@@ -150,7 +154,12 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * `lr-neighbor-list` (the selected entity's relationships), `lr-path-strip` (a found path), and
  * `lr-popover.showAt()` (the details overlay itself).
  *
- * **How the details popover finds its viewport position.** `lr-graph.getNodePosition()` and the
+ * `view="3d"` forwards true spatial positions and camera controls; `view="list"` provides the
+ * visible accessible fallback. Neither requires d3. The default remains `view="2d"`. In 3D,
+ * details use `getNodeScreenPosition()` and follow `lr-camera-change`, including search-driven
+ * selection. The coordinates are CSS pixels relative to the composed graph's border box.
+ *
+ * **How the 2D details popover finds its viewport position.** `lr-graph.getNodePosition()` and the
  * `lr-node-activate` event's `{ x, y }` are in the graph's own *local drawing space* (pre pan/zoom),
  * never viewport pixels -- passing them straight to `showAt()` would anchor the popover at the
  * wrong place as soon as the graph has panned or zoomed even once. A direct node click resolves
@@ -214,7 +223,12 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   Direct host assignments do not emit.
  * @event lr-hidden-types-change - A node type's visibility changed via the composed legend.
  *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
- * @event lr-node-activate - Bubbles unchanged from the composed graph with `{ nodeId, x, y }`.
+ * @event lr-node-activate - Bubbles unchanged with `{ nodeId, x, y, z? }`; spatial activation
+ *   includes world z, while 2D retains its existing local x/y coordinates.
+ * @event lr-camera-change - Bubbles unchanged from the composed graph with `{ camera }`.
+ *   Spatial detail popovers follow the newly projected node position.
+ * @event lr-view-change - Bubbles from the graph toolbar with `{ view }`; the explorer updates
+ *   its own view before the event reaches consumers. Property assignments are silent.
  * @event lr-edge-activate - Bubbles unchanged from the composed graph with `{ sourceNodeId, targetNodeId, edgeId? }`.
  * @event lr-node-expand - Bubbles straight through from `lr-graph` and/or `lr-neighbor-list` (the
  *   same event name/detail shape from either source) -- this component never appends neighbors
@@ -253,7 +267,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    graphCommunity: LYRA_DEFAULT_graphCommunity,
     graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
     graphExplorerFindPath: LYRA_DEFAULT_graphExplorerFindPath,
     graphExplorerLabel: LYRA_DEFAULT_graphExplorerLabel,
@@ -265,8 +284,21 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     graphExplorerSearchResultsLabel: LYRA_DEFAULT_graphExplorerSearchResultsLabel,
     graphExplorerUnpin: LYRA_DEFAULT_graphExplorerUnpin,
     graphExplorerUnpinned: LYRA_DEFAULT_graphExplorerUnpinned,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    next: LYRA_DEFAULT_next,
+    noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    previous: LYRA_DEFAULT_previous,
+    progress: LYRA_DEFAULT_progress,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
+    zoomIn: LYRA_DEFAULT_zoomIn,
+    zoomOut: LYRA_DEFAULT_zoomOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -323,6 +355,13 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  narrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the
    *  class doc's anchoring note. */
   @property() renderer: LyraGraphRenderer = 'svg';
+  /** Forwarded to lr-graph.view. '2d' preserves the default; '3d' uses real x/y/z positions and
+   * an orbit camera; 'list' exposes all graph items through visible pagination. Spatial/list
+   * views work without optional d3 peers. Toolbar changes also update this property. */
+  @property() view: LyraGraphView = '2d';
+  /** Optional orbit-camera input forwarded to lr-graph.camera; camera changes bubble as
+   * lr-camera-change. Angles use radians, distance and target use graph units. */
+  @property({ attribute: false }) camera?: LyraGraphCamera;
   /** Forwarded to `lr-graph.nodeLabels`. Unset (the default) leaves the composed `lr-graph` to
    *  apply its own per-renderer default -- see that property's own doc. */
   @property({ attribute: 'node-labels' }) nodeLabels?: LyraGraphNodeLabelsMode;
@@ -485,6 +524,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('camera') && this.view === '3d' && this.graphEl) {
+      void this.reanchorAfterCameraUpdate(this.graphEl, this.camera);
+    }
     if (!changed.has('selectedNodeId')) return;
     const internallyAssigned =
       this.internalSelectionAssignment !== undefined &&
@@ -502,6 +544,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (graph && this.isVisibleNode(id)) {
       void this.activatePresetWhenGraphReady(id, graph, generation);
     }
+  }
+
+  private async reanchorAfterCameraUpdate(graph: LyraGraph, camera: LyraGraphCamera | undefined): Promise<void> {
+    await graph.updateComplete;
+    if (this.isConnected && this.graphEl === graph && this.camera === camera && this.view === '3d')
+      this.onGraphViewportChange();
   }
 
   private async activatePresetWhenGraphReady(
@@ -950,9 +998,10 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     }
     const rect = graph?.getBoundingClientRect();
     if (!rect) return;
+    const projected = graph?.view === '3d' ? graph.getNodeScreenPosition(id) : undefined;
     this.openDetailAt(id, {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
+      x: rect.left + (projected?.x ?? rect.width / 2),
+      y: rect.top + (projected?.y ?? rect.height / 2),
       width: 0,
       height: 0,
     });
@@ -976,6 +1025,13 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     width: number;
     height: number;
   } {
+    if (this.view === '3d') {
+      this.trackedNodeEl = undefined;
+      const graph = this.graphEl;
+      const position = this.selectedNodeId ? graph?.getNodeScreenPosition(this.selectedNodeId) : undefined;
+      const rect = graph?.getBoundingClientRect();
+      if (position && rect) return { x: rect.left + position.x, y: rect.top + position.y, width: 0, height: 0 };
+    }
     if (this.renderer === 'canvas') {
       this.trackedNodeEl = undefined;
       return { x: event.clientX, y: event.clientY, width: 0, height: 0 };
@@ -1006,6 +1062,16 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (!this.canActivateNode(id)) return;
     const generation = this.invalidateActivation();
     this.setInternalSelectedNodeId(id);
+    if (this.view === '3d') {
+      const graph = this.graphEl;
+      const point = graph?.getNodeScreenPosition(id);
+      const bounds = graph?.getBoundingClientRect();
+      if (point && bounds) {
+        this.trackedNodeEl = undefined;
+        this.openDetailAt(id, { x: bounds.left + point.x, y: bounds.top + point.y, width: 0, height: 0 });
+        return;
+      }
+    }
     this.pendingNodeId = id;
     const ownerDocument = this.ownerDocument;
     const ownerWindow = ownerDocument.defaultView;
@@ -1037,6 +1103,15 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  popover isn't open), so this never schedules work of its own; it only reacts to `lr-graph`'s
    *  already frame-coalesced signal. */
   private onGraphViewportChange = (): void => {
+    const graph = this.graphEl;
+    if (graph?.view === '3d' && this.selectedNodeId && this.popoverEl?.open) {
+      const point = graph.getNodeScreenPosition(this.selectedNodeId);
+      if (point) {
+        const rect = graph.getBoundingClientRect();
+        this.popoverEl.showAt({ x: rect.left + point.x, y: rect.top + point.y, width: 0, height: 0 });
+      }
+      return;
+    }
     const el = this.trackedNodeEl;
     const popover = this.popoverEl;
     if (!el?.isConnected || !popover?.open) return;
@@ -1206,6 +1281,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           .dimmedNodeIds=${guard(dimmedDeps, () => this.computedDimmedNodeIds)}
           .dimmedEdgeIds=${guard(dimmedDeps, () => this.computedDimmedLinkIds)}
           renderer=${this.renderer}
+          .view=${this.view}
+          .camera=${this.camera}
           fit-to=${this.fitTo}
           node-labels=${this.nodeLabels ?? nothing}
           width=${typeof this.width === 'string' ? this.width : finiteRange(this.width, 800, 1)}
@@ -1215,6 +1292,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           @lr-node-enter=${this.onGraphNodeEnter}
           @lr-node-leave=${this.onGraphNodeLeave}
           @lr-viewport-change=${this.onGraphViewportChange}
+          @lr-camera-change=${this.onGraphViewportChange}
+          @lr-view-change=${(event: CustomEvent<{ view: LyraGraphView }>) => { this.view = event.detail.view; }}
         ></lr-graph>
         <lr-popover
           part="detail-popover"

@@ -9,14 +9,77 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 20 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 28 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-graph`
 
-A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
+A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d"` for an
+orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
+list of all graph items. The 3D and list views require no optional peer.
+
+**Spatial view:** `view: LyraGraphView = '2d'` accepts `'2d' | '3d' | 'list'`. Invalid runtime
+values normalize to `'2d'`. The default retains the existing 2D SVG/canvas behavior and adds no
+controls. Spatial/list mode adds a toolbar with 3D/List, fit, orbit and zoom controls. All items
+remain reachable in the visible list, 200 per page, with Previous/Next controls; this is pagination,
+not truncation. If canvas creation fails, the component displays and announces a localized error
+and shows that list. Communities remain available in the list; 3D does not paint community hulls.
+
+`LyraGraphNode.position?: LyraGraphPosition` supplies readonly `{ x, y, z }` coordinates in graph
+units. All three must be finite own data properties; inherited or accessor-backed values are not
+read. Coordinates clamp to ±1,000,000. Missing/invalid positions receive deterministic spherical
+placement keyed by node id, with genuine z separation. Inputs are never moved or modified. In 3D,
+`renderer`, `layout`, `chargeStrength`, `edgeDistance` and `seed` have no effect: there is no force
+solver, settling animation, auto-rotation or inertia. Rendering uses original perspective math
+and a Canvas 2D raster surface, with near-plane clipping, depth-ordered node/edge segments and
+frontmost picking. Fixed edge subdivision approximates crossings; this is not a mesh renderer or
+a guarantee of perfect translucent intersections. Use modest graphs, typically low hundreds;
+the 2D canvas capacity claim below does not apply to 3D.
+
+`camera?: LyraGraphCamera` (property only) accepts readonly `{ yaw, pitch, distance, target }`,
+where `target: LyraGraphPosition`, yaw/pitch use radians and distance uses graph units. Without an
+input, the initial spatial scene is fitted. Camera inputs are copied; invalid fields use safe
+defaults, pitch stays away from the poles, and distance stays positive. Gesture changes update
+internal state and emit `lr-camera-change` with `{ camera }`, a copied immutable snapshot, at most
+once per frame. Camera property assignments are silent. `minZoom`/`maxZoom` bound user dolly
+relative to the fitted distance. `fit({ padding })` and `focusNode(id, { zoom })` act immediately
+in 3D, including with reduced motion. `focusNode` reveals a node's page in list view; it retains
+the existing contract of not moving DOM focus. `focusNodeId` still centers and paints the focus
+halo. The toolbar emits `lr-view-change` with `{ view }` after a user switch; property assignments
+are silent.
+
+Drag to orbit; Shift-drag pans. Wheel zoom is active only while the canvas has focus or an active
+gesture. With canvas focus, arrows orbit (horizontal keys honor RTL), Shift-arrows pan, +/- zoom,
+and Home fits. Native toolbar buttons offer the same camera operations. Node activation, expansion,
+hover, edge activation and controlled selection use the existing events. Spatial/list
+`lr-node-activate` adds `z` and returns world x/y/z; 2D still returns its unchanged local x/y.
+The visible list provides native keyboard activation, with repeated Enter/Space expanding a node.
+
+`getNodePosition3d(id): LyraGraphPosition | undefined` returns immutable world coordinates in
+spatial/list mode, or undefined for a missing/hidden node or 2D view. `getNodePosition(id)` continues
+returning x/y, now world x/y for spatial/list modes. `getNodeScreenPosition(id)` returns projected
+CSS `{ x, y }` relative to the host border-box top-left; add the host's `getBoundingClientRect()`
+left/top for viewport overlays. It returns undefined in list view, for missing/hidden nodes or
+points behind the spatial near plane. Screen coordinates may lie outside the viewport; world
+coordinates must never be passed directly to a viewport-positioned popover.
+
+Spatial parts: `spatial-toolbar`, `spatial-control`, `spatial-canvas`, `spatial-instructions`,
+`spatial-list`, `spatial-list-item`, `spatial-page-count`, and `spatial-pagination`. The existing
+node fill, edge color, type palette and dimmed-opacity CSS properties apply; per-node SVG parts
+remain 2D SVG-only. The allocated canvas box determines spatial projection and resizes live.
+
+```js
+import '@aceshooting/lyra-ui/components/lr-graph.js';
+const graph = document.querySelector('lr-graph');
+graph.view = '3d';
+graph.nodes = [
+  { id: 'near', label: 'Near', position: { x: 60, y: 0, z: 100 } },
+  { id: 'far', label: 'Far', position: { x: -60, y: 0, z: -100 } },
+];
+graph.edges = [{ source: 'near', target: 'far', directed: true }];
+```
 
 A zero-width canvas edge paints neither a stroke nor an arrowhead; its relationship remains in the
 nonvisual topology summary.
@@ -31,7 +94,7 @@ community hulls; zero-width, fully transparent, and dangling edges remain outsid
 
 - `nodes: LyraGraphNode[] = []` (attribute: false) — readonly `LyraGraphNode { id: string; label?: string;
 accessibleLabel?: string; description?: string; radius?: number; color?: string; type?: string;
-expandable?: boolean; communityId?: string }`;
+expandable?: boolean; communityId?: string; position?: LyraGraphPosition }`;
   `accessibleLabel` supplies richer spoken text than the visible label, while `description` renders
   as the preferred bounded tooltip/summary text in both renderers. `radius` is clamped to `[6, 24]` (an unset/non-finite value
   falls back to the midpoint, `15`) so a node can never render invisibly small or absurdly large.
@@ -152,16 +215,19 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
 `undefined` when the id is not currently simulated.
 
-**Events:** `lr-node-activate` (`detail: { nodeId, x, y }`, where `x` and `y` are the clicked node's current
-local drawing coordinates), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId,
+**Events:** `lr-node-activate` (`detail: { nodeId, x, y, z? }`, where `x` and `y` are the clicked node's current
+local drawing coordinates in 2D; spatial/list activation uses world x/y/z), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId,
 edgeId? }`; the optional `edgeId` is the stable `LyraGraphEdge.id` supplied by the caller), `lr-node-enter`/
 `lr-node-leave` (`detail: { nodeId }`, hover start/end, suppressed while dragging/panning; canvas emits once per hit-identity transition or exit),
 `lr-edge-enter`/`lr-edge-leave` (`detail: { sourceNodeId, targetNodeId, edgeId? }`, same hover contract),
 `lr-node-expand` (`detail: { nodeId }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable`), `lr-community-activate`
 (`detail: { communityId }`, a hull was activated by pointer or keyboard), `lr-selection-change`
-(`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), and `lr-viewport-change`
-(`detail: { zoom, x, y }`, as on `lr-flow-canvas`, plus `k`, a deprecated alias of `zoom`; a frame-coalesced camera/layout signal).
+(`detail: { selectedNodeIds, selectedEdgeIds }`, a controlled selection intent), `lr-viewport-change`
+(`detail: { zoom, x, y }`, as on `lr-flow-canvas`, plus `k`, a deprecated alias of `zoom`; a frame-coalesced 2D camera/layout signal),
+`lr-camera-change` (`detail: { camera: LyraGraphCamera }`, a copied immutable spatial camera after a gesture, fit or focus,
+coalesced to one event per frame), and `lr-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
+Direct camera and view property assignments are silent.
 
 **Slots:** none.
 
@@ -177,7 +243,11 @@ announced through a shared assertive light-DOM region — distinct from the empt
 the peers loaded fine but `nodes` is empty),
 `canvas`/`tooltip`/`cursor-items`/`cursor-item`
 (`renderer="canvas"` only — the drawing surface, its hover tooltip replacing the SVG `<title>`, and
-the offscreen keyboard-roving items)
+the offscreen keyboard-roving items), `spatial-toolbar` (3D/list view and camera controls),
+`spatial-control` (each toolbar or pagination button), `spatial-canvas` (the 3D drawing and camera
+interaction surface), `spatial-instructions` (camera keyboard instructions), `spatial-list` (the
+visible paginated fallback), `spatial-list-item` (each activatable node, edge or community),
+`spatial-page-count` (localized total and page status), and `spatial-pagination` (page controls).
 
 **Themeable custom properties:** `--lr-canvas-reserved-height` (default
 `var(--lr-size-24rem)`) sets the host block size and is shared with the optional pre-upgrade

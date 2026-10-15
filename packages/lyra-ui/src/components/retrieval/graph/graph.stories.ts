@@ -510,3 +510,35 @@ export const CanvasKeyboardNavigation: Story = {
     .edges=${Array.from({ length: 299 }, (_, index) => ({ source: `n${index}`, target: `n${index + 1}` }))}
   ></lr-graph>`,
 };
+
+export const SpatialPerspective: Story = {
+  parameters: { docs: { description: { story: 'True x/y/z positions with perspective, depth picking and an orbit camera. Drag to orbit; Shift-drag pans. Keyboard controls and the visible List view expose every item. No optional peer is needed.' } } },
+  render: () => html`<lr-graph view="3d" label="Spatial relationships" height="520"
+    .nodes=${[
+      { id: 'core', label: 'Core', position: { x: 0, y: 0, z: 0 }, expandable: true },
+      { id: 'near', label: 'Near', position: { x: 80, y: -30, z: 100 } },
+      { id: 'far', label: 'Far', position: { x: -80, y: 30, z: -100 } },
+      { id: 'above', label: 'Above', position: { x: 0, y: -120, z: -40 } },
+    ]}
+    .edges=${[
+      { source: 'core', target: 'near', directed: true },
+      { source: 'core', target: 'far', directed: true },
+      { source: 'core', target: 'above', directed: true },
+    ]}
+  ></lr-graph>`,
+};
+
+export const SpatialNarrow: Story = {
+  render: () => html`<div style="inline-size:20rem;max-inline-size:100%"><lr-graph
+    view="3d" height="600" aria-label="Graph in a narrow panel"
+    .nodes=${nodes.map((node, index) => ({ ...node, label: `Relationship with a long descriptive label ${index + 1}` }))}
+    .edges=${links}
+  ></lr-graph></div>`,
+};
+
+export const VisibleGraphList: Story = {
+  render: () => html`<lr-graph view="list" label="All relationships"
+    .nodes=${Array.from({ length: 205 }, (_, index) => ({ id: `n${index}`, label: `Document ${index + 1}` }))}
+    .edges=${[{ source: 'n0', target: 'n204', label: 'References the final document' }]}
+  ></lr-graph>`,
+};

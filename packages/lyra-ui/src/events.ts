@@ -489,6 +489,14 @@ export type LyraBranchChangeEvent = LyraBranchPickerEventMap['lr-branch-change']
 export type LyraCalendarGeometryChangeEvent = LyraHeatmapEventMap['lr-calendar-geometry-change'];
 
 /**
+ * `lr-camera-change` — dispatched by 2 components: `<lr-graph>`, `<lr-knowledge-graph-explorer>`;
+ * detail union of 2, e.g. `LyraGraphEventMap['lr-camera-change']`.
+ */
+export type LyraCameraChangeEvent =
+  | LyraGraphEventMap['lr-camera-change']
+  | LyraKnowledgeGraphExplorerEventMap['lr-camera-change'];
+
+/**
  * `lr-camera-request` — dispatched by 2 components: `<lr-attachment-trigger>`,
  * `<lr-prompt-input>`; detail union of 2, e.g.
  * `LyraAttachmentTriggerEventMap['lr-camera-request']`.
@@ -3278,14 +3286,16 @@ export type LyraVersionSelectEvent = LyraPromptStudioEventMap['lr-version-select
 export type LyraVideoChangeEvent = LyraVideoPlaylistEventMap['lr-video-change'];
 
 /**
- * `lr-view-change` — dispatched by 4 components: `<lr-artifact-panel>`, `<lr-calendar>`,
- * `<lr-date-picker>`, `<lr-widget>`; detail union of 4, e.g.
- * `LyraArtifactPanelEventMap['lr-view-change']`.
+ * `lr-view-change` — dispatched by 6 components: `<lr-artifact-panel>`, `<lr-calendar>`,
+ * `<lr-date-picker>`, `<lr-graph>`, `<lr-knowledge-graph-explorer>`, `<lr-widget>`; detail union
+ * of 6, e.g. `LyraArtifactPanelEventMap['lr-view-change']`.
  */
 export type LyraViewChangeEvent =
   | LyraArtifactPanelEventMap['lr-view-change']
   | LyraCalendarEventMap['lr-view-change']
   | LyraDatePickerEventMap['lr-view-change']
+  | LyraGraphEventMap['lr-view-change']
+  | LyraKnowledgeGraphExplorerEventMap['lr-view-change']
   | LyraWidgetEventMap['lr-view-change'];
 
 /**
@@ -3442,6 +3452,7 @@ export interface LyraGlobalEventMap {
   'lr-before-page-change': LyraBeforePageChangeEvent;
   'lr-branch-change': LyraBranchChangeEvent;
   'lr-calendar-geometry-change': LyraCalendarGeometryChangeEvent;
+  'lr-camera-change': LyraCameraChangeEvent;
   'lr-camera-request': LyraCameraRequestEvent;
   'lr-cancel': LyraCancelEvent;
   'lr-card-activate': LyraCardActivateEvent;

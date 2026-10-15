@@ -63421,6 +63421,15 @@
             "default": "none"
           },
           {
+            "name": "view",
+            "property": "view",
+            "type": "LyraGraphView",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "width",
             "property": "width",
             "type": "number | string",
@@ -63451,6 +63460,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "camera",
+            "attribute": null,
+            "type": "LyraGraphCamera | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "chargeStrength",
@@ -63690,6 +63708,15 @@
             "default": "none"
           },
           {
+            "name": "view",
+            "attribute": "view",
+            "type": "LyraGraphView",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "width",
             "attribute": "width",
             "type": "number | string",
@@ -63712,6 +63739,12 @@
         ],
         "slots": [],
         "events": [
+          {
+            "name": "lr-camera-change",
+            "type": "CustomEvent<{ camera: LyraGraphCamera }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
           {
             "name": "lr-community-activate",
             "type": "CustomEvent<{ communityId: string }>",
@@ -63738,7 +63771,7 @@
           },
           {
             "name": "lr-node-activate",
-            "type": "CustomEvent<{ nodeId: string; x: number; y: number }>",
+            "type": "CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -63763,6 +63796,12 @@
           {
             "name": "lr-selection-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeIds: string[]; selectedEdgeIds: string[] }> >",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-view-change",
+            "type": "CustomEvent<{ view: LyraGraphView }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -63844,6 +63883,38 @@
           },
           {
             "name": "node",
+            "deprecated": null
+          },
+          {
+            "name": "spatial-canvas",
+            "deprecated": null
+          },
+          {
+            "name": "spatial-control",
+            "deprecated": null
+          },
+          {
+            "name": "spatial-instructions",
+            "deprecated": null
+          },
+          {
+            "name": "spatial-list",
+            "deprecated": null
+          },
+          {
+            "name": "spatial-list-item",
+            "deprecated": null
+          },
+          {
+            "name": "spatial-page-count",
+            "deprecated": null
+          },
+          {
+            "name": "spatial-pagination",
+            "deprecated": null
+          },
+          {
+            "name": "spatial-toolbar",
             "deprecated": null
           },
           {
@@ -64001,6 +64072,38 @@
           },
           {
             "name": "getNodePosition",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "{ x: number; y: number } | undefined"
+              }
+            ]
+          },
+          {
+            "name": "getNodePosition3d",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "LyraGraphPosition | undefined"
+              }
+            ]
+          },
+          {
+            "name": "getNodeScreenPosition",
             "overloads": [
               {
                 "parameters": [
@@ -74340,6 +74443,16 @@
             "default": null
           },
           {
+            "name": "view",
+            "property": "view",
+            "type": "LyraGraphView",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2d"
+          },
+          {
             "name": "width",
             "property": "width",
             "type": "number | string",
@@ -74351,6 +74464,15 @@
           }
         ],
         "properties": [
+          {
+            "name": "camera",
+            "attribute": null,
+            "type": "LyraGraphCamera | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "communities",
             "attribute": null,
@@ -74520,6 +74642,16 @@
             "default": null
           },
           {
+            "name": "view",
+            "attribute": "view",
+            "type": "LyraGraphView",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "2d"
+          },
+          {
             "name": "width",
             "attribute": "width",
             "type": "number | string",
@@ -74546,6 +74678,14 @@
         ],
         "events": [
           {
+            "name": "lr-camera-change",
+            "type": "CustomEvent<{ camera: LyraGraphCamera }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
             "name": "lr-community-activate",
             "type": "CustomEvent<{ communityId: string }>",
             "cancelable": "never",
@@ -74570,11 +74710,10 @@
           },
           {
             "name": "lr-node-activate",
-            "type": "CustomEvent<{ nodeId: string; x: number; y: number }>",
+            "type": "CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent",
-            "bubbles": true,
-            "composed": true
+            "bubbles": true
           },
           {
             "name": "lr-node-expand",
@@ -74614,6 +74753,13 @@
             "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeId: string | null; selectedNodeIds: string[]; selectedEdgeIds: string[]; }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-view-change",
+            "type": "CustomEvent<{ view: LyraGraphView }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true
           }
         ],
         "parts": [

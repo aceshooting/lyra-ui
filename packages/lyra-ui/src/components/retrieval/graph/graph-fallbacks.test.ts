@@ -1,4 +1,5 @@
 import * as graphSupport from '../../../../test/graph-test-support.js';
+import { hoverUntilMatched } from '../../../../test/wtr-mouse.js';
 const { fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver } = graphSupport;
 void [fixture, expect, html, waitUntil, aTimeout, oneEvent, select, LyraGraphElement, layeredLayout, invalidateLyraTheme, ANNOUNCEMENT_SINK_ATTRIBUTE, resetMouse, sendMouse, asTestGraph, mediaQueryOverride, nodes, links, announcementSink, announcementTexts, stubPointerCapture, stubNoOwnerWindow, NODE_COUNT_TIMEOUT, ALPHA_SETTLE_TIMEOUT, waitForCanvasBackingStore, stubIntersectionObserver];
 type GraphSimulationNode = graphSupport.GraphSimulationNode;
@@ -114,24 +115,41 @@ describe('styling', () => {
     assertPressedIsStronger('hull', 'fill');
   });
 
-  it('tints the canvas box on hover rather than filtering the scene painted into it', async () => {
+  for (const view of ['2d', '3d'] as const) {
+    it(`tints the ${view} canvas background on native hover without filtering the scene`, async () => {
+      await resetMouse();
+      try {
+        const el = await fixture<LyraGraph>(html`<lr-graph view=${view} renderer="canvas" .nodes=${nodes} .edges=${links} .seed=${1}></lr-graph>`);
+        const part = view === '3d' ? 'spatial-canvas' : 'canvas';
+        await waitUntil(
+          () => el.shadowRoot!.querySelector(`[part="${part}"]`) !== null,
+          `${view} canvas rendered`,
+          { timeout: NODE_COUNT_TIMEOUT }
+        );
+        const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>(`[part="${part}"]`)!;
+        const resting = getComputedStyle(canvas).backgroundColor;
+        expect(getComputedStyle(canvas).filter, `${view} resting scene filter`).to.equal('none');
+
+        // A background wash affects only the transparent plot area. A filter would also change
+        // every painted node, edge and label, so check the actual hovered drawing surface.
+        await hoverUntilMatched(canvas, `${view} canvas hovered`);
+        await waitUntil(
+          () => getComputedStyle(canvas).backgroundColor !== resting,
+          `${view} hovered canvas paints a background tint`
+        );
+        expect(getComputedStyle(canvas).backgroundColor).not.to.equal(resting);
+        expect(getComputedStyle(canvas).filter, `${view} hovered scene filter`).to.equal('none');
+      } finally {
+        await resetMouse();
+      }
+    });
+  }
+
+  it('keeps node, link and hull hover colours free of whole-scene filters', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-    await el.updateComplete;
     const root = el.shadowRoot!;
     const probes = paintProbe(root);
-
-    // The <canvas> is cleared to transparent wherever nothing is drawn, so a background tints only
-    // the empty plot area; the drawn nodes, links and labels keep the colours the renderer computed.
-    const resting = probes.render('transparent');
-    const hovered = probes.render(
-      declaredValue(root, "[part='canvas']:hover", 'background')
-    );
-    expect(hovered).to.not.equal(resting);
-
-    // A filter applies to the element's own painted output, so any surviving one would re-tint the
-    // whole scene. Rendering whatever each rule declares and reading it back proves none survives.
     for (const selector of [
-      "[part='canvas']:hover",
       "[part='node']:hover",
       "[part='link']:hover",
       "[part='hull']:hover",

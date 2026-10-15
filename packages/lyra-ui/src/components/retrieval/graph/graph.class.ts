@@ -46,6 +46,8 @@ import {
   type CanvasCamera,
   type CanvasScene,
 } from './graph-canvas.js';
+import { GraphSpatialController } from './graph-spatial-controller.js';
+import { normalizeGraphCamera } from './graph-spatial.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
 import {
   finiteNumber,
@@ -70,12 +72,18 @@ import {
   graphLengthConverter,
   graphLinkIdentity,
   normalizeGraphModel,
+  type LyraGraphCamera,
+  type LyraGraphPosition,
+  type LyraGraphView,
   type LyraGraphCommunity,
   type LyraGraphEdge,
   type LyraGraphNode,
   type NormalizedGraphModel,
 } from './graph-model.js';
 export type {
+  LyraGraphCamera,
+  LyraGraphPosition,
+  LyraGraphView,
   LyraGraphCommunity,
   LyraGraphEdge,
   LyraGraphNode,
@@ -85,8 +93,8 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodeLimit, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphTypedNode } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_loading, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphFit, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodeLimit, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphOrbitDown, LYRA_DEFAULT_graphOrbitLeft, LYRA_DEFAULT_graphOrbitRight, LYRA_DEFAULT_graphOrbitUp, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphSpatialControls, LYRA_DEFAULT_graphSpatialInstructions, LYRA_DEFAULT_graphSpatialPage, LYRA_DEFAULT_graphSpatialUnavailable, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_graphView3d, LYRA_DEFAULT_graphViewList } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraGraphLayout = 'force' | 'layered';
@@ -95,6 +103,7 @@ const GRAPH_LAYOUT = literalSetConverter<LyraGraphLayout>(
   ['force', 'layered'],
   'force'
 );
+const GRAPH_VIEW = literalSetConverter<LyraGraphView>(['2d', '3d', 'list'], '2d');
 export type LyraGraphRenderer = 'svg' | 'canvas';
 export type LyraGraphSelectionMode = 'none' | 'single' | 'multiple';
 export type LyraGraphPickKind = 'node' | 'link';
@@ -264,7 +273,9 @@ function identitySet(values: readonly string[]): ReadonlySet<string> {
 }
 
 export interface LyraGraphEventMap {
-  'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number }>;
+  'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>;
+  'lr-camera-change': CustomEvent<{ camera: LyraGraphCamera }>;
+  'lr-view-change': CustomEvent<{ view: LyraGraphView }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
   'lr-node-enter': CustomEvent<{ nodeId: string }>;
   'lr-node-leave': CustomEvent<{ nodeId: string }>;
@@ -292,7 +303,19 @@ export interface LyraGraphEventMap {
 /**
  * `<lr-graph>` — a force-directed node-link diagram with pan/zoom/drag.
  * Requires the optional peer deps `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`
- * (lazy-loaded; a consumer who never uses this component pays zero d3 cost).
+ * (lazy-loaded only for the default `view="2d"`).
+ *
+ * `view="3d"` projects real `node.position` x/y/z coordinates through an orbit camera onto a
+ * canvas, with near clipping, depth-ordered links/nodes and frontmost picking. Missing positions
+ * receive deterministic spherical placement. No simulation, automatic rotation or animation runs
+ * in this view. `renderer`, `layout`, `seed`, `chargeStrength` and `edgeDistance` apply only to 2D.
+ * Community hull painting is 2D-only; community activation remains available in `view="list"`.
+ * `view="list"` provides visible paginated buttons for every node, link and community. Both views
+ * work without d3. The spatial toolbar switches between 3D and list and provides camera controls.
+ * Drag to orbit, Shift-drag to pan; wheel over the focused canvas to zoom. On the canvas, arrows
+ * orbit, Shift-arrows pan, +/- zoom and Home fits. Horizontal keys respect inherited direction.
+ * `fit()` and `focusNode()` update the spatial camera immediately, including under reduced motion.
+ * Per-node/edge SVG parts are unavailable in 3D, just as in the 2D canvas renderer.
  *
  * Set `seed` for a deterministic layout: node initial positions become
  * reproducible (keyed by node id) and the settle happens synchronously
@@ -338,6 +361,11 @@ export interface LyraGraphEventMap {
  *
  * @event lr-node-activate - Pointer or keyboard node activation with `{ nodeId, x, y }` detail;
  *   `x` and `y` are the node's current coordinates in the graph's local drawing space.
+ *   Spatial/list activation returns world x/y and adds `z`; these are never screen pixels.
+ * @event lr-camera-change - Spatial camera changed by a gesture, fit or focus, with `{ camera }`.
+ *   Coalesced to one event per animation frame. Property assignments are silent.
+ * @event lr-view-change - User switched the spatial toolbar view, with `{ view }`.
+ *   Programmatic `view` assignments are silent.
  * @event lr-edge-activate - Pointer or keyboard edge activation with
  *   `{ sourceNodeId, targetNodeId, edgeId? }` detail.
  * @event lr-node-enter - A node was hovered. `detail: { nodeId }`. Suppressed while dragging or
@@ -386,6 +414,14 @@ export interface LyraGraphEventMap {
  * @csspart limit - Localized source/retained notice when the public node or link snapshot truncates.
  * @csspart error - Static visible error shown instead of the graph when the optional `d3` peer
  *   dependency is not installed; its transition is announced through a shared light-DOM alert.
+ * @csspart spatial-toolbar - View switch and spatial camera controls.
+ * @csspart spatial-control - A view, camera or pagination button.
+ * @csspart spatial-canvas - Perspective drawing surface in view="3d".
+ * @csspart spatial-instructions - Visible keyboard and pointer camera instructions.
+ * @csspart spatial-list - Scrollable visible data list in view="list" or when canvas is unavailable.
+ * @csspart spatial-list-item - A graph item activation button in the visible list.
+ * @csspart spatial-page-count - Visible page and item count.
+ * @csspart spatial-pagination - Previous and next list page controls.
  * @csspart canvas - The single canvas surface (`renderer="canvas"` only).
  * @csspart tooltip - The hover tooltip (`renderer="canvas"` only; the SVG `<title>` replacement).
  * @csspart cursor-items - The semantic list containing the active virtual cursor (`renderer="canvas"` only).
@@ -428,12 +464,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
     graphCommunity: LYRA_DEFAULT_graphCommunity,
     graphDataList: LYRA_DEFAULT_graphDataList,
     graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
     graphDiagram: LYRA_DEFAULT_graphDiagram,
     graphEdgeLimit: LYRA_DEFAULT_graphEdgeLimit,
     graphExpandableItem: LYRA_DEFAULT_graphExpandableItem,
+    graphFit: LYRA_DEFAULT_graphFit,
     graphItemAnnouncement: LYRA_DEFAULT_graphItemAnnouncement,
     graphLink: LYRA_DEFAULT_graphLink,
     graphMissingLibrary: LYRA_DEFAULT_graphMissingLibrary,
@@ -441,10 +482,29 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     graphNodeFocused: LYRA_DEFAULT_graphNodeFocused,
     graphNodeLimit: LYRA_DEFAULT_graphNodeLimit,
     graphNodesHidden: LYRA_DEFAULT_graphNodesHidden,
+    graphOrbitDown: LYRA_DEFAULT_graphOrbitDown,
+    graphOrbitLeft: LYRA_DEFAULT_graphOrbitLeft,
+    graphOrbitRight: LYRA_DEFAULT_graphOrbitRight,
+    graphOrbitUp: LYRA_DEFAULT_graphOrbitUp,
     graphSelectionCount: LYRA_DEFAULT_graphSelectionCount,
+    graphSpatialControls: LYRA_DEFAULT_graphSpatialControls,
+    graphSpatialInstructions: LYRA_DEFAULT_graphSpatialInstructions,
+    graphSpatialPage: LYRA_DEFAULT_graphSpatialPage,
+    graphSpatialUnavailable: LYRA_DEFAULT_graphSpatialUnavailable,
     graphTypedNode: LYRA_DEFAULT_graphTypedNode,
+    graphView3d: LYRA_DEFAULT_graphView3d,
+    graphViewList: LYRA_DEFAULT_graphViewList,
     loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    next: LYRA_DEFAULT_next,
     noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
+    previous: LYRA_DEFAULT_previous,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
+    zoomIn: LYRA_DEFAULT_zoomIn,
+    zoomOut: LYRA_DEFAULT_zoomOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -526,6 +586,30 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       );
     }
     return this.normalizedGraphModel!;
+  }
+  private _view: LyraGraphView = '2d';
+  /** Default '2d' preserves existing SVG/canvas layouts. '3d' uses perspective and true x/y/z
+   * positions; 'list' provides visible paginated activation. The latter two need no optional peer. */
+  @property({ converter: GRAPH_VIEW })
+  get view(): LyraGraphView { return this._view; }
+  set view(value: LyraGraphView) {
+    const next = GRAPH_VIEW.normalize(value), old = this._view;
+    if (next === old) return;
+    this._view = next;
+    this.requestUpdate('view', old);
+  }
+  private _camera?: LyraGraphCamera;
+  /** Optional spatial camera input, defensively copied. Angles are radians; distance and target
+   * use graph units. Gestures update internal state and emit lr-camera-change, not this input.
+   * Omission fits the initial spatial scene. Invalid numeric fields use a safe default. */
+  @property({ attribute: false })
+  get camera(): LyraGraphCamera | undefined { return this._camera; }
+  set camera(value: LyraGraphCamera | undefined) {
+    const old = this._camera;
+    this._camera = value == null ? undefined : normalizeGraphCamera(value, {
+      yaw: 0, pitch: 0, distance: 500, target: { x: 0, y: 0, z: 0 },
+    });
+    this.requestUpdate('camera', old);
   }
   private _layout: LyraGraphLayout = 'force';
 
@@ -751,7 +835,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private communityHullEls: SVGPathElement[] = [];
   private communityHullHitEls: SVGPathElement[] = [];
   private communityLabelEls: SVGTextElement[] = [];
-  @query('canvas') private canvasEl?: HTMLCanvasElement;
+  @query('[part="canvas"]') private canvasEl?: HTMLCanvasElement;
   private canvasCtx?: CanvasRenderingContext2D;
   /** Offscreen, same-size, same-camera-transform canvas used only for hit-testing (see
    *  `redrawPickCanvas()`/`hitTest()`) -- never attached to the DOM or painted to the screen. */
@@ -862,6 +946,71 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private readonly resolvedCssColorCache = new Map<string, string>();
   private reducedMotion = false;
 
+  // @renderController GraphSpatialController
+  private readonly spatial = new GraphSpatialController(this, {
+    model: () => this.graphModel,
+    locale: () => this.effectiveLocale,
+    direction: () => this.effectiveDirection,
+    pageText: (values) => this.localize('graphSpatialPage', undefined, values),
+    viewport: () => ({ width: this.safeWidth, height: this.safeHeight }),
+    messages: () => this.spatialMessages(),
+    communityText: (values) => this.localize('graphCommunity', undefined, values),
+    nodeText: (node) => this.nodeAccessibleText(node),
+    edgeText: (edge) => this.linkAccessibleText(edge),
+    nodeTooltip: (node) => this.nodeTooltipText(node),
+    edgeTooltip: (edge) => this.linkTooltipText(edge),
+    nodeShape: (node) => this.nodeShape(node),
+    paint: (nodes, edges) => this.withCanvasColorResolver((resolve) => {
+      const css = this.computedStyle();
+      const nodeDefault = css.getPropertyValue('--lr-graph-node-fill').trim() || css.getPropertyValue('--lr-color-brand').trim();
+      const edgeDefault = css.getPropertyValue('--lr-graph-edge-color').trim() || css.getPropertyValue('--lr-color-border').trim();
+      return {
+        nodes: new Map(nodes.map(({ node }) => [node.id, resolve(this.nodeFill(node) ?? nodeDefault)])),
+        edges: new Map(edges.map((edge) => [graphLinkIdentity(edge), resolve(sanitizeNodeColor(edge.color) ?? edgeDefault)])),
+        visibleEdges: new Set(edges.filter((edge) => this.isInteractiveLink(edge, resolve, edgeDefault)).map(graphLinkIdentity)),
+        text: resolve(css.getPropertyValue('--lr-color-text').trim()),
+        selected: resolve(css.getPropertyValue('--lr-graph-selected-color').trim() || css.getPropertyValue('--lr-color-success').trim()),
+        font: css.getPropertyValue('--lr-font').trim() || css.fontFamily,
+        fontSize: this.edgeLabelFontPx(),
+        dimmedOpacity: finiteRange(Number(css.getPropertyValue('--lr-graph-dimmed-opacity').trim() || 0.35), 0.35, 0, 1),
+      };
+    }),
+    activate: (hit, event) => {
+      if (hit.kind === 'node') {
+        const position = this.spatial.position(hit.id);
+        if (!position) return;
+        this.emit('lr-node-activate', { nodeId: hit.id, ...position });
+        this.emitSelectionIntent('node', hit.id, event.ctrlKey || event.metaKey);
+      } else this.onLinkClick(hit.edge, event);
+    },
+    expand: (nodeId) => this.emit('lr-node-expand', { nodeId }),
+    hover: (previous, next) => {
+      if (previous?.kind === 'node') this.emit('lr-node-leave', { nodeId: previous.id });
+      else if (previous?.kind === 'link') this.emitEdgeHover('leave', this.linkHoverDetail(previous.edge));
+      if (next?.kind === 'node') this.emit('lr-node-enter', { nodeId: next.id });
+      else if (next?.kind === 'link') this.emitEdgeHover('enter', this.linkHoverDetail(next.edge));
+    },
+    community: (community) => this.onCommunityClick(community),
+    cameraChanged: (camera) => this.emit('lr-camera-change', { camera }),
+    viewChanged: () => this.emit('lr-view-change', { view: this.view }),
+    unavailable: () => this.announcements.announceAssertive(this.localize('graphSpatialUnavailable')),
+    clearSelection: () => this.clearSelection(),
+    afterUpdate: (callback, key) => this.scheduleAfterUpdate(callback, key),
+  });
+
+  private spatialMessages(): Readonly<Record<string, string>> {
+    return {
+      controls: this.localize('graphSpatialControls'),
+      view3d: this.localize('graphView3d'), viewList: this.localize('graphViewList'),
+      fit: this.localize('graphFit'), left: this.localize('graphOrbitLeft'), right: this.localize('graphOrbitRight'),
+      up: this.localize('graphOrbitUp'), down: this.localize('graphOrbitDown'),
+      instructions: this.localize('graphSpatialInstructions'), unavailable: this.localize('graphSpatialUnavailable'),
+      zoomIn: this.localize('zoomIn'), zoomOut: this.localize('zoomOut'),
+      previous: this.localize('previous'), next: this.localize('next'),
+      dataList: this.localize('graphDataList'), noData: this.localize('noData'),
+    };
+  }
+
   constructor() {
     super();
     new ThemeWatcher(this, () => {
@@ -869,11 +1018,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       if (reduced !== this.reducedMotion) {
         this.reducedMotion = reduced;
         if (reduced) this.simulation?.stop();
-        else if (this.safeSeed == null) this.simulation?.restart();
+        else if (this.view === '2d' && this.safeSeed == null) this.simulation?.restart();
       }
       this.linkPaintVisibilityCache.clear();
       this.resolvedCssColorCache.clear();
-      if (this.renderer === 'canvas') this.markCanvasDirty();
+      if (this.view !== '2d') this.spatial.invalidate();
+      else if (this.renderer === 'canvas') this.markCanvasDirty();
     }, ['(prefers-reduced-motion: reduce)']);
   }
 
@@ -932,7 +1082,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // Observed unconditionally (both first mount and any reconnect below) -- visibility gating
     // applies regardless of whether renderer="canvas" is active yet or d3 has finished loading.
     const IntersectionObserverCtor = this.ownerWindow?.IntersectionObserver;
-    if (IntersectionObserverCtor) {
+    if (this.view === '2d' && IntersectionObserverCtor) {
       this.intersectionObserver = new IntersectionObserverCtor((entries) => {
         const wasVisible = this.visible;
         this.visible = entries[0]?.isIntersecting ?? true;
@@ -954,6 +1104,23 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (this.fitTo === 'container') {
       this.syncHostResizeObserver();
       this.measureHostBox();
+    }
+    if (this.view === '2d') this.connect2d();
+    else { this.loading = false; this.requestUpdate(); }
+  }
+
+  private connect2d(): void {
+    const Observer = this.ownerWindow?.IntersectionObserver;
+    if (!this.intersectionObserver && Observer) {
+      this.intersectionObserver = new Observer((entries) => {
+        const wasVisible = this.visible;
+        this.visible = entries[0]?.isIntersecting ?? true;
+        if (this.visible && !wasVisible && this.canvasDrawPending) {
+          this.canvasDrawPending = false;
+          this.scheduleCanvasDraw();
+        }
+      });
+      this.intersectionObserver.observe(this);
     }
     // A reconnect (e.g. a drag-and-drop reparent that keeps this same
     // element instance) fires disconnectedCallback then connectedCallback
@@ -1018,6 +1185,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.spatial.disconnect();
     this.loadGeneration += 1;
     this.simulation?.stop();
     this.finishCanvasNodeDrag(undefined, true, false);
@@ -1066,6 +1234,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  animation frame -- called from both the svg/canvas zoom handlers and `onTick()`, all of which
    *  can fire far more often than once per frame (a wheel-zoom gesture, a settling simulation). */
   private scheduleViewportChange(): void {
+    if (this.view !== '2d') return;
     if (this.viewportChangeRafId != null) return;
     const frameOwner = this.ownerWindow;
     if (!frameOwner) return;
@@ -1606,6 +1775,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  to center on. Announces `graphNodeFocused` through the shared light-DOM sink. Does not move DOM
    *  focus -- this is a camera operation, not a roving-focus one. */
   async focusNode(id: string, options?: { zoom?: number }): Promise<boolean> {
+    if (this.view !== '2d') {
+      if (!this.isConnected) return false;
+      const focused = this.spatial.focusNode(id, options?.zoom);
+      if (focused) {
+        const node = this.graphModel.nodes.find((candidate) => candidate.id === id);
+        if (node) this.announcements.announcePolite(this.localize('graphNodeFocused', undefined, { label: this.nodeAccessibleText(node) }));
+      }
+      return focused;
+    }
     const node = this.simNodes.find((n) => n.id === id);
     if (!node || !this.d3 || !this.zoomedEl || !this.zoomBehavior) return false;
     const current = this.d3.zoomTransform(this.zoomedEl);
@@ -1635,6 +1813,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  `padding` viewport-px on each side (clamped to `[minZoom, maxZoom]`). Silent -- no data
    *  changed, so no announcement. A no-op with no visible nodes. */
   fit(options?: { padding?: number }): void {
+    if (this.view !== '2d') { if (this.isConnected) this.spatial.fit(options?.padding); return; }
     if (
       !this.d3 ||
       !this.zoomedEl ||
@@ -1737,7 +1916,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  the single place that decides, so `fitTo="container"` keeps its measurement across a renderer
    *  switch that used to unconditionally tear the observer down. */
   private syncHostResizeObserver(): void {
-    if (this.renderer !== 'canvas' && this.fitTo !== 'container') {
+    if (this.view !== '2d' || (this.renderer !== 'canvas' && this.fitTo !== 'container')) {
       this.hostResizeObserver?.disconnect();
       this.hostResizeObserver = undefined;
       this.hostResizeObserverDocument = undefined;
@@ -1823,6 +2002,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private scheduleCanvasDraw(): void {
+    if (this.view !== '2d') return;
     // Gate world, camera and keyboard-focus redraws here rather than at every call site. This is
     // the single choke point every canvas redraw request funnels through. Remembers the request
     // instead of dropping it, so the connectedCallback() IntersectionObserver above can issue
@@ -2603,6 +2783,40 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but a future shared mixin under LyraElement must still run
+    if (changed.has('view') && this.isConnected) {
+      if (this.view !== '2d') {
+        this.loadGeneration += 1;
+        this.simulation?.stop();
+        this.cancelCameraTween();
+        this.finishCanvasNodeDrag(undefined, true, false);
+        this.takeCanvasPointerDown();
+        if (this.canvasDrawRafId != null) this.canvasDrawRafOwner?.cancelAnimationFrame(this.canvasDrawRafId);
+        this.canvasDrawRafId = undefined;
+        this.canvasDrawRafOwner = undefined;
+        if (this.hoverRafId != null) this.hoverRafOwner?.cancelAnimationFrame(this.hoverRafId);
+        this.hoverRafId = undefined;
+        this.hoverRafOwner = undefined;
+        this.pendingHover = undefined;
+        if (this.viewportChangeRafId != null) this.viewportChangeRafOwner?.cancelAnimationFrame(this.viewportChangeRafId);
+        this.viewportChangeRafId = undefined;
+        this.viewportChangeRafOwner = undefined;
+        this.canvasDprQuery?.removeEventListener('change', this.onCanvasDprChange);
+        this.canvasDprQuery = undefined;
+        this.intersectionObserver?.disconnect();
+        this.intersectionObserver = undefined;
+        this.loading = false;
+        this.loadFailed = false;
+        this.zoomedEl = undefined;
+        this.gEl = undefined;
+        this.boundNodeEls = new WeakSet();
+        this.syncHostResizeObserver();
+      } else if (changed.get('view') !== undefined) {
+        this.spatial.disconnect();
+        this.loading = !this.d3;
+        this.connect2d();
+        if (this.d3) this.rebuildSimulation();
+      }
+    }
     // Keeps the rendered host height following the `height` property -- see syncRequestedHeightVar()
     // for why the property it writes is private and why it normalizes `height` itself.
     // measureHostBox() writes it too, so a connect-time measurement never reads an unsized host.
@@ -2627,6 +2841,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // caches below).
     if (!cursorOnly) this.navigableLinksCache = undefined;
     this.syncGraphHostRole();
+    if (this.view !== '2d') {
+      this.spatial.prepare();
+      if (this.focusNodeId == null) this.lastAppliedFocusNodeId = null;
+      else if (this.focusNodeId !== this.lastAppliedFocusNodeId && this.spatial.focusNode(this.focusNodeId))
+        this.lastAppliedFocusNodeId = this.focusNodeId;
+      this.isMounting = false;
+      return;
+    }
     // Gates the mount-time selection announcement below -- selectedNodeIds/selectedEdgeIds both
     // default to `[]`, a non-undefined default, so Lit marks them "changed" on the very first
     // update too. `wasMounting` is captured before flipping the flag so only that first pass is
@@ -2743,6 +2965,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.isConnected) {
       for (const [key, previous] of changed)
         if (!this.detachedGraphChanges.has(key)) this.detachedGraphChanges.set(key, previous);
+      return;
+    }
+    if (this.view !== '2d') {
+      this.setAttribute('aria-busy', 'false');
+      this.spatial.update();
       return;
     }
     this.setAttribute('aria-busy', String(this.loading));
@@ -3209,7 +3436,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private rebuildSimulation(): void {
-    if (!this.d3) return;
+    if (this.view !== '2d' || !this.d3) return;
     this.simulation?.stop();
     this.boundNodeEls = new WeakSet();
 
@@ -3479,10 +3706,39 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   /** Returns a node's current position in the graph's local drawing space. */
   getNodePosition(id: string): { x: number; y: number } | undefined {
+    if (this.view !== '2d') {
+      const position = this.spatial.position(id);
+      return position ? { x: position.x, y: position.y } : undefined;
+    }
     const node = this.simNodes.find((candidate) => candidate.id === id);
     if (!node || !Number.isFinite(node.x) || !Number.isFinite(node.y))
       return undefined;
     return { x: node.x!, y: node.y! };
+  }
+
+  /** World x/y/z in spatial/list view, or undefined for a missing/hidden node or view="2d".
+   * The returned point is an immutable copy and never a projected screen position. */
+  getNodePosition3d(id: string): LyraGraphPosition | undefined {
+    return this.view === '2d' ? undefined : this.spatial.position(id);
+  }
+
+  /** Projected CSS pixels relative to this element's border-box top-left. Undefined for list
+   * view, missing/hidden nodes or a spatial point behind the near plane. Add the host's viewport
+   * rect left/top to anchor a viewport-positioned overlay. This method does not move the camera. */
+  getNodeScreenPosition(id: string): { x: number; y: number } | undefined {
+    if (this.view !== '2d') return this.spatial.screenPosition(id);
+    const position = this.getNodePosition(id);
+    if (!position || !this.zoomedEl || !this.d3) return undefined;
+    const hostRect = this.getBoundingClientRect();
+    const rect = this.zoomedEl.getBoundingClientRect();
+    const camera = this.d3.zoomTransform(this.zoomedEl);
+    const x = position.x * camera.k + camera.x, y = position.y * camera.k + camera.y;
+    if ('getScreenCTM' in this.zoomedEl) {
+      const matrix = this.zoomedEl.getScreenCTM();
+      if (!matrix) return undefined;
+      return { x: matrix.a * x + matrix.c * y + matrix.e - hostRect.left, y: matrix.b * x + matrix.d * y + matrix.f - hostRect.top };
+    }
+    return { x: rect.left - hostRect.left + x, y: rect.top - hostRect.top + y };
   }
 
   private onLinkClick(link: SimLink, e?: MouseEvent | KeyboardEvent): void {
@@ -3924,6 +4180,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       shown: getNumberFormat(this.effectiveLocale).format(edgeLimit.retained),
       total: getNumberFormat(this.effectiveLocale).format(edgeLimit.source),
     })}</p>` : nothing}`;
+    if (this.view !== '2d') return this.spatial.render(limitNotices);
     if (this.loading) {
       return html`
         <div part="base">

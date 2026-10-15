@@ -253,3 +253,10 @@ export const NamedByAccessibleLabel: Story = {
     },
   },
 };
+
+export const SpatialExploration: Story = {
+  render: () => html`<lr-knowledge-graph-explorer view="3d" label="Spatial knowledge graph"
+    .nodes=${nodes.map((node, index) => ({ ...node, position: { x: Math.cos(index * 1.4) * 100, y: Math.sin(index * 1.4) * 100, z: (index - 2) * 60 } }))}
+    .edges=${links} .nodeTypes=${nodeTypes}
+  ></lr-knowledge-graph-explorer>`,
+};

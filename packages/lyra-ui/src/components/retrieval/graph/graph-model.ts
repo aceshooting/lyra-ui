@@ -22,8 +22,29 @@ export const graphLengthConverter: ComplexAttributeConverter<number | string> = 
   },
 };
 
+/** A world-space point for the optional spatial view. Coordinates are bounded to ±1,000,000. */
+export interface LyraGraphPosition {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+/** Orbit camera: radians for yaw/pitch, graph units for distance and target. */
+export interface LyraGraphCamera {
+  readonly yaw: number;
+  readonly pitch: number;
+  readonly distance: number;
+  readonly target: LyraGraphPosition;
+}
+
+/** The default 2D diagram, an orbitable perspective view, or a visible paginated data list. */
+export type LyraGraphView = '2d' | '3d' | 'list';
+
 export interface LyraGraphNode {
   readonly id: string;
+  /** Authoritative x/y/z placement in view="3d"; ignored by the 2D layouts. Missing, inherited,
+   * accessor-backed or non-finite coordinates use deterministic spatial placement keyed by id. */
+  readonly position?: LyraGraphPosition;
   readonly label?: string;
   /** Spoken label when it needs more context than the visible label. */
   readonly accessibleLabel?: string;
