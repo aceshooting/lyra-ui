@@ -3,9 +3,10 @@ import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'vite';
+import { selectTestFont } from './browser-font.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const requested = process.env.WTR_BROWSER ?? process.env.MAP_BROWSER ?? 'chromium';
@@ -14,10 +15,10 @@ if (!['chromium', 'firefox', 'webkit', 'chrome', 'msedge'].includes(channel))
   throw new Error(`Unknown browser ${requested}`);
 const fontResult = process.env.MAP_TEST_FONT
   ? undefined
-  : spawnSync('fc-match', ['-f', '%{file}', 'sans'], { encoding: 'utf8' });
-const font = process.env.MAP_TEST_FONT ?? fontResult?.stdout.trim();
-if (!font) throw new Error('Set MAP_TEST_FONT to an installed TrueType font, or install fontconfig.');
-await readFile(font);
+  : spawnSync('fc-match', ['-s', '-f', '%{file}\n', 'DejaVu Sans'], { encoding: 'utf8' });
+const font = await selectTestFont(
+  process.env.MAP_TEST_FONT ? [process.env.MAP_TEST_FONT] : (fontResult?.stdout ?? '').trim().split('\n')
+);
 await mkdir(resolve(root, 'test-results'), { recursive: true });
 const scratch = await mkdtemp(resolve(tmpdir(), 'lyra-map-browser-'));
 const entry = resolve(scratch, 'entry.mjs');
@@ -91,6 +92,7 @@ try {
     resolve(root, `test-results/${channel}-build.json`),
     JSON.stringify(
       {
+        font: { file: basename(font.path), bytes: font.bytes, sha256: font.sha256 },
         archiveSha256: createHash('sha256')
           .update(await readFile(archive))
           .digest('hex'),
@@ -113,7 +115,7 @@ try {
     env: {
       ...process.env,
       MAP_TEST_ASSETS: scratch,
-      MAP_TEST_FONT: font,
+      MAP_TEST_FONT: font.path,
       MAP_TEST_RESULT: resolve(root, `test-results/${channel}.json`)
     }
   });

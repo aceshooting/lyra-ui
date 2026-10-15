@@ -955,6 +955,27 @@ test('validates tar structure and exact package identity before staging immutabl
   }
 });
 
+test('admits the Map companion only with its exact validated archive identity', async () => {
+  const { inspectPeerTarballArchive } = await loadChecker();
+  const expectedPackage = { name: '@aceshooting/lyra-map', version: '1.0.0' };
+  const inspected = inspectPeerTarballArchive(lyraTarball(expectedPackage), { expectedPackage });
+  assert.equal(inspected.name, expectedPackage.name);
+  assert.equal(inspected.version, expectedPackage.version);
+  assert.throws(
+    () => inspectPeerTarballArchive(lyraTarball({ ...expectedPackage, name: '@aceshooting/other' }), { expectedPackage }),
+    /Tarball package name.*expected/u,
+  );
+  assert.throws(
+    () => inspectPeerTarballArchive(lyraTarball({ ...expectedPackage, version: '1.0.1' }), { expectedPackage }),
+    /Tarball package version.*expected/u,
+  );
+  assert.throws(
+    () => inspectPeerTarballArchive(lyraTarball({ name: '@aceshooting/other', version: '1.0.0' }),
+      { expectedPackage: { name: '@aceshooting/other', version: '1.0.0' } }),
+    /Expected tarball package name/u,
+  );
+});
+
 test('accepts omitted portable tar ownership while rejecting malformed ownership numbers', async () => {
   const { inspectPeerTarballArchive } = await loadChecker();
   const expectedPackage = { name: '@aceshooting/lyra-ui', version: '14.0.0' };

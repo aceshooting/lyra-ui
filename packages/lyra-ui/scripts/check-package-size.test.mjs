@@ -211,6 +211,29 @@ test('uses the actual archive inventory for required-file and hygiene checks', a
   }
 });
 
+test('checks a Map companion archive through the shared tarball validator and its own budget', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-package-size-'));
+  const tarball = join(directory, 'map.tgz');
+  const map = JSON.parse(readFileSync(new URL('../../lyra-map/package.json', import.meta.url), 'utf8'));
+  const contents = {
+    ...Object.fromEntries(requiredTarballFiles.map((file) => [file, null])),
+    ...Object.fromEntries([
+      'dist/index.mjs', 'dist/index.d.ts', 'dist/worker.mjs', 'dist/vite.mjs',
+      'dist/map.css', 'dist/provenance.json', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'UPSTREAM.json',
+    ].map((file) => [file, 'public package content'])),
+  };
+  try {
+    writeFileSync(tarball, archiveFixture(map, contents));
+    const metrics = await readTarballMetrics(tarball, map);
+    const actualBudgets = JSON.parse(readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'));
+    assert.deepEqual(companionBudgetFindings(metrics, map.name, actualBudgets), []);
+    writeFileSync(tarball, archiveFixture({ ...map, name: '@aceshooting/other' }, contents));
+    await assert.rejects(readTarballMetrics(tarball, map), /Tarball package name.*expected/u);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('accepts only an honest measured unpacked exception with tight headroom', () => {
   const withException = {
     ...budgets,
