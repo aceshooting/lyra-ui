@@ -10,6 +10,7 @@ import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { timingReporter } from './wtr-timing-reporter.mjs';
+import { completeJunitReporter } from './wtr-junit-reporter.mjs';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const configUrl = pathToFileURL(resolve(packageDirectory, 'web-test-runner.config.js')).href;
@@ -316,6 +317,126 @@ test('the timing reporter records each completed file and its wall time', () => 
     const line = JSON.parse(readFileSync(output, 'utf8'));
     assert.equal(line.file, 'src/a.test.ts');
     assert.ok(Number.isInteger(line.deltaMs) && line.deltaMs >= 0);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+function junitSession(directory, file, tests, suites = []) {
+  const suitePassed = suite => suite.tests.every(result => result.passed || result.skipped) &&
+    suite.suites.every(suitePassed);
+  return {
+    id: file,
+    group: {},
+    debug: false,
+    browser: { name: 'Chromium', type: 'playwright' },
+    testFile: join(directory, 'src', file),
+    testRun: 0,
+    status: 'finished',
+    passed: tests.every(result => result.passed || result.skipped) && suites.every(suitePassed),
+    errors: [],
+    logs: [],
+    request404s: [],
+    testResults: { name: '', tests, suites },
+  };
+}
+
+test('JUnit reports top-level pass, skip, and error cases with filenames and escaped XML', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-wtr-junit-root-'));
+  try {
+    const reporter = completeJunitReporter({ rootDir: directory, outputPath: 'junit.xml' });
+    reporter.onTestRunFinished({ sessions: [junitSession(directory, 'root.test.ts', [
+      { name: 'passes <root> & stays visible', passed: true, skipped: false, duration: 12 },
+      { name: 'skips at root', passed: false, skipped: true },
+      {
+        name: 'fails at root',
+        passed: false,
+        skipped: false,
+        error: { name: 'AssertionError', message: 'bad <value> & input', stack: 'AssertionError: bad value' },
+      },
+    ])] });
+    const xml = readFileSync(join(directory, 'junit.xml'), 'utf8');
+    assert.match(xml, /<testsuite[^>]* tests="3" skipped="1" errors="1" failures="1"/u);
+    assert.equal((xml.match(/<testcase\b/gu) ?? []).length, 3);
+    assert.equal((xml.match(/file="src\/root\.test\.ts"/gu) ?? []).length, 3);
+    assert.match(xml, /passes &lt;root&gt; &amp; stays visible/u);
+    assert.match(xml, /<skipped\s*\/>/u);
+    assert.match(xml, /<failure[^>]*message="bad &lt;value&gt; &amp; input"/u);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('JUnit includes each root and nested case once across files without mutating runner results', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-wtr-junit-mixed-'));
+  try {
+    const sessions = [
+      junitSession(directory, 'first.test.ts', [
+        { name: 'first root case', passed: true, skipped: false },
+      ], [{
+        name: 'outer',
+        tests: [
+          { name: 'nested case', passed: true, skipped: false },
+          { name: 'nested skip', passed: false, skipped: true },
+        ],
+        suites: [{ name: 'inner', tests: [
+          { name: 'deep case', passed: true, skipped: false },
+          {
+            name: 'deep failure',
+            passed: false,
+            skipped: false,
+            error: { name: 'AssertionError', message: 'nested mismatch', stack: 'AssertionError: nested mismatch' },
+          },
+        ], suites: [] }],
+      }]),
+      junitSession(directory, 'second.test.ts', [
+        { name: 'second root case', passed: true, skipped: false },
+      ]),
+    ];
+    const original = structuredClone(sessions);
+    completeJunitReporter({ rootDir: directory, outputPath: 'junit.xml' })
+      .onTestRunFinished({ sessions });
+    assert.deepEqual(sessions, original);
+    const xml = readFileSync(join(directory, 'junit.xml'), 'utf8');
+    assert.equal((xml.match(/<testcase\b/gu) ?? []).length, 6);
+    assert.equal((xml.match(/file="src\/first\.test\.ts"/gu) ?? []).length, 5);
+    assert.equal((xml.match(/file="src\/second\.test\.ts"/gu) ?? []).length, 1);
+    assert.match(xml, /first\.test\.ts"[^>]* tests="5" skipped="1" errors="1" failures="1"/u);
+    assert.match(xml, /name="first root case"/u);
+    assert.match(xml, /name="second root case"/u);
+    assert.match(xml, /name="nested case"[^>]*classname="outer"/u);
+    assert.match(xml, /name="nested skip"[^>]*classname="outer"/u);
+    assert.match(xml, /name="deep case"[^>]*classname="outer inner"/u);
+    assert.match(xml, /name="deep failure"[^>]*classname="outer inner"/u);
+    assert.equal((xml.match(/<failure\b/gu) ?? []).length, 1);
+    assert.equal((xml.match(/<skipped\s*\/>/gu) ?? []).length, 1);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('coverage config uses the complete JUnit reporter for top-level-only files', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-wtr-junit-config-'));
+  try {
+    const session = junitSession(directory, 'configured.test.ts', [
+      { name: 'configured root case', passed: true, skipped: false },
+    ]);
+    session.testFile = join(packageDirectory, 'src', 'configured.test.ts');
+    const source = `
+      import config from ${JSON.stringify(configUrl)};
+      config.reporters[1].onTestRunFinished({ sessions: [${JSON.stringify(session)}] });
+    `;
+    const environment = { ...process.env, WTR_COVERAGE: '1', WTR_COVERAGE_REPORT_DIR: directory };
+    delete environment.WTR_TIMING_REPORT;
+    const result = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
+      cwd: packageDirectory,
+      env: environment,
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const xml = readFileSync(join(directory, 'junit.xml'), 'utf8');
+    assert.match(xml, /<testsuite[^>]* tests="1" skipped="0" errors="0" failures="0"/u);
+    assert.match(xml, /name="configured root case"[^>]*file="src\/configured\.test\.ts"/u);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

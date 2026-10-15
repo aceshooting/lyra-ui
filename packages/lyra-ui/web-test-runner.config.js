@@ -8,9 +8,9 @@ import { availableParallelism } from 'node:os';
 import { defaultReporter } from '@web/test-runner';
 import { sendKeysPlugin } from '@web/test-runner-commands/plugins';
 import { playwrightLauncher } from '@web/test-runner-playwright';
-import { junitReporter } from '@web/test-runner-junit-reporter';
 import { esbuildPlugin } from '@web/dev-server-esbuild';
 import { timingReporter } from './scripts/wtr-timing-reporter.mjs';
+import { completeJunitReporter } from './scripts/wtr-junit-reporter.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -545,7 +545,7 @@ export default {
     ? [
         defaultReporter(),
         ...(collectCoverage
-          ? [junitReporter({ outputPath: `${coverageReportDir ?? 'coverage'}/junit.xml` })]
+          ? [completeJunitReporter({ outputPath: `${coverageReportDir ?? 'coverage'}/junit.xml` })]
           : []),
         ...(timingReportPath ? [timingReporter(timingReportPath)] : []),
       ]
