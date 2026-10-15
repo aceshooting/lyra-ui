@@ -27,6 +27,89 @@ function indexAfter(lines, line, after = -1) {
   return index;
 }
 
+for (const released of [
+  ['@aceshooting/lyra-docs', '@aceshooting/lyra-ui'],
+  ['@aceshooting/lyra-ui', '@aceshooting/lyra-docs'],
+  ['@aceshooting/lyra-docs'],
+]) {
+  test(`release preparation builds clean prerequisites for ${released.join(', ')}`, () => {
+    const root = mkdtempSync(join(tmpdir(), 'lyra-release-build-order-'));
+    try {
+      const ui = join(root, 'packages/lyra-ui');
+      const docs = join(root, 'packages/lyra-docs');
+      mkdirSync(ui, { recursive: true });
+      mkdirSync(docs, { recursive: true });
+      // Source metadata starts at the unchanged version; the released UI generator updates it.
+      writeFileSync(join(ui, 'metadata.json'), '"current"');
+      writeFileSync(join(root, 'package.json'), JSON.stringify({
+        private: true,
+        packageManager: JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')).packageManager,
+      }));
+      writeFileSync(join(root, 'pnpm-workspace.yaml'), "packages:\n  - 'packages/*'\n");
+      writeFileSync(join(ui, 'package.json'), JSON.stringify({
+        name: '@aceshooting/lyra-ui', version: '1.0.0',
+        scripts: {
+          'package-metadata': 'node ../../fixture.mjs metadata',
+          build: 'node ../../fixture.mjs ui',
+          'component-quality': 'node ../../fixture.mjs quality',
+        },
+      }));
+      writeFileSync(join(docs, 'package.json'), JSON.stringify({
+        name: '@aceshooting/lyra-docs', version: '1.0.0',
+        scripts: { build: 'node ../../fixture.mjs docs' },
+      }));
+      writeFileSync(join(root, 'fixture.mjs'), `
+import assert from 'node:assert/strict';
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+const root = new URL('./', import.meta.url);
+const ui = new URL('packages/lyra-ui/', root);
+const metadata = new URL('metadata.json', ui);
+const declaration = new URL('dist/localization.d.ts', ui);
+const task = process.argv[2];
+if (task === 'metadata') writeFileSync(metadata, '"released"');
+if (task === 'ui') {
+  mkdirSync(new URL('dist/', ui), { recursive: true });
+  writeFileSync(declaration, readFileSync(metadata));
+}
+if (task === 'docs' || task === 'quality') {
+  assert.equal(readFileSync(declaration, 'utf8'), JSON.stringify(process.env.EXPECTED_METADATA));
+}
+appendFileSync(new URL('steps.log', root), task + '\\n');
+`);
+      for (const script of [
+        'update-framework-recipe-versions', 'sync-plugin-version', 'update-readme-status',
+      ]) {
+        mkdirSync(join(root, 'scripts'), { recursive: true });
+        writeFileSync(join(root, 'scripts', `${script}.mjs`), '');
+      }
+      writeFileSync(join(root, 'package.sh'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+      for (const [command, args] of releasePreparationSteps(released)) {
+        const result = spawnSync(command === 'node' ? process.execPath : command, args, {
+          cwd: root,
+          env: {
+            ...process.env,
+            EXPECTED_METADATA: released.includes('@aceshooting/lyra-ui') ? 'released' : 'current',
+          },
+          encoding: 'utf8',
+        });
+        assert.equal(result.status, 0,
+          `${[command, ...args].join(' ')} failed:\n${result.stdout}\n${result.stderr}`);
+      }
+      const tasks = readFileSync(join(root, 'steps.log'), 'utf8').trim().split('\n');
+      assert.equal(tasks.filter(task => task === 'docs').length, 1);
+      assert.ok(tasks.indexOf('ui') < tasks.indexOf('docs'), 'UI declarations exist before docs builds');
+      assert.equal(tasks.filter(task => task === 'ui').length,
+        released.includes('@aceshooting/lyra-ui') ? 2 : 1,
+        'a prerequisite is prepared once, plus the existing post-packaging UI rebuild when released');
+      assert.equal(tasks.filter(task => task === 'metadata').length,
+        released.includes('@aceshooting/lyra-ui') ? 1 : 0,
+        'an unchanged prerequisite is built without regenerating its release metadata');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
+
 test('release preparation runs every per-package generator in dependency order', () => {
   const lines = render(releasePreparationSteps(['@aceshooting/lyra-ui']));
   let cursor = -1;
@@ -178,11 +261,13 @@ test('a lyra-ui release syncs the plugin, repackages, and rebuilds quality evide
 });
 
 test('a companion-only release leaves the lyra-ui plugin untouched', () => {
-  const lines = render(releasePreparationSteps(['@aceshooting/lyra-flags']));
-  assert.ok(!lines.includes('node scripts/update-framework-recipe-versions.mjs'));
-  assert.ok(!lines.includes('node scripts/sync-plugin-version.mjs'));
-  assert.ok(!lines.includes('./package.sh'));
-  assert.equal(lines.at(-1), 'node scripts/update-readme-status.mjs');
+  for (const name of ['@aceshooting/lyra-flags', '@aceshooting/lyra-docs']) {
+    const lines = render(releasePreparationSteps([name]));
+    assert.ok(!lines.includes('node scripts/update-framework-recipe-versions.mjs'));
+    assert.ok(!lines.includes('node scripts/sync-plugin-version.mjs'));
+    assert.ok(!lines.includes('./package.sh'));
+    assert.equal(lines.at(-1), 'node scripts/update-readme-status.mjs');
+  }
 });
 
 test('release preparation never lints, tests, packs, commits, tags, or pushes', () => {

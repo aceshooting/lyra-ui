@@ -17,6 +17,11 @@ import { parseReleaseTag } from './release-integrity.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PRIMARY_PACKAGE = '@aceshooting/lyra-ui';
+// Build prerequisites differ from optional peer dependencies: docs compiles against UI's emitted
+// declarations, while UI and translations intentionally peer on each other without a build cycle.
+const BUILD_PREREQUISITES = {
+  '@aceshooting/lyra-docs': [PRIMARY_PACKAGE],
+};
 
 /**
  * Per-package post-bump generators, in dependency order. The bump stamps `since: 'unreleased'`
@@ -59,18 +64,30 @@ export const PACKAGE_GENERATORS = Object.freeze([
 ]);
 
 /**
- * Every generator command, in order, for the packages whose version the bump changed. A release
+ * Every generator command, in order, for the packages whose version the bump changed. Released
+ * prerequisites run their generators first; unchanged prerequisites only build their existing
+ * sources, so a clean checkout works without regenerating unrelated release metadata. A release
  * that includes lyra-ui also synchronizes the plugin versions and regenerates the packaged skill
  * references; package.sh writes source, so the build and its quality evidence are regenerated
  * after it. A companion-only release leaves the lyra-ui plugin untouched.
  */
 export function releasePreparationSteps(releasedPackageNames) {
   const steps = [];
-  for (const name of releasedPackageNames) {
-    for (const script of PACKAGE_GENERATORS) {
-      steps.push(['pnpm', ['--filter', name, '--if-present', 'run', script]]);
+  const released = new Set(releasedPackageNames);
+  const prepared = new Set();
+  function prepare(name) {
+    if (prepared.has(name)) return;
+    for (const prerequisite of BUILD_PREREQUISITES[name] ?? []) prepare(prerequisite);
+    if (released.has(name)) {
+      for (const script of PACKAGE_GENERATORS) {
+        steps.push(['pnpm', ['--filter', name, '--if-present', 'run', script]]);
+      }
+    } else {
+      steps.push(['pnpm', ['--filter', name, 'run', 'build']]);
     }
+    prepared.add(name);
   }
+  for (const name of releasedPackageNames) prepare(name);
   if (releasedPackageNames.includes(PRIMARY_PACKAGE)) {
     steps.push(['node', ['scripts/update-framework-recipe-versions.mjs']]);
     steps.push(['node', ['scripts/sync-plugin-version.mjs']]);
