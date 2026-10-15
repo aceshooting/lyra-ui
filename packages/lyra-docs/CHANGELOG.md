@@ -1,5 +1,14 @@
 # @aceshooting/lyra-docs
 
+## 0.5.3
+
+### Patch Changes
+
+- 5027f69: Reduce unused document-engine code retained by production bundles through explicit lazy capability imports. Preserve editing, tables, review, image insertion, optional-capability fallbacks, and live engine bindings.
+- Updated dependencies [21686f9]
+- Updated dependencies [70ecffc]
+  - @aceshooting/lyra-ui@28.2.0
+
 ## 0.5.2
 
 ### Patch Changes
