@@ -30,8 +30,6 @@ export default {
         // createRequire resolves these from the disposable consumer or the library workspace,
         // which declares Shiki; they are not imports from the repository-root installation.
         'shiki',
-        'shiki/package.json',
-        'shiki/onig.wasm',
         // Loaded by identifier rather than a JavaScript import.
         'secretlint',
         '@secretlint/secretlint-rule-preset-recommend',

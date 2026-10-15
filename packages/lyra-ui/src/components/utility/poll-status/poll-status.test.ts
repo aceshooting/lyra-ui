@@ -94,16 +94,15 @@ describe('lr-poll-status', () => {
     await el.updateComplete;
     const button = el.shadowRoot!.querySelector('[part="refresh-button"]') as HTMLButtonElement;
     const originalSetTimeout = window.setTimeout;
-    const scheduledHandles: number[] = [];
+    let scheduledCount = 0;
     window.setTimeout = ((...args: Parameters<typeof window.setTimeout>) => {
-      const handle = Reflect.apply(originalSetTimeout, window, args) as number;
-      scheduledHandles.push(handle);
-      return handle;
+      scheduledCount++;
+      return Reflect.apply(originalSetTimeout, window, args);
     }) as typeof window.setTimeout;
     let timersVisibleToListener = -1;
     el.addEventListener('lr-poll-due', (event) => {
       if ((event as CustomEvent<{ manual?: boolean } | null>).detail?.manual) {
-        timersVisibleToListener = scheduledHandles.length;
+        timersVisibleToListener = scheduledCount;
       }
     });
 

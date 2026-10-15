@@ -106,7 +106,20 @@ pnpm dlx npm-check-updates@latest \
   --workspaces \
   --root \
   --dep prod,dev,optional,packageManager \
+  --reject @types/node \
   --target latest \
+  --install never \
+  --upgrade
+
+# Preserve each package's selected Node type major: runtime and tooling compatibility may require
+# different majors across the workspace. Refresh minor and patch releases within those majors.
+pnpm dlx npm-check-updates@latest \
+  --packageManager pnpm \
+  --workspaces \
+  --root \
+  --dep prod,dev,optional \
+  --filter @types/node \
+  --target minor \
   --install never \
   --upgrade
 

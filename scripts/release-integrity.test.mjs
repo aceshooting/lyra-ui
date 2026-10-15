@@ -2641,10 +2641,7 @@ test('upgrade protects managed peer floors before synchronizing package-manager 
   const upgradeScript = readFileSync(path.join(repoRoot, 'scripts/upgrade.sh'), 'utf8');
   const exactNodeIndex = upgradeScript.indexOf('\nnode scripts/check-node-version.mjs\n');
   const firstNcuIndex = upgradeScript.indexOf('pnpm dlx npm-check-updates@latest');
-  const secondNcuIndex = upgradeScript.indexOf(
-    'pnpm dlx npm-check-updates@latest',
-    firstNcuIndex + 1,
-  );
+  const peerNcuIndex = upgradeScript.indexOf('  --dep peer \\');
   const authorityGuardIndex = upgradeScript.indexOf(
     'node scripts/check-peer-compatibility.mjs --check-managed-peer-rewrites',
   );
@@ -2654,14 +2651,14 @@ test('upgrade protects managed peer floors before synchronizing package-manager 
   const installIndex = upgradeScript.indexOf('pnpm install --no-prod --no-frozen-lockfile');
 
   assert.ok(exactNodeIndex >= 0, 'upgrade must fail closed on the exact Node authority');
-  assert.ok(secondNcuIndex > firstNcuIndex, 'upgrade must retain separate non-peer and peer NCU passes');
+  assert.ok(peerNcuIndex > firstNcuIndex, 'upgrade must retain separate non-peer and peer NCU passes');
   assert.ok(
-    authorityGuardIndex > secondNcuIndex,
+    authorityGuardIndex > peerNcuIndex,
     'upgrade must inspect managed peer floors after the peer NCU pass',
   );
   assert.ok(
     syncDocsIndex > authorityGuardIndex && syncDocsIndex < installIndex,
-    'upgrade must synchronize package-manager prose after both NCU passes and before install',
+    'upgrade must synchronize package-manager prose after the NCU passes and before install',
   );
   assert.ok(
     upgradeScript.indexOf('node scripts/check-peer-compatibility.mjs --write-current-versions') > installIndex,
@@ -2696,6 +2693,13 @@ test('upgrade dependency-only mode installs and synchronizes peers without gener
       return { output: result.stdout, commands: readFileSync(commandLog, 'utf8') };
     };
     const dependencyOnly = run('0');
+    const dependencyPasses = dependencyOnly.commands.split('\n').filter((line) => line.includes('npm-check-updates@latest'));
+    const generalPass = dependencyPasses.find((line) => line.includes('--target latest') && line.includes('--dep prod,dev,optional,packageManager'));
+    const nodeTypesPass = dependencyPasses.find((line) => line.includes('--filter @types/node'));
+    assert.match(generalPass ?? '', /--reject @types\/node(?: |$)/u);
+    assert.match(nodeTypesPass ?? '', /--target minor(?: |$)/u);
+    assert.match(nodeTypesPass ?? '', /--dep prod,dev,optional(?: |$)/u);
+    assert.match(nodeTypesPass ?? '', /--workspaces --root/u);
     assert.match(dependencyOnly.commands, /pnpm install --no-prod --no-frozen-lockfile/u);
     assert.match(dependencyOnly.commands, /check-managed-peer-rewrites/u);
     assert.match(dependencyOnly.commands, /sync-package-manager-docs\.mjs --write/u);
