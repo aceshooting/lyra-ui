@@ -1,208 +1,25 @@
 # Changelog
 
-## 28.2.0
-
-### Minor Changes
-
-- 70ecffc: Add an optional perspective 3D view to `lr-graph` and `lr-knowledge-graph-explorer`, with explicit node coordinates, orbit and pan controls, keyboard navigation, and a visible paginated list fallback. The existing 2D view remains the default. Spatial and list views work without the optional 2D layout dependencies, and their controls are translated across all supported locales.
-
-  The spatial renderer and controls add about 8.3 KiB gzip to the standalone graph entry and 8.5 KiB to the explorer. Bundle ceilings increase only for the nine affected entries that exceed their previous limits, using their exact measured sizes with no added headroom; passing component, CSS and initial-route ceilings stay unchanged. The release version stamp adds nine gzip bytes to the complete bundle and one byte to the app-rail-item initial marginal route; only these two additional ceilings advance to their exact measured sizes, without added headroom.
-
-### Patch Changes
-
-- 21686f9: Reduce unused MapLibre exports retained by the lazy map loader while preserving constructor bindings, worker configuration, version access, and default-export compatibility. This is a small payload reduction; the peer's large renderer remains a separate optimization concern.
-- @aceshooting/lyra-translations@28.2.0
-
-## 28.1.6
-
-### Patch Changes
-
-- 91e0b33: Reduce work when updating explicit option labels in large select and combobox catalogs by preserving unchanged accessible-text observation. Content mutations, fallback labels, slot changes, and lifecycle transitions continue to refresh observation.
-- @aceshooting/lyra-translations@28.1.6
-
-## 28.1.5
-
-### Patch Changes
-
-- Preserve accessible names from nested tab labels when tabs first mount or are added later, including labeled tabs without an explicit panel. Keep hidden label content excluded, preserve focus during descriptor changes, and restore author-owned slots when descriptors leave the group. Deduplicate late-registration observation without retaining removed tabs. Make browser update completion wait for projected names and tab buttons so immediate programmatic selection works, including dynamic additions. Release pending completion on disconnect or adoption, and keep unrelated selection updates and unregistered descriptors nonblocking.
-
-  Advance only breached aggregate bundle ceilings to their exact measured sizes for the projection and lifecycle corrections, without added headroom. Passing ceilings and measurement settings remain unchanged.
-
-- Preserve browser-sweep diagnostic logs when interrupted by termination, interrupt, or hangup signals, while continuing to remove logs after successful runs.
-
-- 1910139: Prevent visually hidden content from creating blank document scroll areas outside nested scroll containers. Keep pagination's hidden page mirror within its navigation wrapper, and anchor shared hidden text, announcement sinks and hidden utilities without changing keyboard reveal or page announcements.
-
-  Refresh affected bundle-size canaries from the rebuilt outputs to account for the shared accessibility styles, retaining zero additional headroom and unchanged measurement settings.
-
-  Schedule upgrade-feed verification explicitly after successful publication and bind it to the verified release tag, so delayed registry metadata cannot make the previous version satisfy the new release's check.
-- @aceshooting/lyra-translations@28.1.5
-
-## 28.1.4
-
-### Patch Changes
-
-- The release version stamp changes gzip compression by one byte in the utility family and two bytes in the curated root. Only those two bundle ceilings advance to their exact measured sizes, without additional allowance; all other ceilings and measurement inputs remain unchanged.
-
-- edae457: Correct companion installation guidance: Lyra IDE and translations share the UI version, while Flags and Docs use independently versioned compatible releases.
-- edae457: Correct pseudo-locale manifest imports to point to their Lyra UI exports. Allow valid regional catalog imports within the translations package while continuing to reject imports that escape the package.
-- Updated dependencies [edae457]
-  - @aceshooting/lyra-translations@28.1.4
-
-## 28.1.3
-
-### Patch Changes
-
-- Preserve the original finite numeric values in heatmap and box-plot CSV exports. Default CSV numbers no longer pass through display rounding or locale-specific formatting; explicit box-plot export formatters, string formula-injection guards and no-data filtering remain in place.
-
-  Three aggregate bundle ceilings advance by only 2, 5 and 4 gzip bytes to the exact measured sizes required by the export correction. Other bundle limits remain unchanged.
-
-- 53edd10: Package the default syntax-highlighting engine's reviewed WebAssembly asset beside its lazy loader. Markdown and code components now build without an unresolved asset warning when the optional Shiki peer is absent. The asset is fetched only when default-engine highlighting is requested and Shiki is available; JavaScript-engine and plain-text rendering do not fetch it. Include the upstream licenses and artifact provenance with the binary.
-
-  The portable asset reference and optional-engine capability check add 20–75 gzip bytes to ten direct JavaScript entries, 41 bytes to the component percentile and 46 bytes to its maximum. After removing an unnecessary loader module, those twelve breached bundle canaries advance to their exact measured bytes, with no added headroom. The release version string alone also changes gzip compression by 1–2 bytes in five entries; their breached ceilings advance by only 1–2 bytes to the exact measurements. All other ceilings, CSS budgets and optional-peer exclusions remain unchanged.
-
-  Packed consumer measurements include the reviewed 466,610-byte binary in their complete emitted-file totals. The core and code-block checks retain their existing non-asset ceilings and gain only that exact required-asset allowance; they also verify the emitted binary against the packaged asset, rejecting missing, changed, duplicate or additional WASM files. This does not grant extra JavaScript headroom. The package download grows by approximately 162 kB and remains within its unchanged delivery limits.
-- @aceshooting/lyra-translations@28.1.3
-
-## 28.1.2
-
-### Patch Changes
-
-- The release version stamp changes compressed bundle measurements by 1–3 bytes. Two direct-entry and five initial-marginal ceilings advance to those exact measurements without added allowance; bundle inputs and all passing ceilings remain unchanged.
-
-- ea2a845: Avoid a redundant Chart.js update after accepted dataset legend actions in charts and box plots. Visibility still updates synchronously before the committed event; coalesced data changes, controlled resets, inherited context, accessible tables, and synchronization continue to reconcile normally.
-
-  Six aggregate bundle ceilings increase by 69–359 gzip bytes to their exact measured sizes, with no added headroom, for the peer and visibility checks that prevent duplicate updates. Individual-component and initial-route ceilings remain unchanged.
-- 4ceefc4: Keep slotted accessible names current when responsive panels and widgets move between connected documents, and restore inherited locale updates for responsive panels. Owner-realm subscriptions now finish teardown before overlay teardown, allowing the connected destination to bind its own observations.
-
-  The connection cleanup ordering adds 28–33 gzip bytes to five aggregate entry bundles and 3 bytes to the component percentile. Their reviewed ceilings advance to those exact measurements without extra allowance; other bundle ceilings and measurement options are unchanged.
-- 7a119cc: Keep textarea auto sizing, page allocation frames, and initial menu, popover, dropdown, and accordion ownership inactive while disconnected. Restore current content and geometry on reconnect, and ignore callbacks retired by reconnection or document adoption.
-
-  The lifecycle guards add 81 gzip bytes to the complete registration bundle and 30 bytes to the menu's initial route. Only breached bundle ceilings advance to their exact measured sizes, with no added allowance.
-- b3cc650: Keep heatmap PNG export empty while detached, including when a pending update flushes after removal, and repaint current data on reconnect. Defer graph simulation and force updates until reconnect, then rebind the current renderer and its interaction targets. Six aggregate bundle ceilings rise only to their measured gzip bytes for these lifecycle guards; component, CSS, and initial-route ceilings remain unchanged.
-- 829c00d: Keep image-viewer geometry observers, span-waterfall axis observers, and flow-canvas companion notifications inactive while detached, including pending updates that finish after removal. Restore current geometry and companion snapshots on reconnect, and ignore stale callbacks from a previous document or observation. Eight aggregate bundle ceilings increase only to the measured gzip bytes required by these lifecycle guards, without added headroom; passing component, CSS, and initial-route ceilings remain unchanged.
-- e607435: Avoid development warnings for the standard `form` owner attribute on form-associated custom elements.
-- bfd071f: Keep push-to-talk recording active when its optional audio-level analysis cannot initialize, including when level events are enabled during capture. Close partially initialized audio contexts without reporting a recorder failure or rejecting the component update; microphone capture and normal stop behavior remain available.
-
-  The optional-analysis guard adds 7–10 gzip bytes to five complete or conversation entry bundles. Their previously exact ceilings advance only to the reviewed measurements, with no extra allowance; passing ceilings and optional-peer exclusions remain unchanged.
-- e449f0b: Restore the tour backdrop and spotlight cutout by rendering their shapes in the SVG namespace. Keep the spotlight aligned when its target resizes, and fill the backdrop when the target is missing.
-
-  Reuse one scrim, formatted progress text and scoped geometry lookups to reduce repeated rendering work. The corrected SVG rendering requires three additional gzip bytes in the complete registration bundle and four in the tour initial marginal bundle after these reductions. Their reviewed ceilings advance to exactly 1,269,107 and 18,769 bytes, with no additional allowance; other budgets and measurement inputs are unchanged.
-- @aceshooting/lyra-translations@28.1.2
-
-## 28.1.1
-
-### Patch Changes
-
-- 992d6a2: Close entity-chip and citation-badge previews in the same update when their last assigned content is removed alongside a label change. Clear the preview description while preserving keyboard focus.
-- 07d9075: Add scoped command discovery, search excerpts, a document outline, bounded document checks, comments and qualified tracked-text review to the DOCX editor. Add table formatting, insertion into qualified styled paragraphs and table-cell boundaries, and byte-only image replacement that preserves picture geometry and descriptions. New reports use revision-scoped identifiers, and editing actions retain their original selection intent.
-
-  Reuse graph hull paths and bounded heatmap label measurements during painting, with invalidation when geometry or text settings change.
-
-  Keep command descriptions and shortcuts readable through command-palette highlight transitions.
-
-  The production gzip cost is 376 bytes for the data family, 105 bytes for retrieval and 1 byte for layout. Complete registration adds 512 bytes; the standard and CDN autoloaders add 464 and 477 bytes, and SSR registration adds 496 bytes. Only these seven breached bundle ceilings move to their exact measured sizes, without extra allowance, for bounded text/path reuse and highlighted text contrast. Other bundle canaries and optional-peer exclusions remain unchanged.
-- c529f00: Normalize a navigation item's initial open state when its panel is removed before the first render, without emitting a toggle for a panel that was never shown.
-
-  Preserve the inherited lifecycle API and focus repair ordering by normalizing after slot presence refresh. The five affected bundle ceilings record the measured correctness fix with no added allowance; the complete bundle grows by 40 gzip bytes.
-- 7a28693: Keep newer dialogs interactive when an underlying overlay's native dialog is closed externally, and restore the underlying overlay after the covering dialogs leave. Cancel deferred restoration when its owner closes or disconnects.
-
-  Allow an already-mounted overlay to become interactive above another modal without inheriting the lower overlay's temporary inert state. Preserve explicitly authored inert states and restore them when overlays close.
-- 7a28693: Keep combobox `selectedRows` aligned with programmatically bound values when a search filters selected options out of the suggestion list.
-- 6ea4454: Reduce temporary allocations when selecting a small number of values from a large option list.
-
-  The allocation guard adds 15 gzip bytes to the direct select entry, 22 to its initial marginal route, and 17 to the complete registration barrel. Only breached bundle ceilings advance to their exact reviewed measurements, with no added allowance. The release version stamp adds one byte to the menu and tour marginal routes and two bytes to entity-chip; those three ceilings also match their exact measured sizes.
-- b582d6d: Reduce repeated option catalog scans, project only needed combobox rows, and skip unnecessary adornment serialization. Preserve duplicate selection identities, current option metadata, and form behavior.
-
-  Reuse accessible chart table rows during caption, description, and keyboard announcement updates while retaining explicit refresh and data-dependent invalidation. Avoid sorting non-median data-grid aggregates, normalize search text once, and resolve filter collators only when needed.
-
-  Resolve checkbox selection occurrences and gauge thresholds in linear passes, and reuse the inherited locale during neighbor sorting.
-
-  Index selected choices and hidden graph types once per render or search pass, preserving first-match labels, selection order, and current interaction state.
-
-  Replace repeated membership searches during retrieval, form, file, feedback, and layout updates with bounded lookup indexes. Preserve duplicate identities, validation priority, focus recovery, and source order, and release stale retrieval indexes when their content disappears.
-
-  Normalize picker searches once per pass, find synchronized chart points without sorting, and avoid repeated toolbar ownership scans. Keep toggle matching and batched tree metadata updates linear while preserving empty and singleton fast paths.
-
-  Keep virtualized emoji options connected while they own focus or the active-descendant reference. Correct metric, commit-summary, PDF zoom, and required-button accessibility semantics while preserving localized text and descriptions.
-
-  Keep bundle ceilings tied to exact reviewed gzip measurements for the added lookup indexes, chart caches, retained focus rows, and accessible descriptions, without extra allowance. Preserve passing ceilings, peer exclusions, and CSS budgets.
-- @aceshooting/lyra-translations@28.1.1
-
-## 28.1.0
-
-### Minor Changes
-
-- be521ef: Add independent heatmap hover-ring styling while preserving keyboard focus feedback. Contain deferred fitted heatmap frames after their allocation shrinks, preserve chart data when a canvas context cannot initialize, and keep anchored overlays above sticky cells when composed through shadow roots. The Happy DOM setup helper now supplies missing shadow-root stylesheet collections and HTML direction hints.
-
-  Review bundled-size allowances for the added overlay ancestry tracking, canvas fallback, and heatmap containment. Only exceeded JavaScript and component aggregate limits advance to their measured sizes; existing passing limits, optional-peer exclusions, and CSS budgets remain unchanged.
-
-### Patch Changes
-
-- @aceshooting/lyra-translations@28.1.0
-
-## 28.0.0
+## 29.0.0
 
 ### Major Changes
 
-- bf50c85: Declare the shared design-token layer once per document (RFC 0002). The resolved `--lr-*` outputs are no longer re-declared on every component host: one document token layer declares them on `:root` and re-derives them only at theme scopes (`:root`, `.lr-light`/`.lr-dark`, `[data-lr-theme]`, the style-axis boundaries, the design-token fixture scopes, a look's scoped `.light`/`.dark` aliases, and the new `data-lr-theme-scope` marker). Mode reaches every scope through two inherited switches, so every engine now follows the nearest mode scope, with or without `theme.css`. Components keep only the host-local names (`--lr-icon-button-size`, `--lr-radius-button`, the logical safe-area aliases) and the forced-colours, increased-contrast and reduced-motion arms, so an application override still cannot defeat a preference inside a component. Server-rendered declarative shadow roots shrink by about 34 KB per element.
+- 919bd25: Load map and document editing features on demand while preserving their rendering capabilities.
 
-  New: `adoptLyraTokens(root)` (`utilities/tokens.js`, also from the package root), `findUnscopedThemeInputs(root?)` (`utilities/theme-scopes.js`), the `data-lr-theme-scope` attribute, and `lyra-ui-migrate --rule=theme-scopes`. `theme.css` now ends with that layer, so a page that imports `theme.css` has it from first paint and the runtime adopts no copy; on a page without `theme.css`, registering the first Lyra element adopts the same text as a constructed stylesheet. `tokens-root.css` is now the whole layer alone (byte-identical), for pages that do not use `theme.css` (link one of the two, not both); its stable public subset is listed in its header and gained `--lr-transition-interactive`, which the guide already promised. `theme.css` and the look mode aliases no longer declare the focus-ring composite; the layer owns those four names with the same values. Carrying the layer makes `theme.css` (and every composition that includes it) about 3 KB gzip larger. The runtime recognises a static copy anywhere in a stylesheet (a bundler that inlines `@import '…/theme.css'` mid-file), in a `<link>` or `<style>` whose media matches, and from a cross-origin `theme.css` it cannot read, so the page never applies two copies.
+  `lr-map` now defaults to the optional `@aceshooting/lyra-map` companion. Install the companion and configure `lyraMapWorkerPlugin()` from `@aceshooting/lyra-map/vite`, or provide an explicit worker URL. Applications retaining the full `maplibre-gl` engine must set `engine="maplibre"` before connecting the component and keep their existing worker configuration. Before imperative mutations on the modular engine, await `map.prepareFeatures()` with the required source and layer descriptors. Declarative map properties prepare their features automatically.
 
-  Migration:
+  The document editor now bundles its reviewed engine internally, so applications no longer need the `@docx-editor.dev/core` runtime peer. Import editor styles from `@aceshooting/lyra-docs/docx/editor.css`. Document editing commands now return promises: await `execute()` before reading the resulting revision or issuing a dependent command. Selection ownership remains held during feature loading, and commands from replaced or disconnected sessions cannot update the current editor.
 
-  - **A `--lr-theme-*` input set on an element that is not a theme scope** (a wrapper, a component's inline style, or an application component's own `:host` rule) no longer re-derives the components below it. Add `data-lr-theme-scope` to that element (use `data-lr-theme-scope=""` in JSX, where `false` is rendered as the string `"false"`, which still marks). Run `npx lyra-ui-migrate --rule=theme-scopes src` to mark inline styles in HTML, Lit and JSX templates and to list dynamic `setProperty()` inputs and stylesheet rules that need the marker. Inputs read on the host itself (chart, graph and terminal palettes, form-control heights and radius, icon-button size, button radius) keep working anywhere; `llms/tokens.md` lists them.
-  - **A `--lr-*` output set on an element** still applies there, but the outputs derived from it (`--lr-focus-ring` from `--lr-focus-ring-color`, `--lr-transition-interactive` from `--lr-transition-fast`, `--lr-color-brand` from `--lr-color-brand-fill-loud`) follow it only if the element is a theme scope; the migration rule marks inline ones. An output set on an ancestor now reaches every component below it until the next theme scope, instead of stopping at the first component.
-  - **Server-rendered pages** link `theme.css` (or, without it, `@aceshooting/lyra-ui/tokens-root.css`) for a correct first paint before hydration, and `tokens-root.css` inside an application's own declarative shadow roots that contain theme scopes.
-  - **Application shadow roots**: the layer is appended on demand where a Lyra element connects at or below a scope in that root, following the flat tree (a Lyra element slotted into your component counts as below the scopes around its slot, also when the component renders its slots right after connecting, as Lit does). The copy adopted into an application root is unlayered with zero-specificity (`:where()`) selectors, which keeps nested application roots as fast as before; your component's unlayered rules in that root still win over it, a rule inside a cascade layer of your own no longer does. Elements defined through `createScopedRegistry()` count as library components, as with `defineElement()`: their own shadow roots never receive the layer on demand. Call `adoptLyraTokens(root)` for scopes added afterwards, or for a root with scopes and no Lyra element yet. Append to `adoptedStyleSheets`, never replace it; a wholesale replacement removes the layer until the next Lyra element connects there.
-  - **Application elements that read `--lr-*` outputs** get resolved values wherever the layer applies: from first paint with `theme.css` or `tokens-root.css`, otherwise from the moment the first Lyra element is registered. On a page with no Lyra stylesheet, the adopted sheet's layer statement comes last, so declare Lyra's layer order first or keep application overrides of `--lr-*` outputs unlayered.
-  - **Mode without `theme.css`** now follows the nearest mode scope in every engine: an ancestor `.lr-dark` darkens components in Firefox and WebKit too, a `.lr-light` island inside it stays light, and `.lr-light` wins over an OS dark preference. Switching the root mode therefore restyles the page in those engines too, at about the cost the switch already had with `theme.css`.
-  - **Two copies of Lyra** on one page share an identical layer; when their layers differ, the later-adopted one wins and the development build warns.
-  - **Roles that follow brand in the default look** (Shadcn's neutral loud tier) now compile to the same follow switch as the explicit `data-lr-look="shadcn"` look and re-read the brand input on every boundary. Before, `theme.css` resolved them once at `:root`, so a brand input written on `:root` recoloured them inside every nested scope while brand itself kept the scope's value. On `:root` they still follow a brand input written there. The `data-lr-theme-scope` marker is not a boundary, so a brand input on a marked region leaves them at the nearest boundary's brand: for a brand region use `applyLyraStyleScope(el, { accent })` (which writes `data-lr-accent="custom"`) or set the neutral loud inputs there too.
-  - **Opaque content interiors** (`lr-card`, `lr-details`, `lr-accordion-item` bodies) restore the unqualified `--lr-color-border` and `--lr-color-border-strong` of the nearest theme scope for their slotted content, so a `--lr-color-border` output set on the component itself no longer reaches that content. Set `--lr-theme-color-surface-border` on a theme scope, or use the component's own hooks (for example `--lr-input-border-color`).
-  - **`utilities.css` and `native.css` typography** read the document layer like every other application element, so with the default Shadcn look they now use its values instead of their Lyra-look fallbacks (for example a `.lr-typography` `h5` or an `lr-prose` `h4` at the body size, `--lr-font-size-m`, and inline-code chips at `--lr-radius-xs`).
-  - **Chromium only:** the runtime also appends a one-rule sheet to `document.adoptedStyleSheets` that declares a private root property following every theme input. Re-theming the root (an accent or spacing input on `<html>`) with dark islands or other scopes on the page then costs about what it did in 27.0.0 instead of up to twice as much. Firefox and Safari do not receive it. When `theme.css` or `tokens-root.css` already provides the layer, the sheet goes in at the first change on `<html>` (an inline input, a mode attribute or class) instead of at the first connect, so a route that registers Lyra late on a large page does not restyle every element for it.
-  - **Known costs, accepted:** a page with thousands of marked rows that each carry different inline inputs pays more on its first style flush than 27.0.0 did (about +24 % at 3,000 rows in Chromium; each such row re-derives the shared outputs), and in Firefox a root spacing write on a page whose application hosts are marked scopes costs up to about 15 % more, because marked hosts now re-derive where 27's markers stopped inputs. In Safari, a spacing or font input written on `<html>` costs about 7 % more than in 27.0.0 on a page with dark islands (the same write without islands is about 35 % cheaper), because each element below an island compares the island's re-declared colour values before reaching the changed one. Per-family scopes, which would narrow these, are planned after 28.
-  - **Migrating from 27:** run `npx lyra-ui-migrate --rule=theme-scopes src` (the `--origin=lyra-v26` profile runs the same rule for projects coming from 26).
+  Table and data-grid collection setters now track caller identities weakly. Repeated bindings still preserve their owned snapshots, while original arrays and any rows excluded by the table's processing limit can be collected when no other owner retains them.
 
-### Minor Changes
+  Explicit option-label updates avoid unchanged option renders and state writes while preserving change notifications and accessible-label observation. Closed selects skip navigation scans when they have no active option or single-option shortcut. Sampled charts normalize only plotted values and reuse admitted semantic data while keeping full summaries and exports. Table filtering reuses per-query serialization bookkeeping without caching mutable row text across queries.
 
-- de6b148: Add an opt-in `auto-hide` ("peek") mode to `<lr-app-rail>`. The desktop rail rests as the icon-only strip, expands to the full rail as an overlay (the strip's footprint stays in the layout, so the content never reflows) while a moving non-touch pointer or keyboard focus is inside, and docks at full width only when the user pins it with the new `[part="pin-button"]`. Tune it with `peek-open-delay` and `peek-close-delay`; observe it through the read-only reflected `peeking` state and the new `lr-peek-change` event. Escape closes the peek. The pin writes `preferredMode`, so it persists through `storage-key` with `persist="preferred-mode"`. New `appRailPin`/`appRailUnpin` strings ship in every locale catalog. Without `auto-hide` the rail behaves exactly as before.
-- 39b4dd0: Add the public `--lr-theme-surface-glass-dark-share` theme input (a percentage, default `10%`) for how much of the theme surface dark Glass chrome keeps in its deepening anchor. Apps that lift their dark surface tokens to a softer grey can raise it, on `:root` or on a container, to get lighter glass without private overrides. The default paints identically. The input is not registered with `@property` (a registered inherited property slows every re-theme in Chromium), so a value that is not a percentage voids the dark fill; the development build warns about one set on `:root`. Raising it trades text contrast over bright backdrops, as documented in the styles and tokens guide.
-- 4eadd60: `<lr-emoji-picker>` now tells a missing `emoji-picker-element-data` peer apart from one that is installed but fails to load. A peer whose module cannot be resolved logs "is not installed" with the install command and shows the new localized `emojiPickerPeerMissing` message ("Emoji are not available.") without a Retry button. A peer that was found but could not be loaded or validated (a network or JSON/import-attribute error, an incompatible version, a module without the expected data array) logs that cause with the underlying error and keeps "Could not load emoji." with `load-retry`. Both cases still fail closed, announce the message once and emit `lr-load-error`. A missing peer is imported and warned about once per page, for every picker and locale, since it cannot appear later; a failed load is still retried. `emojiPickerPeerMissing` is translated in every shipped catalog; override it through `registerLyraLocale()` or `.strings`.
-- 5a25138: `@aceshooting/lyra-ui/testing`: `installHappyDomShims()` now also installs `installHappyDomCascadeLayerShim()`, and both it and `flattenCascadeLayers(css)` are exported. Happy DOM 20 drops every rule inside an `@layer` block, so the probe properties Lyra's stylesheets declare in cascade layers never resolved: under a Vitest + Happy DOM suite `theme.css` looked absent, `setLyraStyle()` warned that a stylesheet was missing, and it took its no-stylesheet fallback. The shim unwraps layer blocks in the text `CSSStyleSheet.replaceSync()`/`replace()` parse (the path used by `<style>`, linked and constructed sheets), so the probes resolve as in a browser. Layer precedence is not modelled. The shim detects the defect, so it is a no-op in every browser, and it returns a function that restores the original methods. Install it in the same `setupFiles` entry, before any stylesheet is parsed.
-- 458b832: `<lr-icon-button>` documents `--lr-icon-button-padding-inline` (default `0`), the logical inline padding of its native control. A trigger that shows a short text value such as `€ EUR` no longer needs a `::part(button)` rule for breathing room. The default keeps an icon-only button at exactly its `--lr-icon-button-size` hit-area floor, which still applies with padding set.
-- bcd2daa: `@aceshooting/lyra-ui/testing` exports `installJsdomShims()`, `installJsdomAdoptedStyleSheetsShim()` and `installJsdomFormAssociatedShim()` for jsdom suites. jsdom has no `adoptedStyleSheets`, so Lit rendered one `<style>` per component shadow root; jsdom registers each of those sheets on the document, so every `getComputedStyle()` call matched against all of them (one consumer measured about 118 ms per call and 70–115 s per test with about 357 sheets). The shim adds an inert `adoptedStyleSheets` to `Document` and `ShadowRoot` so Lit adopts constructed stylesheets instead; adopted sheets are stored but never applied. It installs only under jsdom while `adoptedStyleSheets` is missing, is a no-op in browsers and Happy DOM, and returns a function that removes it. Call it in a `setupFiles` entry before anything imports Lit. `installJsdomFormAssociatedShim()` (also installed by `installJsdomShims()`) completes jsdom's `ElementInternals`, which lacks form association: without it every Lyra form control (`lr-button`, `lr-input`, `lr-checkbox`, …) throws in its constructor under jsdom. It adds inert `setFormValue()`, a `setValidity()` that `validity`, `validationMessage`, `checkValidity()` and `reportValidity()` reflect, `willValidate`, `form` and `states`, only where missing. A jsdom 30 smoke run of the built package now renders buttons, cards, badges, checkboxes and inputs with the shims.
-- 0a55cfb: `<lr-pagination format="compact">` no longer renders the page input touching its "/ N" page count: `[part="page-field"]` now has a small default gap (`var(--lr-space-2xs)`), themeable through the new `--lr-pagination-page-field-gap`, alongside `--lr-pagination-controls-gap` and `--lr-pagination-pages-gap`.
-- b6636b8: `<lr-segmented>`'s checked segment is distinguishable on its own in every look and mode. It was a surface-coloured pill with a hairline shadow, about 1:1 against a surface-coloured card or dialog (WCAG 1.4.11). The defaults are now `--lr-segmented-selected-bg: var(--lr-color-text)` and `--lr-segmented-selected-color: var(--lr-color-surface)`, an inverted pill at 13:1 or more against its container. Consumers that override `--lr-segmented-selected-bg` should also set `--lr-segmented-selected-color` to a label that contrasts with their fill; overrides keep winning.
-- 0845756: `@aceshooting/lyra-ui/theme.js` exports `startLyraStyle()`, a storage-free runtime initializer for pages that inline only `lyraThemeBootstrap` and load the style runtime later. It adopts the saved style (or the defaults) on the document root and, while the mode is `system`, attaches the live `prefers-color-scheme` listener. It never calls `localStorage.setItem()`/`removeItem()`, does not migrate a v1 record, emits no `lr-style-change` of its own, and is idempotent. The previous workaround, `setLyraStyle({})`, persisted the record as a side effect.
-- 0fea4be: `<lr-table>` forwards its built-in pager's options: `pagination-with-summary` (`paginationWithSummary`) shows the item-range summary at the inline start of the footer with the controls at the inline end, and `pagination-format` (`paginationFormat`, `'compact'` by default, or `'standard'`) selects the pager format. The nested pager's parts are exported with a `pagination-` prefix (`pagination-summary`, `pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`, `pagination-page-field`, `pagination-page-input`, `pagination-page-count`, `pagination-button`), so they can be styled without reaching into `::part(pagination)`.
-- c5ea949: `@aceshooting/lyra-ui/testing` adds four interaction drivers: `chooseSwatch(picker, value)` for `<lr-swatch-picker>`, `chooseCurrency(picker, code)` for `<lr-currency-picker>` (including a `searchable` picker's lazily loaded combobox), and `openPopover(popover, options?)`/`closePopover(popover, options?)` for `<lr-popover>`. They act through the components' own pointer and keyboard paths (a swatch or option click, a trigger click, Escape or `{ via: 'trigger' }`), resolve after the component's own events (`lr-change`/`lr-activate`, the picker's `input`/`lr-input`/`change`/`lr-change`, `lr-after-show`/`lr-after-hide`), and throw instead of silently doing nothing when the interaction is refused (disabled, unknown value, vetoed lifecycle, manual trigger). Like the existing drivers they use plain DOM operations, with no test-runner-only helper.
+  Scroll-driven popup positioning now runs in the owning window's animation frame and cancels obsolete placements and queued work. Initial and resize positioning remain immediate. This prevents tooltip and arrow layout writes during Firefox scroll dispatch.
+
+  Bundle limits account for the added map-engine selection and feature-loading adapter, frame-scheduled popup positioning, accessible-label updates, weak collection identity tracking, and chart/table preprocessing changes. Only the 28 breached JavaScript entry, component aggregate, and initial-route ceilings advance to their exact measured gzip sizes, with no added headroom. The increases range from 1 to 1,458 bytes; passing ceilings, CSS budgets, shell imports, optional-peer exclusions, and measurement settings remain unchanged.
 
 ### Patch Changes
 
-- 3160025: Components that derive an accessible name from slotted content read computed style about half as often while they observe it. Each rebind now reuses the composed-ancestor readings its own text walk already took for the ancestor visibility baselines, instead of a second `getComputedStyle()` pass over every ancestor, and a mutation batch reads each element once however many records it carries. Behaviour is unchanged.
-- 9767b43: Bundle budgets: the v28 document token layer, the emoji peer diagnostics, the forwarded table pager options and the shared accessible-text readings raise every breached JavaScript ceiling to exactly its measured gzip size (for example `dist/all.js` 1,259,466 B, `dist/lyra.js` 134,821 B, the component p95 128,585 B and maximum 255,947 B), with no headroom. `theme.css` and its compositions now carry the token layer (`css/theme` 13,508 B measured, after writing each mode pair around only the tokens that differ); their CSS ceilings follow the CSS budget file's mandatory derivation from the reviewed bytes.
-
-  The surface-derived dark Glass anchor adds at most 26 gzip bytes to any bundle that carries the Glass fill; the affected ceilings follow to their measured bytes, again with no headroom.
-
-  The configurable dark Glass share and the table and virtual-list overlay raise rule add a few gzip bytes to the bundles that carry them; their failing ceilings move to the exact measured bytes, again with no headroom.
-- 3e9e251: Docs: the native chrome guide now explains that an unlayered application `background` rule on an `.lr-surface-chrome` element beats Lyra's layered Glass fill, and shows where application fallback fills belong: a low-priority layer declared before Lyra's (`@layer app-base, lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;`) or the `--lr-surface-background` token.
-- b6636b8: Dark Glass chrome now follows the theme's surface ramp. Below 70% opacity the fill is deepened toward a darkened `--lr-color-surface` (10% of the surface, the rest black) instead of pure black, so a consumer who lifts the dark surface tokens (for example a neutral grey `--lr-theme-color-surface-default`, `-raised` and `-overlay`) gets chrome that follows them rather than staying pure-black-anchored. The share is small because stock palettes are qualified for 4.5:1 text over a white backdrop at 60% opacity; set `--lr-theme-surface-opacity` to 0.7 or higher to paint the palette's own overlay colour. Stock palettes move by at most about 3 levels per channel.
-- c4a8e96: `<lr-image-viewer>` region highlights now paint exactly the percentage rectangle they describe. A region smaller than `--lr-icon-button-size` no longer grows down and right past its data and over its neighbours at any fit, zoom or rotation. The minimum pointer target is now a transparent `::after` centred on the highlight, painted beneath every highlight box, so a region's own box always wins over a neighbour's enlarged area and overlapping enlarged areas resolve to the later highlight in document order. Keyboard navigation is unchanged.
-- 081312e: `lr-table`: an anchored overlay (`lr-dropdown`, `lr-popover`, `lr-select`, `lr-combobox`) inside a `sticky` column cell, such as a per-row actions menu, is no longer covered by the next row's sticky cell. The cell holding an open overlay is raised to the popover layer and a cell with focus inside is raised one step above content, so the open panel stays visible and its items stay clickable over the following rows. `lr-virtual-list` shares the same raise rule and now also covers an open `lr-popover`, `lr-select` or `lr-combobox` in a row. The sticky docs describe how overlays behave in sticky cells and when `top-layer` is still the right opt-in.
-- bbcd486: Avoid allocating a deferred Chromium root observer when the token layer and its root key are adopted immediately. Documents without a static token stylesheet no longer retain an unnecessary observer; documents with an existing stylesheet still defer the key until the root changes.
-
-  The final 28.0.0 version stamp changes compressed split-chunk routes: CDN autoloader 13,116 bytes, autoloader 12,935 bytes, scoped-registry loader 11,295 bytes, and tool-call-chip initial marginal 7,620 bytes. Their tight ceilings advance by 1 to 3 bytes to those exact measurements, with no added headroom; shell imports, peer exclusions, and passing ceilings are unchanged.
-- 8147014: Preserve Date, Map, and Set values when owned collections cross another property or event boundary, and keep synchronous file-tree child updates from overwriting one another. Honor inherited and non-enumerable Intl formatting options.
-
-  Correct rubric validation for prototype-named keys, duplicate category choices, and extreme finite score ranges. Cancel pending color eyedropper results when values, form state, or interaction availability change.
-
-  Release failed or superseded PDF loading tasks, bound page-rail thumbnail bookkeeping to mounted rows, and cancel or reuse QR logo loads. Refresh chart colors when their CSS variables change, bound color caches, and reduce chart synchronization and virtual-grid preprocessing. Refresh offscreen grid measurements after caller-owned row edits. Restore image highlight hover transitions while keeping region geometry updates immediate.
-
-  Split default English strings into physical family/shared modules and specialist tokens into a separate payload for smaller native ESM downloads. Exclude unused tooling token records from the published package.
-
-  Review the resulting JavaScript delivery costs: Intl option capture, repeated collection snapshots, cancellable QR/PDF resources, and bounded chart/viewer bookkeeping increase some direct and initial-route bundles. Advance only breached ceilings to the next 64-byte boundary (at most 63 bytes of allowance), preserving passing canaries, peer exclusions, the representative shell, and all CSS ceilings. Including the zoom-aware image highlight limits, the complete registration bundle measures 1,265,430 gzip bytes; its ceiling is 1,265,472 bytes.
-- 95f07d1: Keep thin image highlights within their declared regions when zoomed in or out, including in WebKit. Share zoom normalization with the pan-zoom frame and calculate border limits from the measured image size without requiring newer CSS features.
-- @aceshooting/lyra-translations@28.0.0
+- @aceshooting/lyra-translations@29.0.0
 
 Older major versions: [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).
