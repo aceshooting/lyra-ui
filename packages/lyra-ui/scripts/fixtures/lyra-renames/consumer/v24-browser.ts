@@ -1,11 +1,8 @@
 /// <reference types="vite/client" />
 import '@aceshooting/lyra-ui/hydration.js';
-import { setWorkerUrl } from 'maplibre-gl';
-import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { getLyraStyle, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
 import { LyraGeoJsonViewer } from '@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-viewer.class.js';
 
-setWorkerUrl(workerUrl);
 const restoredV1 = getLyraStyle();
 if (restoredV1.mode !== 'system' || restoredV1.accentName !== null || restoredV1.accent !== 'aquamarine' || restoredV1.accentBackground !== 'aquamarine') {
   throw new Error('The saved v1 style preference lost its CSS color or automatic mode');

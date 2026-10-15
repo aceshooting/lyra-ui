@@ -21,6 +21,34 @@ const bundleBudgets = JSON.parse(
   ),
 );
 
+test('the migrated consumer configures its modular worker without changing native map or core builds', async () => {
+  const start = checkerSource.indexOf("  await writeFile(\n    join(fixtureDir, 'vite.config.mjs'),");
+  const end = checkerSource.indexOf('\n\n  const bundleSources =', start);
+  assert.ok(start >= 0 && end > start);
+  let config;
+  await new Function('writeFile', 'join', 'fixtureDir', 'optionalPeers',
+    `return (async () => { ${checkerSource.slice(start, end)} })();`
+  )(async (_path, source) => { config = source; }, join, '/fixture', []);
+  const moduleUrl = source => `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
+  config = config
+    .replace("from 'vite'", `from '${moduleUrl('export const defineConfig = value => value;')}'`)
+    .replace("import('@aceshooting/lyra-map/vite')",
+      `import('${moduleUrl("export const lyraMapWorkerPlugin = () => ({ name: 'modular-worker' });")}')`);
+  const previous = process.env.LYRA_BUNDLE_ENTRY;
+  try {
+    for (const entry of ['migratedX', 'map', 'core']) {
+      process.env.LYRA_BUNDLE_ENTRY = entry;
+      const { default: result } = await import(moduleUrl(`${config}\n// ${entry}`));
+      assert.deepEqual(result.plugins.map(plugin => plugin.name),
+        entry === 'migratedX' ? ['modular-worker', 'packed-consumer-graph'] : ['packed-consumer-graph']);
+      if (entry === 'map') assert.deepEqual(result.build.rollupOptions.external, ['@aceshooting/lyra-map']);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.LYRA_BUNDLE_ENTRY;
+    else process.env.LYRA_BUNDLE_ENTRY = previous;
+  }
+});
+
 test('caps the full core graph with an exact binary allowance and unchanged non-asset headroom', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
   assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable measured budget');

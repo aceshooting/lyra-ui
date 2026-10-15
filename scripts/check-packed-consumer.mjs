@@ -1068,9 +1068,13 @@ const optionalPeers = ${JSON.stringify(optionalPeers)};
 const noOptionalPeers = process.env.LYRA_NO_OPTIONAL_PEERS === '1';
 const entry = process.env.LYRA_BUNDLE_ENTRY;
 const hasStaticFallback = entry.startsWith('firstInteraction');
+const mapPlugins = entry === 'migratedX'
+  ? [(await import('@aceshooting/lyra-map/vite')).lyraMapWorkerPlugin()]
+  : [];
 
 export default defineConfig({
   plugins: [
+    ...mapPlugins,
     {
       // Write diagnostics beside (not inside) the measured output. Module edges distinguish an
       // allowed lazy peer import from an eager one; emitted chunk modules independently catch a
