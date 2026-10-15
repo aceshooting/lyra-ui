@@ -401,6 +401,9 @@ export async function openEigenpalDocument(
               surface.flushPendingInput();
               clearNativeSettlement();
               const settled = valid(); if (!settled.ok) return settled;
+              await module.prepareFeatures(['drawings']);
+              const ready = valid(); if (!ready.ok) return ready;
+              if (request.signal.aborted) return { ok: false, code: 'aborted' };
               const decodePort = surface.imageDecodePort();
               const decoding = valid(); if (!decoding.ok) return decoding;
               const candidate = await preflightImageInsertion(pkg, target, source, dependencies, decodePort, valid, request.signal);
@@ -490,6 +493,9 @@ export async function openEigenpalDocument(
               if (request.signal.aborted) return { ok: false, code: 'aborted' };
               surface.flushPendingInput(); clearNativeSettlement();
               const settled = valid(); if (!settled.ok) return settled;
+              await module.prepareFeatures(['drawings']);
+              const ready = valid(); if (!ready.ok) return ready;
+              if (request.signal.aborted) return { ok: false, code: 'aborted' };
               const decodePort = surface.imageDecodePort();
               const decoding = valid(); if (!decoding.ok) return decoding;
               const candidate = await preflightImageReplacement(pkg, { drawingId: intent.id, paragraphId: intent.paragraphId },
@@ -573,7 +579,7 @@ export async function openEigenpalDocument(
         }
         return review?.can(action, token) ?? { enabled: false, reason: 'unsupported' };
       },
-      executeReview(action, target, retainedSelection, validateSettled) {
+      async executeReview(action, target, retainedSelection, validateSettled) {
         const normalized = normalizeDocxReviewAction(action);
         if (!normalized.ok) return normalized;
         action = normalized.value;
@@ -614,6 +620,9 @@ export async function openEigenpalDocument(
             if (state.cellSelection || state.selection.anchor.paragraphId === state.selection.head.paragraphId &&
               state.selection.anchor.offset === state.selection.head.offset) return { ok: false, code: 'no-selection' };
           }
+          await module.prepareFeatures(['comments']);
+          const prepared = validate();
+          if (!prepared.ok) return prepared;
           const capability = review.can(action, target);
           const after = validate();
           if (!after.ok) return after;
@@ -646,7 +655,7 @@ export async function openEigenpalDocument(
         if (isDocxTableAction(command)) return tableAvailability(current(), command, inspected?.table ?? null);
         return nativeSettling ? { enabled: false, reason: 'busy' } : editing.can(command);
       },
-      execute(command, token, validateSettled) {
+      async execute(command, token, validateSettled) {
         const normalized = normalizeDocxAction(command);
         if (!normalized.ok) return normalized;
         command = normalized.value;
@@ -693,6 +702,9 @@ export async function openEigenpalDocument(
             refreshState();
             const settled = validate();
             if (!settled.ok) return settled;
+            await module.prepareFeatures(['drawings']);
+            const prepared = validate();
+            if (!prepared.ok) return prepared;
             const qualified = qualifyImageCommand(active, intent, command);
             if (!qualified.ok) return qualified;
             const before = validate();
@@ -736,6 +748,9 @@ export async function openEigenpalDocument(
             const before = validate();
             if (!before.ok) return before;
             if (qualified.value.unchanged) return { ok: true, value: undefined };
+            await module.prepareFeatures(['tables']);
+            const prepared = validate();
+            if (!prepared.ok) return prepared;
             let result;
             if (qualified.value.command) {
               const capable = active.can(qualified.value.command);
@@ -750,13 +765,39 @@ export async function openEigenpalDocument(
             return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
           } finally { suppressSelection--; executingGuarded = false; }
         }
+        const ready = editReadiness();
+        if (!ready.ok) return ready;
+        if (!validateSettled) return { ok: false, code: 'unsupported' };
         if (token && !pins.has(token)) return { ok: false, code: 'stale-selection' };
+        const active = current(), surface = active.surface, epoch = selectionEpoch;
+        if (!surface) return { ok: false, code: 'unsupported' };
+        const session = surface.session, generation = active.mountGeneration, revision = session.packageRevision();
+        const pkg = session.currentPackage();
+        const validate = (): DocxResult<void> => {
+          const facade = guardedSettlement();
+          if (!facade.ok) return facade;
+          if (editor !== active || active.surface !== surface || surface.session !== session ||
+              active.mountGeneration !== generation || session.packageRevision() !== revision || session.currentPackage() !== pkg)
+            return { ok: false, code: 'stale-revision' };
+          if (epoch !== selectionEpoch || token && !pins.has(token)) return { ok: false, code: 'stale-selection' };
+          return { ok: true, value: undefined };
+        };
+        executingGuarded = true;
         suppressSelection++;
         try {
-          const result = current().exec(eigenpalCommand(command));
+          surface.flushPendingInput();
+          clearNativeSettlement();
           refreshState();
+          const settled = validate();
+          if (!settled.ok) return settled;
+          const preparedCommand = eigenpalCommand(command);
+          await module.prepareCommandFeatures(preparedCommand);
+          const prepared = validate();
+          if (!prepared.ok) return prepared;
+          const result = active.exec(preparedCommand);
+          if (!destroyed) refreshState();
           return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
-        } finally { suppressSelection--; }
+        } finally { suppressSelection--; executingGuarded = false; }
       },
       selectImage(direction) {
         if (direction !== 'next' && direction !== 'previous') return { ok: false, code: 'invalid-option' };

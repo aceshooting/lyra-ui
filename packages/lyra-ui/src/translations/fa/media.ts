@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'مکث',
   qrCodeMissingLibrary: 'برای نمایش کدهای QR، باید بستهٔ اختیاری «qrcode» را نصب کنید.',
   qrCodeGenerationFailed: 'این مقدار را نمی‌توان به‌صورت کد QR رمزگذاری کرد.',
-  mapMissingLibrary: 'برای نمایش نقشه، باید بستهٔ اختیاری «maplibre-gl» را نصب کنید.',
+  mapMissingLibrary: 'برای نمایش نقشه، باید بستهٔ اختیاری «{package}» را نصب کنید.',
   mapStyleRequired: 'برای نمایش نقشه، یک سبک نقشه ارائه کنید.',
   mapWebglUnavailable: 'این مرورگر نمی‌تواند پشتیبانی گرافیکی لازم برای نمایش نقشه را فراهم کند.',
   mapInitializationFailed: 'نقشه راه‌اندازی نشد.',

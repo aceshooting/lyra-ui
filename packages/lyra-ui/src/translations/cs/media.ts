@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Pozastavit',
   qrCodeMissingLibrary: 'Tato komponenta vyžaduje k vykreslení QR kódů nainstalovaný volitelný balíček „qrcode“.',
   qrCodeGenerationFailed: 'Tuto hodnotu nelze zakódovat jako QR kód.',
-  mapMissingLibrary: 'Tato komponenta vyžaduje k vykreslení mapy nainstalovaný volitelný balíček „maplibre-gl“.',
+  mapMissingLibrary: 'Tato komponenta vyžaduje k vykreslení mapy nainstalovaný volitelný balíček „{package}“.',
   mapStyleRequired: 'Pro vykreslení mapy zadejte styl mapy.',
   mapWebglUnavailable: 'Tento prohlížeč neposkytuje grafickou podporu potřebnou k vykreslení mapy.',
   mapInitializationFailed: 'Mapu se nepodařilo inicializovat.',

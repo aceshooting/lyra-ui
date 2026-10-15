@@ -12,6 +12,41 @@ import '../../../translations/tr/shared.js';
 import { installTableTestHooks, TableOpaqueControlElement, type Row, columns, rows, forcedWidthHeaderCell, hostileIterable } from '../../../../test/table.js';
 installTableTestHooks();
 
+it('keeps source and snapshot rebinds inert while accepting replaced sources and invalid primitives', async () => {
+  const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Rows" .columns=${columns}></lr-table>`);
+  const source = rows.slice(0, 1);
+  element.rows = source;
+  await element.updateComplete;
+  const snapshot = element.rows;
+  source.push(rows[1]!);
+  element.rows = source;
+  element.rows = snapshot;
+  element.rows = source;
+  expect(element.rows === snapshot).to.equal(true);
+  expect(element.rows.length).to.equal(1);
+  element.rows = source.slice();
+  expect(element.rows === snapshot).to.equal(false);
+  expect(element.rows.length).to.equal(2);
+  const replacement = element.rows;
+  element.rows = source;
+  expect(element.rows === replacement).to.equal(false);
+  const { proxy, revoke } = Proxy.revocable(source, {});
+  element.rows = proxy;
+  const proxySnapshot = element.rows;
+  revoke();
+  element.rows = proxy;
+  expect(element.rows === proxySnapshot).to.equal(true);
+  for (const value of [undefined, null, false, 'invalid']) {
+    Reflect.set(element, 'rows', value);
+    const empty = element.rows;
+    Reflect.set(element, 'rows', value);
+    expect(element.rows === empty).to.equal(true);
+    expect(element.rows.length).to.equal(0);
+    expect(element.rowsTruncated).to.equal(false);
+  }
+  await element.updateComplete;
+});
+
 
 
 

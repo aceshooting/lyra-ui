@@ -2698,7 +2698,9 @@ export class LyraSelect<
 
   override render(): TemplateResult {
     const options = this.listboxOptions;
-    const navigable = this.navigableOptions(options);
+    const navigable = this.open || this.autoCommitSingleOption || this.activeIndex >= 0
+      ? this.navigableOptions(options)
+      : [];
     const active =
       this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;
     const activeId = active

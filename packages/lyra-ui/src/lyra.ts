@@ -605,6 +605,8 @@ export type {
   LyraMapMarkerActivationSource,
   LyraMapStyleSpecification,
   LyraMapInstance,
+  LyraMapEngine,
+  LyraMapFeatureRequirements,
 } from './components/media/map/map.class.js';
 export {
   DEFAULT_MAX_FILE_SIZE_BYTES,

@@ -380,3 +380,21 @@ test('a supplied tarball must be this checkout\'s package before any check uses 
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('map companion tarballs preserve identity and contain their runtime without workspace protocols', async () => {
+  const { validatePackedMapManifest } = await import('./packed-map-consumer.mjs');
+  const manifest = { name: '@aceshooting/lyra-map', version: '1.0.0' };
+  assert.doesNotThrow(() => validatePackedMapManifest(manifest));
+  assert.throws(() => validatePackedMapManifest({ ...manifest, name: '@example/other' }), /@aceshooting/u);
+  for (const section of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
+    assert.throws(() => validatePackedMapManifest({ ...manifest, [section]: { example: 'workspace:*' } }), /workspace:/u);
+  }
+  assert.throws(() => validatePackedMapManifest({ ...manifest, dependencies: { 'maplibre-gl': '^6.0.0' } }), /own its runtime/u);
+});
+
+test('map companion uses verified supplied tarballs and keeps native map fixtures distinct', () => {
+  assert.match(checkerSource, /suppliedPackedTarball\(PACKED_TARBALL_ENVIRONMENT\.map/u);
+  assert.match(checkerSource, /verifyPackedMapConsumer\(\{ workspace, mapTarball, run, pnpm, root \}\)/u);
+  assert.match(checkerSource, /external: entry === 'map'\s*\? \['@aceshooting\/lyra-map'\]/u);
+  assert.match(checkerSource, /MapLibre v5 consumer declaration check/u);
+});

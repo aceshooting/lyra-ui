@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Misa isikhashana',
   qrCodeMissingLibrary: 'Le ngxenye idinga ukuthi kufakwe iphakheji ongayikhetha ethi "qrcode" ukuze ibonise amakhodi e-QR.',
   qrCodeGenerationFailed: 'Leli nani alikwazanga ukubhalwa njengekhodi ye-QR.',
-  mapMissingLibrary: 'Le ngxenye idinga ukuthi kufakwe iphakheji ongayikhetha ethi "maplibre-gl" ukuze ibonise imephu.',
+  mapMissingLibrary: 'Le ngxenye idinga ukuthi kufakwe iphakheji ongayikhetha ethi "{package}" ukuze ibonise imephu.',
   mapStyleRequired: 'Nikeza isitayela semephu ukuze uyibonise.',
   mapWebglUnavailable: 'Lesi siphequluli asikwazi ukusebenzisa izithombe ezidingekayo ukuze sibonise imephu.',
   mapInitializationFailed: 'Imephu ayikwazanga ukuqalwa.',

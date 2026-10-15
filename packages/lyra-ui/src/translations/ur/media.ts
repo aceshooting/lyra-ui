@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'روکیں',
   qrCodeMissingLibrary: 'QR کوڈ دکھانے کے لیے اس جزو کو اختیاری "qrcode" پیکیج درکار ہے۔',
   qrCodeGenerationFailed: 'اس قدر کو QR کوڈ میں تبدیل نہیں کیا جا سکا۔',
-  mapMissingLibrary: 'نقشہ دکھانے کے لیے اس جزو کو اختیاری "maplibre-gl" پیکیج درکار ہے۔',
+  mapMissingLibrary: 'نقشہ دکھانے کے لیے اس جزو کو اختیاری "{package}" پیکیج درکار ہے۔',
   mapStyleRequired: 'نقشہ دکھانے کے لیے نقشے کا انداز فراہم کریں۔',
   mapWebglUnavailable: 'یہ براؤزر نقشہ دکھانے کے لیے مطلوبہ گرافکس سہولت فراہم نہیں کر سکتا۔',
   mapInitializationFailed: 'نقشہ شروع نہیں ہو سکا۔',

@@ -19,7 +19,7 @@ import './tailwind.css';
 // explicit compatibility entry that performs registrations.
 import '../packages/lyra-ui/src/all.js';
 // The families above intentionally exclude components with an optional peer
-// dependency (chart.js, maplibre-gl, d3-*) so consumers who import the root
+// dependency (chart.js, @aceshooting/lyra-map, d3-*) so consumers who import the root
 // barrel never pull in those peers unconditionally. Storybook, unlike a real
 // consumer, always has every peer installed and needs every component's
 // story to render — so register these directly here instead.
@@ -36,9 +36,8 @@ import '../packages/lyra-ui/src/components/charts/chart/box-plot.js';
 import '../packages/lyra-ui/src/components/charts/chart/histogram.js';
 import '../packages/lyra-ui/src/components/media/map/map.js';
 import '../packages/lyra-ui/src/components/retrieval/graph/graph.js';
-// <lr-map>'s optional peer `maplibre-gl` ships its own CSS as a side-effect import — same
-// requirement as the old docs/ playground had.
-import 'maplibre-gl/dist/maplibre-gl.css';
+// Companion styles cover map-generated light DOM in documentation examples.
+import '@aceshooting/lyra-map/map.css';
 // Drives the autodocs prop/event/slot tables — regenerate via `pnpm --filter
 // @aceshooting/lyra-ui run manifest` whenever a component's public API changes.
 import customElements from '../packages/lyra-ui/custom-elements.json';

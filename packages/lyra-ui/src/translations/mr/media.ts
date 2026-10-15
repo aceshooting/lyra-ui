@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'थांबवा',
   qrCodeMissingLibrary: 'QR कोड दाखवण्यासाठी या घटकाला पर्यायी "qrcode" पॅकेज स्थापित करणे आवश्यक आहे.',
   qrCodeGenerationFailed: 'हे मूल्य QR कोड म्हणून एन्कोड करता आले नाही.',
-  mapMissingLibrary: 'नकाशा दाखवण्यासाठी या घटकाला पर्यायी "maplibre-gl" पॅकेज स्थापित करणे आवश्यक आहे.',
+  mapMissingLibrary: 'नकाशा दाखवण्यासाठी या घटकाला पर्यायी "{package}" पॅकेज स्थापित करणे आवश्यक आहे.',
   mapStyleRequired: 'नकाशा दाखवण्यासाठी नकाशाची शैली द्या.',
   mapWebglUnavailable: 'या ब्राउझरमध्ये नकाशा दाखवण्यासाठी आवश्यक ग्राफिक्स सुविधा उपलब्ध नाही.',
   mapInitializationFailed: 'नकाशा सुरू करता आला नाही.',

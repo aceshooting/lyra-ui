@@ -4,7 +4,7 @@ Status: public experimental editor package with broader qualification in progres
 is shipped in `@aceshooting/lyra-ui`. All existing file viewers, including the lightweight,
 read-only `lr-docx-viewer`, stay in `@aceshooting/lyra-ui`. Editing belongs in the optional
 `@aceshooting/lyra-docs` companion. The current component is `<lr-docx-editor>` and the exact
-optional runtime engine peer is `@docx-editor.dev/core@2.30.0`; neither choice establishes general DOCX
+internal runtime engine derives from `@docx-editor.dev/core@2.30.0`; neither choice establishes general DOCX
 support or completes a roadmap phase.
 
 The [implementation and qualification record](document-editing-feasibility.md) records verified
@@ -39,13 +39,16 @@ The companion reuses Lyra's public controls, tokens, localization and accessibil
 Its first release exposes the bounded experimental editor described in the package README;
 broader format fidelity and interoperability qualification remain open.
 
-Use the public framework-independent core behind original Lyra controls, without importing its
-React/Vue application or complete feature set. The runtime peer is
-`@docx-editor.dev/core@2.30.0`, dynamically loaded when a document opens. The
-[public core implementation](https://github.com/eigenpal/docx-editor/tree/42c6c267) is reference
-material; the runtime is the published package at the exact peer version. Lyra owns the
-public component, Lit interface, supported commands, lifecycle, accessibility, theming and
-integration contract.
+The companion builds the Apache-2.0 framework-independent core from a pinned source
+archive, without importing its React/Vue application. The derivative of
+`@docx-editor.dev/core@2.30.0` is included in the package and loaded when a document
+opens. Reviewed semantic feature boundaries defer table, note, drawing, control,
+comment, TOC and rich-paste implementations until needed. Exact source, dependency,
+patch and generated-input inventories bind the maintainer build; consumers do not
+fetch source or install an engine peer. Lyra owns the public component, Lit interface,
+supported commands, lifecycle, accessibility, theming and integration contract.
+Commands await required modules and revalidate document and selection ownership
+before their synchronous transaction.
 Copying isolated parser/layout files is not automatically a smaller solution: those modules share
 document identity, styles, resources, transactions and serialization invariants.
 

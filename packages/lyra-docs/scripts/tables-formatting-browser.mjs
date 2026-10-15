@@ -26,8 +26,8 @@ async function caret(page, id, text = 'A11') {
   await page.keyboard.press('ArrowLeft');
 }
 async function execute(page, id, action) {
-  return page.locator(`#${id}`).evaluate((element, action) => {
-    const before = element.snapshot(), result = element.execute(action, { expectedRevision: before.revision }), after = element.snapshot();
+  return page.locator(`#${id}`).evaluate(async (element, action) => {
+    const before = element.snapshot(), result = await element.execute(action, { expectedRevision: before.revision }), after = element.snapshot();
     return { result, before: { revision: before.revision, selection: before.selection }, after: { revision: after.revision, selection: after.selection } };
   }, action);
 }
@@ -72,7 +72,7 @@ export async function runTableFormatting(page, check, { createEditor, saveEditor
         }
         const repeated = await page.locator(`#${id}`).evaluate(async (element, action) => {
           const saved = await element.save(); if (!saved.ok) return { saved };
-          const ack = element.acknowledgeSaved(saved.value), before = element.snapshot(), result = element.execute(action), after = element.snapshot();
+          const ack = element.acknowledgeSaved(saved.value), before = element.snapshot(), result = await element.execute(action), after = element.snapshot();
           return { ack, result, before: before.revision, after: after.revision, dirty: after.dirty };
         }, action);
         assert.equal(repeated.ack.ok, true); assert.equal(repeated.result.ok, true);
@@ -126,10 +126,10 @@ export async function runTableFormatting(page, check, { createEditor, saveEditor
       assert.deepEqual((await execute(page, id, { type: 'table-width', widthPoints: 44.95 })).result, { ok: false, code: 'unsupported' });
       assert.deepEqual((await execute(page, id, { type: 'table-cell-shading', color: 'red' })).result, { ok: false, code: 'invalid-option' });
       assert.deepEqual(zipParts(await saveEditor(page, id)), zipParts(before));
-      const stale = await page.locator(`#${id}`).evaluate(element => {
+      const stale = await page.locator(`#${id}`).evaluate(async element => {
         const revision = element.snapshot().revision;
-        const changed = element.execute({ type: 'table-cell-alignment', value: 'bottom' });
-        return { changed, refused: element.execute({ type: 'table-header-row', enabled: true }, { expectedRevision: revision }) };
+        const changed = await element.execute({ type: 'table-cell-alignment', value: 'bottom' });
+        return { changed, refused: await element.execute({ type: 'table-header-row', enabled: true }, { expectedRevision: revision }) };
       });
       assert.equal(stale.changed.ok, true); assert.deepEqual(stale.refused, { ok: false, code: 'stale-revision' });
       assert.ok(rows(tableXml(await saveEditor(page, id))).every(row => !child(child(row, 'trPr'), 'tblHeader')));
@@ -149,9 +149,9 @@ export async function runTableFormatting(page, check, { createEditor, saveEditor
       await page.locator(`#${id} .docx-pages`).waitFor({ state: 'visible' }); await caret(page, id);
       await page.evaluate(() => { const result = window.__tableFormattingSession.retainSelection(); if (!result.ok) throw Error(result.code); window.__tableFormattingLease = result.value; });
       await page.locator(`#${id}-toolbar`).click();
-      const formatted = await page.evaluate(() => {
+      const formatted = await page.evaluate(async () => {
         const session = window.__tableFormattingSession, before = session.snapshot();
-        const result = session.execute({ type: 'table-width', widthPoints: 300 }, { selection: window.__tableFormattingLease });
+        const result = await session.execute({ type: 'table-width', widthPoints: 300 }, { selection: window.__tableFormattingLease });
         return { result, before: before.selection, after: session.snapshot().selection, revision: session.snapshot().revision.value };
       });
       assert.equal(formatted.result.ok, true, JSON.stringify(formatted)); assert.equal(formatted.revision, 1);
@@ -161,7 +161,7 @@ export async function runTableFormatting(page, check, { createEditor, saveEditor
       await caret(page, id, 'A22');
       const refused = await page.evaluate(async () => {
         const session = window.__tableFormattingSession, before = session.snapshot().revision;
-        const result = session.execute({ type: 'table-header-row', enabled: true }, { selection: window.__tableFormattingLease });
+        const result = await session.execute({ type: 'table-header-row', enabled: true }, { selection: window.__tableFormattingLease });
         const saved = await session.save(); if (!saved.ok) throw Error(saved.code);
         return { result, before, after: session.snapshot().revision, bytes: [...saved.value.bytes] };
       });

@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'పాజ్ చేయండి',
   qrCodeMissingLibrary: 'QR కోడ్‌లను చూపించడానికి ఈ కాంపోనెంట్‌లో ఐచ్ఛిక "qrcode" ప్యాకేజీని ఇన్‌స్టాల్ చేయాలి.',
   qrCodeGenerationFailed: 'ఈ విలువను QR కోడ్‌గా ఎన్‌కోడ్ చేయలేకపోయాం.',
-  mapMissingLibrary: 'మ్యాప్‌ను చూపించడానికి ఈ కాంపోనెంట్‌లో ఐచ్ఛిక "maplibre-gl" ప్యాకేజీని ఇన్‌స్టాల్ చేయాలి.',
+  mapMissingLibrary: 'మ్యాప్‌ను చూపించడానికి ఈ కాంపోనెంట్‌లో ఐచ్ఛిక "{package}" ప్యాకేజీని ఇన్‌స్టాల్ చేయాలి.',
   mapStyleRequired: 'మ్యాప్‌ను చూపించడానికి మ్యాప్ శైలిని అందించండి.',
   mapWebglUnavailable: 'మ్యాప్‌ను చూపించడానికి అవసరమైన గ్రాఫిక్స్ సదుపాయాన్ని ఈ బ్రౌజర్ అందించలేకపోతోంది.',
   mapInitializationFailed: 'మ్యాప్‌ను ప్రారంభించలేకపోయాం.',

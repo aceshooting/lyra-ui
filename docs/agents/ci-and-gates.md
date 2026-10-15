@@ -188,8 +188,8 @@ real data dependencies, so a red check names the phase to reproduce:
    public property's type alias points at it. Lint, build, test and manifest compile the source tree
    and stay green; only this job compiles a real consumer against the tarball and surfaces
    `TS2305: has no exported member`.
-5. **`docs-and-storybook`**: `docs_build` runs `pnpm docs:build` once (it needs only the committed
-   `custom-elements.json`, not `dist/`), verifies the generated sitemap is fresh and uploads
+5. **`docs-and-storybook`**: `docs_build` builds the packages needed by the map worker and document
+   engine stories, runs `pnpm docs:build` once, verifies the generated sitemap is fresh and uploads
    `storybook-static/`. The Storybook contract crawl and the Show Code crawl run in parallel against
    that artifact, and the stable `docs-and-storybook` aggregate requires both.
 6. **`visual-regression`** is blocking (baselines and determinism notes:

@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'השהה',
   qrCodeMissingLibrary: 'כדי להציג קודי QR, יש להתקין את החבילה האופציונלית "qrcode".',
   qrCodeGenerationFailed: 'לא ניתן היה לקודד ערך זה כקוד QR.',
-  mapMissingLibrary: 'כדי להציג את המפה, יש להתקין את החבילה האופציונלית "maplibre-gl".',
+  mapMissingLibrary: 'כדי להציג את המפה, יש להתקין את החבילה האופציונלית "{package}".',
   mapStyleRequired: 'יש לספק סגנון מפה כדי להציג את המפה.',
   mapWebglUnavailable: 'דפדפן זה אינו יכול לספק את התמיכה הגרפית הנדרשת להצגת המפה.',
   mapInitializationFailed: 'לא ניתן היה לאתחל את המפה.',

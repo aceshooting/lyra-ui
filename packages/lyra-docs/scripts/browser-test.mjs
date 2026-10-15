@@ -115,8 +115,8 @@ async function runBasicEditing(page, check) {
     const styled = await saveEditor(page, 'basic-style');
     assert.match(zipEntry(styled, 'word/document.xml'), /<w:pStyle\b[^>]*w:val="CustomHeading"/u);
     assertProtectedParts(styled, basicSource);
-    const history = await page.locator('#basic-style').evaluate(element => ({
-      undo: element.execute('undo'), redo: element.execute('redo')
+    const history = await page.locator('#basic-style').evaluate(async element => ({
+      undo: await element.execute('undo'), redo: await element.execute('redo')
     }));
     assert.equal(history.undo.ok, true, JSON.stringify(history));
     assert.equal(history.redo.ok, true, JSON.stringify(history));
@@ -188,7 +188,7 @@ async function runBasicEditing(page, check) {
       assertProtectedParts(bytes, source);
       assert.match(zipEntry(bytes, 'word/document.xml'), /<w:numPr(?:\s|>)/u);
       assert.match(zipEntry(bytes, 'word/numbering.xml'), kind === 'bullet' ? /w:val="bullet"/u : /w:val="decimal"/u);
-      const result = await page.locator(`#${id}`).evaluate(element => ({ undo: element.execute('undo'), redo: element.execute('redo') }));
+      const result = await page.locator(`#${id}`).evaluate(async element => ({ undo: await element.execute('undo'), redo: await element.execute('redo') }));
       assert.equal(result.undo.ok, true, JSON.stringify(result));
       assert.equal(result.redo.ok, true, JSON.stringify(result));
       const redone = await saveEditor(page, id);
@@ -249,14 +249,14 @@ async function runBasicEditing(page, check) {
     await page.locator('#basic-type [part="text-color"]').click();
     await page.locator('#basic-type [data-edit="text-color-auto"]').click();
     assert.match(zipEntry(await saveEditor(page, 'basic-type'), 'word/document.xml'), /<w:color\b[^>]*w:val="auto"/u);
-    const result = await page.locator('#basic-type').evaluate(element => {
+    const result = await page.locator('#basic-type').evaluate(async element => {
       const before = element.snapshot().revision;
       const refusals = [
-        element.execute({ type: 'font-size', points: 2.25 }),
-        element.execute({ type: 'font-size', points: Number.POSITIVE_INFINITY }),
-        element.execute({ type: 'font-family', family: 'A,'.repeat(40) }),
-        element.execute({ type: 'text-color', color: '#XYZXYZ' }),
-        element.execute({ type: 'paragraph-style', styleId: 'MissingStyle' })
+        await element.execute({ type: 'font-size', points: 2.25 }),
+        await element.execute({ type: 'font-size', points: Number.POSITIVE_INFINITY }),
+        await element.execute({ type: 'font-family', family: 'A,'.repeat(40) }),
+        await element.execute({ type: 'text-color', color: '#XYZXYZ' }),
+        await element.execute({ type: 'paragraph-style', styleId: 'MissingStyle' })
       ];
       return { refusals, unchanged: before === element.snapshot().revision, color: element.snapshot().formatting.color };
     });
@@ -352,9 +352,9 @@ async function runBasicEditing(page, check) {
       text: 'Linked words', target: 'https://example.test/linked'
     });
     assertProtectedParts(bytes, source);
-    const refused = await page.locator('#basic-link').evaluate(element => ({
-      http: element.execute({ type: 'link', href: Object.assign(new URL('http://example.test/unsafe'), { username: 'user', password: 'pw' }).href }),
-      script: element.execute({ type: 'link', href: 'javascript:alert(1)' })
+    const refused = await page.locator('#basic-link').evaluate(async element => ({
+      http: await element.execute({ type: 'link', href: Object.assign(new URL('http://example.test/unsafe'), { username: 'user', password: 'pw' }).href }),
+      script: await element.execute({ type: 'link', href: 'javascript:alert(1)' })
     }));
     assert.deepEqual(refused.http, { ok: false, code: 'invalid-option' });
     assert.deepEqual(refused.script, { ok: false, code: 'invalid-option' });
@@ -470,12 +470,13 @@ async function runBasicEditing(page, check) {
   });
   await check('XML-invalid authored text is refused before any content or revision changes', async () => {
     await createEditor(page, 'basic-xml-text', 'basic-editing');
-    const result = await page.locator('#basic-xml-text').evaluate(element => {
+    const result = await page.locator('#basic-xml-text').evaluate(async element => {
       const invalid = ['\u0000', '\u000b', '\ufffe', '\ud800', '\udc00'];
       const found = element.find('Café 東京');
       if (!found.ok) return { found };
       const before = element.snapshot().revision;
-      const links = invalid.map(text => element.execute({ type: 'link', href: 'https://example.test', text }));
+      const links = [];
+      for (const text of invalid) links.push(await element.execute({ type: 'link', href: 'https://example.test', text }));
       const replacements = invalid.map(text => element.replaceMatch(found.value.matches[0].id, text));
       const unchanged = element.snapshot().revision === before;
       const valid = element.replaceMatch(found.value.matches[0].id, '😀 東京\tline\nnext\rend');
@@ -649,7 +650,7 @@ async function runEditorWorkflows(page, check) {
     const editor = page.locator(`#${id}`);
     await editor.locator('.docx-pages').click();
     await page.keyboard.insertText('Selection lease');
-    await editor.locator('[part="font-size"]').click();
+    await editor.locator('[part="font-size"] input').click();
     assert.equal(await editor.evaluate(element => {
       const field = element.shadowRoot.activeElement;
       return field?.getAttribute('part') === 'font-size' && field.shadowRoot.activeElement?.getAttribute('part') === 'input';
@@ -904,18 +905,19 @@ async function bundle() {
   assert.ok(core?.[1]?.file, 'DOCX engine must be a separate lazy chunk');
   const store = manifest['src/docx/engine-store-capabilities.ts'];
   assert.ok(store?.isDynamicEntry && store.file, 'DOCX store must be a separate lazy chunk');
-  for (const [name, specifier] of [['engine-core-capabilities', '@docx-editor.dev/core'],
-    ['engine-store-capabilities', '@docx-editor.dev/core/store']]) {
+  for (const [name, specifier] of [['engine-core-capabilities', '#lyra-docx-engine/core'],
+    ['engine-store-capabilities', '#lyra-docx-engine/store']]) {
     const file = resolve(root, `dist/docx/${name}.js`);
     assert.deepEqual(staticModuleSpecifiers(file, await readFile(file, 'utf8'))
-      .filter(value => value.startsWith('@docx-editor.dev/')), [specifier], 'Lazy capability imports the actual public engine');
+      .filter(value => value.startsWith('#lyra-docx-engine/')), [specifier], 'Lazy capability imports the generated internal engine');
   }
-  const staticFiles = (key, found) => {
+  const staticFiles = (key, found, includeFeatures = false) => {
     const entry = manifest[key];
     assert.ok(entry?.file, `Missing engine dependency ${key}`);
     if (found.has(entry.file)) return;
     found.add(entry.file);
-    for (const imported of entry.imports ?? []) staticFiles(imported, found);
+    for (const imported of [...entry.imports ?? [], ...(includeFeatures ? entry.dynamicImports ?? [] : [])])
+      staticFiles(imported, found, includeFeatures);
   };
   const beforeOpenFiles = new Set();
   for (const key of ['test/browser.html', 'test/editor-entry.ts', 'src/docx/create-session.ts'])
@@ -923,8 +925,8 @@ async function bundle() {
   assert.equal(beforeOpenFiles.has(core[1].file) || beforeOpenFiles.has(store.file), false,
     'Public entries must not statically reach engine capability chunks');
   const engineFiles = new Set();
-  staticFiles(core[0], engineFiles);
-  staticFiles('src/docx/engine-store-capabilities.ts', engineFiles);
+  staticFiles(core[0], engineFiles, true);
+  staticFiles('src/docx/engine-store-capabilities.ts', engineFiles, true);
   // Shared helpers can already be needed by the ordinary entry, independently of the engine.
   for (const file of beforeOpenFiles) engineFiles.delete(file);
   const files = await filesUnder(output);
@@ -1017,7 +1019,7 @@ async function runMountChecks(page, check, { name, editor, record, engineEntry, 
     assert.equal(await editor.evaluate(element => element.snapshot()?.dirty), true);
   });
   await check('undo and redo remain callable', async () => {
-    const result = await editor.evaluate(element => ({ undo: element.execute('undo'), redo: element.execute('redo') }));
+    const result = await editor.evaluate(async element => ({ undo: await element.execute('undo'), redo: await element.execute('redo') }));
     assert.equal(result.undo.ok, true, JSON.stringify(result));
     assert.equal(result.redo.ok, true, JSON.stringify(result));
   });
@@ -1118,7 +1120,7 @@ async function runInputChecks(page, check, { editor, record }) {
       document.querySelector('#fixture').append(element);
       const opened = await element.newDocument();
       const before = element.snapshot()?.revision;
-      const command = element.execute('bold');
+      const command = await element.execute('bold');
       return { opened, command, before, after: element.snapshot()?.revision };
     });
     assert.equal(result.opened.ok, true, JSON.stringify(result));
@@ -1406,7 +1408,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry, engineFiles }) {
   });
   page.on('requestfailed', request => record.requestFailures.push(`${request.url()}: ${request.failure()?.errorText}`));
   page.on('pageerror', error => record.pageErrors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') record.consoleErrors.push(message.text()); });
+  page.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') record.consoleErrors.push(`${message.type()}: ${message.text()}`); });
   const check = async (label, work) => {
     const started = performance.now();
     await work();

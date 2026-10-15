@@ -1,6 +1,7 @@
 import {
   computePosition,
   autoUpdate,
+  getOverflowAncestors,
   arrow,
   flip,
   shift,
@@ -577,18 +578,39 @@ function placeImpl(
   let escapeReruns = 0;
   let stopAutoUpdate: (() => void) | undefined;
   let stopResize: (() => void) | undefined;
+  let stopScroll: (() => void) | undefined;
+  let scrollFrame: number | undefined;
+  let updateGeneration = 0;
   const openStyleTransactions = new Set<PlacementStyleTransaction>();
-  const visualViewport = popup.ownerDocument.defaultView?.visualViewport;
+  const view = popup.ownerDocument.defaultView ?? window;
+  const visualViewport = view.visualViewport;
   const updateFromVisualViewport = () => update();
+  const cancelScrollFrame = (): void => {
+    if (scrollFrame === undefined) return;
+    view.cancelAnimationFrame(scrollFrame);
+    scrollFrame = undefined;
+  };
+  const updateFromScroll = (): void => {
+    if (disposed) return;
+    // Invalidate promises immediately, even while the replacement waits for a frame.
+    updateGeneration++;
+    if (scrollFrame !== undefined) return;
+    scrollFrame = view.requestAnimationFrame(() => {
+      scrollFrame = undefined;
+      update();
+    });
+  };
 
   const dispose = (): void => {
     if (disposed) return;
     disposed = true;
+    updateGeneration++;
+    cancelScrollFrame();
+    stopScroll?.();
     stopResize?.();
     stopAutoUpdate?.();
     stopAutoUpdate = undefined;
     visualViewport?.removeEventListener('resize', updateFromVisualViewport);
-    visualViewport?.removeEventListener('scroll', updateFromVisualViewport);
     for (const transaction of [...openStyleTransactions].reverse()) transaction.rollback();
     openStyleTransactions.clear();
   };
@@ -613,6 +635,7 @@ function placeImpl(
   const middlewareFor = (
     styleTransaction: PlacementStyleTransaction,
     stagedStyles: StagedPlacementStyles,
+    isCurrent: () => boolean,
   ) =>
     [
       offset({ mainAxis: opts.offset ?? 4, crossAxis: opts.skidding ?? 0 }),
@@ -621,7 +644,7 @@ function placeImpl(
       sync
         ? size({
             apply({ rects, elements }) {
-              if (disposed) return;
+              if (!isCurrent()) return;
               const referenceWidth = finiteGeometry(
                 rects.reference.width,
                 'place() reference width',
@@ -669,7 +692,7 @@ function placeImpl(
         boundary: opts.boundary as Boundary | undefined,
         padding,
         apply({ availableWidth, availableHeight }) {
-          if (disposed) return;
+          if (!isCurrent()) return;
           // Available-size variables do not affect middleware measurement, so keep them off the
           // live element until every later geometry read has succeeded. Synced dimensions cannot
           // be staged because flip and shift must measure the resized box; those writes stay in
@@ -684,7 +707,7 @@ function placeImpl(
             boundary: (opts.autoSizeBoundary ?? opts.boundary) as Boundary | undefined,
             padding: opts.autoSizePadding ?? 0,
             apply({ availableWidth, availableHeight }) {
-              if (disposed) return;
+              if (!isCurrent()) return;
               if (autoSize === 'horizontal' || autoSize === 'both') {
                 stagedStyles.availableInline = `${Math.max(0, finiteGeometry(availableWidth, 'place() auto-size available width'))}px`;
               }
@@ -699,6 +722,9 @@ function placeImpl(
 
   function update(): void {
     if (disposed) return;
+    cancelScrollFrame();
+    const generation = ++updateGeneration;
+    const isCurrent = () => !disposed && generation === updateGeneration;
     try {
       validatedClientRect(anchor.getBoundingClientRect(), 'place() anchor rect');
     } catch {
@@ -735,7 +761,7 @@ function placeImpl(
     void computePosition(anchor, popup, {
       strategy,
       placement: opts.placement ?? 'bottom-start',
-      middleware: middlewareFor(styleTransaction, stagedStyles),
+      middleware: middlewareFor(styleTransaction, stagedStyles, isCurrent),
       // Use the same containing block for computation and the browser's eventual inset writes.
       platform: {
         ...platform,
@@ -743,7 +769,7 @@ function placeImpl(
       },
     }).then(
       async ({ x, y, placement, middlewareData }) => {
-        if (disposed) {
+        if (!isCurrent()) {
           rollback();
           return;
         }
@@ -787,7 +813,7 @@ function placeImpl(
           if (calibrateInlineOrigin) {
             const expectedOrigin = await popupRectAtPosition(anchor, popup, strategy, 0, 0);
             const scale = await platform.getScale!(resolvedOffsetParent as HTMLElement);
-            if (disposed) {
+            if (!isCurrent()) {
               rollback();
               return;
             }
@@ -805,11 +831,15 @@ function placeImpl(
               x,
               y,
             );
-            if (disposed) {
+            if (!isCurrent()) {
               rollback();
               return;
             }
             bridgeQuad = hoverBridgeQuad(anchorRect, placedPopupRect, placement);
+          }
+          if (!isCurrent()) {
+            rollback();
+            return;
           }
           if (stagedStyles.availableInline !== undefined) {
             styleTransaction.set(
@@ -847,7 +877,8 @@ function placeImpl(
             );
           }
         } catch {
-          dispose();
+          if (isCurrent()) dispose();
+          else rollback();
           return;
         }
         // Consumer callbacks deliberately sit outside the internal failure boundary. A callback
@@ -855,14 +886,41 @@ function placeImpl(
         // failure and silently suppressed.
         opts.onPlaced?.({ placement, arrow: middlewareData.arrow });
       },
-      () => dispose(),
+      () => {
+        if (isCurrent()) dispose();
+        else rollback();
+      },
     );
   }
 
+  const reference = (anchor as Element).nodeType === 1
+    ? anchor as Element
+    : (anchor as VirtualAnchor).contextElement;
+  const scrollTargets = new Set<EventTarget>([
+    ...(reference ? getOverflowAncestors(reference) : []),
+    ...getOverflowAncestors(popup),
+    ...(visualViewport ? [visualViewport] : []),
+  ]);
+  for (const target of scrollTargets) {
+    target.addEventListener('scroll', updateFromScroll, { passive: true });
+    // Run before autoUpdate's resize listener: real resizes retain immediate placement even
+    // when a scroll is pending, while its scroll-induced layout observer delivery is coalesced.
+    target.addEventListener('resize', cancelScrollFrame);
+  }
+  stopScroll = () => {
+    for (const target of scrollTargets) {
+      target.removeEventListener('scroll', updateFromScroll);
+      target.removeEventListener('resize', cancelScrollFrame);
+    }
+  };
+
   // Size middleware may resize an observed surface. Updating inside resize delivery would
   // invalidate another observation at the same depth; defer only that source to the next frame.
-  // Initial placement, scrolling and layout shifts retain Floating UI's immediate publication.
-  const stop = autoUpdate(anchor, popup, update, { elementResize: false });
+  // Initial placement, ancestor resize and layout shifts retain immediate publication. Scroll
+  // listeners are separate because autoUpdate's public callback does not identify its source.
+  const stop = autoUpdate(anchor, popup, () => {
+    if (scrollFrame === undefined) update();
+  }, { elementResize: false, ancestorScroll: false });
   // autoUpdate publishes synchronously, and that update can reject a now-invalid virtual rect.
   if (disposed) {
     stop();
@@ -877,7 +935,6 @@ function placeImpl(
   // Read from `popup` rather than `anchor` -- a VirtualAnchor has no `ownerDocument` of its own,
   // and `popup` is always a real element in the same document a real `anchor` would be anyway.
   visualViewport?.addEventListener('resize', updateFromVisualViewport);
-  visualViewport?.addEventListener('scroll', updateFromVisualViewport);
 
   return dispose;
 }

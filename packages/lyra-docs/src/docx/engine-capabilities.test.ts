@@ -5,11 +5,14 @@ const reviewNames = ['collectReviewItems', 'collectRevisionSites', 'commentsOfPa
   'threadStateOfPart', 'commentBodyText', 'reviewItemKey', 'commentPartNameOf', 'commentsExtendedPartNameOf', 'stylesPartOf'];
 const imageNames = ['readZip', 'readOoxmlPart', 'TreePackageStore', 'writeOoxmlPackage'];
 
-function checkEngine(body: string, missing: readonly string[] = []): void {
-  const core = `let blankCalls = 0;
+function checkEngine(body: string, missing: readonly string[] = [], invalid: readonly string[] = []): void {
+  let core = `let blankCalls = 0;
     ${missing.includes('createDocxEditor') ? '' : 'export let createDocxEditor = function originalEditor() {}; export function replaceEditor() { createDocxEditor = function replacedEditor() {}; }'}
     ${missing.includes('blankDocumentBytes') ? '' : 'export function blankDocumentBytes() { blankCalls++; return new Uint8Array([1]); }'}
+    ${missing.includes('prepareFeatures') ? '' : 'export async function prepareFeatures() {}'}
+    ${missing.includes('prepareCommandFeatures') ? '' : 'export async function prepareCommandFeatures() {}'}
     export function blankCallCount() { return blankCalls; }`;
+  for (const name of invalid) core = core.replace(`export async function ${name}() {}`, `export const ${name} = {};`);
   const implementations: Record<string, string> = {
     findNode: 'function originalFindNode() {}',
     parentNodeOf: 'function parentNodeOf() {}',
@@ -26,15 +29,15 @@ function checkEngine(body: string, missing: readonly string[] = []): void {
     import { registerHooks } from 'node:module';
     const coreUrl = ${JSON.stringify(`data:text/javascript,${encodeURIComponent(core)}`)};
     const storeUrl = ${JSON.stringify(`data:text/javascript,${encodeURIComponent(store)}`)};
-    let peerResolutions = 0;
+    let engineResolutions = 0;
     registerHooks({ resolve(specifier, context, nextResolve) {
-      if (specifier === '@docx-editor.dev/core' || specifier === '@docx-editor.dev/core/store') peerResolutions++;
-      if (specifier === '@docx-editor.dev/core') return { url: coreUrl, shortCircuit: true };
-      if (specifier === '@docx-editor.dev/core/store') return { url: storeUrl, shortCircuit: true };
+      if (specifier === '#lyra-docx-engine/core' || specifier === '#lyra-docx-engine/store') engineResolutions++;
+      if (specifier === '#lyra-docx-engine/core') return { url: coreUrl, shortCircuit: true };
+      if (specifier === '#lyra-docx-engine/store') return { url: storeUrl, shortCircuit: true };
       return nextResolve(specifier, context);
     }});
     const { loadDocxEngine } = await import(${JSON.stringify(new URL('./engine-loader.js', import.meta.url).href)});
-    assert.equal(peerResolutions, 0, 'Importing the loader must not resolve the engine');
+    assert.equal(engineResolutions, 0, 'Importing the loader must not resolve the engine');
     ${body}`;
   execFileSync(process.execPath, ['--input-type=module', '-e', source], { stdio: 'pipe', timeout: 15000 });
 }
@@ -49,6 +52,8 @@ test('capability imports stay lazy and singleton facades preserve the image deri
     assert.equal(first.imageInsertion, second.imageInsertion);
     assert.equal(core.blankCallCount(), 1);
     assert.equal(first.createDocxEditor, core.createDocxEditor);
+    assert.equal(first.prepareFeatures, core.prepareFeatures);
+    assert.equal(first.prepareCommandFeatures, core.prepareCommandFeatures);
     const store = await import(storeUrl);
     for (const name of ${JSON.stringify(reviewNames)}) assert.equal(first.review[name], store[name]);
     for (const name of ${JSON.stringify(imageNames)}) assert.equal(first.imageInsertion[name], store[name]);
@@ -87,8 +92,14 @@ for (const name of [...imageNames, 'blankDocumentBytes']) {
       assert(engine.review);`, [name]);
   });
 }
-for (const name of ['createDocxEditor', 'findNode', 'parentNodeOf']) {
+for (const name of ['createDocxEditor', 'prepareFeatures', 'prepareCommandFeatures', 'findNode', 'parentNodeOf']) {
   test(`missing required ${name} rejects the engine`, () => {
     checkEngine('await assert.rejects(loadDocxEngine(), /Engine unavailable/);', [name]);
+  });
+}
+
+for (const name of ['prepareFeatures', 'prepareCommandFeatures']) {
+  test(`noncallable required ${name} rejects the engine`, () => {
+    checkEngine('await assert.rejects(loadDocxEngine(), /Engine unavailable/);', [], [name]);
   });
 }

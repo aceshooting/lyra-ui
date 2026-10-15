@@ -59,7 +59,7 @@ class ImageToolIntent {
     if (!this.valid(session)) return stale;
     return result.ok ? { ok: true, value: Object.freeze({ title: result.value.title, description: result.value.description }) } : result;
   }
-  execute(session: DocxSession | null, action: DocxImageAction): DocxResult<DocxRevision> {
+  execute(session: DocxSession | null, action: DocxImageAction): Promise<DocxResult<DocxRevision>> {
     return this.intent.execute(session, action);
   }
   release(): void {

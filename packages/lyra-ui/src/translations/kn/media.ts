@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'ವಿರಾಮಗೊಳಿಸಿ',
   qrCodeMissingLibrary: 'QR ಕೋಡ್ ರೆಂಡರ್ ಮಾಡಲು ಈ ಘಟಕಕ್ಕೆ ಐಚ್ಛಿಕ "qrcode" ಪ್ಯಾಕೇಜ್ ಅಗತ್ಯವಿದೆ.',
   qrCodeGenerationFailed: 'ಈ ಮೌಲ್ಯವನ್ನು QR ಕೋಡ್ ಆಗಿ ಎನ್‌ಕೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
-  mapMissingLibrary: 'ನಕ್ಷೆ ರೆಂಡರ್ ಮಾಡಲು ಈ ಘಟಕಕ್ಕೆ ಐಚ್ಛಿಕ "maplibre-gl" ಪ್ಯಾಕೇಜ್ ಅಗತ್ಯವಿದೆ.',
+  mapMissingLibrary: 'ನಕ್ಷೆ ರೆಂಡರ್ ಮಾಡಲು ಈ ಘಟಕಕ್ಕೆ ಐಚ್ಛಿಕ "{package}" ಪ್ಯಾಕೇಜ್ ಅಗತ್ಯವಿದೆ.',
   mapStyleRequired: 'ನಕ್ಷೆ ರೆಂಡರ್ ಮಾಡಲು ನಕ್ಷೆಯ ಶೈಲಿ ಒದಗಿಸಿ.',
   mapWebglUnavailable: 'ನಕ್ಷೆ ರೆಂಡರ್ ಮಾಡಲು ಅಗತ್ಯವಾದ ಗ್ರಾಫಿಕ್ಸ್ ಬೆಂಬಲವನ್ನು ಈ ಬ್ರೌಸರ್ ಒದಗಿಸುವುದಿಲ್ಲ.',
   mapInitializationFailed: 'ನಕ್ಷೆಯನ್ನು ಆರಂಭಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',

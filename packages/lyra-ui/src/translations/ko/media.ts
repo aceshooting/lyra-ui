@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: '일시 중지',
   qrCodeMissingLibrary: 'QR 코드를 렌더링하려면 선택적 "qrcode" 패키지를 설치해야 합니다.',
   qrCodeGenerationFailed: '이 값을 QR 코드로 인코딩할 수 없습니다.',
-  mapMissingLibrary: '지도를 렌더링하려면 선택적 "maplibre-gl" 패키지를 설치해야 합니다.',
+  mapMissingLibrary: '지도를 렌더링하려면 선택적 "{package}" 패키지를 설치해야 합니다.',
   mapStyleRequired: '지도 스타일을 제공하여 지도를 렌더링합니다.',
   mapWebglUnavailable: '이 브라우저는 지도를 렌더링하는 데 필요한 그래픽 기능을 지원하지 않습니다.',
   mapInitializationFailed: '지도를 초기화하지 못했습니다.',

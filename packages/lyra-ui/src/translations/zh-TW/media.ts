@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: '暫停',
   qrCodeMissingLibrary: '此元件需要安裝可選的 "qrcode" 套件才能產生 QR Code。',
   qrCodeGenerationFailed: '無法將此值編碼為二維碼。',
-  mapMissingLibrary: '此元件需要安裝可選的 "maplibre-gl" 套件才能渲染地圖。',
+  mapMissingLibrary: '此元件需要安裝可選的 "{package}" 套件才能渲染地圖。',
   mapStyleRequired: '請提供地圖樣式以渲染地圖。',
   mapWebglUnavailable: '此瀏覽器無法提供渲染地圖所需的圖形支援。',
   mapInitializationFailed: '無法初始化地圖。',

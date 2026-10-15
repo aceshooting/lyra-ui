@@ -112,9 +112,9 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
     await page.waitForFunction(id => document.getElementById(id).snapshot().selection.kind === 'text', id);
     await page.keyboard.press('ControlOrMeta+K');
     await palette(id).getByRole('dialog').waitFor({ state: 'visible' });
-    const changed = await host(id).evaluate(element => {
+    const changed = await host(id).evaluate(async element => {
       const before = element.snapshot().revision.value;
-      const result = element.execute('italic');
+      const result = await element.execute('italic');
       return { ok: result.ok, delta: element.snapshot().revision.value - before };
     });
     assert.deepEqual(changed, { ok: true, delta: 1 });

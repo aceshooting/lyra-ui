@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'रोक्नुहोस्',
   qrCodeMissingLibrary: 'QR कोडहरू देखाउन यो कम्पोनेन्टमा वैकल्पिक "qrcode" प्याकेज स्थापना गर्नुपर्छ।',
   qrCodeGenerationFailed: 'यो मानलाई QR कोडमा सङ्केतन गर्न सकिएन।',
-  mapMissingLibrary: 'नक्सा देखाउन यो कम्पोनेन्टमा वैकल्पिक "maplibre-gl" प्याकेज स्थापना गर्नुपर्छ।',
+  mapMissingLibrary: 'नक्सा देखाउन यो कम्पोनेन्टमा वैकल्पिक "{package}" प्याकेज स्थापना गर्नुपर्छ।',
   mapStyleRequired: 'नक्सा देखाउन नक्साको शैली दिनुहोस्।',
   mapWebglUnavailable: 'यो ब्राउजरले नक्सा देखाउन आवश्यक ग्राफिक्स सहायता दिन सक्दैन।',
   mapInitializationFailed: 'नक्सा सुरु गर्न सकिएन।',

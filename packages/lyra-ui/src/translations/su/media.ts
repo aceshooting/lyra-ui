@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Reureuh',
   qrCodeMissingLibrary: 'Komponén ieu merlukeun paket "qrcode" opsional pikeun dipasang supaya kode QR bisa dijieun.',
   qrCodeGenerationFailed: 'Nilai ieu teu bisa dikodekeun jadi kode QR.',
-  mapMissingLibrary: 'Komponén ieu merlukeun paket "maplibre-gl" opsional pikeun dipasang supaya peta bisa dipintonkeun.',
+  mapMissingLibrary: 'Komponén ieu merlukeun paket "{package}" opsional pikeun dipasang supaya peta bisa dipintonkeun.',
   mapStyleRequired: 'Pasihan gaya peta pikeun mintonkeun peta.',
   mapWebglUnavailable: 'Browser ieu teu ngarojong grafik nu diperlukeun pikeun mintonkeun peta.',
   mapInitializationFailed: 'Peta teu bisa dimimitian.',

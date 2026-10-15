@@ -163,7 +163,7 @@ async function measureTablePerformance(browser, url) {
     assert.equal(opened.ok, true, JSON.stringify(opened));
     await run.page.locator('#performance-editor .docx-pages').getByText('T1_1', { exact: true }).click();
     await run.page.keyboard.press('ArrowLeft');
-    const measurements = await run.page.evaluate(() => {
+    const measurements = await run.page.evaluate(async () => {
       const element = document.querySelector('#performance-editor');
       const action = { type: 'insert-table-row', where: 'below' };
       const unchanged = element.snapshot().revision;
@@ -176,11 +176,11 @@ async function measureTablePerformance(browser, url) {
       for (let index = 0; index < 10; index++) {
         const before = element.snapshot().revision.value;
         let started = performance.now();
-        const inserted = element.execute(action); executeMs.push(performance.now() - started);
+        const inserted = await element.execute(action); executeMs.push(performance.now() - started);
         if (!inserted.ok || element.snapshot().revision.value !== before + 1 || element.snapshot().table?.rows !== 20)
           throw Error(`Table insertion failed: ${JSON.stringify(inserted)}`);
         started = performance.now();
-        const undone = element.execute('undo'); undoMs.push(performance.now() - started);
+        const undone = await element.execute('undo'); undoMs.push(performance.now() - started);
         if (!undone.ok || element.snapshot().revision.value !== before + 2 || element.snapshot().table?.rows !== 19)
           throw Error('Table undo did not restore 19 rows');
       }
@@ -215,7 +215,7 @@ async function measureTablePerformance(browser, url) {
     assert.equal((xml.match(/<w:tr[ >]/gu) ?? []).length, 19);
     assert.deepEqual(run.pageErrors, []);
     return { rows: 19, columns: 20, cells: 380, bytes: fixture.length, savedBytes: saved.length,
-      method: 'Synchronous public execution includes bounded canonical qualification and core layout. Each insertion reaches 20x20 and is undone; no cold-index guarantee. Advisory reads assert unchanged revision. Native typing is measured inside the target table through two postcommit animation frames.',
+      method: 'Public command timing awaits completion, including any feature preparation and bounded canonical qualification. Each insertion reaches 20x20 and is undone; no cold-index guarantee. Advisory reads assert unchanged revision. Native typing is measured inside the target table through two postcommit animation frames.',
       advisory1000Ms: round(measurements.advisory1000Ms), execute: summarize(measurements.executeMs), undo: summarize(measurements.undoMs),
       inputToTwoFrames: summarize(await run.page.evaluate(() => window.__tablePaintSamples)) };
   } finally { await run.context.close(); }

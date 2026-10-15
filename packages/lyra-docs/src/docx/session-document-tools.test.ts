@@ -65,16 +65,16 @@ test('document reports copy, freeze and authenticate every navigation identifier
   value(h.session.selectReviewItem(review.items[0]!.id));
   assert.deepEqual(h.f.calls, [h.heading, h.diagnostic, h.comment]); assert.equal(h.session.snapshot().dirty, false);
   refuses(h.session.selectOutlineItem(review.items[0]!.id), 'stale-selection');
-  refuses(h.session.execute({ type: 'review-decision', id: review.items[0]!.id, decision: 'resolve' }), 'read-only');
+  refuses((await h.session.execute({ type: 'review-decision', id: review.items[0]!.id, decision: 'resolve' })), 'read-only');
 });
 
 test('tracking mode has no range target but still refuses document changes during settlement', async () => {
   const h = await fixture();
   h.f.beforeMutation = () => h.f.emit('user-selection');
-  assert.equal(h.session.execute({ type: 'track-changes', enabled: true, author: 'Writer' }).ok, true);
-  refuses(h.session.execute({ type: 'add-comment', text: 'Original range', author: 'Writer' }), 'stale-selection');
+  assert.equal((await h.session.execute({ type: 'track-changes', enabled: true, author: 'Writer' })).ok, true);
+  refuses((await h.session.execute({ type: 'add-comment', text: 'Original range', author: 'Writer' })), 'stale-selection');
   h.f.beforeMutation = () => h.f.emit('change');
-  refuses(h.session.execute({ type: 'track-changes', enabled: false, author: 'Writer' }), 'stale-revision');
+  refuses((await h.session.execute({ type: 'track-changes', enabled: false, author: 'Writer' })), 'stale-revision');
   h.session.destroy();
 });
 
@@ -98,8 +98,9 @@ test('queries refuse composition, reentrant edits and native changes during a re
   refuses(h.session.outline(), 'composing'); refuses(h.session.inspectDocument(), 'composing'); refuses(h.session.review(), 'composing');
   assert.equal(h.f.queryReads, 0);
   h.f.composing = false; h.f.emit('composition');
-  h.f.beforeRead = () => { refuses(h.session.execute('bold'), 'busy'); refuses(h.session.review(), 'busy'); };
-  value(h.session.outline()); assert.equal(h.f.commands, 0);
+  let nested: ReturnType<typeof h.session.execute> | undefined;
+  h.f.beforeRead = () => { nested = h.session.execute('bold'); refuses(h.session.review(), 'busy'); };
+  value(h.session.outline()); refuses(await nested!, 'busy'); assert.equal(h.f.commands, 0);
   h.f.beforeRead = () => h.f.emit('change'); refuses(h.session.outline(), 'stale-revision');
   h.f.beforeRead = () => h.f.emit('user-selection'); refuses(h.session.inspectDocument(), 'stale-selection');
   h.f.beforeRead = () => { h.f.valid = false; }; refuses(h.session.review(), 'destroyed');
@@ -108,21 +109,23 @@ test('queries refuse composition, reentrant edits and native changes during a re
 test('review mutations retain original revision and selection through settlement and resolve private targets', async () => {
   for (const invalidation of ['revision', 'selection', 'lease']) {
     const h = await fixture(), report = value(h.session.review()), lease = value(h.session.retainSelection());
+    let nested: ReturnType<typeof h.session.execute> | undefined;
     h.f.beforeMutation = () => {
-      refuses(h.session.execute('bold'), 'busy');
+      nested = h.session.execute('bold');
       if (invalidation === 'revision') h.f.emit('change');
       else if (invalidation === 'selection') h.f.emit('user-selection');
       else lease.release();
     };
-    refuses(h.session.execute({ type: 'reply-comment', id: report.items[0]!.id, text: 'Response', author: 'Writer' }, { selection: lease }),
+    refuses((await h.session.execute({ type: 'reply-comment', id: report.items[0]!.id, text: 'Response', author: 'Writer' }, { selection: lease })),
       invalidation === 'revision' ? 'stale-revision' : 'stale-selection');
+    refuses(await nested!, 'busy');
     assert.equal(h.f.commands, 0); assert.equal(h.f.calls.length, 0);
   }
   const h = await fixture(), report = value(h.session.review());
   assert.equal(h.session.can({ type: 'review-decision', id: 'forged', decision: 'resolve' }).reason, 'stale-selection');
-  value(h.session.execute({ type: 'review-decision', id: report.items[0]!.id, decision: 'resolve' }));
+  value((await h.session.execute({ type: 'review-decision', id: report.items[0]!.id, decision: 'resolve' })));
   assert.deepEqual(h.f.calls, [h.comment]);
-  refuses(h.session.execute({ type: 'review-decision', id: report.items[0]!.id, decision: 'resolve' }), 'stale-revision');
+  refuses((await h.session.execute({ type: 'review-decision', id: report.items[0]!.id, decision: 'resolve' })), 'stale-revision');
 });
 
 test('document queries discard a report when an engine callback destroys the session', async () => {
@@ -140,7 +143,7 @@ test('document queries discard a report when an engine callback destroys the ses
 
 test('tracking mode changes report their existing revision without a dirty or saved-byte transition', async () => {
   const h = await fixture(), before = h.session.snapshot().revision;
-  assert.deepEqual(value(h.session.execute({ type: 'track-changes', enabled: true, author: 'Writer' })), before);
+  assert.deepEqual(value((await h.session.execute({ type: 'track-changes', enabled: true, author: 'Writer' }))), before);
   assert.equal(h.session.snapshot().dirty, false); assert.equal(h.f.saves, 0);
 });
 
@@ -171,7 +174,7 @@ test('replacement copies visible bytes before notification and owns every naviga
   const pending = h.session.replaceImage(h.bytes);
   assert.equal(h.session.snapshot().activity, 'replacing-image'); assert.deepEqual(h.state.copied, original);
   refuses(h.session.outline(), 'busy'); refuses(h.session.review(), 'busy'); refuses(h.session.inspectDocument(), 'busy');
-  refuses(h.session.selectOutlineItem('forged'), 'busy'); refuses(h.session.execute('bold'), 'busy');
+  refuses(h.session.selectOutlineItem('forged'), 'busy'); refuses((await h.session.execute('bold')), 'busy');
   refuses(await h.session.save(), 'busy'); refuses(h.session.focus(), 'busy'); refuses(h.session.retainSelection(), 'busy');
   assert.deepEqual(h.session.canReplaceImage(), { enabled: false, reason: 'busy' });
   h.state.gate.resolve(); assert.equal(value(await pending).value, 1); assert.equal(h.state.releases, 1);
@@ -204,7 +207,7 @@ test('review action reflection cannot silently retarget an original text selecti
   const action = new Proxy({ type: 'add-comment' as const, text: 'Note', author: 'Writer' }, {
     ownKeys(target) { h.f.emit('user-selection'); return Reflect.ownKeys(target); }
   });
-  refuses(h.session.execute(action), 'stale-selection'); assert.equal(h.f.commands, 0);
+  refuses((await h.session.execute(action)), 'stale-selection'); assert.equal(h.f.commands, 0);
 });
 
 test('navigation completion cannot return success after its final ready notification destroys the session', async () => {

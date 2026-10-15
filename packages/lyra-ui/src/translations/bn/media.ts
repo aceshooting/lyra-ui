@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'থামান',
   qrCodeMissingLibrary: 'QR কোড দেখাতে এই কম্পোনেন্টের ঐচ্ছিক "qrcode" প্যাকেজটি ইনস্টল থাকা প্রয়োজন।',
   qrCodeGenerationFailed: 'এই মানটি QR কোড হিসেবে এনকোড করা যায়নি।',
-  mapMissingLibrary: 'মানচিত্র দেখাতে এই কম্পোনেন্টের ঐচ্ছিক "maplibre-gl" প্যাকেজটি ইনস্টল থাকা প্রয়োজন।',
+  mapMissingLibrary: 'মানচিত্র দেখাতে এই কম্পোনেন্টের ঐচ্ছিক "{package}" প্যাকেজটি ইনস্টল থাকা প্রয়োজন।',
   mapStyleRequired: 'মানচিত্র দেখাতে একটি ম্যাপ স্টাইল দিন।',
   mapWebglUnavailable: 'এই ব্রাউজারে মানচিত্র দেখানোর জন্য প্রয়োজনীয় গ্রাফিক্স সুবিধা নেই।',
   mapInitializationFailed: 'মানচিত্র চালু করা যায়নি।',

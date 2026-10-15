@@ -68,6 +68,13 @@ export default {
       entry: ['src/index.ts!', 'src/docx/index.ts!', 'src/docx/editor.ts!', 'src/docx/docx-editor.class.ts!', 'src/**/*.test.ts', 'type-tests/**/*.ts'],
       project: ['src/**/*.ts!', '!src/**/*.test.ts!', '!src/**/*-fixtures.ts!', 'scripts/**/*.mjs', 'type-tests/**/*.ts', 'test/**/*.ts'],
     },
+    'packages/lyra-map': {
+      // Build inputs produce the public worker/plugin entries and declarations in dist/.
+      entry: ['src/vite.mjs!', 'src/vite.d.ts!', 'types/features.d.ts!', 'test/*.test.mjs'],
+      project: ['src/**/*.{mjs,ts}!', 'types/**/*.ts!', 'scripts/**/*.mjs', 'test/**/*.{mjs,ts}'],
+      // Linux browser qualification uses the system font resolver and an isolated display server.
+      ignoreBinaries: ['fc-match', 'Xvfb'],
+    },
     'packages/lyra-flags': {
       project: ['scripts/**/*.mjs', '*.js'],
     },

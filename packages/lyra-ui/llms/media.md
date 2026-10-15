@@ -350,7 +350,8 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 
 ## `lr-map`
 
-A `maplibre-gl` wrapper with a declarative legend, a single choropleth GeoJSON fill layer, markers,
+A MapLibre-compatible wrapper using the optional `@aceshooting/lyra-map` modular engine by default,
+with a declarative legend, a single choropleth GeoJSON fill layer, markers,
 and additive `dataLayers` — plain GeoJSON, natively clustered points, or a heatmap density surface —
 plus a peer-neutral `map` getter for common imperative operations. Its runtime value is the
 underlying MapLibre map. The component observes its own map-container allocation and calls the
@@ -366,6 +367,11 @@ modes use the same expression semantics at initial render and after a theme chan
 
 **Properties:**
 
+- `engine: LyraMapEngine = 'modular'` — selects the optional `@aceshooting/lyra-map` companion.
+  Set `engine="maplibre"` before connecting to explicitly use the full canonical `maplibre-gl`
+  peer. A missing selected engine shows a localized fallback; it never selects another engine.
+  Later changes take effect after disconnect/reconnect. Native compatibility includes the full
+  engine payload and is a separate opt-in from the modular default.
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2` — `center` and `zoom` are the declarative camera. Assigning either moves the
   map without emitting anything. When the camera settles after a user gesture or `fitBounds()`, the
@@ -791,18 +797,33 @@ payload beside the map.
 `LyraMapPointRadiusInterpolation`, `LyraMapPointIcon`, `LyraMapPointIconMode`,
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
 `LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapLegendPanelToggleDetail`,
-`LyraMapStyleSpecification`, and `LyraMapInstance`.
+`LyraMapStyleSpecification`, `LyraMapEngine`, `LyraMapFeatureRequirements`, and `LyraMapInstance`.
 
 **Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
 through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and
 `resize()` subset so merely importing Lyra does not require `maplibre-gl` declarations. A consumer
 that installed the optional peer and needs its full imperative API can explicitly narrow the runtime
-value to `maplibregl.Map`.
+value to the selected engine's `Map` type. `LyraMapInstance.prepareFeatures?()` is present on the
+modular engine and absent on canonical MapLibre, so guard it or narrow to the companion `Map`
+before calling. Identity is preserved: `.map` is the engine instance, not a proxy.
 
-**Methods:** `LyraMap.preload(): Promise<boolean>` is a static optional-peer warm-up that starts the
-shared `maplibre-gl` import without constructing a map or allocating a WebGL context. It resolves to
-`false` when the peer is unavailable, allowing an application to choose a fallback before connecting
-an element.
+The modular engine automatically prepares initial and replacement style requirements, including
+projection and terrain. `<lr-map>` additionally awaits per-map main-thread and worker readiness
+before adding generated choropleth or `dataLayers` sources and layers. New heatmap, clustering, and
+symbol requirements are prepared when introduced. Failed or superseded preparations never apply
+stale overlays, and disconnect aborts outstanding preparation.
+
+For direct imperative mutations, call `await map.prepareFeatures(requirements, { signal })` with
+actual `sources`, `layers`, `projection`, and `terrain` descriptors before introducing new families
+through synchronous `addSource`, `addLayer`, `setProjection`, or `setTerrain` calls. Requirements use
+`LyraMapFeatureRequirements`; `signal` is optional. A map constructed with `style: null` is initialized
+by this per-map method before those mutations. Global `prepareStyle()` warms main modules only;
+it does not replace per-map worker readiness. Same-family updates remain synchronous after readiness.
+
+**Methods:** `LyraMap.preload(engine: LyraMapEngine = 'modular'): Promise<boolean>` starts the selected
+optional-peer import without constructing a map or allocating a WebGL context. Pass `'maplibre'`
+for an explicitly native element. It resolves to `false` when the selected peer is unavailable,
+allowing an application to choose a fallback before connecting an element.
 
 `fitBounds(bounds: LyraMapBounds, options?: LyraMapFitBoundsOptions): boolean` frames a box
 `[[west, south], [east, north]]` in the viewport: the way to show every current marker, or a
@@ -950,7 +971,7 @@ A swatch rendering an entry's `icon` carries `data-icon="true"`, paints the glyp
 own colour through `currentColor`, and drops the colour block, its border and the `pattern`
 overlay — all three would sit on top of the shape they identify. The glyph stays decorative: the row's
 visible label carries its meaning. That association is advertised only while it is true — while
-the optional `maplibre-gl` peer is still loading, and after any failure, there is no map
+the selected optional map peer is still loading, and after any failure, there is no map
 container in the tree, so `legend` withholds `aria-controls` rather than leaving a dangling
 idref.
 Under `legendInteractive`, a row carrying a `value` wraps its swatch and label in a
@@ -997,8 +1018,9 @@ peer unavailable, owner-realm WebGL2 unavailable, or initialization failed. A po
 appended to the document's pre-mounted `[data-lr-live-region="assertive"]` sink rather than making
 shadow chrome live; raw caught errors are never exposed.
 
-**Standard peer controls:** after `lr-map-load`, narrow `.map` to the installed MapLibre peer
-and use `addControl(new NavigationControl(), 'bottom-right')` and
+**Standard peer controls:** after `lr-map-load`, narrow `.map` to the selected engine's `Map`.
+For the default engine, import `NavigationControl` from `@aceshooting/lyra-map/controls/navigation`
+and `ScaleControl` from `@aceshooting/lyra-map/controls/scale`, then use `addControl(new NavigationControl(), 'bottom-right')` and
 `addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left')`. No document-level peer CSS or
 shadow-root modification is needed: navigation buttons, compass glyph, scale bar and control
 corners are styled with Lyra tokens. The corners follow inline start/end under RTL. The legend
@@ -1046,20 +1068,32 @@ var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-acti
   control group), `--lr-color-border-subtle` (popup, legend and legend-limit rule edges),
   `--lr-shadow`, `--lr-radius`.
 
-**Optional peer deps:** `maplibre-gl` `>=5 <7` (lazy-loaded). `<lr-map>` styles MapLibre's
-generated canvas, marker, popup, and control DOM inside its shadow root; a page-level MapLibre
-stylesheet is neither required nor able to reach those nodes. MapLibre v5's standard build includes
-its worker. MapLibre v6 is ESM-only, requires WebGL2, and additionally needs its module-worker URL
-configured for the bundler once — the component cannot choose a bundler-specific worker URL. For
-Vite with v6:
+**Optional peer deps:** the default is `@aceshooting/lyra-map` `^1.0.0` (lazy-loaded). Install and
+configure the companion's Vite plugin so the engine and module worker share the same emitted
+feature graph:
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+import { lyraMapWorkerPlugin } from '@aceshooting/lyra-map/vite';
+export default defineConfig({ plugins: [lyraMapWorkerPlugin()] });
+```
+
+The plugin disables document module-preload helpers for chunks also imported by workers. See the
+companion README for Rollup/Rolldown integration or the explicit `setWorkerUrl()` override. Missing
+worker configuration fails visibly. Importing the companion during SSR is safe; worker creation
+occurs in the browser.
+
+`<lr-map>` styles the generated canvas, marker, popup, and control DOM inside its shadow root;
+a page-level map stylesheet is neither required nor able to reach those nodes. The explicit
+`engine="maplibre"` choice uses the separate optional `maplibre-gl` `>=5 <7` peer. Canonical v6 needs
+its own bundler-specific module-worker URL; v5's standard build includes its worker.
+
+With the default companion configured:
 
 ```html
 <lr-map center="[2.35, 48.85]" zoom="10"></lr-map>
 <script type="module">
-  import { setWorkerUrl } from "maplibre-gl";
-  import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
-  setWorkerUrl(workerUrl);
-
   const m = document.querySelector("lr-map");
   m.mapStyle = { version: 8, sources: {}, layers: [] }; // explicit, network-silent baseline
   m.choropleth = {
@@ -1086,8 +1120,9 @@ Vite with v6:
 </script>
 ```
 
-Webpack, esbuild, Rollup, and direct-browser ESM use different worker URL forms; use MapLibre's ESM
-installation guide for the matching setup:
+For the explicit canonical engine, configure its worker before connecting the element. For example,
+Vite with MapLibre v6 uses `setWorkerUrl` from `maplibre-gl` with a URL imported from
+`maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url`. Other bundlers use different forms; see
 https://maplibre.org/maplibre-gl-js/docs/#esm.
 
 **Known gotchas:**
@@ -1132,7 +1167,7 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
   swatch renders). The required `pattern` remains distinct in forced colors through solid, dashed,
   dotted, and double border/shape encodings.
-- while the `maplibre-gl` peer is resolving, the host/base expose `aria-busy="true"` and show a
+- while the selected map peer is resolving, the host/base expose `aria-busy="true"` and show a
   decorative `<lr-skeleton shape="rect" announce="false">` in place of the map container.
   Ordinary sr-only text preserves the localized `loading` label without creating a shadow live
   region.
@@ -3632,7 +3667,24 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-media-map-map-loader-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
-  `loadMaplibre(): Promise<MaplibreModule | null>`
+  `loadMaplibre(): Promise<MaplibreModule | null>` — explicit canonical-engine loader.
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
+  `loadModularMap(): Promise<ModularMapModule | null>` — default modular-engine loader.
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
+  `LyraMapFeatureRequirements {
+    readonly sources?: Readonly<Record<string, unknown>>;
+    readonly layers?: readonly unknown[];
+    readonly projection?: unknown;
+    readonly terrain?: unknown;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
+  `ModularMapModule extends MaplibreModule {
+    Map: new (options: Record<string, unknown>) => MapLibreMapCapability & {
+      prepareFeatures(requirements: LyraMapFeatureRequirements, options?: { signal?: AbortSignal }): Promise<void>;
+    };
+    Marker: new (options?: { color?: string }) => MapLibreMarkerCapability;
+    Popup: new (options?: { offset?: number }) => MapLibrePopupCapability;
+  }`
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreGeoJsonDiff {
     readonly remove?: readonly (string | number)[];
@@ -3653,6 +3705,7 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreMapCapability {
+    prepareFeatures?(requirements: LyraMapFeatureRequirements, options?: { signal?: AbortSignal }): Promise<void>;
     getCanvas(): HTMLCanvasElement;
     getCenter(): {
       lng: number;
@@ -3728,6 +3781,8 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-media-map-map-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `buildGeoJsonPropertyDiff(previous: unknown, next: unknown): MapLibreGeoJsonDiff | null`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapEngine = 'modular' | 'maplibre'`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapChoroplethLayer {
     readonly sourceId: string;
@@ -3813,6 +3868,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraMapPointIconLineJoin = 'miter' | 'round' | 'bevel'`.
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapInstance {
+    prepareFeatures?(requirements: LyraMapFeatureRequirements, options?: { signal?: AbortSignal }): Promise<void>;
     getCanvas(): HTMLCanvasElement;
     getCenter(): {
       lng: number;
@@ -3896,6 +3952,8 @@ These named interfaces and helper signatures are available to typed integrations
       url: string;
     }>[];
     readonly glyphs?: string;
+    readonly projection?: unknown;
+    readonly terrain?: unknown;
   }`
 
 - **`components-media-media-card-media-card-contracts`** — Supporting data types and helpers for this component family.

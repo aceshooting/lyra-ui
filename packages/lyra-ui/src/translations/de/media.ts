@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Pausieren',
   qrCodeMissingLibrary: 'Für diese Komponente muss das optionale Paket „qrcode“ installiert sein, um QR-Codes zu erzeugen.',
   qrCodeGenerationFailed: 'Dieser Wert konnte nicht als QR-Code kodiert werden.',
-  mapMissingLibrary: 'Für diese Komponente muss das optionale Paket „maplibre-gl“ installiert sein, um die Karte darzustellen.',
+  mapMissingLibrary: 'Für diese Komponente muss das optionale Paket „{package}“ installiert sein, um die Karte darzustellen.',
   mapStyleRequired: 'Geben Sie einen Kartenstil an, um die Karte darzustellen.',
   mapWebglUnavailable: 'Dieser Browser kann die zum Darstellen der Karte erforderliche Grafikunterstützung nicht bereitstellen.',
   mapInitializationFailed: 'Die Karte konnte nicht initialisiert werden.',

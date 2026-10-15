@@ -2080,20 +2080,31 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       labels: [...labels],
       datasets: datasets.map((series) => {
         const { points: _points, ...safeSeries } = series;
-        return {
+        const values = canonicalSeriesPoints(series) ?? canonicalSeriesData(series);
+        const data = [...values];
+        Object.freeze(data);
+        const dataset = {
           ...safeSeries,
-          data: [...(canonicalSeriesPoints(series) ?? canonicalSeriesData(series))],
+          data,
           yAxisID: series.axis === 'y2' ? 'y2' : 'y',
         };
+        canonicalChartDatasetValues.set(dataset, values);
+        return Object.freeze(dataset);
       }),
     };
+    Object.freeze(generated.labels);
+    Object.freeze(generated.datasets);
     const override = projectChartDataConfiguration(this.effectiveConfig()?.data);
-    const merged = override ? deepMerge(generated, override) : generated;
-    const projected = projectChartDataConfiguration(merged);
-    const value = {
-      labels: (projected?.labels ?? []) as unknown[],
-      datasets: (projected?.datasets ?? []) as LyraChartDatasetConfiguration[],
-    };
+    // Simplified series and labels already crossed their descriptor boundary. Keep their full
+    // semantic model without projecting every value again; raw data overrides still need merging.
+    let value = generated;
+    if (override) {
+      const projected = projectChartDataConfiguration(deepMerge(generated, override));
+      value = {
+        labels: (projected?.labels ?? []) as unknown[],
+        datasets: (projected?.datasets ?? []) as LyraChartDatasetConfiguration[],
+      };
+    }
     this.effectiveDataMemo = { labels, datasets, config, value };
     return value;
   }
@@ -3101,14 +3112,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const series = canonicalChartSeries(s);
     if (!series) return { label: '', data: [] };
     const points = canonicalSeriesPoints(series);
-    const fullNormalizedData = points
-      ? points.map(normalizedChartPoint)
-      : canonicalSeriesData(series).map((value) =>
-          typeof value === 'number' && Number.isFinite(value) ? value : null
-        );
+    const values = points ?? canonicalSeriesData(series);
+    const normalize: (value: unknown) => number | LyraChartPoint | null = points
+      ? normalizedChartPoint
+      : (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null;
+    // Sampling bounds visual work as well as the peer payload. Full canonical values remain
+    // available to summaries and exports through the independent semantic model.
     const normalizedData = rowIndexes
-      ? rowIndexes.map((rowIndex) => fullNormalizedData[rowIndex] ?? null)
-      : fullNormalizedData;
+      ? rowIndexes.map((rowIndex) => normalize(values[rowIndex]))
+      : values.map(normalize);
     const borderFallback =
       chartStyle.borderColors[index % chartStyle.borderColors.length] ??
       palette[index % palette.length];

@@ -24,19 +24,19 @@ test('table insertion drafts require complete bounded decimal integers', () => {
   }
 });
 
-test('table intent retains unchanged drafts and consumes exactly one original lease', () => {
+test('table intent retains unchanged drafts and consumes exactly one original lease', async () => {
   const f = fixture();
   const intent = captureTableToolIntent(f.session)!;
   assert.equal(intent.valid(f.session), true);
-  assert.equal(intent.execute(f.session, { type: 'delete-table' }).ok, true);
+  assert.equal((await intent.execute(f.session, { type: 'delete-table' })).ok, true);
   assert.equal(f.options.length, 1);
   assert.equal(f.released(), 1);
-  assert.deepEqual(intent.execute(f.session, { type: 'delete-table' }), { ok: false, code: 'stale-selection' });
+  assert.deepEqual((await intent.execute(f.session, { type: 'delete-table' })), { ok: false, code: 'stale-selection' });
   intent.release();
   assert.equal(f.released(), 1);
 });
 
-test('table intent refuses replacement, reselection, revision changes and released intent without live fallback', () => {
+test('table intent refuses replacement, reselection, revision changes and released intent without live fallback', async () => {
   for (const kind of ['selection', 'revision', 'session', 'release']) {
     const f = fixture();
     const intent = captureTableToolIntent(f.session)!;
@@ -46,7 +46,7 @@ test('table intent refuses replacement, reselection, revision changes and releas
     if (kind === 'session') target = fixture().session;
     if (kind === 'release') intent.release();
     assert.equal(intent.valid(target), false);
-    assert.deepEqual(intent.execute(target, { type: 'delete-table' }), { ok: false, code: 'stale-selection' });
+    assert.deepEqual((await intent.execute(target, { type: 'delete-table' })), { ok: false, code: 'stale-selection' });
     assert.equal(f.options.length, 0);
     assert.equal(f.released(), 1);
   }
@@ -66,4 +66,19 @@ test('table intent releases a lease when acquisition synchronously changes the s
   assert.equal(captureTableToolIntent(f.session), null);
   assert.equal(f.released(), 1);
   assert.equal(f.options.length, 0);
+});
+
+
+test('dispatched selection intent retains its lease across preparation and releases it exactly once', async () => {
+  const f = fixture(), intent = captureTableToolIntent(f.session)!;
+  let resolve!: (value: Awaited<ReturnType<DocxSession['execute']>>) => void;
+  f.session.execute = () => new Promise(done => { resolve = done; });
+  const pending = intent.execute(f.session, { type: 'delete-table' });
+  intent.release();
+  assert.equal(f.released(), 0);
+  assert.deepEqual(await intent.execute(f.session, { type: 'delete-table' }), { ok: false, code: 'stale-selection' });
+  assert.equal(f.released(), 0);
+  resolve({ ok: true, value: f.session.snapshot().revision! });
+  assert.equal((await pending).ok, true);
+  intent.release(); assert.equal(f.released(), 1);
 });

@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'ਰੋਕੋ',
   qrCodeMissingLibrary: 'QR ਕੋਡ ਦਿਖਾਉਣ ਲਈ ਇਸ ਕੰਪੋਨੈਂਟ ਵਿੱਚ ਵਿਕਲਪਿਕ "qrcode" ਪੈਕੇਜ ਸਥਾਪਤ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।',
   qrCodeGenerationFailed: 'ਇਸ ਮੁੱਲ ਨੂੰ QR ਕੋਡ ਵਜੋਂ ਏਨਕੋਡ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ।',
-  mapMissingLibrary: 'ਨਕਸ਼ਾ ਦਿਖਾਉਣ ਲਈ ਇਸ ਕੰਪੋਨੈਂਟ ਵਿੱਚ ਵਿਕਲਪਿਕ "maplibre-gl" ਪੈਕੇਜ ਸਥਾਪਤ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।',
+  mapMissingLibrary: 'ਨਕਸ਼ਾ ਦਿਖਾਉਣ ਲਈ ਇਸ ਕੰਪੋਨੈਂਟ ਵਿੱਚ ਵਿਕਲਪਿਕ "{package}" ਪੈਕੇਜ ਸਥਾਪਤ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।',
   mapStyleRequired: 'ਨਕਸ਼ਾ ਦਿਖਾਉਣ ਲਈ ਨਕਸ਼ੇ ਦੀ ਸ਼ੈਲੀ ਦਿਓ।',
   mapWebglUnavailable: 'ਇਹ ਬ੍ਰਾਊਜ਼ਰ ਨਕਸ਼ਾ ਦਿਖਾਉਣ ਲਈ ਲੋੜੀਂਦਾ ਗ੍ਰਾਫ਼ਿਕਸ ਸਮਰਥਨ ਨਹੀਂ ਦੇ ਸਕਦਾ।',
   mapInitializationFailed: 'ਨਕਸ਼ਾ ਸ਼ੁਰੂ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਿਆ।',

@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Keskeytä',
   qrCodeMissingLibrary: 'Tämä komponentti tarvitsee valinnaisen ”qrcode”-paketin QR-koodien piirtämiseen.',
   qrCodeGenerationFailed: 'Tätä arvoa ei voitu koodata QR-koodiksi.',
-  mapMissingLibrary: 'Tämä komponentti tarvitsee valinnaisen ”maplibre-gl”-paketin kartan piirtämiseen.',
+  mapMissingLibrary: 'Tämä komponentti tarvitsee valinnaisen ”{package}”-paketin kartan piirtämiseen.',
   mapStyleRequired: 'Anna karttatyyli kartan piirtämistä varten.',
   mapWebglUnavailable: 'Tämä selain ei tarjoa kartan piirtämiseen tarvittavaa grafiikkatukea.',
   mapInitializationFailed: 'Karttaa ei voitu alustaa.',

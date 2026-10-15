@@ -10,7 +10,7 @@ export function eagerEngineImports(entries, readSource) {
     if (visited.has(file)) return;
     visited.add(file);
     for (const specifier of staticModuleSpecifiers(file, readSource(file))) {
-      if (specifier.startsWith('@docx-editor.dev/')) findings.push({ file, specifier });
+      if ((specifier.startsWith('@docx-editor.dev/') || specifier.startsWith('#lyra-docx-engine/'))) findings.push({ file, specifier });
       else if (specifier.startsWith('.')) visit(path.resolve(path.dirname(file), specifier));
       else if (path.isAbsolute(specifier)) visit(specifier);
       else if (specifier.startsWith('file:')) visit(fileURLToPath(specifier));

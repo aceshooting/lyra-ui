@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import tailwindcss from '@tailwindcss/vite';
+import { lyraMapWorkerPlugin } from '@aceshooting/lyra-map/vite';
 import remarkGfm from 'remark-gfm';
 import { codecovVitePlugin } from '@codecov/vite-plugin';
 import { componentImportsPlugin } from './component-imports.js';
@@ -94,12 +95,13 @@ const config = {
     // read at build time from the same `llms/components/<tag>.md` files `check:llms-artifacts`
     // resolves. See .storybook/component-imports.js.
     viteConfig.plugins.push(componentImportsPlugin());
-    // Companion stories import the public package routes; resolve their committed source
-    // targets so the docs build remains independent of the library build.
+    // Companion stories import public package routes; resolve their source targets so their
+    // modules use the same graph as component stories.
     viteConfig.plugins.push(sourcePackageExportsPlugin());
     viteConfig.plugins.push(sourceShikiWasmPlugin());
-    // Storybook consumes source classes directly, including on a clean checkout without dist.
-    // Resolve diagnostics to the matching source condition while package consumers use imports.
+    viteConfig.plugins.push(lyraMapWorkerPlugin());
+    // Storybook consumes source classes. Resolve diagnostics to the matching source condition
+    // while package consumers use imports.
     let sourceDiagnosticCondition = 'production';
     viteConfig.plugins.push({
       name: 'lyra-source-diagnostic-condition',
@@ -120,42 +122,37 @@ const config = {
     const catalogNames = localeManifest.locales
       .filter(locale => typeof locale.aggregateImport === 'string' && locale.kind !== 'testing-only')
       .map(locale => locale.aggregateImport.split('/').at(-1).replace(/\.js$/, ''));
-    viteConfig.build.modulePreload = builderModulePreload(viteConfig.build.modulePreload, catalogNames);
-    // Vite's default 500kB warning fires on chunks that are already correctly
-    // split (one-per-language addon-docs syntax-highlighter chunks, axe-core,
-    // MapLibre's own WASM+JS) — none of it ships in the published npm
-    // package (see check:packed-consumer, which measures that separately).
-    // Raised past the current largest known chunk so the warning stays meaningful for a genuine
-    // future regression instead of firing on this site build's normal baseline. Re-baselined from
-    // 3200: Storybook's own iframe runtime has grown well past the ~2.8MB it sat at when that
-    // number was picked, and it is the chunk in question -- the library's own code is no longer
-    // in it at all (see the `lyra-components` manualChunk below, which already cut this chunk
-    // from 6072 KB to 4293 KB). Nothing in this repo's source can shrink the remainder, so the
-    // honest move is to re-baseline rather than leave a tripwire that fires on every clean build.
-    // The current Storybook/Vite refresh moved that framework-owned runtime baseline to 4965 KB;
-    // keep a small margin while preserving the tripwire for the next material regression.
+    // Worker-shared chunks cannot run document-based module-preload helpers. Disabling preloads
+    // also preserves the builder/locale lazy-root boundary represented by this shared helper.
+    viteConfig.build.modulePreload = builderModulePreload(false, catalogNames);
+    // Keep a real size tripwire while splitting the eager library and Storybook runtime below.
+    // Syntax-highlighter languages and optional peers can still form substantial lazy chunks.
     viteConfig.build.chunkSizeWarningLimit = 5100;
-    viteConfig.build.rollupOptions = viteConfig.build.rollupOptions ?? {};
-    viteConfig.build.rollupOptions.output = viteConfig.build.rollupOptions.output ?? {};
+    // Vite 8 reads warnings from rolldownOptions; its rollupOptions name is only an alias.
+    const bundlerOptions = viteConfig.build.rolldownOptions ?? viteConfig.build.rollupOptions ?? {};
+    viteConfig.build.rolldownOptions = bundlerOptions;
+    delete viteConfig.build.rollupOptions;
+    bundlerOptions.output = bundlerOptions.output ?? {};
     // Split each optional-peer-heavy dependency family into its own chunk so
     // a story that never renders `lr-map`/`lr-chart`/`lr-graph` never
     // has to load MapLibre/Chart.js/d3 as part of whatever shared chunk it
     // does need.
-    // `preview.js` imports the `all.js` registration entry so every story can rely on every element
-    // being defined, which otherwise parks the entire library inside Storybook's own `iframe`
-    // entry chunk. Splitting it out measurably wins on both axes (verified by building both
-    // ways): the largest chunk drops 6072 KB -> 4293 KB, and total emitted JS gets *smaller*
-    // (24,450,190 -> 24,419,661 bytes across 668 -> 598 chunks) because the shared library code
-    // stops being duplicated into per-story chunks. It also stops a one-component edit from
-    // invalidating the cached Storybook runtime, and vice versa. Story modules are excluded on
-    // purpose: Storybook code-splits those per story, and folding them in would make every story
-    // eager.
+    // `preview.js` imports the eager `all.js` registration entry, so separate component families
+    // and shared source from Storybook's iframe runtime. Story modules remain independently lazy.
     const LYRA_SRC = '/packages/lyra-ui/src/';
-    viteConfig.build.rollupOptions.output.manualChunks = (id) => {
+    bundlerOptions.output.manualChunks = (id) => {
+      // Preserve the companion's semantic feature and shared-worker chunk boundaries.
+      if (id.includes('/packages/lyra-map/') || id.includes('/@aceshooting/lyra-map/') || id.startsWith('\0lyra-map')) return;
       if (id.includes(LYRA_SRC) && !id.includes('.stories.') && !id.endsWith('.mdx') && !isDeferredLocaleModule(id)) {
-        return 'lyra-components';
+        const relative = id.slice(id.indexOf(LYRA_SRC) + LYRA_SRC.length);
+        const family = /^components\/([^/]+)\//.exec(relative)?.[1];
+        return family ? `lyra-${family}` : 'lyra-shared';
       }
-      if (id.includes('maplibre-gl')) return 'vendor-maplibre';
+      // The preview includes Storybook's framework runtime, which is large enough to make the
+      // iframe itself exceed the warning limit unless its own modules have a separate chunk.
+      if (/(?:\/node_modules\/(?:\.pnpm\/storybook@[^/]+\/node_modules\/)?storybook\/)/.test(id)) return 'vendor-storybook';
+      if (/(?:\/node_modules\/(?:\.pnpm\/@storybook\+addon-docs@[^/]+\/node_modules\/)?@storybook\/addon-docs\/)/.test(id)) return 'vendor-storybook-docs';
+      if (/(?:^|\/)maplibre-gl(?:\/|$)/.test(id)) return 'vendor-maplibre';
       if (id.includes('chart.js') || id.includes('chartjs-plugin-zoom') || id.includes('@sgratzl/chartjs-chart-boxplot')) {
         return 'vendor-chartjs';
       }
@@ -163,20 +160,22 @@ const config = {
         return 'vendor-d3';
       }
     };
-    // `all.js` is the "define every root-included element" entry, so everything it imports is in the static
-    // graph by construction. That makes the deliberate lazy `import()` in a viewer's
-    // `*-register.js` (and `phone-input`'s deferred `lr-flag` registration) ineffective *in this
-    // build specifically* -- not a defect in those modules. The published package is unbundled, so
-    // a consumer that deep-imports the register module instead of the barrel still gets the real
-    // lazy load; only the docs site, which wants every element defined up front, collapses it.
-    // Scoped to that exact cause on purpose: an ineffective dynamic import reported from any other
-    // importer is a genuine regression and must still surface.
-    const defaultOnwarn = viteConfig.build.rollupOptions.onwarn;
-    viteConfig.build.rollupOptions.onwarn = (warning, warn) => {
+    // The eager docs registry makes its imported registration targets static. The three other
+    // paths below resolve statically through the same eager component graph. Their source-level
+    // lazy imports remain intact for granular library consumers. Other ineffective imports still
+    // warn.
+    const eagerDocsPairs = [
+      ['internal/announcer.ts', 'components/overlays/skeleton/skeleton.class.ts'],
+      ['components/overlays/toast/toast.class.ts', 'components/overlays/toast/toaster.ts'],
+      ['components/overlays/toast/toast-item.class.ts', 'components/overlays/toast/toaster.ts'],
+    ];
+    const defaultOnwarn = bundlerOptions.onwarn;
+    bundlerOptions.onwarn = (warning, warn) => {
       const message = String(warning?.message ?? warning ?? '');
-      // Keep this pattern in step with the registration barrel named above: it was `lyra.ts` before
-      // v8 moved registration to `all.ts`, and the stale name silently stopped matching.
-      if (warning?.code === 'INEFFECTIVE_DYNAMIC_IMPORT' && /src\/all\.ts|\.stories\.ts/.test(message)) {
+      if (warning?.code === 'INEFFECTIVE_DYNAMIC_IMPORT' &&
+          (message.includes('but also statically imported by packages/lyra-ui/src/all.ts') ||
+            eagerDocsPairs.some(([target, importer]) => message.includes(target) && message.includes(importer) &&
+              message.includes('but also statically imported by')))) {
         return;
       }
       if (defaultOnwarn) defaultOnwarn(warning, warn);

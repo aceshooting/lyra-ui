@@ -63,7 +63,11 @@ function harness() {
     retainSelection: () => Symbol(), releaseSelection() {},
     save: () => saved(), destroy() { destroyCount++; },
   } as unknown as DocxEditorInstance;
-  const loader = async () => ({ createDocxEditor(config: DocxEditorConfig) {
+  const packageState = {};
+  Object.defineProperty(engine, 'surface', { configurable: true, writable: true, value: { session: { packageRevision: () => 0, currentPackage: () => packageState }, flushPendingInput() {} } });
+  let prepare = async (_features: readonly string[]) => {};
+  const loader = async () => ({ prepareFeatures: (features: readonly string[]) => prepare(features),
+    prepareCommandFeatures: (command: Parameters<DocxEditorInstance['exec']>[0]) => prepare([command.type]), createDocxEditor(config: DocxEditorConfig) {
     creation = config; mode = config.mode ?? 'edit'; return engine;
   } });
   return { mount, child, viewport, viewportRemoves: () => viewportRemoves, document, emit, loader, engine,
@@ -71,6 +75,7 @@ function harness() {
     loadCount: () => loadCount, creation: () => creation,
     modeChanges: () => modeChanges, focusCalls: () => focusCalls,
     executions: () => executions,
+    prepareWith: (callback: typeof prepare) => { prepare = callback; },
     saveWith: (callback: typeof saved) => { saved = callback; } };
 }
 
@@ -91,8 +96,8 @@ test('adapter opens an inert surface and observes changes before enabling native
   assert.equal(h.child.inert, false);
   assert.equal(h.modeChanges(), 0);
   assert.deepEqual(events, []);
-  opened.value.execute('bold');
-  assert.deepEqual(events, ['change', 'state']);
+  (await opened.value.execute('bold', undefined, () => ({ ok: true, value: undefined })));
+  assert.deepEqual(events, ['state', 'change', 'state']);
   off();
   assert.equal(h.child.inert, true);
   opened.value.destroy(); opened.value.destroy();
@@ -119,7 +124,7 @@ test('factory or synchronous load failures destroy only the owned surface and re
       if (kind === 'aborted-load') controller.abort();
       throw new Error('private document diagnostics');
     };
-    const loader = kind === 'factory' ? async () => ({ createDocxEditor() {
+    const loader = kind === 'factory' ? async () => ({ async prepareFeatures() {}, async prepareCommandFeatures() {}, createDocxEditor() {
       throw new Error('private engine factory diagnostics');
     } }) : h.loader;
     const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' },
@@ -154,7 +159,7 @@ test('command and replacement observers receive formatting finalized after the c
     if (replace) {
       const match = port.find('a', { matchCase: false, wholeWord: false, limit: 1 }).matches[0]!;
       assert.equal(port.replaceMatch(match.token, 'replacement').ok, true);
-    } else assert.equal(port.execute({ type: 'alignment', value: 'center' }).ok, true);
+    } else assert.equal((await port.execute({ type: 'alignment', value: 'center' }, undefined, () => ({ ok: true, value: undefined }))).ok, true);
     assert.equal(observed, 'center');
     assert.equal(changes, 1);
     port.destroy();
@@ -418,14 +423,16 @@ async function tableHarness() {
 test('table dispatch suspends native input without blur and rechecks request after settlement', async () => {
   const h = await tableHarness(); let checks = 0;
   h.document.activeElement = h.child;
+  let nested: Promise<DocxResult<void>> | DocxResult<void> | undefined;
   h.duringFlush(() => {
     const event = new Event('beforeinput', { cancelable: true }); h.child.dispatchEvent(event);
     assert.equal(event.defaultPrevented, true); assert.equal(h.child.inert, false);
     assert.equal(h.document.activeElement, h.child);
-    assert.deepEqual(h.port.execute({ type: 'insert-table', rows: 1, columns: 1 }, undefined, () => ({ ok: true, value: undefined })), { ok: false, code: 'busy' });
+    nested = h.port.execute({ type: 'insert-table', rows: 1, columns: 1 }, undefined, () => ({ ok: true, value: undefined }));
   });
-  const result = h.port.execute({ type: 'insert-table', rows: 2, columns: 2 }, undefined, () => { checks++; return { ok: true, value: undefined }; });
-  assert.equal(result.ok, true); assert.equal(h.flushes(), 1); assert.equal(checks, 3); assert.equal(h.executions(), 1);
+  const result = (await h.port.execute({ type: 'insert-table', rows: 2, columns: 2 }, undefined, () => { checks++; return { ok: true, value: undefined }; }));
+  assert.deepEqual(await nested, { ok: false, code: 'busy' });
+  assert.equal(result.ok, true); assert.equal(h.flushes(), 1); assert.equal(checks, 4); assert.equal(h.executions(), 1);
   const input = new Event('beforeinput', { cancelable: true }); h.child.dispatchEvent(input); assert.equal(input.defaultPrevented, false);
   h.port.destroy();
 });
@@ -437,11 +444,11 @@ test('table command rejects postsettlement facade changes and post-capability co
     if (mode === 'selection') h.duringCan(() => { h.emit('selectionChange'); h.emit('selectionChange'); });
     if (mode === 'destroy') h.duringCan(() => h.port.destroy());
     if (mode === 'throw') h.duringCan(() => { throw Error('failure'); });
-    const execute = () => h.port.execute({ type: 'insert-table', rows: 2, columns: 2 }, undefined, () => {
+    const execute = async () => (await h.port.execute({ type: 'insert-table', rows: 2, columns: 2 }, undefined, () => {
       checks++; return checks === (mode === 'settled' ? 1 : mode === 'second-check' ? 2 : mode === 'third-check' ? 3 : -1)
         ? { ok: false, code: 'stale-revision' } : { ok: true, value: undefined };
-    });
-    if (mode === 'throw') assert.throws(execute); else assert.equal(execute().ok, false, mode);
+    }));
+    if (mode === 'throw') await assert.rejects(execute); else assert.equal((await execute()).ok, false, mode);
     assert.equal(h.executions(), 0, mode);
     const input = new Event('beforeinput', { cancelable: true }); h.child.dispatchEvent(input);
     if (mode !== 'destroy') assert.equal(input.defaultPrevented, false);
@@ -451,9 +458,9 @@ test('table command rejects postsettlement facade changes and post-capability co
 
 test('table validation and missing request guard refuse before flushing', async () => {
   const h = await tableHarness();
-  assert.deepEqual(h.port.execute({ type: 'insert-table', rows: 0, columns: 2 }), { ok: false, code: 'invalid-option' });
-  assert.deepEqual(h.port.execute({ type: 'delete-table' }), { ok: false, code: 'unsupported' });
-  assert.deepEqual(h.port.execute({ type: 'delete-table' }, {}, () => ({ ok: true, value: undefined })), { ok: false, code: 'stale-selection' });
+  assert.deepEqual((await h.port.execute({ type: 'insert-table', rows: 0, columns: 2 })), { ok: false, code: 'invalid-option' });
+  assert.deepEqual((await h.port.execute({ type: 'delete-table' })), { ok: false, code: 'unsupported' });
+  assert.deepEqual((await h.port.execute({ type: 'delete-table' }, {}, () => ({ ok: true, value: undefined }))), { ok: false, code: 'stale-selection' });
   assert.equal(h.flushes(), 0); assert.equal(h.executions(), 0);
   h.port.destroy();
 });
@@ -490,8 +497,8 @@ test('table mutation during native dispatch refuses, but same-stack postdispatch
   const event = new Event('beforeinput', { cancelable: true });
   Object.defineProperty(event, 'eventPhase', { get: () => dispatching ? Event.AT_TARGET : Event.NONE });
   h.child.dispatchEvent(event); dispatching = false;
-  assert.deepEqual(during, { ok: false, code: 'busy' }); assert.equal(h.flushes(), 0); assert.equal(h.executions(), 0);
-  assert.equal(h.port.execute(action, undefined, () => ({ ok: true, value: undefined })).ok, true);
+  assert.deepEqual(await during, { ok: false, code: 'busy' }); assert.equal(h.flushes(), 0); assert.equal(h.executions(), 0);
+  assert.equal((await h.port.execute(action, undefined, () => ({ ok: true, value: undefined }))).ok, true);
   assert.equal(h.flushes(), 1); assert.equal(h.executions(), 1);
   await new Promise(resolve => setTimeout(resolve, 20));
   h.port.destroy();
@@ -520,10 +527,10 @@ test('nested native event tracking stays bounded and fails closed until settleme
     result = h.port.execute(action, undefined, () => ({ ok: true, value: undefined }));
   });
   dispatch();
-  assert.deepEqual(result, { ok: false, code: 'busy' }); assert.equal(h.executions(), 0);
-  assert.deepEqual(h.port.execute(action, undefined, () => ({ ok: true, value: undefined })), { ok: false, code: 'busy' });
+  assert.deepEqual(await result, { ok: false, code: 'busy' }); assert.equal(h.executions(), 0);
+  assert.deepEqual((await h.port.execute(action, undefined, () => ({ ok: true, value: undefined }))), { ok: false, code: 'busy' });
   await waitForNativeSettlement(h.port);
-  assert.equal(h.port.execute(action, undefined, () => ({ ok: true, value: undefined })).ok, true);
+  assert.equal((await h.port.execute(action, undefined, () => ({ ok: true, value: undefined }))).ok, true);
   h.port.destroy();
 });
 
@@ -744,8 +751,8 @@ test('review adapter registers the public module and allows read-only queries an
 test('review adapter refuses a retained pin whose original engine selection epoch has changed', async () => {
   const h = await documentToolsHarness(), pin = h.port.retainSelection();
   h.emit('selectionChange');
-  assert.deepEqual(h.port.executeReview!({ type: 'add-comment', text: 'Original target', author: 'Editor' }, undefined, pin,
-    () => ({ ok: true, value: undefined })), { ok: false, code: 'stale-selection' });
+  assert.deepEqual((await h.port.executeReview!({ type: 'add-comment', text: 'Original target', author: 'Editor' }, undefined, pin,
+    () => ({ ok: true, value: undefined }))), { ok: false, code: 'stale-selection' });
   assert.equal(h.state.comments, 0); assert.equal(h.state.flushes, 0); h.port.destroy();
 });
 
@@ -753,17 +760,17 @@ test('review adapter requires a selected text range for new comments', async () 
   const h = await documentToolsHarness(); h.state.rangeEnd = 0;
   const command = { type: 'add-comment', text: 'Note', author: 'Writer' } as const;
   assert.deepEqual(h.port.canReview!(command), { enabled: false, reason: 'no-selection' });
-  assert.deepEqual(h.port.executeReview!(command, undefined, undefined, () => ({ ok: true, value: undefined })), { ok: false, code: 'no-selection' });
+  assert.deepEqual((await h.port.executeReview!(command, undefined, undefined, () => ({ ok: true, value: undefined }))), { ok: false, code: 'no-selection' });
   h.state.rangeEnd = 1;
   assert.deepEqual(h.port.canReview!(command), { enabled: true });
-  assert.deepEqual(h.port.executeReview!(command, undefined, undefined, () => ({ ok: true, value: undefined })), { ok: true, value: undefined });
+  assert.deepEqual((await h.port.executeReview!(command, undefined, undefined, () => ({ ok: true, value: undefined }))), { ok: true, value: undefined });
   assert.equal(h.state.comments, 1); h.port.destroy();
 });
 
 test('tracking mode tolerates the public author selection notification without changing document content', async () => {
   const h = await documentToolsHarness();
-  assert.deepEqual(h.port.executeReview!({ type: 'track-changes', enabled: true, author: 'Writer' }, undefined, undefined,
-    () => ({ ok: true, value: undefined })), { ok: true, value: undefined });
+  assert.deepEqual((await h.port.executeReview!({ type: 'track-changes', enabled: true, author: 'Writer' }, undefined, undefined,
+    () => ({ ok: true, value: undefined }))), { ok: true, value: undefined });
   const report = h.port.review!(); assert(report.ok); assert.equal(report.value.enabled, true); assert.equal(report.value.author, 'Writer');
   assert.equal(h.state.revision, 0); h.port.destroy();
 });
@@ -772,8 +779,8 @@ test('review adapter authenticates revision targets and refuses input settled af
   const h = await documentToolsHarness(), report = h.port.review!(); assert(report.ok);
   assert.deepEqual(h.port.selectReviewItem!({}), { ok: false, code: 'stale-revision' });
   h.state.onFlush = () => { h.state.revision++; h.emit('change', { revision: h.state.revision }); };
-  assert.deepEqual(h.port.executeReview!({ type: 'add-comment', text: 'Note', author: 'Editor' }, undefined, undefined,
-    () => ({ ok: true, value: undefined })), { ok: false, code: 'stale-revision' });
+  assert.deepEqual((await h.port.executeReview!({ type: 'add-comment', text: 'Note', author: 'Editor' }, undefined, undefined,
+    () => ({ ok: true, value: undefined }))), { ok: false, code: 'stale-revision' });
   assert.equal(h.state.comments, 0);
   assert.deepEqual(h.port.selectReviewItem!(report.value.items[0]!.token), { ok: false, code: 'stale-revision' });
   h.port.destroy();
@@ -784,10 +791,10 @@ test('image adapter compares identical values before core capability or mutation
   const before = h.port.inspect(); assert.deepEqual(before.image, { widthPoints: 120, heightPoints: 60 });
   const description = h.port.imageDescription!(); assert(description.ok); assert(Object.isFrozen(description.value));
   for (const action of [{ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, { type: 'image-description', title: 'Title 1', description: 'Description 1' }] as const) {
-    assert(h.port.execute(action, undefined, () => ({ ok: true, value: undefined })).ok);
+    assert((await h.port.execute(action, undefined, () => ({ ok: true, value: undefined }))).ok);
   }
   assert.equal(h.f.dispatches, 0); assert.equal(h.f.calls, 0); assert.equal(h.f.revision, 0);
-  assert(h.port.execute({ type: 'resize-image', widthPoints: 144, heightPoints: 72 }, undefined, () => ({ ok: true, value: undefined })).ok);
+  assert((await h.port.execute({ type: 'resize-image', widthPoints: 144, heightPoints: 72 }, undefined, () => ({ ok: true, value: undefined }))).ok);
   assert.equal(h.f.dispatches, 1); assert.equal(h.f.calls, 1); h.port.destroy();
 });
 
@@ -811,7 +818,7 @@ test('image adapter rejects original intent changed by settlement, capability ob
     if (phase === 'package') h.f.onPackage = () => { h.f.revision++; };
     if (phase === 'release') h.port.releaseSelection(pin);
     if (phase === 'aba') { h.f.id = 'other'; h.emit('selectionChange'); h.f.id = h.image.id; h.emit('selectionChange'); }
-    assert.equal(h.port.execute({ type: 'delete-image' }, pin, () => ({ ok: true, value: undefined })).ok, false, phase);
+    assert.equal((await h.port.execute({ type: 'delete-image' }, pin, () => ({ ok: true, value: undefined }))).ok, false, phase);
     assert.equal(h.f.dispatches, 0, phase); h.port.destroy();
   }
 });
@@ -821,7 +828,7 @@ test('queued ordinary input is settled then refuses the cached original image wi
   h.child.dispatchEvent(new Event('beforeinput', { cancelable: true }));
   h.f.id = '';
   h.f.onFlush = () => { h.f.revision++; h.emit('change', { revision: h.f.revision }); };
-  assert.equal(h.port.execute({ type: 'delete-image' }, undefined, () => h.f.revision ? { ok: false, code: 'stale-revision' } : { ok: true, value: undefined }).ok, false);
+  assert.equal((await h.port.execute({ type: 'delete-image' }, undefined, () => h.f.revision ? { ok: false, code: 'stale-revision' } : { ok: true, value: undefined })).ok, false);
   assert.equal(h.f.flushes, 1); assert.equal(h.f.revision, 1); assert.equal(h.f.dispatches, 0);
   h.port.destroy();
 });
@@ -847,10 +854,10 @@ test('image metadata remains available when a committed edit restarts native res
     Object.assign(h.image, { title: action.title, description: action.description, resourceStatus: 'pending' });
     h.f.dispatches++; h.f.revision++; h.emit('change', { revision: h.f.revision }); return { ok: true };
   } });
-  assert(h.port.execute(action, undefined, () => ({ ok: true, value: undefined })).ok);
+  assert((await h.port.execute(action, undefined, () => ({ ok: true, value: undefined }))).ok);
   assert.deepEqual(h.port.imageDescription!(), { ok: true, value: { title: action.title, description: action.description } });
   assert.deepEqual(h.port.can({ type: 'delete-image' }), { enabled: false, reason: 'unsupported' });
-  assert.deepEqual(h.port.execute({ type: 'delete-image' }, undefined, () => ({ ok: true, value: undefined })), { ok: false, code: 'unsupported' });
+  assert.deepEqual((await h.port.execute({ type: 'delete-image' }, undefined, () => ({ ok: true, value: undefined }))), { ok: false, code: 'unsupported' });
   h.image.resourceStatus = 'failed'; h.port.inspect();
   assert.deepEqual(h.port.imageDescription!(), { ok: false, code: 'unsupported' });
   h.port.destroy();
@@ -870,7 +877,7 @@ test('owned resource refresh publishes readiness without selection or document c
   assert.equal(h.f.reads, reads + 1); assert.deepEqual(events, ['state']);
   assert.equal(h.port.inspect().imageReady, true);
   assert.equal(h.f.revision, 0); assert.equal(h.f.dispatches, 0); assert.equal(h.f.flushes, 0);
-  assert(h.port.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, pin, () => ({ ok: true, value: undefined })).ok);
+  assert((await h.port.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, pin, () => ({ ok: true, value: undefined }))).ok);
   assert.equal(h.f.dispatches, 0); h.port.destroy();
 });
 
@@ -975,7 +982,7 @@ test('explicit image navigation selects once, focuses and invalidates the origin
     assert.equal(selections, 1); assert.equal(h.focusCalls(), 1);
     assert.deepEqual(events, ['user-selection']);
     assert.equal(h.f.dispatches, 0); assert.equal(h.f.revision, 0); assert.equal(h.f.flushes, 0); assert.equal(h.f.calls, 0);
-    if (!readOnly) assert.deepEqual(h.port.execute({ type: 'delete-image' }, pin, () => ({ ok: true, value: undefined })), { ok: false, code: 'stale-selection' });
+    if (!readOnly) assert.deepEqual((await h.port.execute({ type: 'delete-image' }, pin, () => ({ ok: true, value: undefined }))), { ok: false, code: 'stale-selection' });
     h.port.destroy();
   }
 });
@@ -1012,7 +1019,7 @@ test('image execution rechecks readiness after settlement even for identical val
   for (const action of [{ type: 'delete-image' }, { type: 'resize-image', widthPoints: 120, heightPoints: 60 }] as const) {
     const h = await imageHarness();
     h.f.onFlush = () => { h.image.resourceStatus = 'pending'; };
-    assert.deepEqual(h.port.execute(action, undefined, () => ({ ok: true, value: undefined })), { ok: false, code: 'unsupported' });
+    assert.deepEqual((await h.port.execute(action, undefined, () => ({ ok: true, value: undefined }))), { ok: false, code: 'unsupported' });
     assert.equal(h.f.calls, 0); assert.equal(h.f.dispatches, 0); h.port.destroy();
   }
 });
@@ -1033,7 +1040,7 @@ test('singleton image navigation is a pure no-op and native refusal preserves se
   h.engine.surface!.selectDrawing = () => { selections++; return false; };
   assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'unsupported' });
   assert.equal(selections, 1); assert.equal(h.focusCalls(), 0);
-  assert(h.port.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, pin, () => ({ ok: true, value: undefined })).ok);
+  assert((await h.port.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, pin, () => ({ ok: true, value: undefined }))).ok);
   assert.equal(h.f.dispatches, 0); h.port.destroy();
 });
 
@@ -1046,12 +1053,14 @@ test('image navigation guards save, reentrant commands and invalid directions wi
   assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'busy' });
   assert.equal(h.f.packages, 0);
   pending.resolve(new ArrayBuffer(0)); await save;
+  let reentrant: Promise<DocxResult<void>> | DocxResult<void> | undefined;
   h.engine.surface!.selectDrawing = (id, paragraphId) => {
     assert.deepEqual(h.port.selectImage!('previous'), { ok: false, code: 'busy' });
-    assert.deepEqual(h.port.execute({ type: 'delete-image' }), { ok: false, code: 'busy' });
+    reentrant = h.port.execute({ type: 'delete-image' });
     h.f.id = id; h.f.paragraphId = paragraphId!; h.image.id = id; return true;
   };
   assert.deepEqual(h.port.selectImage!('next'), { ok: true, value: undefined });
+  assert.deepEqual(await reentrant, { ok: false, code: 'busy' });
   assert.equal(h.f.packages, 1); assert.equal(h.f.dispatches, 0); assert.equal(h.f.flushes, 0);
   h.port.destroy();
 });
@@ -1168,7 +1177,7 @@ test('ambiguous image layout refuses before native selection and preserves the r
     h.engine.surface!.selectDrawing = () => { selections++; return false; };
     assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'unsupported' });
     assert.equal(selections, 0); assert.equal(h.focusCalls(), 0);
-    assert(h.port.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, pin, () => ({ ok: true, value: undefined })).ok);
+    assert((await h.port.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, pin, () => ({ ok: true, value: undefined }))).ok);
     h.port.destroy();
   }
 });
@@ -1179,7 +1188,7 @@ test('unexpected false native selection publishes its actual moved caret and inv
   h.engine.surface!.selectDrawing = () => { h.f.id = ''; h.f.offset = 7; return false; };
   assert.deepEqual(h.port.selectImage!('next'), { ok: false, code: 'unsupported' });
   assert.deepEqual(events, ['user-selection']); assert.equal(h.port.inspect().image, null);
-  assert.equal(h.port.execute({ type: 'delete-image' }, pin, () => ({ ok: true, value: undefined })).ok, false);
+  assert.equal((await h.port.execute({ type: 'delete-image' }, pin, () => ({ ok: true, value: undefined }))).ok, false);
   assert.equal(h.f.dispatches, 0); assert.equal(h.focusCalls(), 0); assert.equal(h.f.offset, 7); h.port.destroy();
 });
 
@@ -1377,4 +1386,43 @@ test('insertion capture and live exceptions release authority without masking or
     assert.deepEqual(await captured.value.execute(h.source, h.operation()), { ok: false, code: stale ? 'stale-selection' : 'engine-failed' });
     assert.equal(h.live.packageRevision, 0); captured.value.release(); h.port.destroy();
   }
+});
+
+
+test('feature preparation retains the native barrier and rejects original table selection drift', async () => {
+  for (const invalidation of ['none', 'selection', 'revision', 'destroy'] as const) {
+    const h = await tableHarness(), gate = deferred<void>(), entered = deferred<void>();
+    const requests: string[][] = [];
+    h.prepareWith(async features => { requests.push([...features]); entered.resolve(); await gate.promise; });
+    const pending = h.port.execute({ type: 'insert-table', rows: 1, columns: 1 }, undefined, () => ({ ok: true, value: undefined }));
+    await entered.promise;
+    assert.deepEqual(requests, [['tables']]);
+    assert.equal(h.executions(), 0);
+    const input = new Event('beforeinput', { cancelable: true }); h.child.dispatchEvent(input);
+    assert.equal(input.defaultPrevented, true);
+    assert.deepEqual(await h.port.execute('bold'), { ok: false, code: 'busy' });
+    if (invalidation === 'selection') h.emit('selectionChange');
+    if (invalidation === 'revision') h.commit();
+    if (invalidation === 'destroy') h.port.destroy();
+    gate.resolve();
+    const result = await pending;
+    assert.equal(result.ok, invalidation === 'none', invalidation);
+    assert.equal(h.executions(), invalidation === 'none' ? 1 : 0);
+    h.port.destroy();
+  }
+});
+
+test('ordinary command preparation validates the captured facade before synchronous commit', async () => {
+  const h = harness(), gate = deferred<void>(), entered = deferred<void>();
+  h.prepareWith(async features => { assert.deepEqual(features, ['setAlignment']); entered.resolve(); await gate.promise; });
+  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' },
+    { readOnly: false, signal: new AbortController().signal }, () => true, h.loader);
+  assert(opened.ok); opened.value.subscribe(() => {});
+  let valid = true;
+  const pending = opened.value.execute({ type: 'alignment', value: 'center' }, undefined,
+    () => valid ? { ok: true, value: undefined } : { ok: false, code: 'stale-selection' });
+  await entered.promise; assert.equal(h.executions(), 0);
+  valid = false; gate.resolve();
+  assert.deepEqual(await pending, { ok: false, code: 'stale-selection' });
+  assert.equal(h.executions(), 0); opened.value.destroy();
 });

@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Dhaabi',
   qrCodeMissingLibrary: 'Kutaan kun koodii QR agarsiisuuf paakeejii filannoo "qrcode" fe\'amee qabaachuu barbaada.',
   qrCodeGenerationFailed: 'Gatii kana koodii QRtti jijjiiruun hin danda\'amne.',
-  mapMissingLibrary: 'Kutaan kun kaartaa agarsiisuuf paakeejii filannoo "maplibre-gl" fe\'amee qabaachuu barbaada.',
+  mapMissingLibrary: 'Kutaan kun kaartaa agarsiisuuf paakeejii filannoo "{package}" fe\'amee qabaachuu barbaada.',
   mapStyleRequired: 'Kaartaa agarsiisuuf bifa kaartaa kenni.',
   mapWebglUnavailable: 'Biraawzarri kun kaartaa agarsiisuuf deeggarsa giraafiksii barbaachisu kennuu hin danda\'u.',
   mapInitializationFailed: 'Kaartaa jalqabsiisuun hin danda\'amne.',

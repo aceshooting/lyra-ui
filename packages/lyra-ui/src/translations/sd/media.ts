@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'روڪيو',
   qrCodeMissingLibrary: 'QR ڪوڊ ڏيکارڻ لاءِ هن جزو کي اختياري "qrcode" پيڪيج گهربل آهي.',
   qrCodeGenerationFailed: 'هن قدر کي QR ڪوڊ طور انڪوڊ نه ڪري سگهيو.',
-  mapMissingLibrary: 'نقشو ڏيکارڻ لاءِ هن جزو کي اختياري "maplibre-gl" پيڪيج گهربل آهي.',
+  mapMissingLibrary: 'نقشو ڏيکارڻ لاءِ هن جزو کي اختياري "{package}" پيڪيج گهربل آهي.',
   mapStyleRequired: 'نقشو ڏيکارڻ لاءِ نقشي جو انداز ڏيو.',
   mapWebglUnavailable: 'هي برائوزر نقشو ڏيکارڻ لاءِ گهربل گرافڪس سهائتا نٿو ڏئي سگهي.',
   mapInitializationFailed: 'نقشو شروع نه ٿي سگهيو.',

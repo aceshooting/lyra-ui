@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'I-pause',
   qrCodeMissingLibrary: 'Kailangang mai-install ang opsyonal na package na "qrcode" upang makagawa ng QR code.',
   qrCodeGenerationFailed: 'Hindi ma-encode ang value na ito bilang QR code.',
-  mapMissingLibrary: 'Kailangang mai-install ang opsyonal na package na "maplibre-gl" upang maipakita ang mapa.',
+  mapMissingLibrary: 'Kailangang mai-install ang opsyonal na package na "{package}" upang maipakita ang mapa.',
   mapStyleRequired: 'Magbigay ng estilo ng mapa upang maipakita ito.',
   mapWebglUnavailable: 'Hindi maibigay ng browser na ito ang graphics support na kailangan para sa mapa.',
   mapInitializationFailed: 'Hindi ma-initialize ang mapa.',

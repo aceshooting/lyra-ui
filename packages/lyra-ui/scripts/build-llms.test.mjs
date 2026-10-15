@@ -947,8 +947,7 @@ assert.equal(
   '| `--lr-color-surface` | `--lr-theme-color-surface-default` | `#ffffff` | dark: `var(--lr-theme-color-surface-default, #0a0a0a)`<br>forcedColors: `Canvas` |',
 );
 
-// 30 since chartjs-plugin-annotation joined as lr-chart's optional annotations peer.
-assert.match(peers, /All 30 peers are \*\*optional\*\*/);
+assert.ok(peers.includes(`All ${totalPeerCount} peers are **optional**`));
 
 // lr-phone-input's only reachable mention of libphonenumber-js is a JSDoc @example
 // (`import('libphonenumber-js/min')`) showing a consumer-built adapter -- it must not attribute
@@ -958,8 +957,8 @@ assert.doesNotMatch(
   /\| `libphonenumber-js` \|[^\n]*`lr-phone-input`/,
   'a JSDoc @example must never attribute an optional peer to the component that documents it',
 );
-assert.match(peers, /\*\*Framework declaration peers \(3\)\.\*\*/);
-assert.match(peers, /\*\*Component-loaded peers \(27\)\.\*\*/);
+assert.ok(peers.includes(`**Framework declaration peers (${Object.keys(TYPE_ONLY_DECLARATION_PEERS).length}).**`));
+assert.ok(peers.includes(`**Component-loaded peers (${componentPeerCount}).**`));
 
 for (const [peer, entry] of Object.entries(TYPE_ONLY_DECLARATION_PEERS)) {
   const row = peers

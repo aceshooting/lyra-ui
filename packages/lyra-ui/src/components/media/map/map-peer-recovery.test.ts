@@ -56,6 +56,7 @@ async function recoveryMap(): Promise<{ el: LyraMap; peer: RecoveryMap; restore(
   try {
     const wrapper = await fixture<HTMLElement>(html`<div></div>`);
     const el = document.createElement('lr-map');
+    el.engine = 'maplibre';
     (el as unknown as { loadLibrary(): Promise<unknown> }).loadLibrary = async () => ({ Map: RecoveryMap });
     el.mapStyle = blankStyle;
     wrapper.append(el);
@@ -144,7 +145,7 @@ it('falls back to full GeoJSON replacement for holes, non-features and inaccessi
 it('omits a revoked legend icon without losing the named row or its color swatch', async () => {
   const icon = Proxy.revocable({}, {});
   icon.revoke();
-  const el = await fixture<LyraMap>(html`<lr-map .legend=${[{ label: 'Safe row', color: '#ff0000', pattern: 'solid', icon: icon.proxy }]}></lr-map>`);
+  const el = await fixture<LyraMap>(html`<lr-map engine="maplibre" .legend=${[{ label: 'Safe row', color: '#ff0000', pattern: 'solid', icon: icon.proxy }]}></lr-map>`);
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="legend"]')?.textContent).to.include('Safe row');
   expect(el.shadowRoot!.querySelectorAll('[part="legend-swatch"]').length).to.equal(1);
@@ -176,6 +177,7 @@ it('reports unavailable WebGL when a required style is supplied after the peer h
     },
   });
   const el = document.createElement('lr-map');
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary(): Promise<unknown> }).loadLibrary = async () => ({ Map: RecoveryMap });
   el.strings = { mapWebglUnavailable: 'Graphics support unavailable' };
   document.body.append(el);

@@ -61,7 +61,7 @@ test('image description drafts keep empty/Unicode metadata and reject limits or 
   assert.equal(imageDescriptionDraft('', '\ud800'), null);
 });
 
-test('image intent reads only on demand and uses exactly one original lease', () => {
+test('image intent reads only on demand and uses exactly one original lease', async () => {
   const f = fixture(), intent = captureImageToolIntent(f.session)!;
   assert.equal(f.reads(), 0);
   assert.equal(intent.valid(f.session), true);
@@ -69,15 +69,15 @@ test('image intent reads only on demand and uses exactly one original lease', ()
   assert.deepEqual(description, { ok: true, value: { title: 'Title', description: 'Text' } });
   assert.equal(Object.isFrozen(intent.image), true);
   assert.equal(Object.isFrozen(description.ok && description.value), true);
-  assert.equal(intent.execute(f.session, { type: 'delete-image' }).ok, true);
+  assert.equal((await intent.execute(f.session, { type: 'delete-image' })).ok, true);
   assert.equal(f.calls.length, 1);
   assert.equal(f.releases(), 1);
-  assert.deepEqual(intent.execute(f.session, { type: 'delete-image' }), { ok: false, code: 'stale-selection' });
+  assert.deepEqual((await intent.execute(f.session, { type: 'delete-image' })), { ok: false, code: 'stale-selection' });
   intent.release();
   assert.equal(f.releases(), 1);
 });
 
-test('image intent rejects reselection, revision, replacement and released state without live fallback', () => {
+test('image intent rejects reselection, revision, replacement and released state without live fallback', async () => {
   for (const kind of ['selection', 'revision', 'document', 'session', 'release', 'image', 'status']) {
     const f = fixture(), intent = captureImageToolIntent(f.session)!;
     let target = f.session;
@@ -90,7 +90,7 @@ test('image intent rejects reselection, revision, replacement and released state
     if (kind === 'status') f.change({ status: 'destroyed' });
     assert.equal(intent.valid(target), false, kind);
     assert.deepEqual(intent.description(target), { ok: false, code: 'stale-selection' });
-    assert.deepEqual(intent.execute(target, { type: 'delete-image' }), { ok: false, code: 'stale-selection' });
+    assert.deepEqual((await intent.execute(target, { type: 'delete-image' })), { ok: false, code: 'stale-selection' });
     assert.equal(f.calls.length, 0); assert.equal(f.reads(), 0); assert.equal(f.releases(), 1);
   }
   const f = fixture(); f.change({ image: null });
@@ -98,11 +98,11 @@ test('image intent rejects reselection, revision, replacement and released state
   assert.equal(captureImageToolIntent(null), null);
 });
 
-test('image draft read revalidates original selection after synchronous observer changes', () => {
+test('image draft read revalidates original selection after synchronous observer changes', async () => {
   const f = fixture(), intent = captureImageToolIntent(f.session)!;
   f.onRead(() => f.change({ selection: { kind: 'other', version: 2 } }));
   assert.deepEqual(intent.description(f.session), { ok: false, code: 'stale-selection' });
-  assert.deepEqual(intent.execute(f.session, { type: 'delete-image' }), { ok: false, code: 'stale-selection' });
+  assert.deepEqual((await intent.execute(f.session, { type: 'delete-image' })), { ok: false, code: 'stale-selection' });
   assert.equal(f.calls.length, 0); assert.equal(f.releases(), 1);
 });
 

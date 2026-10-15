@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Jeda',
   qrCodeMissingLibrary: 'Komponen ini memerlukan pakej pilihan "qrcode" dipasang untuk memaparkan kod QR.',
   qrCodeGenerationFailed: 'Nilai ini tidak dapat dikodkan sebagai kod QR.',
-  mapMissingLibrary: 'Komponen ini memerlukan pakej pilihan "maplibre-gl" dipasang untuk memaparkan peta.',
+  mapMissingLibrary: 'Komponen ini memerlukan pakej pilihan "{package}" dipasang untuk memaparkan peta.',
   mapStyleRequired: 'Sediakan gaya peta untuk memaparkan peta.',
   mapWebglUnavailable: 'Pelayar ini tidak menyediakan sokongan grafik yang diperlukan untuk memaparkan peta.',
   mapInitializationFailed: 'Peta tidak dapat dimulakan.',

@@ -8,8 +8,9 @@ until their full exit conditions are met.
 ## Current decision and boundary
 
 `@aceshooting/lyra-docs` contains the experimental `<lr-docx-editor>` component and a session API.
-The runtime engine is the exact optional peer `@docx-editor.dev/core@2.30.0`, dynamically loaded
-when a document opens. Lyra owns the public Lit surface, native controls, admission checks,
+The internal runtime engine derives from pinned Apache-2.0 source for
+`@docx-editor.dev/core@2.30.0`, with semantic features prepared on demand.
+The package ships the generated engine; consumers install no engine peer. Lyra owns the public Lit surface, native controls, admission checks,
 lifecycle, and host persistence contract. The engine's framework adapters and any Pro-only packages
 are not included. Existing viewers, including `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
@@ -36,8 +37,8 @@ consume it for this contract. Links accept
 HTTPS, `mailto:`, and fragment-only targets; HTTP is refused. The current browser evidence for
 these actions is recorded below, alongside the earlier first-increment results. The
 [public core 2.25 source reference](https://github.com/eigenpal/docx-editor/tree/42c6c267) is
-read-only reference material; the runtime is the published package at the exact peer version, not that source checkout
-or an implementation source. Current license
+historical reference material. The current engine uses the immutable source and
+reviewed patches identified by the package engine-source lock. Current license
 texts and attribution are documented in
 [`packages/lyra-docs/THIRD_PARTY_NOTICES.md`](../../packages/lyra-docs/THIRD_PARTY_NOTICES.md).
 
@@ -76,7 +77,7 @@ check if additional assets or features are introduced.
 
 | Material considered | Published terms | Scope |
 | --- | --- | --- |
-| Public core and i18n | Apache-2.0 | Current optional engine and engine strings |
+| Public core and i18n | Apache-2.0 | Internal engine derivative and engine strings |
 | HarfBuzz glue and WASM | MIT glue; supplied HarfBuzz Old MIT text for WASM | Separate shaping asset, requested only where needed |
 | Optional font loader | Apache-2.0 code | Does not grant a blanket license for font binaries |
 | Carlito, Caladea, Liberation and optional Noto CJK fonts | SIL OFL-1.1 | Possible substitutions with their own notices and modification terms; not bundled in this increment |

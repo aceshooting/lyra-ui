@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Παύση',
   qrCodeMissingLibrary: 'Για την εμφάνιση κωδικών QR απαιτείται η εγκατάσταση του προαιρετικού πακέτου "qrcode".',
   qrCodeGenerationFailed: 'Δεν ήταν δυνατή η κωδικοποίηση αυτής της τιμής ως κωδικού QR.',
-  mapMissingLibrary: 'Για την εμφάνιση του χάρτη απαιτείται το προαιρετικό πακέτο "maplibre-gl".',
+  mapMissingLibrary: 'Για την εμφάνιση του χάρτη απαιτείται το προαιρετικό πακέτο "{package}".',
   mapStyleRequired: 'Καθορίστε ένα στυλ χάρτη για να εμφανιστεί ο χάρτης.',
   mapWebglUnavailable: 'Αυτό το πρόγραμμα περιήγησης δεν παρέχει την απαραίτητη υποστήριξη γραφικών για την εμφάνιση του χάρτη.',
   mapInitializationFailed: 'Δεν ήταν δυνατή η αρχικοποίηση του χάρτη.',

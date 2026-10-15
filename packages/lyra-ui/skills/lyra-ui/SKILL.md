@@ -2,7 +2,7 @@
 name: lyra-ui
 description: >
   Use when writing or reviewing code that imports @aceshooting/lyra-ui (or its lyra-docs,
-  lyra-flags, lyra-translations and lyra-ide companions), uses any lr-* custom element, or
+  lyra-flags, lyra-map, lyra-translations and lyra-ide companions), uses any lr-* custom element, or
   migrates a project off Web Awesome (wa-*) or Shoelace (sl-*). Covers exact component APIs
   (attributes, slots, events, parts, CSS custom properties), design-token theming, localization,
   framework/TypeScript integration, and wa-*/sl-* to lr-* migration.
@@ -86,7 +86,7 @@ the exact recipe, labels and persistence; read it before changing startup or per
 ## Companion packages
 
 Install `@aceshooting/lyra-ide` and `@aceshooting/lyra-translations` at the same version as
-`@aceshooting/lyra-ui`. `@aceshooting/lyra-flags` and `@aceshooting/lyra-docs` are versioned
+`@aceshooting/lyra-ui`. `@aceshooting/lyra-flags`, `@aceshooting/lyra-docs`, and `@aceshooting/lyra-map` are versioned
 independently; choose releases compatible with the installed packages and their declared peer ranges.
 
 - **`@aceshooting/lyra-translations`** (optional peer): the 66 locale catalogs. Import
@@ -100,8 +100,13 @@ independently; choose releases compatible with the installed packages and their 
 - **`@aceshooting/lyra-flags`** (optional peer): assets for `<lr-flag>`. Read
   `node_modules/@aceshooting/lyra-ui/llms/components/lr-flag.md`; for direct asset loading read the installed package README.
 - **`@aceshooting/lyra-docs`**: experimental `<lr-docx-editor>`; read its installed README for the
-  optional peer, registration, stylesheet imports, save receipts and limits. Core document viewers
+  bundled engine, registration, stylesheet imports, async editing commands, save receipts and limits. Core document viewers
   stay in `node_modules/@aceshooting/lyra-ui/llms/components/`.
+- **`@aceshooting/lyra-map`** (optional peer): the default modular renderer for `<lr-map>`. Configure
+  `lyraMapWorkerPlugin()` from `@aceshooting/lyra-map/vite`, or supply a compatible worker URL.
+  Read `node_modules/@aceshooting/lyra-ui/llms/components/lr-map.md` and the companion README before imperative map mutations:
+  new feature families require awaiting `map.prepareFeatures()`. Explicit `engine="maplibre"`
+  retains the separate native `maplibre-gl` peer and its worker setup.
 
 Tests under Happy DOM: call `installHappyDomShims()` from `@aceshooting/lyra-ui/testing` in the
 setup file instead of local patches (details in `node_modules/@aceshooting/lyra-ui/llms/shared/testing-and-utilities.md`).

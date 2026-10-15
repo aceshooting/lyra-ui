@@ -62,13 +62,17 @@
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
-    "THIRD_PARTY_LICENSES"
+    "THIRD_PARTY_LICENSES",
+    "NOTICE",
+    "scripts/engine-source.lock.json",
+    "scripts/engine",
+    "scripts/build-engine.mjs"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm build",
     "lint": "tsc --noEmit -p tsconfig.test.json && node scripts/check-package.mjs",
-    "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/*.test.js scripts/package.test.mjs test/xml.test.mjs",
+    "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/*.test.js scripts/package.test.mjs scripts/engine/source.test.mjs scripts/engine/distribution.test.mjs scripts/editor-command-lifecycle.test.mjs test/xml.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",
     "test:coverage": "node scripts/coverage.mjs"
   },
@@ -91,12 +95,10 @@
     "saxes": "^6.0.0"
   },
   "peerDependencies": {
-    "@aceshooting/lyra-ui": "workspace:^",
-    "@docx-editor.dev/core": "2.30.0"
+    "@aceshooting/lyra-ui": "workspace:^"
   },
-  "peerDependenciesMeta": {
-    "@docx-editor.dev/core": {
-      "optional": true
-    }
+  "imports": {
+    "#lyra-docx-engine/core": "./dist/engine/core.js",
+    "#lyra-docx-engine/store": "./dist/engine/store.js"
   }
 }

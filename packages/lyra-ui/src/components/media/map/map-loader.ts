@@ -39,7 +39,17 @@ export interface MapLibreMarkerCapability {
   getElement?(): HTMLElement;
 }
 
+/** Actual source, layer, projection and terrain descriptors to prepare before synchronous mutations. */
+export interface LyraMapFeatureRequirements {
+  readonly sources?: Readonly<Record<string, unknown>>;
+  readonly layers?: readonly unknown[];
+  readonly projection?: unknown;
+  readonly terrain?: unknown;
+}
+
 export interface MapLibreMapCapability {
+  /** Present on the modular engine; canonical MapLibre does not expose this method. */
+  prepareFeatures?(requirements: LyraMapFeatureRequirements, options?: { signal?: AbortSignal }): Promise<void>;
   /** Required, unlike setMaxBounds below: the loader validates getCanvas is callable and rejects a
    *  peer without it, so holding this type already implies the method is present. Call sites still
    *  guard with `?.()` against a peer that satisfies the shape check and then lies at runtime. */
@@ -212,4 +222,48 @@ export function loadMaplibre(): Promise<MaplibreModule | null> {
     maplibre = loadMaplibreModule();
   }
   return maplibre;
+}
+
+/** The companion additionally provides per-map main-thread and worker readiness. */
+export interface ModularMapModule extends MaplibreModule {
+  Map: new (options: Record<string, unknown>) => MapLibreMapCapability & {
+    prepareFeatures(requirements: LyraMapFeatureRequirements, options?: { signal?: AbortSignal }): Promise<void>;
+  };
+}
+
+function isModularMapModule(candidate: unknown): candidate is ModularMapModule {
+  return isMaplibreModule(candidate) &&
+    typeof candidate.Map.prototype.prepareFeatures === 'function';
+}
+
+let modularMapCapabilities: unknown;
+
+/** Loads and validates the optional modular engine without substituting a canonical engine. @internal */
+export async function loadModularMapModule(
+  importer: () => Promise<unknown> = () => import('@aceshooting/lyra-map').then(source =>
+    modularMapCapabilities ??= Object.freeze({
+      get Map() { return source.Map; },
+      get Marker() { return source.Marker; },
+      get Popup() { return source.Popup; },
+    }),
+  ),
+): Promise<ModularMapModule | null> {
+  try {
+    const value = await importer();
+    const module = resolveOptionalPeerCapability(value, isModularMapModule);
+    if (module) return module;
+    const candidate = unwrapOptionalPeerDefault(value);
+    const missing = missingMaplibreCapability(candidate) ?? 'Map.prototype.prepareFeatures';
+    throw new Error(`Invalid optional peer \`@aceshooting/lyra-map\`: missing or invalid \`${missing}\` capability.`);
+  } catch (error) {
+    console.warn('<lr-map> needs the optional peer dependency `@aceshooting/lyra-map` — install it with `pnpm add @aceshooting/lyra-map`.', error);
+    return null;
+  }
+}
+
+let modularMap: Promise<ModularMapModule | null> | undefined;
+
+/** Lazily loads the modular companion once per page. A failed load never selects another engine. */
+export function loadModularMap(): Promise<ModularMapModule | null> {
+  return modularMap ??= loadModularMapModule();
 }

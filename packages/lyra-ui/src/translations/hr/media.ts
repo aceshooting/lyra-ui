@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Pauziraj',
   qrCodeMissingLibrary: 'Za prikaz QR kodova ova komponenta zahtijeva instaliran izborni paket „qrcode”.',
   qrCodeGenerationFailed: 'Ovu vrijednost nije moguće kodirati kao QR kod.',
-  mapMissingLibrary: 'Za prikaz karte ova komponenta zahtijeva instaliran izborni paket „maplibre-gl”.',
+  mapMissingLibrary: 'Za prikaz karte ova komponenta zahtijeva instaliran izborni paket „{package}”.',
   mapStyleRequired: 'Za prikaz karte navedite stil karte.',
   mapWebglUnavailable: 'Ovaj preglednik ne pruža grafičku podršku potrebnu za prikaz karte.',
   mapInitializationFailed: 'Kartu nije moguće inicijalizirati.',

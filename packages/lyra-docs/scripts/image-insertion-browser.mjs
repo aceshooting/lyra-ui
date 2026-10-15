@@ -30,6 +30,7 @@ export async function runImageInsertion(page, check, { createEditor, saveEditor 
       const source = { bytes, widthPoints: 48, heightPoints: 24, title: 'Picture & "quoted" 😀', description: 'First\nSecond\tCafé 東京' };
       const pending = element.insertImage(source), active = element.snapshot(); bytes.fill(0); source.widthPoints = 99;
       const busy = { save: await element.save(), execute: element.execute('bold'), navigation: element.selectImage('next'), can: element.canInsertImage() };
+      busy.execute = await busy.execute;
       const result = await pending; return { result, active, busy, original, after: element.snapshot() };
     }, kind);
     assert.equal(observation.active.activity, 'inserting-image'); assert.deepEqual(observation.active.revision, initial.revision);

@@ -81,7 +81,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Pausar',
   qrCodeMissingLibrary: 'Este componente precisa do pacote opcional "qrcode" instalado para renderizar códigos QR.',
   qrCodeGenerationFailed: 'Não foi possível codificar este valor como um código QR.',
-  mapMissingLibrary: 'Este componente precisa do pacote opcional "maplibre-gl" instalado para renderizar o mapa.',
+  mapMissingLibrary: 'Este componente precisa do pacote opcional "{package}" instalado para renderizar o mapa.',
   mapStyleRequired: 'Forneça um estilo de mapa para renderizar o mapa.',
   mapWebglUnavailable: 'Este navegador não pode fornecer o suporte gráfico necessário para renderizar o mapa.',
   mapInitializationFailed: 'Não foi possível inicializar o mapa.',

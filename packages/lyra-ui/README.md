@@ -110,9 +110,17 @@ Lit and Floating UI install transitively; everything else is an optional peer, i
 (`<lr-phone-input>` adapter; E.164 input works without it), `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`
 (`<lr-graph>`), `chart.js` plus optional `chartjs-plugin-zoom`, `chartjs-plugin-datalabels` and
 `@sgratzl/chartjs-chart-boxplot` (chart family), `mammoth` and `dompurify` (`<lr-docx-viewer>`), and
-`maplibre-gl` v5 or v6 (`<lr-map>`).
+`@aceshooting/lyra-map` (`<lr-map>`'s default modular renderer). The explicit `engine="maplibre"`
+mode instead uses the optional `maplibre-gl` v5 or v6 peer.
 
-`<lr-map>` requires an explicit `mapStyle` and never requests a third-party tile service implicitly. MapLibre v6
+`<lr-map>` requires an explicit `mapStyle` and never requests a third-party tile service implicitly.
+For the default renderer, install `@aceshooting/lyra-map` and add `lyraMapWorkerPlugin()` from
+`@aceshooting/lyra-map/vite` to Vite's plugins, or provide a compatible worker URL. Before imperative
+mutations introduce a new feature family, await `map.prepareFeatures()` with its source/layer
+descriptors; declarative component properties prepare features automatically. See the
+[companion setup and migration details](../lyra-map/README.md).
+
+To retain the native engine, set `engine="maplibre"` before connecting the component. MapLibre v6
 is ESM-only, needs WebGL2, and needs its worker URL set before the first map is built (Vite shown; other
 bundlers: [MapLibre's ESM guide](https://maplibre.org/maplibre-gl-js/docs/#esm)):
 `import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"; setWorkerUrl(workerUrl);`.

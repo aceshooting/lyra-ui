@@ -187,11 +187,11 @@ test('first publication of a companion package uses a protected, provenance-bear
 
   assert.match(release, /first_package_bootstrap:\n\s+description: [^\n]+\n\s+required: false\n\s+type: boolean\n\s+default: false/u);
   assert.match(publish, /first_package_bootstrap:\n\s+description: [^\n]+\n\s+required: false\n\s+type: boolean\n\s+default: false/u);
-  assert.match(plan, /"\$PACKAGE" =~ \^lyra-\(docs\|ide\|translations\)\$[\s\S]*"\$TAGS" =~ \^lyra-\(docs\|ide\|translations\)@/u);
+  assert.match(plan, /"\$PACKAGE" =~ \^lyra-\(docs\|ide\|translations\|map\)\$[\s\S]*"\$TAGS" =~ \^lyra-\(docs\|ide\|translations\|map\)@/u);
   assert.match(plan, /"\$status" != 404/u);
   assert.match(dispatch, /-f first_package_bootstrap=true/u);
   assert.match(eligibility, /"\$GITHUB_EVENT_NAME" != workflow_dispatch \|\| "\$DRY_RUN" == true/u);
-  assert.match(eligibility, /! "\$TAG" =~ \^lyra-\(docs\|ide\|translations\)@/u);
+  assert.match(eligibility, /! "\$TAG" =~ \^lyra-\(docs\|ide\|translations\|map\)@/u);
   assert.match(eligibility, /"\$status" != 404/u);
   assert.match(normalPublish, /if: \$\{\{ inputs\.first_package_bootstrap != true \}\}/u);
   assert.doesNotMatch(normalPublish, /NODE_AUTH_TOKEN|NPM_BOOTSTRAP_TOKEN|--provenance/u);
@@ -248,9 +248,21 @@ test('both bootstrap eligibility checks fail closed on registry and package ambi
       }
     }
     assert.equal(run(plan, { PACKAGE: 'lyra-ui' }).status, 1);
+    assert.equal(run(plan, { PACKAGE: 'all', TAGS: 'lyra-map@1.0.0' }).status, 1);
+    assert.equal(run(plan, { PACKAGE: 'lyra-map', TAGS: 'lyra-map@1.0.0 lyra-ui@29.0.0' }).status, 1);
+    for (const tag of ['lyra-map@01.0.0', 'lyra-map@1.0.0-beta.1', 'lyra-map@1.0.0+meta']) {
+      assert.equal(run(plan, { PACKAGE: 'lyra-map', TAGS: tag }).status, 1);
+      assert.equal(run(publish, { TAG: tag }).status, 1);
+    }
+    for (const status of ['200', '401', '403', '503', '']) {
+      assert.equal(run(plan, { PACKAGE: 'lyra-map', TAGS: 'lyra-map@1.0.0', MOCK_REGISTRY_STATUS: status }).status, 1);
+      assert.equal(run(publish, { TAG: 'lyra-map@1.0.0', MOCK_REGISTRY_STATUS: status }).status, 1);
+    }
+    assert.equal(run(publish, { TAG: 'lyra-map@1.0.0', DRY_RUN: 'true' }).status, 1);
+    assert.equal(run(publish, { TAG: 'lyra-map@1.0.0', GITHUB_EVENT_NAME: 'release' }).status, 1);
     assert.equal(run(plan, { TAGS: 'lyra-docs@0.1.1 lyra-ui@25.6.2' }).status, 1);
     assert.equal(run(publish, { TAG: 'lyra-ui@25.6.2' }).status, 1);
-    for (const [name, version] of [['lyra-ide', '27.0.0'], ['lyra-translations', '27.0.0']]) {
+    for (const [name, version] of [['lyra-ide', '27.0.0'], ['lyra-translations', '27.0.0'], ['lyra-map', '1.0.0']]) {
       const vars = { PACKAGE: name, TAG: `${name}@${version}`, TAGS: `${name}@${version}` };
       assert.equal(run(plan, vars).status, 0);
       assert.equal(run(publish, vars).status, 0);

@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Dúró díẹ̀',
   qrCodeMissingLibrary: 'Apá yìí nílò àpò "qrcode" àṣàyàn láti fi àwọn kóòdù QR hàn.',
   qrCodeGenerationFailed: 'A kò lè yí iye yìí padà sí kóòdù QR.',
-  mapMissingLibrary: 'Apá yìí nílò àpò "maplibre-gl" àṣàyàn láti fi màpù hàn.',
+  mapMissingLibrary: 'Apá yìí nílò àpò "{package}" àṣàyàn láti fi màpù hàn.',
   mapStyleRequired: 'Pèsè ìrísí màpù láti fi màpù hàn.',
   mapWebglUnavailable: 'Ẹ̀rọ aṣàwákiri yìí kò lè pèsè àtìlẹ́yìn àwòrán tó yẹ láti fi màpù hàn.',
   mapInitializationFailed: 'A kò lè bẹ̀rẹ̀ màpù náà.',

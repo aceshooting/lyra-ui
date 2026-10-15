@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Začasno ustavi',
   qrCodeMissingLibrary: 'Ta komponenta za izris kod QR potrebuje nameščen izbirni paket »qrcode«.',
   qrCodeGenerationFailed: 'Te vrednosti ni bilo mogoče kodirati kot kodo QR.',
-  mapMissingLibrary: 'Ta komponenta za izris zemljevida potrebuje nameščen izbirni paket »maplibre-gl«.',
+  mapMissingLibrary: 'Ta komponenta za izris zemljevida potrebuje nameščen izbirni paket »{package}«.',
   mapStyleRequired: 'Za izris zemljevida podajte slog zemljevida.',
   mapWebglUnavailable: 'Ta brskalnik ne zagotavlja grafične podpore, potrebne za izris zemljevida.',
   mapInitializationFailed: 'Zemljevida ni bilo mogoče inicializirati.',

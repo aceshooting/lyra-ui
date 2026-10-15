@@ -55,6 +55,7 @@ const RELEASE_PACKAGES = Object.freeze({
   'lyra-ui': '@aceshooting/lyra-ui',
   'lyra-flags': '@aceshooting/lyra-flags',
   'lyra-docs': '@aceshooting/lyra-docs',
+  'lyra-map': '@aceshooting/lyra-map',
   'lyra-ide': '@aceshooting/lyra-ide',
   'lyra-translations': '@aceshooting/lyra-translations',
 });

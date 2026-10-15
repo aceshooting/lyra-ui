@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compactBuildJavaScript, pruneEmptyBuildJavaScript } from '../../lyra-ui/scripts/compact-build-js.mjs';
+import { buildEngine } from './build-engine.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const dist = path.join(root, 'dist');
@@ -24,6 +24,5 @@ const visit = file => {
 for (const route of Object.values(manifest.exports)) if (route.types) visit(path.join(root, route.types));
 for (const file of readdirSync(dist, { recursive: true }))
   if (file.endsWith('.d.ts') && !reachable.has(path.join(dist, file))) rmSync(path.join(dist, file));
-const require = createRequire(import.meta.url);
-copyFileSync(require.resolve('@docx-editor.dev/core/styles/editor.css'), path.join(dist, 'docx/editor.css'));
+await buildEngine();
 await import('./check-package.mjs');

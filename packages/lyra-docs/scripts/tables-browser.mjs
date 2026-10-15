@@ -38,9 +38,9 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
       await caret(page, id, target);
       const before = await saveEditor(page, id);
       const action = { type, ...(where ? { where } : {}) };
-      const result = await page.locator(`#${id}`).evaluate((element, action) => {
+      const result = await page.locator(`#${id}`).evaluate(async (element, action) => {
         const revision = element.snapshot().revision;
-        const result = element.execute(action, { expectedRevision: revision });
+        const result = await element.execute(action, { expectedRevision: revision });
         return { result, revision, after: element.snapshot().revision, context: element.snapshot().table };
       }, action);
       assert.equal(result.result.ok, true, JSON.stringify(result));
@@ -69,11 +69,11 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
   }
   await check('insert-table uses an outside collapsed caret and validates before mutation', async () => {
     await createEditor(page, 'table-insert', 'table-simple'); await caret(page, 'table-insert', 'Before');
-    const result = await page.locator('#table-insert').evaluate(element => {
+    const result = await page.locator('#table-insert').evaluate(async element => {
       const before = element.snapshot().revision;
-      const invalid = element.execute({ type: 'insert-table', rows: NaN, columns: 2 });
+      const invalid = await element.execute({ type: 'insert-table', rows: NaN, columns: 2 });
       const unchanged = element.snapshot().revision === before;
-      const inserted = element.execute({ type: 'insert-table', rows: 2, columns: 2 });
+      const inserted = await element.execute({ type: 'insert-table', rows: 2, columns: 2 });
       return { invalid, unchanged, inserted, revision: element.snapshot().revision.value };
     });
     assert.deepEqual(result.invalid, { ok: false, code: 'invalid-option' }); assert.equal(result.unchanged, true);
@@ -91,8 +91,8 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
     await check(`table refusal ${fixture} ${target} ${action.type} preserves package/revision/history`, async () => {
       await createEditor(page, 'table-refusal', fixture); await caret(page, 'table-refusal', target);
       const before = await saveEditor(page, 'table-refusal');
-      const result = await page.locator('#table-refusal').evaluate((element, action) => {
-        const before = element.snapshot(), available = element.can(action), result = element.execute(action);
+      const result = await page.locator('#table-refusal').evaluate(async (element, action) => {
+        const before = element.snapshot(), available = element.can(action), result = await element.execute(action);
         return { available, result, before: before.revision, after: element.snapshot().revision, undoBefore: before.commands.undo, undoAfter: element.snapshot().commands.undo };
       }, action);
       assert.deepEqual(result.result, { ok: false, code: reason }); assert.deepEqual(result.after, result.before); assert.deepEqual(result.undoBefore, result.undoAfter);
@@ -109,15 +109,15 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
   });
   await check('queued native typing settles before stale table refusal; fresh command is one edit', async () => {
     await createEditor(page, 'table-queued', 'table-simple'); await caret(page, 'table-queued', 'A00');
-    const result = await page.locator('#table-queued').evaluate(element => {
+    const result = await page.locator('#table-queued').evaluate(async element => {
       const before = element.snapshot().revision, surface = element.querySelector('.docx-pages');
       surface.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: 'Queued', bubbles: true, cancelable: true, composed: true }));
       const afterInput = element.snapshot().revision;
       const available = element.can({ type: 'insert-table-row', where: 'below' });
       const pureRevision = element.snapshot().revision;
-      const stale = element.execute({ type: 'insert-table-row', where: 'below' }, { expectedRevision: before });
+      const stale = await element.execute({ type: 'insert-table-row', where: 'below' }, { expectedRevision: before });
       const settled = element.snapshot().revision;
-      const fresh = element.execute({ type: 'insert-table-row', where: 'below' }, { expectedRevision: settled });
+      const fresh = await element.execute({ type: 'insert-table-row', where: 'below' }, { expectedRevision: settled });
       return { before, afterInput, available, pureRevision, stale, settled, fresh, final: element.snapshot().revision };
     });
     assert.equal(result.available.enabled, true); assert.deepEqual(result.pureRevision, result.before, JSON.stringify(result));
@@ -128,14 +128,14 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
   });
   await check('queued replacement of a text range settles to a caret before table qualification', async () => {
     await createEditor(page, 'table-replacement', 'table-simple');
-    const result = await page.locator('#table-replacement').evaluate(element => {
+    const result = await page.locator('#table-replacement').evaluate(async element => {
       const found = element.find('A00'); if (!found.ok) return found;
       const selected = element.selectMatch(found.value.matches[0].id); if (!selected.ok) return selected;
       const before = element.snapshot().revision.value;
       element.querySelector('.docx-pages').dispatchEvent(new InputEvent('beforeinput', {
         inputType: 'insertText', data: 'Replacement', bubbles: true, cancelable: true, composed: true,
       }));
-      const result = element.execute({ type: 'insert-table-row', where: 'below' });
+      const result = await element.execute({ type: 'insert-table-row', where: 'below' });
       return { result, before, after: element.snapshot().revision.value };
     });
     assert.equal(result.result?.ok, true, JSON.stringify(result)); assert.equal(result.after, result.before + 2);
@@ -154,7 +154,11 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
     });
     await page.keyboard.type('Native');
     await page.waitForFunction(() => document.querySelector('#table-native').can('bold').enabled);
-    const evidence = await page.locator('#table-native').evaluate(element => ({ events: element.__nativeEvidence, revision: element.snapshot().revision.value }));
+    const evidence = await page.locator('#table-native').evaluate(async element => {
+      const revision = element.snapshot().revision.value;
+      const events = await Promise.all(element.__nativeEvidence.map(async event => ({ ...event, result: await event.result })));
+      return { events, revision };
+    });
     assert.equal(evidence.events.length, 6);
     for (const event of evidence.events) {
       assert.deepEqual(event.result, { ok: false, code: 'busy' }); assert.equal(event.after, event.revision);
@@ -166,7 +170,7 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
   });
   await check('nested beforeinput dispatch cannot evade command ownership', async () => {
     await createEditor(page, 'table-nested-input', 'table-simple'); await caret(page, 'table-nested-input', 'A00');
-    const result = await page.locator('#table-nested-input').evaluate(element => {
+    const result = await page.locator('#table-nested-input').evaluate(async element => {
       const surface = element.querySelector('.docx-pages'); let nested, inner = false;
       surface.addEventListener('beforeinput', () => {
         if (inner) return; inner = true;
@@ -174,7 +178,8 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
         nested = element.execute({ type: 'delete-table' });
       }, { once: true });
       surface.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: 'Outer', bubbles: true, cancelable: true, composed: true }));
-      return { nested, revision: element.snapshot().revision.value };
+      const revision = element.snapshot().revision.value;
+      return { nested: await nested, revision };
     });
     assert.deepEqual(result.nested, { ok: false, code: 'busy' }); assert.equal(result.revision, 0);
     await page.waitForFunction(() => document.querySelector('#table-nested-input').snapshot().revision.value > 0);
@@ -195,13 +200,14 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
   });
   await check('public change listeners cannot reenter a table commit', async () => {
     await createEditor(page, 'table-reentrant', 'table-simple'); await caret(page, 'table-reentrant', 'A00');
-    const result = await page.locator('#table-reentrant').evaluate(element => {
+    const result = await page.locator('#table-reentrant').evaluate(async element => {
       const before = element.snapshot().revision; let nested;
       const listener = () => { if (!nested && element.snapshot().revision.value > before.value) { nested = 'entered'; nested = element.execute({ type: 'delete-table' }); } };
       element.addEventListener('lr-change', listener);
-      const result = element.execute({ type: 'insert-table-row', where: 'below' });
+      const result = await element.execute({ type: 'insert-table-row', where: 'below' });
       element.removeEventListener('lr-change', listener);
-      return { result, nested, before, after: element.snapshot().revision };
+      const after = element.snapshot().revision;
+      return { result, nested: await nested, before, after };
     });
     assert.equal(result.result.ok, true); assert.deepEqual(result.nested, { ok: false, code: 'busy' });
     assert.equal(result.after.value, result.before.value + 1); assert.equal(shape(await saveEditor(page, 'table-reentrant'))[0].rows.length, 4);
@@ -210,7 +216,7 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
   await check('single-cell deletion removes the table; read-only and text ranges refuse', async () => {
     for (const type of ['delete-table-row', 'delete-table-column', 'delete-table']) {
       await createEditor(page, 'table-single', 'table-single'); await caret(page, 'table-single', 'A00');
-      const removed = await page.locator('#table-single').evaluate((element, type) => ({ result: element.execute({ type }), context: element.snapshot().table, selection: element.snapshot().selection, type }), type);
+      const removed = await page.locator('#table-single').evaluate(async (element, type) => ({ result: await element.execute({ type }), context: element.snapshot().table, selection: element.snapshot().selection, type }), type);
       assert.equal(removed.result.ok, true, JSON.stringify(removed)); assert.equal(shape(await saveEditor(page, 'table-single')).length, 0);
       await dispose(page, 'table-single');
     }
@@ -232,9 +238,9 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
       inputType: 'insertText', data: 'abc', bubbles: true, cancelable: true, composed: true,
     })));
     await page.waitForFunction(() => document.querySelector('#table-form').snapshot().revision.value === 1);
-    const result = await page.locator('#table-form').evaluate(element => {
+    const result = await page.locator('#table-form').evaluate(async element => {
       const before = element.querySelector('.docx-pages').textContent, revision = element.snapshot().revision;
-      const result = element.execute({ type: 'insert-table', rows: 1, columns: 1 });
+      const result = await element.execute({ type: 'insert-table', rows: 1, columns: 1 });
       return { before, result, revision, after: element.querySelector('.docx-pages').textContent, afterRevision: element.snapshot().revision };
     });
     assert.ok(result.before.includes('abc')); assert.ok(result.before.includes('Stale value')); assert.ok(result.before.includes('Controlled text'));
@@ -260,7 +266,7 @@ export async function runTableEditing(page, check, { createEditor, saveEditor, a
     await caret(page, 'table-lease', 'A22');
     const result = await page.evaluate(async () => {
       const session = window.__tableLeaseSession, before = session.snapshot().revision;
-      const stale = session.execute({ type: 'delete-table-row' }, { selection: window.__tableLease });
+      const stale = await session.execute({ type: 'delete-table-row' }, { selection: window.__tableLease });
       const saved = await session.save(); if (!saved.ok) throw Error(saved.code);
       const after = session.snapshot().revision; session.destroy();
       document.querySelector('#table-lease').remove(); document.querySelector('#table-lease-toolbar').remove();

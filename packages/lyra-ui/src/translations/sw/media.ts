@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Sitisha',
   qrCodeMissingLibrary: 'Kipengele hiki kinahitaji kifurushi cha hiari "qrcode" kisakinishwe ili kuonyesha misimbo ya QR.',
   qrCodeGenerationFailed: 'Thamani hii haikuweza kusimbwa kama msimbo wa QR.',
-  mapMissingLibrary: 'Kipengele hiki kinahitaji kifurushi cha hiari "maplibre-gl" kisakinishwe ili kuonyesha ramani.',
+  mapMissingLibrary: 'Kipengele hiki kinahitaji kifurushi cha hiari "{package}" kisakinishwe ili kuonyesha ramani.',
   mapStyleRequired: 'Toa mtindo wa ramani ili kuionyesha.',
   mapWebglUnavailable: 'Kivinjari hiki hakiwezi kutoa usaidizi wa michoro unaohitajika kuonyesha ramani.',
   mapInitializationFailed: 'Ramani haikuweza kuanzishwa.',

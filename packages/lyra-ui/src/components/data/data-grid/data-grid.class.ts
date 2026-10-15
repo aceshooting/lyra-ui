@@ -1,4 +1,5 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
+import { CollectionSourceTracker } from '../../../internal/collection-source-tracker.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -934,7 +935,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     | ((row: Row) => readonly Row[] | undefined)
     | null = null;
   /** The value each snapshotting collection setter last received. */
-  private readonly assignedSources = new Map<string, unknown>();
+  private readonly assignedSources = new CollectionSourceTracker();
 
   /**
    * Whether assigning `value` to `name` is a rebind rather than a change: the exact value that
@@ -943,10 +944,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
    * (resetting the shift-range anchor, re-running the pipeline, dropping row measurements).
    */
   private isRebind(name: string, value: unknown, current: unknown): boolean {
-    if (value === current) return true;
-    if (this.assignedSources.has(name) && this.assignedSources.get(name) === value) return true;
-    this.assignedSources.set(name, value);
-    return false;
+    return this.assignedSources.isRebind(name, value, current);
   }
 
   private _columnOrder: readonly string[] = Object.freeze([]);

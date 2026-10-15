@@ -398,11 +398,17 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   }
 
   /** @internal */
-  protected override willUpdate(changed: PropertyValues): void {
-    super.willUpdate(changed);
-    // An explicit label is picker metadata: it neither renders into this option's static slots
-    // nor changes the accessible fallback content. Other updates retain normal observation work.
-    if (this.hasUpdated && changed.size === 1 && changed.has('label')) this.labelTextObserver.preserveBindingForNextUpdate();
+  protected override shouldUpdate(changed: PropertyValues): boolean {
+    // An explicit label is picker metadata. Once mounted, this option's own markup, ARIA state,
+    // and observed fallback content do not change, but its owner still needs a notification.
+    if (this.hasUpdated && changed.size === 1 && changed.has('label') &&
+        !this.labelTextObserver.hasDrainedRecords()) {
+      // Lit clears the pending change set after shouldUpdate(). Defer the event until then so
+      // a direct listener can safely request another update on this option.
+      queueMicrotask(() => this.emit('lr-option-change'));
+      return false;
+    }
+    return super.shouldUpdate(changed);
   }
 
   protected override updated(changed: PropertyValues): void {

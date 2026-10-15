@@ -10,9 +10,9 @@ async function report(page, id) {
   return result.value;
 }
 async function act(page, id, action, expectedRevision) {
-  return page.locator(`#${id}`).evaluate((element, { action, expectedRevision }) => {
+  return page.locator(`#${id}`).evaluate(async (element, { action, expectedRevision }) => {
     const before = element.snapshot().revision, can = element.can(action);
-    const result = element.execute(action, expectedRevision ? { expectedRevision } : {});
+    const result = await element.execute(action, expectedRevision ? { expectedRevision } : {});
     return { before, after: element.snapshot().revision, can, result };
   }, { action, expectedRevision });
 }

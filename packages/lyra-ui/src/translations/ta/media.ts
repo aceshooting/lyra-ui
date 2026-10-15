@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'இடைநிறுத்து',
   qrCodeMissingLibrary: 'QR குறியீடுகளை உருவாக்க இந்தக் கூறுக்கு விருப்பமான "qrcode" தொகுப்பை நிறுவ வேண்டும்.',
   qrCodeGenerationFailed: 'இந்த மதிப்பை QR குறியீடாக மாற்ற முடியவில்லை.',
-  mapMissingLibrary: 'வரைபடத்தைக் காட்ட இந்தக் கூறுக்கு விருப்பமான "maplibre-gl" தொகுப்பை நிறுவ வேண்டும்.',
+  mapMissingLibrary: 'வரைபடத்தைக் காட்ட இந்தக் கூறுக்கு விருப்பமான "{package}" தொகுப்பை நிறுவ வேண்டும்.',
   mapStyleRequired: 'வரைபடத்தைக் காட்ட வரைபட பாணியை வழங்கவும்.',
   mapWebglUnavailable: 'வரைபடத்தைக் காட்டத் தேவையான வரைகலை ஆதரவை இந்த உலாவி வழங்க முடியாது.',
   mapInitializationFailed: 'வரைபடத்தைத் தொடங்க முடியவில்லை.',

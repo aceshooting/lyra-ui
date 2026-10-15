@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Telemisa',
   qrCodeMissingLibrary: 'Composant oyo esengaka paquet "qrcode" mpo na kosala ba code QR.',
   qrCodeGenerationFailed: 'Valeur oyo ekoki te kokomama lokola code QR.',
-  mapMissingLibrary: 'Composant oyo esengaka paquet "maplibre-gl" mpo na kolakisa carte.',
+  mapMissingLibrary: 'Composant oyo esengaka paquet "{package}" mpo na kolakisa carte.',
   mapStyleRequired: 'Pesa style ya carte mpo na kolakisa yango.',
   mapWebglUnavailable: 'Navigateur oyo epesi soutien graphique oyo esengeli te mpo na kolakisa carte.',
   mapInitializationFailed: 'Carte ekoki kobanda te.',

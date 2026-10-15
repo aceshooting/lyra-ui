@@ -1,4 +1,4 @@
-import * as source from '@docx-editor.dev/core/store';
+import * as source from '#lyra-docx-engine/store';
 
 /** Keep the consumed store surface explicit without requiring optional exports at link time. */
 export const capabilities = Object.freeze({

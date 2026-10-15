@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,8 +20,8 @@ const repoRoot = path.resolve(packageRoot, '../..');
 const read = (file) => readFileSync(path.join(repoRoot, file), 'utf8');
 const manifest = JSON.parse(read('packages/lyra-docs/package.json'));
 const engineCapabilityImports = new Map([
-  ['docx/engine-core-capabilities', '@docx-editor.dev/core'],
-  ['docx/engine-store-capabilities', '@docx-editor.dev/core/store'],
+  ['docx/engine-core-capabilities', '#lyra-docx-engine/core'],
+  ['docx/engine-store-capabilities', '#lyra-docx-engine/store'],
 ]);
 const capabilityImport = (file, directory) => engineCapabilityImports.get(
   path.relative(directory, file).split(path.sep).join('/').replace(/\.(?:ts|js)$/u, ''),
@@ -45,18 +46,21 @@ assert.deepEqual(manifest.exports, {
   './docx/editor.css': './dist/docx/editor.css',
   './package.json': './package.json',
 });
-assert.deepEqual(manifest.files, ['dist', 'CHANGELOG.md', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES']);
+assert.deepEqual(manifest.files, ['dist', 'CHANGELOG.md', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES', 'NOTICE', 'scripts/engine-source.lock.json', 'scripts/engine', 'scripts/build-engine.mjs']);
 const changelog = read('packages/lyra-docs/CHANGELOG.md');
 assert.match(changelog, /^# @aceshooting\/lyra-docs\s/mu);
 assert(changelog.split(/\r?\n/u).includes(`## ${manifest.version}`), 'Changelog lacks current version');
 // package.json is the single source of versions; the docs and shipped notices must follow it.
 assert.deepEqual(Object.keys(manifest.dependencies).sort(), ['fflate', 'lit', 'saxes']);
 assert.equal(Object.keys(manifest.optionalDependencies ?? {}).length, 0);
-const engine = manifest.peerDependencies['@docx-editor.dev/core'];
-assert.match(engine, /^\d+\.\d+\.\d+$/u, 'The document engine peer is one exact version');
-assert.deepEqual(manifest.peerDependencies, { '@aceshooting/lyra-ui': 'workspace:^', '@docx-editor.dev/core': engine });
-assert.deepEqual(manifest.peerDependenciesMeta, { '@docx-editor.dev/core': { optional: true } });
-assert.equal(manifest.devDependencies['@docx-editor.dev/core'], engine);
+const engine = manifest.devDependencies['@docx-editor.dev/core'];
+assert.match(engine, /^\d+\.\d+\.\d+$/u, 'The maintainer engine input is one exact version');
+assert.deepEqual(manifest.peerDependencies, { '@aceshooting/lyra-ui': 'workspace:^' });
+assert.equal(manifest.peerDependenciesMeta, undefined);
+assert.deepEqual(manifest.imports, {
+  '#lyra-docx-engine/core': './dist/engine/core.js',
+  '#lyra-docx-engine/store': './dist/engine/store.js',
+});
 assert.equal(manifest.devDependencies['@aceshooting/lyra-ui'], 'workspace:*');
 assert(read('packages/lyra-docs/README.md').includes(`@docx-editor.dev/core@${engine}`), 'README names the engine version');
 const notices = read('packages/lyra-docs/THIRD_PARTY_NOTICES.md');
@@ -125,7 +129,7 @@ for (const file of files(path.join(packageRoot, 'src'))) {
   assert(!/(?:\.\.\/)+lyra-ui\//u.test(source), `Private core import: ${file}`);
   assert(!/@docx-editor\.dev\/(?!core(?:['"/]))/u.test(source), `Unqualified engine package: ${file}`);
   assert(!/@docx-editor\.dev\/core\/src\//u.test(source), `Private engine import: ${file}`);
-  for (const match of source.matchAll(/import\s+(?!type\b)[^;\n]*from\s+['"](@docx-editor\.dev\/[^'"]+)['"]/gu)) {
+  for (const match of source.matchAll(/import\s+(?!type\b)[^;\n]*from\s+['"](@docx-editor\.dev\/[^'"]+|#lyra-docx-engine\/[^'"]+)['"]/gu)) {
     assert.equal(match[1], capabilityImport(file, path.join(packageRoot, 'src')),
       `Unexpected static document engine import: ${file}: ${match[1]}`);
   }
@@ -147,10 +151,30 @@ if (!existsSync(dist)) {
   console.warn('WARNING: dist/ is missing; the emitted-package checks did not run.');
 }
 if (existsSync(dist)) {
+  const provenance = JSON.parse(readFileSync(path.join(dist, 'engine/provenance.json'), 'utf8'));
+  const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+  assert.equal(provenance.sourceLockSha256, digest(readFileSync(path.join(packageRoot, 'scripts/engine-source.lock.json'))),
+    'Generated engine source lock differs');
+  assert.deepEqual(provenance.buildInputs?.map(input => input.file),
+    ['build-engine.mjs', 'engine/source.mjs', 'engine/entries/core.ts', 'engine/entries/store.ts'],
+    'Generated engine build input inventory differs');
+  for (const input of provenance.buildInputs) {
+    assert.equal(input.sha256, digest(readFileSync(path.join(packageRoot, 'scripts', input.file))),
+      `Generated engine build input differs: ${input.file}`);
+  }
+  for (const asset of provenance.assets) {
+    assert(!path.isAbsolute(asset.file) && asset.file.split('/').every(part => part && part !== '..' && part !== '.'),
+      'Invalid engine asset path');
+    const bytes = readFileSync(path.join(dist, 'engine', asset.file));
+    assert.equal(bytes.length, asset.bytes, `Engine asset size differs: ${asset.file}`);
+    assert.equal(digest(bytes), asset.sha256, `Engine asset digest differs: ${asset.file}`);
+  }
+  for (const dependency of provenance.bundledPackages)
+    assert(notices.includes(`${dependency.name}@${dependency.version}`), `Missing bundled engine notice: ${dependency.name}`);
   // Only the two dynamically loaded capability modules may import the engine statically.
   for (const file of files(dist).filter((candidate) => candidate.endsWith('.js'))) {
     const eager = staticModuleSpecifiers(file, readFileSync(file, 'utf8'))
-      .filter((specifier) => specifier.startsWith('@docx-editor.dev/'));
+      .filter((specifier) => specifier.startsWith('@docx-editor.dev/') || specifier.startsWith('#lyra-docx-engine/'));
     const expected = capabilityImport(file, dist);
     assert.deepEqual(eager, expected ? [expected] : [],
       `Unexpected static document engine import in emitted ${path.relative(packageRoot, file)}`);
@@ -163,8 +187,9 @@ if (existsSync(dist)) {
   assert.deepEqual(findBuildArtifactFindings(files(dist), file => readFileSync(file, 'utf8'),
     { packageDirectory: packageRoot, exports: manifest.exports }), []);
   for (const file of files(dist)) {
-    assert(/\.(?:js|d\.ts|css)$/u.test(file), `Unexpected build artifact: ${file}`);
+    assert(/\.(?:js|d\.ts|css|wasm)$/u.test(file) || file === path.join(dist, 'engine/provenance.json'), `Unexpected build artifact: ${file}`);
     assert(!/\.test\./u.test(file), `Test build artifact: ${file}`);
+    if (file.endsWith('.wasm')) continue;
     const source = readFileSync(file, 'utf8');
     if (/(?:index|types|create-session|docx-editor(?:\.class)?)\.d\.ts$/u.test(file)) {
       assert(!/@docx-editor\.dev\//u.test(source), `Public engine type leaked: ${file}`);

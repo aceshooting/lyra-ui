@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Jeda',
   qrCodeMissingLibrary: 'Komponen ini memerlukan paket opsional "qrcode" agar kode QR dapat ditampilkan.',
   qrCodeGenerationFailed: 'Nilai ini tidak dapat dikodekan sebagai kode QR.',
-  mapMissingLibrary: 'Komponen ini memerlukan paket opsional "maplibre-gl" agar peta dapat ditampilkan.',
+  mapMissingLibrary: 'Komponen ini memerlukan paket opsional "{package}" agar peta dapat ditampilkan.',
   mapStyleRequired: 'Sediakan gaya peta agar peta dapat ditampilkan.',
   mapWebglUnavailable: 'Browser ini tidak menyediakan dukungan grafis yang diperlukan untuk menampilkan peta.',
   mapInitializationFailed: 'Peta tidak dapat diinisialisasi.',

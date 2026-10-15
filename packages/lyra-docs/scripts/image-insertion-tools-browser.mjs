@@ -162,8 +162,12 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
           assert.equal(await page.locator(`#${id} .docx-pages img`).count(), 0);
         }
         await paints(page);
-        const completion = await page.evaluate(() => ({ revision: window.__insertionOwner.committed, focusCalls: window.__insertionOwner.focusCalls,
-          announcements: window.__insertionOwner.announcements, lateSelections: window.__insertionOwner.lateSelections, busyRefusal: window.__insertionOwner.busyRefusal, active: document.activeElement.id }));
+        const completion = await page.evaluate(async () => {
+          const evidence = { revision: window.__insertionOwner.committed, focusCalls: window.__insertionOwner.focusCalls,
+            announcements: window.__insertionOwner.announcements, lateSelections: window.__insertionOwner.lateSelections, busyRefusal: window.__insertionOwner.busyRefusal, active: document.activeElement.id };
+          evidence.busyRefusal = await evidence.busyRefusal;
+          return evidence;
+        });
         assert.deepEqual(completion.revision, { documentId: initial.revision.documentId, value: initial.revision.value + (early ? 0 : 1) });
         assert.equal(completion.focusCalls, 0); assert.equal(completion.active, 'insert-ui-owner-outside');
         assert.equal(completion.announcements.some(text => text.includes('Old insertion owner completed')), false);

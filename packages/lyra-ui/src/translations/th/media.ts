@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'หยุดชั่วคราว',
   qrCodeMissingLibrary: 'คอมโพเนนต์นี้ต้องติดตั้งแพ็กเกจเสริม "qrcode" เพื่อแสดงคิวอาร์โค้ด',
   qrCodeGenerationFailed: 'เข้ารหัสค่านี้เป็นคิวอาร์โค้ดไม่ได้',
-  mapMissingLibrary: 'คอมโพเนนต์นี้ต้องติดตั้งแพ็กเกจเสริม "maplibre-gl" เพื่อแสดงแผนที่',
+  mapMissingLibrary: 'คอมโพเนนต์นี้ต้องติดตั้งแพ็กเกจเสริม "{package}" เพื่อแสดงแผนที่',
   mapStyleRequired: 'ระบุรูปแบบแผนที่เพื่อแสดงแผนที่',
   mapWebglUnavailable: 'เบราว์เซอร์นี้ไม่รองรับกราฟิกที่จำเป็นสำหรับแสดงแผนที่',
   mapInitializationFailed: 'เริ่มต้นแผนที่ไม่ได้',

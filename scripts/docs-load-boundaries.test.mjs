@@ -11,7 +11,11 @@ test('actual docs config accepts the manifest English no-op and only enrolls imp
   assert.equal(manifest.locales.find(locale => locale.locale === 'en').aggregateImport, null);
   const { default: config } = await import('../.storybook/main.js');
   const resolved = await config.viteFinal({});
-  const preload = resolved.build.modulePreload.resolveDependencies;
+  assert.equal(resolved.build.modulePreload, false);
+  const catalogs = manifest.locales
+    .filter(locale => typeof locale.aggregateImport === 'string' && locale.kind !== 'testing-only')
+    .map(locale => locale.aggregateImport.split('/').at(-1).replace(/\.js$/, ''));
+  const preload = builderModulePreload(undefined, catalogs).resolveDependencies;
   const host = { hostId: 'assets/locale-loader-Abcd1234.js', hostType: 'js' };
   for (const locale of manifest.locales.filter(locale => typeof locale.aggregateImport === 'string' && locale.kind !== 'testing-only')) {
     const name = locale.aggregateImport.split('/').at(-1).replace(/\.js$/, '');
@@ -22,6 +26,45 @@ test('actual docs config accepts the manifest English no-op and only enrolls imp
     const deps = [file, 'assets/shared.js'];
     assert.equal(preload(file, deps, host), deps);
   }
+});
+
+test('docs chunks split eager library families and Storybook without enrolling lazy roots', async () => {
+  const { default: config } = await import('../.storybook/main.js');
+  const resolved = await config.viteFinal({});
+  const chunks = resolved.build.rolldownOptions.output.manualChunks;
+  const source = '/checkout/packages/lyra-ui/src/';
+  assert.equal(chunks(source + 'components/forms/select/select.class.ts'), 'lyra-forms');
+  assert.equal(chunks(source + 'components/viewers/pdf-viewer/pdf-viewer.class.ts'), 'lyra-viewers');
+  assert.equal(chunks(source + 'internal/announcer.ts'), 'lyra-shared');
+  assert.equal(chunks(source + 'components/forms/select/select.stories.ts'), undefined);
+  assert.equal(chunks(source + 'translations/de.ts'), undefined);
+  assert.equal(chunks('/checkout/node_modules/.pnpm/storybook@10/node_modules/storybook/dist/preview/index.js'), 'vendor-storybook');
+  assert.equal(chunks('/checkout/node_modules/.pnpm/@storybook+addon-docs@10/node_modules/@storybook/addon-docs/dist/index.js'), 'vendor-storybook-docs');
+  assert.equal(chunks('/checkout/packages/lyra-map/src/map.ts'), undefined);
+  assert.equal(resolved.build.chunkSizeWarningLimit, 5100);
+  assert.equal(resolved.build.rollupOptions, undefined);
+});
+
+test('docs only ignores ineffective imports proven static in the eager registry graph', async () => {
+  const { default: config } = await import('../.storybook/main.js');
+  const resolved = await config.viteFinal({});
+  const forwarded = [];
+  const warn = warning => forwarded.push(warning);
+  const onwarn = resolved.build.rolldownOptions.onwarn;
+  for (const [target, importer] of [
+    ['internal/announcer.ts', 'components/overlays/skeleton/skeleton.class.ts'],
+    ['components/overlays/toast/toast.class.ts', 'components/overlays/toast/toaster.ts'],
+    ['components/overlays/toast/toast-item.class.ts', 'components/overlays/toast/toaster.ts'],
+  ]) onwarn({ code: 'INEFFECTIVE_DYNAMIC_IMPORT', message: `packages/lyra-ui/src/${target} is dynamically imported by packages/lyra-ui/src/${importer} but also statically imported by packages/lyra-ui/src/components/another-registration.ts` }, warn);
+  assert.deepEqual(forwarded, []);
+  onwarn({ code: 'INEFFECTIVE_DYNAMIC_IMPORT', message: 'packages/lyra-ui/src/components/viewers/email-viewer/email-viewer.ts is dynamically imported by packages/lyra-ui/src/components/viewers/email-viewer/email-viewer-register.ts but also statically imported by packages/lyra-ui/src/all.ts' }, warn);
+  assert.deepEqual(forwarded, []);
+  const unrelated = { code: 'INEFFECTIVE_DYNAMIC_IMPORT', message: 'unrelated.ts is dynamically imported by another.ts but also statically imported by third.ts' };
+  const differentImporter = { code: 'INEFFECTIVE_DYNAMIC_IMPORT', message: 'packages/lyra-ui/src/internal/announcer.ts is dynamically imported by packages/lyra-ui/src/components/another.ts but also statically imported by third.ts' };
+  onwarn(unrelated, warn);
+  onwarn(differentImporter, warn);
+  onwarn({ code: 'OTHER_WARNING', message: 'a warning' }, warn);
+  assert.deepEqual(forwarded, [unrelated, differentImporter, { code: 'OTHER_WARNING', message: 'a warning' }]);
 });
 
 test('builder preload removes only its exact target, keeping shared scripts and CSS', () => {

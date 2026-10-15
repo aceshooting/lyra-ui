@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'താൽക്കാലികമായി നിർത്തുക',
   qrCodeMissingLibrary: 'QR കോഡുകൾ കാണിക്കാൻ ഈ ഘടകത്തിൽ ഐച്ഛിക "qrcode" പാക്കേജ് ഇൻസ്റ്റാൾ ചെയ്യണം.',
   qrCodeGenerationFailed: 'ഈ മൂല്യം QR കോഡായി എൻകോഡ് ചെയ്യാനായില്ല.',
-  mapMissingLibrary: 'മാപ്പ് കാണിക്കാൻ ഈ ഘടകത്തിൽ ഐച്ഛിക "maplibre-gl" പാക്കേജ് ഇൻസ്റ്റാൾ ചെയ്യണം.',
+  mapMissingLibrary: 'മാപ്പ് കാണിക്കാൻ ഈ ഘടകത്തിൽ ഐച്ഛിക "{package}" പാക്കേജ് ഇൻസ്റ്റാൾ ചെയ്യണം.',
   mapStyleRequired: 'മാപ്പ് കാണിക്കാൻ മാപ്പ് സ്റ്റൈൽ നൽകുക.',
   mapWebglUnavailable: 'മാപ്പ് കാണിക്കാൻ ആവശ്യമായ ഗ്രാഫിക്സ് പിന്തുണ ഈ ബ്രൗസറിന് നൽകാനാവില്ല.',
   mapInitializationFailed: 'മാപ്പ് ആരംഭിക്കാനായില്ല.',

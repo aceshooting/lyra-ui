@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'አቁም',
   qrCodeMissingLibrary: 'QR ኮዶችን ለማሳየት ይህ ክፍል አማራጭ "qrcode" ጥቅል እንዲጫን ይፈልጋል።',
   qrCodeGenerationFailed: 'ይህን ዋጋ እንደ QR ኮድ መቀየር አልተቻለም።',
-  mapMissingLibrary: 'ካርታውን ለማሳየት ይህ ክፍል አማራጭ "maplibre-gl" ጥቅል እንዲጫን ይፈልጋል።',
+  mapMissingLibrary: 'ካርታውን ለማሳየት ይህ ክፍል አማራጭ "{package}" ጥቅል እንዲጫን ይፈልጋል።',
   mapStyleRequired: 'ካርታውን ለማሳየት የካርታ ቅጥ ያቅርቡ።',
   mapWebglUnavailable: 'ይህ አሳሽ ካርታውን ለማሳየት የሚያስፈልገውን የግራፊክስ ድጋፍ ማቅረብ አይችልም።',
   mapInitializationFailed: 'ካርታውን ማስጀመር አልተቻለም።',

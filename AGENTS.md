@@ -52,6 +52,7 @@ packages/lyra-ui/                 @aceshooting/lyra-ui, the library
                                   GENERATED; never edit, CI diffs them
 packages/lyra-flags/              optional <lr-flag> SVG companion (Noto Emoji, Public Domain)
 packages/lyra-docs/               public experimental editor companion; viewers stay in lyra-ui for now
+packages/lyra-map/                optional modular map renderer and shared module worker; generated from pinned source
 packages/lyra-ide/                editor data (custom-elements/web-types/vscode-*-data json), copied from lyra-ui at prepack
 packages/lyra-translations/       the 66 locale catalogs, assembled from lyra-ui's dist/translations (pseudo stay in lyra-ui)
 docs/agents/                      detail behind this file's digests

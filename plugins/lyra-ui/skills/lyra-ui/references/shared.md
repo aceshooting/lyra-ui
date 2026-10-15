@@ -164,7 +164,7 @@ The entry points, then:
   `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
   `lr-knowledge-graph-explorer` and `lr-geojson-viewer`. Those always need their own subpath import,
   from `all.js` exactly as from the root — the entry deliberately preserves the optional-peer
-  isolation contract rather than putting `chart.js`, `maplibre-gl`, or the `d3-*` set on the
+  isolation contract rather than putting `chart.js`, `@aceshooting/lyra-map`, `maplibre-gl`, or the `d3-*` set on the
   critical path of every install. It is the one import that defeats tree-shaking.
   (Server-side, `@aceshooting/lyra-ui/ssr/all.js` is the counterpart that _does_ register the
   complete inventory, optional-peer families included; see "SSR and declarative shadow DOM".)
@@ -2707,7 +2707,7 @@ preferred in production.
 
 ## Optional peer dependencies
 
-All 30 peers are optional, in two groups. The 27 component-facing peers remain outside the default
+All 31 peers are optional, in two groups. The 28 component-facing peers remain outside the default
 install; components load them on demand where applicable. React, Svelte, and Vue are
 compile-time-only peers for their matching
 opt-in declaration entries (`custom-elements-jsx`, `svelte`, and `vue`): those entries emit empty
@@ -2723,7 +2723,7 @@ adapter (`loadLibphonenumberAdapter()`) rather than importing `libphonenumber-js
 ### Experimental DOCX editing companion
 
 Use `@aceshooting/lyra-docs` for editing; `lr-docx-viewer` remains a viewer in Lyra UI.
-The companion uses optional `@docx-editor.dev/core@2.27.0`. Its installed README owns
+The companion bundles a lazily loaded document engine. Its installed README owns
 installation, admission limits, lifecycle, exact supported structures and save receipts.
 
 ```ts
@@ -2738,7 +2738,8 @@ replace-and-advance, Outline, Checks and Review panels, table formatting and loc
 image tools. `createDocxSession({ mount })` supports a host-owned toolbar; it requires a
 connected empty light-DOM mount. Both routes expose `can()`/`execute()`, `find()`/
 `selectMatch()`/`replaceMatch()`, `outline()`/`selectOutlineItem()`, `inspectDocument()`/
-`selectDiagnostic()`, and `review()`/`selectReviewItem()`. Query rows are copied, bounded
+`selectDiagnostic()`, and `review()`/`selectReviewItem()`. Await `execute()` before inspecting its
+result or issuing a dependent command; it includes any required feature preparation. Query rows are copied, bounded
 and revision-scoped; refresh after edits and pass the returned `expectedRevision` when
 navigating. Queries do not save or fetch. Inspection covers body metadata only; capability
 fields `preserved`, `renderable` and `editable` remain `unverified`, and the report is not

@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Пауза',
   qrCodeMissingLibrary: 'Для создания QR-кодов нужно установить дополнительный пакет «qrcode».',
   qrCodeGenerationFailed: 'Не удалось закодировать это значение в QR-код.',
-  mapMissingLibrary: 'Для отображения карты нужно установить дополнительный пакет «maplibre-gl».',
+  mapMissingLibrary: 'Для отображения карты нужно установить дополнительный пакет «{package}».',
   mapStyleRequired: 'Укажите стиль карты, чтобы отобразить карту.',
   mapWebglUnavailable: 'Этот браузер не может предоставить графическую поддержку, необходимую для отображения карты.',
   mapInitializationFailed: 'Не удалось инициализировать карту.',

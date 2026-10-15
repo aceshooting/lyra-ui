@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Pauzeren',
   qrCodeMissingLibrary: 'Voor het weergeven van QR-codes moet het optionele pakket "qrcode" zijn geïnstalleerd.',
   qrCodeGenerationFailed: 'Deze waarde kon niet als QR-code worden gecodeerd.',
-  mapMissingLibrary: 'Voor het weergeven van de kaart moet het optionele pakket "maplibre-gl" zijn geïnstalleerd.',
+  mapMissingLibrary: 'Voor het weergeven van de kaart moet het optionele pakket "{package}" zijn geïnstalleerd.',
   mapStyleRequired: 'Geef een kaartstijl op om de kaart weer te geven.',
   mapWebglUnavailable: 'Deze browser biedt niet de grafische ondersteuning die nodig is om de kaart weer te geven.',
   mapInitializationFailed: 'De kaart kon niet worden geïnitialiseerd.',

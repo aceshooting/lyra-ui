@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'إيقاف مؤقت',
   qrCodeMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت الحزمة الاختيارية "qrcode" لإنشاء رموز QR.',
   qrCodeGenerationFailed: 'تعذّر ترميز هذه القيمة كرمز QR.',
-  mapMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت الحزمة الاختيارية "maplibre-gl" لعرض الخريطة.',
+  mapMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت الحزمة الاختيارية "{package}" لعرض الخريطة.',
   mapStyleRequired: 'وفّر نمط خريطة لعرض الخريطة.',
   mapWebglUnavailable: 'لا يستطيع هذا المتصفح توفير دعم الرسومات اللازم لعرض الخريطة.',
   mapInitializationFailed: 'تعذّر تهيئة الخريطة.',

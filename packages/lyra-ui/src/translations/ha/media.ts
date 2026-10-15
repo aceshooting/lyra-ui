@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Dakata',
   qrCodeMissingLibrary: 'Wannan ɓangaren yana buƙatar a girka fakitin zaɓi na "qrcode" don nuna lambobin QR.',
   qrCodeGenerationFailed: 'Ba a iya ɓoye wannan ƙima a matsayin lambar QR ba.',
-  mapMissingLibrary: 'Wannan ɓangaren yana buƙatar a girka fakitin zaɓi na "maplibre-gl" don nuna taswira.',
+  mapMissingLibrary: 'Wannan ɓangaren yana buƙatar a girka fakitin zaɓi na "{package}" don nuna taswira.',
   mapStyleRequired: 'Samar da salon taswira don nuna ta.',
   mapWebglUnavailable: 'Wannan mai binciken ba zai iya samar da tallafin zane-zanen da ake buƙata don nuna taswira ba.',
   mapInitializationFailed: 'Ba a iya fara taswirar ba.',

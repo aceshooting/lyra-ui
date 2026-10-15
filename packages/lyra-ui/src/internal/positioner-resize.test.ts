@@ -62,7 +62,7 @@ it('observes reference and virtual context sizing without polling idle frames', 
   }
 });
 
-it('keeps initial and ancestor-scroll geometry reads immediate', async () => {
+it('keeps initial and ancestor-resize geometry reads immediate', async () => {
   const wrap = await fixture(html`<div style="overflow:auto;width:200px;height:100px"><div id="reference" style="width:80px;height:20px"></div><div style="height:400px"></div><div id="popup" style="width:50px;height:20px"></div></div>`);
   const reference = wrap.querySelector<HTMLElement>('#reference')!;
   const popup = wrap.querySelector<HTMLElement>('#popup')!;
@@ -78,7 +78,7 @@ it('keeps initial and ancestor-scroll geometry reads immediate', async () => {
     expect(reads).to.be.greaterThan(1);
     await frames();
     const before = reads;
-    wrap.dispatchEvent(new Event('scroll'));
+    wrap.dispatchEvent(new Event('resize'));
     expect(reads).to.be.greaterThan(before);
   } finally { stop(); }
 });

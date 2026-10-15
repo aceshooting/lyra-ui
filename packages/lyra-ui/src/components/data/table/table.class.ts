@@ -12,6 +12,7 @@ import { finiteCount, finiteInteger, finiteRatio } from '../../../internal/numbe
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
+import { CollectionSourceTracker } from '../../../internal/collection-source-tracker.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import {
   definePersistedProperty,
@@ -468,22 +469,34 @@ function encodeKey(key: string | number): string {
  *  table from rendering entirely. The replacer downgrades BigInt to its decimal string and a repeat
  *  visit to an already-seen container to `'[Circular]'`; a row that still can't be serialized (a
  *  hostile `toJSON()`, for instance) simply falls back to never matching rather than throwing. */
-function safeStringifyForFilter(row: unknown): string {
-  const seen = new WeakSet<object>();
-  try {
-    return (
-      JSON.stringify(row, (_key, value) => {
-        if (typeof value === 'bigint') return value.toString();
-        if (typeof value === 'object' && value !== null) {
-          if (seen.has(value)) return '[Circular]';
-          seen.add(value);
-        }
-        return value;
-      }) ?? ''
-    );
-  } catch {
-    return '';
-  }
+function createFilterStringifier(): (row: unknown) => string {
+  let first: object | undefined;
+  let seen: Set<object> | undefined;
+  const replace = (_key: string, value: unknown): unknown => {
+    if (typeof value === 'bigint') return value.toString();
+    if (typeof value === 'object' && value !== null) {
+      // Flat records need only their root identity; nested containers share one tracker per pass.
+      if (first === undefined) first = value;
+      else {
+        if (value === first) return '[Circular]';
+        seen ??= new Set<object>();
+        if (seen.has(value)) return '[Circular]';
+        seen.add(value);
+      }
+    }
+    return value;
+  };
+  return (row) => {
+    try {
+      return JSON.stringify(row, replace) ?? '';
+    } catch {
+      return '';
+    } finally {
+      // Each row owns its reference history, including when a getter or toJSON throws.
+      first = undefined;
+      seen?.clear();
+    }
+  };
 }
 
 /** Returns an Element across owner-document realms without relying on the current global's
@@ -805,16 +818,13 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The value each snapshotting collection setter last received. */
-  private readonly assignedSources = new Map<string, unknown>();
+  private readonly assignedSources = new CollectionSourceTracker();
 
   /** Whether assigning `value` to `name` is a rebind rather than a change: the exact value that
    *  property last received, or its current snapshot read back. Declarative hosts re-commit
    *  object and array bindings on every render. */
   private isRebind(name: string, value: unknown, current: unknown): boolean {
-    if (value === current) return true;
-    if (this.assignedSources.has(name) && this.assignedSources.get(name) === value) return true;
-    this.assignedSources.set(name, value);
-    return false;
+    return this.assignedSources.isRebind(name, value, current);
   }
 
   private _columns: readonly TableColumn<T>[] = Object.freeze([]);
@@ -2076,12 +2086,13 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (text === '') {
       entries = canonicalEntries;
     } else {
+      const stringify = createFilterStringifier();
       const intlLocale = this.effectiveLocale;
       const normalized = text.toLocaleLowerCase(intlLocale);
       entries = canonicalEntries.filter(({ row }) => {
         const matches = this.filter
           ? this.filter(row, text)
-          : safeStringifyForFilter(row).toLocaleLowerCase(intlLocale).includes(normalized);
+          : stringify(row).toLocaleLowerCase(intlLocale).includes(normalized);
         return matches;
       });
     }

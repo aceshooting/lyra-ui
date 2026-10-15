@@ -6,12 +6,15 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const docs = path.join(root, 'packages/lyra-docs');
 const manifest = JSON.parse(readFileSync(path.join(docs, 'package.json'), 'utf8'));
-const version = manifest.peerDependencies['@docx-editor.dev/core'];
-assert.match(version, /^\d+\.\d+\.\d+$/u, 'DOCX engine peer must be one exact version');
-assert.equal(manifest.devDependencies['@docx-editor.dev/core'], version);
+const lock = JSON.parse(readFileSync(path.join(docs, 'scripts/engine-source.lock.json'), 'utf8'));
+const version = lock.upstream.version;
+assert.match(version, /^\d+\.\d+\.\d+$/u, 'DOCX engine source must be one exact version');
+assert.equal(manifest.peerDependencies['@docx-editor.dev/core'], undefined, 'The engine is internal, not a consumer peer');
+assert.equal(manifest.devDependencies['@docx-editor.dev/core'], version,
+  'Engine updates require a reviewed source lock and patches; keep the maintainer input pinned');
 const installed = path.join(docs, 'node_modules/@docx-editor.dev/core');
 assert.equal(JSON.parse(readFileSync(path.join(installed, 'package.json'), 'utf8')).version, version,
-  'Install the exact DOCX engine peer before synchronizing its notices');
+  'Install the locked DOCX maintainer input before synchronizing its notices');
 
 function update(relative, transform) {
   const file = path.join(root, relative);
@@ -30,12 +33,7 @@ for (const relative of [
   update(relative, source => {
     assert(packageVersion.test(source), `${relative} lacks the current engine version reference`);
     packageVersion.lastIndex = 0;
-    let next = source.replace(packageVersion, `@docx-editor.dev/core@${version}`);
-    if (relative.endsWith('/README.md')) {
-      assert(/exact `\d+\.\d+\.\d+` peer dependency/u.test(next), 'README lacks exact peer prose');
-      next = next.replace(/exact `\d+\.\d+\.\d+` peer dependency/u,
-        `exact \`${version}\` peer dependency`);
-    }
+    const next = source.replace(packageVersion, `@docx-editor.dev/core@${version}`);
     return next;
   });
 }

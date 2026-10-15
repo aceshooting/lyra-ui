@@ -31,12 +31,20 @@ for (const released of [
   ['@aceshooting/lyra-docs', '@aceshooting/lyra-ui'],
   ['@aceshooting/lyra-ui', '@aceshooting/lyra-docs'],
   ['@aceshooting/lyra-docs'],
+  ['@aceshooting/lyra-map', '@aceshooting/lyra-ui', '@aceshooting/lyra-docs'],
+  ['@aceshooting/lyra-docs', '@aceshooting/lyra-map', '@aceshooting/lyra-ui'],
 ]) {
   test(`release preparation builds clean prerequisites for ${released.join(', ')}`, () => {
     const root = mkdtempSync(join(tmpdir(), 'lyra-release-build-order-'));
     try {
       const ui = join(root, 'packages/lyra-ui');
       const docs = join(root, 'packages/lyra-docs');
+      const map = join(root, 'packages/lyra-map');
+      mkdirSync(map, { recursive: true });
+      writeFileSync(join(map, 'package.json'), JSON.stringify({
+        name: '@aceshooting/lyra-map', version: '1.0.0',
+        scripts: { build: 'node ../../fixture.mjs map' },
+      }));
       mkdirSync(ui, { recursive: true });
       mkdirSync(docs, { recursive: true });
       // Source metadata starts at the unchanged version; the released UI generator updates it.
@@ -67,7 +75,12 @@ const metadata = new URL('metadata.json', ui);
 const declaration = new URL('dist/localization.d.ts', ui);
 const task = process.argv[2];
 if (task === 'metadata') writeFileSync(metadata, '"released"');
+if (task === 'map') {
+  mkdirSync(new URL('packages/lyra-map/dist/', root), { recursive: true });
+  writeFileSync(new URL('packages/lyra-map/dist/index.d.ts', root), 'map declarations');
+}
 if (task === 'ui') {
+  assert.equal(readFileSync(new URL('packages/lyra-map/dist/index.d.ts', root), 'utf8'), 'map declarations');
   mkdirSync(new URL('dist/', ui), { recursive: true });
   writeFileSync(declaration, readFileSync(metadata));
 }
@@ -96,6 +109,8 @@ appendFileSync(new URL('steps.log', root), task + '\\n');
           `${[command, ...args].join(' ')} failed:\n${result.stdout}\n${result.stderr}`);
       }
       const tasks = readFileSync(join(root, 'steps.log'), 'utf8').trim().split('\n');
+      assert.equal(tasks.filter(task => task === 'map').length, 1);
+      assert.ok(tasks.indexOf('map') < tasks.indexOf('ui'), 'map declarations exist before UI builds');
       assert.equal(tasks.filter(task => task === 'docs').length, 1);
       assert.ok(tasks.indexOf('ui') < tasks.indexOf('docs'), 'UI declarations exist before docs builds');
       assert.equal(tasks.filter(task => task === 'ui').length,

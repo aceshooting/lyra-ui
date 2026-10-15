@@ -201,10 +201,11 @@ export interface DocxSession {
   /** Insert one owned raster at the original caret; success identifies its committed revision. */
   insertImage(source: DocxImageSource, options?: DocxInsertImageOptions): Promise<DocxResult<DocxRevision>>;
   retainSelection(): DocxResult<DocxSelectionLease>;
+  /** Prepare required document features, then commit at the captured revision and selection. */
   execute(command: DocxAction, options?: {
     expectedRevision?: DocxRevision;
     selection?: DocxSelectionLease;
-  }): DocxResult<DocxRevision>;
+  }): Promise<DocxResult<DocxRevision>>;
   /** On-demand document paragraph styles; at most 256 copied entries. */
   paragraphStyles(): DocxResult<DocxParagraphStyles>;
   /** Pure bounded cached metadata; pending native input returns busy without settlement. */

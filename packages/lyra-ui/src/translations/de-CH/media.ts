@@ -11,7 +11,7 @@ const strings: LyraLocaleStrings = {
   fileInputRejectedMaxTotalSize: '{filename}: Durch diese Datei würde die zulässige Gesamtgrösse überschritten.',
   videoExitPictureInPicture: 'Bild-in-Bild schliessen',
   qrCodeMissingLibrary: 'Für diese Komponente muss das optionale Paket «qrcode» installiert sein, um QR-Codes zu erzeugen.',
-  mapMissingLibrary: 'Für diese Komponente muss das optionale Paket «maplibre-gl» installiert sein, um die Karte darzustellen.',
+  mapMissingLibrary: 'Für diese Komponente muss das optionale Paket «{package}» installiert sein, um die Karte darzustellen.',
   imageViewerFitActual: 'Originalgrösse',
   imageViewerAnnotationHint: 'Annotationsmodus aktiv. Mit der Eingabetaste einen Bereich setzen, dann mit den Pfeiltasten verschieben, mit Umschalt und Pfeiltasten die Grösse ändern, mit der Eingabetaste speichern oder mit Escape abbrechen.',
 };

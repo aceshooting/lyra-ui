@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Кідірту',
   qrCodeMissingLibrary: 'QR кодтарын көрсету үшін бұл компонентке қосымша «qrcode» бумасын орнату қажет.',
   qrCodeGenerationFailed: 'Бұл мәнді QR кодқа кодтау мүмкін болмады.',
-  mapMissingLibrary: 'Картаны көрсету үшін бұл компонентке қосымша «maplibre-gl» бумасын орнату қажет.',
+  mapMissingLibrary: 'Картаны көрсету үшін бұл компонентке қосымша «{package}» бумасын орнату қажет.',
   mapStyleRequired: 'Картаны көрсету үшін карта стилін беріңіз.',
   mapWebglUnavailable: 'Бұл браузер картаны көрсетуге қажетті графикалық қолдауды бере алмайды.',
   mapInitializationFailed: 'Картаны іске қосу мүмкін болмады.',

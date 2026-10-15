@@ -167,7 +167,7 @@ test('insertion owns synchronous bytes before activity and rejects every competi
   assert.deepEqual(h.state.capturedBytes, original);
   const hostile = new Proxy(source, { getPrototypeOf() { throw new Error('must not inspect'); } });
   refusal(await h.session.insertImage(hostile), 'busy');
-  refusal(h.session.focus(), 'busy'); refusal(h.session.retainSelection(), 'busy'); refusal(h.session.execute('bold'), 'busy');
+  refusal(h.session.focus(), 'busy'); refusal(h.session.retainSelection(), 'busy'); refusal((await h.session.execute('bold')), 'busy');
   refusal(await h.session.save(), 'busy'); refusal(h.session.imageDescription(), 'busy');
   const hostileOptions = new Proxy({}, { getPrototypeOf() { throw new Error('must not inspect busy options'); } });
   refusal(h.session.selectMatch('unused', hostileOptions), 'busy');
@@ -215,7 +215,7 @@ test('insertion with a foreign lease preserves the genuine original retained sel
   const h = await insertionFixture(), lease = value(h.session.retainSelection());
   refusal(await h.session.insertImage(h.source(), { selection: { release() {} } }), 'stale-selection');
   assert.equal(h.f.released.length, 0); assert.equal(h.state.calls, 0);
-  assert.equal(value(h.session.execute('bold', { selection: lease })).value, 1);
+  assert.equal(value((await h.session.execute('bold', { selection: lease }))).value, 1);
   assert.equal(h.f.released.length, 1);
 });
 
@@ -266,15 +266,15 @@ test('parameterized edits validate before engine calls and keep existing revisio
   const invalid = { type: 'font-size', points: Infinity } as const;
   const before = f.canCalls;
   assert.deepEqual(session.can(invalid), { enabled: false, reason: 'invalid-option' });
-  refusal(session.execute(invalid), 'invalid-option');
+  refusal((await session.execute(invalid)), 'invalid-option');
   assert.equal(f.canCalls, before);
   assert.equal(f.executes, 0);
   const lease = value(session.retainSelection());
   const revision = session.snapshot().revision!;
-  const edited = value(session.execute({ type: 'alignment', value: 'center' }, { expectedRevision: revision, selection: lease }));
+  const edited = value((await session.execute({ type: 'alignment', value: 'center' }, { expectedRevision: revision, selection: lease })));
   assert.equal(edited.value, revision.value + 1);
   assert.equal(f.released.length, 1);
-  refusal(session.execute({ type: 'alignment', value: 'left' }, { expectedRevision: revision }), 'stale-revision');
+  refusal((await session.execute({ type: 'alignment', value: 'left' }, { expectedRevision: revision })), 'stale-revision');
 });
 
 test('formatting state is immutable and stable, with no catalog, search or save work on input', async () => {
@@ -357,7 +357,7 @@ test('invalid XML authoring leaves the selection, revision and search match usab
   const before = session.snapshot();
   for (const text of ['\u0000', '\u000b', '\ufffe', '\ud800', '\udfff']) {
     refusal(session.replaceMatch(id, text), 'invalid-option');
-    refusal(session.execute({ type: 'link', href: '#bookmark', text }), 'invalid-option');
+    refusal((await session.execute({ type: 'link', href: '#bookmark', text })), 'invalid-option');
     assert.equal(session.can({ type: 'link', href: '#bookmark', text }).reason, 'invalid-option');
   }
   assert.equal(f.navigations, 0);
@@ -572,23 +572,23 @@ test('failed readiness normalizes errors and releases engine subscription and mo
 test('committed changes alone advance revision; no-op/refusal/selection/focus remain separate', async () => {
   const { f, session, revision } = await opened();
   f.changed = false;
-  assert.deepEqual(value(session.execute('bold')), revision);
+  assert.deepEqual(value((await session.execute('bold'))), revision);
   f.emit('user-selection'); value(session.focus());
   assert.equal(session.snapshot().revision?.value, 0);
   f.availability = { enabled: false, reason: 'unsupported' };
-  refusal(session.execute('bold'), 'unsupported');
+  refusal((await session.execute('bold')), 'unsupported');
   assert.equal(f.executes, 1);
   f.availability = { enabled: true, active: 'mixed' }; f.changed = true;
-  assert.equal(value(session.execute('undo')).value, 1);
+  assert.equal(value((await session.execute('undo'))).value, 1);
   assert.equal(session.snapshot().dirty, true);
   assert.equal(session.snapshot().commands.bold.active, 'mixed');
   assert.equal(session.snapshot().commands.undo.active, undefined);
-  refusal(session.execute('bold', { expectedRevision: revision }), 'stale-revision');
+  refusal((await session.execute('bold', { expectedRevision: revision })), 'stale-revision');
 });
 
 test('readonly permits focus/selection/export while composition refuses mutation and export', async () => {
   const { f, session } = await opened(true);
-  refusal(session.execute('bold'), 'read-only');
+  refusal((await session.execute('bold')), 'read-only');
   value(session.focus()); value(session.retainSelection()).release();
   value(await session.save());
   f.composing = true; f.emit('composition');
@@ -603,14 +603,14 @@ test('leases are single-owner, preserve toolbar focus loss and invalidate delibe
   const second = value(session.retainSelection());
   assert.equal(f.released.length, 1);
   f.selection = 'none'; f.emit('focus-selection');
-  value(session.execute('bold', { selection: second }));
+  value((await session.execute('bold', { selection: second })));
   assert.equal(f.released.length, 2);
   first.release(); second.release();
   assert.equal(f.released.length, 2);
   f.selection = 'text'; f.emit('user-selection');
   const third = value(session.retainSelection());
   f.selection = 'text'; f.emit('user-selection');
-  refusal(session.execute('bold', { selection: third }), 'stale-selection');
+  refusal((await session.execute('bold', { selection: third })), 'stale-selection');
   assert.equal(f.released.length, 3);
 });
 
@@ -618,10 +618,10 @@ test('lease release covers failed execution, composition, content changes and fo
   const { f, session } = await opened();
   const other = await opened();
   const foreign = value(other.session.retainSelection());
-  refusal(session.execute('bold', { selection: foreign }), 'stale-selection');
+  refusal((await session.execute('bold', { selection: foreign })), 'stale-selection');
   const held = value(session.retainSelection());
   f.executeThrows = true;
-  refusal(session.execute('bold', { selection: held }), 'unsupported');
+  refusal((await session.execute('bold', { selection: held })), 'unsupported');
   assert.equal(f.released.length, 1);
   value(session.retainSelection());
   f.emit('change');
@@ -683,13 +683,13 @@ test('aborted save stays busy until underlying barrier settles and preserves edi
   controller.abort();
   assert.equal(f.signal?.aborted, true);
   refusal(await session.save(), 'busy');
-  refusal(session.execute('bold'), 'busy');
+  refusal((await session.execute('bold')), 'busy');
   refusal(session.focus(), 'busy');
   refusal(session.retainSelection(), 'busy');
   f.saveGate.resolve(f.output);
   refusal(await pending, 'aborted');
   assert.equal(session.snapshot().activity, null);
-  value(session.execute('bold'));
+  value((await session.execute('bold')));
   assert.equal(session.snapshot().dirty, true);
 });
 
@@ -705,7 +705,7 @@ test('destroy promptly invalidates pending save and retains only a terminal snap
   assert.equal(session.snapshot(), terminal);
   assert.equal(f.destroyed, 1);
   assert.equal(f.subscriptions, 0);
-  refusal(session.execute('bold'), 'destroyed');
+  refusal((await session.execute('bold')), 'destroyed');
   refusal(session.focus(), 'destroyed');
 });
 
@@ -760,7 +760,7 @@ test('committed change inspection faults preserve the revision and fail closed w
   assert.equal(f.subscriptions, 0);
   assert.equal(f.claimsReleased, 1);
   assert.equal(f.released.length, 1);
-  refusal(session.execute('bold'), 'not-ready');
+  refusal((await session.execute('bold')), 'not-ready');
   assert.ok(!JSON.stringify(session.snapshot()).includes('private document details'));
 });
 
@@ -889,21 +889,21 @@ test('owned leases release on early revision/readonly/busy refusals; foreign lea
   const ready = await opened();
   ready.f.emit('change');
   const lease = value(ready.session.retainSelection());
-  refusal(ready.session.execute('bold', { selection: lease, expectedRevision: ready.revision }), 'stale-revision');
+  refusal((await ready.session.execute('bold', { selection: lease, expectedRevision: ready.revision })), 'stale-revision');
   assert.equal(ready.f.released.length, 1);
   const readonly = await opened(true);
   const readLease = value(readonly.session.retainSelection());
-  refusal(readonly.session.execute('bold', { selection: readLease }), 'read-only');
+  refusal((await readonly.session.execute('bold', { selection: readLease })), 'read-only');
   assert.equal(readonly.f.released.length, 1);
   const held = value(ready.session.retainSelection());
   ready.f.saveGate = deferred();
   const save = ready.session.save();
-  refusal(ready.session.execute('bold', { selection: held }), 'busy');
+  refusal((await ready.session.execute('bold', { selection: held })), 'busy');
   assert.equal(ready.f.released.length, 2);
   ready.f.saveGate.resolve(ready.f.output); value(await save);
   const other = await opened();
   const foreign = value(other.session.retainSelection());
-  refusal(ready.session.execute('bold', { selection: foreign }), 'stale-selection');
+  refusal((await ready.session.execute('bold', { selection: foreign })), 'stale-selection');
   assert.equal(other.f.released.length, 0);
   foreign.release();
   assert.equal(other.f.released.length, 1);
@@ -966,7 +966,7 @@ test('ready and save-completion observers that cause an engine fault cannot rece
 test('execute and focus report the engine fault caused by their synchronous event', async () => {
   const execution = await opened();
   execution.f.inspectThrows = true;
-  refusal(execution.session.execute('bold'), 'engine-failed');
+  refusal((await execution.session.execute('bold')), 'engine-failed');
   assert.equal(execution.session.snapshot().revision?.value, 1);
   assert.equal(execution.session.snapshot().dirty, true);
   const focusing = await opened();
@@ -1035,7 +1035,7 @@ test('lease release during no-op execution cannot leave an already-computed succ
   f.changed = false;
   const lease = value(session.retainSelection());
   engine.releaseSelection = token => { f.released.push(token); session.destroy(); };
-  refusal(session.execute('bold', { selection: lease }), 'destroyed');
+  refusal((await session.execute('bold', { selection: lease })), 'destroyed');
   assert.equal(f.released.length, 1);
 });
 
@@ -1064,7 +1064,7 @@ test('independently evaluated modules mint distinct document identities and reje
   const revision = value(await firstSession.open({ kind: 'blank' }));
   const other = value(await secondSession.open({ kind: 'blank' }));
   assert.notEqual(other.documentId, revision.documentId);
-  refusal(secondSession.execute('bold', { expectedRevision: revision }), 'stale-revision');
+  refusal((await secondSession.execute('bold', { expectedRevision: revision })), 'stale-revision');
   refusal(await secondSession.save({ expectedRevision: revision }), 'stale-revision');
   firstSession.destroy(); secondSession.destroy();
 });
@@ -1109,8 +1109,8 @@ test('table settlement checks expected revision and leases after prior typing co
       if (!checked.ok) return checked;
       tableWrites++; f.emit('change'); return { ok: true, value: undefined };
     };
-    const result = session.execute({ type: 'insert-table', rows: 2, columns: 2 },
-      stale === 'revision' ? { expectedRevision: revision } : stale === 'lease' ? { selection: lease } : {});
+    const result = (await session.execute({ type: 'insert-table', rows: 2, columns: 2 },
+      stale === 'revision' ? { expectedRevision: revision } : stale === 'lease' ? { selection: lease } : {}));
     if (stale === 'revision') refusal(result, 'stale-revision');
     else if (stale === 'lease') refusal(result, 'stale-selection');
     else assert.equal(result.ok, true);
@@ -1124,14 +1124,14 @@ test('synchronous table ownership blocks reentrant commands, navigation, focus a
   f.selection = 'caret'; f.emit('user-selection');
   const match = value(session.find('alpha')).matches[0]!;
   const nested: unknown[] = [];
-  engine.execute = (_action, _token, validate) => {
+  engine.execute = async (_action, _token, validate) => {
     assert.equal(validate!().ok, true);
-    nested.push(session.execute('bold'), session.execute({ type: 'delete-table' }), session.focus(),
+    nested.push((await session.execute('bold')), (await session.execute({ type: 'delete-table' })), session.focus(),
       session.retainSelection(), session.selectMatch(match.id), session.replaceMatch(match.id, 'x'), session.can({ type: 'delete-table' }));
     f.emit('change');
     return { ok: true, value: undefined };
   };
-  const result = session.execute({ type: 'delete-table' });
+  const result = (await session.execute({ type: 'delete-table' }));
   assert.equal(result.ok, true);
   for (const value of nested.slice(0, 6)) assert.deepEqual(value, { ok: false, code: 'busy' });
   assert.deepEqual(nested[6], { enabled: false, reason: 'busy' });
@@ -1158,7 +1158,7 @@ test('table guard detects changed selection generation, released leases and term
       if (!valid.ok) return valid;
       writes++; return { ok: true, value: undefined };
     };
-    const result = session.execute({ type: 'delete-table' }, effect === 'lease' ? { selection: lease } : {});
+    const result = (await session.execute({ type: 'delete-table' }, effect === 'lease' ? { selection: lease } : {}));
     assert.equal(result.ok, false, effect);
     assert.equal(writes, 0, effect);
   }
@@ -1170,7 +1170,7 @@ test('table refusals and thrown preflight release synchronous ownership without 
     f.selection = 'caret'; f.emit('user-selection');
     const receipt = value(await session.save());
     engine.execute = () => { if (throwing) throw Error('private'); return { ok: false, code: 'unsupported' }; };
-    refusal(session.execute({ type: 'delete-table' }), 'unsupported');
+    refusal((await session.execute({ type: 'delete-table' })), 'unsupported');
     assert.deepEqual(session.snapshot().revision, revision);
     assert.equal(session.can('bold').enabled, true);
     assert.equal(session.acknowledgeSaved(receipt).ok, true);
@@ -1182,10 +1182,10 @@ test('execute option accessors and invalid table actions never touch engine capa
   const { session, f } = await opened(); const lease = value(session.retainSelection()); const before = f.canCalls;
   for (const options of [null, [], { extra: true }, { expectedRevision: { documentId: 'x', value: NaN } },
     { get selection() { throw Error('getter'); } }, { get expectedRevision() { throw Error('getter'); } }, { selection: 'forged' }]) {
-    refusal(session.execute({ type: 'delete-table' }, options as never), 'invalid-option');
+    refusal((await session.execute({ type: 'delete-table' }, options as never)), 'invalid-option');
   }
-  refusal(session.execute({ type: 'insert-table', rows: 0, columns: 2 }), 'invalid-option');
-  refusal(session.execute({ type: 'insert-table', rows: 0, columns: 2 }, { selection: lease }), 'invalid-option');
+  refusal((await session.execute({ type: 'insert-table', rows: 0, columns: 2 })), 'invalid-option');
+  refusal((await session.execute({ type: 'insert-table', rows: 0, columns: 2 }, { selection: lease })), 'invalid-option');
   assert.equal(f.released.length, 0);
   assert.equal(f.canCalls, before); assert.equal(f.executes, 0);
 });
@@ -1266,10 +1266,10 @@ test('image snapshots contain frozen dimensions only and description reads prese
   const copied = value(session.imageDescription()); assert(Object.isFrozen(copied));
   assert.equal(session.snapshot(), before); assert.equal(f.released.length, 0);
   engine.execute = (_command, _token, validate) => validate!();
-  assert.deepEqual(session.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, { selection: lease }), { ok: true, value: before.revision });
+  assert.deepEqual((await session.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }, { selection: lease })), { ok: true, value: before.revision });
   assert.equal(session.snapshot().dirty, false); assert.equal(session.snapshot().revision, before.revision);
   assert.equal(f.released.length, 1);
-  assert.deepEqual(session.execute({ type: 'delete-image' }, { selection: lease }), { ok: false, code: 'stale-selection' });
+  assert.deepEqual((await session.execute({ type: 'delete-image' }, { selection: lease })), { ok: false, code: 'stale-selection' });
   session.destroy(); assert.equal(session.snapshot().image, null);
 });
 
@@ -1286,7 +1286,7 @@ test('image execution binds revision and selection before settlement even withou
       if (allowed.ok) actualDispatch++;
       return allowed;
     };
-    refusal(session.execute({ type: 'delete-image' }), event === 'change' ? 'stale-revision' : event === 'composition' ? 'composing' : 'stale-selection');
+    refusal((await session.execute({ type: 'delete-image' })), event === 'change' ? 'stale-revision' : event === 'composition' ? 'composing' : 'stale-selection');
     assert.equal(actualDispatch, 0);
     assert.equal(session.snapshot().revision!.value, revision!.value + (event === 'change' ? 1 : 0));
   }
@@ -1297,16 +1297,16 @@ test('image ownership refuses reentrant work and stale ABA, released or foreign 
   engine.inspect = () => ({ selection: 'other', composing: false, formatting, image: { widthPoints: 120, heightPoints: 60 } });
   f.emit('user-selection'); const lease = value(session.retainSelection());
   f.emit('user-selection'); f.emit('user-selection');
-  refusal(session.execute({ type: 'delete-image' }, { selection: lease }), 'stale-selection');
-  refusal(session.execute({ type: 'delete-image' }, { selection: { release() {} } }), 'stale-selection');
+  refusal((await session.execute({ type: 'delete-image' }, { selection: lease })), 'stale-selection');
+  refusal((await session.execute({ type: 'delete-image' }, { selection: { release() {} } })), 'stale-selection');
   const released = value(session.retainSelection()); released.release();
-  refusal(session.execute({ type: 'delete-image' }, { selection: released }), 'stale-selection');
-  engine.execute = (_command, _token, validate) => {
-    refusal(session.execute('bold'), 'busy');
+  refusal((await session.execute({ type: 'delete-image' }, { selection: released })), 'stale-selection');
+  engine.execute = async (_command, _token, validate) => {
+    refusal((await session.execute('bold')), 'busy');
     refusal(session.imageDescription(), 'busy');
     return validate!();
   };
-  assert(session.execute({ type: 'delete-image' }).ok);
+  assert((await session.execute({ type: 'delete-image' })).ok);
   assert.equal(session.snapshot().revision!.value, 0);
 });
 
@@ -1339,11 +1339,13 @@ test('image navigation owns reentrant work and refuses invalid options, composit
   refusal(session.selectImage('forged' as never), 'invalid-option');
   f.composing = true; f.emit('composition'); refusal(session.selectImage('next'), 'composing');
   f.composing = false; f.emit('composition');
+  let pending: Promise<DocxResult<unknown>> | undefined;
   engine.selectImage = () => {
-    refusal(session.selectImage('next'), 'busy'); refusal(session.execute('bold'), 'busy');
+    refusal(session.selectImage('next'), 'busy'); pending = session.execute('bold');
     return { ok: true, value: undefined };
   };
   assert(session.selectImage('next').ok);
+  refusal(await pending!, 'busy');
   engine.selectImage = () => { f.emit('change'); return { ok: true, value: undefined }; };
   refusal(session.selectImage('next'), 'stale-revision');
   engine.selectImage = () => { session.destroy(); return { ok: true, value: undefined }; };
@@ -1383,5 +1385,32 @@ test('insertion ordinary refusal and synchronous port exceptions clear busy with
     assert.equal(h.session.snapshot().activity, null); assert.equal(releases, mode === 'capture-throw' ? 0 : 1);
     assert.equal(h.session.snapshot().revision?.value, mode === 'commit-throw' ? 1 : 0);
     h.session.destroy();
+  }
+});
+
+
+test('asynchronous commands own the session and retained selection until their final commit guard', async () => {
+  for (const invalidation of ['none', 'selection', 'revision', 'destroy'] as const) {
+    const { session, engine, f } = await opened(), gate = deferred<void>();
+    const lease = value(session.retainSelection());
+    engine.execute = async (_command, _token, validate) => {
+      await gate.promise;
+      const guarded = validate!(); if (!guarded.ok) return guarded;
+      f.executes++; f.emit('change'); return { ok: true, value: undefined };
+    };
+    const pending = session.execute('bold', { selection: lease });
+    assert.equal(f.released.length, 0);
+    assert.deepEqual(session.can('italic'), { enabled: false, reason: 'busy' });
+    refusal(await session.execute('italic'), 'busy');
+    refusal(await session.save(), 'busy'); refusal(session.focus(), 'busy');
+    if (invalidation === 'selection') f.emit('user-selection');
+    if (invalidation === 'revision') f.emit('change');
+    if (invalidation === 'destroy') session.destroy();
+    gate.resolve();
+    const result = await pending;
+    assert.equal(result.ok, invalidation === 'none', invalidation);
+    assert.equal(f.executes, invalidation === 'none' ? 1 : 0);
+    assert.equal(f.released.length, 1);
+    session.destroy();
   }
 });

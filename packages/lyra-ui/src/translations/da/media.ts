@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Pause',
   qrCodeMissingLibrary: 'Denne komponent kræver, at den valgfrie pakke "qrcode" er installeret, for at kunne vise QR-koder.',
   qrCodeGenerationFailed: 'Denne værdi kunne ikke kodes som en QR-kode.',
-  mapMissingLibrary: 'Denne komponent kræver, at den valgfrie pakke "maplibre-gl" er installeret, for at kunne vise kortet.',
+  mapMissingLibrary: 'Denne komponent kræver, at den valgfrie pakke "{package}" er installeret, for at kunne vise kortet.',
   mapStyleRequired: 'Angiv en kortstil for at vise kortet.',
   mapWebglUnavailable: 'Denne browser kan ikke levere den grafikunderstøttelse, der kræves for at vise kortet.',
   mapInitializationFailed: 'Kortet kunne ikke initialiseres.',

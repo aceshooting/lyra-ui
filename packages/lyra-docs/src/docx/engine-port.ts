@@ -70,7 +70,7 @@ export interface DocxEnginePort {
   /** A change event is one committed document change, never initial loading. */
   subscribe(listener: (event: DocxEngineEvent) => void): () => void;
   can(command: DocxAction): DocxCommandAvailability;
-  execute(command: DocxAction, retainedSelection?: object, validateSettled?: () => DocxResult<void>): DocxResult<void>;
+  execute(command: DocxAction, retainedSelection?: object, validateSettled?: () => DocxResult<void>): Promise<DocxResult<void>> | DocxResult<void>;
   outline?(): DocxResult<DocxEngineOutlineReport>;
   inspectDocument?(): DocxResult<DocxEngineInspectionReport>;
   selectDocumentTarget?(token: object): DocxResult<void>;
@@ -78,7 +78,7 @@ export interface DocxEnginePort {
   selectReviewItem?(token: object): DocxResult<void>;
   canReview?(action: DocxReviewAction, token?: object): DocxCommandAvailability;
   executeReview?(action: DocxReviewAction, token: object | undefined,
-    retainedSelection?: object, validateSettled?: () => DocxResult<void>): DocxResult<void>;
+    retainedSelection?: object, validateSettled?: () => DocxResult<void>): Promise<DocxResult<void>> | DocxResult<void>;
   selectImage?(direction: DocxImageDirection): DocxResult<void>;
   imageDescription?(): DocxResult<Readonly<DocxImageDescription>>;
   paragraphStyles(): DocxParagraphStyles;

@@ -124,6 +124,7 @@ afterEach(() => fixtureCleanup());
 async function connectedMapWithoutMaplibre(style = ''): Promise<{ wrapper: HTMLElement; el: LyraMap }> {
   const wrapper = (await fixture(html`<div data-lr-theme-scope style=${style}></div>`)) as HTMLElement;
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => new Promise(() => {});
   wrapper.append(el);
   await el.updateComplete;
@@ -147,7 +148,7 @@ it('uses the same map-height token as the pre-upgrade reservation', async () => 
 });
 
 it('preloads the optional map peer without constructing a map', async () => {
-  const loaded = await LyraMapElement.preload();
+  const loaded = await LyraMapElement.preload('maplibre');
   expect(typeof loaded).to.equal('boolean');
 });
 
@@ -240,6 +241,7 @@ it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps t
   if (!hasWebGL2) this.skip();
   let resolveLibrary!: (value: Awaited<ReturnType<typeof loadMaplibre>>) => void;
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<Awaited<ReturnType<typeof loadMaplibre>>> }).loadLibrary =
     () => new Promise((resolve) => {
       resolveLibrary = resolve;
@@ -286,7 +288,7 @@ it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps t
 
 it('constructs a maplibregl.Map and exposes it via the map getter', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -317,6 +319,7 @@ it('forwards renderWorldCopies only when explicitly authored, preserving the pee
 
   const connect = async (worldCopies: boolean | undefined): Promise<LyraMap> => {
     const el = document.createElement('lr-map') as LyraMap;
+    el.engine = 'maplibre';
     (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
       Map: ConstructionMap,
     });
@@ -432,6 +435,7 @@ it('keeps a constructed map usable when allocation observation throws and ignore
     remove(): void { removals += 1; }
   }
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({ Map: AllocationMap });
   el.mapStyle = LOCAL_STYLE;
   try {
@@ -485,6 +489,7 @@ it('requires an explicit style when an offscreen map becomes visible in the same
     remove(): void {}
   }
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({ Map: OffscreenMap });
   el.mapStyle = LOCAL_STYLE;
   el.strings = { mapStyleRequired: 'Choose a style before opening the map' };
@@ -651,7 +656,7 @@ it('does not construct the underlying maplibregl.Map (and its WebGL context) unt
     FakeIntersectionObserver as unknown as typeof IntersectionObserver;
 
   try {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     await el.updateComplete;
     expect(observedTargets).to.include(el);
@@ -712,6 +717,7 @@ it('uses the adopted owner realm for intersection observation, token reads, and 
   });
 
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
     new Promise(() => {});
   try {
@@ -849,6 +855,7 @@ it('probes WebGL2 in the concrete owner realm before and after adoption', async 
   }
   const module = { Map: OwnerRealmMap };
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => {
     loadCalls += 1;
     return loadCalls === 1 ? new Promise(() => {}) : Promise.resolve(module);
@@ -899,7 +906,7 @@ it('probes WebGL2 in the concrete owner realm before and after adoption', async 
 });
 
 // Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --
-// when the optional peer `maplibre-gl` fails to load, <lr-map> must fail closed into a visible,
+// when the optional peer `maplibre-gl` fails to load, <lr-map engine="maplibre"> must fail closed into a visible,
 // accessible error state instead of silently rendering an empty container with no on-page
 // indication anything is wrong. Its interrupting announcement belongs in the pre-mounted shared
 // light-DOM sink, not in a shadow-root live region.
@@ -910,6 +917,7 @@ it('renders a visible, accessible error state instead of a blank container when 
   // same technique box-plot.test.ts uses for the identical "construct detached, stub the loader,
   // then connect" need.
   const el = document.createElement('lr-map') as unknown as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
   el.strings = { mapMissingLibrary: 'Map peer is unavailable' };
   document.body.appendChild(el);
@@ -934,6 +942,7 @@ it('renders a visible, accessible error state instead of a blank container when 
 
 it('classifies a rejected optional-peer import the same as an unavailable module', async () => {
   const el = document.createElement('lr-map') as unknown as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
     Promise.reject(new Error('network import failure'));
   el.strings = { mapMissingLibrary: 'Map peer is unavailable' };
@@ -961,6 +970,7 @@ it('requires explicit mapStyle without constructing a peer map or making an impl
     }
   }
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
     Map: NeverConstructedMap,
   });
@@ -1034,6 +1044,7 @@ for (const failureStage of ['constructor', 'setup'] as const) {
     }
 
     const el = document.createElement('lr-map') as LyraMap;
+    el.engine = 'maplibre';
     (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
       Map: TransactionMap,
     });
@@ -1101,6 +1112,7 @@ it('classifies an initial peer style error and disposes the published candidate 
     remove(): void { removals += 1; }
   }
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
     Map: StyleErrorMap,
   });
@@ -1148,6 +1160,7 @@ it('logs a post-load runtime map error via console.error instead of failing an a
     remove(): void {}
   }
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
     Map: RuntimeErrorMap,
   });
@@ -1203,6 +1216,7 @@ it('rolls back a synchronous dynamic style failure and retries with a fresh map'
     remove(): void { removals += 1; }
   }
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
     Map: DynamicStyleMap,
   });
@@ -1253,6 +1267,7 @@ it('renders a distinct accessible error state instead of crashing when WebGL2 is
     },
   );
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   el.mapStyle = LOCAL_STYLE;
   el.strings = { mapWebglUnavailable: 'Owner realm has no WebGL2' };
   document.body.append(el);
@@ -1289,6 +1304,7 @@ it('fails closed when the WebGL2 capability probe itself throws', async () => {
     },
   );
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({});
   el.mapStyle = LOCAL_STYLE;
   document.body.append(el);
@@ -1310,8 +1326,8 @@ it('fails closed when the WebGL2 capability probe itself throws', async () => {
 
 // Regression coverage for the lifecycle-super-call-omitted defect class -- no user-visible
 // symptom today, but a future shared updated() behavior on LyraElement would silently never run
-// for <lr-map> if its own override shadows the base hook instead of calling it. Scoped by
-// tagName (not the fixture()-returned element reference): <lr-map> renders an <lr-skeleton>
+// for <lr-map engine="maplibre"> if its own override shadows the base hook instead of calling it. Scoped by
+// tagName (not the fixture()-returned element reference): <lr-map engine="maplibre"> renders an <lr-skeleton>
 // child in its shadow DOM, which itself extends LyraElement directly and overrides updated() on
 // its own, so an unscoped check risks conflating a *different* element's own call.
 it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
@@ -1323,7 +1339,7 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
     original.call(this, changed);
   };
   try {
-    const el = (await fixture(html`<lr-map .mapStyle=${LOCAL_STYLE}></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" .mapStyle=${LOCAL_STYLE}></lr-map>`)) as LyraMap;
     await el.updateComplete;
     expect(calledOnSelf).to.be.true;
   } finally {
@@ -1333,7 +1349,7 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
 
 it('calls setCenter/setZoom on the underlying map when center/zoom change after mount', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1364,7 +1380,7 @@ it('calls setCenter/setZoom on the underlying map when center/zoom change after 
 // are maplibre-gl's own defaults).
 it('normalizes a non-finite initial zoom before constructing the underlying maplibregl.Map', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map zoom="NaN"></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre" zoom="NaN"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1375,7 +1391,7 @@ it('clamps a non-finite/out-of-range zoom passed to setZoom on the live map afte
   if (!hasWebGL2) this.skip();
   // Starts away from the fallback zoom (2): a value the map already shows is never pushed, so the
   // NaN case must resolve to a real change to reach `setZoom()` at all.
-  const el = (await fixture(html`<lr-map zoom="5"></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre" zoom="5"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1403,7 +1419,7 @@ it('normalizes malformed and out-of-range center values before live map updates'
   if (!hasWebGL2) this.skip();
   // Starts away from the fallback center ([0, 0]) for the same reason: a center the map already
   // shows is never pushed.
-  const el = (await fixture(html`<lr-map center="[10, 10]"></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre" center="[10, 10]"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1427,6 +1443,7 @@ it('normalizes malformed and out-of-range center values before live map updates'
 it('does not leak a second maplibregl.Map when disconnected and reconnected before the loader promise resolves', async function () {
   if (!hasWebGL2) this.skip();
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   el.mapStyle = LOCAL_STYLE;
   // Disconnect + reconnect synchronously, in the same tick as the initial
   // connect — before the (cached) loadMaplibre() promise has any chance to
@@ -1450,7 +1467,7 @@ it('does not leak a second maplibregl.Map when disconnected and reconnected befo
 
 it('fires lr-map-load once the underlying map loads', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -1461,7 +1478,7 @@ it('fires lr-map-load once the underlying map loads', async function () {
 });
 
 it('renders a legend swatch per entry', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [
     { color: '#f00', label: 'High', pattern: 'diagonal' },
     { color: '#0f0', label: 'Low', pattern: 'dots' },
@@ -1488,7 +1505,7 @@ it('renders a legend swatch per entry', async () => {
 });
 
 it('owns a bounded frozen legend snapshot and exposes an exact truncation result', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   const input = Array.from({ length: 150 }, (_, index) => ({
     color: index % 2 ? '#f00' : '#00f',
     label: `Category ${index}`,
@@ -1522,7 +1539,7 @@ it('owns a bounded frozen legend snapshot and exposes an exact truncation result
 });
 
 it('does not throw when legendProjection is assigned, e.g. from a lit-html property binding', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   const before = el.legendProjection;
   expect(() => {
     (el as unknown as { legendProjection: unknown }).legendProjection = {
@@ -1538,7 +1555,7 @@ it('does not throw when legendProjection is assigned, e.g. from a lit-html prope
 });
 
 it('bounds labels and contains malformed or hostile legend records', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   const hostile = new Proxy({}, {
     get(): never {
       throw new Error('hostile legend getter');
@@ -1567,7 +1584,7 @@ it('bounds labels and contains malformed or hostile legend records', async () =>
 // ---------------------------------------------------------------------------
 
 it('retains a legend row category key on the frozen readback', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [{ color: 'red', label: 'Home', pattern: 'solid', value: 'home' }];
   await el.updateComplete;
 
@@ -1576,7 +1593,7 @@ it('retains a legend row category key on the frozen readback', async () => {
 });
 
 it('leaves no value key at all for a non-string, empty, or whitespace-only legend category key', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [
     { color: '#f00', label: 'Plain', pattern: 'solid' },
     { color: '#0f0', label: 'Numeric', pattern: 'solid', value: 7 },
@@ -1591,7 +1608,7 @@ it('leaves no value key at all for a non-string, empty, or whitespace-only legen
 });
 
 it('bounds a legend category key without counting it as a truncated label', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [{ color: '#f00', label: 'Long key', pattern: 'solid', value: 'k'.repeat(1000) }];
   await el.updateComplete;
 
@@ -1604,7 +1621,7 @@ it('bounds a legend category key without counting it as a truncated label', asyn
 });
 
 it('never derives a legend row category key from its icon record', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [
     { color: '#f00', label: 'Home', pattern: 'solid', icon: { value: 'home', path: 'M0 0H24V24H0Z' } },
   ];
@@ -1617,7 +1634,7 @@ it('never derives a legend row category key from its icon record', async () => {
 });
 
 it('contains a legend record whose own value getter throws', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   const hostileValue = { color: '#f00', label: 'Hostile', pattern: 'solid' as const };
   Object.defineProperty(hostileValue, 'value', {
     enumerable: true,
@@ -1644,7 +1661,7 @@ it('contains a legend record whose own value getter throws', async () => {
 // ---------------------------------------------------------------------------
 
 it('defaults legendInteractive off and reflects it as a dash-cased attribute', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   expect(el.legendInteractive).to.equal(false);
   expect(el.hasAttribute('legend-interactive')).to.be.false;
 
@@ -1659,7 +1676,7 @@ it('defaults legendInteractive off and reflects it as a dash-cased attribute', a
 });
 
 it('owns a frozen, deduplicated, first-wins hiddenCategories snapshot', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   expect(el.hiddenCategories).to.deep.equal([]);
   expect(Object.isFrozen(el.hiddenCategories)).to.be.true;
 
@@ -1675,7 +1692,7 @@ it('owns a frozen, deduplicated, first-wins hiddenCategories snapshot', async ()
 });
 
 it('bounds hiddenCategories to the legend item limit', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.hiddenCategories = Array.from({ length: 150 }, (_, index) => `category-${index}`);
   await el.updateComplete;
   expect(el.hiddenCategories.length).to.equal(100);
@@ -1684,7 +1701,7 @@ it('bounds hiddenCategories to the legend item limit', async () => {
 });
 
 it('normalizes a hostile hiddenCategories assignment to empty instead of throwing', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   const { proxy, revoke } = Proxy.revocable([], {});
   revoke();
   el.hiddenCategories = proxy as never;
@@ -1703,7 +1720,7 @@ it('normalizes a hostile hiddenCategories assignment to empty instead of throwin
 });
 
 it('renders a byte-identical read-only legend while legendInteractive is unset', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [
     { color: '#f00', label: 'Home', pattern: 'solid', value: 'home' },
     { color: '#00f', label: 'Work', pattern: 'dots', value: 'work' },
@@ -1739,7 +1756,7 @@ async function interactiveLegendMap(
   legend: LyraMap['legend'] = CATEGORY_LEGEND,
   hidden?: readonly string[],
 ): Promise<LyraMap> {
-  const el = (await fixture(html`<lr-map legend-interactive></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre" legend-interactive></lr-map>`)) as LyraMap;
   el.legend = legend;
   if (hidden) el.hiddenCategories = hidden;
   await el.updateComplete;
@@ -1785,7 +1802,7 @@ it('leaves a legend row with no category key inert under legendInteractive', asy
   expect(rows[1]!.querySelectorAll('button').length).to.equal(0);
   expect(rows[1]!.querySelector('[part~="legend-toggle"]') === null).to.be.true;
 
-  const readOnly = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const readOnly = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   readOnly.legend = [{ color: '#0f0', label: 'Unkeyed', pattern: 'diagonal' }];
   await readOnly.updateComplete;
   expect(rows[1]!.innerHTML).to.equal(
@@ -1898,7 +1915,7 @@ it('announces a legend visibility change through the shared polite light-DOM sin
 });
 
 it('honours a .strings override of legendTypeHidden in the legend toggle announcement', async () => {
-  const el = (await fixture(html`<lr-map legend-interactive></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre" legend-interactive></lr-map>`)) as LyraMap;
   el.strings = { legendTypeHidden: '{label} masqué' };
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
@@ -1924,7 +1941,7 @@ it('keeps a hidden legend toggle distinguishable without color in forced colors'
 });
 
 it('lays a legend toggle out from the inline start under RTL', async () => {
-  const el = (await fixture(html`<lr-map dir="rtl" legend-interactive></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre" dir="rtl" legend-interactive></lr-map>`)) as LyraMap;
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
   const button = legendToggles(el)[0]!;
@@ -2053,7 +2070,7 @@ it('defaults legendControlRole to button and renders unchanged aria-pressed mark
 });
 
 it('reflects legendControlRole as a dash-cased attribute and normalizes an unsupported value', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legendControlRole = 'checkbox';
   await el.updateComplete;
   expect(el.getAttribute('legend-control-role')).to.equal('checkbox');
@@ -2075,7 +2092,7 @@ function legendCheckboxes(el: LyraMap): HTMLButtonElement[] {
 
 it('renders checkbox semantics with both aria-checked values under legendControlRole="checkbox"', async () => {
   const el = (await fixture(
-    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+    html`<lr-map engine="maplibre" legend-interactive legend-control-role="checkbox"></lr-map>`,
   )) as LyraMap;
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
@@ -2098,7 +2115,7 @@ it('renders checkbox semantics with both aria-checked values under legendControl
 
 it('toggles a checkbox legend row from a click and round-trips hiddenCategories', async () => {
   const el = (await fixture(
-    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+    html`<lr-map engine="maplibre" legend-interactive legend-control-role="checkbox"></lr-map>`,
   )) as LyraMap;
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
@@ -2116,7 +2133,7 @@ it('toggles a checkbox legend row from a click and round-trips hiddenCategories'
 
 it('toggles a focused checkbox legend row with Enter and Space', async () => {
   const el = (await fixture(
-    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+    html`<lr-map engine="maplibre" legend-interactive legend-control-role="checkbox"></lr-map>`,
   )) as LyraMap;
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
@@ -2149,7 +2166,7 @@ it('ignores retired lr-map-legend-toggle vetoes while preserving the canonical p
 
 it('lets a lr-map-legend-toggle-request listener veto a checkbox row activation outright', async () => {
   const el = (await fixture(
-    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+    html`<lr-map engine="maplibre" legend-interactive legend-control-role="checkbox"></lr-map>`,
   )) as LyraMap;
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
@@ -2167,7 +2184,7 @@ it('lets a lr-map-legend-toggle-request listener veto a checkbox row activation 
 
 it('composes legendControlRole="checkbox" with grouped sections', async () => {
   const el = (await fixture(
-    html`<lr-map legend-interactive legend-control-role="checkbox"></lr-map>`,
+    html`<lr-map engine="maplibre" legend-interactive legend-control-role="checkbox"></lr-map>`,
   )) as LyraMap;
   el.legend = [
     { color: '#f00', label: 'Bus', pattern: 'solid', value: 'bus', group: 'Transit' },
@@ -2188,7 +2205,7 @@ it('composes legendControlRole="checkbox" with grouped sections', async () => {
 
 it('composes legendControlRole="checkbox" with legendCollapsible', async () => {
   const el = (await fixture(
-    html`<lr-map legend-interactive legend-control-role="checkbox" legend-collapsible></lr-map>`,
+    html`<lr-map engine="maplibre" legend-interactive legend-control-role="checkbox" legend-collapsible></lr-map>`,
   )) as LyraMap;
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
@@ -2202,7 +2219,7 @@ it('composes legendControlRole="checkbox" with legendCollapsible', async () => {
 
 it('stays axe-clean with a checkbox legend, populated and collapsed', async () => {
   const el = (await fixture(
-    html`<lr-map legend-interactive legend-control-role="checkbox" legend-collapsible></lr-map>`,
+    html`<lr-map engine="maplibre" legend-interactive legend-control-role="checkbox" legend-collapsible></lr-map>`,
   )) as LyraMap;
   el.legend = CATEGORY_LEGEND;
   await el.updateComplete;
@@ -2214,7 +2231,7 @@ it('stays axe-clean with a checkbox legend, populated and collapsed', async () =
 });
 
 it('normalizes a legend assignment that fails Array.isArray (a revoked Proxy) to empty instead of throwing', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   const { proxy, revoke } = Proxy.revocable([], {});
   revoke();
   el.legend = proxy as never;
@@ -2228,7 +2245,7 @@ it('normalizes a legend assignment that fails Array.isArray (a revoked Proxy) to
 });
 
 it('normalizes a legend assignment whose own length getter throws to empty instead of throwing', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   const hostileLength = new Proxy([{ color: '#f00', label: 'Unreachable', pattern: 'solid' }], {
     get(target, prop, receiver) {
       if (prop === 'length') throw new Error('hostile length getter');
@@ -2246,7 +2263,7 @@ it('normalizes a legend assignment whose own length getter throws to empty inste
 it('keeps every color-only legend category pattern distinct in forced colors', async () => {
   await setForcedColors('active');
   try {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.legend = [
       { color: '#f00', label: 'Solid', pattern: 'solid' },
       { color: '#0f0', label: 'Diagonal', pattern: 'diagonal' },
@@ -2270,7 +2287,7 @@ it('keeps every color-only legend category pattern distinct in forced colors', a
 
 it('projects stable parts onto every supported peer-chrome class without erasing tokens', async () => {
   const el = (await fixture(html`
-    <lr-map .strings=${{ mapToggleAttribution: 'Afficher les attributions' }}></lr-map>
+    <lr-map engine="maplibre" .strings=${{ mapToggleAttribution: 'Afficher les attributions' }}></lr-map>
   `)) as LyraMap;
   const root = document.createElement('div');
   const cases = [
@@ -2300,7 +2317,7 @@ it('projects stable parts onto every supported peer-chrome class without erasing
 
 it('uses the localized map-specific fallback name for unlabeled markers', async () => {
   const el = (await fixture(html`
-    <lr-map .strings=${{ mapMarker: 'Repère cartographique' }}></lr-map>
+    <lr-map engine="maplibre" .strings=${{ mapMarker: 'Repère cartographique' }}></lr-map>
   `)) as LyraMap;
   const marker = document.createElement('div');
   const privateMap = el as unknown as {
@@ -2344,7 +2361,7 @@ it('projects parts onto peer chrome added after map construction', async () => {
 it('paints a theme-aware compact attribution glyph while preserving native disclosure and compact hit targets', async function () {
   if (!hasWebGL2) this.skip();
   let loaded = false;
-  const el = await fixture<LyraMap>(html`<lr-map .mapStyle=${LOCAL_STYLE} label="Attribution example"
+  const el = await fixture<LyraMap>(html`<lr-map engine="maplibre" .mapStyle=${LOCAL_STYLE} label="Attribution example"
     style="inline-size:320px;block-size:240px" @lr-map-load=${() => { loaded = true; }}></lr-map>`);
   await waitUntil(() => loaded, 'map loaded', { timeout: 5000 });
   const { AttributionControl } = await import('maplibre-gl');
@@ -2383,7 +2400,7 @@ it('paints a theme-aware compact attribution glyph while preserving native discl
 });
 
 it('does not let a LyraMapLegendEntry.color value inject extra CSS declarations via the swatch style attribute', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [{ color: 'red; position: fixed; top: 0px', label: 'Bad', pattern: 'solid' }];
   await el.updateComplete;
   const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
@@ -2395,7 +2412,7 @@ it('does not let a LyraMapLegendEntry.color value inject extra CSS declarations 
 });
 
 it('does not accept a non-color CSS value (e.g. url()) as a legend swatch background', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [{ color: 'url(https://attacker.example/beacon.gif)', label: 'Bad', pattern: 'solid' }];
   await el.updateComplete;
   const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
@@ -2403,7 +2420,7 @@ it('does not accept a non-color CSS value (e.g. url()) as a legend swatch backgr
 });
 
 it('does not render the legend panel when legend is empty (the default)', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   await el.updateComplete;
   // A Lit template's own whitespace/comment nodes mean `[part="legend"]:empty` in CSS
   // never matches (it always has child nodes), so the panel must be omitted from the
@@ -2412,7 +2429,7 @@ it('does not render the legend panel when legend is empty (the default)', async 
 });
 
 it('renders the legend panel once entries are set, and removes it again once cleared', async () => {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [{ color: '#f00', label: 'High', pattern: 'solid' }];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="legend"]') != null).to.be.true;
@@ -2425,7 +2442,7 @@ it('renders the legend panel once entries are set, and removes it again once cle
 describe('aria-label forwarding', () => {
   it('falls back to the localized default when neither label nor a host aria-label is set', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map .mapStyle=${LOCAL_STYLE}></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" .mapStyle=${LOCAL_STYLE}></lr-map>`)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.equal(null);
@@ -2434,14 +2451,14 @@ describe('aria-label forwarding', () => {
   });
 
   it('reads back an omitted label as undefined, not the empty string', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     expect(el.label).to.equal(undefined);
   });
 
   it('uses a .strings override for the localized default when neither label nor a host aria-label is set', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`
-      <lr-map .mapStyle=${LOCAL_STYLE} .strings=${{ map: 'Carte' }}></lr-map>
+      <lr-map engine="maplibre" .mapStyle=${LOCAL_STYLE} .strings=${{ map: 'Carte' }}></lr-map>
     `)) as LyraMap;
     await el.updateComplete;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -2451,7 +2468,7 @@ describe('aria-label forwarding', () => {
   it('uses the label prop when set', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`
-      <lr-map label="Delivery regions" .mapStyle=${LOCAL_STYLE}></lr-map>
+      <lr-map engine="maplibre" label="Delivery regions" .mapStyle=${LOCAL_STYLE}></lr-map>
     `)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Delivery regions');
@@ -2460,7 +2477,7 @@ describe('aria-label forwarding', () => {
   it('suppresses the localized default label on the canvas when label is explicitly empty', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`
-      <lr-map label="" .mapStyle=${LOCAL_STYLE}></lr-map>
+      <lr-map engine="maplibre" label="" .mapStyle=${LOCAL_STYLE}></lr-map>
     `)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('');
@@ -2469,7 +2486,7 @@ describe('aria-label forwarding', () => {
   it('forwards a nonempty host aria-label to the canvas', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(html`
-      <lr-map aria-label="Forwarded label" .mapStyle=${LOCAL_STYLE}></lr-map>
+      <lr-map engine="maplibre" aria-label="Forwarded label" .mapStyle=${LOCAL_STYLE}></lr-map>
     `)) as LyraMap;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Forwarded label');
@@ -2478,7 +2495,7 @@ describe('aria-label forwarding', () => {
   it('lets a host aria-label win over the label prop', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(
-      html`<lr-map
+      html`<lr-map engine="maplibre"
         label="Delivery regions"
         aria-label="Forwarded label"
         .mapStyle=${LOCAL_STYLE}
@@ -2491,7 +2508,7 @@ describe('aria-label forwarding', () => {
   it('preserves an explicit empty host aria-label on the MapLibre canvas, updates it live, and restores the label fallback after removal', async function () {
     if (!hasWebGL2) this.skip();
     const el = (await fixture(
-      html`<lr-map
+      html`<lr-map engine="maplibre"
         label="Delivery regions"
         aria-label=""
         .mapStyle=${LOCAL_STYLE}
@@ -2514,7 +2531,7 @@ describe('aria-label forwarding', () => {
 
 it('is accessible', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   el.legend = [
     { color: '#f00', label: 'High', pattern: 'diagonal' },
@@ -2527,7 +2544,7 @@ it('is accessible', async function () {
 
 it('adds a choropleth source + fill layer, and re-applies the color expression on update', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -2821,7 +2838,7 @@ it('repaints applied layers once after an ancestor theme mutation without touchi
 
 it('does not mark an empty-stops choropleth as applied, so a later non-empty update for the same sourceId still creates the fill layer', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -2859,7 +2876,7 @@ it('does not mark an empty-stops choropleth as applied, so a later non-empty upd
 
 it('adds the choropleth GeoJSON source without promoteId, so a top-level Feature.id is preserved instead of requiring a duplicate properties.id', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -2886,7 +2903,7 @@ it('adds the choropleth GeoJSON source without promoteId, so a top-level Feature
 
 it('fires lr-map-click with the lngLat and no feature when there is no choropleth', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -2910,6 +2927,7 @@ it('detaches and freezes lr-map-click coordinates while retaining the feature id
   };
 
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   const lngLat: [number, number] = [7, 8];
   const feature = { id: 'station' };
   const source = { lngLat, feature };
@@ -2926,7 +2944,7 @@ it('detaches and freezes lr-map-click coordinates while retaining the feature id
 
 it('attaches the clicked choropleth feature to lr-map-click when one exists at the point', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -2962,7 +2980,7 @@ it('attaches the clicked choropleth feature to lr-map-click when one exists at t
 
 it('does not query the choropleth fill layer on click before it has been added to the style', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('vanishing-choropleth', [
     [0, '#000000'],
@@ -3005,7 +3023,7 @@ it('does not query the choropleth fill layer on click before it has been added t
 
 it('removes the choropleth layer and source when choropleth is cleared', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3032,7 +3050,7 @@ it('removes the choropleth layer and source when choropleth is cleared', async f
 
 it('removes the old choropleth layer/source when sourceId changes', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3061,7 +3079,7 @@ it('removes the old choropleth layer/source when sourceId changes', async functi
 
 it('calls setStyle when mapStyle changes after the map has mounted', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3090,7 +3108,7 @@ it('calls setStyle when mapStyle changes after the map has mounted', async funct
 
 it('accepts the string style-URL form of mapStyle and passes it through to setStyle, not just the StyleSpecification object form', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3132,6 +3150,7 @@ it('constructs the underlying maplibregl.Map with a string style-URL mapStyle se
   }) as typeof window.fetch;
 
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   el.mapStyle = 'https://example.test/lr-map-style.json';
   document.body.appendChild(el);
   try {
@@ -3154,7 +3173,7 @@ it('constructs the underlying maplibregl.Map with a string style-URL mapStyle se
 
 it('re-applies the choropleth once the new style finishes loading after a mapStyle change', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3205,13 +3224,13 @@ describe('dataLayers', () => {
   } as unknown as import('./map.js').LyraMapGeoJsonDataLayer;
 
   it('defaults to an empty array with zero behavior change', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     expect(el.dataLayers).to.deep.equal([]);
   });
 
   it('retains the first unique nonempty data-layer sourceId before reconciliation', async function () {
     if (!hasWebGL2) this.skip();
-    const el = await fixture<LyraMap>(html`<lr-map></lr-map>`);
+    const el = await fixture<LyraMap>(html`<lr-map engine="maplibre"></lr-map>`);
     el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
@@ -3246,7 +3265,7 @@ describe('dataLayers', () => {
 
   it('keeps a colliding base-style source owned by its style across add and removal', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [{ ...POLY_LAYER, sourceId: 'demo' }];
     await el.updateComplete;
@@ -3270,7 +3289,7 @@ describe('dataLayers', () => {
 
   it('adds a source and fill/line/circle layers per entry once the style loads', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
@@ -3290,7 +3309,7 @@ describe('dataLayers', () => {
 
   it('removing an entry (dataLayers reassigned without it) removes its source/layers, leaking nothing', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
@@ -3314,7 +3333,7 @@ describe('dataLayers', () => {
 
   it('updates existing source data in place when the same sourceId is reassigned with new geojson', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
@@ -3342,7 +3361,7 @@ describe('dataLayers', () => {
 
   it('re-applies dataLayers after a mapStyle change (style.load handshake)', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [POLY_LAYER];
     await el.updateComplete;
@@ -3375,7 +3394,7 @@ describe('dataLayers', () => {
 
   it('caps dataLayers at MAX_MAP_DATA_LAYERS, only applying the capped count of sources/layers', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     const CAP = 100; // mirrors map.class.ts's private MAX_MAP_DATA_LAYERS
     el.dataLayers = Array.from({ length: CAP * 2 }, (_, index) => ({
@@ -3398,7 +3417,7 @@ describe('dataLayers', () => {
 
 it('adds a maplibregl.Marker per entry in markers', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3504,7 +3523,7 @@ it('exposes every declarative marker as a named button and emits one immutable a
 
 it('caps markers at MAX_MAP_MARKERS, creating only the capped count of marker DOM elements', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3525,6 +3544,7 @@ it('provides shadow-local layout for MapLibre canvas, markers, and popups withou
   const module = await loadMaplibre();
   if (!module) throw new Error('maplibre-gl test peer is unavailable');
   const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary: () => Promise<typeof module> }).loadLibrary = () =>
     Promise.resolve(module);
   el.style.cssText = 'inline-size: 20rem; block-size: 12rem';
@@ -3683,6 +3703,7 @@ it('keeps popup anchor tip alignment tied to the physical MapLibre anchor class,
   ): Promise<string> => {
     const wrapper = (await fixture(html`<div dir=${dir}></div>`)) as HTMLElement;
     const el = document.createElement('lr-map') as LyraMap;
+    el.engine = 'maplibre';
     (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () =>
       new Promise(() => {});
     wrapper.append(el);
@@ -3706,7 +3727,7 @@ it('keeps popup anchor tip alignment tied to the physical MapLibre anchor class,
 
 it('keeps choropleth and data-layer sources distinct when their public sourceId collides', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
   el.dataLayers = [{
@@ -3736,7 +3757,7 @@ it('keeps choropleth and data-layer sources distinct when their public sourceId 
 
 it('keeps the choropleth source distinct from every colliding public data source id', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
   el.dataLayers = [
@@ -3771,7 +3792,7 @@ it('keeps the choropleth source distinct from every colliding public data source
 
 it('can replace a choropleth with a same-id data layer in one reactive update', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
   await el.updateComplete;
@@ -3797,7 +3818,7 @@ it('can replace a choropleth with a same-id data layer in one reactive update', 
 
 it('preserves colliding choropleth and data-layer namespaces across clear and style reload', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
   el.dataLayers = [{
@@ -3836,7 +3857,7 @@ it('preserves colliding choropleth and data-layer namespaces across clear and st
 
 it('removes markers no longer present and reuses markers that persist', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3856,7 +3877,7 @@ it('removes markers no longer present and reuses markers that persist', async fu
 
 it('updates the reused marker popup when label changes for a persisting id', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3883,7 +3904,7 @@ it('updates the reused marker popup when label changes for a persisting id', asy
 
 it('updates the reused marker popup when unsafeHtml changes for a persisting id', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3906,7 +3927,7 @@ it('updates the reused marker popup when unsafeHtml changes for a persisting id'
 
 it('leaves focus and an open popup alone when markers are re-assigned unchanged', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3950,7 +3971,7 @@ it('leaves focus and an open popup alone when markers are re-assigned unchanged'
 
 it('updates an open popup without moving focus into it when its marker content changes', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -3983,7 +4004,7 @@ it('updates an open popup without moving focus into it when its marker content c
 
 it('adds popup semantics when persisted plain markers later gain label or unsafeHtml content', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4049,7 +4070,7 @@ it('adds popup semantics when persisted plain markers later gain label or unsafe
 
 it('attaches an openable popup when label or html is provided', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4137,7 +4158,7 @@ it('keeps one keyboard popup toggle while marker activation prevents Space scrol
 
 it('removes all marker DOM on disconnect', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4154,7 +4175,7 @@ it('removes all marker DOM on disconnect', async function () {
 
 it('renders a colored marker and derives its accessible name from visible popup HTML', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4184,7 +4205,7 @@ it('renders a colored marker and derives its accessible name from visible popup 
 it('forwards the host name to the real MapLibre focus owner and follows its changes', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`
-    <lr-map
+    <lr-map engine="maplibre"
       aria-label="Delivery map"
       lang="fr-FR"
       .strings=${{ map: 'Carte', close: 'Fermer' }}
@@ -4213,7 +4234,7 @@ it('forwards the host name to the real MapLibre focus owner and follows its chan
 it('synchronizes popup-capable marker disclosure semantics and localized popup ownership', async function () {
   if (!hasWebGL2) this.skip();
   const el = (await fixture(html`
-    <lr-map lang="fr-FR" .strings=${{ close: 'Fermer' }}></lr-map>
+    <lr-map engine="maplibre" lang="fr-FR" .strings=${{ close: 'Fermer' }}></lr-map>
   `)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
@@ -4248,7 +4269,7 @@ it('synchronizes popup-capable marker disclosure semantics and localized popup o
 
 it('skips malformed/non-finite markers without aborting valid marker reconciliation', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4271,7 +4292,7 @@ it('skips malformed/non-finite markers without aborting valid marker reconciliat
 
 it('clears stale markers without throwing when a non-array runtime value is assigned', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4288,7 +4309,7 @@ it('clears stale markers without throwing when a non-array runtime value is assi
 
 it('keeps explicit marker ids separate from synthesized idless-coordinate identities', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4311,13 +4332,13 @@ it('contains long legend labels in paired 320px LTR and RTL allocations', async 
   const pair = (await fixture(html`
     <div style="display: grid; gap: var(--lr-space-l)">
       <div dir="ltr" style="inline-size: 320px; max-inline-size: 100%">
-        <lr-map
+        <lr-map engine="maplibre"
           style="block-size: var(--lr-size-12rem)"
           .legend=${[{ color: '#f00', label: 'LongestUnbrokenLegendLabel'.repeat(80), pattern: 'solid' }]}
         ></lr-map>
       </div>
       <div dir="rtl" lang="ar" style="inline-size: 320px; max-inline-size: 100%">
-        <lr-map
+        <lr-map engine="maplibre"
           style="block-size: var(--lr-size-12rem)"
           .legend=${[{ color: '#00f', label: 'أطولتسميةوسيلةإيضاحمتصلة'.repeat(80), pattern: 'dots' }]}
         ></lr-map>
@@ -4333,7 +4354,7 @@ it('contains long legend labels in paired 320px LTR and RTL allocations', async 
 
 it('does not throw or leave a dangling marker when the element disconnects while applyMarkers is running', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4359,7 +4380,7 @@ it('does not throw or leave a dangling marker when the element disconnects while
 
 it("updates an existing marker's color when it changes", async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4385,7 +4406,7 @@ it("updates an existing marker's color when it changes", async function () {
 
 it('rejects url paint servers from marker colors', async function () {
   if (!hasWebGL2) this.skip();
-  const el = await fixture<LyraMap>(html`<lr-map></lr-map>`);
+  const el = await fixture<LyraMap>(html`<lr-map engine="maplibre"></lr-map>`);
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4439,7 +4460,7 @@ function stubMarkerConstruction(el: LyraMap): Array<{ color?: string } | undefin
 
 it('defaults an omitted marker color to the themed brand token instead of the unthemed maplibre-gl default', async () => {
   const el = (await fixture(
-    html`<lr-map data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
+    html`<lr-map engine="maplibre" data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
   )) as LyraMap;
   const constructedOptions = stubMarkerConstruction(el);
 
@@ -4452,7 +4473,7 @@ it('defaults an omitted marker color to the themed brand token instead of the un
 
 it('rebuilds default-coloured markers when the theme changes the brand token', async () => {
   const el = (await fixture(
-    html`<lr-map data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
+    html`<lr-map engine="maplibre" data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
   )) as LyraMap;
   const constructedOptions = stubMarkerConstruction(el);
   el.markers = [
@@ -4473,7 +4494,7 @@ it('rebuilds default-coloured markers when the theme changes the brand token', a
 
 it("leaves an explicit invalid marker color to maplibre-gl's own default, unlike an omitted color", async () => {
   const el = (await fixture(
-    html`<lr-map data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
+    html`<lr-map engine="maplibre" data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
   )) as LyraMap;
   const constructedOptions = stubMarkerConstruction(el);
 
@@ -4486,7 +4507,7 @@ it("leaves an explicit invalid marker color to maplibre-gl's own default, unlike
 
 it('does not collide two id-less markers placed at the same coordinates', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4503,7 +4524,7 @@ it('does not collide two id-less markers placed at the same coordinates', async 
 
 it('retains the first unique nonempty explicit marker id while preserving idless occurrences', async function () {
   if (!hasWebGL2) this.skip();
-  const el = await fixture<LyraMap>(html`<lr-map></lr-map>`);
+  const el = await fixture<LyraMap>(html`<lr-map engine="maplibre"></lr-map>`);
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -4559,7 +4580,7 @@ describe('continuous choropleth legend', () => {
   ] as const;
 
   it('renders no legend panel at all when nothing asks for one', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     await el.updateComplete;
     // Compared as a boolean, never as a node: a failing chai assertion carrying a DOM node as
     // actual/expected hangs the whole file until the per-file watchdog.
@@ -4570,7 +4591,7 @@ describe('continuous choropleth legend', () => {
   });
 
   it('renders a gradient bar with endpoint captions from the choropleth stops', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.legendGradient = STOPS;
     await el.updateComplete;
 
@@ -4595,7 +4616,7 @@ describe('continuous choropleth legend', () => {
 
   it('lets the endpoint captions be overridden', async () => {
     const el = (await fixture(
-      html`<lr-map
+      html`<lr-map engine="maplibre"
         legend-gradient-lo-label="none"
         legend-gradient-hi-label="≥ 100"
       ></lr-map>`
@@ -4607,7 +4628,7 @@ describe('continuous choropleth legend', () => {
   });
 
   it('sorts stops ascending and drops unusable ones', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.legendGradient = [
       null,
       [50],
@@ -4629,7 +4650,7 @@ describe('continuous choropleth legend', () => {
   });
 
   it('renders no bar for fewer than two usable stops, since a flat block describes nothing', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.legendGradient = [[5, '#08306b']] as unknown as readonly (readonly [number, string])[];
     await el.updateComplete;
     expect(el.legendGradient.length).to.equal(0);
@@ -4640,7 +4661,7 @@ describe('continuous choropleth legend', () => {
   });
 
   it('hides the ramp bar from assistive tech, leaving the captions to carry the meaning', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.legendGradient = STOPS;
     await el.updateComplete;
     const bar = el.shadowRoot!.querySelector<HTMLElement>('[part="legend-gradient"]')!;
@@ -4649,7 +4670,7 @@ describe('continuous choropleth legend', () => {
   });
 
   it('renders a logarithmic choropleth key with the same non-linear colour progression as its layer', async () => {
-    const linear = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const linear = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     linear.choropleth = {
       ...choropleth(
         'linear-regions',
@@ -4660,7 +4681,7 @@ describe('continuous choropleth legend', () => {
     linear.legendGradient = STOPS;
     await linear.updateComplete;
 
-    const logarithmic = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const logarithmic = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     logarithmic.choropleth = {
       ...choropleth(
         'log-regions',
@@ -4693,7 +4714,7 @@ describe('continuous choropleth legend', () => {
     const originalWarn = console.warn;
     console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
     try {
-      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
       el.choropleth = choropleth('regions', [[0, '#f7fbff'], [100, '#08306b']]);
       el.legendGradient = [[0, '#f7fbff'], [100, '#ff0000']];
       await el.updateComplete;
@@ -4713,7 +4734,7 @@ describe('continuous choropleth legend', () => {
     const originalWarn = console.warn;
     console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
     try {
-      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
       const layer = choropleth('regions', [[0, '#f7fbff'], [100, '#08306b']]);
       el.choropleth = layer;
       el.legendGradient = layer.stops;
@@ -4729,7 +4750,7 @@ describe('continuous choropleth legend', () => {
 
   it('opens the legend panel for slotted legend content alone', async () => {
     const el = (await fixture(
-      html`<lr-map><div slot="legend" id="custom">Custom key</div></lr-map>`
+      html`<lr-map engine="maplibre"><div slot="legend" id="custom">Custom key</div></lr-map>`
     )) as LyraMap;
     await el.updateComplete;
     await aTimeout(0);
@@ -4765,7 +4786,7 @@ describe('choropleth interpolation', () => {
       style?: string;
     } = {},
   ) => {
-    const el = (await fixture(html`<lr-map style=${options.style ?? ''}></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" style=${options.style ?? ''}></lr-map>`)) as LyraMap;
     const applied: unknown[] = [];
     // Stand in for the maplibre instance: applyChoropleth() only needs the handful of methods it
     // calls, and this keeps the assertion on the emitted expression rather than on a real GL context.
@@ -4889,7 +4910,7 @@ describe('lr-map-click across choropleth and dataLayers', () => {
   } as unknown as import('./map.js').LyraMapGeoJsonDataLayer;
 
   async function readyMap(): Promise<LyraMap> {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     await el.updateComplete;
     await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -5172,6 +5193,7 @@ describe('incremental GeoJSON updates', () => {
 
   it('routes add/remove-only diffs through updateData instead of setData', () => {
     const el = document.createElement('lr-map') as LyraMap;
+    el.engine = 'maplibre';
     const two = {
       type: 'FeatureCollection',
       features: [
@@ -5221,7 +5243,7 @@ describe('incremental GeoJSON updates', () => {
     let dataLayers = [{ sourceId: 'timeline-points', geojson: collection(1) }];
     const mount = document.createElement('div');
     const view = () => html`
-      <lr-map
+      <lr-map engine="maplibre"
         .mapStyle=${mapStyle}
         .center=${center}
         .choropleth=${choropleth}
@@ -5317,7 +5339,7 @@ describe('incremental GeoJSON updates', () => {
     const hidden = ['low'];
     const mount = document.createElement('div');
     const view = () => html`
-      <lr-map
+      <lr-map engine="maplibre"
         .mapStyle=${LOCAL_STYLE}
         .choropleth=${{ sourceId: 'regions', geojson: regions, field: 'value', stops: [[0, '#000000'], [10, '#ffffff']] }}
         .dataLayers=${[{ sourceId: 'points', geojson: points, tone: 'success' }]}
@@ -5393,7 +5415,7 @@ describe('incremental GeoJSON updates', () => {
 // together because the first was the only thing hiding the second.
 //
 // 1. `maxBounds` is `attribute: false`, so a property binding is the only way to set it -- which
-//    means its one and only appearance in `changed` is the FIRST update. <lr-map> builds its peer
+//    means its one and only appearance in `changed` is the FIRST update. <lr-map engine="maplibre"> builds its peer
 //    asynchronously (a lazy `import('maplibre-gl')` plus WebGL init), so `this._map` is still
 //    undefined then. `updated()`'s `&& this._map` guard short-circuited, the property never
 //    changed again, and it was never retried: a documented property that read back as set and did
@@ -5404,7 +5426,7 @@ describe('incremental GeoJSON updates', () => {
 //    with no try/catch, the exception escapes `updated()` into the consumer's render cycle.
 it('applies a declaratively-set maxBounds once the map exists, not only on a later change', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   // Set before the peer can possibly have loaded: this is the normal path for an `attribute:
   // false` property, not an edge case.
   el.maxBounds = [
@@ -5444,7 +5466,7 @@ async function captureMaxBoundsWarnings(run: () => Promise<void>): Promise<strin
 
 it('routes a throwing setMaxBounds into the same revert-and-warn path as a non-finite camera', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
@@ -5511,7 +5533,7 @@ it('contains failures from both defensive camera snapshot reads', async () => {
 
   const warnings = await captureMaxBoundsWarnings(async () => {
     for (const throwingRead of ['getZoom', 'getCenter'] as const) {
-      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
       el.maxBounds = [[-10, -10], [10, 10]];
       await el.updateComplete;
       const calls = revertCalls[throwingRead];
@@ -5930,7 +5952,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('paints a numeric line field with sorted continuous stops and a bounded width', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     const stops = [[100, '#ff0000'], [0, '#0000ff'], [100, '#ffffff']];
     el.dataLayers = entry({ strokeColor: '#008000', line: { field: 'speed', stops, width: 6 } });
@@ -5948,7 +5970,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('resolves modern line stops and a CSS variable fallback before MapLibre paint', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({
       strokeColor: 'var(--lr-missing-line, #102030)',
@@ -5966,7 +5988,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('updates and clears line paint in place without recreating resources', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ line: { field: 'speed', stops: [[0, 'blue'], [10, 'red']], width: 500 } });
     await el.updateComplete;
@@ -5983,7 +6005,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('bounds and clone-owns line options without invoking accessor stops', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     let reads = 0;
     const hostile = { get field() { reads++; return 'speed'; }, width: Number.NaN };
@@ -6003,7 +6025,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('reconciles token-colored route paint and legend through theme changes without source churn', async () => {
-    const el = (await fixture(html`<lr-map data-lr-theme-scope style="--lr-theme-color-success-fill-loud: rgb(1, 2, 3)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" data-lr-theme-scope style="--lr-theme-color-success-fill-loud: rgb(1, 2, 3)"></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el);
     const stops = [[0, 'var(--lr-color-success)'], [100, 'red']] as const;
     el.legendGradient = stops;
@@ -6025,7 +6047,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('rejects unusable line ramps and bounds hostile stop collections', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ strokeColor: 'red', line: { field: 'speed', stops: [[0, 'url(https://example.invalid)'], [1, 'blue']], opacity: -2 } });
     await el.updateComplete;
@@ -6043,7 +6065,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('leaves a data layer unclustered and geometry-split when cluster and kind are unset', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({});
     await el.updateComplete;
@@ -6063,7 +6085,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('clusters the source and emits cluster, count and unclustered-point layers', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({ cluster: {} });
     await el.updateComplete;
@@ -6087,7 +6109,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('pairs mixed cluster fill steps with a public count foreground and halo', async () => {
-    const el = (await fixture(html`<lr-map data-lr-theme-scope style="--lr-color-danger: rgb(80, 20, 40); --lr-color-brand: rgb(250, 240, 210)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" data-lr-theme-scope style="--lr-color-danger: rgb(80, 20, 40); --lr-color-brand: rgb(250, 240, 210)"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({
       cluster: {
@@ -6106,7 +6128,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('keeps the default on-tone count with no halo and clears overrides on a retained cluster', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers, sources } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({ cluster: {} });
     await el.updateComplete;
@@ -6133,7 +6155,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('bounds count halo width and rejects unsafe or inaccessible count paint', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({ cluster: {} });
     await el.updateComplete;
@@ -6159,7 +6181,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('resolves count foreground and halo tokens on add and theme repaint', async () => {
-    const el = (await fixture(html`<lr-map data-lr-theme-scope style="--lr-color-danger: rgb(1, 2, 3); --lr-color-brand: rgb(4, 5, 6)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" data-lr-theme-scope style="--lr-color-danger: rgb(1, 2, 3); --lr-color-brand: rgb(4, 5, 6)"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     const added = captureAddedLayerPaint(el);
     el.dataLayers = entry({ cluster: {
@@ -6179,7 +6201,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('trims count token whitespace and rejects invalid or missing token values on add and repaint', async () => {
-    const el = (await fixture(html`<lr-map style="--lr-test-count: rgb(1, 2, 3); --lr-test-halo: rgb(4, 5, 6)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" style="--lr-test-count: rgb(1, 2, 3); --lr-test-halo: rgb(4, 5, 6)"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     const added = captureAddedLayerPaint(el);
     el.dataLayers = entry({ cluster: {
@@ -6209,7 +6231,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('resolves count currentColor and CSS token fallbacks before MapLibre paint', async () => {
-    const el = (await fixture(html`<lr-map style="color: rgb(14, 15, 16)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" style="color: rgb(14, 15, 16)"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({ cluster: {
       countColor: 'currentColor',
@@ -6223,7 +6245,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('converts modern CSS count colors to MapLibre-compatible sRGB paint', async () => {
-    const el = (await fixture(html`<lr-map style="--lr-test-modern-halo: oklch(70% 0.1 200)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" style="--lr-test-modern-halo: oklch(70% 0.1 200)"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({ cluster: {
       countColor: 'color-mix(in srgb, red, blue)',
@@ -6237,7 +6259,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('filters malformed cluster font fallbacks while preserving the usable font order', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({
       cluster: {
@@ -6254,7 +6276,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('omits a hostile data-layer record without aborting later valid layers', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources } = stubMaplibreMap(el);
     const hostile = new Proxy({}, {
       get(_target, property): never {
@@ -6270,7 +6292,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('emits step expressions for cluster radius and colour keyed on point_count', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el);
     el.dataLayers = entry({
       cluster: {
@@ -6383,7 +6405,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('omits the cluster count layer when the style provides no glyphs', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ cluster: {} });
     await el.updateComplete;
@@ -6396,7 +6418,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('emits a single heatmap layer, with weight, ramp and radius, when kind is heatmap', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el);
     el.dataLayers = entry({
       kind: 'heatmap',
@@ -6440,7 +6462,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('defaults an unconfigured heatmap to a fully transparent density floor and the peer weight', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ kind: 'heatmap' });
     await el.updateComplete;
@@ -6461,7 +6483,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('emits bounded zoom interpolation for heatmap radius and intensity', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({
       kind: 'heatmap',
@@ -6483,7 +6505,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('collapses one usable heatmap zoom stop to its bounded scalar value', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({
       kind: 'heatmap',
@@ -6498,7 +6520,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('normalizes hostile heatmap zoom stops and resets dropped opacity to the peer default', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({
       kind: 'heatmap',
@@ -6527,7 +6549,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('ignores cluster on a heatmap entry rather than aggregating the density input', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el, { glyphs: 'https://example.invalid/{range}.pbf' });
     el.dataLayers = entry({ kind: 'heatmap', cluster: {} });
     await el.updateComplete;
@@ -6538,7 +6560,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('restores the uniform weight when an update drops the heatmap weight field', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ kind: 'heatmap', heatmap: { weightField: 'magnitude' } });
     await el.updateComplete;
@@ -6558,7 +6580,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('recreates the source when clustering is switched on, since MapLibre cannot re-cluster in place', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources, layers } = stubMaplibreMap(el);
     el.dataLayers = entry({});
     await el.updateComplete;
@@ -6576,7 +6598,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('repaints heatmap and cluster layers on a theme change without touching layers they never created', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = [
       { sourceId: 'pins', geojson: POINTS, cluster: {} },
@@ -6596,7 +6618,7 @@ describe('dataLayers clustering and heatmap', () => {
 
   it('re-applies clustered and heatmap data layers after a mapStyle change', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [
       { sourceId: 'pins', geojson: POINTS, cluster: {} },
@@ -6636,7 +6658,7 @@ describe('dataLayers clustering and heatmap', () => {
 
   it('hit-tests the cluster circle but never the heatmap layer MapLibre cannot query', async function () {
     if (!hasWebGL2) this.skip();
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.mapStyle = LOCAL_STYLE;
     el.dataLayers = [
       { sourceId: 'pins', geojson: POINTS, cluster: {} },
@@ -6696,7 +6718,7 @@ describe('dataLayers clustering and heatmap', () => {
 
   it('resolves a var() colour in cluster.colorSteps against the host, on add and on repaint', async () => {
     const el = (await fixture(
-      html`<lr-map data-lr-theme-scope style="--lr-color-brand: rgb(1, 2, 3); --lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
+      html`<lr-map engine="maplibre" data-lr-theme-scope style="--lr-color-brand: rgb(1, 2, 3); --lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
     )) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     const added = captureAddedLayerPaint(el);
@@ -6736,7 +6758,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('uses a cluster-only outline override and restores the layer stroke when it is unset', async () => {
-    const el = (await fixture(html`<lr-map style="--lr-test-cluster-ring: color(srgb 0.25 0.5 0.75)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" style="--lr-test-cluster-ring: color(srgb 0.25 0.5 0.75)"></lr-map>`)) as LyraMap;
     const { layers, sources } = stubMaplibreMap(el);
     const added = captureAddedLayerPaint(el);
     el.dataLayers = entry({ strokeColor: '#102030', cluster: {
@@ -6764,7 +6786,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('ignores unsafe cluster outline descriptors and invalid values without changing pins', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     let getterCalls = 0;
     const cluster = {
@@ -6797,7 +6819,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('snapshots cluster outline input until dataLayers is assigned again', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers, sources } = stubMaplibreMap(el);
     const cluster = { strokeColor: '#123456' };
     el.dataLayers = entry({ cluster });
@@ -6816,7 +6838,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('emits MapLibre-compatible paint for modern CSS colors in layer, point and cluster stops', async () => {
-    const el = (await fixture(html`<lr-map style="--lr-test-map-paint: color(srgb 0.25 0.5 0.75)"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" style="--lr-test-map-paint: color(srgb 0.25 0.5 0.75)"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({
       strokeColor: 'var(--lr-test-map-paint)',
@@ -6849,7 +6871,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('falls back to a valid tone when a map paint color cannot be resolved', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ color: 'var(--lr-missing-map-color)', strokeColor: 'url(https://example.invalid/x)' });
     await el.updateComplete;
@@ -6861,7 +6883,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('resolves a browser system color before passing it to MapLibre paint', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     expect(CSS.supports('color', 'ButtonShadow')).to.be.true;
     el.dataLayers = entry({ strokeColor: 'ButtonShadow' });
@@ -6872,7 +6894,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('keeps map paint valid when modern-color sRGB readback has no canvas context', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext');
     const original = HTMLCanvasElement.prototype.getContext;
@@ -6891,7 +6913,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('honours a single-stop heatmap ramp above the auto-prepended transparent floor', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ kind: 'heatmap', heatmap: { stops: [[1, '#ff0000']] } });
     await el.updateComplete;
@@ -6905,7 +6927,7 @@ describe('dataLayers clustering and heatmap', () => {
 
   it('resolves a var() colour in a single-stop heatmap ramp against the host', async () => {
     const el = (await fixture(
-      html`<lr-map data-lr-theme-scope style="--lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
+      html`<lr-map engine="maplibre" data-lr-theme-scope style="--lr-color-danger: rgb(4, 5, 6)"></lr-map>`,
     )) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ kind: 'heatmap', heatmap: { stops: [[0.5, 'var(--lr-color-danger)']] } });
@@ -6924,7 +6946,7 @@ describe('dataLayers clustering and heatmap', () => {
   });
 
   it('falls back to the token ramp for a lone heatmap stop at density zero', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);
     el.dataLayers = entry({ kind: 'heatmap', heatmap: { stops: [[0, '#ff0000']] } });
     await el.updateComplete;
@@ -6975,7 +6997,7 @@ describe('dataLayers clustering and heatmap', () => {
       },
     ];
     for (const shape of shapes) {
-      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
       const { layers } = stubMaplibreMap(el);
       el.dataLayers = entry(shape);
       await el.updateComplete;
@@ -7224,7 +7246,7 @@ describe('descriptor-safe map data projections', () => {
   }
 
   it('skips hostile gradient stops by descriptor while retaining later valid stops in bounded order', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const stops: unknown[] = [];
     Object.defineProperty(stops, '0', {
       enumerable: true,
@@ -7248,7 +7270,7 @@ describe('descriptor-safe map data projections', () => {
   });
 
   it('projects a choropleth once, retaining its opaque GeoJSON identity without direct source reads', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources, layers } = installProjectionMap(el);
     const geojson = {
       type: 'FeatureCollection',
@@ -7291,7 +7313,7 @@ describe('descriptor-safe map data projections', () => {
   });
 
   it('keeps an admitted hostile GeoJSON payload opaque after its descriptor-safe projection', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources } = installProjectionMap(el);
     const geojsonReads: Record<string, number> = {};
     const geojson = descriptorProxy(
@@ -7375,7 +7397,7 @@ describe('descriptor-safe map data projections', () => {
     const originalWarn = console.warn;
     console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
     try {
-      const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+      const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
       installProjectionMap(el);
       el.choropleth = {
         sourceId: 'unaddressable-diagnostic',
@@ -7400,7 +7422,7 @@ describe('descriptor-safe map data projections', () => {
   });
 
   it('contains hostile nested layer branches, retains later first-valid duplicates, and keeps cluster and heatmap GeoJSON opaque', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { sources, layers } = installProjectionMap(el);
     const clusterGeojson = { type: 'FeatureCollection', features: [] } as const;
     const heatmapGeojson = { type: 'FeatureCollection', features: [] } as const;
@@ -7479,7 +7501,7 @@ describe('descriptor-safe map data projections', () => {
   });
 
   it('retains a valid marker after a hostile duplicate and keeps unsafeHtml opaque for peer and activation paths', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const htmlValues: unknown[] = [];
     class FakePopup {
       setHTML(value: unknown): this {
@@ -7576,7 +7598,7 @@ describe('descriptor-safe map data projections', () => {
 describe('standard peer navigation and scale controls', () => {
   it('applies shared Glass and Solid to actual peer controls without changing native control geometry', async function () {
     if (!hasWebGL2) this.skip();
-    const el = await fixture<LyraMap>(html`<lr-map data-lr-surface="glass" .mapStyle=${LOCAL_STYLE}
+    const el = await fixture<LyraMap>(html`<lr-map engine="maplibre" data-lr-surface="glass" .mapStyle=${LOCAL_STYLE}
       .legendGradient=${[[0, 'blue'], [100, 'red']]}></lr-map>`);
     await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
     const peer = await import('maplibre-gl');
@@ -7604,7 +7626,7 @@ describe('standard peer navigation and scale controls', () => {
 
   it('keeps expanded attribution, opposite controls and legends separate in narrow layouts', async function () {
     if (!hasWebGL2) this.skip();
-    const el = await fixture<LyraMap>(html`<lr-map style="inline-size: 320px"
+    const el = await fixture<LyraMap>(html`<lr-map engine="maplibre" style="inline-size: 320px"
       .mapStyle=${LOCAL_STYLE} .legendGradient=${[[0, 'blue'], [100, 'red']]}></lr-map>`);
     await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
     const peer = await import('maplibre-gl');
@@ -7679,7 +7701,7 @@ describe('standard peer navigation and scale controls', () => {
 
   it('styles and localizes peer-added controls inside the shadow root', async function () {
     if (!hasWebGL2) this.skip();
-    const el = await fixture<LyraMap>(html`<lr-map style="inline-size: 320px" .mapStyle=${LOCAL_STYLE}
+    const el = await fixture<LyraMap>(html`<lr-map engine="maplibre" style="inline-size: 320px" .mapStyle=${LOCAL_STYLE}
       .legendGradient=${[[0, 'blue'], [100, 'red']]} .strings=${{ zoomIn: 'Agrandir', zoomOut: 'Réduire', mapResetNorth: 'Nord' }}></lr-map>`);
     await waitUntil(() => !!el.map && el.map.isStyleLoaded(), 'map ready', { timeout: 5000 });
     const peer = await import('maplibre-gl');
@@ -7719,7 +7741,7 @@ describe('standard peer navigation and scale controls', () => {
 it('renders declarative route metrics, restores them after style changes, and exports painted pixels', async function () {
   if (!hasWebGL2) this.skip();
   let loaded = false;
-  const el = await fixture<LyraMap>(html`<lr-map .mapStyle=${LOCAL_STYLE} zoom="14"
+  const el = await fixture<LyraMap>(html`<lr-map engine="maplibre" .mapStyle=${LOCAL_STYLE} zoom="14"
     @lr-map-load=${() => { loaded = true; }}
     .legendGradient=${[[0, 'blue'], [100, 'red']]}
     legend-gradient-lo-label="0 km/h" legend-gradient-hi-label="100 km/h"></lr-map>`);
@@ -7775,7 +7797,7 @@ it('renders declarative route metrics, restores them after style changes, and ex
 it('clusters sized categories, restores filled and stroked icons after a style reload and exports them', async function () {
   if (!hasWebGL2) this.skip();
   let loaded = false;
-  const el = await fixture<LyraMap>(html`<lr-map label="Classified locations" .mapStyle=${LOCAL_STYLE} zoom="8"
+  const el = await fixture<LyraMap>(html`<lr-map engine="maplibre" label="Classified locations" .mapStyle=${LOCAL_STYLE} zoom="8"
     @lr-map-load=${() => { loaded = true; }}></lr-map>`);
   await waitUntil(() => loaded, 'component map loaded', { timeout: 5000 });
   const map = el.map as unknown as import('maplibre-gl').Map;
@@ -7865,7 +7887,7 @@ it('clusters sized categories, restores filled and stroked icons after a style r
 
 describe('legend-start slot', () => {
   it('renders legend-start ahead of the gradient and the rows, and keeps legend last', async () => {
-    const el = (await fixture(html`<lr-map>
+    const el = (await fixture(html`<lr-map engine="maplibre">
       <div slot="legend-start" id="header">Layers</div>
       <div slot="legend" id="footer">Source: OSM</div>
     </lr-map>`)) as LyraMap;
@@ -7905,7 +7927,7 @@ describe('legend-start slot', () => {
 
   it('opens the legend panel for slotted legend-start content alone', async () => {
     const el = (await fixture(
-      html`<lr-map><div slot="legend-start" id="only-header">Layers</div></lr-map>`,
+      html`<lr-map engine="maplibre"><div slot="legend-start" id="only-header">Layers</div></lr-map>`,
     )) as LyraMap;
     await el.updateComplete;
     await aTimeout(0);
@@ -7921,7 +7943,7 @@ describe('legend-start slot', () => {
   });
 
   it('renders no legend-start slot content wrapper when nothing is slotted into it', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.legend = [{ color: '#f00', label: 'High', pattern: 'solid' }];
     await el.updateComplete;
     const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="legend-start"]')!;
@@ -7948,8 +7970,8 @@ describe('collapsible legend panel', () => {
   async function collapsibleMap(open?: 'false'): Promise<LyraMap> {
     const el = (await fixture(
       open === 'false'
-        ? html`<lr-map legend-collapsible legend-open="false"></lr-map>`
-        : html`<lr-map legend-collapsible></lr-map>`,
+        ? html`<lr-map engine="maplibre" legend-collapsible legend-open="false"></lr-map>`
+        : html`<lr-map engine="maplibre" legend-collapsible></lr-map>`,
     )) as LyraMap;
     el.legend = PANEL_LEGEND;
     await el.updateComplete;
@@ -7957,7 +7979,7 @@ describe('collapsible legend panel', () => {
   }
 
   it('renders no disclosure and mints no list id when legendCollapsible is unset', async () => {
-    const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     el.legend = PANEL_LEGEND;
     await el.updateComplete;
 
@@ -7996,7 +8018,7 @@ describe('collapsible legend panel', () => {
   });
 
   it('localizes the disclosure name through a strings override', async () => {
-    const el = (await fixture(html`<lr-map legend-collapsible></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" legend-collapsible></lr-map>`)) as LyraMap;
     el.legend = PANEL_LEGEND;
     el.strings = { mapLegend: 'Légende de la carte' };
     await el.updateComplete;
@@ -8004,7 +8026,7 @@ describe('collapsible legend panel', () => {
   });
 
   it('parses legend-open="false" and renders collapsed on first paint', async () => {
-    const el = (await fixture(html`<lr-map legend-collapsible legend-open="false">
+    const el = (await fixture(html`<lr-map engine="maplibre" legend-collapsible legend-open="false">
       <div slot="legend-start" id="panel-head">Risk band</div>
     </lr-map>`)) as LyraMap;
     el.legend = [{ color: '#f00', label: 'x'.repeat(400), pattern: 'solid' }];
@@ -8103,7 +8125,7 @@ it('ignores retired lr-map-legend-panel-toggle vetoes while preserving the canon
 
   it('mirrors the collapsed disclosure chevron under RTL and points it down when open', async () => {
     const ltr = await collapsibleMap('false');
-    const rtl = (await fixture(html`<lr-map
+    const rtl = (await fixture(html`<lr-map engine="maplibre"
       dir="rtl"
       lang="ar"
       legend-collapsible
@@ -8133,7 +8155,7 @@ it('ignores retired lr-map-legend-panel-toggle vetoes while preserving the canon
   });
 
   it('never hides a key that has no control to restore it', async () => {
-    const el = (await fixture(html`<lr-map legend-open="false"></lr-map>`)) as LyraMap;
+    const el = (await fixture(html`<lr-map engine="maplibre" legend-open="false"></lr-map>`)) as LyraMap;
     el.legend = PANEL_LEGEND;
     await el.updateComplete;
 
@@ -8174,7 +8196,7 @@ describe('legend sections', () => {
     interactive = false,
   ): Promise<LyraMap> {
     const el = (await fixture(
-      interactive ? html`<lr-map legend-interactive></lr-map>` : html`<lr-map></lr-map>`,
+      interactive ? html`<lr-map engine="maplibre" legend-interactive></lr-map>` : html`<lr-map engine="maplibre"></lr-map>`,
     )) as LyraMap;
     el.legend = legend;
     await el.updateComplete;
@@ -8605,6 +8627,7 @@ describe('fitBounds and lr-map-view-change', () => {
     });
     const wrapper = (await fixture(html`<div style="inline-size: 32rem"></div>`)) as HTMLElement;
     const el = document.createElement('lr-map') as LyraMap;
+    el.engine = 'maplibre';
     (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => library;
     el.mapStyle = EMPTY_STYLE;
     wrapper.append(el);
@@ -8925,7 +8948,7 @@ describe('fitBounds and lr-map-view-change', () => {
       const home = Object.freeze([6, 49] as const);
       const wrapper = (await fixture(html`<div style="inline-size: 32rem"></div>`)) as HTMLElement;
       const mount = document.createElement('div');
-      const view = () => html`<lr-map .center=${home} .zoom=${4} .mapStyle=${EMPTY_STYLE}></lr-map>`;
+      const view = () => html`<lr-map engine="maplibre" .center=${home} .zoom=${4} .mapStyle=${EMPTY_STYLE}></lr-map>`;
       // Rendered detached so the peer import can be replaced before connectedCallback runs.
       render(view(), mount);
       const el = mount.querySelector('lr-map') as LyraMap;
@@ -9199,7 +9222,7 @@ describe('fitBounds and lr-map-view-change', () => {
     it('frames the box, reports the resulting camera, and leaves it alone on the next update', async function () {
       if (!hasWebGL2) this.skip();
       const el = (await fixture(
-        html`<lr-map style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
+        html`<lr-map engine="maplibre" style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
       )) as LyraMap;
       await waitUntil(() => el.map != null, 'map never initialized', { timeout: 4000 });
       const map = el.map!;
@@ -9244,7 +9267,7 @@ describe('fitBounds and lr-map-view-change', () => {
     it('lands an assignment that interrupts an animated fit on the whole declared camera', async function () {
       if (!hasWebGL2) this.skip();
       const el = (await fixture(
-        html`<lr-map style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
+        html`<lr-map engine="maplibre" style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
       )) as LyraMap;
       await waitUntil(() => el.map != null, 'map never initialized', { timeout: 4000 });
       const map = el.map as unknown as LyraMapInstance & { isMoving(): boolean };
@@ -9273,7 +9296,7 @@ describe('fitBounds and lr-map-view-change', () => {
     it('reports a real shift-drag box zoom as a user camera change', async function () {
       if (!hasWebGL2) this.skip();
       const el = (await fixture(
-        html`<lr-map style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
+        html`<lr-map engine="maplibre" style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
       )) as LyraMap;
       await waitUntil(() => el.map != null, 'map never initialized', { timeout: 4000 });
       const map = el.map!;
@@ -9307,7 +9330,7 @@ describe('fitBounds and lr-map-view-change', () => {
     it('reports a real drag as a user camera change and keeps it on the next update', async function () {
       if (!hasWebGL2) this.skip();
       const el = (await fixture(
-        html`<lr-map style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
+        html`<lr-map engine="maplibre" style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
       )) as LyraMap;
       await waitUntil(() => el.map != null, 'map never initialized', { timeout: 4000 });
       const map = el.map!;

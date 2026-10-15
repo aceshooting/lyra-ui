@@ -19,11 +19,12 @@ export class DocxSelectionIntent {
       snapshot.selection.version === this.selectionVersion && this.qualifies(snapshot);
   }
 
-  execute(session: DocxSession | null, action: DocxAction): DocxResult<DocxRevision> {
+  async execute(session: DocxSession | null, action: DocxAction): Promise<DocxResult<DocxRevision>> {
+    if (!this.valid(session)) { this.release(); return { ok: false, code: 'stale-selection' }; }
+    this.phase = 'dispatched';
     try {
-      if (!this.valid(session)) return { ok: false, code: 'stale-selection' };
-      return this.session.execute(action, { expectedRevision: this.revision, selection: this.lease });
-    } finally { this.release(); }
+      return await this.session.execute(action, { expectedRevision: this.revision, selection: this.lease });
+    } finally { this.phase = 'released'; this.lease.release(); }
   }
 
   async insertImage(source: DocxImageSource): Promise<DocxResult<DocxRevision>> {

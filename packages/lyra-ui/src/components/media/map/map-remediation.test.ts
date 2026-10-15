@@ -5,6 +5,7 @@ import type { LyraMap } from './map.js';
 async function connectedMap(): Promise<{ wrapper: HTMLElement; el: LyraMap }> {
   const wrapper = await fixture<HTMLElement>(html`<div style="--stop-a: rgb(1, 2, 3); --stop-b: rgb(4, 5, 6); --step-base: rgb(7, 8, 9);"></div>`);
   const el = document.createElement('lr-map');
+  el.engine = 'maplibre';
   (el as unknown as { loadLibrary(): Promise<unknown> }).loadLibrary = () => new Promise(() => {});
   wrapper.append(el);
   await el.updateComplete;

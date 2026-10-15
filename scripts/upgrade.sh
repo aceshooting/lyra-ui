@@ -2,7 +2,7 @@
 # Upgrade dependency ranges in the root package and every pnpm workspace package, install the
 # resulting dependency graph, then build every workspace package. Peer dependencies are upgraded
 # separately because npm-check-updates does not include them by default. The curated
-# libphonenumber-js, MapLibre, postal-mime and Shiki peer ranges keep their compatibility bounds;
+# libphonenumber-js, MapLibre, postal-mime, Shiki and Vite peer ranges keep their compatibility bounds;
 # their dev dependencies are still upgraded by the first pass.
 # Set VERIFY=0 to refresh dependency manifests, lockfile, package-manager documentation, and
 # current peer versions without running artifact generators, workspace builds, or quality checks.
@@ -128,7 +128,7 @@ pnpm dlx npm-check-updates@latest \
   --workspaces \
   --root \
   --dep peer \
-  --reject @sgratzl/chartjs-chart-boxplot,chart.js,chartjs-plugin-annotation,chartjs-plugin-datalabels,chartjs-plugin-zoom,dompurify,katex,mammoth,marked,pdfjs-dist,libphonenumber-js,maplibre-gl,postal-mime,shiki \
+  --reject @sgratzl/chartjs-chart-boxplot,chart.js,chartjs-plugin-annotation,chartjs-plugin-datalabels,chartjs-plugin-zoom,dompurify,katex,mammoth,marked,pdfjs-dist,libphonenumber-js,maplibre-gl,postal-mime,shiki,vite \
   --target latest \
   --install never \
   --upgrade
@@ -153,7 +153,7 @@ echo "==> Installing workspace dependencies and refreshing pnpm-lock.yaml"
 pnpm install --no-prod --no-frozen-lockfile
 
 echo
-echo "==> Synchronizing the exact DOCX engine peer documentation and shipped notices"
+echo "==> Verifying the pinned DOCX engine source and synchronizing shipped notices"
 node scripts/sync-docx-engine-peer.mjs
 
 echo

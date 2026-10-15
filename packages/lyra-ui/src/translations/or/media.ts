@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'ବିରତ କରନ୍ତୁ',
   qrCodeMissingLibrary: 'QR କୋଡ୍ ଦେଖାଇବାକୁ ବୈକଳ୍ପିକ "qrcode" ପ୍ୟାକେଜ୍ ଇନ୍‌ଷ୍ଟଲ୍ କରିବା ଆବଶ୍ୟକ।',
   qrCodeGenerationFailed: 'ଏହି ମୂଲ୍ୟକୁ QR କୋଡ୍ ଭାବେ ଏନକୋଡ୍ କରିହେଲା ନାହିଁ।',
-  mapMissingLibrary: 'ମାନଚିତ୍ର ଦେଖାଇବାକୁ ବୈକଳ୍ପିକ "maplibre-gl" ପ୍ୟାକେଜ୍ ଇନ୍‌ଷ୍ଟଲ୍ କରିବା ଆବଶ୍ୟକ।',
+  mapMissingLibrary: 'ମାନଚିତ୍ର ଦେଖାଇବାକୁ ବୈକଳ୍ପିକ "{package}" ପ୍ୟାକେଜ୍ ଇନ୍‌ଷ୍ଟଲ୍ କରିବା ଆବଶ୍ୟକ।',
   mapStyleRequired: 'ମାନଚିତ୍ର ଦେଖାଇବାକୁ ଏକ ମାନଚିତ୍ର ଶୈଳୀ ଦିଅନ୍ତୁ।',
   mapWebglUnavailable: 'ମାନଚିତ୍ର ଦେଖାଇବାକୁ ଆବଶ୍ୟକ ଗ୍ରାଫିକ୍ସ ସମର୍ଥନ ଏହି ବ୍ରାଉଜର୍ ଦେଇପାରିବ ନାହିଁ।',
   mapInitializationFailed: 'ମାନଚିତ୍ର ଆରମ୍ଭ ହୋଇପାରିଲା ନାହିଁ।',

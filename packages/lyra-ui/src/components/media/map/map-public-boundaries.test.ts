@@ -7,7 +7,7 @@ const blankStyle = { version: 8 as const, sources: {}, layers: [] };
 it('skips a throwing hidden category without hiding later valid legend rows', async () => {
   const categories = ['broken', 'valid'];
   Object.defineProperty(categories, '0', { get() { throw new Error('caller category unavailable'); } });
-  const element = await fixture<LyraMap>(html`<lr-map legend-interactive legend-control-role="checkbox"
+  const element = await fixture<LyraMap>(html`<lr-map engine="maplibre" legend-interactive legend-control-role="checkbox"
     .legend=${[{ label: 'Valid', value: 'valid', color: '#ff0000', pattern: 'solid' }]}
     .hiddenCategories=${categories}></lr-map>`);
   await element.updateComplete;
@@ -18,7 +18,7 @@ it('skips a throwing hidden category without hiding later valid legend rows', as
 });
 
 it('renders duplicate logarithmic gradient positions and recovers after a revoked assignment', async () => {
-  const element = await fixture<LyraMap>(html`<lr-map
+  const element = await fixture<LyraMap>(html`<lr-map engine="maplibre"
     .choropleth=${{ sourceId: 'density', geojson: { type: 'FeatureCollection', features: [] }, field: 'density', interpolation: 'logarithmic', stops: [] }}
     .legendGradient=${[[0, '#000000'], [0, '#ff0000'], [10, '#ffffff']]}></lr-map>`);
   await element.updateComplete;
@@ -41,6 +41,7 @@ it('contains a public peer fit failure and recovers after the required style is 
   if (!probe) this.skip();
   probe.getExtension('WEBGL_lose_context')?.loseContext();
   const element = document.createElement('lr-map') as LyraMap;
+  element.engine = 'maplibre';
   element.style.cssText = 'width:320px;height:200px';
   element.mapStyle = blankStyle;
   const loaded = oneEvent(element, 'lr-map-load');

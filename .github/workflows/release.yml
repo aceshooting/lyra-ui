@@ -28,8 +28,9 @@ on:
           - lyra-docs
           - lyra-ide
           - lyra-translations
+          - lyra-map
       first_package_bootstrap:
-        description: 'Use the protected npm token for the first publication of lyra-docs, lyra-ide or lyra-translations only'
+        description: 'Use the protected npm token for the first publication of lyra-docs, lyra-ide, lyra-translations or lyra-map only'
         required: false
         type: boolean
         default: false
@@ -89,8 +90,8 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$BOOTSTRAP" != true ]]; then exit 0; fi
-          if [[ ! "$PACKAGE" =~ ^lyra-(docs|ide|translations)$ || ! "$TAGS" =~ ^lyra-(docs|ide|translations)@[0-9]+\.[0-9]+\.[0-9]+$ || "${TAGS%@*}" != "$PACKAGE" ]]; then
-            echo '::error::First-package bootstrap requires a single, named stable lyra-docs, lyra-ide or lyra-translations release.'
+          if [[ ! "$PACKAGE" =~ ^lyra-(docs|ide|translations|map)$ || ! "$TAGS" =~ ^lyra-(docs|ide|translations|map)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || "${TAGS%@*}" != "$PACKAGE" ]]; then
+            echo '::error::First-package bootstrap requires a single, named stable lyra-docs, lyra-ide, lyra-translations or lyra-map release.'
             exit 1
           fi
           status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \

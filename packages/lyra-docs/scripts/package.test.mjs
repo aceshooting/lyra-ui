@@ -55,7 +55,7 @@ test('the root, session and editor-class entries never resolve the document engi
     const resolutions = readFileSync(record, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
     assert.ok(resolutions.some(({ specifier }) => specifier === '@aceshooting/lyra-docs/docx'), 'the recorder saw the session entry');
     assert.deepEqual(
-      resolutions.filter(({ specifier, url }) => specifier.startsWith('@docx-editor.dev/') || url.includes('/@docx-editor.dev/')),
+      resolutions.filter(({ specifier, url }) => specifier.startsWith('@docx-editor.dev/') || specifier.startsWith('#lyra-docx-engine/') || url.includes('/@docx-editor.dev/') || url.includes('/dist/engine/')),
       [],
       'no entry may resolve the document engine before a document is opened',
     );
@@ -118,7 +118,7 @@ const read = modules => file => {
 test('a capability facade stays outside the public static dependency graph', () => {
   assert.deepEqual(eagerEngineImports([entry], read(new Map([
     [entry, "export const load = () => import('./capabilities.js');"],
-    [facade, "import * as source from '@docx-editor.dev/core'; export const capabilities = source;"],
+    [facade, "import * as source from '#lyra-docx-engine/core'; export const capabilities = source;"],
   ]))), []);
 });
 
@@ -126,8 +126,8 @@ test('a static import or reexport reaching the engine fails the lazy boundary', 
   for (const source of ["import './capabilities.js';", "export * from './capabilities.js';"]) {
     assert.deepEqual(eagerEngineImports([entry], read(new Map([
       [entry, source],
-      [facade, "import * as source from '@docx-editor.dev/core/store'; export const capabilities = source;"],
-    ]))), [{ file: facade, specifier: '@docx-editor.dev/core/store' }]);
+      [facade, "import * as source from '#lyra-docx-engine/store'; export const capabilities = source;"],
+    ]))), [{ file: facade, specifier: '#lyra-docx-engine/store' }]);
   }
 });
 

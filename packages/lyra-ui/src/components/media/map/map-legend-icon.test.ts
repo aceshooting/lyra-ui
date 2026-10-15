@@ -21,7 +21,7 @@ async function mapWithLegend(
   direction?: string,
 ): Promise<LyraMap> {
   const el = (await fixture(
-    direction === undefined ? html`<lr-map></lr-map>` : html`<lr-map dir=${direction}></lr-map>`,
+    direction === undefined ? html`<lr-map engine="maplibre"></lr-map>` : html`<lr-map engine="maplibre" dir=${direction}></lr-map>`,
   )) as LyraMap;
   el.legend = legend;
   await el.updateComplete;
@@ -258,7 +258,7 @@ it('keeps a forced-colors glyph on its unframed shape cue', async () => {
 // inert row gives it: the swatch must not become part of the button's accessible name, and the
 // SVG must not become a second focus target inside an already-focusable control.
 it('keeps a glyph decorative and unfocusable inside an interactive legend toggle', async () => {
-  const el = (await fixture(html`<lr-map legend-interactive></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre" legend-interactive></lr-map>`)) as LyraMap;
   el.legend = [
     { color: 'rgb(255, 0, 0)', label: 'Depot', pattern: 'solid', value: 'depot',
       icon: { path: TRIANGLE_PATH } },

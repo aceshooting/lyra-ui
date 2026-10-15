@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Tạm dừng',
   qrCodeMissingLibrary: 'Cần cài gói tùy chọn "qrcode" để hiển thị mã QR.',
   qrCodeGenerationFailed: 'Không thể mã hóa giá trị này thành mã QR.',
-  mapMissingLibrary: 'Cần cài gói tùy chọn "maplibre-gl" để hiển thị bản đồ.',
+  mapMissingLibrary: 'Cần cài gói tùy chọn "{package}" để hiển thị bản đồ.',
   mapStyleRequired: 'Cung cấp kiểu bản đồ để hiển thị bản đồ.',
   mapWebglUnavailable: 'Trình duyệt này không hỗ trợ đồ họa cần thiết để hiển thị bản đồ.',
   mapInitializationFailed: 'Không thể khởi tạo bản đồ.',

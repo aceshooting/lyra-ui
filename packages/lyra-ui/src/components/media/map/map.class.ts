@@ -26,6 +26,8 @@ import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import {
   loadMaplibre,
+  loadModularMap,
+  type LyraMapFeatureRequirements,
   type MapLibreGeoJsonSource,
   type MapLibreMapCapability,
   type MapLibreMarkerCapability,
@@ -75,6 +77,12 @@ function supportsWebGL2(host: Element): boolean {
     return false;
   }
 }
+
+export type { LyraMapFeatureRequirements } from './map-loader.js';
+
+/** Map engine selected before connecting the component. */
+export type LyraMapEngine = 'modular' | 'maplibre';
+const MAP_ENGINE = literalSetConverter<LyraMapEngine>(['modular', 'maplibre'], 'modular');
 
 type MapFailureReason =
   | 'missing-peer'
@@ -1689,6 +1697,8 @@ export interface LyraMapStyleSpecification {
   readonly name?: string;
   readonly sprite?: string | readonly Readonly<{ id: string; url: string }>[];
   readonly glyphs?: string;
+  readonly projection?: unknown;
+  readonly terrain?: unknown;
 }
 
 /**
@@ -1696,6 +1706,9 @@ export interface LyraMapStyleSpecification {
  * `maplibre-gl` a declaration dependency for consumers.
  */
 export interface LyraMapInstance {
+  /** Modular-engine readiness before imperative source/layer/projection/terrain mutations.
+   * Absent when `engine="maplibre"` selects the canonical engine. */
+  prepareFeatures?(requirements: LyraMapFeatureRequirements, options?: { signal?: AbortSignal }): Promise<void>;
   getCanvas(): HTMLCanvasElement;
   getCenter(): { lng: number; lat: number };
   getZoom(): number;
@@ -2123,16 +2136,16 @@ export interface LyraMapEventMap {
   }>;
 }
 /**
- * `<lr-map>` — a maplibre-gl wrapper with a declarative legend, choropleth
+ * `<lr-map>` — a modular MapLibre-compatible wrapper with a declarative legend, choropleth
  * GeoJSON layer, markers, and additive `dataLayers` GeoJSON overlays
  * (arbitrary shapes rendered as a source plus fill/line/circle layers, or — opting in per entry —
  * as a natively clustered point set or a `heatmap` density surface,
  * independent of `choropleth`'s field/stops color-interpolation), plus a peer-neutral
  * `map` getter for common imperative operations. Its runtime value is the underlying MapLibre
- * map, while its declaration stays independent of the optional peer. Requires `maplibre-gl`
- * v5 or v6; the component styles MapLibre's generated canvas, marker, popup, and control DOM
- * inside its shadow root. MapLibre v6 is ESM-only, requires WebGL2, and needs its module-worker
- * URL configured once; v5's standard build includes its worker.
+ * map, while its declaration stays independent of the optional peer. The default engine requires
+ * `@aceshooting/lyra-map` with its bundler plugin or an explicit worker URL. `engine="maplibre"`
+ * selects the full optional `maplibre-gl` peer (v5 or v6). Both engines require WebGL2; the
+ * component styles generated canvas, marker, popup, and control DOM inside its shadow root.
  *
  * The underlying `maplibregl.Map` — and the WebGL context it opens — isn't
  * constructed until this element is first visible in the viewport (tracked
@@ -2353,8 +2366,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Starts the shared optional-peer import without constructing a map. Returns false when the
    * peer is unavailable, so applications can decide whether to render their own fallback before
    * connecting an element. */
-  static preload(): Promise<boolean> {
-    return loadMaplibre().then((module) => module !== null);
+  static preload(engine: LyraMapEngine = 'modular'): Promise<boolean> {
+    return (engine === 'maplibre' ? loadMaplibre() : loadModularMap()).then((module) => module !== null);
   }
 
   constructor() {
@@ -2743,7 +2756,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    *  localized `map` message, which an explicit empty string suppresses. */
   @property() label?: string;
 
-  /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
+  /** Optional engine. Set before connecting; changes take effect after disconnect/reconnect.
+   * `modular` loads `@aceshooting/lyra-map`; `maplibre` explicitly selects the full `maplibre-gl`
+   * peer. No engine is substituted when the selected peer is unavailable. */
+  @property({ converter: MAP_ENGINE }) engine: LyraMapEngine = 'modular';
+
+  /** True until the selected lazy-loaded map engine has settled (success or failure). */
   @state() private loading = true;
 
   /** Classified failure rendered as localized ordinary text and announced through the owner
@@ -2754,7 +2772,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // Overridable instance field (not a direct `loadMaplibre()` call site) purely so tests can
   // inject a stubbed loader before the element ever connects -- matches docx-viewer's own
   // `loadLibrary` field/rationale exactly.
-  private loadLibrary: () => ReturnType<typeof loadMaplibre> = loadMaplibre;
+  private loadLibrary: (engine: LyraMapEngine) => ReturnType<typeof loadMaplibre> =
+    engine => engine === 'maplibre' ? loadMaplibre() : loadModularMap();
 
   // Gates the actual `new mod.Map(...)` construction (see `tryConstructMap()`)
   // -- starts `false` so a `<lr-map>` mounted off-screen doesn't open a
@@ -2854,6 +2873,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // connectedCallback has since superseded it.
   private _connectGeneration = 0;
   private _styleGeneration = 0;
+  private featureGeneration = 0;
+  private featureAbort?: AbortController;
+  private preparingFeatures = false;
+  private preparedFeatureSignature?: string;
+  private pendingMapLoad = false;
+  private rebuildGeneratedLayers = false;
 
   /** The underlying runtime `maplibregl.Map`, declared through Lyra's peer-neutral common-method
    * subset so consumers do not acquire a mandatory `maplibre-gl` type dependency. Consumers that
@@ -3158,7 +3183,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     void (async () => {
       let mod: Awaited<ReturnType<typeof loadMaplibre>>;
       try {
-        mod = await this.loadLibrary();
+        mod = await this.loadLibrary(this.engine);
       } catch {
         if (generation === this._connectGeneration && this.isConnected) {
           this.failInitialization('missing-peer');
@@ -3229,7 +3254,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private failureMessage(reason: MapFailureReason = this.failure ?? 'initialization-failed'): string {
     switch (reason) {
-      case 'missing-peer': return this.localize('mapMissingLibrary');
+      case 'missing-peer': return this.localize('mapMissingLibrary', undefined, {
+        package: this.engine === 'maplibre' ? 'maplibre-gl' : '@aceshooting/lyra-map',
+      });
       case 'style-required': return this.localize('mapStyleRequired');
       case 'webgl-unavailable': return this.localize('mapWebglUnavailable');
       case 'initialization-failed': return this.localize('mapInitializationFailed');
@@ -3258,6 +3285,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private disposeMap(): void {
+    this.cancelFeaturePreparation();
+    this.preparedFeatureSignature = undefined;
+    this.pendingMapLoad = false;
+    this.rebuildGeneratedLayers = false;
     this.stopObservingMapAllocation();
     this.stopObservingPeerChrome();
     try {
@@ -3352,10 +3383,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (this._map !== candidate) return;
         try {
           this._styleLoaded = true;
-          this.applyChoropleth();
+          this.pendingMapLoad = true;
+          this.rebuildGeneratedLayers = true;
           this.applyMarkers();
-          this.applyDataLayers();
-          this.emit('lr-map-load');
+          this.reconcileGeneratedLayers();
         } catch {
           this.failInitialization('initialization-failed');
         }
@@ -3473,7 +3504,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // common case and is instead handled at the end of the
     // `loadMaplibre().then()` chain in connectedCallback() above).
     if (changed.has('visible') && this.visible) this.tryConstructMap();
-    if (changed.has('mapStyle')) this._styleGeneration += 1;
+    if (changed.has('mapStyle')) {
+      this._styleGeneration += 1;
+      this.cancelFeaturePreparation();
+      this.preparedFeatureSignature = undefined;
+    }
 
     if (changed.has('mapStyle') && !hasMapStyle(this.mapStyle) && this._maplibreModule) {
       this.scheduleStyleRequiredFailure();
@@ -3516,8 +3551,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             this.appliedPointPaint.clear();
             this.appliedPointMuting.clear();
             this._appliedGeoJson.clear();
-            this.applyChoropleth();
-            this.applyDataLayers();
+            this.rebuildGeneratedLayers = true;
+            this.reconcileGeneratedLayers();
           } catch {
             failStyle();
           }
@@ -3527,21 +3562,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         failStyle();
       }
     } else if (this._styleLoaded && (changed.has('dataLayers') || changed.has('choropleth'))) {
-      const choropleth = this.canonicalChoropleth;
-      const nextChoroplethSourceId = choropleth
-        ? this.resolveChoroplethSourceId(choropleth.sourceId)
-        : undefined;
-      // Remove a choropleth that must move namespaces before mutating data layers. This ordering
-      // also makes an atomic `choropleth = undefined; dataLayers = [{ same sourceId }]` update
-      // safe: the old source is released before the new layers begin referring to that id.
-      if (
-        this._appliedChoroplethSourceId &&
-        this._appliedChoroplethSourceId !== nextChoroplethSourceId
-      ) {
-        this.removeChoropleth();
-      }
-      if (changed.has('dataLayers')) this.applyDataLayers();
-      this.applyChoropleth();
+      this.reconcileGeneratedLayers();
     }
     if (changed.has('hiddenCategories') && this._map && this._styleLoaded) this.refreshThemePaint();
     this.pushCamera(changed);
@@ -3577,7 +3598,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    *  layers, or map geometry -- which is exactly what a theme change and a `hiddenCategories`
    *  change each need. */
   private refreshThemePaint(): void {
-    if (!this._map || !this._styleLoaded) return;
+    if (!this._map || !this._styleLoaded || this.preparingFeatures) return;
     const fillOpacity = choroplethFillOpacity(this);
     if (this._appliedFillLayerId) {
       const choropleth = this.canonicalChoropleth;
@@ -3597,6 +3618,111 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // exist as an error event on this component's own handler.
       this.paintDataLayer(sourceId, dataLayer);
     }
+  }
+
+  private cancelFeaturePreparation(): void {
+    this.featureGeneration += 1;
+    this.featureAbort?.abort();
+    this.featureAbort = undefined;
+    this.preparingFeatures = false;
+  }
+
+  /** Source specifications and only the layer families this component is about to render. */
+  private generatedFeatureRequirements(): LyraMapFeatureRequirements {
+    const sources: Record<string, unknown> = {};
+    const layers: { id: string; type: string; source: string }[] = [];
+    const add = (source: string, types: readonly string[]): void => {
+      for (const [index, type] of types.entries()) layers.push({ id: `${source}-${type}-${index}`, type, source });
+    };
+    const choropleth = this.canonicalChoropleth;
+    if (choropleth) {
+      sources['choropleth'] = { type: 'geojson', data: choropleth.geojson };
+      if (choropleth.stops.length) add('choropleth', ['fill']);
+    }
+    for (const [index, layer] of this.canonicalDataLayers.entries()) {
+      const source = `data-${index}`;
+      const cluster = layer.cluster;
+      sources[source] = { type: 'geojson', data: layer.geojson,
+        ...(cluster ? { cluster: true, clusterRadius: cluster.radius, clusterMaxZoom: cluster.maxZoom } : {}),
+      };
+      if (layer.kind === 'heatmap') add(source, ['heatmap']);
+      else {
+        add(source, cluster ? ['circle'] : ['fill', 'line', 'circle']);
+        if ((cluster && this.styleProvidesGlyphs()) || (layer.point?.iconField && layer.point.icons.length)) {
+          add(source, ['symbol']);
+        }
+      }
+    }
+    return { sources, layers };
+  }
+
+  private reconcileGeneratedLayers(): void {
+    const map = this._map;
+    if (!map || !this._styleLoaded) return;
+    this.cancelFeaturePreparation();
+    const generation = this.featureGeneration;
+    const connection = this._connectGeneration;
+    const styleGeneration = this._styleGeneration;
+    const style = this.mapStyle;
+    const dataLayers = this.dataLayers;
+    const choropleth = this.choropleth;
+    const current = (): boolean => this.isConnected && this._map === map &&
+      generation === this.featureGeneration && connection === this._connectGeneration &&
+      styleGeneration === this._styleGeneration && style === this.mapStyle &&
+      dataLayers === this.dataLayers && choropleth === this.choropleth;
+    const apply = (): void => {
+      const next = this.canonicalChoropleth;
+      const nextId = next ? this.resolveChoroplethSourceId(next.sourceId) : undefined;
+      if (this._appliedChoroplethSourceId && this._appliedChoroplethSourceId !== nextId) this.removeChoropleth();
+      // Rebuilds retain the original paint order: generated overlays sit above the choropleth.
+      if (this.rebuildGeneratedLayers) {
+        this.applyChoropleth();
+        this.applyDataLayers();
+        this.rebuildGeneratedLayers = false;
+      } else {
+        this.applyDataLayers();
+        this.applyChoropleth();
+      }
+      if (this.pendingMapLoad) {
+        this.pendingMapLoad = false;
+        this.emit('lr-map-load');
+      }
+    };
+    const fail = (): void => {
+      if (!current()) return;
+      if (this.pendingMapLoad) { this.failInitialization('initialization-failed'); return; }
+      this.scheduleAfterUpdate(() => {
+        if (current()) this.failInitialization('initialization-failed');
+      }, `map-feature-failure-${generation}`);
+    };
+    try {
+      // Canonical peers keep their synchronous mutation contract. The modular loader validates
+      // prepareFeatures before a real module can reach this point.
+      if (!map.prepareFeatures) { apply(); return; }
+      const requirements = this.generatedFeatureRequirements();
+      const signature = JSON.stringify([
+        Object.values(requirements.sources ?? {}).map(source => (source as { type: string; cluster?: boolean }).type),
+        (requirements.layers ?? []).map(layer => (layer as { type: string }).type),
+      ]);
+      if (signature === this.preparedFeatureSignature) { apply(); return; }
+      const controller = new AbortController();
+      this.featureAbort = controller;
+      this.preparingFeatures = true;
+      void (async () => {
+        try {
+          await map.prepareFeatures!(requirements, { signal: controller.signal });
+          if (!current() || controller.signal.aborted) return;
+          this.featureAbort = undefined;
+          this.preparingFeatures = false;
+          this.preparedFeatureSignature = signature;
+          apply();
+        } catch {
+          if (!current() || controller.signal.aborted) return;
+          this.preparingFeatures = false;
+          fail();
+        }
+      })();
+    } catch { fail(); }
   }
 
   private applyChoropleth(): void {

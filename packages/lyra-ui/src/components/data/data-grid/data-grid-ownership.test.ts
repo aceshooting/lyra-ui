@@ -3,6 +3,40 @@ import './data-grid.js';
 import type { DataGridColumn, DataGridSort } from './data-grid-types.js';
 import { type Person, columns, rows, dataGrid } from '../../../../test/data-grid.js';
 
+it('keeps source and snapshot rebinds inert while accepting replaced sources and invalid primitives', async () => {
+  const element = await dataGrid(html`<lr-data-grid label="People" .columns=${columns}></lr-data-grid>`);
+  const source = rows.slice(0, 1);
+  element.data = source;
+  await element.updateComplete;
+  const snapshot = element.data;
+  source.push(rows[1]!);
+  element.data = source;
+  element.data = snapshot;
+  element.data = source;
+  expect(element.data === snapshot).to.equal(true);
+  expect(element.data.length).to.equal(1);
+  element.data = source.slice();
+  expect(element.data === snapshot).to.equal(false);
+  expect(element.data.length).to.equal(2);
+  const replacement = element.data;
+  element.data = source;
+  expect(element.data === replacement).to.equal(false);
+  const { proxy, revoke } = Proxy.revocable(source, {});
+  element.data = proxy;
+  const proxySnapshot = element.data;
+  revoke();
+  element.data = proxy;
+  expect(element.data === proxySnapshot).to.equal(true);
+  for (const value of [undefined, null, false, 'invalid']) {
+    Reflect.set(element, 'data', value);
+    const empty = element.data;
+    Reflect.set(element, 'data', value);
+    expect(element.data === empty).to.equal(true);
+    expect(element.data.length).to.equal(0);
+  }
+  await element.updateComplete;
+});
+
 
 it("skips a sort entry whose id accessor throws, keeping valid neighbors", async () => {
   const poisoned = {

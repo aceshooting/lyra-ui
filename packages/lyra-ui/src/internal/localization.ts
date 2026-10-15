@@ -869,7 +869,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
     'This component needs the optional "qrcode" package installed to render QR codes.',
   qrCodeGenerationFailed: 'This value could not be encoded as a QR code.',
   mapMissingLibrary:
-    'This component needs the optional "maplibre-gl" package installed to render the map.',
+    'This component needs the optional "{package}" package installed to render the map.',
   mapStyleRequired: 'Provide a map style to render the map.',
   mapWebglUnavailable:
     'This browser cannot provide the graphics support needed to render the map.',

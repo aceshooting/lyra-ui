@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import '../src/docx/editor.js';
-import '@docx-editor.dev/core/styles/editor.css';
+import '@aceshooting/lyra-docs/docx/editor.css';
 import { docxFixture } from './admission-fixtures.js';
 import { imageFixture, tableFixture } from './corpus.js';
 

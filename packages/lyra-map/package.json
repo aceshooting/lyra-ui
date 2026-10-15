@@ -1,0 +1,117 @@
+{
+  "name": "@aceshooting/lyra-map",
+  "version": "1.0.0",
+  "description": "Modular MapLibre renderer with asynchronous feature preparation and a shared module worker",
+  "type": "module",
+  "license": "BSD-3-Clause",
+  "author": {
+    "name": "Aceshooting",
+    "email": "info@aceshooting.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aceshooting/lyra-ui.git",
+    "directory": "packages/lyra-map"
+  },
+  "homepage": "https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-map#readme",
+  "bugs": {
+    "url": "https://github.com/aceshooting/lyra-ui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.11.2",
+  "sideEffects": [
+    "./dist/modules/**/*.mjs",
+    "./dist/worker.mjs",
+    "./dist/map.css"
+  ],
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.mjs"
+    },
+    "./worker": "./dist/worker.mjs",
+    "./map.css": "./dist/map.css",
+    "./package.json": "./package.json",
+    "./controls/attribution": {
+      "types": "./dist/controls/attribution.d.ts",
+      "import": "./dist/controls/attribution.mjs"
+    },
+    "./controls/navigation": {
+      "types": "./dist/controls/navigation.d.ts",
+      "import": "./dist/controls/navigation.mjs"
+    },
+    "./controls/geolocate": {
+      "types": "./dist/controls/geolocate.d.ts",
+      "import": "./dist/controls/geolocate.mjs"
+    },
+    "./controls/scale": {
+      "types": "./dist/controls/scale.d.ts",
+      "import": "./dist/controls/scale.mjs"
+    },
+    "./controls/fullscreen": {
+      "types": "./dist/controls/fullscreen.d.ts",
+      "import": "./dist/controls/fullscreen.mjs"
+    },
+    "./controls/terrain": {
+      "types": "./dist/controls/terrain.d.ts",
+      "import": "./dist/controls/terrain.mjs"
+    },
+    "./controls/globe": {
+      "types": "./dist/controls/globe.d.ts",
+      "import": "./dist/controls/globe.mjs"
+    },
+    "./controls/logo": {
+      "types": "./dist/controls/logo.d.ts",
+      "import": "./dist/controls/logo.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "UPSTREAM.json"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepack": "pnpm build",
+    "lint": "node scripts/check-package.mjs && tsc --noEmit -p tsconfig.test.json",
+    "test": "node --test test/*.test.mjs",
+    "test:browser": "node scripts/browser-test.mjs"
+  },
+  "dependencies": {
+    "@mapbox/point-geometry": "1.1.0",
+    "@mapbox/tiny-sdf": "2.3.0",
+    "@maplibre/maplibre-gl-style-spec": "26.4.4",
+    "@types/geojson": "7946.0.16",
+    "gl-matrix": "3.4.4",
+    "kdbush": "4.1.0"
+  },
+  "peerDependencies": {
+    "vite": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "maplibre-gl": "6.14.0",
+    "rolldown": "1.2.14",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "playwright": "^1.64.1"
+  }
+}

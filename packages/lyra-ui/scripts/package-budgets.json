@@ -24,6 +24,13 @@
     "fileCount": 3352
   },
   "companions": {
+    "@aceshooting/lyra-map": {
+      "maximum": {
+        "packedBytes": 1000000,
+        "unpackedBytes": 4000000,
+        "fileCount": 675
+      }
+    },
     "@aceshooting/lyra-translations": {
       "maximum": {
         "packedBytes": 1500000,

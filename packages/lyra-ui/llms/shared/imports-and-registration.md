@@ -164,7 +164,7 @@ The entry points, then:
   `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
   `lr-knowledge-graph-explorer` and `lr-geojson-viewer`. Those always need their own subpath import,
   from `all.js` exactly as from the root — the entry deliberately preserves the optional-peer
-  isolation contract rather than putting `chart.js`, `maplibre-gl`, or the `d3-*` set on the
+  isolation contract rather than putting `chart.js`, `@aceshooting/lyra-map`, `maplibre-gl`, or the `d3-*` set on the
   critical path of every install. It is the one import that defeats tree-shaking.
   (Server-side, `@aceshooting/lyra-ui/ssr/all.js` is the counterpart that _does_ register the
   complete inventory, optional-peer families included; see "SSR and declarative shadow DOM".)

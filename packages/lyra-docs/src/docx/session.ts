@@ -531,7 +531,7 @@ class InternalDocxSession implements DocxSession {
       return ok(lease);
     } catch { return refused(this.completionFailure() ?? 'no-selection'); }
   }
-  execute(command: DocxAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease } = {}): DocxResult<DocxRevision> {
+  async execute(command: DocxAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease } = {}): Promise<DocxResult<DocxRevision>> {
     if (this.operation?.kind === 'inserting-image' || this.operation?.kind === 'replacing-image') return refused('busy');
     const entryRevision = this.revision, entrySelection = this.selectionVersion;
     const checkedOptions = searchRevisionOptions(options, true);
@@ -545,7 +545,7 @@ class InternalDocxSession implements DocxSession {
     try {
       const reflected = isDocxReviewAction(command) && entryRevision ? this.completionFailure() ??
         (!equalRevision(entryRevision, this.revision) ? 'stale-revision' : entrySelection !== this.selectionVersion ? 'stale-selection' : null) : null;
-      result = reflected ? refused(reflected) : this.executeCommand(command, options);
+      result = reflected ? refused(reflected) : await this.executeCommand(command, options);
     } catch { result = refused(this.completionFailure() ?? 'unsupported'); }
     if (options.selection && this.lease?.lease === options.selection) this.releaseLease();
     this.owned();
@@ -553,7 +553,7 @@ class InternalDocxSession implements DocxSession {
     return failure && this.cached !== initialSnapshot ? refused(failure) : result.ok ? ok(this.revision!) : result;
   }
   /** `command` is already normalized by `execute()`. */
-  private executeCommand(command: DocxAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): DocxResult<DocxRevision> {
+  private async executeCommand(command: DocxAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): Promise<DocxResult<DocxRevision>> {
     const gate = this.gate();
     if (gate) return refused(gate);
     if (options.expectedRevision && !equalRevision(options.expectedRevision, this.revision)) return refused('stale-revision');
@@ -567,10 +567,24 @@ class InternalDocxSession implements DocxSession {
     if (!available.enabled) return refused(available.reason ?? 'unsupported');
     if (!equalRevision(before, this.revision)) return refused('stale-revision');
     if (supplied && this.lease?.lease !== supplied) return refused('stale-selection');
-    const result = this.engine!.execute(command, supplied ? this.lease!.token : undefined);
-    return result.ok ? ok(this.revision!) : result;
+    const engine = this.engine!, owner = {}, revision = this.revision, selection = this.selectionVersion;
+    const retained = supplied ? this.lease!.token : undefined;
+    this.commandOwner = owner;
+    const validate = (): DocxResult<void> => {
+      if (!this.owned()) return refused('destroyed');
+      const failure = this.completionFailure(); if (failure) return refused(failure);
+      if (this.commandOwner !== owner || this.engine !== engine || this.operation) return refused('busy');
+      if (!equalRevision(revision, this.revision)) return refused('stale-revision');
+      if (this.composing) return refused('composing');
+      if (selection !== this.selectionVersion || supplied && this.lease?.lease !== supplied) return refused('stale-selection');
+      return ok(undefined);
+    };
+    try {
+      const result = await engine.execute(command, retained, validate);
+      return result.ok ? ok(this.revision!) : result;
+    } finally { if (this.commandOwner === owner) this.commandOwner = null; this.publish(); }
   }
-  private executeReview(command: DocxReviewAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): DocxResult<DocxRevision> {
+  private async executeReview(command: DocxReviewAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): Promise<DocxResult<DocxRevision>> {
     if (this.composing) return refused('composing');
     if (this.readOnly) return refused('read-only');
     const target = 'id' in command ? this.documentTarget(this.reviewTargets, command.id, options.expectedRevision) : null;
@@ -589,11 +603,11 @@ class InternalDocxSession implements DocxSession {
       return ok(undefined);
     };
     try {
-      const result = engine.executeReview(command, target?.ok ? target.value.token : undefined, retained, validate);
+      const result = await engine.executeReview(command, target?.ok ? target.value.token : undefined, retained, validate);
       return result.ok ? ok(this.revision!) : result;
     } finally { if (this.commandOwner === owner) this.commandOwner = null; this.publish(); }
   }
-  private executeTable(command: DocxTableAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): DocxResult<DocxRevision> {
+  private async executeTable(command: DocxTableAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): Promise<DocxResult<DocxRevision>> {
     if (this.composing) return refused('composing');
     if (this.readOnly) return refused('read-only');
     const engine = this.engine!, owner = {}, supplied = options.selection;
@@ -616,14 +630,14 @@ class InternalDocxSession implements DocxSession {
       return ok(undefined);
     };
     try {
-      const result = engine.execute(command, supplied ? this.lease!.token : undefined, validate);
+      const result = await engine.execute(command, supplied ? this.lease!.token : undefined, validate);
       return result.ok ? ok(this.revision!) : result;
     } finally {
       if (this.commandOwner === owner) this.commandOwner = null;
       this.publish();
     }
   }
-  private executeImage(command: DocxImageAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): DocxResult<DocxRevision> {
+  private async executeImage(command: DocxImageAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease }): Promise<DocxResult<DocxRevision>> {
     if (this.composing) return refused('composing');
     if (this.readOnly) return refused('read-only');
     if (!this.image) return refused('no-selection');
@@ -643,7 +657,7 @@ class InternalDocxSession implements DocxSession {
       return ok(undefined);
     };
     try {
-      const result = engine.execute(command, token, validate);
+      const result = await engine.execute(command, token, validate);
       return result.ok ? ok(this.revision!) : result;
     } finally {
       if (this.commandOwner === owner) this.commandOwner = null;

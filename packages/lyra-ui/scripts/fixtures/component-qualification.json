@@ -4857,6 +4857,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -5101,6 +5102,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -6040,6 +6042,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -8182,6 +8185,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -11212,6 +11216,7 @@
           "src/components/forms/combobox/combobox-selection-projection.test.ts",
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
+          "src/components/forms/combobox/option-label-cost.test.ts",
           "src/components/forms/combobox/option.test.ts",
           "src/components/forms/combobox/positioning-strategy.test.ts",
           "src/components/forms/combobox/top-layer.test.ts"
@@ -14568,7 +14573,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2864,
+              "line": 2862,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17215,6 +17220,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -24785,6 +24791,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -27922,6 +27929,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -28167,6 +28175,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -28631,6 +28640,12 @@
               "state": "open"
             },
             {
+              "file": "src/components/media/map/map-legend-icon.test.ts",
+              "test": "stays axe-clean with a populated glyph legend",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/media/map/map.test.ts",
               "test": "adds a maplibregl.Marker per entry in markers",
               "target": "el",
@@ -28800,8 +28815,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-peer-recovery.test.ts",
-              "test": "contains a peer source failure on initial load and clears the unusable map",
+              "file": "src/components/media/map/map-engine-preparation.test.ts",
+              "test": "contains an asynchronous preparation failure in localized visible and light-DOM feedback",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -28813,7 +28828,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3173,
+              "line": 3198,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28849,6 +28864,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/map/map-data-layers.test.ts",
+          "src/components/media/map/map-engine-preparation.test.ts",
           "src/components/media/map/map-glass.test.ts",
           "src/components/media/map/map-legend-icon-border.test.ts",
           "src/components/media/map/map-legend-icon.test.ts",
@@ -34005,6 +34021,7 @@
           "src/components/forms/combobox/combobox-selection-projection.test.ts",
           "src/components/forms/combobox/combobox-source-state.test.ts",
           "src/components/forms/combobox/combobox.test.ts",
+          "src/components/forms/combobox/option-label-cost.test.ts",
           "src/components/forms/combobox/option.test.ts",
           "src/components/forms/combobox/positioning-strategy.test.ts",
           "src/components/forms/combobox/top-layer.test.ts"
@@ -36009,6 +36026,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -36229,6 +36247,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -38748,6 +38767,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -42638,6 +42658,7 @@
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
           "src/components/charts/chart/chart-preload.test.ts",
+          "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
           "src/components/charts/chart/chart-sync.test.ts",
@@ -48688,6 +48709,7 @@
           "src/components/data/table/table-accessibility.test.ts",
           "src/components/data/table/table-editing.test.ts",
           "src/components/data/table/table-expansion.test.ts",
+          "src/components/data/table/table-filter-work.test.ts",
           "src/components/data/table/table-layout.test.ts",
           "src/components/data/table/table-ownership.test.ts",
           "src/components/data/table/table-processing.test.ts",

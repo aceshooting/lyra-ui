@@ -1,0 +1,29 @@
+Lyra Docs internal DOCX engine
+
+This package includes a modified derivative of the Apache-2.0 portions of
+@docx-editor.dev/core 2.30.0, copyright 2026 EigenPal Inc., from:
+https://github.com/eigenpal/docx-editor
+Commit: 232503c79148266c1487bfebdea4a1314326628e
+
+Lyra modifications provide explicit module preparation for document features,
+DOM presentation, editing commands and native input; split shared pure helpers;
+preserve a single implementation of each store operation; and project the
+locale catalog to the exact TOC title values used by the engine. Each modified
+source file is identified in scripts/engine-source.lock.json and carries a
+modification notice in the distributed patch.
+
+The Apache-2.0 license, original upstream notices and HarfBuzz license are in
+THIRD_PARTY_LICENSES. THIRD_PARTY_NOTICES.md also identifies bundled dependencies.
+Lyra's original component and adapter code remains under its MIT license.
+
+Reproduction inputs are shipped in scripts/engine-source.lock.json and
+scripts/engine/. The lock identifies the immutable upstream archive, selected
+source files, exact patch, prepared sources, build dependencies and assets.
+Maintainers run the package build with the recorded Node, pnpm and Vite versions.
+It verifies and prepares the source in a temporary directory, builds the engine,
+and removes that directory. LYRA_DOCX_SOURCE_ARCHIVE may name a previously
+acquired archive; it undergoes the same complete integrity checks.
+
+The published package already contains dist/engine and the static editor CSS.
+Consumer installation performs no source acquisition or compilation. Engine
+implementation entry points are internal and are not upstream API substitutes.

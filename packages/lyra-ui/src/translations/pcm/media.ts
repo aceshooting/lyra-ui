@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Pause am',
   qrCodeMissingLibrary: 'Dis component need make you install di optional "qrcode" package before e fit show QR codes.',
   qrCodeGenerationFailed: 'E no fit encode dis value as QR code.',
-  mapMissingLibrary: 'Dis component need make you install di optional "maplibre-gl" package before e fit show di map.',
+  mapMissingLibrary: 'Dis component need make you install di optional "{package}" package before e fit show di map.',
   mapStyleRequired: 'Provide map style make di map fit show.',
   mapWebglUnavailable: 'Dis browser no fit provide di graphics support wey di map need.',
   mapInitializationFailed: 'E no fit start di map.',

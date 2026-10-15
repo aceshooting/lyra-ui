@@ -13,7 +13,6 @@ import type {
   LyraMapViewChangeDetail,
 } from './map.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
-import '../../../../../../.storybook/maplibre-worker.js';
 
 const legend = (): LyraMapLegendEntry[] => [
   { color: storyColor('brand'), label: 'Low', pattern: 'solid' },
@@ -79,13 +78,28 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Markers and popups keep the physical geographic projection origin in both text directions. Live ancestor theme changes refresh choropleth stop/base colors and opacity without rebuilding sources or layers. Requires an explicit `mapStyle`; the deterministic default story uses a network-silent inlined raster tile, while the opt-in live story demonstrates OpenStreetMap tiles. Explicit marker IDs and `dataLayers[].sourceId` values are trimmed, nonempty, and first-wins; idless colocated markers remain distinct by occurrence. Peer/custom markers retain a 24px minimum target in both axes even without intrinsic content size.',
+          'The default modular engine loads `@aceshooting/lyra-map` and prepares only the source/layer families requested by its style and generated overlays. Configure the companion bundler plugin once; no canonical engine is substituted. Select `engine="maplibre"` before connection to use the full native peer explicitly. Markers and popups keep the physical geographic projection origin in both text directions. Live ancestor theme changes refresh choropleth stop/base colors and opacity without rebuilding sources or layers. Requires an explicit `mapStyle`; the deterministic default story uses a network-silent inlined raster tile, while the opt-in live story demonstrates OpenStreetMap tiles. Explicit marker IDs and `dataLayers[].sourceId` values are trimmed, nonempty, and first-wins; idless colocated markers remain distinct by occurrence. Peer/custom markers retain a 24px minimum target in both axes even without intrinsic content size.',
       },
     },
   },
 };
 export default meta;
 type Story = StoryObj;
+
+/** Explicit compatibility choice; its worker setup is loaded only when this story renders. */
+export const NativeEngine: Story = {
+  render: () => html`<div ${ref(async host => {
+    if (!(host instanceof HTMLElement)) return;
+    await import('../../../../../../.storybook/maplibre-worker.js');
+    if (!host.isConnected) return;
+    const map = document.createElement('lr-map');
+    map.engine = 'maplibre';
+    map.mapStyle = OFFLINE_RASTER_STYLE as LyraMap['mapStyle'];
+    map.label = 'Native MapLibre engine';
+    map.style.blockSize = '20rem';
+    host.replaceChildren(map);
+  })}></div>`,
+};
 
 export const Default: Story = {
   render: () => html`
@@ -604,9 +618,13 @@ export const NavigationAndScale: Story = {
     .legendGradient=${[[0, storyColor('brand')], [100, storyColor('danger')]]}
     @lr-map-load=${async (event: Event) => {
       const el = event.currentTarget as import('./map.js').LyraMap;
-      const { NavigationControl, ScaleControl } = await import('maplibre-gl');
-      const map = el.map as import('maplibre-gl').Map | undefined;
-      if (!el.isConnected || !map) return;
+      const map = el.map as import('@aceshooting/lyra-map').Map | undefined;
+      if (!map) return;
+      const [{ NavigationControl }, { ScaleControl }] = await Promise.all([
+        import('@aceshooting/lyra-map/controls/navigation'),
+        import('@aceshooting/lyra-map/controls/scale'),
+      ]);
+      if (!el.isConnected || el.map !== map) return;
       map.addControl(new NavigationControl(), 'bottom-right');
       map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
     }}></lr-map>`,

@@ -106,12 +106,12 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
   await check('selected image identical and invalid commands preserve revision dirty history and package', async () => {
     const id = 'image-noop'; await createEditor(page, id, 'image-simple'); await select(page, id);
     const before = await saveEditor(page, id), initial = await state(page, id);
-    const results = await page.locator(`#${id}`).evaluate(element => [
-      element.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }),
-      element.execute({ type: 'image-description', title: 'Title 1', description: 'Description 1' }),
-      element.execute({ type: 'resize-image', widthPoints: NaN, heightPoints: 60 }),
-      element.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 1441 }),
-      element.execute({ type: 'image-description', title: 'x'.repeat(257), description: '' }),
+    const results = await page.locator(`#${id}`).evaluate(async element => [
+      await element.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 60 }),
+      await element.execute({ type: 'image-description', title: 'Title 1', description: 'Description 1' }),
+      await element.execute({ type: 'resize-image', widthPoints: NaN, heightPoints: 60 }),
+      await element.execute({ type: 'resize-image', widthPoints: 120, heightPoints: 1441 }),
+      await element.execute({ type: 'image-description', title: 'x'.repeat(257), description: '' }),
     ]);
     assert.equal(results[0].ok, true); assert.equal(results[1].ok, true);
     assert.deepEqual(results.slice(2).map(r => r.code), ['invalid-option', 'resource-limit', 'resource-limit']);
@@ -159,9 +159,9 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
         }, { reopened, saved })).ok, true);
         assert.equal((await page.locator(`#${reopened}`).evaluate(element => element.selectImage('next'))).ok, true);
         await page.waitForFunction(id => document.getElementById(id).can({ type: 'delete-image' }).enabled, reopened);
-        const unchanged = await page.locator(`#${reopened}`).evaluate(element => {
+        const unchanged = await page.locator(`#${reopened}`).evaluate(async element => {
           const before = element.snapshot(), dimensions = before.image;
-          const result = element.execute({ type: 'resize-image', ...dimensions });
+          const result = await element.execute({ type: 'resize-image', ...dimensions });
           return { result, before, after: element.snapshot() };
         });
         assert.equal(unchanged.result.ok, true, JSON.stringify(unchanged.result));
@@ -302,9 +302,9 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
       window.__imageLease = retained.value; return session.snapshot();
     });
     await nativeImages.nth(1).click(); await nativeImages.first().click();
-    const result = await page.evaluate(() => {
+    const result = await page.evaluate(async () => {
       const session = window.__imageLeaseSession, before = session.snapshot();
-      const refused = session.execute({ type: 'delete-image' }, { selection: window.__imageLease });
+      const refused = await session.execute({ type: 'delete-image' }, { selection: window.__imageLease });
       return { refused, before, after: session.snapshot() };
     });
     assert.deepEqual(result.refused, { ok: false, code: 'stale-selection' });
@@ -314,13 +314,13 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
   });
   await check('cached image reads during synthetic queued native input do not settle or mutate the drawing', async () => {
     const id = 'image-queued'; await createEditor(page, id, 'image-simple'); await select(page, id);
-    const observation = await page.locator(`#${id}`).evaluate(element => {
+    const observation = await page.locator(`#${id}`).evaluate(async element => {
       const before = element.snapshot(), target = element.ownerDocument.activeElement;
       target.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: 'Queued image test', bubbles: true, cancelable: true, composed: true }));
       const queued = element.snapshot();
       const description = element.imageDescription(), can = element.can({ type: 'delete-image' });
       const afterReads = element.snapshot();
-      const result = element.execute({ type: 'image-description', title: 'must not change', description: '' });
+      const result = await element.execute({ type: 'image-description', title: 'must not change', description: '' });
       return { before, queued, afterReads, description, can, result, after: element.snapshot() };
     });
     assert.deepEqual(observation.queued.revision, observation.before.revision); assert.deepEqual(observation.afterReads, observation.queued);

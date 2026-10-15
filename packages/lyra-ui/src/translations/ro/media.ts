@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Pauză',
   qrCodeMissingLibrary: 'Această componentă necesită pachetul opțional „qrcode” instalat pentru a genera coduri QR.',
   qrCodeGenerationFailed: 'Această valoare nu a putut fi codificată ca cod QR.',
-  mapMissingLibrary: 'Această componentă necesită pachetul opțional „maplibre-gl” instalat pentru a afișa harta.',
+  mapMissingLibrary: 'Această componentă necesită pachetul opțional „{package}” instalat pentru a afișa harta.',
   mapStyleRequired: 'Furnizează un stil de hartă pentru a o afișa.',
   mapWebglUnavailable: 'Acest browser nu poate oferi suportul grafic necesar pentru a afișa harta.',
   mapInitializationFailed: 'Harta nu a putut fi inițializată.',

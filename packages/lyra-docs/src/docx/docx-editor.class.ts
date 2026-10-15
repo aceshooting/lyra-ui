@@ -906,14 +906,24 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return this.usable(key, snapshot ? this.availabilityMemo.get(snapshot, key, () => this.can(action)) : this.can(action));
   }
 
-  /** Execute a supported formatting, editing or history command. */
-  execute(command: DocxAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease } = {}): DocxResult<DocxRevision> {
+  private commandOwnerCurrent(owner: DocxSession | null, sequence: number): boolean {
+    return this.isConnected && this.session === owner && this.sourceReadSequence === sequence;
+  }
+
+  private async settleCommand(operation: () => Promise<DocxResult<DocxRevision>>): Promise<DocxResult<DocxRevision>> {
+    try { return await operation(); }
+    catch { return refused('engine-failed'); }
+  }
+
+  /** Prepare and execute a supported formatting, editing or history command. Await the result before inspecting state. */
+  async execute(command: DocxAction, options: { expectedRevision?: DocxRevision; selection?: DocxSelectionLease } = {}): Promise<DocxResult<DocxRevision>> {
     const owner = this.session;
     if (!owner) return refused('not-ready');
-    const result = owner.execute(command, options);
-    if (this.isConnected && this.session === owner) {
+    const sequence = this.sourceReadSequence;
+    const result = await this.settleCommand(() => owner.execute(command, options));
+    if (this.commandOwnerCurrent(owner, sequence)) {
       this.syncSession();
-      if (result.ok && this.isConnected && this.session === owner && this.documentPanel === 'review')
+      if (result.ok && this.commandOwnerCurrent(owner, sequence) && this.documentPanel === 'review')
         this.refreshDocumentPanel();
     }
     return result;
@@ -1025,14 +1035,17 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (this.announcementsArmed) this.assertiveSink?.announce(this.localize('docxEditorEditUnavailable'));
   }
 
-  private runEdit(edit: DocxEdit, returnFocus = true): void {
+  private async runEdit(edit: DocxEdit, returnFocus = true): Promise<void> {
+    const owner = this.session, sequence = this.sourceReadSequence;
     const lease = this.toolbarSelection;
     this.toolbarSelection = null;
-    const result = this.execute(edit, lease ? { selection: lease } : {});
-    lease?.release();
+    let result: DocxResult<DocxRevision>;
+    try { result = await this.execute(edit, lease ? { selection: lease } : {}); }
+    finally { lease?.release(); }
+    if (!this.commandOwnerCurrent(owner, sequence)) return;
     if (result.ok) this.editError = null;
     else if (result.code !== 'busy') this.reportEditRefusal(result.code);
-    if (returnFocus) this.focusEditor();
+    if (returnFocus && this.commandOwnerCurrent(owner, sequence)) this.focusEditor();
   }
 
   private loadParagraphStyles(): void {
@@ -1237,17 +1250,19 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       returnToEditor, '[part="table-insert-trigger"]');
   }
 
-  private runTableEdit(action: DocxTableAction, fromDialog = false): void {
-    const session = this.session;
+  private async runTableEdit(action: DocxTableAction, fromDialog = false): Promise<void> {
+    const session = this.session, sequence = this.sourceReadSequence, generation = this.tableDialogGeneration;
     const intent = this.tableIntent;
-    const result = intent?.execute(session, action) ?? refused<DocxRevision>('stale-selection');
+    const result = intent ? await this.settleCommand(() => intent.execute(session, action)) : refused<DocxRevision>('stale-selection');
+    if (!this.commandOwnerCurrent(session, sequence) || this.tableIntent !== intent || generation !== this.tableDialogGeneration) return;
     this.syncSession();
+    if (!this.commandOwnerCurrent(session, sequence) || this.tableIntent !== intent || generation !== this.tableDialogGeneration) return;
     if (result.ok) {
       this.editError = null;
       if (fromDialog) this.closeTableDialog(true);
       else if (this.isConnected && this.session === session) this.focusEditor();
     } else this.reportEditRefusal(result.code);
-    if (!fromDialog) this.releaseTableIntent();
+    if (!fromDialog && this.tableIntent === intent) this.releaseTableIntent();
   }
 
   private insertTable(): void {
@@ -1574,16 +1589,19 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     else this.imageWidth = partner ?? '';
   }
 
-  private runImageEdit(action: DocxImageAction, fromDialog = false): void {
-    const session = this.session;
-    const result = this.imageIntent?.execute(session, action) ?? refused<DocxRevision>('stale-selection');
+  private async runImageEdit(action: DocxImageAction, fromDialog = false): Promise<void> {
+    const session = this.session, sequence = this.sourceReadSequence, generation = this.imageDialogGeneration;
+    const intent = this.imageIntent;
+    const result = intent ? await this.settleCommand(() => intent.execute(session, action)) : refused<DocxRevision>('stale-selection');
+    if (!this.commandOwnerCurrent(session, sequence) || this.imageIntent !== intent || generation !== this.imageDialogGeneration) return;
     this.syncSession();
+    if (!this.commandOwnerCurrent(session, sequence) || this.imageIntent !== intent || generation !== this.imageDialogGeneration) return;
     if (result.ok) {
       this.editError = null;
       if (fromDialog) this.closeImageDialog(true);
       else if (this.isConnected && this.session === session) this.focusEditor();
     } else this.reportEditRefusal(result.code);
-    if (!fromDialog) this.releaseImageIntent();
+    if (!fromDialog && this.imageIntent === intent) this.releaseImageIntent();
   }
 
   private applyImageResize(): void {
@@ -1764,7 +1782,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     };
   }
 
-  private endImageDrag(event: PointerEvent): void {
+  private async endImageDrag(event: PointerEvent): Promise<void> {
     const drag = this.imageDrag, preview = this.imagePreview;
     if (!drag || event.pointerId !== drag.pointerId) return;
     event.preventDefault();
@@ -1773,9 +1791,11 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (!preview) { drag.intent.release(); return; }
     const action = { type: 'resize-image', widthPoints: preview.widthPoints, heightPoints: preview.heightPoints } as const;
     if (imageResizeUnchanged(action, drag.intent.image)) { drag.intent.release(); return; }
-    const session = this.session;
-    const result = drag.intent.execute(session, action);
+    const session = this.session, sequence = this.sourceReadSequence;
+    const result = await this.settleCommand(() => drag.intent.execute(session, action));
+    if (!this.commandOwnerCurrent(session, sequence)) return;
     this.syncSession();
+    if (!this.commandOwnerCurrent(session, sequence)) return;
     if (result.ok) {
       this.editError = null;
       if (this.isConnected && this.session === session) this.focusEditor();
@@ -1906,7 +1926,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.selectedCommand = item;
   };
 
-  private onCommandsHidden = (event: Event): void => {
+  private onCommandsHidden = async (event: Event): Promise<void> => {
     event.stopPropagation();
     if (!this.commandsOpen) return;
     const item = this.selectedCommand, intent = this.commandIntent;
@@ -1920,11 +1940,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     if (!item || !intent || !available) { intent?.lease?.release(); return; }
     const action = buildDocxCommandAction(item.id);
     if (action && intent.session) {
-      const result = intent.session.execute(action, { expectedRevision: intent.revision ?? undefined,
-        selection: intent.lease ?? undefined });
-      intent.lease?.release();
-      if (!this.isConnected || this.session !== intent.session) return;
+      const owner = intent.session, sequence = this.sourceReadSequence, generation = this.commandGeneration;
+      let result: DocxResult<DocxRevision>;
+      try { result = await this.settleCommand(() => owner.execute(action, { expectedRevision: intent.revision ?? undefined,
+        selection: intent.lease ?? undefined })); }
+      finally { intent.lease?.release(); }
+      if (!this.commandOwnerCurrent(owner, sequence) || generation !== this.commandGeneration) return;
       this.syncSession();
+      if (!this.commandOwnerCurrent(owner, sequence) || generation !== this.commandGeneration) return;
       if (!result.ok) this.reportEditRefusal(result.code);
       else { this.editError = null; this.focusEditor(); }
       return;
@@ -2150,13 +2173,16 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         !button.closest('[inert]') && button.getAttribute('aria-hidden') !== 'true');
   }
 
-  private runToolbarCommand(command: DocxCommand): void {
+  private async runToolbarCommand(command: DocxCommand): Promise<void> {
+    const owner = this.session, sequence = this.sourceReadSequence;
     const lease = this.toolbarSelection;
     this.toolbarSelection = null;
-    const result = this.execute(command, lease ? { selection: lease } : {});
-    lease?.release();
+    let result: DocxResult<DocxRevision>;
+    try { result = await this.execute(command, lease ? { selection: lease } : {}); }
+    finally { lease?.release(); }
+    if (!this.commandOwnerCurrent(owner, sequence)) return;
     if (!result.ok && result.code === 'engine-failed') this.reportError(result.code);
-    this.focusEditor();
+    if (this.commandOwnerCurrent(owner, sequence)) this.focusEditor();
   }
 
   private openFilePicker(): void {
@@ -2522,12 +2548,13 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.tableFormattingIntent = captureTableToolIntent(this.session);
   }
 
-  private runTableFormatting(action: DocxTableAction): void {
-    const owner = this.session, intent = this.tableFormattingIntent;
+  private async runTableFormatting(action: DocxTableAction): Promise<void> {
+    const owner = this.session, intent = this.tableFormattingIntent, sequence = this.sourceReadSequence;
     if (!intent?.valid(owner)) return;
-    const result = intent.execute(owner, action);
-    if (!this.isConnected || this.session !== owner) return;
+    const result = await this.settleCommand(() => intent.execute(owner, action));
+    if (!this.commandOwnerCurrent(owner, sequence) || this.tableFormattingIntent !== intent) return;
     this.syncSession();
+    if (!this.commandOwnerCurrent(owner, sequence) || this.tableFormattingIntent !== intent) return;
     if (!result.ok) { this.reportEditRefusal(result.code); return; }
     this.editError = null;
     intent.release();
@@ -2988,13 +3015,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return this.can(action).enabled;
   }
 
-  private runReviewAction(action: DocxAction): void {
-    const owner = this.session, report = this.reviewReport;
+  private async runReviewAction(action: DocxAction): Promise<void> {
+    const owner = this.session, report = this.reviewReport, sequence = this.sourceReadSequence;
+    const generation = this.documentPanelGeneration;
     if (!owner || !report || !this.reviewActionAvailable(action)) return;
     const adding = typeof action !== 'string' && action.type === 'add-comment';
-    const result = this.execute(action, { expectedRevision: report.revision,
+    const result = await this.execute(action, { expectedRevision: report.revision,
       ...(adding && this.reviewIntent?.lease ? { selection: this.reviewIntent.lease } : {}) });
-    if (!this.isConnected || this.session !== owner) return;
+    if (!this.commandOwnerCurrent(owner, sequence) || generation !== this.documentPanelGeneration) return;
     if (!result.ok) { this.reportEditRefusal(result.code); return; }
     this.editError = null;
     this.reviewText = '';

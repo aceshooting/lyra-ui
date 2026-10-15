@@ -7,6 +7,7 @@ type StylePeer = LyraMapInstance & { setStyle(style: unknown): unknown };
 
 async function liveMap(): Promise<LyraMap> {
   const element = document.createElement('lr-map') as LyraMap;
+  element.engine = 'maplibre';
   element.style.cssText = 'width:320px;height:200px';
   element.mapStyle = style;
   const loaded = oneEvent(element, 'lr-map-load');

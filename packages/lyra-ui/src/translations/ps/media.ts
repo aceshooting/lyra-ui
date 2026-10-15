@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'ځنډول',
   qrCodeMissingLibrary: 'د QR کوډونو جوړولو لپاره د "qrcode" اختیاري بسته نصب کړئ.',
   qrCodeGenerationFailed: 'دا ارزښت د QR کوډ په بڼه نه شو کوډ کېدای.',
-  mapMissingLibrary: 'د نقشې ښودلو لپاره د "maplibre-gl" اختیاري بسته نصب کړئ.',
+  mapMissingLibrary: 'د نقشې ښودلو لپاره د "{package}" اختیاري بسته نصب کړئ.',
   mapStyleRequired: 'د نقشې ښودلو لپاره د نقشې بڼه ورکړئ.',
   mapWebglUnavailable: 'دا لټونګر د نقشې لپاره اړین ګرافیکي ملاتړ نه شي برابرولی.',
   mapInitializationFailed: 'نقشه نه شوه چمتو کېدای.',

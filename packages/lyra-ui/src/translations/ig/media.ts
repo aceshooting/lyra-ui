@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Kwụsịtụ',
   qrCodeMissingLibrary: 'Akụkụ a chọrọ ka etinye ngwungwu nhọrọ "qrcode" iji mepụta koodu QR.',
   qrCodeGenerationFailed: 'Enweghị ike itinye uru a n’ime koodu QR.',
-  mapMissingLibrary: 'Akụkụ a chọrọ ka etinye ngwungwu nhọrọ "maplibre-gl" iji gosipụta maapụ.',
+  mapMissingLibrary: 'Akụkụ a chọrọ ka etinye ngwungwu nhọrọ "{package}" iji gosipụta maapụ.',
   mapStyleRequired: 'Nye ụdị maapụ iji gosipụta ya.',
   mapWebglUnavailable: 'Ihe nchọgharị a enweghị ike inye nkwado eserese achọrọ iji gosipụta maapụ.',
   mapInitializationFailed: 'Enweghị ike ịmalite maapụ ahụ.',

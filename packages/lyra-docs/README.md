@@ -1,8 +1,8 @@
 # @aceshooting/lyra-docs
 
 `@aceshooting/lyra-docs` is a public, experimental companion package for the
-native Lyra DOCX editor. Its runtime uses the public `@docx-editor.dev/core@2.30.0`
-engine as an optional peer. Existing document viewers, including
+native Lyra DOCX editor. It ships an internal engine derived from the Apache-2.0
+source of `@docx-editor.dev/core@2.30.0`, with document features loaded on demand. Existing document viewers, including
 `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
 The editor supports opening local DOCX files or caller-provided bytes, a blank
@@ -12,11 +12,10 @@ text review, and explicit save receipts. The supported inputs and actions are
 documented here; they do not establish general Word compatibility or a broader
 format support commitment.
 
-Install the package with its `@aceshooting/lyra-ui` peer, and the optional document engine
-when using the editor:
+Install the package with its `@aceshooting/lyra-ui` peer:
 
 ```sh
-pnpm add @aceshooting/lyra-docs @aceshooting/lyra-ui @docx-editor.dev/core@2.30.0
+pnpm add @aceshooting/lyra-docs @aceshooting/lyra-ui
 ```
 
 ## Imports
@@ -46,8 +45,12 @@ Lyra controls inherit the public theme. The engine is dynamically loaded on the
 first open, so importing the session API or registering the custom element does
 not initialize it. Package admission and the controls that only appear in an open
 document (color, chart, checkbox and text-area controls) also load with the first open.
-`@docx-editor.dev/core` is an exact `2.30.0` peer dependency and development
-dependency; consumers may omit it until they use the editor.
+The npm package includes the generated engine, stylesheet and WASM asset; consumers
+do not install an engine peer or download source during installation. Tables, notes,
+content controls, drawings, comments, TOC editing and rich HTML paste prepare their
+required modules before the corresponding document or command is processed.
+The upstream framework adapters and private engine entry points are not public Lyra APIs.
+See [NOTICE](NOTICE) for source provenance, modifications and reproduction inputs.
 
 ## Custom element
 
@@ -435,8 +438,10 @@ try {
 
 The session reports immutable state through `snapshot()` and `subscribe()`.
 `open()` accepts a blank source or DOCX bytes. `can()` reports whether a
-`DocxAction` is available; `execute()` runs one string command or one parameterized
-edit action. `DocxCommand` is
+`DocxAction` is available; `await execute()` runs one string command or one parameterized
+edit action and returns its result after required engine modules are ready.
+Always await the returned promise before reading `ok` or issuing a dependent action.
+A changed document, selection or command owner during preparation refuses the edit. `DocxCommand` is
 `bold | italic | underline | strikethrough | superscript | subscript | undo | redo`;
 parameterized actions are:
 
@@ -583,7 +588,7 @@ Review edits use `execute()` and its existing revision/retained-selection option
 const report = editor.review();
 if (report.ok) {
   const comment = report.value.items.find(item => item.kind === 'comment' && !item.readOnly);
-  if (comment) editor.execute({ type: 'review-decision', id: comment.id, decision: 'resolve' }, {
+  if (comment) await editor.execute({ type: 'review-decision', id: comment.id, decision: 'resolve' }, {
     expectedRevision: report.value.revision,
   });
 }

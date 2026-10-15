@@ -124,6 +124,9 @@ export class AccessibleTextController implements ReactiveController {
     return records;
   }
 
+  /** A synchronous text read drained records that the next host update must rebind. */
+  hasDrainedRecords(): boolean { return this.drainedRecords; }
+
   text(): string {
     const root = this.host.shadowRoot;
     const slots = root

@@ -62910,6 +62910,7 @@
       "rootIncluded": false,
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
+        "@aceshooting/lyra-map",
         "maplibre-gl"
       ],
       "maturity": {
@@ -79611,6 +79612,7 @@
       "rootIncluded": false,
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
+        "@aceshooting/lyra-map",
         "maplibre-gl"
       ],
       "maturity": {
@@ -79648,6 +79650,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "engine",
+            "property": "engine",
+            "type": "LyraMapEngine",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "modular"
           },
           {
             "name": "label",
@@ -79766,6 +79778,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "engine",
+            "attribute": "engine",
+            "type": "LyraMapEngine",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "modular"
           },
           {
             "name": "hiddenCategories",
@@ -80175,7 +80197,15 @@
             "name": "preload",
             "overloads": [
               {
-                "parameters": [],
+                "parameters": [
+                  {
+                    "name": "engine",
+                    "type": "LyraMapEngine",
+                    "optional": false,
+                    "hasDefault": true,
+                    "default": "modular"
+                  }
+                ],
                 "returnType": "Promise<boolean>"
               }
             ]

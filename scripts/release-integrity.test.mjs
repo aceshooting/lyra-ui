@@ -1473,6 +1473,9 @@ test('deploys the docs CI built and checked, only after that CI run succeeded, w
   assert.match(rootPackage.scripts['docs:build'], /^pnpm manifest:check &&/u);
   const ci = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
   const docsBuild = ci.slice(ci.indexOf('\n  docs_build:'), ci.indexOf('\n  docs_storybook_contract:'));
+  const packageBuild = docsBuild.indexOf('- run: pnpm build\n');
+  assert.ok(packageBuild >= 0 && packageBuild < docsBuild.indexOf('- run: pnpm docs:build'),
+    'Storybook must build its worker and document engine package exports first');
   assert.match(docsBuild, /- run: pnpm docs:build[\s\S]*LYRA_DOCS_BASE_URL: https:\/\/www\.lyra-ui\.com\/docs\//u);
   assert.match(docsBuild, /name: storybook-static/u);
 });
@@ -1890,6 +1893,10 @@ test('release workflows accept the document companion and reject unsupported tag
     ['lyra-docs@0.1.0', true],
     ['lyra-ide@27.0.0', true],
     ['lyra-translations@27.0.0', true],
+    ['lyra-map@1.0.0', true],
+    ['lyra-map@1.0.0-beta.1', false],
+    ['lyra-map@1.0.0+meta', false],
+    ['lyra-map@01.0.0', false],
     ['lyra-docs@0.1.0-beta.1', false],
     ['lyra-docs@0.1.0+rebuild.1', false],
     ['lyra-docs@00.1.0', false],
@@ -1918,6 +1925,19 @@ test('initial document release selects its existing version without releasing an
   assert.throws(() => validateTarballIdentity({ ...docs, version: '0.1.1' }, plan[0]), /does not match tag version/u);
   assert.throws(() => validateTarballIdentity({ ...docs, name: '@aceshooting/lyra-ui' }, plan[0]), /does not match tag package/u);
   assert.throws(() => planReleaseTags({ packages, existingTags: ['lyra-docs@0.1.0'], selection: 'lyra-docs' }), /already exists/u);
+});
+
+test('initial map release selects and validates only its own stable package', () => {
+  const map = { directory: 'packages/lyra-map', name: '@aceshooting/lyra-map', version: '1.0.0' };
+  const packages = [map, { directory: 'packages/lyra-ui', name: '@aceshooting/lyra-ui', version: '29.0.0' }];
+  const plan = planReleaseTags({ packages, existingTags: [], selection: 'lyra-map' });
+  assert.deepEqual(plan, [{ tag: 'lyra-map@1.0.0', directory: map.directory, packageName: map.name, version: map.version }]);
+  assert.deepEqual(validateTarballIdentity(map, plan[0]), { name: map.name, version: map.version });
+  assert.throws(() => validateTarballIdentity({ ...map, version: '1.0.1' }, plan[0]), /does not match tag version/u);
+  assert.throws(() => validateTarballIdentity({ ...map, name: '@aceshooting/lyra-ui' }, plan[0]), /does not match tag package/u);
+  assert.throws(() => planReleaseTags({ packages, existingTags: ['lyra-map@1.0.0'], selection: 'lyra-map' }), /already exists/u);
+  const release = readFileSync(path.join(repoRoot, '.github/workflows/release.yml'), 'utf8');
+  assert.match(release, /options:\n(?:          - [^\n]+\n)*          - lyra-map\n/u);
 });
 
 test('freshness dispatch is isolated and only follows real UI or flags publication', () => {
@@ -2931,6 +2951,14 @@ test('primary CI and release qualification use the exact Node file while compati
   );
   assert.doesNotMatch(platformJob, /check-peer-compatibility/u);
   assert.doesNotMatch(platformJob, /node-version: 20|ci-pnpm10/u);
+  assert.match(platformJob, /node-version-file: \.nvmrc/u,
+    'companion engine generation must use the pinned contributor Node patch');
+  const mapQualification = platformJob.slice(
+    platformJob.indexOf('- name: Qualify the map companion'),
+    platformJob.indexOf('- name: Archive map companion'),
+  );
+  assert.match(mapQualification, /WTR_BROWSER: \$\{\{ matrix\.install_browser \}\}/u,
+    'the companion runner accepts engine/channel names, not the Safari display alias');
 
   const publishWorkflow = readFileSync(
     path.join(repoRoot, '.github/workflows/publish.yml'),

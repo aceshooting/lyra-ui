@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Szüneteltetés',
   qrCodeMissingLibrary: 'A QR-kódok megjelenítéséhez ennek az összetevőnek szüksége van az opcionális „qrcode” csomagra.',
   qrCodeGenerationFailed: 'Ezt az értéket nem sikerült QR-kódként kódolni.',
-  mapMissingLibrary: 'A térkép megjelenítéséhez ennek az összetevőnek szüksége van az opcionális „maplibre-gl” csomagra.',
+  mapMissingLibrary: 'A térkép megjelenítéséhez ennek az összetevőnek szüksége van az opcionális „{package}” csomagra.',
   mapStyleRequired: 'A térkép megjelenítéséhez adjon meg egy térképstílust.',
   mapWebglUnavailable: 'Ez a böngésző nem biztosítja a térkép megjelenítéséhez szükséges grafikai támogatást.',
   mapInitializationFailed: 'A térképet nem sikerült inicializálni.',

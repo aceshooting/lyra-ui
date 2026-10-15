@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { loadMaplibre, loadMaplibreModule, type MaplibreModule } from './map-loader.js';
+import { loadMaplibre, loadMaplibreModule, loadModularMap, loadModularMapModule, type MaplibreModule } from './map-loader.js';
 
 const MAP_METHODS = [
   'getCanvas',
@@ -138,4 +138,44 @@ it('rejects malformed named and default-wrapped MapLibre namespaces', async () =
   } finally {
     console.warn = originalWarn;
   }
+});
+
+
+it('loads the modular companion with the same runtime Map identity and caches its result', async () => {
+  const first = loadModularMap();
+  expect(loadModularMap() === first).to.be.true;
+  const module = await first;
+  const companion = await import('@aceshooting/lyra-map');
+  expect((module?.Map as unknown) === companion.Map).to.be.true;
+  expect((module?.Marker as unknown) === companion.Marker).to.be.true;
+  expect((module?.Popup as unknown) === companion.Popup).to.be.true;
+  expect(typeof module?.Map.prototype.prepareFeatures).to.equal('function');
+});
+
+it('requires per-map feature readiness on the modular peer and accepts valid default interop', async () => {
+  const candidate = fakeMaplibreModule();
+  const warnings: unknown[][] = [];
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  try {
+    expect(await loadModularMapModule(async () => candidate)).to.equal(null);
+    expect(warnings.flat().some(value => value instanceof Error && value.message.includes('Map.prototype.prepareFeatures'))).to.be.true;
+    Object.defineProperty(candidate.Map.prototype, 'prepareFeatures', { value: async () => {} });
+    expect(await loadModularMapModule(async () => ({ default: candidate }))).to.equal(candidate);
+    const named = Object.assign(candidate, { default: fakeMaplibreModule() });
+    expect(await loadModularMapModule(async () => named)).to.equal(named);
+  } finally { console.warn = warn; }
+});
+
+it('fails closed when the selected modular companion cannot load', async () => {
+  const warn = console.warn;
+  const warnings: unknown[][] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  try {
+    let attempts = 0;
+    const result = await loadModularMapModule(async () => { attempts++; throw new Error('companion unavailable'); });
+    expect(result).to.equal(null);
+    expect(attempts).to.equal(1);
+    expect(warnings.flat().some(value => typeof value === 'string' && value.includes('@aceshooting/lyra-map'))).to.be.true;
+  } finally { console.warn = warn; }
 });

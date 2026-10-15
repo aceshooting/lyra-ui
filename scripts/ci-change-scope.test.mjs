@@ -49,3 +49,9 @@ test('an unusable base or an unreadable diff yields no change set', () => {
   assert.deepEqual(calls.at(-1), ['diff', '--no-renames', '--name-only', 'b'.repeat(40), head]);
   assert.equal(changedPaths('b'.repeat(40), head, { git: () => { throw new Error('unreachable'); } }), null);
 });
+
+test('map companion sources retain every dependent qualification lane', () => {
+  for (const source of ['packages/lyra-map/src/index.ts', 'packages/lyra-map/scripts/build.mjs', 'packages/lyra-map/package.json']) {
+    assert.deepEqual(changeScope([source]), { runtime: true, packages: true, docsSite: true });
+  }
+});

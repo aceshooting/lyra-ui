@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Duraklat',
   qrCodeMissingLibrary: 'QR kodları oluşturmak için bu bileşenin isteğe bağlı "qrcode" paketine ihtiyacı vardır.',
   qrCodeGenerationFailed: 'Bu değer QR kodu olarak kodlanamadı.',
-  mapMissingLibrary: 'Haritayı görüntülemek için bu bileşenin isteğe bağlı "maplibre-gl" paketine ihtiyacı vardır.',
+  mapMissingLibrary: 'Haritayı görüntülemek için bu bileşenin isteğe bağlı "{package}" paketine ihtiyacı vardır.',
   mapStyleRequired: 'Haritayı görüntülemek için harita stili sağlayın.',
   mapWebglUnavailable: 'Bu tarayıcı haritayı görüntülemek için gereken grafik desteğini sağlayamıyor.',
   mapInitializationFailed: 'Harita başlatılamadı.',

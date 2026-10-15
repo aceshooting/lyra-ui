@@ -6,7 +6,7 @@ import type { LyraMap } from './map.js';
 const STROKE_PATH = 'M12 3 L21 20 L3 20 Z';
 
 async function legendSwatches(): Promise<HTMLElement[]> {
-  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
   el.legend = [
     {
       color: '#006b5e',

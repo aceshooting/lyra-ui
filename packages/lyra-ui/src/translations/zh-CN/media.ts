@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: '暂停',
   qrCodeMissingLibrary: '此组件需要安装可选的 "qrcode" 包才能生成二维码。',
   qrCodeGenerationFailed: '无法将此值编码为二维码。',
-  mapMissingLibrary: '此组件需要安装可选的 "maplibre-gl" 包才能渲染地图。',
+  mapMissingLibrary: '此组件需要安装可选的 "{package}" 包才能渲染地图。',
   mapStyleRequired: '请提供地图样式以渲染地图。',
   mapWebglUnavailable: '此浏览器无法提供渲染地图所需的图形支持。',
   mapInitializationFailed: '无法初始化地图。',

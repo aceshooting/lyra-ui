@@ -7208,6 +7208,7 @@ export interface LyraComponentTypeMap {
       | 'center'
       | 'choropleth'
       | 'dataLayers'
+      | 'engine'
       | 'hiddenCategories'
       | 'label'
       | 'legend'

@@ -19,7 +19,7 @@ for (const direction of ['ltr', 'rtl']) for (const surface of ['glass', 'solid']
             scrollbar-width: thin;
           }
         </style>
-        <lr-map data-lr-surface=${surface} style="inline-size:320px;block-size:600px"></lr-map>
+        <lr-map engine="maplibre" data-lr-surface=${surface} style="inline-size:320px;block-size:600px"></lr-map>
       </div>
     `);
     const map = wrapper.querySelector<LyraMap>('lr-map')!;

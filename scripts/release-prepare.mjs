@@ -17,9 +17,10 @@ import { parseReleaseTag } from './release-integrity.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PRIMARY_PACKAGE = '@aceshooting/lyra-ui';
-// Build prerequisites differ from optional peer dependencies: docs compiles against UI's emitted
-// declarations, while UI and translations intentionally peer on each other without a build cycle.
+// Build prerequisites include public declaration imports: UI compiles against the map companion,
+// and docs compiles against UI. UI and translations peer on each other without a build cycle.
 const BUILD_PREREQUISITES = {
+  [PRIMARY_PACKAGE]: ['@aceshooting/lyra-map'],
   '@aceshooting/lyra-docs': [PRIMARY_PACKAGE],
 };
 

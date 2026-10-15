@@ -4,7 +4,7 @@
   "source": {
     "path": "src/internal/localization.ts#DEFAULT_STRINGS",
     "keyCount": 1441,
-    "sha256": "sha256:87f8f3d2a3914a181b65cf4051493d7eb0db93b645a96e50a518e1b34cfc3c89"
+    "sha256": "sha256:de1246a4ba2da85faf135295ce820805d70a5fb3662abb687d63c01d80f90a34"
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {

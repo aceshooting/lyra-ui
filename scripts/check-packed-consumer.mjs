@@ -11,6 +11,7 @@ import { PACKED_TARBALL_ENVIRONMENT, packedManifest, suppliedPackedTarball } fro
 import { checkPublishedCompatibilitySync, readCurrentCompatibilityContext } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
 import { checkPublishedFieldHistorySync } from '../packages/lyra-ui/scripts/published-field-compatibility-io.mjs';
 import { preservePackedTarball, verifyPackedMigrationConsumers, writeResolvedMigrationEntry, verifyResolvedMigrationBrowser } from './packed-migration-consumer.mjs';
+import { verifyPackedMapConsumer } from './packed-map-consumer.mjs';
 import { verifyPackedShikiConsumer } from './packed-shiki-consumer.mjs';
 import {
   parsePerformanceQualificationOptions,
@@ -22,6 +23,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const uiPackage = join(root, 'packages', 'lyra-ui');
 const flagsPackage = join(root, 'packages', 'lyra-flags');
 const docsPackage = join(root, 'packages', 'lyra-docs');
+const mapPackage = join(root, 'packages', 'lyra-map');
 const translationsPackage = join(root, 'packages', 'lyra-translations');
 const idePackage = join(root, 'packages', 'lyra-ide');
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
@@ -80,6 +82,7 @@ const FIXTURE_OPTIONAL_PEERS = Object.freeze({
  * new optional peer forces an explicit decision instead of silently landing uncovered.
  */
 const OPTIONAL_PEER_COVERAGE_EXEMPTIONS = Object.freeze({
+  '@aceshooting/lyra-map': 'installed from the packed workspace tarball, not the registry',
   '@aceshooting/lyra-flags': 'installed from the packed workspace tarball, not the registry',
   '@aceshooting/lyra-translations': 'installed from the packed workspace tarball, not the registry',
   xlsx: 'the supported >=0.20.3 range is published only on the SheetJS CDN, not the public npm registry',
@@ -577,10 +580,12 @@ async function writeFixture(
   maplibreVersion = '^6.0.0',
   performanceBaselineTarball,
   translationsTarball,
+  mapTarball,
 ) {
   const dependencies = {
     '@aceshooting/lyra-ui': `file:${relative(fixtureDir, packageTarball)}`,
     '@aceshooting/lyra-translations': `file:${relative(fixtureDir, translationsTarball)}`,
+    '@aceshooting/lyra-map': `file:${relative(fixtureDir, mapTarball)}`,
     lit: uiPackageJson.dependencies.lit,
   };
   if (performanceBaselineTarball) {
@@ -1102,7 +1107,9 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: resolve(process.cwd(), 'src', \`bundle-\${entry}.\${hasStaticFallback ? 'html' : 'ts'}\`),
-      external: noOptionalPeers
+      external: entry === 'map'
+        ? ['@aceshooting/lyra-map']
+        : noOptionalPeers
         ? (id) =>
             // The locale entry measures the catalogs themselves, so they bundle into one registry.
             !(entry === 'locale' && id.startsWith('@aceshooting/lyra-translations')) &&
@@ -1158,12 +1165,18 @@ export const loaded = true;
     map: maplibreVersion.startsWith('^5')
       ? `import '@aceshooting/lyra-ui/components/lr-map.js';
 import 'maplibre-gl/dist/maplibre-gl.css';
+const map = document.createElement('lr-map');
+map.engine = 'maplibre';
+export { map };
 export const loaded = true;
 `
       : `import '@aceshooting/lyra-ui/components/lr-map.js';
 import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 setWorkerUrl(workerUrl);
+const map = document.createElement('lr-map');
+map.engine = 'maplibre';
+export { map };
 export const loaded = true;
 `,
     graph: `import '@aceshooting/lyra-ui/components/lr-graph.js';\nexport const loaded = true;\n`,
@@ -1677,6 +1690,9 @@ async function main() {
       destination: tarballDir,
     })) ?? await pack(flagsPackage, tarballDir);
     if (migrationArtifactsDir) await preservePackedTarball({ tarballPath: flagsTarball, artifactsDir: join(migrationArtifactsDir, 'packages') });
+    const mapTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.map, {
+      packageDir: mapPackage, destination: tarballDir, compareExports: true,
+    })) ?? await pack(mapPackage, tarballDir);
     const docsTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.docs, {
       packageDir: docsPackage,
       destination: tarballDir,
@@ -1709,6 +1725,7 @@ async function main() {
     } else {
       console.log('Skipping only ATTW; packed install, runtime, declaration, and bundle contracts remain enabled.');
     }
+    await verifyPackedMapConsumer({ workspace, mapTarball, run, pnpm, root });
     await verifyPackedDocsPackage({ workspace, uiTarball, docsTarball });
     await verifyPackedTranslationsPackage({ workspace, uiTarball, translationsTarball });
     await verifyPackedIdePackage({ workspace, uiTarball, ideTarball });
@@ -1721,9 +1738,10 @@ async function main() {
       '^6.0.0',
       performanceOptions?.baselineTarballPath,
       translationsTarball,
+      mapTarball,
     );
-    await writeFixture(optionalFixture, uiTarball, flagsTarball, true, '^6.0.0', undefined, translationsTarball);
-    await writeFixture(maplibreV5Fixture, uiTarball, flagsTarball, true, '^5.24.0', undefined, translationsTarball);
+    await writeFixture(optionalFixture, uiTarball, flagsTarball, true, '^6.0.0', undefined, translationsTarball, mapTarball);
+    await writeFixture(maplibreV5Fixture, uiTarball, flagsTarball, true, '^5.24.0', undefined, translationsTarball, mapTarball);
     await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], coreFixture, 'core fixture install');
     await run(
       pnpm,

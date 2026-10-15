@@ -82,7 +82,7 @@ const strings: LyraLocaleStrings = {
   pause: 'Toʻxtatib turish',
   qrCodeMissingLibrary: 'QR kodlarni chiqarish uchun ushbu komponentga ixtiyoriy "qrcode" paketini oʻrnatish kerak.',
   qrCodeGenerationFailed: 'Bu qiymatni QR kodga aylantirib boʻlmadi.',
-  mapMissingLibrary: 'Xaritani chiqarish uchun ushbu komponentga ixtiyoriy "maplibre-gl" paketini oʻrnatish kerak.',
+  mapMissingLibrary: 'Xaritani chiqarish uchun ushbu komponentga ixtiyoriy "{package}" paketini oʻrnatish kerak.',
   mapStyleRequired: 'Xaritani koʻrsatish uchun xarita uslubini belgilang.',
   mapWebglUnavailable: 'Bu brauzer xaritani koʻrsatish uchun zarur grafik imkoniyatlarni taqdim eta olmaydi.',
   mapInitializationFailed: 'Xaritani ishga tushirib boʻlmadi.',
