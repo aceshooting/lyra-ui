@@ -5,6 +5,7 @@ import {
   projectSpatialPoint,
   projectSpatialScene,
   pickSpatialScene,
+  panGraphCamera,
   type SpatialWorldNode,
 } from './graph-spatial.js';
 
@@ -95,6 +96,16 @@ describe('graph perspective geometry', () => {
     const scene = projectSpatialScene([square], [], camera, viewport);
     expect(pickSpatialScene(scene, 311, 211)?.id).to.equal('small-square');
     expect(pickSpatialScene(scene, 313, 200)).to.equal(undefined);
+  });
+
+  it('pans along the camera basis while preserving its facing and distance', () => {
+    const angled = { ...camera, yaw: Math.PI / 3, pitch: Math.PI / 6, target: { x: 10, y: 20, z: 30 } };
+    const panned = panGraphCamera(angled, 24, -12, viewport);
+    expect(panned.target).not.to.deep.equal(angled.target);
+    expect(panned.yaw).to.equal(angled.yaw);
+    expect(panned.pitch).to.equal(angled.pitch);
+    expect(panned.distance).to.equal(angled.distance);
+    expect(panGraphCamera(angled, 0, 0, viewport).target).to.deep.equal(angled.target);
   });
 
 });

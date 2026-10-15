@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
+import { sendMouse, sendWheel, resetMouse, hoverUntilMatched } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LyraGraph } from './graph.js';
 
@@ -74,6 +74,32 @@ describe('graph spatial views', () => {
     expect((await second).detail.camera.yaw).to.be.lessThan(0);
   });
 
+  it('pans the camera with a shifted pointer drag while leaving its facing unchanged', async () => {
+    const el = await mount();
+    const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="spatial-canvas"]')!;
+    const changed = oneEvent(el, 'lr-camera-change');
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 5, clientX: 20, clientY: 20, button: 0, shiftKey: true }));
+    canvas.dispatchEvent(new PointerEvent('pointermove', { pointerId: 5, clientX: 44, clientY: 32, shiftKey: true }));
+    const next = (await changed).detail.camera;
+    expect(next.target).not.to.deep.equal(camera.target);
+    expect(next.yaw).to.equal(camera.yaw);
+    expect(next.pitch).to.equal(camera.pitch);
+    expect(next.distance).to.equal(camera.distance);
+    canvas.dispatchEvent(new PointerEvent('pointerup', { pointerId: 5, clientX: 44, clientY: 32, button: 0, shiftKey: true }));
+  });
+
+  it('zooms the focused spatial canvas in response to native wheel input', async () => {
+    const el = await mount();
+    const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="spatial-canvas"]')!;
+    await hoverUntilMatched(canvas, 'Spatial canvas receives native wheel input');
+    await focusByKeyboard(canvas);
+    const changed = oneEvent(el, 'lr-camera-change');
+    try {
+      await sendWheel({ deltaX: 0, deltaY: -120 });
+      expect((await changed).detail.camera.distance).to.be.lessThan(camera.distance);
+    } finally { await resetMouse(); }
+  });
+
   it('makes every item reachable through visible list pages and retains node activation', async () => {
     const el = await fixture<LyraGraph>(html`<lr-graph view="list" .nodes=${Array.from({ length: 205 }, (_, index) => ({ id: `n${index}`, label: `Node ${index}` }))}></lr-graph>`);
     expect(el.shadowRoot!.querySelectorAll('[part="spatial-list-item"]').length).to.equal(200);
@@ -84,6 +110,22 @@ describe('graph spatial views', () => {
     (el.shadowRoot!.querySelector('[part="spatial-list-item"]') as HTMLButtonElement).click();
     expect((await activated).detail.nodeId).to.equal('n200');
     await expect(el).to.be.accessible();
+  });
+
+  it('expands a list node after two non-repeated Enter activations', async () => {
+    const el = await fixture<LyraGraph>(html`<lr-graph view="list" .nodes=${[{ id: 'expand-me', label: 'Expand me' }]}></lr-graph>`);
+    const item = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-node-id="expand-me"]')!;
+    await focusByKeyboard(item);
+    let expansions = 0;
+    el.addEventListener('lr-node-expand', () => { expansions++; });
+    const expanded = oneEvent(el, 'lr-node-expand');
+    item.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(expansions).to.equal(0);
+    item.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, repeat: true }));
+    expect(expansions).to.equal(0);
+    item.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect((await expanded).detail.nodeId).to.equal('expand-me');
+    expect(expansions).to.equal(1);
   });
 
   it('releases a cancelled gesture and returns to the 2D renderer', async () => {

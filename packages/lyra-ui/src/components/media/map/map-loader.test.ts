@@ -47,15 +47,24 @@ it('resolves the maplibre-gl module', async () => {
   const mod = await loadMaplibre();
   expect(mod).to.not.be.null;
   expect(mod!.Map).to.exist;
+  const peer = await import('maplibre-gl');
+  expect(mod!.Map).to.equal(peer.Map);
+  expect(mod!.Marker).to.equal(peer.Marker);
+  expect(mod!.Popup).to.equal(peer.Popup);
   const runtime = mod as unknown as { setWorkerUrl: unknown; getVersion(): string };
   expect(runtime.setWorkerUrl).to.be.a('function');
   expect(runtime.getVersion()).to.match(/^6\./);
 });
 
 it('caches the module — a second call returns the same promise result', async () => {
-  const a = await loadMaplibre();
-  const b = await loadMaplibre();
+  const first = loadMaplibre();
+  const second = loadMaplibre();
+  expect(first === second).to.be.true;
+  const a = await first;
+  const b = await second;
   expect(a).to.equal(b);
+  expect((await loadMaplibreModule()) === a).to.be.true;
+  expect((await loadMaplibreModule()) === a).to.be.true;
 });
 
 it('normalizes a default-wrapped MapLibre module and prefers a valid named namespace', async () => {

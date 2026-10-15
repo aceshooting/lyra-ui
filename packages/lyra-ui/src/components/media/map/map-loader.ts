@@ -173,10 +173,20 @@ function resolveMaplibreModule(value: unknown): MaplibreModule {
 }
 
 let maplibre: Promise<MaplibreModule | null> | undefined;
+let maplibreCapabilities: unknown;
 
 /** Loads and validates the MapLibre capabilities consumed by `<lr-map>`. @internal */
 export async function loadMaplibreModule(
-  importer: () => Promise<unknown> = () => import('maplibre-gl'),
+  importer: () => Promise<unknown> = () => import('maplibre-gl').then(source =>
+    maplibreCapabilities ??= Object.freeze({
+      get Map() { return source.Map; },
+      get Marker() { return source.Marker; },
+      get Popup() { return source.Popup; },
+      get setWorkerUrl() { return source.setWorkerUrl; },
+      get getVersion() { return source.getVersion; },
+      get default() { return (source as unknown as { readonly default?: unknown }).default; },
+    }),
+  ),
 ): Promise<MaplibreModule | null> {
   try {
     return resolveMaplibreModule(await importer());
