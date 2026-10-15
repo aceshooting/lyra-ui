@@ -71,7 +71,7 @@ jobs:
           LINT_TIMING_REPORT: ${{ runner.temp }}/lint-timing.jsonl
       # Input for `node packages/lyra-ui/scripts/ci-costs.mjs lint <file>`.
       - if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lint-timing
           path: ${{ runner.temp }}/lint-timing.jsonl
@@ -159,12 +159,12 @@ jobs:
       - run: pnpm build
       - run: pnpm --filter @aceshooting/lyra-ui test:optional-looks
       - run: pnpm test:theme-builder
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lyra-ui-dist
           path: packages/lyra-ui/dist
           retention-days: 1
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lyra-map-dist
           path: packages/lyra-map/dist
@@ -343,7 +343,7 @@ jobs:
       # explicitly configured otherwise.
       - name: Upload coverage shard
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lyra-ui-coverage-shard-${{ matrix.shard }}
           path: packages/lyra-ui/coverage/shards/coverage-shard-${{ matrix.shard }}
@@ -434,7 +434,7 @@ jobs:
       # Input for `node packages/lyra-ui/scripts/ci-costs.mjs tests <files>`.
       - name: Upload per-file test timings
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lyra-ui-test-timing
           path: packages/lyra-ui/coverage/shards/*/timing.jsonl
@@ -535,7 +535,7 @@ jobs:
           test "${#tarballs[@]}" -eq 1
           test -f "${tarballs[0]}"
           sha256sum "${tarballs[0]}" > SHA256SUMS
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-attw-tarball
           path: artifacts/packed-attw
@@ -585,7 +585,7 @@ jobs:
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-translations --tarball artifacts/packed-companions/aceshooting-lyra-translations-*.tgz
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-ide --tarball artifacts/packed-companions/aceshooting-lyra-ide-*.tgz
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-map --tarball artifacts/packed-companions/aceshooting-lyra-map-*.tgz
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-companion-tarballs
           path: artifacts/packed-companions
@@ -681,7 +681,7 @@ jobs:
           LYRA_PACKED_MIGRATION_ARTIFACTS: ${{ runner.temp }}/packed-migration-evidence
       - name: Upload installed migration evidence
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-migration-evidence
           path: ${{ runner.temp }}/packed-migration-evidence
@@ -837,12 +837,12 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           LYRA_DOCS_BASE_URL: https://www.lyra-ui.com/docs/
       - run: git diff --exit-code -- .storybook/sitemap.xml
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: storybook-static
           path: storybook-static
           retention-days: 1
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: storybook-lyra-map-dist
           path: packages/lyra-map/dist
@@ -1134,7 +1134,7 @@ jobs:
         run: pnpm --filter @aceshooting/lyra-ui test:map-legend-compositor
       - name: Upload visual regression diff artifacts
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-regression-diff-${{ matrix.shard }}-of-3
           path: packages/lyra-ui/.visual-diff-output
@@ -1308,7 +1308,7 @@ jobs:
           node packages/lyra-ui/scripts/edge-platform-diagnostics.mjs test-results/edge-startup.log pnpm --filter @aceshooting/lyra-ui test:platform-shard
       - name: Archive Edge startup diagnostics
         if: always() && matrix.browser == 'edge'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: edge-platform-startup-${{ github.run_attempt }}
           path: test-results/edge-startup.log
@@ -1323,7 +1323,7 @@ jobs:
           pnpm --filter @aceshooting/lyra-map test:browser
       - name: Archive map companion qualification
         if: always() && matrix.shard_index == 1
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: map-companion-${{ matrix.browser }}-${{ github.run_attempt }}
           path: packages/lyra-map/test-results
@@ -1348,7 +1348,7 @@ jobs:
           fi
       - name: Archive DOCX editor qualification
         if: always() && matrix.shard_index == 1 && (matrix.install_browser == 'chromium' || matrix.install_browser == 'firefox' || matrix.install_browser == 'webkit')
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docx-editor-${{ matrix.install_browser }}-${{ github.run_attempt }}
           path: |
