@@ -3,7 +3,8 @@ import test from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { eagerEngineImports } from './lib/engine-imports.mjs';
 import { renderedControlTags } from './lib/editor-tags.mjs';
 
 test('root and session entries resolve without a DOM, engine, fetch or stylesheet side effects', async () => {
@@ -105,4 +106,36 @@ test('the registration entry defines the editor and every rendered Lyra control'
     if (definitions.get('lr-docx-editor') !== LyraDocxEditor)
       throw new Error('Editor registration does not use the public class');`;
   execFileSync(process.execPath, ['--input-type=module', '-e', source], { stdio: 'pipe' });
+});
+
+const entry = resolve('entry.js');
+const facade = resolve('capabilities.js');
+const read = modules => file => {
+  assert(modules.has(file), 'Every statically reachable local module must be inspected');
+  return modules.get(file);
+};
+
+test('a capability facade stays outside the public static dependency graph', () => {
+  assert.deepEqual(eagerEngineImports([entry], read(new Map([
+    [entry, "export const load = () => import('./capabilities.js');"],
+    [facade, "import * as source from '@docx-editor.dev/core'; export const capabilities = source;"],
+  ]))), []);
+});
+
+test('a static import or reexport reaching the engine fails the lazy boundary', () => {
+  for (const source of ["import './capabilities.js';", "export * from './capabilities.js';"]) {
+    assert.deepEqual(eagerEngineImports([entry], read(new Map([
+      [entry, source],
+      [facade, "import * as source from '@docx-editor.dev/core/store'; export const capabilities = source;"],
+    ]))), [{ file: facade, specifier: '@docx-editor.dev/core/store' }]);
+  }
+});
+
+test('an unresolved local static dependency refuses inspection', () => {
+  assert.throws(() => eagerEngineImports([entry], read(new Map([
+    [entry, "import './missing.js';"],
+  ]))), /Every statically reachable/);
+  assert.throws(() => eagerEngineImports([entry], read(new Map([
+    [entry, "import '#capabilities';"],
+  ]))), /unresolved package-import alias/);
 });

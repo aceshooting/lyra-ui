@@ -15,7 +15,9 @@ export interface DocxEngineModule {
 
 /** Importing the companion does not evaluate or initialize the optional engine. */
 export async function loadDocxEngine(): Promise<DocxEngineModule> {
-  const [module, store] = await Promise.all([import('@docx-editor.dev/core'), import('@docx-editor.dev/core/store')]);
+  const [{ capabilities: module }, { capabilities: store }] = await Promise.all([
+    import('./engine-core-capabilities.js'), import('./engine-store-capabilities.js'),
+  ]);
   if (typeof module.createDocxEditor !== 'function') throw new Error('Engine unavailable');
   if (typeof store.findNode !== 'function' || typeof store.parentNodeOf !== 'function') throw new Error('Engine unavailable');
   const reviewNames = ['collectReviewItems', 'collectRevisionSites', 'commentsOfPart', 'commentAnchorsOfStory',

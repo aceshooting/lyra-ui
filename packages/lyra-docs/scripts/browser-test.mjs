@@ -23,6 +23,7 @@ import { runTableFormatting } from './tables-formatting-browser.mjs';
 import { runImageExtensions } from './image-extensions-browser.mjs';
 import { filesUnder, serveStatic } from './lib/static-files.mjs';
 import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
+import { staticModuleSpecifiers } from '../../lyra-ui/scripts/module-specifiers.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -899,8 +900,33 @@ async function bundle() {
   const lazy = manifest['test/editor-entry.ts'];
   assert.ok(lazy?.isDynamicEntry && lazy.file, 'Editor entry must be a separate lazy chunk');
   const core = Object.entries(manifest).find(([name, entry]) =>
-    name.endsWith('@docx-editor.dev/core/dist/index.js') && entry.isDynamicEntry);
+    name === 'src/docx/engine-core-capabilities.ts' && entry.isDynamicEntry);
   assert.ok(core?.[1]?.file, 'DOCX engine must be a separate lazy chunk');
+  const store = manifest['src/docx/engine-store-capabilities.ts'];
+  assert.ok(store?.isDynamicEntry && store.file, 'DOCX store must be a separate lazy chunk');
+  for (const [name, specifier] of [['engine-core-capabilities', '@docx-editor.dev/core'],
+    ['engine-store-capabilities', '@docx-editor.dev/core/store']]) {
+    const file = resolve(root, `dist/docx/${name}.js`);
+    assert.deepEqual(staticModuleSpecifiers(file, await readFile(file, 'utf8'))
+      .filter(value => value.startsWith('@docx-editor.dev/')), [specifier], 'Lazy capability imports the actual public engine');
+  }
+  const staticFiles = (key, found) => {
+    const entry = manifest[key];
+    assert.ok(entry?.file, `Missing engine dependency ${key}`);
+    if (found.has(entry.file)) return;
+    found.add(entry.file);
+    for (const imported of entry.imports ?? []) staticFiles(imported, found);
+  };
+  const beforeOpenFiles = new Set();
+  for (const key of ['test/browser.html', 'test/editor-entry.ts', 'src/docx/create-session.ts'])
+    staticFiles(key, beforeOpenFiles);
+  assert.equal(beforeOpenFiles.has(core[1].file) || beforeOpenFiles.has(store.file), false,
+    'Public entries must not statically reach engine capability chunks');
+  const engineFiles = new Set();
+  staticFiles(core[0], engineFiles);
+  staticFiles('src/docx/engine-store-capabilities.ts', engineFiles);
+  // Shared helpers can already be needed by the ordinary entry, independently of the engine.
+  for (const file of beforeOpenFiles) engineFiles.delete(file);
   const files = await filesUnder(output);
   for (const file of files) {
     if (file.includes(`${sep}.vite${sep}`)) continue;
@@ -917,7 +943,8 @@ async function bundle() {
   }, { js: { bytes: 0, gzipBytes: 0 }, css: { bytes: 0, gzipBytes: 0 }, wasm: { bytes: 0, gzipBytes: 0 } });
   evidence.lazyEntry = lazy.file;
   evidence.engineEntry = core[1].file;
-  return { lazyEntry: lazy.file, engineEntry: core[1].file };
+  evidence.engineFiles = [...engineFiles];
+  return { lazyEntry: lazy.file, engineEntry: core[1].file, engineFiles: [...engineFiles] };
 }
 
 // Startup, native input, toolbar and responsive rendering.
@@ -1364,7 +1391,7 @@ async function runSelectedSuite(page, check) {
   }
 }
 
-async function runBrowser(name, url, { lazyEntry, engineEntry }) {
+async function runBrowser(name, url, { lazyEntry, engineEntry, engineFiles }) {
   const browser = await ({ chromium, firefox, webkit })[name].launch({ headless: true });
   const record = evidence.browsers[name] = { checks: [], requests: [], externalRequests: [], pageErrors: [], consoleErrors: [], requestFailures: [], startupWallMs: null, saveWallMs: null, saveBytes: null };
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
@@ -1394,7 +1421,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
     await page.waitForFunction(() => window.__docxTest?.ready === true);
     await check('ordinary entry leaves editor lazy', async () => {
       assert.equal(record.requests.some(path => path.endsWith(`/${lazyEntry}`)), false);
-      assert.equal(record.requests.some(path => path.endsWith(`/${engineEntry}`)), false);
+      assert.equal(record.requests.some(path => engineFiles.some(file => path.endsWith(`/${file}`))), false);
       assert.equal(await page.evaluate(() => Boolean(customElements.get('lr-docx-editor'))), false);
     });
     await page.evaluate(() => window.__docxTest.loadEditor());
@@ -1402,11 +1429,11 @@ async function runBrowser(name, url, { lazyEntry, engineEntry }) {
     await page.addScriptTag({ path: axePath });
     await check('editor loads on demand', async () => {
       assert.ok(record.requests.some(path => path.endsWith(`/${lazyEntry}`)));
-      assert.equal(record.requests.some(path => path.endsWith(`/${engineEntry}`)), false, 'Engine loaded before document open');
+      assert.equal(record.requests.some(path => engineFiles.some(file => path.endsWith(`/${file}`))), false, 'Engine loaded before document open');
     });
     await check('session entry leaves the engine lazy', async () => {
       await page.evaluate(() => window.__docxTest.sessionFactory());
-      assert.equal(record.requests.some(path => path.endsWith(`/${engineEntry}`)), false, 'Engine loaded by the session entry');
+      assert.equal(record.requests.some(path => engineFiles.some(file => path.endsWith(`/${file}`))), false, 'Engine loaded by the session entry');
     });
     await check('document-only controls stay unregistered until a document opens', async () => {
       assert.deepEqual(await page.evaluate(() => ['lr-checkbox', 'lr-color-picker', 'lr-lite-chart', 'lr-swatch-picker', 'lr-textarea']

@@ -11,12 +11,20 @@ import {
 import { staticModuleSpecifiers } from '../../lyra-ui/scripts/module-specifiers.mjs';
 import { filesUnderSync as files } from './lib/static-files.mjs';
 import { renderedControlTags } from './lib/editor-tags.mjs';
+import { eagerEngineImports } from './lib/engine-imports.mjs';
 import { findBuildArtifactFindings } from '../../lyra-ui/scripts/check-build-artifacts.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
 const repoRoot = path.resolve(packageRoot, '../..');
 const read = (file) => readFileSync(path.join(repoRoot, file), 'utf8');
 const manifest = JSON.parse(read('packages/lyra-docs/package.json'));
+const engineCapabilityImports = new Map([
+  ['docx/engine-core-capabilities', '@docx-editor.dev/core'],
+  ['docx/engine-store-capabilities', '@docx-editor.dev/core/store'],
+]);
+const capabilityImport = (file, directory) => engineCapabilityImports.get(
+  path.relative(directory, file).split(path.sep).join('/').replace(/\.(?:ts|js)$/u, ''),
+);
 assert.equal(manifest.name, '@aceshooting/lyra-docs');
 assert.match(manifest.version, /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u);
 assert.equal(manifest.private, undefined, 'The Docs package must be publishable');
@@ -118,7 +126,8 @@ for (const file of files(path.join(packageRoot, 'src'))) {
   assert(!/@docx-editor\.dev\/(?!core(?:['"/]))/u.test(source), `Unqualified engine package: ${file}`);
   assert(!/@docx-editor\.dev\/core\/src\//u.test(source), `Private engine import: ${file}`);
   for (const match of source.matchAll(/import\s+(?!type\b)[^;\n]*from\s+['"](@docx-editor\.dev\/[^'"]+)['"]/gu)) {
-    assert.fail(`Eager document engine import: ${file}: ${match[1]}`);
+    assert.equal(match[1], capabilityImport(file, path.join(packageRoot, 'src')),
+      `Unexpected static document engine import: ${file}: ${match[1]}`);
   }
 }
 const editorClassSource = read('packages/lyra-docs/src/docx/docx-editor.class.ts');
@@ -138,12 +147,19 @@ if (!existsSync(dist)) {
   console.warn('WARNING: dist/ is missing; the emitted-package checks did not run.');
 }
 if (existsSync(dist)) {
-  // The engine stays a lazy import(): no emitted module may load it statically.
+  // Only the two dynamically loaded capability modules may import the engine statically.
   for (const file of files(dist).filter((candidate) => candidate.endsWith('.js'))) {
     const eager = staticModuleSpecifiers(file, readFileSync(file, 'utf8'))
       .filter((specifier) => specifier.startsWith('@docx-editor.dev/'));
-    assert.deepEqual(eager, [], `Eager document engine import in emitted ${path.relative(packageRoot, file)}`);
+    const expected = capabilityImport(file, dist);
+    assert.deepEqual(eager, expected ? [expected] : [],
+      `Unexpected static document engine import in emitted ${path.relative(packageRoot, file)}`);
   }
+  const publicEntries = Object.values(manifest.exports)
+    .filter(route => typeof route === 'object')
+    .map(route => path.join(packageRoot, route.default));
+  assert.deepEqual(eagerEngineImports(publicEntries, file => readFileSync(file, 'utf8')), [],
+    'No public entry may reach the document engine through static imports or reexports');
   assert.deepEqual(findBuildArtifactFindings(files(dist), file => readFileSync(file, 'utf8'),
     { packageDirectory: packageRoot, exports: manifest.exports }), []);
   for (const file of files(dist)) {
