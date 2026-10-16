@@ -2716,7 +2716,7 @@ test('upgrade dependency-only mode installs and synchronizes peers without gener
     const dependencyPasses = dependencyOnly.commands.split('\n').filter((line) => line.includes('npm-check-updates@latest'));
     const generalPass = dependencyPasses.find((line) => line.includes('--target latest') && line.includes('--dep prod,dev,optional,packageManager'));
     const nodeTypesPass = dependencyPasses.find((line) => line.includes('--filter @types/node'));
-    assert.match(generalPass ?? '', /--reject @types\/node(?: |$)/u);
+    assert.match(generalPass ?? '', /--reject @types\/node,@docx-editor\.dev\/core(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--target minor(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--dep prod,dev,optional(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--workspaces --root/u);
@@ -2731,6 +2731,50 @@ test('upgrade dependency-only mode installs and synchronizes peers without gener
     assert.match(full.commands, /package\.sh/u);
     assert.match(full.commands, /pnpm build/u);
     assert.match(full.commands, /generate-component-quality\.mjs --write --measure-gzip/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade preserves the source-locked DOCX input while refreshing ordinary dependencies', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-upgrade-docx-'));
+  try {
+    for (const directory of ['scripts', 'packages/lyra-ui', 'packages/lyra-docs', 'bin']) {
+      mkdirSync(path.join(root, directory), { recursive: true });
+    }
+    copyFileSync(path.join(repoRoot, 'scripts/upgrade.sh'), path.join(root, 'scripts/upgrade.sh'));
+    writeFileSync(path.join(root, '.nvmrc'), '22.23.2\n');
+    writeFileSync(path.join(root, 'packages/lyra-ui/package.json'), '{}\n');
+    const manifestPath = path.join(root, 'packages/lyra-docs/package.json');
+    writeFileSync(manifestPath, JSON.stringify({
+      devDependencies: { '@docx-editor.dev/core': '2.30.0', 'happy-dom': '^21.0.1' },
+    }));
+    const nodeStub = path.join(root, 'bin/node');
+    writeFileSync(nodeStub, '#!/usr/bin/env bash\nif [[ "$1" == "-p" ]]; then echo "22.23.2"; fi\n');
+    chmodSync(nodeStub, 0o755);
+    const pnpmStub = path.join(root, 'bin/pnpm');
+    writeFileSync(pnpmStub, `#!${process.execPath}
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+if (args[0] === 'dlx' && args[args.indexOf('--dep') + 1] === 'prod,dev,optional,packageManager') {
+  const file = 'packages/lyra-docs/package.json';
+  const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const rejected = args.includes('--reject') ? args[args.indexOf('--reject') + 1].split(',') : [];
+  if (!rejected.includes('@docx-editor.dev/core')) manifest.devDependencies['@docx-editor.dev/core'] = '2.31.0';
+  if (!rejected.includes('happy-dom')) manifest.devDependencies['happy-dom'] = '^21.0.3';
+  fs.writeFileSync(file, JSON.stringify(manifest));
+}
+`);
+    chmodSync(pnpmStub, 0o755);
+    const result = spawnSync('bash', ['scripts/upgrade.sh'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${path.join(root, 'bin')}:/usr/bin:/bin`, VERIFY: '0' },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const upgraded = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    assert.equal(upgraded.devDependencies['@docx-editor.dev/core'], '2.30.0');
+    assert.equal(upgraded.devDependencies['happy-dom'], '^21.0.3');
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

@@ -155,7 +155,7 @@ minimumReleaseAgeExclude:
   - jscpd-windows-arm64-msvc@5.4.1
   - jscpd-windows-x64-msvc@5.4.1
   - jscpd@5.4.1
-  - happy-dom@21.0.1
+  - happy-dom@21.0.1 || 21.0.3
   - playwright-core@1.64.1
   - playwright@1.64.1
   - '@asamuzakjp/dom-selector@10.0.3'

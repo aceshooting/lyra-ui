@@ -3,7 +3,8 @@
 # resulting dependency graph, then build every workspace package. Peer dependencies are upgraded
 # separately because npm-check-updates does not include them by default. The curated
 # libphonenumber-js, MapLibre, postal-mime, Shiki and Vite peer ranges keep their compatibility bounds;
-# their dev dependencies are still upgraded by the first pass.
+# their dev dependencies are still upgraded by the first pass. The DOCX maintainer input stays
+# pinned to its reviewed source lock and patches; update those together before changing its version.
 # Set VERIFY=0 to refresh dependency manifests, lockfile, package-manager documentation, and
 # current peer versions without running artifact generators, workspace builds, or quality checks.
 # The default runs the complete existing regeneration and build workflow.
@@ -106,7 +107,7 @@ pnpm dlx npm-check-updates@latest \
   --workspaces \
   --root \
   --dep prod,dev,optional,packageManager \
-  --reject @types/node \
+  --reject @types/node,@docx-editor.dev/core \
   --target latest \
   --install never \
   --upgrade

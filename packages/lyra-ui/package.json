@@ -2947,7 +2947,7 @@
     "emoji-picker-element-data": "^1.8.0",
     "epubjs": "^0.3.93",
     "fast-check": "^4.10.2",
-    "happy-dom": "^21.0.1",
+    "happy-dom": "^21.0.3",
     "ical.js": "^2.2.1",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
