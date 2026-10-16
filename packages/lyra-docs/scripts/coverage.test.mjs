@@ -177,6 +177,41 @@ test('unmapped generated export facade is accounted for without hiding its origi
   assert.equal(metadata.browserModules, 1);
 });
 
+test('unmapped local re-export facade preserves original source coverage and the complete census', async context => {
+  const root = await fixture(context);
+  const file = resolve(root, 'coverage/browser-v8.json');
+  const entries = JSON.parse(await readFile(file, 'utf8'));
+  const source = 'export{value as createSession}from"./editor.js";';
+  await write(resolve(root, '.browser-output/assets/create-session.js'), source);
+  entries.push({ url: 'http://127.0.0.1:1234/assets/create-session.js', source, functions: [] });
+  await write(file, JSON.stringify(entries));
+  const metadata = await reportCoverage({ root });
+  assert.deepEqual(metadata.generatedBrowserFacades, ['/assets/create-session.js']);
+  assert.equal(metadata.included.length, 4);
+  assert.equal(metadata.browserModules, 1);
+  assert.deepEqual(metadata.unloaded, ['src/untouched.ts', 'src/view.styles.ts']);
+  const final = JSON.parse(await readFile(resolve(root, 'coverage/coverage-final.json'), 'utf8'));
+  assert.ok(Object.values(final[resolve(root, 'src/editor.ts')].s).some(count => count > 0));
+});
+
+test('unmapped re-exports cannot hide runtime statements or nonlocal modules', async context => {
+  const root = await fixture(context);
+  const file = resolve(root, 'coverage/browser-v8.json');
+  const entries = JSON.parse(await readFile(file, 'utf8'));
+  for (const source of [
+    'export{value}from"./editor.js";globalThis.hidden = 1;',
+    'export{value}from"./editor.js";import("./hidden.js");',
+    'export{value}from"./editor.js";import "./hidden.js";',
+    'export{value}from"https://example.test/editor.js";',
+  ]) {
+    await write(resolve(root, '.browser-output/assets/facade.js'), source);
+    await write(file, JSON.stringify([...entries,
+      { url: 'http://127.0.0.1:1234/assets/facade.js', source, functions: [] },
+    ]));
+    await assert.rejects(reportCoverage({ root }), /Executable browser chunk lacks source map/u);
+  }
+});
+
 test('unmapped browser code with actual runtime statements fails closed', async context => {
   const root = await fixture(context);
   const file = resolve(root, 'coverage/browser-v8.json');

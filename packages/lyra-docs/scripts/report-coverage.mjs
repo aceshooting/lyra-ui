@@ -130,7 +130,7 @@ export async function reportCoverage({ root, unitStatus = 0, browserStatus = 0 }
       // The bundler also emits import/export-only facades for shared dynamic entries.
       const remainder = source
         .replace(/\bimport\s*\{[^{}]*\}\s*from\s*(['"])\.\/[^'"\n]+\1\s*;?/gu, '')
-        .replace(/\bexport\s*\{[^{}]*\}\s*;?/gu, '').trim();
+        .replace(/\bexport\s*\{[^{}]*\}\s*(?:from\s*(['"])\.\/[^'"\n]+\1\s*)?;?/gu, '').trim();
       assert.equal(remainder, '', `Executable browser chunk lacks source map: ${script}`);
       assert.ok(source.includes('export'), `Unmapped browser chunk is not an export facade: ${script}`);
       generatedBrowserFacades.push(pathname);
