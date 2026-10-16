@@ -147,6 +147,10 @@ export async function buildEngine({ outputRoot = path.join(root, 'dist') } = {})
           output: {
             // Compact library output while preserving annotations used by consumer tree shaking.
             minify: { codegen: true },
+            // Keep the shared Unicode bidi tables separate from the growing layout implementation.
+            codeSplitting: {
+              groups: [{ name: 'bidi', test: /[/\\]node_modules[/\\]bidi-js[/\\]/ }],
+            },
             comments: { annotation: true },
           },
         },

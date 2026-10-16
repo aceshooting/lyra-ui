@@ -7,25 +7,25 @@ corresponding full license texts and upstream notices are included in
 
 ## DOCX engine and stylesheet
 
-`@docx-editor.dev/core@2.30.0` is copyright 2026 EigenPal Inc. and is
+`@docx-editor.dev/core@2.31.0` is copyright 2026 EigenPal Inc. and is
 licensed under Apache-2.0. The upstream package source is published at
 [github.com/eigenpal/docx-editor/tree/main/packages/core](https://github.com/eigenpal/docx-editor/tree/main/packages/core),
 and the exact public package is
-[`@docx-editor.dev/core@2.30.0`](https://www.npmjs.com/package/@docx-editor.dev/core/v/2.30.0).
+[`@docx-editor.dev/core@2.31.0`](https://www.npmjs.com/package/@docx-editor.dev/core/v/2.31.0).
 Lyra Docs builds a modified internal engine from the pinned Apache-2.0 source and
 redistributes the package's `dist/editor.css` stylesheet unchanged.
 
-Source commit: `232503c79148266c1487bfebdea4a1314326628e`
+Source commit: `d22e3b4f02d4d0b73d7964114d077b286f207742`
 
 The engine and its feature modules are
 included in the npm package. [NOTICE](NOTICE) describes the modifications and
 reproduction inputs; `scripts/engine-source.lock.json` binds the source, patches,
 maintainer dependencies and generated assets. No upstream Pro package is included.
 The Apache-2.0 license text is included in
-[`THIRD_PARTY_LICENSES/docx-editor-core-2.30.0-Apache-2.0.txt`](THIRD_PARTY_LICENSES/docx-editor-core-2.30.0-Apache-2.0.txt).
+[`THIRD_PARTY_LICENSES/docx-editor-core-2.31.0-Apache-2.0.txt`](THIRD_PARTY_LICENSES/docx-editor-core-2.31.0-Apache-2.0.txt).
 
 The upstream package's
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_LICENSES/docx-editor-core-2.30.0-THIRD_PARTY_NOTICES.md)
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_LICENSES/docx-editor-core-2.31.0-THIRD_PARTY_NOTICES.md)
 is included verbatim. It attributes bundled `harfbuzzjs@1.6.1` to its project
 authors under MIT and identifies the separately distributed HarfBuzz asset.
 The upstream HarfBuzz license is included at
@@ -53,7 +53,7 @@ own license and copyright notices in its separately distributed files.
 The generated engine also includes these packages. Their full license texts are
 included with this distribution; fflate is listed above.
 
-- `@docx-editor.dev/i18n@2.30.0` — Apache-2.0; [license](THIRD_PARTY_LICENSES/docx-editor.dev-i18n-2.30.0-Apache-2.0.txt).
+- `@docx-editor.dev/i18n@2.31.0` — Apache-2.0; [license](THIRD_PARTY_LICENSES/docx-editor.dev-i18n-2.31.0-Apache-2.0.txt).
 - `@nodable/entities@3.1.0` — MIT; [license](THIRD_PARTY_LICENSES/nodable-entities-3.1.0-MIT.txt).
 - `anynum@1.0.1` — MIT; [license](THIRD_PARTY_LICENSES/anynum-1.0.1-MIT.txt).
 - `bidi-js@1.1.0` — MIT; [license](THIRD_PARTY_LICENSES/bidi-js-1.1.0-MIT.txt).

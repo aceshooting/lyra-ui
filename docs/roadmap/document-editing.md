@@ -4,7 +4,7 @@ Status: public experimental editor package with broader qualification in progres
 is shipped in `@aceshooting/lyra-ui`. All existing file viewers, including the lightweight,
 read-only `lr-docx-viewer`, stay in `@aceshooting/lyra-ui`. Editing belongs in the optional
 `@aceshooting/lyra-docs` companion. The current component is `<lr-docx-editor>` and the exact
-internal runtime engine derives from `@docx-editor.dev/core@2.30.0`; neither choice establishes general DOCX
+internal runtime engine derives from `@docx-editor.dev/core@2.31.0`; neither choice establishes general DOCX
 support or completes a roadmap phase.
 
 The [implementation and qualification record](document-editing-feasibility.md) records verified
@@ -41,7 +41,7 @@ broader format fidelity and interoperability qualification remain open.
 
 The companion builds the Apache-2.0 framework-independent core from a pinned source
 archive, without importing its React/Vue application. The derivative of
-`@docx-editor.dev/core@2.30.0` is included in the package and loaded when a document
+`@docx-editor.dev/core@2.31.0` is included in the package and loaded when a document
 opens. Reviewed semantic feature boundaries defer table, note, drawing, control,
 comment, TOC and rich-paste implementations until needed. Exact source, dependency,
 patch and generated-input inventories bind the maintainer build; consumers do not
