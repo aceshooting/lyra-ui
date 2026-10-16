@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-ide",
-  "version": "29.0.1",
+  "version": "29.0.2",
   "description": "Editor data for @aceshooting/lyra-ui: the Custom Elements Manifest, JetBrains web-types and VS Code HTML/CSS custom data.",
   "keywords": [
     "lyra-ui",

@@ -1,5 +1,17 @@
 # @aceshooting/lyra-docs
 
+## 0.6.2
+
+### Patch Changes
+
+- cb8c8c5: Refresh dependency resolutions and security overrides, and bound nested pattern processing and numeric formatting in development dependencies with verified patches. The dependency upgrade command now refreshes transitive dependencies, and CI checks patch integrity and new audit findings.
+
+  Update the map renderer's GeoJSON tiling dependency, including its optional `worldCoordinates` option and clipping fixes.
+
+  Refresh the document editor's bundled numeric parsing dependency for corrected nonnumeric and leading-zero handling.
+- Updated dependencies [cb8c8c5]
+  - @aceshooting/lyra-ui@29.0.2
+
 ## 0.6.1
 
 ### Patch Changes
