@@ -1,5 +1,14 @@
 # Changelog
 
+## 29.0.1
+
+### Patch Changes
+
+- 6590e5d: Keep labeled controls in widget headers readable at narrow widths by wrapping header items before scrolling actions that genuinely overflow.
+
+  The fix adds 18 gzip bytes to the complete registration barrel. The six affected bundle-size limits advance to the next 64-byte boundary; passing limits remain unchanged.
+- @aceshooting/lyra-translations@29.0.1
+
 ## 29.0.0
 
 ### Major Changes

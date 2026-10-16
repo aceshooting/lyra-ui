@@ -1,5 +1,13 @@
 # @aceshooting/lyra-docs
 
+## 0.6.1
+
+### Patch Changes
+
+- 7459432: Upgrade the bundled document engine to 2.31.0 while preserving lazy feature loading and asynchronous command readiness. Keep shared bidirectional-text data in a separate distribution module.
+- Updated dependencies [6590e5d]
+  - @aceshooting/lyra-ui@29.0.1
+
 ## 0.6.0
 
 ### Minor Changes
