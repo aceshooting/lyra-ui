@@ -594,9 +594,10 @@ empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabe
 subtree is inert and aria-hidden, leaving the toggle as the sole action), `view-label`
 (a view's visible label), `collapse-button`, `fullscreen-button`, `body`, `backdrop`
 
-Both header rows (`actions` and `view-toggles`) scroll horizontally on their own when the header is
-too narrow for them, and each independently paints a `--lr-scroll-fade-size` edge fade while — and
-only while — it actually overflows, so a clipped row reads as scrollable rather than truncated. The
+Header items wrap when needed to keep ordinary slotted actions at their intrinsic size. Both
+header rows (`actions` and `view-toggles`) scroll horizontally on their own when their content is
+still too wide, and each independently paints a `--lr-scroll-fade-size` edge fade while — and only
+while — it actually overflows, so a clipped row reads as scrollable rather than truncated. The
 overflow is measured, not assumed: a row that fits is left unmasked.
 Forced-colors mode disables those decorative masks while retaining the native scroll owners. The
 body is the block-axis scroll owner whenever the widget receives a constrained height, so the

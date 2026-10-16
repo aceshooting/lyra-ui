@@ -9,11 +9,13 @@ import {
   waitUntil,
 } from "@open-wc/testing";
 import "./widget.js";
+import '../../forms/switch/switch.js';
 import type { LyraWidget } from "./widget.js";
 import { styles } from "./widget.styles.js";
 import { registerLyraLocale } from "../../../internal/localization.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
+import { sendKeys } from '@web/test-runner-commands';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
@@ -1084,6 +1086,66 @@ it("contains unbroken title, view-label, and action content at an exact 320px al
       );
       expect(bounds.height, `${direction} control hit area`).to.be.at.least(36);
     }
+  }
+});
+
+it('keeps a labeled slotted switch fully usable in narrow headers in LTR and RTL', async () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    const root = await fixture<HTMLElement>(html`
+      <div dir=${direction}>
+        <lr-switch>Show details</lr-switch>
+        <lr-widget label="Account overview" collapsible expandable
+          style="inline-size: 320px;"
+        >
+          <lr-switch slot="actions">Show details</lr-switch>
+          Panel body.
+        </lr-widget>
+        <lr-widget label="Account overview" collapsible expandable
+          style="inline-size: 640px;"
+        >
+          <lr-switch slot="actions">Show details</lr-switch>
+          Panel body.
+        </lr-widget>
+      </div>
+    `);
+    const intrinsic = root.querySelector('lr-switch') as HTMLElement;
+    const [narrow, wide] = [...root.querySelectorAll<LyraWidget>('lr-widget')];
+    const header = narrow!.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const actions = narrow!.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    const control = narrow!.querySelector('lr-switch[slot="actions"]') as HTMLElement & {
+      checked: boolean;
+    };
+    const label = control.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const wideHeader = wide!.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const wideActions = wide!.shadowRoot!.querySelector('[part="actions"]') as HTMLElement;
+    const controlBounds = control.getBoundingClientRect();
+    const actionsBounds = actions.getBoundingClientRect();
+
+    expect(controlBounds.width, `${direction} keeps the switch intrinsic width`).to.be.at.least(
+      intrinsic.getBoundingClientRect().width - 1
+    );
+    expect(actionsBounds.width, `${direction} exposes the full switch`).to.be.at.least(
+      controlBounds.width - 1
+    );
+    expect(actions.scrollWidth, `${direction} needs no action scroll for one switch`).to.be.at.most(
+      actions.clientWidth + 1
+    );
+    expect(label.getBoundingClientRect().height, `${direction} label remains one line`).to.be.at.most(
+      parseFloat(getComputedStyle(label).fontSize) * 2
+    );
+    expect(header.scrollWidth, `${direction} header stays contained`).to.be.at.most(
+      header.clientWidth + 1
+    );
+    expect(wideHeader.getBoundingClientRect().height, `${direction} wide header stays one row`).to.be.lessThan(
+      header.getBoundingClientRect().height
+    );
+    expect(wideActions.scrollWidth, `${direction} wide actions need no scroll`).to.be.at.most(
+      wideActions.clientWidth + 1
+    );
+
+    await focusByKeyboard(control);
+    await sendKeys({ press: 'Space' });
+    expect(control.checked, `${direction} switch remains keyboard operable`).to.equal(true);
   }
 });
 

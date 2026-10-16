@@ -319,7 +319,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-virtual-list"></a>`lr-virtual-list` | layout | `import '@aceshooting/lyra-ui/components/lr-virtual-list.js';` | none | none | none | 37.2 KiB |
 | <a id="lr-visually-hidden"></a>`lr-visually-hidden` | utility | `import '@aceshooting/lyra-ui/components/lr-visually-hidden.js';` | none | none | none | 21.8 KiB |
 | <a id="lr-voice-picker"></a>`lr-voice-picker` | conversation | `import '@aceshooting/lyra-ui/components/lr-voice-picker.js';` | none | none | none | 69 KiB |
-| <a id="lr-widget"></a>`lr-widget` | layout | `import '@aceshooting/lyra-ui/components/lr-widget.js';` | none | none | none | 46.8 KiB |
+| <a id="lr-widget"></a>`lr-widget` | layout | `import '@aceshooting/lyra-ui/components/lr-widget.js';` | none | none | none | 46.9 KiB |
 | <a id="lr-widget-renderer"></a>`lr-widget-renderer` | conversation | `import '@aceshooting/lyra-ui/components/lr-widget-renderer.js';` | `dompurify`, `katex`, `marked`, `shiki` | `lr-badge`, `lr-button`, `lr-card`, `lr-markdown`, `lr-media-card`, `lr-result-card`, `lr-result-field`, `lr-stat` | none | 102.3 KiB |
 | <a id="lr-word-cloud"></a>`lr-word-cloud` | data | `import '@aceshooting/lyra-ui/components/lr-word-cloud.js';` | none | none | none | 36.8 KiB |
 | <a id="lr-xml-viewer"></a>`lr-xml-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-xml-viewer.js';` | none | none | none | 45.6 KiB |

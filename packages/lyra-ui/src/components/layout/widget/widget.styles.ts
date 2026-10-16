@@ -33,6 +33,7 @@ export const styles = css`
     display: flex;
     flex: 0 0 auto;
     align-items: center;
+    flex-wrap: wrap;
     min-inline-size: 0;
     gap: var(--lr-space-s);
     padding: var(--lr-space-s) var(--lr-space-m);
@@ -87,6 +88,10 @@ export const styles = css`
   }
   [part="actions"][hidden] {
     display: none;
+  }
+  [part="actions"] ::slotted(*) {
+    flex-shrink: 0;
+    max-inline-size: none;
   }
   [part="view-toggles"] {
     display: flex;

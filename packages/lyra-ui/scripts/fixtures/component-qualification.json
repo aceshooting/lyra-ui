@@ -55901,7 +55901,7 @@
           "evidence": [
             {
               "file": "src/components/layout/widget/widget.test.ts",
-              "test": "exits fullscreen on Escape and returns focus to the trigger button",
+              "test": "keeps a labeled slotted switch fully usable in narrow headers in LTR and RTL",
               "kind": "component keyboard exercise signal"
             }
           ]
