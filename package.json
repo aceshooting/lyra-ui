@@ -37,6 +37,7 @@
     "check:packed-consumer": "pnpm run test:packed-consumer-tooling && node scripts/check-packed-consumer.mjs && node scripts/check-packed-framework-types.mjs && pnpm run check:framework-recipes",
     "check:dead-code": "knip --production --no-progress && knip --no-progress",
     "check:secrets": "node scripts/check-secrets.mjs",
+    "check:dependency-security": "node --test scripts/check-dependency-security.test.mjs scripts/dependency-security-braces.test.mjs scripts/dependency-security-sprintf.test.mjs && node scripts/check-dependency-security.mjs",
     "check:workflows": "./scripts/check-workflows.sh",
     "check:release-qualification": "node --test scripts/generate-release-qualification.test.mjs scripts/release-workflow-contract.test.mjs && node scripts/generate-release-qualification.mjs --check",
     "check:release-tooling": "node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/sync-playwright-images.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs && node scripts/sync-package-manager-docs.mjs --check",
@@ -83,6 +84,6 @@
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.4"
   },
-  "packageManager": "pnpm@12.11.2",
+  "packageManager": "pnpm@12.14.0",
   "customElements": "packages/lyra-ui/custom-elements.json"
 }

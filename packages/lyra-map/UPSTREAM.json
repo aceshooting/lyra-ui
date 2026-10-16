@@ -17,9 +17,9 @@
   "declarationSources": [
     {
       "package": "@maplibre/geojson-vt",
-      "version": "6.1.2",
+      "version": "6.2.0",
       "file": "dist/definitions.d.ts",
-      "sha256": "f7ddcb7fc10cff67b11fd9979efc9b7a85c32069103ede4fd82613365a21ea3a"
+      "sha256": "1216e07268d674a83e7fed8bc5799df2b4a6528ef714a42c647d0aae047ef9c8"
     },
     {
       "package": "@maplibre/vt-pbf",

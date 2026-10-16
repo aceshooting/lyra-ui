@@ -3,5 +3,13 @@ id = "GHSA-4r6h-8v6p-xvw6"
 reason = "SheetJS is pinned to the fixed 0.20.3 release from the official CDN; the scanner cannot resolve the CDN tarball version."
 
 [[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+reason = "braces 3.0.3 is patched by patches/braces@3.0.3.patch to bound parser and AST traversal depth. CI check:dependency-security verifies patch registration, installed source digests, and exploit regression tests; version-only scanning cannot identify this local fix."
+
+[[IgnoredVulns]]
+id = "GHSA-hp3w-g68c-fv3c"
+reason = "sprintf-js 1.0.3 is patched by patches/sprintf-js@1.0.3.patch to bound numeric precision and padding allocation. CI check:dependency-security verifies patch registration, installed source digests, and exploit regression tests; version-only scanning cannot identify this local fix."
+
+[[IgnoredVulns]]
 id = "GHSA-5pgg-2g8v-p4x9"
 reason = "SheetJS is pinned to the fixed 0.20.3 release from the official CDN; the scanner cannot resolve the CDN tarball version."

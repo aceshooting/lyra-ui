@@ -211,7 +211,7 @@ Firefox in two shards, and Chromium, Chrome, Edge and Safari (WebKit) in one eac
 pinned Playwright image; branded Chrome and Edge use the runner VM with bounded browser setup. Every
 leg installs with `--frozen-lockfile` and enables strict browser console checking. The packed-consumer
 jobs cover the Node floor, declarations, tree shaking and framework recipes without repeating that
-matrix per browser. Node 22 uses `package.json#packageManager` (`pnpm@12.11.2`).
+matrix per browser. Node 22 uses `package.json#packageManager` (`pnpm@12.14.0`).
 
 ## Scheduled full Firefox/WebKit suite
 
@@ -263,7 +263,7 @@ aggregates from one successful `workflow_dispatch` run whose `head_branch` is `m
   its automatic default and WebKit/Safari use the smaller of four pages or half the CPUs. The
   aggregate runner budgets shard pages from Firefox's one-page and WebKit's four-page allocations.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same six
-  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.11.2.
+  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.14.0.
   Its 6 legs are source-derived: Node 22 runs Chromium (1 shard), Chrome (1 shard), Edge (1 shard), Firefox (2 shards), and Safari (1 shard).
   `CI_SH_NODE22_BIN` and `CI_SH_PNPM22_BIN` accept explicit executable paths; the selected Node
   must match the exact `.nvmrc` patch (`22.23.2`).
@@ -297,6 +297,25 @@ page count is `shards x (Firefox pages + WebKit pages)`. The script budgets abou
 CPUs as browser pages and clamps an over-large request with a warning rather than failing.
 
 ## Release integrity
+
+### Dependency security patches
+
+`pnpm check:dependency-security` runs exploit regressions and a registry audit. It accepts a
+locally patched advisory only for its reviewed package/version, patch registration and file digest,
+and installed source digests. Unknown advisories, changed patch contents, unpatched copies, and audit
+errors fail the check. Both CI and `scripts/ci.sh` run this gate.
+
+The `braces@3.0.3` patch bounds parsed nesting and AST traversal to 128 levels, throwing a
+`SyntaxError` for deeper input. The `sprintf-js@1.0.3` patch bounds numeric precision to the native
+formatting limits and padding width to 10,000 characters. These upstream versions have no published
+fix for their respective advisories. The two corresponding `osv-scanner.toml` entries describe these
+verified patches; a version-only `pnpm audit` still reports the original advisory metadata.
+
+Workspace patches do not propagate through published npm packages. A consumer that installs an
+affected dependency must apply the patch in its own package-manager configuration and verify the
+installed result, or use an upstream release that fixes the issue.
+
+### Release procedure
 
 Releases run in four steps; nothing is tagged or published from a workstation.
 

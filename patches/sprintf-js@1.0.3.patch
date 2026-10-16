@@ -1,0 +1,50 @@
+diff --git a/src/sprintf.js b/src/sprintf.js
+index c0fc7c0..4731b1c 100644
+--- a/src/sprintf.js
++++ b/src/sprintf.js
+@@ -30,6 +30,13 @@
+             }
+             else if (node_type === "array") {
+                 match = parse_tree[i] // convenience purposes only
++                // Bound format-controlled allocation and native numeric precision.
++                // Clamp instead of throwing so hostile formats cannot abort callers.
++                var width = match[6] ? Math.min(Number(match[6]), 10000) : 0
++                var precision = match[7] ? Math.min(Number(match[7]), 100) : undefined
++                if (match[8] === 'g' && precision === 0) {
++                    precision = 1
++                }
+                 if (match[2]) { // keyword argument
+                     arg = argv[cursor]
+                     for (k = 0; k < match[2].length; k++) {
+@@ -70,16 +77,16 @@
+                         arg = parseInt(arg, 10)
+                     break
+                     case "j":
+-                        arg = JSON.stringify(arg, null, match[6] ? parseInt(match[6]) : 0)
++                        arg = JSON.stringify(arg, null, width)
+                     break
+                     case "e":
+-                        arg = match[7] ? arg.toExponential(match[7]) : arg.toExponential()
++                        arg = match[7] ? arg.toExponential(precision) : arg.toExponential()
+                     break
+                     case "f":
+-                        arg = match[7] ? parseFloat(arg).toFixed(match[7]) : parseFloat(arg)
++                        arg = match[7] ? parseFloat(arg).toFixed(precision) : parseFloat(arg)
+                     break
+                     case "g":
+-                        arg = match[7] ? parseFloat(arg).toPrecision(match[7]) : parseFloat(arg)
++                        arg = match[7] ? parseFloat(arg).toPrecision(precision) : parseFloat(arg)
+                     break
+                     case "o":
+                         arg = arg.toString(8)
+@@ -109,8 +116,8 @@
+                         sign = ""
+                     }
+                     pad_character = match[4] ? match[4] === "0" ? "0" : match[4].charAt(1) : " "
+-                    pad_length = match[6] - (sign + arg).length
+-                    pad = match[6] ? (pad_length > 0 ? str_repeat(pad_character, pad_length) : "") : ""
++                    pad_length = width - (sign + arg).length
++                    pad = width ? (pad_length > 0 ? str_repeat(pad_character, pad_length) : "") : ""
+                     output[output.length] = match[5] ? sign + arg + pad : (pad_character === "0" ? sign + pad + arg : pad + sign + arg)
+                 }
+             }

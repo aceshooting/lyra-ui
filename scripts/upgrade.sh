@@ -154,6 +154,12 @@ echo "==> Installing workspace dependencies and refreshing pnpm-lock.yaml"
 pnpm install --no-prod --no-frozen-lockfile
 
 echo
+echo "==> Refreshing transitive dependencies within workspace manifest ranges"
+# Installation can retain older compatible resolutions; update every workspace and dependency depth
+# without changing the compatibility ranges declared in the manifests.
+pnpm --recursive --include-workspace-root update --depth Infinity --no-save
+
+echo
 echo "==> Verifying the pinned DOCX engine source and synchronizing shipped notices"
 node scripts/sync-docx-engine-peer.mjs
 

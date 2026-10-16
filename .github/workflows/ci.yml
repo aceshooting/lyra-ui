@@ -98,6 +98,7 @@ jobs:
       - run: pnpm check:workflows
       - run: pnpm check:release-qualification
       - run: pnpm check:release-tooling
+      - run: pnpm check:dependency-security
       - run: node --test scripts/ci-change-scope.test.mjs
       - run: pnpm test:benchmarks
       # test:public-api and test:pinned-upstream-manifests are contract-policy members (lint).

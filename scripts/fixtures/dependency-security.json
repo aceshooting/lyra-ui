@@ -1,0 +1,26 @@
+[
+  {
+    "advisory": "GHSA-vfj7-8cjw-p6xm",
+    "package": "braces",
+    "version": "3.0.3",
+    "patch": "patches/braces@3.0.3.patch",
+    "patchSha256": "6a51944e47fdf849394529628931b895d58dbf01ce01aa96ce460a6f9f45e6b8",
+    "files": {
+      "lib/compile.js": "9663bba710b10d63f5e753647817bea2d07e89cdb4f1cf02ca53ab27203799bb",
+      "lib/expand.js": "33c7d964b8dbb824351595d12b9edc9378a73ebb94948918e4f400aafc08b957",
+      "lib/parse.js": "1aaace3abd8a66247aef790606abf06772401ea326da132d38e76f692a2cef6b",
+      "lib/stringify.js": "938bd675756f57d03c97e51e0c7a2ffa670cfd802b82fb0fe640b1861cb579d8",
+      "lib/utils.js": "e103603079d1078c22931188fea20853fe01d48e4fe723ab360acd79ffa21074"
+    }
+  },
+  {
+    "advisory": "GHSA-hp3w-g68c-fv3c",
+    "package": "sprintf-js",
+    "version": "1.0.3",
+    "patch": "patches/sprintf-js@1.0.3.patch",
+    "patchSha256": "3cc545bd22e591995f0a9f7841330069463717b32798e92b23976cd8a96d9b69",
+    "files": {
+      "src/sprintf.js": "c150afe72f7e5f900b6068552831f2037717c05d6967c4027582a4abbd365017"
+    }
+  }
+]
