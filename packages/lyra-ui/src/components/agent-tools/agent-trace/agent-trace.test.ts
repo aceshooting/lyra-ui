@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
@@ -596,13 +597,17 @@ describe('lr-agent-trace', () => {
     const trace = el.querySelector('lr-agent-trace') as LyraAgentTrace;
     await trace.updateComplete;
     expect(trace.shadowRoot!.querySelector('lr-trace-tree')).to.exist;
-    await expect(trace).to.be.accessible();
+    await expect(trace).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(trace, reviewComponentLabels(trace, 'lr-trace-tree', '[part="row"]', '[part="name"]',
+      'The span name labels the action; kind, status, duration and token metrics describe the span.'));
   });
 
   it('is accessible with a populated, multi-kind span set including handoffs', async () => {
     const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
     await el.updateComplete;
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(el, 'lr-trace-tree', '[part="row"]', '[part="name"]',
+      'The span name labels the action; kind, status, duration and token metrics describe the span.'));
   });
 
   // No empty-state axe assertion here: the empty state renders entirely through the composed
@@ -643,7 +648,9 @@ describe('lr-agent-trace', () => {
 
     it('is accessible with the matching composed trace-tree row active', async () => {
       const el = await activeFixture();
-      await expect(el).to.be.accessible();
+      await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(el, 'lr-trace-tree', '[part="row"]', '[part="name"]',
+      'The span name labels the action; kind, status, duration and token metrics describe the span.'));
     });
   });
 });

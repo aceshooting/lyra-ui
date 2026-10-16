@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { resolvedColorIn } from '../../../../test/shadow-style.js';
 // Focused rendering and accessibility cases. Test bodies and titles were moved intact from the prior suite.
 import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from "@open-wc/testing";
@@ -698,7 +699,9 @@ it("renders structured async-row adornments and preserves selected opaque data",
     "City"
   );
   finishListboxAnimation(el);
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, [{ target: row, label: [row.querySelector('[part="option-label"] > span:first-child')!],
+    reason: 'The city name labels the option; its alternate name, badge and decorative adornments provide context.' }]);
   row.click();
   await el.updateComplete;
   expect(el.selectedRows).to.have.length(1);

@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './neighbor-list.js';
@@ -556,7 +557,11 @@ it('is accessible with grouped, expandable rows', async () => {
   el.groupByRelation = true;
   el.expandable = true;
   await el.updateComplete;
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-neighbor-list', '[part="node-label"]', 'span:not([part])',
+    'The entity name labels its action; relation, direction, type and degree describe the neighbor.',
+  ));
 });
 
 it('paints node-label hover feedback under a real pointer', async () => {
@@ -713,7 +718,11 @@ describe('row part styling reaches both rendering paths', () => {
       expect(
         rowRoot(el).querySelectorAll('[part~="row"]').length
       ).to.be.greaterThan(0);
-      await expect(el).to.be.accessible();
+      await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+      await expectLabelInName(el, reviewComponentLabels(
+        el, 'lr-neighbor-list', '[part="node-label"]', 'span:not([part])',
+        'The entity name labels its action; relation, direction, type and degree describe the neighbor.',
+      ));
     });
   }
 

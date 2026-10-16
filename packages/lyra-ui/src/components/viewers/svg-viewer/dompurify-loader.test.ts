@@ -12,6 +12,15 @@ it('loads dompurify and caches the resolved module', async () => {
   expect(second).to.equal(first);
 });
 
+it('uses the optional peer import when no importer is supplied', async () => {
+  const resolved = await loadSvgSanitizerDeps();
+  expect(resolved).to.not.equal(null);
+  const clean = resolved!.sanitize('<svg onload="alert(1)"><circle r="10"/><script>alert(1)</script></svg>');
+  expect(clean).to.include('<circle');
+  expect(clean).not.to.include('onload');
+  expect(clean).not.to.include('<script');
+});
+
 function fakeDompurifyModule(): { sanitize: () => string } {
   return { sanitize: () => '<svg></svg>' };
 }

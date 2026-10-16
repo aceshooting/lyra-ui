@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './calendar.js';
@@ -432,7 +433,11 @@ it('inherits independent selected, outside-month, and today paint hooks from a t
 
 it('is accessible', async () => {
   const el = await fixture(html`<lr-calendar aria-label="Schedule"></lr-calendar>`);
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-calendar', '[part="day"]', '[part="date"]',
+    'The day number labels the date cell; contained events are independently named controls.',
+  ));
 });
 
 // Regression: the today cell never got aria-current="date", so a screen reader user tabbing/
@@ -465,7 +470,11 @@ it('is accessible with a populated month view (selection + multiple events per d
     { date: '2026-07-20', title: 'Deadline' },
   ];
   await el.updateComplete;
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-calendar', '[part="day"]', '[part="date"]',
+    'The day number labels the date cell; contained events are independently named controls.',
+  ));
 });
 
 it('is accessible with a populated agenda view', async () => {
@@ -478,7 +487,11 @@ it('is accessible with a populated agenda view', async () => {
     { date: '2026-07-20', title: 'Deadline' },
   ];
   await el.updateComplete;
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-calendar', '[part="day"]', '[part="date"]',
+    'The day number labels the date cell; contained events are independently named controls.',
+  ));
 });
 
 it('exposes month-grid day cells as gridcells with per-day selection state and a full-date accessible name', async () => {

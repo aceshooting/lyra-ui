@@ -1,3 +1,5 @@
+import { accessibleName } from '../../../../test/accessible-name.js';
+import { expectValidAriaRules } from '../../../../test/aria-rules.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import "./color-picker.js";
@@ -3141,4 +3143,23 @@ it("releases a top-layer promoted panel when switching to inline while open", as
   expect(rect.top).to.be.at.least(host.top - 0.5);
   expect(rect.left).to.be.at.least(host.left - 0.5);
   expect(rect.bottom).to.be.at.most(host.bottom + 0.5);
+});
+
+it('names the format action from its visible format and describes its localized purpose', async () => {
+  const el = await opened(html`<lr-color-picker label="Accent"></lr-color-picker>`);
+  const button = part(el, 'format-button');
+  for (const description of ['Toggle color format', 'Changer le format de couleur']) {
+    if (description !== 'Toggle color format') {
+      el.strings = { colorPickerToggleFormat: description };
+      await el.updateComplete;
+    }
+    expect(button.getAttribute('aria-description')).to.equal(description);
+    await expectValidAriaRules(button, ['label-content-name-mismatch']);
+    expect(accessibleName(button)).to.equal(button.textContent!.trim());
+  }
+  button.click();
+  await el.updateComplete;
+  expect(button.textContent!.trim()).to.equal('RGB');
+  await expectValidAriaRules(button, ['label-content-name-mismatch']);
+  expect(accessibleName(button)).to.equal('RGB');
 });

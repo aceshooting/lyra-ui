@@ -2501,7 +2501,7 @@ it("makes interactive icon-slot content decorative and unfocusable inside the tr
   const el = (await fixture(html`
     <lr-push-to-talk
       ><button id="nested-icon" slot="microphone-icon">
-        Nested action
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3a2 2 0 0 1 4 0v5a2 2 0 0 1-4 0zM3 8a5 5 0 0 0 10 0M8 13v3" /></svg>
       </button></lr-push-to-talk
     >
   `)) as LyraPushToTalk;

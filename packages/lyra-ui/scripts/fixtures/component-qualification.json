@@ -12822,24 +12822,6 @@
               "test": "passes axe while open, with a submenu open, in RTL and with a host aria-label",
               "target": "el",
               "state": "populated"
-            },
-            {
-              "file": "src/components/overlays/context-menu/context-menu.test.ts",
-              "test": "passes axe while open, with a submenu open, in RTL and with a host aria-label",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/overlays/context-menu/context-menu.test.ts",
-              "test": "passes axe while open, with a submenu open, in RTL and with a host aria-label",
-              "target": "el",
-              "state": "populated"
-            },
-            {
-              "file": "src/components/overlays/context-menu/context-menu.test.ts",
-              "test": "passes axe while open, with a submenu open, in RTL and with a host aria-label",
-              "target": "el",
-              "state": "populated"
             }
           ],
           "exemption": null

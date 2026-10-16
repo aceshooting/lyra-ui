@@ -1587,7 +1587,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           : html`<button
               type="button"
               part="format-button format-button__base"
-              aria-label=${this.localize('colorPickerToggleFormat')}
+              aria-description=${this.localize('colorPickerToggleFormat')}
               ?disabled=${this.effectiveDisabled}
               @click=${this.onFormatClick}
             ><span part="format-button__start format-button__prefix"></span

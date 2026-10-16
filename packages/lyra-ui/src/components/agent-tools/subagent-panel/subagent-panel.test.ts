@@ -1,3 +1,5 @@
+import { accessibleName } from '../../../../test/accessible-name.js';
+import { expectValidAriaRules } from '../../../../test/aria-rules.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './subagent-panel.js';
@@ -140,7 +142,7 @@ it('activates the focused treeitem with Enter/Space and contextualizes row actio
     el.shadowRoot!.querySelector('[data-run-id="research"] [part="cancel"]')!.getAttribute('aria-label'),
   ).to.equal('Cancel Researcher');
   expect(
-    el.shadowRoot!.querySelector('[data-run-id="review"] [part="retry"]')!.getAttribute('aria-label'),
+    el.shadowRoot!.querySelector('[data-run-id="review"] [part="retry"]')!.getAttribute('aria-description'),
   ).to.equal('Retry Reviewer');
 });
 
@@ -869,4 +871,18 @@ it('requests cancellation through lr-run-cancel, then the deprecated lr-cancel a
   }
   el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="research"] [part="cancel"]')!.click();
   expect(seen).to.deep.equal(['lr-run-cancel:research', 'lr-cancel:research']);
+});
+
+it('names retry actions from their visible localized labels and keeps the run context in the description', async () => {
+  const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`);
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[data-run-id="review"] [part="retry"]')!;
+  expect(button.textContent!.trim()).to.equal('Retry subagent');
+  expect(button.getAttribute('aria-description')).to.equal('Retry Reviewer');
+  await expectValidAriaRules(button, ['label-content-name-mismatch']);
+  expect(accessibleName(button)).to.equal('Retry subagent');
+  el.strings = { subagentPanelRetry: 'Relancer le sous-agent', subagentPanelRetryRun: 'Relancer {name}' };
+  await el.updateComplete;
+  expect(button.getAttribute('aria-description')).to.equal('Relancer Reviewer');
+  await expectValidAriaRules(button, ['label-content-name-mismatch']);
+  expect(accessibleName(button)).to.equal('Relancer le sous-agent');
 });

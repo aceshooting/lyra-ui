@@ -440,8 +440,8 @@ describe('zoom controls and interaction', () => {
           zoom="1"
           zoom-levels="50% 100% 150%"
         >
-          <button id="zoom-in-glyph" slot="zoom-in-icon" type="button">Larger</button>
-          <a id="zoom-out-glyph" slot="zoom-out-icon" href="#zoom-out-glyph">Smaller</a>
+          <button id="zoom-in-glyph" slot="zoom-in-icon" type="button"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 8h10M8 3v10" /></svg></button>
+          <a id="zoom-out-glyph" slot="zoom-out-icon" href="#zoom-out-glyph"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 8h10" /></svg></a>
         </lr-zoomable-frame>
       </div>
     `);

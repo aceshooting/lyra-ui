@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
@@ -1126,7 +1127,11 @@ it("is accessible in the default (empty) state", async () => {
   const el = await fixtureItem(
     html`<lr-conversation-item></lr-conversation-item>`
   );
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+    'The conversation title labels the action; preview text and timestamp describe the conversation.',
+  ));
 });
 
 it("is accessible in a populated, active state with an excerpt, timestamp, and actions slot", async () => {
@@ -1140,7 +1145,11 @@ it("is accessible in a populated, active state with an excerpt, timestamp, and a
       <button slot="actions" aria-label="Delete conversation">✕</button>
     </lr-conversation-item>
   `);
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+    'The conversation title labels the action; preview text and timestamp describe the conversation.',
+  ));
 });
 
 it("is accessible while renaming", async () => {
@@ -1151,7 +1160,11 @@ it("is accessible while renaming", async () => {
     el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement
   ).click();
   await el.updateComplete;
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+    'The conversation title labels the action; preview text and timestamp describe the conversation.',
+  ));
 });
 
 describe('nested-interactive slot contract (start/content/excerpt/meta render inside role="button")', () => {
@@ -1268,7 +1281,11 @@ describe("active-state cssprop escape hatch", () => {
     const el = await activeItem(
       "--lr-conversation-item-active-bg: rgb(255, 243, 205); --lr-conversation-item-active-color: rgb(51, 25, 0)"
     );
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
   });
 });
 
@@ -1457,7 +1474,11 @@ describe("dense size tier", () => {
     expect(
       el.shadowRoot!.querySelectorAll('[part="rename-button"]').length
     ).to.equal(1);
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
   });
 });
 
@@ -1793,7 +1814,11 @@ describe("menu-open state", () => {
     const { el, dropdown } = await itemWithDropdown();
     await dropdown.show();
     await waitUntil(() => menuOpen(el));
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
     await dropdown.hide({ focusTrigger: false });
   });
 });

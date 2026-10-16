@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraMenubarItem } from './menubar-item.class.js';
@@ -5,7 +6,7 @@ import './menubar.js';
 
 describe('lr-menubar-item', () => {
   it('is accessible as an open menu title and a plain action in the owning menubar', async () => {
-    const wrapper = await fixture(html`<lr-menubar label="App"><lr-menubar-item id="file">File<lr-menu slot="menu"><lr-menu-item>New</lr-menu-item></lr-menu></lr-menubar-item><lr-menubar-item id="help">Help</lr-menubar-item></lr-menubar>`);
+    const wrapper = await fixture(html`<lr-menubar label="App"><lr-menubar-item id="file"><span id="file-label">File</span><lr-menu slot="menu"><lr-menu-item>New</lr-menu-item></lr-menu></lr-menubar-item><lr-menubar-item id="help">Help</lr-menubar-item></lr-menubar>`);
     const file = wrapper.querySelector<LyraMenubarItem>('#file')!;
     const help = wrapper.querySelector<LyraMenubarItem>('#help')!;
     await waitUntil(() => file.hasMenu); file.click();
@@ -13,7 +14,8 @@ describe('lr-menubar-item', () => {
     const surface = file.querySelector('lr-menu')!.shadowRoot!.querySelector<HTMLElement>('.submenu-surface')!;
     await waitUntil(() => getComputedStyle(surface).visibility === 'visible');
     expect(file.getAttribute('aria-expanded')).to.equal('true');
-    await expect(file).to.be.accessible();
+    await expect(file).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(file, [{ target: file, label: [file.querySelector('#file-label')!], reason: 'The open menu is a separate surface; File labels only its title action.' }]);
     await expect(help).to.be.accessible();
   });
 

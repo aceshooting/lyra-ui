@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./email-viewer.js";
@@ -849,7 +850,11 @@ describe("lr-email-viewer", () => {
     const el = await fixture<LyraEmailViewer>(
       html`<lr-email-viewer></lr-email-viewer>`
     );
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-email-viewer', '[part="attachment-button"]', '[part="attachment-name"]',
+      'The filename labels the attachment action; its file size is metadata.',
+    ));
   });
 
   it("is accessible once a message has loaded (headers grid, attachment list/buttons)", async () => {
@@ -861,7 +866,11 @@ describe("lr-email-viewer", () => {
       expect(
         el.shadowRoot!.querySelectorAll('[part="attachment-button"]').length
       ).to.be.greaterThan(0);
-      await expect(el).to.be.accessible();
+      await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+      await expectLabelInName(el, reviewComponentLabels(
+        el, 'lr-email-viewer', '[part="attachment-button"]', '[part="attachment-name"]',
+        'The filename labels the attachment action; its file size is metadata.',
+      ));
     } finally {
       restore();
     }
@@ -888,7 +897,11 @@ describe("lr-email-viewer", () => {
       expect(
         el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute("hidden")
       ).to.be.false;
-      await expect(el).to.be.accessible();
+      await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+      await expectLabelInName(el, reviewComponentLabels(
+        el, 'lr-email-viewer', '[part="attachment-button"]', '[part="attachment-name"]',
+        'The filename labels the attachment action; its file size is metadata.',
+      ));
     } finally {
       restore();
     }

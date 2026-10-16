@@ -497,7 +497,7 @@ describe('play-icon and pause-icon slots', () => {
 
   it('keeps an authored interactive glyph decorative: skipped by Tab and never the click target', async () => {
     const el = (await fixture(html`<lr-sequence-playback item-count="3">
-      <button slot="play-icon" type="button" aria-label="Glyph">Go</button>
+      <button slot="play-icon" type="button" aria-label="Play"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 2 10 6-10 6z" /></svg></button>
     </lr-sequence-playback>`)) as LyraSequencePlayback;
     const glyph = el.querySelector('button')!;
     let glyphClicks = 0;

@@ -1,3 +1,5 @@
+import { accessibleName } from '../../../../test/accessible-name.js';
+import { expectValidAriaRules } from '../../../../test/aria-rules.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -1878,4 +1880,17 @@ it('lr-memory-panel drops its card chrome under frame="plain" and tightens paddi
   el.frame = 'plain';
   await el.updateComplete;
   expect(getComputedStyle(target()).borderTopWidth).to.equal('0px');
+});
+
+it('names memory promotion from its complete visible localized label and retains item context in the description', async () => {
+  const el = await populated();
+  const button = el.shadowRoot!.querySelector<HTMLElement>('[part="add-button"]')!;
+  expect(button.getAttribute('aria-description')).to.equal('Add "User is debugging a TypeScript build error." to long-term memory');
+  await expectValidAriaRules(button, ['label-content-name-mismatch']);
+  expect(accessibleName(button)).to.equal('Add to long-term memory');
+  el.strings = { memoryPanelAdd: 'Ajouter à la mémoire', memoryPanelAddWithContext: 'Mémoriser « {label} »' };
+  await el.updateComplete;
+  expect(button.getAttribute('aria-description')).to.equal('Mémoriser « User is debugging a TypeScript build error. »');
+  await expectValidAriaRules(button, ['label-content-name-mismatch']);
+  expect(accessibleName(button)).to.equal('Ajouter à la mémoire');
 });

@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './entity-dossier.js';
 import type { LyraEntityDossier, LyraEntityDossierConfidence } from './entity-dossier.js';
@@ -323,17 +324,29 @@ it('renders correctly under dir="rtl"', async () => {
   el.provenance = provenance;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('lr-tab-group')).to.exist;
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-neighbor-list', '[part="node-label"]', 'span:not([part])',
+    'The entity name labels its action; relation, direction, type and degree describe the neighbor.',
+  ));
 });
 
 it('is accessible in the empty (entity=null) state', async () => {
   const el = (await fixture(html`<lr-entity-dossier></lr-entity-dossier>`)) as LyraEntityDossier;
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-neighbor-list', '[part="node-label"]', 'span:not([part])',
+    'The entity name labels its action; relation, direction, type and degree describe the neighbor.',
+  ));
 });
 
 it('is accessible in the fully populated state', async () => {
   const el = await populated();
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-neighbor-list', '[part="node-label"]', 'span:not([part])',
+    'The entity name labels its action; relation, direction, type and degree describe the neighbor.',
+  ));
 });
 
 it("contains the composed lr-tab-group's lr-activate on a real repeat pick of the active tab", async () => {
@@ -405,7 +418,11 @@ it('names the overall dossier independently of the compatibility tab-strip name'
   el.strings = { details: 'Détails' };
   await el.updateComplete;
   expect(base().getAttribute('aria-label')).to.equal('Détails');
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(
+    el, 'lr-neighbor-list', '[part="node-label"]', 'span:not([part])',
+    'The entity name labels its action; relation, direction, type and degree describe the neighbor.',
+  ));
 });
 
 

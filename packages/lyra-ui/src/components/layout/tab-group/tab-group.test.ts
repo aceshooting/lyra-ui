@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { twoFrames as nextFrames } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
@@ -1418,7 +1419,7 @@ it("derives a rich tab name from accessible default-slot content and observes vi
     <lr-tab-group aria-label="Workspace tabs">
       <lr-tab panel="general">
         <span id="visible-label"
-          >Visible
+          ><span id="visible-word">Visible</span>
           <strong id="visible-suffix" aria-hidden="true">tab</strong></span
         >
         <span aria-hidden="true">Ignored aria-hidden</span>
@@ -1440,7 +1441,14 @@ it("derives a rich tab name from accessible default-slot content and observes vi
   await el.updateComplete;
 
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Visible");
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  const axe = (window as Window & { axe?: typeof import('axe-core') }).axe!;
+  const audit = await axe.run(el, { runOnly: ['label-content-name-mismatch'], elementRef: true });
+  // This hostile author fixture intentionally shows prose excluded from its computed name.
+  expect(audit.violations.map((violation) => violation.id)).to.deep.equal(['label-content-name-mismatch']);
+  const mismatches = audit.violations.flatMap((violation) => violation.nodes);
+  expect(mismatches.length).to.equal(1);
+  expect(mismatches[0]!.element === tabButtons(el)[0]).to.equal(true);
 
   alternate.removeAttribute("aria-hidden");
   await nextFrame();
@@ -1527,7 +1535,8 @@ it("omits a rich label branch skipped by content-visibility:auto", async () => {
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal(
     "Visible label"
   );
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, [{ target: tabButtons(el)[0]!, label: [tab.querySelector('span')!], reason: 'The deferred content-visibility branch is not rendered as part of the tab label.' }]);
 });
 
 it("keeps a rich tab label when the browser does not expose checkVisibility", async () => {
@@ -1577,7 +1586,8 @@ it("omits closed <details> text from a rich tab name and restores it when opened
   await el.updateComplete;
 
   expect(tabButtons(el)[0]!.getAttribute("aria-label")).to.equal("Summary");
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, [{ target: tabButtons(el)[0]!, label: [details.querySelector('summary')!], reason: 'Closed details expose only the summary as the visible tab label.' }]);
 
   details.open = true;
   await nextFrame();

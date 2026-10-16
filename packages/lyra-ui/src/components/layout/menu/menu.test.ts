@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { resolvedMaxInlineSizeInShadow as resolvedInShadow } from '../../../../test/shadow-style.js';
 import {
   expect,
@@ -70,7 +71,7 @@ const nested = () => html`
   <lr-menu label="Row actions">
     <lr-menu-item value="rename" id="rename">Rename</lr-menu-item>
     <lr-menu-item value="share" id="share">
-      Share
+      <span id="share-label">Share</span>
       <lr-menu slot="submenu" id="share-menu">
         <lr-menu-item value="email" id="email">Email</lr-menu-item>
         <lr-menu-item value="link" id="link">Copy link</lr-menu-item>
@@ -811,7 +812,8 @@ it('is accessible in populated and nested-open states', async () => {
   const menu = await fixture<LyraMenu>(nested());
   await expect(menu).to.be.accessible();
   await byId<LyraMenuItem>(menu, 'share').openSubmenu('first');
-  await expect(menu).to.be.accessible();
+  await expect(menu).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(menu, [{ target: byId<LyraMenuItem>(menu, 'share'), label: [menu.querySelector('#share-label')!], reason: 'The open submenu has independent action labels, separate from Share.' }]);
 });
 
 it('no-ops Arrow/Home/End navigation when every item is disabled', async () => {

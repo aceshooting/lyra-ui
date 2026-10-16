@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { expect, fixture, html, waitUntil, aTimeout, nextFrame } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -29,7 +30,7 @@ async function opened(target: LyraMenubarItem): Promise<void> {
 async function sample(direction = 'ltr'): Promise<LyraMenubar> {
   const bar = await fixture<LyraMenubar>(html`
     <lr-menubar data-lr-theme-scope label="Application" dir=${direction} style="--lr-transition-fast:0ms">
-      <lr-menubar-item id="file">File<lr-menu slot="menu"><input id="filter" slot="header" aria-label="Filter" /><lr-menu-item id="new" value="new" aria-keyshortcuts="Control+T Meta+T">New tab<lr-kbd slot="details" keys="mod+t"></lr-kbd></lr-menu-item><lr-menu-item id="share">Share<lr-menu slot="submenu"><lr-menu-item id="email">Email</lr-menu-item></lr-menu></lr-menu-item><lr-menu-label>Options</lr-menu-label><hr /><lr-menu-item id="check" type="checkbox">Show toolbar</lr-menu-item><lr-menu-item type="radio" group="profile" checked>Personal</lr-menu-item><lr-menu-item id="last" type="radio" group="profile">Work</lr-menu-item></lr-menu></lr-menubar-item>
+      <lr-menubar-item id="file"><span id="file-label">File</span><lr-menu slot="menu"><input id="filter" slot="header" aria-label="Filter" /><lr-menu-item id="new" value="new" aria-keyshortcuts="Control+T Meta+T"><span id="new-label">New tab</span><lr-kbd slot="details" keys="mod+t"></lr-kbd></lr-menu-item><lr-menu-item id="share"><span id="share-label">Share</span><lr-menu slot="submenu"><lr-menu-item id="email">Email</lr-menu-item></lr-menu></lr-menu-item><lr-menu-label>Options</lr-menu-label><hr /><lr-menu-item id="check" type="checkbox">Show toolbar</lr-menu-item><lr-menu-item type="radio" group="profile" checked>Personal</lr-menu-item><lr-menu-item id="last" type="radio" group="profile">Work</lr-menu-item></lr-menu></lr-menubar-item>
       <lr-menubar-item id="edit">Edit<lr-menu slot="menu"><lr-menu-item id="undo">Undo</lr-menu-item></lr-menu></lr-menubar-item>
       <lr-menubar-item id="view">View<lr-menu slot="menu"><lr-menu-item>Zoom</lr-menu-item></lr-menu></lr-menubar-item>
       <lr-menubar-item id="disabled" disabled>Disabled</lr-menubar-item>
@@ -103,7 +104,12 @@ describe('lr-menubar', () => {
     expect(getComputedStyle(surface(item(el, 'file'))).visibility).to.equal('visible');
     const details = el.querySelector('#new')!.shadowRoot!.querySelector<HTMLElement>('[part="details"]')!;
     expect(details.hidden).to.equal(false); expect(details.offsetWidth).to.be.greaterThan(0);
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, [
+      { target: item(el, 'file'), label: [el.querySelector('#file-label')!], reason: 'The menu title File does not include its separate open menu actions.' },
+      { target: el.querySelector('#new')!, label: [el.querySelector('#new-label')!], reason: 'The keycap details describe the keyboard shortcut, not the New tab action label.' },
+      { target: el.querySelector('#share')!, label: [el.querySelector('#share-label')!], reason: 'The Share submenu contains independently labelled actions.' },
+    ]);
   });
 
   for (const direction of ['ltr', 'rtl']) {

@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys, setViewport } from '@web/test-runner-commands';
 import './context-menu.js';
@@ -652,7 +653,7 @@ describe('<lr-context-menu>', () => {
           <lr-context-menu style="--show-duration: 0ms; --hide-duration: 0ms">
             <div slot="trigger"><button id="btn">Row</button></div>
             <lr-menu-item value="more" id="parent">
-              More
+              <span id="more-label">More</span>
               <lr-menu-item slot="submenu" value="child" id="child">Child</lr-menu-item>
             </lr-menu-item>
           </lr-context-menu>
@@ -1639,13 +1640,13 @@ describe('<lr-context-menu>', () => {
           >
             <div slot="trigger"><button id="btn">Row</button></div>
             <lr-menu-label>Edit</lr-menu-label>
-            <lr-menu-item value="copy" id="copy">Copy<span slot="details">Ctrl+C</span></lr-menu-item>
+            <lr-menu-item value="copy" id="copy"><span id="copy-label">Copy</span><span slot="details">Ctrl+C</span></lr-menu-item>
             <lr-menu-item value="wrap" type="checkbox" checked>Wrap lines</lr-menu-item>
             <hr />
             <lr-menu-item value="list" type="radio" group="view" checked>List</lr-menu-item>
             <lr-menu-item value="grid" type="radio" group="view">Grid</lr-menu-item>
             <lr-menu-item value="more" id="more">
-              More
+              <span id="more-label">More</span>
               <lr-menu-item slot="submenu" value="child" id="child">Child</lr-menu-item>
             </lr-menu-item>
           </lr-context-menu>
@@ -1669,22 +1670,29 @@ describe('<lr-context-menu>', () => {
 
     it('passes axe while open, with a submenu open, in RTL and with a host aria-label', async () => {
       let el = await populated({ label: 'Row actions' });
+      const assertLabels = async (): Promise<void> => {
+        await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+        await expectLabelInName(el, [
+          { target: byId(el, 'copy'), label: [el.querySelector('#copy-label')!], reason: 'Ctrl+C describes the keyboard shortcut, separate from the visible Copy action label.' },
+          { target: byId(el, 'more'), label: [el.querySelector('#more-label')!], reason: 'The open submenu contains independent actions, separate from the More label.' },
+        ]);
+      };
       await openFromKeyboard(el);
-      await expect(el).to.be.accessible();
+      await assertLabels();
       byId(el, 'more').focus();
       await sendKeys({ press: 'ArrowRight' });
       await waitUntil(() => deepActiveId() === 'child', 'submenu opened');
-      await expect(el).to.be.accessible();
+      await assertLabels();
       await el.hide({ focusTrigger: false });
 
       el = await populated({ label: 'Row actions', dir: 'rtl' });
       await openFromKeyboard(el);
-      await expect(el).to.be.accessible();
+      await assertLabels();
       await el.hide({ focusTrigger: false });
 
       el = await populated({ ariaLabel: 'Row actions' });
       await openFromKeyboard(el);
-      await expect(el).to.be.accessible();
+      await assertLabels();
       await el.hide({ focusTrigger: false });
     });
 

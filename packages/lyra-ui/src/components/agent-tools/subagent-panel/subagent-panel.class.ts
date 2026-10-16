@@ -475,7 +475,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
                   data-agent-action="inline"
                   type="button"
                   tabindex=${buttonTabindex}
-                  aria-label=${this.localize('subagentPanelRetryRun', undefined, { name: run.label })}
+                  aria-description=${this.localize('subagentPanelRetryRun', undefined, { name: run.label })}
                   @click=${() => this.emit('lr-run-retry', { runId: run.id })}
                 >${this.localize('subagentPanelRetry')}</button>`
               : nothing}

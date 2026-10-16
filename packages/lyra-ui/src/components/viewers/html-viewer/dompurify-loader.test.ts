@@ -11,6 +11,12 @@ it('loads dompurify and caches the resolved module', async () => {
   expect(second).to.equal(first);
 });
 
+it('uses the optional peer import when no importer is supplied', async () => {
+  const resolved = await loadHtmlSanitizerDeps();
+  expect(resolved).to.not.equal(null);
+  expect(resolved!.sanitize('<p onclick="alert(1)">Safe<script>alert(1)</script></p>')).to.equal('<p>Safe</p>');
+});
+
 it('falls back to the bare module namespace when the dynamic import has no .default', async () => {
   const bareModule = { sanitize: (value: string) => value };
   const resolved = await loadHtmlSanitizerDeps(() => Promise.resolve(bareModule));

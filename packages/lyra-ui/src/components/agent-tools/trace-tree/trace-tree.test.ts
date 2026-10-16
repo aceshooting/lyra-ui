@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -749,7 +750,9 @@ describe('lr-trace-tree', () => {
   it('is accessible', async () => {
     const el = (await fixture(html`<lr-trace-tree .spans=${SPANS} with-tokens with-cost></lr-trace-tree>`)) as LyraTraceTree;
     await el.updateComplete;
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(el, 'lr-trace-tree', '[part="row"]', '[part="name"]',
+      'The span name labels the action; kind, status, duration and token metrics describe the span.'));
   });
 
   it('gives the expand/collapse toggle the shared minimum tappable size without inflating the chevron glyph', async () => {
@@ -1155,7 +1158,9 @@ describe('lr-trace-tree', () => {
         const active = el.shadowRoot!.querySelector('[part="row"][data-active]') as HTMLElement;
         expect(active.getAttribute('data-id'), span.id).to.equal(span.id);
         expect(active.querySelector('[part="status-text"]')!.getAttribute('data-status')).to.equal(span.status);
-        await expect(el).to.be.accessible();
+        await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(el, 'lr-trace-tree', '[part="row"]', '[part="name"]',
+      'The span name labels the action; kind, status, duration and token metrics describe the span.'));
       }
     });
   });

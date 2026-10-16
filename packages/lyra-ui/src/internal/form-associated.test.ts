@@ -1482,10 +1482,14 @@ describe('isEmptyFormValue()', () => {
     expect(isEmptyFormValue(''), 'empty string').to.be.true;
     expect(isEmptyFormValue([]), 'empty array').to.be.true;
     expect(isEmptyFormValue({}), 'empty plain object').to.be.true;
+    expect(isEmptyFormValue(Object.create(null)), 'empty null-prototype object').to.be.true;
 
     expect(isEmptyFormValue('x'), 'non-empty string').to.be.false;
     expect(isEmptyFormValue(['x']), 'non-empty array').to.be.false;
     expect(isEmptyFormValue({ a: 1 }), 'non-empty plain object').to.be.false;
+    const nullPrototypeValue = Object.create(null) as Record<string, unknown>;
+    nullPrototypeValue['answer'] = 42;
+    expect(isEmptyFormValue(nullPrototypeValue), 'non-empty null-prototype object').to.be.false;
     // A real value, however falsy or however key-less: `0`/`false` are choices a user made, and
     // `Object.keys()` reports 0 for a populated FormData/Map/Set, so those are never key-counted.
     expect(isEmptyFormValue(0), 'zero').to.be.false;

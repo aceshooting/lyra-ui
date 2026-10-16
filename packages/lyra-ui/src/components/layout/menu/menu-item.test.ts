@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import {
   fixture,
   expect,
@@ -718,13 +719,13 @@ it('keeps every display slot decorative while the host retains the sole menuitem
   const wrapper = (await fixture(html`
     <lr-menu label="Actions">
       <lr-menu-item id="rename" value="rename" tabindex="0">
-        <button id="icon" slot="icon" type="button">Icon action</button>
-        <button id="prefix" slot="prefix" type="button">Prefix action</button>
+        <button id="icon" slot="icon" type="button"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 8h10M8 3v10" /></svg></button>
+        <button id="prefix" slot="prefix" type="button"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 8h10M8 3v10" /></svg></button>
         <button id="label" type="button">Rename</button>
         <button id="details" slot="details" type="button">
-          Shortcut action
+          Ctrl+R
         </button>
-        <button id="suffix" slot="suffix" type="button">Suffix action</button>
+        <button id="suffix" slot="suffix" type="button"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 8h10M8 3v10" /></svg></button>
       </lr-menu-item>
     </lr-menu>
   `)) as LyraMenu;
@@ -790,7 +791,8 @@ it('keeps every display slot decorative while the host retains the sole menuitem
 
   expect(slottedClicks).to.equal(0);
   expect(selections).to.equal(1);
-  await expect(wrapper).to.be.accessible();
+  await expect(wrapper).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(wrapper, [{ target: item, label: [label], reason: 'Shortcut and decorative display slots describe the action; Rename is its visible label.' }]);
 });
 
 it('treats loading as interaction-disabled and renders the spinner parts', async () => {

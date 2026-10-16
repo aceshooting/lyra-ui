@@ -229,8 +229,8 @@ describe("Web Awesome carousel surface", () => {
     const wrapper = await fixture<HTMLElement>(html`<div>
       <button id="before-carousel-icons">Before</button>
       <lr-carousel navigation>
-        <button id="nested-previous-icon" slot="previous-icon" type="button">Back</button>
-        <a id="nested-next-icon" slot="next-icon" href="#nested-next">Forward</a>
+        <button id="nested-previous-icon" slot="previous-icon" type="button"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="m10 3-5 5 5 5" /></svg></button>
+        <a id="nested-next-icon" slot="next-icon" href="#nested-next"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><path d="m6 3 5 5-5 5" /></svg></a>
         <div>One</div>
         <div>Two</div>
       </lr-carousel>

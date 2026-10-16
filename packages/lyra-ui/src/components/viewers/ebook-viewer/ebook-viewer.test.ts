@@ -570,6 +570,30 @@ describe("lr-ebook-viewer", () => {
     }
   });
 
+  it("rejects malformed archive bytes before constructing an epub.js book", async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(new Response(new Uint8Array([0x50, 0x4b, 0x03, 0x04])))) as typeof window.fetch;
+    const fake = fakeBook();
+    let factoryCalls = 0;
+    __setEpubJsForTesting(() => {
+      factoryCalls++;
+      return fake.book as never;
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      const errorPromise = oneEvent(el, "lr-render-error");
+      el.src = "https://example.test/malformed.epub";
+      const event = (await errorPromise) as CustomEvent<{ error: unknown }>;
+      expect(event.detail.error).to.exist;
+      expect(factoryCalls).to.equal(0);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal("This document is too large to preview.");
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it("drops an aborted in-flight load without surfacing an error, once a newer src supersedes it", async () => {
     const original = window.fetch;
     const signals: (AbortSignal | undefined)[] = [];

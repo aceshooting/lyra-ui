@@ -800,7 +800,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                         tabindex=${itemKey === rovingActionKey ? '0' : '-1'}
                         @focus=${() => { this.rovingActionByScope.set(scope, itemKey); this.requestUpdate(); }}
                         @keydown=${this.onPrimaryKeyDown}
-                        aria-label=${this.localize(
+                        aria-description=${this.localize(
                           'memoryPanelAddWithContext',
                           undefined,
                           { label: item.text }

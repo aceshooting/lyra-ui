@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 
-const require = createRequire(import.meta.url);
-const braces = require('../node_modules/.pnpm/node_modules/braces');
+const packageRequire = createRequire(new URL('../packages/lyra-ui/package.json', import.meta.url));
+const analyzerRequire = createRequire(packageRequire.resolve('@custom-elements-manifest/analyzer'));
+const globbyRequire = createRequire(analyzerRequire.resolve('globby'));
+const fastGlobRequire = createRequire(globbyRequire.resolve('fast-glob'));
+const micromatchRequire = createRequire(fastGlobRequire.resolve('micromatch'));
+const braces = micromatchRequire('braces');
 const depthError = { name: 'SyntaxError', message: 'Input nesting depth exceeds maximum of 128' };
 const nested = (depth, open = '{', close = '}') => open.repeat(depth) + 'a,b' + close.repeat(depth);
 

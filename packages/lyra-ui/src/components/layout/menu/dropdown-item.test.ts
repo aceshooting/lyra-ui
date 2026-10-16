@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { sendKeys } from '@web/test-runner-commands';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
@@ -12,7 +13,7 @@ async function submenuParent(): Promise<LyraDropdownItem> {
   const wrapper = (await fixture(html`
     <div role="menu" aria-label="Share actions">
       <lr-dropdown-item id="share">
-        Share
+        <span id="share-label">Share</span>
         <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
       </lr-dropdown-item>
     </div>
@@ -203,7 +204,7 @@ describe('<lr-dropdown-item>', () => {
         <lr-dropdown-item id="archive" value="archive" tabindex="0">
           <button id="label" type="button">Archive</button>
           <button id="details" slot="details" type="button">
-            Shortcut action
+            Ctrl+A
           </button>
         </lr-dropdown-item>
       </lr-menu>
@@ -252,7 +253,8 @@ describe('<lr-dropdown-item>', () => {
 
     expect(slottedClicks).to.equal(0);
     expect(selections).to.equal(1);
-    await expect(wrapper).to.be.accessible();
+    await expect(wrapper).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(wrapper, [{ target: item, label: [label], reason: 'The details slot is shortcut metadata; Archive is the visible action label.' }]);
   });
 
   it('exposes submenu-open as a reflected, controllable state with a false default', async () => {
@@ -449,7 +451,8 @@ describe('<lr-dropdown-item>', () => {
   it('is accessible with its reflected submenu state open', async () => {
     const item = await submenuParent();
     await item.openSubmenu('none');
-    await expect(item.parentElement!).to.be.accessible();
+    await expect(item.parentElement!).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(item.parentElement!, [{ target: item, label: [item.querySelector('#share-label')!], reason: 'The expanded submenu contains separate actions, not words in the Share label.' }]);
   });
 
   // Asserted against this tag rather than <lr-menu-item>: the ladder arrives through the

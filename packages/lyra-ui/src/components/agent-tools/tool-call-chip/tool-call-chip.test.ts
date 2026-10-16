@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tool-call-chip.js';
 import type { LyraToolCallChip } from './tool-call-chip.js';
@@ -768,7 +769,9 @@ it('is accessible in a populated state with category, duration, and an open deta
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
   await focusByKeyboard(base);
   await el.updateComplete;
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, reviewComponentLabels(el, 'lr-tool-call-chip', 'button[part="base"]', '[part="name"]',
+    'The tool name labels the action; category, summary, status and timing provide context.'));
 });
 
 it('keeps long labels and localized metadata visible inside a 256px allocation', async () => {

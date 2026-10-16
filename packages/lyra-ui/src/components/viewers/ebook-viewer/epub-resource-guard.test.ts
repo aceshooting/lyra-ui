@@ -54,4 +54,17 @@ describe('EPUB resource guard', () => {
     await assertEpubArchiveWithinLimits(await build(5), 10, 100_000, { maxXmlNodes: 30 });
     await expectResourceLimit(async () => assertEpubArchiveWithinLimits(await build(100), 10, 100_000, { maxXmlNodes: 30 }));
   });
+
+  it('resolves package and manifest references with dot segments before checking document complexity', async () => {
+    const zip = new JSZip();
+    zip.file('META-INF/container.xml', '<container><rootfiles><rootfile full-path="OPS/chapters/../book.opf"/></rootfiles></container>');
+    zip.file('OPS/book.opf', '<package><manifest>'
+      + '<item id="chapter" href="../Text/chapter.xhtml?edition=1#start" media-type="application/xhtml+xml"/>'
+      + '<item id="image" href="../Images/cover.png" media-type="image/png"/></manifest></package>');
+    zip.file('Text/chapter.xhtml', '<html><body>' + '<p/>'.repeat(20) + '</body></html>');
+    zip.file('Images/cover.png', '<p'.repeat(256));
+    const source = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+
+    await expectResourceLimit(() => assertEpubArchiveWithinLimits(source, 10, 100_000, { maxXmlNodes: 10 }));
+  });
 });

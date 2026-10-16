@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
@@ -115,7 +116,11 @@ it('renders a localized empty state and remains accessible at populated state', 
     'Aucun résultat à comparer',
   );
   const populated = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
-  await expect(populated).shadowDom.to.be.accessible();
+  await expect(populated).shadowDom.to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(populated, reviewComponentLabels(
+    populated, 'lr-retrieval-compare', '[part~="chunk"]', '[part="chunk-rank"], [part="chunk-title"]',
+    'Rank and source title label the result; text and scores are separately referenced descriptions.',
+  ));
 });
 
 it('applies per-instance strings to the comparison region label', async () => {
@@ -368,7 +373,11 @@ describe('lr-retrieval-compare review fixes', () => {
     expect(text('aria-labelledby')).to.equal('Rank 1 Source b');
     expect(text('aria-describedby')).to.contain('Text for b');
     expect(text('aria-labelledby')).to.not.contain('Text for b');
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-retrieval-compare', '[part~="chunk"]', '[part="chunk-rank"], [part="chunk-title"]',
+      'Rank and source title label the result; text and scores are separately referenced descriptions.',
+    ));
   });
 
   it('separates each score label from its value', async () => {

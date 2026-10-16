@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './dropdown.js';
@@ -766,7 +767,7 @@ it('mirrors submenu arrows and preserves the safe pointer corridor under RTL', a
     <lr-dropdown dir="rtl">
       <button slot="trigger">Actions</button>
       <lr-dropdown-item id="share">
-        Share
+        <span id="share-label">Share</span>
         <lr-dropdown-item slot="submenu" value="email">Email</lr-dropdown-item>
       </lr-dropdown-item>
       <lr-dropdown-item value="move">Move</lr-dropdown-item>
@@ -818,7 +819,8 @@ it('mirrors submenu arrows and preserves the safe pointer corridor under RTL', a
   // wait-reason: wait past the 300ms safe-corridor close deadline to prove it was cancelled
   await new Promise((resolve) => setTimeout(resolve, 330));
   expect(parent.submenuOpen).to.equal(true);
-  await expect(el).to.be.accessible();
+  await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(el, [{ target: parent, label: [parent.querySelector('#share-label')!], reason: 'The visible Share label excludes the separately navigable submenu actions.' }]);
 });
 
 for (const shape of ['direct', 'nested'] as const) {

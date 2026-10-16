@@ -1,3 +1,4 @@
+import { expectLabelInName } from '../../../../test/reviewed-labels.js';
 import { twoFrames as nextFrames } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
@@ -1371,7 +1372,11 @@ describe('collision="cluster"', () => {
   it('has no axe violations in a populated clustered state', async () => {
     const el = (await fixture(CLUSTERED)) as LyraTimeline;
     await settleClusters(el);
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, clusterButtons(el).map((target) => ({
+      target, label: [target.querySelector('[part="cluster-count"]')!],
+      reason: 'The cluster count is the visible label; the symbolic plus sign indicates additional events.',
+    })));
   });
 });
 

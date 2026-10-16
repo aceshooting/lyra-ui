@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import {
   fixture,
@@ -1542,7 +1543,11 @@ describe('lr-knowledge-graph-explorer', () => {
     ) as LyraKnowledgeGraphExplorer;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-neighbor-list', '[part="node-label"]', 'span:not([part])',
+      'The entity name labels its action; relation, direction, type and degree describe the neighbor.',
+    ));
   });
 
   it('shrinks to a 320px allocation without horizontal overflow', async () => {
@@ -1598,7 +1603,11 @@ describe('lr-knowledge-graph-explorer', () => {
       ?.querySelector('[part~="popup"]')
       ?.getAnimations()
       .forEach((animation) => animation.finish());
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-neighbor-list', '[part="node-label"]', 'span:not([part])',
+      'The entity name labels its action; relation, direction, type and degree describe the neighbor.',
+    ));
   });
 
   it('renders detail-body and detail-actions slot content additively alongside the default card body/actions', async () => {
@@ -1663,7 +1672,11 @@ describe('lr-knowledge-graph-explorer', () => {
       ?.querySelector('[part~="popup"]')
       ?.getAnimations()
       .forEach((animation) => animation.finish());
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-neighbor-list', '[part="node-label"]', 'span:not([part])',
+      'The entity name labels its action; relation, direction, type and degree describe the neighbor.',
+    ));
   });
 
   it('clears a dangling selection and force-closes the popover when the selected node disappears from nodes', async () => {

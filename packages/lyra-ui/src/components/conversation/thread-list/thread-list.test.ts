@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
@@ -819,7 +820,11 @@ describe("data mode", () => {
     ).to.deep.equal(["Open beta", "Open alpha"]);
     expect(toggles.every((toggle) => toggle.querySelector("a") === null)).to.be
       .true;
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
   });
 
   it("self-manages group collapse via the lr-group-toggle-request/lr-group-toggle pair by default, removing collapsed rows from virtual-list measurement", async () => {
@@ -883,7 +888,11 @@ describe("data mode", () => {
       "Réduire alpha"
     );
 
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
   });
 
   it("lets a consumer veto the built-in write via a cancelable lr-group-toggle-request and stay fully controlled", async () => {
@@ -2306,7 +2315,11 @@ describe("data mode", () => {
         expect(clearButton!.tagName).to.equal("BUTTON");
         expect(clearButton!.getAttribute("aria-label")).to.equal("Clear");
         expect(clearButton!.tabIndex).to.equal(0);
-        await expect(el).to.be.accessible();
+        await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+        await expectLabelInName(el, reviewComponentLabels(
+          el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+          'The conversation title labels the action; preview text and timestamp describe the conversation.',
+        ));
       });
 
       it("respects a .strings override for its accessible name, proving it is not a hardcoded fallback", async () => {
@@ -2587,14 +2600,22 @@ it("is accessible in both modes", async () => {
     ></lr-thread-list>`
   )) as LyraThreadList;
   await dataMode.updateComplete;
-  await expect(dataMode).to.be.accessible();
+  await expect(dataMode).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(dataMode, reviewComponentLabels(
+    dataMode, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+    'The conversation title labels the action; preview text and timestamp describe the conversation.',
+  ));
 
   const slottedMode = (await fixture(
     html`<lr-thread-list
       ><lr-conversation-item label="Row"></lr-conversation-item
     ></lr-thread-list>`
   )) as LyraThreadList;
-  await expect(slottedMode).to.be.accessible();
+  await expect(slottedMode).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  await expectLabelInName(slottedMode, reviewComponentLabels(
+    slottedMode, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+    'The conversation title labels the action; preview text and timestamp describe the conversation.',
+  ));
 });
 
 it("renders first-class start, meta, and row-content hooks inside virtualized rows", async () => {
@@ -3210,7 +3231,11 @@ describe("wrapRow row-wrapper part", () => {
       html`<span data-thread-id=${thread.id}>${row}</span>`;
     await el.updateComplete;
     await nextFrame();
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
   });
 });
 
@@ -3359,7 +3384,11 @@ describe("data-mode row part forwarding", () => {
       lr-thread-list::part(row-item-label) { font-size: 12px; }
     `);
     const { el } = await mountRow();
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
   });
 });
 
@@ -4183,7 +4212,11 @@ describe("sticky group headers", () => {
     const el = await mount(true);
     expect(band(el) === null, "the band is present for the axe run").to.be
       .false;
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
   });
 });
 
@@ -4308,7 +4341,11 @@ describe("error state", () => {
       html`<lr-thread-list error .threads=${threads}></lr-thread-list>`
     )) as LyraThreadList;
     await el.updateComplete;
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
   });
 });
 
@@ -4506,7 +4543,11 @@ describe("row-action overlays escape the virtual viewport", () => {
     const { dropdown } = await openRowMenu(el, "r0");
     const row = dataRow(el, "r0");
     const timestamp = row.shadowRoot!.querySelector<HTMLElement>('[part="timestamp"]')!;
-    await expect(el).to.be.accessible();
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(el, reviewComponentLabels(
+      el, 'lr-conversation-item', '[part="select-button"][role="button"]:has([part="label"])', '[part="label"]',
+      'The conversation title labels the action; preview text and timestamp describe the conversation.',
+    ));
     row.setAttribute('data-lr-theme-scope', '');
     row.style.setProperty("--lr-color-text", "rgb(0, 0, 0)");
     expect(getComputedStyle(timestamp).color).to.equal("rgb(0, 0, 0)");

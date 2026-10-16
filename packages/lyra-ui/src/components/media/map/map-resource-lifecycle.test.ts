@@ -54,6 +54,68 @@ class DelayedLoadMap {
   queryRenderedFeatures(): unknown[] { return []; }
 }
 
+it('waits for a positive intersection and tolerates empty observer notifications', async () => {
+  const originalIntersectionObserver = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  let intersection: IntersectionObserverCallback | undefined;
+  let observerDisconnected = false;
+  class ControlledIntersectionObserver {
+    constructor(callback: IntersectionObserverCallback) {
+      intersection = callback;
+    }
+    observe(): void {}
+    disconnect(): void { observerDisconnected = true; }
+    takeRecords(): IntersectionObserverEntry[] { return []; }
+    unobserve(): void {}
+  }
+
+  DelayedLoadMap.instances.length = 0;
+  Object.defineProperty(window, 'IntersectionObserver', {
+    configurable: true,
+    value: ControlledIntersectionObserver,
+  });
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    configurable: true,
+    writable: true,
+    value(this: HTMLCanvasElement, kind: string, ...args: unknown[]): unknown {
+      if (kind === 'webgl2') return {};
+      return Reflect.apply(originalGetContext, this, [kind, ...args]);
+    },
+  });
+
+  const element = document.createElement('lr-map') as LyraMap;
+  element.engine = 'maplibre';
+  element.mapStyle = blankStyle;
+  (element as unknown as { loadLibrary(): Promise<unknown> }).loadLibrary = async () => ({ Map: DelayedLoadMap });
+
+  try {
+    document.body.append(element);
+    await waitUntil(() => element.shadowRoot!.querySelector('[part="container"]') !== null);
+    await element.updateComplete;
+    expect(element.map === undefined).to.be.true;
+
+    const notifyIntersection = intersection;
+    if (!notifyIntersection) throw new Error('The map must observe its allocated container.');
+    expect(() => notifyIntersection([], {} as IntersectionObserver)).to.not.throw();
+    notifyIntersection([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+    await element.updateComplete;
+    expect(element.map === undefined).to.be.true;
+
+    notifyIntersection([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+    await waitUntil(() => element.map !== undefined);
+    expect(DelayedLoadMap.instances.length).to.equal(1);
+  } finally {
+    element.remove();
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    if (originalIntersectionObserver) {
+      Object.defineProperty(window, 'IntersectionObserver', originalIntersectionObserver);
+    } else {
+      delete (window as unknown as { IntersectionObserver?: typeof IntersectionObserver }).IntersectionObserver;
+    }
+  }
+  expect(observerDisconnected).to.be.true;
+});
+
 it('ignores a removed peer load after reconnect and publishes only the current map', async () => {
   const originalIntersectionObserver = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
   const originalGetContext = HTMLCanvasElement.prototype.getContext;

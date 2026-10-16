@@ -1,3 +1,4 @@
+import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
@@ -47,9 +48,17 @@ describe('lr-approval-queue', () => {
 
   it('is accessible in empty and populated states', async () => {
     const empty = (await fixture(html`<lr-approval-queue></lr-approval-queue>`)) as LyraApprovalQueue;
-    await expect(empty).to.be.accessible();
+    await expect(empty).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(empty, reviewComponentLabels(
+      empty, 'lr-approval-queue', '[part="request"]', '[part="tool-name"]',
+      'The tool name labels the review action; request identity and status are descriptive metadata.',
+    ));
     const populated = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
-    await expect(populated).to.be.accessible();
+    await expect(populated).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    await expectLabelInName(populated, reviewComponentLabels(
+      populated, 'lr-approval-queue', '[part="request"]', '[part="tool-name"]',
+      'The tool name labels the review action; request identity and status are descriptive metadata.',
+    ));
   });
 
   it('honors readonly and forwards it to the reused dialog', async () => {
