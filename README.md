@@ -16,7 +16,7 @@
 [![avg per component](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.avgComponentGzipKb&label=avg%20per%20component&suffix=%20KB%20gzip&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json)
 [![total gzip](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.barrelGzipKb&label=total%20gzip&suffix=%20KB&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json)
 [![types](https://img.shields.io/badge/types-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.npmjs.com/package/@aceshooting/lyra-ui)
-[![license](https://img.shields.io/github/license/aceshooting/lyra-ui)](./LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 Tested on every modern engine — see [Browser & Node support](#browser--node-support) for what CI
 actually proves for each:
@@ -50,6 +50,7 @@ a live example, source code, and API reference.
 
 - [Quick Start](#quick-start)
 - [Highlights](#highlights)
+- [Upgrading](./packages/lyra-ui/README.md#upgrading)
 - [Principles & Guidelines](#principles--guidelines)
 - [Components](#components)
 - [Theming, internationalization & RTL](#theming-internationalization--rtl)
@@ -155,10 +156,9 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 The [feature guide](./packages/lyra-ui/README.md#highlights) has APIs and examples; the [roadmap](./docs/roadmap.md)
 records shipped releases and open work, including [native document editing](./docs/roadmap/document-editing.md).
-Version history and older upgrades: [package changelog](./packages/lyra-ui/CHANGELOG.md). Upgrading to
-[v23](./packages/lyra-ui/README.md#upgrading-to-v23), [v24](./packages/lyra-ui/llms/shared/v23-to-v24-migration.md) or
-[v27](./packages/lyra-ui/README.md#upgrading-to-v27)? Editor data moved to [`@aceshooting/lyra-ide`](./packages/lyra-ide)
-and locale catalogs to [`@aceshooting/lyra-translations`](./packages/lyra-translations).
+Upgrading across a major? The [upgrade table](./packages/lyra-ui/README.md#upgrading) lists what
+breaks in each major since v22, with the matching `lyra-ui-migrate` profile; full history is in the
+[package changelog](./packages/lyra-ui/CHANGELOG.md) and [archive](./docs/changelog).
 
 ## Principles & Guidelines
 

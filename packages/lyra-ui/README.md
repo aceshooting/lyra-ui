@@ -16,7 +16,7 @@
 [![avg per component](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.avgComponentGzipKb&label=avg%20per%20component&suffix=%20KB%20gzip&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json)
 [![total gzip](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.barrelGzipKb&label=total%20gzip&suffix=%20KB&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json)
 [![types](https://img.shields.io/badge/types-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.npmjs.com/package/@aceshooting/lyra-ui)
-[![license](https://img.shields.io/github/license/aceshooting/lyra-ui)](./LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 <p align="center">
   <a href="https://www.lyra-ui.com/">
@@ -55,28 +55,24 @@ and no runtime dependency on either project.
 The [roadmap](../../docs/roadmap.md#roadmap-index-and-release-status) tracks upcoming work; the
 [changelog](CHANGELOG.md) and [archive](../../docs/changelog) hold per-version changes and older upgrade notes.
 
-## Upgrading to v23
+## Upgrading
 
-Compatibility APIs deprecated before v22 were removed; use the [migration guide](./llms/migration.md) and the `lyra-v21` profile ([notes](../../docs/changelog/v23.md)).
+Every major release has notes. This list covers all of them since v22; older ones are in the
+[archive](../../docs/changelog). Moving across several majors? Do them one at a time, oldest first:
+each `--origin` profile below needs the CLI from the version it upgrades to
+(`npx --package @aceshooting/lyra-ui@<version> lyra-ui-migrate`). The [migration guide](./llms/migration.md)
+has the full rules, and `--check` lists what's left without changing any files.
 
-## Upgrading to v24
-
-Theme/preset facade, nested registration routes and `ssr-loader.js` were removed; follow the [v23-to-v24 guide](./llms/shared/v23-to-v24-migration.md) and run the CLI with `--origin=lyra-v22` ([notes](../../docs/changelog/v24.md)).
-
-## Upgrading to v27
-
-V27 is a major release; each change below has a migration note in the [changelog](CHANGELOG.md). Run `npx lyra-ui-migrate --origin=lyra-v26 --check src` first.
-
-- **Package split.** Locale catalogs moved to [`@aceshooting/lyra-translations`](../lyra-translations)
-  (`@aceshooting/lyra-ui/translations/<locale>.js` becomes `@aceshooting/lyra-translations/<locale>.js`; the
-  pseudo-locales stay here) and editor data to [`@aceshooting/lyra-ide`](../lyra-ide)
-  (the `custom-elements.json` export is now `@aceshooting/lyra-ide/custom-elements.json`). Install
-  them at the same version; `loadLyraLocale()` needs `lyra-translations`.
-- **Agent tools.** `ToolCallStatus` and `ToolResultStatus` are replaced by one `ToolStatus` union.
-  `lr-task-list` and `lr-prompt-studio` default `heading-level` to `none`; set `3` / `2` to keep headings.
-- **Copy controls** show feedback for 1500 ms; set `feedback-duration="1000"` on `lr-copy-button` to keep the old timing.
-- **Text fields.** `lr-phone-input`'s string `autoCorrect` is now the boolean `autocorrect`.
-- **Charts** over the row budget keep every series and thin only rows.
+| To | What breaks | Migration help |
+| --- | --- | --- |
+| **v29** | `lr-map` now uses the optional `@aceshooting/lyra-map` renderer (or set `engine="maplibre"`); the DOCX editor bundles its engine and `execute()` returns a promise | [Changelog](CHANGELOG.md#2900), [map setup](../lyra-map/README.md) |
+| **v28** | Shared `--lr-*` tokens are declared once per document; a `--lr-theme-*` input set on a plain element needs `data-lr-theme-scope` | `--rule=theme-scopes`, [notes](../../docs/changelog/v28.md) |
+| **v27** | Locales moved to `@aceshooting/lyra-translations`, editor data to `@aceshooting/lyra-ide`; one `ToolStatus` union; some changed defaults | `--origin=lyra-v26`, [notes](../../docs/changelog/v27.md) |
+| **v26** | Form events use native `input`/`change` plus typed `lr-input`/`lr-change`; resize, focus and viewer-diagnostic events changed | `--origin=lyra-v25`, [notes](../../docs/changelog/v26.md) |
+| **v25** | Built-in look is now Shadcn, Glass, Emerald and System mode | Set the look you want explicitly, [notes](../../docs/changelog/v25.md) |
+| **v24** | Theme/preset facade, nested registration routes and `ssr-loader.js` removed | `--origin=lyra-v22`, [v23→v24 guide](./llms/shared/v23-to-v24-migration.md), [notes](../../docs/changelog/v24.md) |
+| **v23** | APIs deprecated before v22 removed | `--origin=lyra-v21`, [notes](../../docs/changelog/v23.md) |
+| **v22** | Requires Node 22 and the Popover API; Lyra-only events and defaults normalized | `--origin=lyra-v21`, [notes](../../docs/changelog/v22.md) |
 
 ## Quick Start
 
