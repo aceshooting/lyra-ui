@@ -263,7 +263,8 @@ aggregates from one successful `workflow_dispatch` run whose `head_branch` is `m
   its automatic default and WebKit/Safari use the smaller of four pages or half the CPUs. The
   aggregate runner budgets shard pages from Firefox's one-page and WebKit's four-page allocations.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same six
-  Node 22 browser/shard legs as CI (the `platform-contracts` matrix described above). Node 22 needs pnpm 12.14.0.
+  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.14.0.
+  Its 6 legs are source-derived: Node 22 runs Chromium (1 shard), Chrome (1 shard), Edge (1 shard), Firefox (2 shards), and Safari (1 shard).
   `CI_SH_NODE22_BIN` and `CI_SH_PNPM22_BIN` accept explicit executable paths; the selected Node
   must match the exact `.nvmrc` patch.
 - `CI_SH_SKIP_INSTALL=1` skips only the primary dependency installation and Chromium download;

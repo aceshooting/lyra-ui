@@ -17,8 +17,19 @@ version. If an API is deprecated in major version M, it remains available for th
 release line and cannot be removed before M+2. This policy applies equally to stable and
 experimental public APIs.
 
-9.0.0 was a one-time exception to the M+2 rule (members renamed without a deprecation window; see
-the 9.0.0 notes in the release history archive). From 9.0.0 onward the rule applies as written.
+**9.0.0 took a one-time exception to that policy, and says so rather than quietly breaking it.**
+Three members whose recorded removal window had genuinely opened were removed normally
+(`lr-tool-call-chip`/`lr-message-parts`' `lr-tool-chip-select`, and `lr-flow-canvas`'
+`--lr-flow-canvas-node-current-outline-color`). Alongside them, a small set of members that had
+_never_ been deprecated were renamed and their old spellings removed in the same release, without the
+customary M+1 warning period — `lr-usage-badge`'s `compact`, `lr-chart`'s `horizontal`,
+`lr-rag-answer`/`lr-retrieval-results`' `error`, `lr-ingestion-queue`'s
+`virtualizeThreshold` → `virtualizeAt`,
+`lr-knowledge-base`'s `lr-kb-*` events, `lr-data-grid`'s `columns`/`filename` option fields, and
+`lr-test-results`' two legacy detail-slot spellings, plus the component-specific
+`LyraModelCatalog`/`LyraVoiceCatalog` aliases in favor of the shared `LyraCatalog<T>`. Every one has
+a mechanical migration listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward
+the M+2 rule applies as written; treat the above as a documented exception, not a precedent.
 
 Deprecation records also cover contracts that are not a single member. Deprecated **slot
 content** is a kind of content inside a slot that stays supported (for example, content other than
