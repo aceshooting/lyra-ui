@@ -16,7 +16,7 @@
 
 ## `lr-model-select`
 
-The model list follows the [shared surface treatment](shared/styles-and-tokens.md);
+The model list follows the [shared surface treatment](../shared/styles-and-tokens.md);
 its editing field retains an opaque fill.
 
 A provider/model picker that renders as a closed dropdown when a fixed `catalog` is available, or as a

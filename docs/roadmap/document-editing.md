@@ -137,9 +137,8 @@ the phase remains open for broader inputs, interoperability and user qualificati
   HTTP. Replace-one is a single undoable edit; replace-all is not supported.
 - [ ] Verify formatting-value semantics and on-demand catalogs/search, including mixed or
   unavailable values, stale match refusal, result/context bounds, and that typing does not trigger
-  catalog reads or searches. Color reads as `null` because the editor uses `getSelectionFormatting()`,
-  whose result omits color; although `snapshot().formatting` exposes color, the editor does not
-  consume it for this contract.
+  catalog reads or searches. Color reads as `null`; see the
+  [formatting-values note](../../packages/lyra-docs/README.md#custom-element).
 - [x] Provide undo/redo and localized status messages; add Alt+F10 toolbar entry with arrow,
   Home/End and Escape navigation.
 - [x] Compose the initial five-command toolbar from Lyra controls, retaining selection for toolbar

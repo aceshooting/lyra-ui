@@ -37,10 +37,7 @@ pnpm add -D @aceshooting/lyra-ide
 import manifest from '@aceshooting/lyra-ide/custom-elements.json' with { type: 'json' };
 ```
 
-Migrating from `@aceshooting/lyra-ui` 26 or earlier: install this package and point the manifest
-import and the `vscode-*-data.json` paths at `@aceshooting/lyra-ide/...` instead of
-`@aceshooting/lyra-ui`. `lyra-ui` no longer publishes these files or the `customElements` and
-`web-types` fields.
+Upgrading from lyra-ui 26 or earlier: see the [upgrade table](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/README.md#upgrading).
 
 ## Versioning
 

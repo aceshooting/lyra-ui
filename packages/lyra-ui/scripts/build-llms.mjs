@@ -1242,14 +1242,39 @@ export function buildComponentFile(
     '- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types):' +
       ' `llms/shared.md`',
     '',
-    ...(isPrimary ? ['---', '', section.text, ''] : []),
+    ...(isPrimary ? ['---', '', relocateMarkdownLinks(section.text, 'llms', 'llms/components'), ''] : []),
   ]
     .filter((l) => l !== null)
     .join('\n');
 }
 
 const SHARED_CHANGELOG_LINK = '[CHANGELOG.md](../CHANGELOG.md)';
-const ROOT_CHANGELOG_LINK = '[CHANGELOG.md](./CHANGELOG.md)';
+
+const MARKDOWN_LINK_TARGET_RE = /(\]\()([^)\s]+)(?=[\s)])/gu;
+
+/**
+ * Re-resolve relative Markdown link targets when text authored in package directory `fromDir` is
+ * published in `toDir`, leaving fenced code, inline code, anchors and absolute URLs untouched.
+ */
+export function relocateMarkdownLinks(text, fromDir, toDir) {
+  if (path.posix.normalize(fromDir) === path.posix.normalize(toDir)) return text;
+  const relocate = (prose) => prose.replace(MARKDOWN_LINK_TARGET_RE, (match, open, target) => {
+    if (/^(?:[a-z][a-z0-9+.-]*:|#|\/)/iu.test(target)) return match;
+    const hash = target.indexOf('#');
+    const file = hash < 0 ? target : target.slice(0, hash);
+    const fragment = hash < 0 ? '' : target.slice(hash);
+    const relocated = path.posix.relative(toDir, path.posix.join(fromDir, file)) || '.';
+    return `${open}${relocated.startsWith('.') ? relocated : `./${relocated}`}${fragment}`;
+  });
+  return text
+    .split(/(^```[^\n]*\n[\s\S]*?^```[^\n]*$)/mu)
+    .map((part, index) => (index % 2
+      ? part
+      : part.split(/(\n[ \t]*\n)/u).map((paragraph) => paragraph
+        .replace(/(`+)[\s\S]*?\1|[^`]+/gu, (chunk) => (chunk.startsWith('`') ? chunk : relocate(chunk))))
+        .join('')))
+    .join('');
+}
 
 const SHARED_STYLE_CONTINUATION = '### Composing looks, surfaces and density';
 const SHARED_ACCESSIBILITY_CONTINUATION = '### Host accessible names and compatibility properties';
@@ -1363,12 +1388,6 @@ export function buildSharedReferences() {
     .trimEnd();
   assembled = replaceExactlyOnce(
     assembled,
-    '../../CHANGELOG.md',
-    '../CHANGELOG.md',
-    'shared topic changelog path',
-  );
-  assembled = replaceExactlyOnce(
-    assembled,
     './styles-and-tokens.md#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss',
     '#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss',
     'native styles cross-topic anchor route',
@@ -1386,7 +1405,7 @@ export function buildSharedReferences() {
     'shared cross-topic anchor route',
   );
   const compatibility =
-    `${GENERATED('llms/shared/*.md')}\n${assembled}\n`;
+    `${GENERATED('llms/shared/*.md')}\n${relocateMarkdownLinks(assembled, 'llms/shared', 'llms')}\n`;
   const sourceChangelog = '[CHANGELOG.md](../CHANGELOG.md)';
   const occurrences = compatibility.split(sourceChangelog).length - 1;
   if (occurrences !== 1) {
@@ -1402,7 +1421,7 @@ export function rewriteSharedLinksForRoot(text) {
       `Expected exactly one ${SHARED_CHANGELOG_LINK} in llms/shared.md, found ${occurrences}.`,
     );
   }
-  return text.replace(SHARED_CHANGELOG_LINK, ROOT_CHANGELOG_LINK);
+  return relocateMarkdownLinks(text, 'llms', '.');
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1505,7 +1524,9 @@ export function build({ write = true } = {}) {
   const fullParts = [preamble, '', contents, '', '---', '', '# Foundation', '', rootShared, ''];
   for (const [family, title] of FAMILIES) {
     fullParts.push(`# ${title} (\`components/${family}/\`)`, '');
-    for (const section of sectionsByFamily.get(family)) fullParts.push(section.text, '');
+    for (const section of sectionsByFamily.get(family)) {
+      fullParts.push(relocateMarkdownLinks(section.text, 'llms', '.'), '');
+    }
   }
   const full = fullParts.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
 

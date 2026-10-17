@@ -7,6 +7,11 @@ allowed-tools: Read, Grep, Bash(grep:*)
 Produce a working usage snippet for the lyra-ui component `$1` (bare name such as `button` or full
 tag such as `lr-button`; normalize to the bare name).
 
+<!-- plugin-only:start -->
+Prefer `node_modules/@aceshooting/lyra-ui/llms/` when installed (it matches the project's version);
+otherwise use the plugin copy.
+<!-- plugin-only:end -->
+
 1. If `$1` is empty, ask which component and stop; do not guess.
 2. Read `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/components/lr-$1.md` (derived from the tag,
    no search needed). If it does not exist the component does not exist: say so and suggest the

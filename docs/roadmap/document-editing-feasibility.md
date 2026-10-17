@@ -31,9 +31,8 @@ increment adds a parameterized `DocxAction` contract for paragraph style, alignm
 numbered lists, font family/size, text color, links, and bounded find, match navigation and
 replace-one. Replace-all is omitted because the pinned core does not offer the required atomic,
 single-undo operation. Catalog and search work is demand-driven, never per-keystroke. Formatting
-color reads as `null` because the editor derives formatting through `getSelectionFormatting()`,
-whose result omits color. Although `snapshot().formatting` exposes color, the editor does not
-consume it for this contract. Links accept
+color reads as `null`; see the
+[formatting-values note](../../packages/lyra-docs/README.md#custom-element). Links accept
 HTTPS, `mailto:`, and fragment-only targets; HTTP is refused. The current browser evidence for
 these actions is recorded below, alongside the earlier first-increment results. The
 [public core 2.25 source reference](https://github.com/eigenpal/docx-editor/tree/42c6c267) is

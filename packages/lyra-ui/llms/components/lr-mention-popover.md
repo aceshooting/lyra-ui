@@ -18,7 +18,7 @@
 
 The `more-results` CSS part exposes the additional-results message.
 
-Suggestion listboxes follow the [shared surface treatment](shared/styles-and-tokens.md);
+Suggestion listboxes follow the [shared surface treatment](../shared/styles-and-tokens.md);
 the caller-owned message field retains its fill.
 
 A caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete

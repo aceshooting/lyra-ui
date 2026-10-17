@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import {
   build,
   buildComponentFile,
@@ -15,6 +16,7 @@ import {
   findDanglingPositionalReferences,
   primaryTagOfSection,
   readTagFacts,
+  relocateMarkdownLinks,
   rewriteSharedLinksForRoot,
   splitSections,
   TYPE_ONLY_DECLARATION_PEERS,
@@ -321,6 +323,40 @@ const currentMetadata = JSON.parse(
 // One generation serves every artifact assertion below.
 const artifacts = build({ write: false });
 const generatedIndex = [...artifacts].find(([file]) => file.endsWith('/llms/index.md'))?.[1];
+
+assert.equal(
+  relocateMarkdownLinks(
+    'See [a](styles-and-tokens.md#x), [b](../components/lr-a.md), [c](https://x.dev), [d](#y), `[e](z.md)`.\n' +
+      '```md\n[f](q.md)\n```\n[g](../../CHANGELOG.md)',
+    'llms/shared',
+    'llms',
+  ),
+  'See [a](./shared/styles-and-tokens.md#x), [b](./components/lr-a.md), [c](https://x.dev), [d](#y), `[e](z.md)`.\n' +
+    '```md\n[f](q.md)\n```\n[g](../CHANGELOG.md)',
+  'relocated links must re-resolve relative targets and leave code, anchors and URLs untouched',
+);
+assert.equal(
+  relocateMarkdownLinks('[a](shared/s.md#k) [b](./components/lr-a.md)', 'llms', 'llms/components'),
+  '[a](../shared/s.md#k) [b](./lr-a.md)',
+  'family prose published as a per-tag file must keep its links resolving',
+);
+const artifactPaths = new Set(artifacts.keys());
+const unresolvedArtifactLinks = [];
+for (const [file, text] of artifacts) {
+  const prose = text
+    .replace(/^```[^\n]*\n[\s\S]*?^```[^\n]*$/gmu, '')
+    .split(/\n[ \t]*\n/u)
+    .map((paragraph) => paragraph.replace(/(`+)[\s\S]*?\1/gu, ''))
+    .join('\n\n');
+  for (const [, target] of prose.matchAll(/\]\(([^)\s]+)(?=[\s)])/gu)) {
+    if (/^(?:[a-z][a-z0-9+.-]*:|#|\/)/iu.test(target)) continue;
+    const resolved = path.resolve(path.dirname(file), decodeURI(target.split('#')[0]));
+    if (!artifactPaths.has(resolved) && !existsSync(resolved)) {
+      unresolvedArtifactLinks.push(`${path.basename(file)} -> ${target}`);
+    }
+  }
+}
+assert.deepEqual(unresolvedArtifactLinks, [], 'every relative link in a generated llms artifact must resolve');
 assert.ok(generatedIndex, 'build({ write: false }) must produce llms/index.md');
 assert.equal(
   generatedIndex.includes('\n## Deprecated package exports\n'),

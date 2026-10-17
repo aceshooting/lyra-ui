@@ -33,9 +33,7 @@ locale with its exact import specifiers, direction and coverage.
 To load catalogs lazily instead, use `loadLyraLocale()` from `@aceshooting/lyra-ui/locale-loader.js`;
 it imports from this package.
 
-Migrating from `@aceshooting/lyra-ui` 26 or earlier: install this package and change
-`@aceshooting/lyra-ui/translations/<locale>.js` to `@aceshooting/lyra-translations/<locale>.js`. The
-pseudo-locales (`translations/pseudo/en-XA.js`, `ar-XB.js`) stay in `@aceshooting/lyra-ui`.
+Upgrading from lyra-ui 26 or earlier: see the [upgrade table](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/README.md#upgrading).
 
 ## Versioning
 

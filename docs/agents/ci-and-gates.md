@@ -252,7 +252,7 @@ aggregates from one successful `workflow_dispatch` run whose `head_branch` is `m
 
 ## Local aggregate: `scripts/ci.sh`
 
-`./scripts/ci.sh` consolidates the six primary jobs into one Node 22/Chromium run. It requires the exact `22.23.2` patch recorded in `.nvmrc` and pnpm to match `package.json#packageManager`, so a green run under another patch is not mistaken for CI; run `nvm use` first. It reuses one install, one library build and one Storybook build, and omits the external Codecov and artifact-upload actions (the blocking local equivalents of bundle-size, coverage and visual regression still run; `codecov:bundle` is reporting only). It includes the networked, content-addressed pinned-upstream-manifest check (an unavailable registry or changed artifact fails the run rather than falling back to a clone-generated manifest) and the checksum-pinned actionlint workflow gate.
+`./scripts/ci.sh` consolidates the six primary jobs into one Node 22/Chromium run. It requires the exact Node patch recorded in `.nvmrc` and pnpm to match `package.json#packageManager`, so a green run under another patch is not mistaken for CI; run `nvm use` first. It reuses one install, one library build and one Storybook build, and omits the external Codecov and artifact-upload actions (the blocking local equivalents of bundle-size, coverage and visual regression still run; `codecov:bundle` is reporting only). It includes the networked, content-addressed pinned-upstream-manifest check (an unavailable registry or changed artifact fails the run rather than falling back to a clone-generated manifest) and the checksum-pinned actionlint workflow gate.
 
 - `./scripts/ci.sh --platform` adds the unsharded `test:platform` browser sweep under the active
   Node 22/pnpm 12 toolchain. The 5-browser Node 22 sweep is Firefox, Chromium, Chrome, Edge, and
@@ -263,10 +263,9 @@ aggregates from one successful `workflow_dispatch` run whose `head_branch` is `m
   its automatic default and WebKit/Safari use the smaller of four pages or half the CPUs. The
   aggregate runner budgets shard pages from Firefox's one-page and WebKit's four-page allocations.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same six
-  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.14.0.
-  Its 6 legs are source-derived: Node 22 runs Chromium (1 shard), Chrome (1 shard), Edge (1 shard), Firefox (2 shards), and Safari (1 shard).
+  Node 22 browser/shard legs as CI (the `platform-contracts` matrix described above). Node 22 needs pnpm 12.14.0.
   `CI_SH_NODE22_BIN` and `CI_SH_PNPM22_BIN` accept explicit executable paths; the selected Node
-  must match the exact `.nvmrc` patch (`22.23.2`).
+  must match the exact `.nvmrc` patch.
 - `CI_SH_SKIP_INSTALL=1` skips only the primary dependency installation and Chromium download;
   platform modes still install their own dependencies and requested engines.
 - `--keep-going` aggregates only generated-artifact freshness failures; real lint, build, test,
@@ -305,11 +304,9 @@ locally patched advisory only for its reviewed package/version, patch registrati
 and installed source digests. Unknown advisories, changed patch contents, unpatched copies, and audit
 errors fail the check. Both CI and `scripts/ci.sh` run this gate.
 
-The `braces@3.0.3` patch bounds parsed nesting and AST traversal to 128 levels, throwing a
-`SyntaxError` for deeper input. The `sprintf-js@1.0.3` patch bounds numeric precision to the native
-formatting limits and padding width to 10,000 characters. These upstream versions have no published
-fix for their respective advisories. The two corresponding `osv-scanner.toml` entries describe these
-verified patches; a version-only `pnpm audit` still reports the original advisory metadata.
+Per-patch scope: see the patch files under `patches/` and `osv-scanner.toml`. The patched upstream
+versions have no published fix; a version-only `pnpm audit` still reports the original advisory
+metadata.
 
 Workspace patches do not propagate through published npm packages. A consumer that installs an
 affected dependency must apply the patch in its own package-manager configuration and verify the
@@ -333,10 +330,10 @@ qualification needs a new commit and fresh qualification, and an existing tag is
 verify packed exports and dependencies against the versions actually on npm; workspace source at a
 matching version is no evidence a registry dependency works. npm needs a package to exist before its
 trusted publisher can be configured, so for the first publication of `@aceshooting/lyra-docs`,
-`@aceshooting/lyra-ide` or `@aceshooting/lyra-translations`, provide a short-lived granular npm token
+`@aceshooting/lyra-ide`, `@aceshooting/lyra-translations` or `@aceshooting/lyra-map`, provide a short-lived granular npm token
 (`@aceshooting` read/write direct publish, Bypass 2FA) as the `NPM_BOOTSTRAP_TOKEN` secret in the
 protected `npm-publish` environment and dispatch
-`gh workflow run release.yml --ref main -f package=<lyra-docs|lyra-ide|lyra-translations> -f first_package_bootstrap=true`.
+`gh workflow run release.yml --ref main -f package=<lyra-docs|lyra-ide|lyra-translations|lyra-map> -f first_package_bootstrap=true`.
 Both workflows reject the flag for other packages, for a package already on the registry, and on an
 ambiguous registry response. After environment approval the protected job uses the token only for the
 verified tarball and publishes with provenance. Then configure the trusted publisher for

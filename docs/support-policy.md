@@ -57,9 +57,10 @@ This table is the support window.
 - **`build-and-coverage`** — the complete `@web/test-runner` suite on Chromium (Playwright's pinned
   build), plus coverage floors, SSR render matrix, and DSD hydration.
 - **`platform-contracts`** — a source-defined matrix running the curated `test:platform` subset.
-  Node 22 covers Chromium, Chrome, Edge, Firefox, and Safari (WebKit). The exact browser/shard matrix lives in `.github/workflows/ci.yml`, and the exact test
-  inventory is the `test:platform` script entry in `packages/lyra-ui/package.json` — those sources,
-  not this summary, are the definition.
+  Node 22 covers Chromium, Chrome, Edge, Firefox, and Safari (WebKit). The exact browser/shard
+  matrix lives in `.github/workflows/ci.yml`, and the exact test inventory is the `test:platform`
+  script entry in `packages/lyra-ui/package.json` — those sources, not this summary, are the
+  definition.
   The primary Node 22 packed-consumer jobs cover install, import, types, styles, tree shaking
   and framework recipes at the supported Node floor.
 

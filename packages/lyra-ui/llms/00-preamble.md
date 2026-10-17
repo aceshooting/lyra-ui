@@ -23,6 +23,5 @@ Read it end to end only if you genuinely need everything. Otherwise:
 
 Prefer stable tag-shaped registration imports such as
 `@aceshooting/lyra-ui/components/lr-input.js`; each registers its tag as a side effect without
-coupling application code to Lyra's source-family layout. The former duplicate nested registration
-paths are removed in v24. Class-only and helper modules retain their owning family paths; a
+coupling application code to Lyra's source-family layout. Class-only and helper modules retain their owning family paths; a
 `.class.js` module exports a class without registering it.

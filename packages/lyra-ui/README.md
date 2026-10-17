@@ -38,8 +38,6 @@ and no runtime dependency on either project.
 > users get a separate `sl-*` migration map because the APIs are not identical. No competitor runtime,
 > theme, token namespace, or source code is required by Lyra.
 
-<a id="v21-highlights"></a>
-
 ## Highlights
 
 - **Composable looks.** Lyra, shadcn, Material, data, terminal and high contrast combine with independent
@@ -227,8 +225,7 @@ Lyra reads only its own `--lr-theme-*` variables; map existing values in applica
 
 Some upstream behavior is deliberately not automatic; the report records it instead of emitting markup that weakens a boundary:
 
-- `<lr-include>` sanitizes every fragment, has no script mode, defaults `mode` to `same-origin`, and strips every
-  navigation or resource attribute except same-document `#fragment` anchors. Its post-sanitization transclusion is network-silent and non-interactive: anchors remain only for resolvable same-document `#fragment` links (rebased per include instance); every other navigation or resource attribute, including `href`, `src`, `srcset`, `action`, `ping`, and `poster`, is stripped, so images do not load. Form-control and custom-element wrappers are unwrapped to safe ordinary text or children, while controls with no passive content are removed.
+- `<lr-include>` sanitizes every fragment, has no script mode, and defaults `mode` to `same-origin`. Its post-sanitization transclusion is network-silent and non-interactive: anchors remain only for resolvable same-document `#fragment` links (rebased per include instance); every other navigation or resource attribute, including `href`, `src`, `srcset`, `action`, `ping`, and `poster`, is stripped, so images do not load. Form-control and custom-element wrappers are unwrapped to safe ordinary text or children, while controls with no passive content are removed.
 - Link-like controls always add `noopener noreferrer` to `rel` when `target` is set and strip `opener`; author
   `rel` tokens are merged. `<lr-app-rail-item>` still derives `rel` from `target` alone.
 - `<lr-zoomable-frame>` rejects active/non-embeddable schemes, always sandboxes, and never combines
@@ -243,7 +240,7 @@ density, mode and accent independently ([guide](./llms/shared/styles-and-tokens.
 
 `setLyraStyle({})` from `@aceshooting/lyra-ui/theme.js` restores saved choices (missing fields use the built-in
 profile); `setLyraStyle({ look: "lyra", surface: "solid", accent: null })` selects the earlier appearance and
-`resetLyraStyle()` restores the built-in profile. Since 28.0.0 the resolved `--lr-color-*`/`--lr-space-*`/... layer is
+`resetLyraStyle()` restores the built-in profile. The resolved `--lr-color-*`/`--lr-space-*`/... layer is
 declared once per document and re-derived only at **theme scopes** (`.lr-light`/`.lr-dark`, `data-lr-theme`, style-axis
 boundaries, or any element marked `data-lr-theme-scope`), so retheme through the `--lr-theme-*` inputs on `:root` or a
 theme scope, for example `:root { --lr-theme-color-brand-fill-loud: #60a5fa; }`; an input on a plain wrapper no longer

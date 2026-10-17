@@ -24,7 +24,7 @@ nested and `slot=""` headings remain outside automatic discovery.
 
 ### `lr-dialog`
 
-Dialog and drawer panels follow the [shared surface treatment](shared/styles-and-tokens.md).
+Dialog and drawer panels follow the [shared surface treatment](../shared/styles-and-tokens.md).
 The public panel and body retain their scrolling and focus behavior.
 
 A modal/overlay: `role="dialog"`, focus-trapped while open, dismissible via Escape or (opt-in) a

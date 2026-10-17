@@ -89,6 +89,8 @@ pnpm create:component --family utility --name status-panel  # validated scaffold
 The scaffold takes an unprefixed name, enrolls every authored inventory/docs surface, and runs a
 three-engine baseline: **[docs/agents/component-scaffold.md](docs/agents/component-scaffold.md)**.
 
+Qualification ledger and evidence rules: **[docs/agents/component-qualification.md](docs/agents/component-qualification.md)**.
+
 - `packages/lyra-ui/package.json#scripts.contract-policy` and `.github/workflows/ci.yml` are the
   authoritative gate lists; reproduce CI failures in that order, never from a prose copy.
 - Before every release, run `./scripts/upgrade.sh` with the pinned Node (reuse the author's completed
@@ -293,7 +295,7 @@ Full rules and incidents: **[docs/agents/testing.md](docs/agents/testing.md)**.
   (`packages/lyra-ui/test/wtr-mouse.ts`), then `waitUntil`; never read `:state(x)` synchronously
   after a press.
 - After ANY `src/` change, tests included: rebuild, then
-  `node scripts/generate-component-quality.mjs --write --measure-gzip`.
+  `node packages/lyra-ui/scripts/generate-component-quality.mjs --write --measure-gzip`.
 - Set up `oneEvent()` BEFORE the dispatch, or the test hangs.
 - Move focus via `test/wtr-focus.ts` (`focusByKeyboard`/`focusAfterPointer`), never bare
   `.focus()` or synthetic focus events; window spies pre-arm `trackInputModality(document)`.

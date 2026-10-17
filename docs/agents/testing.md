@@ -142,13 +142,11 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   `@web/dev-server-core`'s browser `sendMessage` serializes it with `stable()`, whose very first
   statement is `structuredClone(obj)`; `structuredClone` throws `DataCloneError` on any DOM
   value, so the message is never sent, the session never finishes, and the file reports
-  `0 passed, 0 failed` only when the per-file `testsFinishTimeout` expires, with no per-test detail — which reads
-  exactly like an infinite loop or an environment/resource-contention issue and is easy to
-  misdiagnose as one. It is neither: chai's own message formatting is fine (~2 ms), and deleting
+  `0 passed, 0 failed` only when the per-file `testsFinishTimeout` expires, with no per-test detail. Chai's own message formatting is fine (~2 ms), and deleting
   `actual`/`expected` off the caught `AssertionError` before rethrowing makes the identical
   failure report instantly. **Never assert on a DOM node/NodeList directly unless the assertion
-  is guaranteed to pass** — compare an id, a tag name, `querySelectorAll(...).length`, or
-  `labels.length` instead. Every matcher that leaves the asserted object as chai's `actual` has
+  is guaranteed to pass** — compare an id, a tag name or a
+  count instead. Every matcher that leaves the asserted object as chai's `actual` has
   the same effect (`.to.equal()`, `expect(node).to.exist`, `.to.not.exist`, `.to.be.null`,
   `.to.be.undefined`, `.to.deep.equal(...)`); `.to.have.lengthOf(n)` and asserting `.length` are
   safe because chai passes a *number* as `actual`. The trap bites only during a TDD red phase —

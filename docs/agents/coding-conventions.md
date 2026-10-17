@@ -52,8 +52,8 @@
   tree-shaking/bundle-budget discipline below. Grep `@property\([^)]*\)\s+[a-zA-Z]+\??\s*:\s*'` for
   an inline union that isn't a named-type reference — extract to a named type once the same
   literal set reappears elsewhere in the component (a switch/lookup object, `includes()` guard, a
-  test) rather than leaving two hand-kept copies to drift. Use `as const` arrays/objects (56
-  already do) when the set needs runtime iteration; never `Object.values(SomeEnum)`.
+  test) rather than leaving two hand-kept copies to drift. Use `as const` arrays/objects
+  when the set needs runtime iteration; never `Object.values(SomeEnum)`.
 - **Single-quoted string literals, enforced by `check:source-policy`'s `double-quoted-literal`
   rule.** A double-quoted literal outside a template literal, whose content has no single quote to
   escape, fails `pnpm lint`. This is not just house style: a component's `.class.ts` string-literal
@@ -102,8 +102,8 @@
   spec'd silent no-op on an unparseable string: it keeps the previous value, usually black, with
   no error. Any canvas path deriving a color from a `--lr-*` property, a consumer callback, or a
   `color-mix()`/`var()` expression round-trips it through `getComputedStyle` into a concrete
-  color first — `heatmap.class.ts`'s `resolveRgb()` and `graph.class.ts`'s
-  `resolveCssColorValue()` are the patterns. `chart.class.ts`'s `themeColors()` is a third
+  color first — `heatmap-colors.ts`'s `resolveRgb()` and `graph.class.ts`'s
+  `resolveCssColorWithProbe()` are the patterns. `chart.class.ts`'s `themeColors()` is a third
   instance for Chart.js specifically: Chart.js also renders to `<canvas>` and cannot read a
   `var()` color option at all — it silently falls back to its own default (e.g.
   `rgba(0,0,0,0.1)`), invisible in dark mode — so every `--lr-chart-*` token needs the same

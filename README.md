@@ -78,10 +78,6 @@ clear `sl-*` → `lr-*` component map and migration notes; Lyra is an independen
 not a fork, rebrand, official product, or affiliated project. No Web Awesome Pro source code was
 available to or used by the maintainers.
 
-The result is one open library for everyday UI, dashboards and charts, and AI chat/agent interfaces —
-with the broad component coverage of a general-purpose design system and original building blocks
-for data-heavy and streaming applications.
-
 | Package | Description | Version | Size |
 |---|---|---|---|
 | [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent web components for Lit, React, Vue, Angular, Svelte, and plain JavaScript. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui) | [![avg per component](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.avgComponentGzipKb&label=avg%20per%20component&suffix=%20KB%20gzip&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) [![total gzip](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.barrelGzipKb&label=total%20gzip&suffix=%20KB&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) |
@@ -141,8 +137,6 @@ pnpm run test:migrate-wa     # run migration fixture/tests
 ```
 
 Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS.md).
-
-<a id="v21-highlights"></a>
 
 ## Highlights
 
@@ -251,20 +245,10 @@ Lit import in the browser. Renderer setup, diagnostics and limits:
 - **Node** ≥ 22 to build/test this repo and to run the supported SSR imports (`engines.node`);
   browser-only capabilities start after hydration.
 - **Browsers** — any evergreen browser with Custom Elements v1 + Shadow DOM support (Chrome, Edge,
-  Firefox, Safari). Every push runs the complete suite against Chromium plus a platform-contract
-  suite (a curated fast subset) across Chromium, Chrome, Edge, Firefox, and Safari (WebKit) on
-  Node 22. Supported browsers start at Chrome/Edge 120, Firefox 125, and Safari 17. The two engines that only
-  get the fast subset per-push (Firefox, Safari/WebKit) get the
-  *complete* suite weekly and before every release via
-  [`full-engine.yml`](https://github.com/aceshooting/lyra-ui/actions/workflows/full-engine.yml).
-  [`test-all-browsers.yml`](https://github.com/aceshooting/lyra-ui/actions/workflows/test-all-browsers.yml)
-  runs the complete suite on demand against Chromium, Chrome, and Edge by default (Firefox and
-  Safari when selected through its `browsers` input) — the tool of record for "does everything
-  actually pass everywhere right now."
+  Firefox, Safari). Supported browsers start at Chrome/Edge 120, Firefox 125, and Safari 17. What CI
+  proves for each engine, how the floors were derived, assistive-technology status, and the policy
+  for engines outside the window: [`docs/support-policy.md`](./docs/support-policy.md).
 - Not tested against Internet Explorer or other browsers without native custom-element support.
-- **Exact version floors** (Chromium 120+, Gecko 121+, WebKit 16.4+), how they were derived, the CI
-  matrix behind them, assistive-technology status, and the policy for engines outside the window:
-  [`docs/support-policy.md`](./docs/support-policy.md).
 
 Per-commit and release evidence lives in the workflow badges above and the
 [Actions history](https://github.com/aceshooting/lyra-ui/actions); [`docs/component-quality.md`](./docs/component-quality.md)
@@ -290,21 +274,8 @@ records per-tag results.
   relevant API details.
 - **Contributors working on this repo itself:** [`AGENTS.md`](./AGENTS.md) (AI agents) and
   [`CONTRIBUTING.md`](./CONTRIBUTING.md) (humans).
-- **Accessibility:** [`docs/accessibility.md`](./docs/accessibility.md) — which guarantees a gate
-  enforces on every commit, which are conventions, and which are not verified at all (no screen
-  reader has been run against this library).
-- **Component qualification:** [`docs/component-quality.md`](./docs/component-quality.md) —
-  per-tag automated evidence, explicit exemptions, human-review status, and known limitations.
-- **Component integration:** [`docs/component-integration.md`](./docs/component-integration.md) —
-  stable/class imports, optional peers, component dependencies, and measured or pending gzip data.
-- **Support window:** [`docs/support-policy.md`](./docs/support-policy.md) — supported browser and
-  Node versions, what CI actually proves for each, assistive-technology status, and the policy for
-  engines outside the window.
-- **Getting help:** [`SUPPORT.md`](./SUPPORT.md) — issue routes, required reproduction details, and
-  the boundary between community support and private vulnerability reporting.
-- **Governance and substantial changes:** [`GOVERNANCE.md`](./GOVERNANCE.md) and the
-  [`docs/rfcs/`](./docs/rfcs/process.md) process — decision authority, RFC scope, lifecycle, and
-  proposal template.
+- **Everything else** (accessibility, component quality and integration, support policy, getting
+  help, governance and RFCs): [`docs/index.md`](./docs/index.md).
 
 ## Codex and Claude Code plugin
 
@@ -312,24 +283,9 @@ The npm package already bundles both skills and the command playbooks under `ski
 `npx lyra-ui init-agents` installs them into a project (see [Use with AI coding agents](#use-with-ai-coding-agents)).
 The repository is also a shared [Codex](https://learn.chatgpt.com/docs/plugins) and
 [Claude Code](https://claude.com/claude-code) plugin marketplace, generated from the same source in
-`plugins/lyra-ui`, for users who prefer a marketplace install: coding agents get the exact component API
-(not a guess from training data), plus
-workflows for migrating off Web Awesome/Shoelace and auditing lyra-ui usage.
-
-```bash
-# Via Codex CLI's plugin marketplace
-codex plugin marketplace add aceshooting/lyra-ui
-codex plugin add lyra-ui@aceshooting
-```
-
-```bash
-# Via Claude Code's plugin marketplace
-/plugin marketplace add aceshooting/lyra-ui
-/plugin install lyra-ui@aceshooting
-```
-
-See [`plugins/lyra-ui`](./plugins/lyra-ui) for the plugin source, or
-[`packages/lyra-ui/llms.txt`](./packages/lyra-ui/llms.txt) for the same component reference
+[`plugins/lyra-ui`](./plugins/lyra-ui), for users who prefer a marketplace install; the marketplace
+commands are in the [package README Quick Start](./packages/lyra-ui/README.md#quick-start), and
+[`packages/lyra-ui/llms.txt`](./packages/lyra-ui/llms.txt) gives the same component reference
 without a plugin install. The plugin also includes `$compose-lyra-interfaces`, a focused workflow
 for turning product intent into responsive, accessible Lyra component compositions while the
 main `$lyra-ui` skill remains the exact API reference.
@@ -338,8 +294,9 @@ main `$lyra-ui` skill remains the exact API reference.
 
 `@aceshooting/lyra-ui` source is versioned at `29.0.2`; `@aceshooting/lyra-flags` source at `2.3.0`
 — see each package's own `CHANGELOG.md` for release history. Published npm versions can lag these
-source versions while a release is being qualified. The two are versioned independently (not
-always lockstep) with [Changesets](https://github.com/changesets/changesets) and follow semver.
+source versions while a release is being qualified. `lyra-ide` and `lyra-translations` version in
+lockstep with `lyra-ui`; `lyra-flags`, `lyra-docs` and `lyra-map` version independently with
+[Changesets](https://github.com/changesets/changesets), following semver.
 
 Every component also carries machine-readable `stable` or `experimental` status plus its first
 published `since` version. Both statuses receive normal semver protection once published;
@@ -347,7 +304,7 @@ experimental means the design is still under review, not that breaking changes c
 release. A deprecation names its replacement, rationale, deprecation version, and earliest removal
 version, and remains available for the entire following major release line. The full policy is in
 [`packages/lyra-ui/llms/shared.md#component-status-versioning-and-deprecation`](./packages/lyra-ui/llms/shared.md#component-status-versioning-and-deprecation).
-Every release passes the same CI gate as every PR, and both packages are under active development.
+Every release passes the same CI gate as every PR.
 
 ## License
 

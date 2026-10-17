@@ -28,6 +28,7 @@ function bundleEntries(pluginDir) {
   const entries = [
     ['skills/lyra-ui/SKILL.md', 'lyra-ui/SKILL.md', 'lyra-ui'],
     ['skills/lyra-ui/reporting.md', 'lyra-ui/reporting.md', 'lyra-ui'],
+    ['skills/lyra-ui/online-api.md', 'lyra-ui/online-api.md', 'lyra-ui'],
     ['skills/compose-lyra-interfaces/SKILL.md', 'compose-lyra-interfaces/SKILL.md', 'compose'],
     [
       'skills/compose-lyra-interfaces/references/composition-patterns.md',

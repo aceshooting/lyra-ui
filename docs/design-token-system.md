@@ -26,7 +26,7 @@ Generation is deterministic and produces:
 - `.storybook/token-preview.generated.js`, the grouped data used by Storybook token previews.
 - `scripts/fixtures/token-docs.generated.json` and `token-editor.generated.json`, stable inputs for
   authored-reference and editor-data generation. Those consumers never have to parse TypeScript.
-- **The document token layer** (RFC 0002, since 28.0.0): `src/internal/document-tokens.generated.ts`
+- **The document token layer** (RFC 0002): `src/internal/document-tokens.generated.ts`
   and `src/styles/tokens-root.css`, whose body is byte-identical to the adopted text; `src/theme.css`
   ends with the same text (`scripts/theme-document-layer.mjs`, run by `generate-style-axes.mjs`). The layer
   declares every shared output once on `:root` and re-derives it at the closed list of theme scopes,
@@ -69,7 +69,7 @@ and `lyra` is reserved for the canonical base.
 }
 ```
 
-The shipped entries are `lyra`, `material` and `shadcn`; `example` above illustrates the shape.
+The shipped entries are `lyra`, `data`, `high-contrast`, `material`, `shadcn` and `terminal`; `example` above illustrates the shape.
 Each `definitions[id]` can be passed to `defineLyraLook()` and then to `setLyraStyle({ look })` or
 `lyraLookCss()`. Omitted inputs are not expanded into copied defaults. The empty Lyra definition
 selects the canonical base already described by the ordinary DTCG token tree, avoiding a second copy
@@ -116,7 +116,7 @@ observation layer. Existing component and animation-utility motion opt-outs rema
 
 ## Value-named size compatibility
 
-The 89 legacy `--lr-size-<value>` names are frozen: the family may shrink through an intentional
+The 88 legacy `--lr-size-<value>` names are frozen: the family may shrink through an intentional
 migration but cannot grow. Every entry has one classification and checked-in call-site evidence:
 
 - `component-role` identifies the role-named component property that owns a single-purpose
@@ -126,7 +126,7 @@ migration but cannot grow. Every entry has one classification and checked-in cal
 - `semantic-global` is reserved for a token whose call sites all share an existing semantic role.
   None of the current names qualifies: equal numeric values alone are not equal roles.
 
-Current classification is 12 component roles and 77 audited fixed geometries. This is deliberately
+Current classification is 12 component roles and 76 audited fixed geometries. This is deliberately
 more conservative than aliasing `1px` to the border-width scale: that value is also used for gaps,
 line stops, and canvas geometry, so such an alias would introduce theme-dependent regressions.
 `check:value-named-tokens` requires complete classification, retained compatibility metadata,

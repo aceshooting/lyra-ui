@@ -119,90 +119,90 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`ai-adapters-a2ui-contracts`** — AI adapter and runtime contracts.
   `A2UiAdapterLimits {
-  maxComponents: unknown;
-  maxDepth: unknown;
-  maxOutputNodes: unknown;
-  maxChildrenPerComponent: unknown;
-  maxNodes: unknown;
-  maxBytes: unknown;
-  maxStringCharacters: unknown;
+  maxComponents: number;
+  maxDepth: number;
+  maxOutputNodes: number;
+  maxChildrenPerComponent: number;
+  maxNodes: number;
+  maxBytes: number;
+  maxStringCharacters: number;
 }`
   `A2UiLikeAction {
-  id: unknown;
-  payload: unknown;
+  id: string;
+  payload?: unknown;
 }`
   `A2UiLikeComponent {
-  id: unknown;
-  type: unknown;
-  props: unknown;
-  text: unknown;
-  children: unknown;
-  action: unknown;
+  id: string;
+  type: string;
+  props?: Record<string, unknown>;
+  text?: string;
+  children?: string[];
+  action?: A2UiLikeAction;
 }`
   `A2UiLikeSurface {
-  surfaceId: unknown;
-  rootId: unknown;
-  components: unknown;
-  data: unknown;
+  surfaceId?: string;
+  rootId: string;
+  components: A2UiLikeComponent[];
+  data?: unknown;
 }`
-  `adaptA2UiSurface(/* public names: surface, typeMap, limits */): unknown`
+  `adaptA2UiSurface(surface: unknown, typeMap: unknown, limits: Partial<A2UiAdapterLimits> = {}): LyraWidgetDocument | null`
 
 - **`ai-adapters-ag-ui-contracts`** — AI adapter and runtime contracts.
   `AgUiAdapterLimits {
-  maxBufferedTools: unknown;
-  maxToolArgumentBytes: unknown;
-  maxTextDeltaCharacters: unknown;
-  maxDepth: unknown;
-  maxNodes: unknown;
-  maxBytes: unknown;
-  maxStringCharacters: unknown;
+  maxBufferedTools: number;
+  maxToolArgumentBytes: number;
+  maxTextDeltaCharacters: number;
+  maxDepth: number;
+  maxNodes: number;
+  maxBytes: number;
+  maxStringCharacters: number;
 }`
   `AgUiLikeEvent {
-  type: unknown;
-  eventId: unknown;
-  runId: unknown;
-  messageId: unknown;
-  role: unknown;
-  delta: unknown;
-  toolCallId: unknown;
-  toolCallName: unknown;
-  result: unknown;
-  message: unknown;
-  code: unknown;
-  snapshot: unknown;
-  messages: unknown;
+  type: string;
+  eventId?: string;
+  runId?: string;
+  messageId?: string;
+  role?: string;
+  delta?: unknown;
+  toolCallId?: string;
+  toolCallName?: string;
+  result?: unknown;
+  message?: string;
+  code?: string;
+  snapshot?: unknown;
+  messages?: unknown[];
 }`
 
 - **`ai-adapters-ai-sdk-contracts`** — AI adapter and runtime contracts.
   `adaptAiSdkMessage(message: unknown, limits?: Partial<AiSdkAdapterLimits>): ChatMessage | null`
   `AiSdkAdapterLimits {
-  maxParts: unknown;
-  maxDepth: unknown;
-  maxNodes: unknown;
-  maxBytes: unknown;
-  maxStringCharacters: unknown;
+  maxParts: number;
+  maxDepth: number;
+  maxNodes: number;
+  maxBytes: number;
+  maxStringCharacters: number;
 }`
   `AiSdkLikeMessage {
-  id: unknown;
-  role: unknown;
-  parts: unknown;
-  metadata: unknown;
+  id: string;
+  role: string;
+  parts?: unknown[];
+  metadata?: Record<string, unknown>;
 }`
 
 - **`ai-runtime-contracts`** — AI adapter and runtime contracts.
   `AgentStreamLimits {
-  maxMessages: unknown;
-  maxPartsPerMessage: unknown;
-  maxTools: unknown;
-  maxDeltaCharacters: unknown;
-  maxTextCharactersPerPart: unknown;
-  maxIdentifierCharacters: unknown;
-  maxStatusMessageCharacters: unknown;
-  maxPatchOperations: unknown;
-  maxSnapshotDepth: unknown;
-  maxSnapshotNodes: unknown;
-  maxSnapshotBytes: unknown;
-  maxRetainedBytes: unknown;
+  maxMessages: number;
+  maxPartsPerMessage: number;
+  maxTools: number;
+  maxDeltaCharacters: number;
+  maxTextCharactersPerPart: number;
+  maxIdentifierCharacters: number;
+  maxStatusMessageCharacters: number;
+  maxPatchOperations: number;
+  maxSnapshotDepth: number;
+  maxSnapshotNodes: number;
+  maxSnapshotBytes: number;
+  maxRetainedBytes: number;
 }`
   `AgentStreamState {
   generation: number;
@@ -214,51 +214,51 @@ These named interfaces and helper signatures are available to typed integrations
   messages: ChatMessage[];
   tools: ToolInvocation[];
   sharedState: unknown;
-  error?: { message: string; code?: string; };
+  error?: { message: string; code?: string };
 }`
-  `applySharedStatePatch(/* public names: value, patch */): unknown`
+  `applySharedStatePatch(value: unknown, patch: readonly JsonPatchOperation[]): unknown`
   `createAgentStreamState(limits?: Partial<AgentStreamLimits>): AgentStreamState`
-  `parseJsonPatch(/* public names: value, limits */): unknown`
+  `parseJsonPatch(value: unknown, limits: Partial<AgentStreamLimits> = {}): JsonPatchOperation[] | null`
   `reduceAgentStreamEvents(state: AgentStreamState, events: readonly AgentStreamEvent[]): AgentStreamState`
   `reduceAgentStream(state: AgentStreamState, event: AgentStreamEvent): AgentStreamState`
 
 - **`ai-snapshot-contracts`** — AI adapter and runtime contracts.
-  `createProviderSnapshotBudget(/* public names: limits */): unknown`
+  `createProviderSnapshotBudget(limits: Partial<ProviderSnapshotLimits> | Readonly<ProviderSnapshotLimits> = {}): ProviderSnapshotBudget`
   `ProviderSnapshotBudget {
-  limits: unknown;
-  bytes: unknown;
-  nodes: unknown;
+  readonly limits: Readonly<ProviderSnapshotLimits>;
+  bytes: number;
+  nodes: number;
 }`
   `ProviderSnapshotLimits {
-  maxDepth: unknown;
-  maxNodes: unknown;
-  maxBytes: unknown;
-  maxStringCharacters: unknown;
+  maxDepth: number;
+  maxNodes: number;
+  maxBytes: number;
+  maxStringCharacters: number;
 }`
-  `resolveProviderSnapshotLimits(/* public names: limits */): unknown`
-  `snapshotProviderValue(/* public names: value, budget */): unknown`
+  `resolveProviderSnapshotLimits(limits: Partial<ProviderSnapshotLimits> = {}): Readonly<ProviderSnapshotLimits>`
+  `snapshotProviderValue<T = unknown>(value: unknown, budget: ProviderSnapshotBudget = createProviderSnapshotBudget()): ProviderSnapshotResult<T>`
 
 - **`ai-types-contracts`** — AI adapter and runtime contracts.
   `AgentRun {
-  id: unknown;
-  status: unknown;
-  startedAt: unknown;
-  endedAt: unknown;
-  model: unknown;
-  costEstimate: unknown;
-  steps: unknown;
+  id: string;
+  status: AgentStatus;
+  startedAt?: number;
+  endedAt?: number;
+  model?: string;
+  costEstimate?: number;
+  steps: readonly AgentStep[];
 }`
   `AgentStatus {
-  kind: unknown;
-  message: unknown;
+  kind: AgentStatusKind;
+  message?: string;
 }`
   `AgentStep {
-  id: unknown;
-  kind: unknown;
-  label: unknown;
-  status: unknown;
-  startedAt: unknown;
-  endedAt: unknown;
+  id: string;
+  kind: string;
+  label: string;
+  status: AgentStatus;
+  startedAt?: number;
+  endedAt?: number;
 }`
   `AttachmentMessagePart {
   type: 'attachment';
@@ -279,7 +279,7 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `CancelEventDetail {
-  reason: unknown;
+  reason?: string;
 }`
   `ChatMessage {
   id: string;
@@ -292,17 +292,15 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `Citation {
-  id: unknown;
-  chunkId: unknown;
-  sourceId: unknown;
-  span: unknown;
-  start: unknown;
-  end: unknown;
-  label: unknown;
-  locator: unknown;
-  answerRange: unknown;
-  quote: unknown;
-  metadata: unknown;
+  id: string;
+  chunkId?: string;
+  sourceId?: string;
+  span?: { start: number; end: number };
+  label?: string;
+  locator?: DocumentLocator;
+  answerRange?: { start: number; end: number };
+  quote?: string;
+  metadata?: Record<string, unknown>;
 }`
   `CitationMessagePart {
   type: 'citation';
@@ -313,7 +311,7 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `CitationSelectEventDetail {
-  citation: unknown;
+  citation: Citation;
 }`
   `DataMessagePart {
   type: 'data';
@@ -326,11 +324,11 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `DocumentRef {
-  id: unknown;
-  name: unknown;
-  mimeType: unknown;
-  uri: unknown;
-  version: unknown;
+  id: string;
+  name: string;
+  mimeType?: string;
+  uri?: string;
+  version?: string;
 }`
   `ErrorMessagePart {
   type: 'error';
@@ -343,26 +341,24 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `ExportEventDetail {
-  format: unknown;
+  format: string;
 }`
   `GroundedClaim {
-  id: unknown;
-  text: unknown;
-  status: unknown;
-  citationIds: unknown;
-  answerRange: unknown;
-  start: unknown;
-  end: unknown;
-  confidence: unknown;
-  explanation: unknown;
+  id: string;
+  text: string;
+  status: GroundedClaimStatus;
+  citationIds: readonly string[];
+  answerRange?: { start: number; end: number };
+  confidence?: number;
+  explanation?: string;
 }`
   `GroundingAssessment {
-  supportedClaims: unknown;
-  unsupportedClaims: unknown;
-  coverage: unknown;
-  confidence: unknown;
-  warnings: unknown;
-  claims: unknown;
+  supportedClaims: number;
+  unsupportedClaims: number;
+  coverage: number;
+  confidence?: number;
+  warnings?: readonly string[];
+  claims?: readonly GroundedClaim[];
 }`
   `MessagePartBase {
   id: string;
@@ -380,42 +376,42 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `RetrievalChunk {
-  id: unknown;
-  text: unknown;
-  score: unknown;
-  source: unknown;
-  metadata: unknown;
-  rank: unknown;
-  locator: unknown;
-  queryId: unknown;
-  stage: unknown;
-  traceId: unknown;
-  scores: unknown;
+  id: string;
+  text: string;
+  score: number;
+  source: DocumentRef;
+  metadata?: Record<string, unknown>;
+  rank?: number;
+  locator?: DocumentLocator;
+  queryId?: string;
+  stage?: string;
+  traceId?: string;
+  scores?: RetrievalScoreBreakdown;
 }`
   `RetrievalProgressEventDetail {
-  queryId: unknown;
-  stage: unknown;
-  progress: unknown;
+  queryId: string;
+  stage: string;
+  progress?: number;
 }`
   `RetrievalQuery {
-  text: unknown;
-  filters: unknown;
-  mode: unknown;
-  scope: unknown;
+  text: string;
+  filters?: Record<string, unknown>;
+  mode: 'vector' | 'keyword' | 'hybrid';
+  scope?: string[];
 }`
   `RetrievalScoreBreakdown {
-  dense: unknown;
-  sparse: unknown;
-  rerank: unknown;
-  final: unknown;
+  dense?: number;
+  sparse?: number;
+  rerank?: number;
+  final: number;
 }`
   `RetryEventDetail {
-  attempt: unknown;
-  messageId: unknown;
+  attempt: number;
+  messageId?: string;
 }`
   `RunLifecycleEventDetail {
-  runId: unknown;
-  status: unknown;
+  runId: string;
+  status: AgentStatus;
 }`
   `TextMessagePart {
   type: 'text';
@@ -426,8 +422,8 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `ToolApprovalEventDetail {
-  invocationId: unknown;
-  approved: unknown;
+  invocationId: string;
+  approved: boolean;
 }`
   `ToolCallMessagePart {
   type: 'tool-call';
@@ -438,16 +434,16 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `ToolInvocation {
-  id: unknown;
-  name: unknown;
-  displayName: unknown;
-  args: unknown;
-  status: unknown;
-  result: unknown;
-  error: unknown;
-  startedAt: unknown;
-  endedAt: unknown;
-  redactedFields: unknown;
+  id: string;
+  name: string;
+  displayName?: string;
+  args: Record<string, unknown>;
+  status: ToolStatus;
+  result?: unknown;
+  error?: string;
+  startedAt?: number;
+  endedAt?: number;
+  redactedFields?: readonly string[];
 }`
   `ToolResultErrorMessagePart {
   error: string;
@@ -497,22 +493,22 @@ These named interfaces and helper signatures are available to typed integrations
   readonly optionalPeers: readonly string[];
 }`
   `AutoloaderOptions {
-  optionalPeers: unknown;
-  events: unknown;
-  maxConcurrency: unknown;
-  maxElements: unknown;
-  maxRoots: unknown;
-  maxDepth: unknown;
-  maxWork: unknown;
+  readonly optionalPeers?: AutoloaderOptionalPeers;
+  readonly events?: boolean;
+  readonly maxConcurrency?: number;
+  readonly maxElements?: number;
+  readonly maxRoots?: number;
+  readonly maxDepth?: number;
+  readonly maxWork?: number;
 }`
   `AutoloaderTraversalErrorEventDetail {
-  limit: unknown;
-  maximum: unknown;
-  error: unknown;
+  readonly limit: RenderedTreeTraversalLimit;
+  readonly maximum: number;
+  readonly error: Error;
 }`
   `discover(root?: LyraDefinitionRoot | undefined, options?: AutoloaderOptions): Promise<readonly AutoloadableTagName[]>`
   `start(root?: LyraDefinitionRoot | undefined, options?: AutoloaderOptions): Promise<readonly AutoloadableTagName[]>`
-  `stop(): unknown`
+  `stop(): void`
 
 - **`custom-elements-jsx-contracts`** — Framework integration type contracts, including the multi-split
   `for` launcher id and `trigger` element reference.
@@ -829,18 +825,18 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`internal-ansi-contracts`** — Shared utility contracts.
   `AnsiStyles {
-  bold: unknown;
-  dim: unknown;
-  italic: unknown;
-  underline: unknown;
-  inverse: unknown;
-  fg: unknown;
-  bg: unknown;
+  bold: boolean;
+  dim: boolean;
+  italic: boolean;
+  underline: boolean;
+  inverse: boolean;
+  fg?: string;
+  bg?: string;
 }`
 
 - **`internal-canvas-color-contracts`** — Shared utility contracts.
-  `resolveCanvasColor(/* public names: scope, color, fallback */): unknown`
-  `resolveCanvasColors(/* public names: scope, colors, fallback */): unknown`
+  `resolveCanvasColor(scope: Element, color: string, fallback: string): string`
+  `resolveCanvasColors(scope: Element, colors: Iterable<string>, fallback: string): string[]`
 
 - **`internal-document-tokens-contracts`** — Shared utility contracts.
   `adoptLyraTokens(root: Document | ShadowRoot): void`
@@ -853,21 +849,21 @@ These named interfaces and helper signatures are available to typed integrations
   scope. Reads inline styles only and logs nothing.
 
 - **`internal-localization-runtime-contracts`** — Shared utility contracts.
-  `getLyraLocaleDirection(/* public names: locale */): unknown`
-  `getLyraLocale(): unknown`
-  `getRegisteredLyraLocaleKeys(/* public names: locale */): unknown`
-  `getRegisteredLyraLocales(): unknown`
+  `getLyraLocaleDirection(locale: string): LyraLocaleDirection`
+  `getLyraLocale(): string`
+  `getRegisteredLyraLocaleKeys(locale: string): readonly string[]`
+  `getRegisteredLyraLocales(): readonly string[]`
   `registerLyraLocale(locale: string, strings: LyraLocaleStrings, meta?: LyraLocaleMeta): void`
-  `resolveLyraDirection(/* public names: host */): unknown`
-  `resolveLyraLocale(/* public names: host */): unknown`
-  `setLyraLocale(/* public names: locale */): unknown`
-  `subscribeLyraLocaleRegistry(/* public names: listener */): unknown`
+  `resolveLyraDirection(host: Element): 'ltr' | 'rtl'`
+  `resolveLyraLocale(host: Element): string`
+  `setLyraLocale(locale: string): void`
+  `subscribeLyraLocaleRegistry(listener: () => void): () => void`
   `registerLyraLocaleDelta(locale: string, parent: string, strings: LyraLocaleStrings, meta?: LyraLocaleMeta): void`
 
 - **`internal-localization-types-contracts`** — Shared utility contracts.
   `LyraLocaleMeta {
-  dir: unknown;
-  name: unknown;
+  dir?: LyraLocaleDirection;
+  name?: string;
 }`
 
 - **`internal-localization-contracts`** — Shared utility contracts.
@@ -875,87 +871,83 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`internal-node-type-style-contracts`** — Shared utility contracts.
   `LyraNodeTypeStyle {
-  id: unknown;
-  label: unknown;
-  color: unknown;
-  shape: unknown;
+  readonly id: string;
+  readonly label: string;
+  readonly color?: string;
+  readonly shape?: 'circle' | 'square' | 'diamond';
 }`
 
 - **`internal-registered-animation-contracts`** — Shared utility contracts.
   `RegisteredAnimationSpec {
-  keyframes: unknown;
-  rtlKeyframes: unknown;
-  durationProperties: unknown;
-  easingProperties: unknown;
-  fallbackDuration: unknown;
-  fallbackEasing: unknown;
-  options: unknown;
+  keyframes: Keyframe[];
+  rtlKeyframes?: Keyframe[];
+  durationProperties: readonly string[];
+  easingProperties?: readonly string[];
+  fallbackDuration?: number;
+  fallbackEasing?: string;
+  options?: KeyframeAnimationOptions;
 }`
 
 - **`internal-text-viewer-target-contracts`** — Shared utility contracts.
   `LyraSearchChangeDetail {
-  query: unknown;
-  matchCount: unknown;
-  matchCountExact: unknown;
-  activeIndex: unknown;
+  query: string;
+  matchCount: number;
+  matchCountExact: boolean;
+  activeIndex: number;
 }`
   `LyraTextViewerTarget {
-  search: unknown;
-  query: unknown;
-  searchNext: unknown;
-  searchPrevious: unknown;
-  clearSearch: unknown;
-  highlights: unknown;
-  activeHighlightId: unknown;
-  anchor: unknown;
-  anchorKinds: unknown;
-  scrollToAnchor: unknown;
-  target: unknown;
+  search(query: string): Promise<number>;
+  searchNext(): Promise<boolean>;
+  searchPrevious(): Promise<boolean>;
+  clearSearch(): void;
+  highlights: readonly LyraHighlight[];
+  activeHighlightId: string | null;
+  anchor: LyraAnchor | string | null;
+  readonly anchorKinds: readonly LyraAnchorKind[];
+  scrollToAnchor(target: LyraAnchor | string): Promise<boolean>;
 }`
 
 - **`ssr-contracts`** — Shared utility contracts.
-  `buildLyraSsrStaticSafety(/* public names: tags, tagCapabilities, auditedStaticSafeTags */): unknown`
+  `buildLyraSsrStaticSafety(tags: readonly string[], tagCapabilities: Readonly<Record<string, LyraSsrTagCapabilities>>, auditedStaticSafeTags: readonly string[]): LyraSsrStaticSafetyResult`
   Fail-closed classifier behind `LYRA_SSR_STATIC_SAFETY`/`getLyraSsrStaticSafety`: a tag present in
   neither a non-empty `tagCapabilities` entry nor `auditedStaticSafeTags` is reported in the result's
   `unaudited` list instead of silently defaulting to `'static-safe'`. Pure and fixture-friendly --
   `scripts/check-ssr.mjs` calls it with the real inventory, tests call it with small fixture lists.
-  `deriveLyraSsrStaticSafety(/* public names: capabilities */): unknown`
+  `deriveLyraSsrStaticSafety(capabilities: LyraSsrTagCapabilities): LyraSsrStaticSafety`
   Derives static safety from one tag's capability record: any `'after-hydration'`/`'client-only'`
   entry makes it `'hydration-required'`; an empty record defaults to `'static-safe'`. That empty-
   record default is only valid for a record already known to reflect a completed review (as
   `LYRA_SSR_TAG_CAPABILITIES` entries do) -- `buildLyraSsrStaticSafety()` does not rely on it for a
   tag missing from that record entirely, which it instead routes through `auditedStaticSafeTags`.
-  `diagnoseLyraHydration(/* public names: root */): unknown`
-  `getLyraSsrMode(/* public names: tagName */): unknown`
-  `getLyraSsrStaticSafety(/* public names: tagName */): unknown`
+  `diagnoseLyraHydration(root?: ParentNode): Promise<readonly LyraHydrationDiagnostic[]>`
+  `getLyraSsrMode(tagName: string): LyraSsrMode | undefined`
+  `getLyraSsrStaticSafety(tagName: string): LyraSsrStaticSafety | undefined`
   Returns the static-safety classification for a `render-and-hydrate` Lyra tag, or `undefined` for a
   tag outside that tier. See "SSR and declarative shadow DOM" above for the full write-up.
   `LyraHydrationDiagnostic {
-  element: unknown;
-  tag: unknown;
-  mode: unknown;
-  status: unknown;
-  error: unknown;
+  element: Element;
+  tag: string;
+  mode: LyraSsrMode;
+  status: LyraHydrationStatus;
+  error?: unknown;
 }`
   `LyraLitElementRendererConstructor {
-  prototype: unknown;
-  matchesClass: unknown;
-  constructor: unknown;
-  tagName: unknown;
-  attributes: unknown;
+  new (tagName: string): object;
+  readonly prototype: object;
+  matchesClass(constructor: CustomElementConstructor, tagName: string, attributes: Map<string, string>): boolean;
 }`
   `LyraSsrClientRenderReason {
-  code: unknown;
-  detail: unknown;
+  code: LyraSsrClientRenderReasonCode;
+  detail: string;
 }`
   `LyraSsrStaticSafetyResult {
-  classification: unknown;
-  unaudited: unknown;
+  classification: Readonly<Record<string, LyraSsrStaticSafety>>;
+  unaudited: readonly string[];
 }`
   Return shape of `buildLyraSsrStaticSafety()`: `classification` holds one entry per classified tag
   (a tag absent from it was neither capability-bearing nor audited), and a non-empty `unaudited`
   means the check must fail closed.
-  `lyraSsrElementRenderers(/* public names: litElementRenderer */): unknown`
+  `lyraSsrElementRenderers<T extends LyraLitElementRendererConstructor>(litElementRenderer: T): readonly [typeof LyraSsrFallbackRenderer, T]`
 
 - **`svelte-contracts`** — Framework integration type contracts, including the multi-split
   `for` launcher id and `trigger` element reference.
@@ -1585,13 +1577,13 @@ These named interfaces and helper signatures are available to typed integrations
   See "Constructing a validated test event: `createLyraEvent()`" above for the full contract.
 
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
-  `installHappyDomFormAssociatedShims(): unknown`
-  `installHappyDomShadowFocusShim(): unknown`
-  `flattenCascadeLayers(/* public names: css */): unknown`
-  `installHappyDomAriaControlsShim(/* public names: proto */): unknown`
-  `installHappyDomCascadeLayerShim(/* public names: proto, misbehaves */): unknown`
-  `installHappyDomShims(): unknown`
-  `installStubInternalsForTest(/* public names: host */): unknown`
+  `installHappyDomFormAssociatedShims(): void`
+  `installHappyDomShadowFocusShim(): () => void`
+  `flattenCascadeLayers(css: string): string`
+  `installHappyDomAriaControlsShim(proto: object | undefined = globalThis.Element?.prototype): void`
+  `installHappyDomCascadeLayerShim(proto: SheetTextMethods | undefined = globalThis.CSSStyleSheet?.prototype, misbehaves: () => boolean = cascadeLayerRulesDropped): () => void`
+  `installHappyDomShims(): void`
+  `installStubInternalsForTest(host: Element): StubElementInternals`
 
 - **`testing-jsdom-shims-contracts`** — Shared utility contracts.
   `JsdomAdoptedStyleSheetsTargets {
@@ -1611,43 +1603,43 @@ These named interfaces and helper signatures are available to typed integrations
   See "jsdom: `installJsdomShims()`" above for the full contract.
 
 - **`testing-interaction-drivers-contracts`** — Shared utility contracts.
-  `chooseOption(/* public names: owner, value */): unknown`
-  `submitConfirmDecision(/* public names: owner, decision */): unknown`
-  `toggleSwitch(/* public names: switchEl */): unknown`
-  `activateStep(/* public names: stepper, target */): unknown`
-  `chooseSwatch(/* public names: picker, value */): unknown`
-  `chooseCurrency(/* public names: picker, code */): unknown`
+  `chooseOption(owner: LyraOptionListElement, value: string): Promise<void>`
+  `submitConfirmDecision(owner: LyraConfirmBar | LyraToolApprovalDialog, decision: ApprovalDecision): Promise<void>`
+  `toggleSwitch(switchEl: LyraSwitch): Promise<void>`
+  `activateStep(stepper: LyraStepper, target: number | string): Promise<void>`
+  `chooseSwatch(picker: LyraSwatchPicker, value: string): Promise<void>`
+  `chooseCurrency(picker: LyraCurrencyPicker, code: string): Promise<void>`
   `PopoverDriverOptions {
-  timeoutMs: unknown;
+  timeoutMs?: number;
 }`
   `ClosePopoverOptions {
-  via: unknown;
-  timeoutMs: unknown;
+  via?: 'escape' | 'trigger';
+  timeoutMs?: number;
 }`
-  `openPopover(/* public names: popover, options */): unknown`
-  `closePopover(/* public names: popover, options */): unknown`
+  `openPopover(popover: LyraPopover, options: PopoverDriverOptions = {}): Promise<void>`
+  `closePopover(popover: LyraPopover, options: ClosePopoverOptions = {}): Promise<void>`
   See "Driving a component's real activation path: interaction drivers" above for the full contract.
 
 - **`testing-wait-for-mount-contracts`** — Shared utility contracts.
-  `waitForLyraElement(/* public names: selector, options */): unknown`
+  `waitForLyraElement<T extends Element = HTMLElement>(selector: string, options: WaitForLyraElementOptions<T> = {}): Promise<T>`
   `WaitForLyraElementOptions {
-  root: unknown;
-  match: (element: unknown) => unknown;
-  timeoutMs: unknown;
+  root?: Node & ParentNode;
+  match?: (element: T) => boolean;
+  timeoutMs?: number;
 }`
-  `waitForToast(/* public names: match, options */): unknown`
+  `waitForToast(match?: ToastMatch, options: Omit<WaitForLyraElementOptions<LyraToastItem>, 'match'> = {}): Promise<LyraToastItem>`
   See "Awaiting a lazily registered mount: `waitForLyraElement()` and `waitForToast()`" above for the
   full contract.
 
 - **`theme-gemstones-data-contracts`** — Shared utility contracts.
   `GemstoneAccent {
-  key: unknown;
-  fill: unknown;
-  deep: unknown;
+  key: GemstoneKey;
+  fill: string;
+  deep: string;
 }`
 
 - **`theme-gemstones-contracts`** — Shared utility contracts.
-  `gemstoneGlyph(/* public names: color */): unknown`
+  `gemstoneGlyph(color = 'currentColor'): TemplateResult`
   `gemstoneSelectedGlyphStyles: CSSResult` — the shared "selected" halo/shine presentation for a
   rendered `gemstoneGlyph()`, applied via the `data-lr-gemstone-selected` boolean attribute on the
   element wrapping the glyph. `lr-swatch-picker mode="gemstone"` includes this exact stylesheet in

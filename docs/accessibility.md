@@ -27,8 +27,8 @@ that row means — this table summarizes, the script decides.
 | No axe-core violation in each component's qualifying populated/open state (or the complete default state for a recorded primitive exemption) | `check:qualification` + `expect(el).to.be.accessible()` in the browser suite | `pnpm lint`, `pnpm test`, CI `build-and-coverage` |
 | Every pinned upstream mapping records reviewed semantic, naming, keyboard, focus, state, announcement, and motion profiles; automatic mappings may not omit a recorded upstream behavior | `check:component-inventory` + `test:component-inventory` + `test:migrate-wa` | `pnpm lint` |
 | No axe-core `wcag2a`/`wcag2aa` violation on a curated set of representative story renderings in the built docs site | `storybook:check` | CI `docs-and-storybook` |
-| Every `--lr-color-<variant>-on-<emphasis>` token clears 4.5:1 against the `-fill-` token it pairs with (WCAG 2.2 SC 1.4.3), and the border tokens that identify a control clear 3:1 against the page surface (SC 1.4.11) — in **both** the light and dark palettes | `check:contrast` | `pnpm lint` |
-| Categorical chart series stay distinguishable after protanopia/deuteranopia/tritanopia simulation (OKLab distance ≥ 0.10) | `check:contrast` | `pnpm lint` |
+| Every `--lr-color-<variant>-on-<emphasis>` token clears 4.5:1 against the `-fill-` token it pairs with (WCAG 2.2 SC 1.4.3), and the border tokens that identify a control clear 3:1 against the page surface (SC 1.4.11) — in **both** the light and dark palettes | [`check-contrast.mjs`](../packages/lyra-ui/scripts/check-contrast.mjs) | `pnpm lint` |
+| Categorical chart series stay distinguishable after protanopia/deuteranopia/tritanopia simulation (OKLab distance ≥ 0.10) | [`check-contrast.mjs`](../packages/lyra-ui/scripts/check-contrast.mjs) | `pnpm lint` |
 | Every icon-sized interactive control resolves to at least 40px × 40px — above WCAG 2.2 SC 2.5.8's 24px minimum | `check:hit-area` | `pnpm lint` |
 | Every part that reacts to `:hover` also reacts to `:active`, or carries a written `no-pressed-state:` justification | `check:interaction-states` | `pnpm lint` |
 | No `::part()` selector that parses but can never match (dead focus/hover styling) | `check:part-reachability` | `pnpm lint` |
@@ -66,7 +66,7 @@ component's rendered tree, shadow roots included.
 Two of these gates are static text analysis over stylesheets rather than measurements of a rendered
 page, and their limits are worth knowing: `check:hit-area` cannot run a layout engine, so
 runtime-sized SVG and canvas targets are covered by per-component rendered-box tests instead of by
-the gate, and a small number of targets carry a recorded exemption; `check:contrast` evaluates the
+the gate, and a small number of targets carry a recorded exemption; `check-contrast.mjs` evaluates the
 shipped token grid, not a page you have themed.
 
 ### What no gate covers
@@ -146,11 +146,11 @@ The contrast guarantees above hold for the **shipped** palettes. They are checke
 library's own token grid, in light and dark.
 
 If you override `--lr-color-*` tokens — which is the supported way to theme Lyra UI — you take over
-the contrast obligation for the values you supply. `check:contrast` runs against this repository's
+the contrast obligation for the values you supply. `check-contrast.mjs` runs against this repository's
 palette, not against yours. When you fork the ramp, pair each `--lr-color-<variant>-on-<emphasis>`
 token with the `--lr-color-<variant>-fill-<emphasis>` it is meant to sit on, and re-measure.
 
-Forced colors: Lyra does not ship or advertise a separate `high-contrast` theme. Selected visual
+Forced colors: Lyra ships an optional `high-contrast` look; it is not a substitute for forced-colors support. Selected visual
 fixtures run Chromium with the real `forced-colors: active` emulation, including painted-pixel
 checks for intrinsic color surfaces and non-color chart encodings. This is targeted automated
 evidence, not a per-component Windows High Contrast audit or a manual assistive-technology review;

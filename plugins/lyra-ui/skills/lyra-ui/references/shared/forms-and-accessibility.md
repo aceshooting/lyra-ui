@@ -450,22 +450,8 @@ documented accessibility scope and how to report an accessibility issue, see
 
 Use the host `aria-label` attribute or native `ariaLabel` property to name a component. Where the
 component owns an internal role, it forwards that host name to the semantic element. An explicitly
-present host name, including `aria-label=""`, wins over the retained `accessibleLabel` fallback.
+present host name, including `aria-label=""`, is honored as given.
 This applies to `lr-table`'s grid and `lr-sequence-strip`'s list as well.
 
-On `lr-attachment-trigger`, `lr-callout`, `lr-carousel`, `lr-dialog`, `lr-drawer`, `lr-file-input`,
-`lr-lite-chart`, `lr-progress-bar`, `lr-progress-ring` and `lr-reorder-item`, the older
-`accessible-label` attribute was removed in 23.0.0 and no longer supplies an accessible name.
-Their `accessibleLabel` properties remain supported as deprecated fallbacks, with removal no
-earlier than 24.0.0. On `lr-table` and `lr-sequence-strip`, both `accessible-label` and
-`accessibleLabel` remain supported with removal no earlier than 24.0.0. These retained
-compatibility inputs can issue one-time development notices; use the native host name for new
-code. The migration reference lists each attribute and property independently.
-
-`lr-message-parts` retains a deprecated nullable `accessibleLabel` property, with removal no earlier
-than 24.0.0. It maps to the current `aria-label` attribute: authoring that attribute updates the
-property, and removing it restores `null` and the localized default name. Normal host attribute
-use and removal are supported without deprecation warnings. Assigning a non-null value directly to
-`accessibleLabel` while no host `aria-label` is present remains a working fallback and warns once
-in development. Use the host `aria-label` or native `ariaLabel` instead; an explicitly empty host
-name still takes precedence.
+Name components with the host `aria-label` / `ariaLabel`. The former `accessible-label` attribute and
+`accessibleLabel` property no longer exist (see the generated migration reference).

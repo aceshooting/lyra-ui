@@ -255,6 +255,4 @@ component and a release blocker for a new one.
   `scripts/fixtures/component-metadata.json` facade; never hand-edit that aggregate or its generated
   `component-metadata/history.json` source. Use `since: 'unreleased'` after the current release tag;
   the version rollover stamps it. Otherwise `since` may not exceed the current `package.json` version.
-  `removalNotBefore` must clear one whole subsequent major after the notice's actual release. A
-  record that retires a Lyra-only name in 23.0.0 also needs its rename-ledger entry in the same
-  change (see [upstream-parity.md](upstream-parity.md)).
+  `removalNotBefore` must clear one whole subsequent major after the notice's actual release.

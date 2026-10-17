@@ -7,6 +7,11 @@ allowed-tools: Read, Grep, Glob, Bash(grep:*)
 Review the frontend at `$1` (default: the current working directory) for how it uses
 `@aceshooting/lyra-ui`. Read-only: report findings and let the user ask for fixes afterwards.
 
+<!-- plugin-only:start -->
+Prefer `node_modules/@aceshooting/lyra-ui/llms/` when installed (it matches the project's version);
+otherwise use the plugin copy.
+<!-- plugin-only:end -->
+
 Every claim is checked against `${CLAUDE_PLUGIN_ROOT}/skills/lyra-ui/references/components/<lr-tag>.md`
 (path derived from the tag), never against memory. Check, in order:
 

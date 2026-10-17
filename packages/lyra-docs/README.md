@@ -664,28 +664,6 @@ byte-identical through edit, save, and reopen. That result applies to the tested
 corpus only; it does not establish general preservation of arbitrary DOCX
 extensions or compatibility with desktop word processors.
 
-## Lifecycle and qualification
-
-Disconnecting `<lr-docx-editor>` destroys its session, undo history, and
-selection. Reconnecting does not restore them; reopen bytes retained by the
-host. Moving or removing a session API mount also ends its session. There is no
-Shadow DOM mount mode.
-
-Native IME and touch behavior, font fidelity,
-advanced editing, broader DOCX compatibility, Word and LibreOffice
-interoperability, and collaboration still need qualification. The browser
-checks cover Chromium, Firefox, and WebKit, with associated synthetic OOXML
-preservation checks. Qualification covers the exercised actions and fixtures;
-human input and assistive-technology review, real-document and font coverage,
-external word-processor round trips, and retained-memory behavior remain open.
-Performance runs record a fixed fixture and environment for comparison; they
-do not support a general speed claim. Measurements, environment and bundle details are in the
-[qualification record](https://github.com/aceshooting/lyra-ui/blob/main/docs/roadmap/document-editing-feasibility.md#bundle-and-performance-observations).
-
-The package is public and independently versioned through Changesets.
-See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and
-[`THIRD_PARTY_LICENSES/`](THIRD_PARTY_LICENSES/) for licensing details.
-
 ### Simple table actions
 
 The session and element `execute()` APIs accept `insert-table` with integer
@@ -907,3 +885,25 @@ checks that dimensions and metadata stay equal, and admits the serialized packag
 within 16 MiB before live dispatch. Its bounded package scan permits opaque parts;
 the preservation and one-undo round trips apply to the exercised fixtures, not to
 arbitrary DOCX extensions. Unsupported pictures refuse without modification.
+
+## Lifecycle and qualification
+
+Disconnecting `<lr-docx-editor>` destroys its session, undo history, and
+selection. Reconnecting does not restore them; reopen bytes retained by the
+host. Moving or removing a session API mount also ends its session. There is no
+Shadow DOM mount mode.
+
+Native IME and touch behavior, font fidelity,
+advanced editing, broader DOCX compatibility, Word and LibreOffice
+interoperability, and collaboration still need qualification. The browser
+checks cover Chromium, Firefox, and WebKit, with associated synthetic OOXML
+preservation checks. Qualification covers the exercised actions and fixtures;
+human input and assistive-technology review, real-document and font coverage,
+external word-processor round trips, and retained-memory behavior remain open.
+Performance runs record a fixed fixture and environment for comparison; they
+do not support a general speed claim. Measurements, environment and bundle details are in the
+[qualification record](https://github.com/aceshooting/lyra-ui/blob/main/docs/roadmap/document-editing-feasibility.md#bundle-and-performance-observations).
+
+The package is public and independently versioned through Changesets.
+See [LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and
+[`THIRD_PARTY_LICENSES/`](THIRD_PARTY_LICENSES/) for licensing details.

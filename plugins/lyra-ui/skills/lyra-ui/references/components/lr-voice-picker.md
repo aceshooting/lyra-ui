@@ -18,7 +18,7 @@
 
 Override `--lr-voice-picker-trigger-padding`, `--lr-voice-picker-font-size`, and `--lr-voice-picker-expand-size` for trigger spacing, text size, and the expand control’s minimum target cap.
 
-The voice list follows the [shared surface treatment](shared/styles-and-tokens.md);
+The voice list follows the [shared surface treatment](../shared/styles-and-tokens.md);
 its editing field retains an opaque fill.
 
 A TTS voice selector over a host-supplied `catalog`, mirroring `lr-model-select`'s

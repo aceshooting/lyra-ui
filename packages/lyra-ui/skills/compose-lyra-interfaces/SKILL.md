@@ -10,14 +10,12 @@ Use the sibling `lyra-ui` skill (or the installed package's `llms.txt`) for exac
 slots, parts, custom properties, peers and import paths before writing code; its companion-package
 routes cover the experimental DOCX editor, flag assets, locale catalogs and editor data.
 
-Appearance: Shadcn look, Glass surface, Emerald accent, System mode and comfortable density are the
-built-in defaults. The [Lyra signature starter](node_modules/@aceshooting/lyra-ui/llms/shared/styles-and-tokens.md#lyra-signature-starter)
-owns the optional spotlights, gemstone selector (one localized "Selected accent: {name}" label used
-for its trigger name, hover title, dialog and radiogroup), 44px mode/design/flag-language controls
-and persistence recipe; older releases have different defaults, so read the installed
-`llms/shared/styles-and-tokens.md`. Language menus keep flags and readable localized names. Preserve
-saved preferences and branding, and retheme an existing app only within an authorized migration or
-redesign (Lyra look, Solid surface, `accent: null` selected explicitly retains the earlier look).
+Appearance defaults and the optional spotlights, gemstone selector, 44px mode/design/flag-language
+controls and persistence recipe are owned by the sibling `lyra-ui` skill ("Appearance defaults") and the
+[Lyra signature starter](node_modules/@aceshooting/lyra-ui/llms/shared/styles-and-tokens.md#lyra-signature-starter);
+older releases have different defaults, so read the installed `llms/shared/styles-and-tokens.md`.
+Language menus keep flags and readable localized names. Preserve saved preferences and branding, and
+retheme an existing app only within an authorized migration or redesign.
 
 ## Workflow
 

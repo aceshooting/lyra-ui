@@ -2,7 +2,8 @@
 
 `https://www.lyra-ui.com/api/v1/feature-requests` is the single automated intake for anything an
 assistant finds wrong with, missing from, or worth improving in lyra-ui on a user's behalf (a person
-filing their own report can use the GitHub routes in `SUPPORT.md`). Reportable:
+filing their own report can use the GitHub routes in
+[SUPPORT.md](https://github.com/aceshooting/lyra-ui/blob/main/SUPPORT.md)). Reportable:
 
 - **Missing component:** no `lr-*` tag covers the need.
 - **Missing capability** on an existing component: a prop, variant, slot, event or CSS part.

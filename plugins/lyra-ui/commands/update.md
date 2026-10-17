@@ -8,10 +8,10 @@ Bring the project at `$1` (default: the current working directory) onto the late
 `@aceshooting/lyra-ui`.
 
 1. **Check drift.** Read the installed version from `package.json` and the lockfile and compare it
-   with `npm view @aceshooting/lyra-ui version`. Also check the companions the project uses
-   (`@aceshooting/lyra-translations`, `@aceshooting/lyra-ide`, `@aceshooting/lyra-flags`,
-   `@aceshooting/lyra-docs`): bump them to the same version as lyra-ui (translations and ide are
-   versioned together with it).
+   with `npm view @aceshooting/lyra-ui version`. Also check the companions the project uses:
+   bump `@aceshooting/lyra-translations` and `@aceshooting/lyra-ide` to lyra-ui's version; bump
+   `@aceshooting/lyra-flags`, `@aceshooting/lyra-docs` and `@aceshooting/lyra-map` to their latest
+   release whose peer ranges accept it (`npm view <pkg> version peerDependencies`).
 2. **Read the notes before bumping.** Fetch `https://www.lyra-ui.com/changelog.json` and read every
    release between the installed version and `latest`; `kind: "major"` entries are breaking and
    required reading. npm is the authority on what is published and the feed only carries notes: if
@@ -25,6 +25,7 @@ Bring the project at `$1` (default: the current working directory) onto the late
    links) against the pre-bump review. Where the project ran `npx lyra-ui init-agents`, run it again
    (symlinked skills already follow the new version; it refreshes the marked instruction block and
    any `--copy` install). When the changelog names a Lyra rename profile, run the installed release's
-   `npx lyra-ui-migrate --origin=<lyra-v21|lyra-v22|lyra-v25> --check <path>` and review its warnings.
+   `npx lyra-ui-migrate --origin=<profile> --check <path>` (`--help` lists the profiles; use the one
+   named after the major being left) and review its warnings.
 5. **Report** the versions bumped from and to, the breaking changes and deprecations that affect
    this project (check components it actually uses), and anything else notable.

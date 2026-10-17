@@ -16,7 +16,7 @@
 
 ## `lr-select`
 
-Floating form-control panels follow the [shared surface treatment](shared/styles-and-tokens.md).
+Floating form-control panels follow the [shared surface treatment](../shared/styles-and-tokens.md).
 Editing fields and inline color editors retain opaque interiors.
 
 A plain closed-list dropdown — a direct `<lr-*>` counterpart to `<wa-select>`/`<wa-option>`.
@@ -50,7 +50,7 @@ await select.locator('[part="option"][data-value="fr"]').click();
 For an in-page component test with a `LyraSelect` element, the public
 `@aceshooting/lyra-ui/testing` `chooseOption(selectElement, 'fr')` driver opens the listbox,
 clicks its first rendered row with that value, and awaits the component update. It also works in
-DOM test environments without Playwright; see [interaction drivers](shared/testing-and-utilities.md#driving-a-components-real-activation-path-interaction-drivers).
+DOM test environments without Playwright; see [interaction drivers](../shared/testing-and-utilities.md#driving-a-components-real-activation-path-interaction-drivers).
 
 Playwright's locators enter the open shadow root. A light-DOM `lr-option[value="fr"]` has no
 clickable box in this picker. If multiple options share a value, `data-value` matches every

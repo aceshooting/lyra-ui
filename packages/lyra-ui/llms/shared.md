@@ -17,19 +17,8 @@ version. If an API is deprecated in major version M, it remains available for th
 release line and cannot be removed before M+2. This policy applies equally to stable and
 experimental public APIs.
 
-**9.0.0 took a one-time exception to that policy, and says so rather than quietly breaking it.**
-Three members whose recorded removal window had genuinely opened were removed normally
-(`lr-tool-call-chip`/`lr-message-parts`' `lr-tool-chip-select`, and `lr-flow-canvas`'
-`--lr-flow-canvas-node-current-outline-color`). Alongside them, a small set of members that had
-_never_ been deprecated were renamed and their old spellings removed in the same release, without the
-customary M+1 warning period — `lr-usage-badge`'s `compact`, `lr-chart`'s `horizontal`,
-`lr-rag-answer`/`lr-retrieval-results`' `error`, `lr-ingestion-queue`'s
-`virtualizeThreshold` → `virtualizeAt`,
-`lr-knowledge-base`'s `lr-kb-*` events, `lr-data-grid`'s `columns`/`filename` option fields, and
-`lr-test-results`' two legacy detail-slot spellings, plus the component-specific
-`LyraModelCatalog`/`LyraVoiceCatalog` aliases in favor of the shared `LyraCatalog<T>`. Every one has
-a mechanical migration listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward
-the M+2 rule applies as written; treat the above as a documented exception, not a precedent.
+9.0.0 was a one-time exception to the M+2 rule (members renamed without a deprecation window; see
+the 9.0.0 notes in the release history archive). From 9.0.0 onward the rule applies as written.
 
 Deprecation records also cover contracts that are not a single member. Deprecated **slot
 content** is a kind of content inside a slot that stays supported (for example, content other than
@@ -60,7 +49,7 @@ while deliberately exercising a deprecated form can pre-seed Lit's development-m
 `globalThis.litIssuedWarnings` set, before the element renders, with the key
 `lyra-deprecated:<owner>:<kind>:<name>` — `<kind>` and `<name>` as in the deprecation record.
 `<owner>` is the element name or package-relative module specifier. Theme migration guidance is in
-[styles and tokens](styles-and-tokens.md).
+[styles and tokens](./shared/styles-and-tokens.md).
 
 ### Release history and upgrade notes
 
@@ -70,23 +59,9 @@ Family-wide breaking-change summaries open each authored `llms/<family>.md`, and
 `llms/components/<tag>.md` header links its family summary. `llms/migration.md` covers only
 `wa-*`/`sl-*` renames, not Lyra release history.
 
-The major-version landmarks after 9.0.0 are:
-
-- **10.0.0:** removed eligible members deprecated during 9.x and made the public-contract
-  corrections listed in its changelog entry; follow that entry's per-member migration guidance.
-- **11.0.0:** carried no known consumer-breaking change; consumers upgrading from 10.x were not
-  expected to change code.
-- **12.0.0:** removed the inherited static `LyraElement.getPropertyDescriptor()` surface after Lit
-  deprecated that finalization hook. Ordinary component consumers need no migration; only subclasses
-  that themselves overrode the hook are affected. Collection snapshot enforcement moved to a
-  decorator-agnostic accessor seam instead.
-
-- **24.0.0:** removed eligible v22 compatibility routes, including package-root component
-  constructors, duplicate nested registration entries, the combined `ssr-loader.js` entry, and the
-  retired theme/preset facade. Use stable tag-shaped registration entries, a component's
-  registration-free `.class.js` subpath, the split SSR/hydration entries, and the current style API.
-  The [v23-to-v24 migration guide](v23-to-v24-migration.md) gives the removed routes, ordered
-  consumer cleanup and retained-profile instructions.
+The [v23-to-v24 migration guide](./shared/v23-to-v24-migration.md) gives the removed routes, ordered consumer
+cleanup and retained-profile instructions. Use stable tag-shaped registration entries, a component's
+registration-free `.class.js` subpath, the split SSR/hydration entries, and the current style API.
 
 ### The support window
 
@@ -404,7 +379,7 @@ through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` o
 "TypeScript" below.
 
 For event-detail compatibility fields removed in the v23-to-v24 upgrade,
-use step 7 of the [migration checklist](v23-to-v24-migration.md#migrate-a-project-in-reviewable-steps).
+use step 7 of the [migration checklist](./shared/v23-to-v24-migration.md#migrate-a-project-in-reviewable-steps).
 Those nested detail fields are separate from deprecated event names and are not automatic renames.
 
 ## TypeScript
@@ -956,7 +931,7 @@ These are decorative application backgrounds, not an `accentBackground` value: t
 accepts absolute colors used as contrast reference surfaces, not gradients or image URLs. Use
 semantic surface/text pairings for content and keep the decorative layer behind it.
 
-Use the existing [gemstoneAccentPicker composition](../components/lr-swatch-picker.md#gemstoneaccentpicker--the-signature-accent-selector),
+Use the existing [gemstoneAccentPicker composition](./components/lr-swatch-picker.md#gemstoneaccentpicker--the-signature-accent-selector),
 with its single localized “Selected accent: {name}” heading, nine canonical gemstones, and shared
 selected-glyph treatment. Update the name when selection changes. Use the same interpolated label
 for the trigger's accessible name and hover title, dialog, radiogroup, and visible heading; do not
@@ -1092,9 +1067,9 @@ server-rendered pages and for application elements that paint before any Lyra el
 `tokens-root.css` is the same layer alone, as a static stylesheet, for pages that do not use
 `theme.css`:
 
-- **Server-rendered pages.** Declarative shadow roots no longer carry the layer, so link
-  `theme.css` (or `tokens-root.css`) for a correct first paint before hydration (see
-  [Theme scopes](#theme-scopes) for application shadow roots).
+- **Server-rendered pages.** See
+  [SSR and declarative shadow DOM](./shared/frameworks-and-ssr.md#ssr-and-declarative-shadow-dom) and
+  [Theme scopes](#theme-scopes) for application shadow roots.
 - **Application elements that paint before the first Lyra element is registered**, for example
   ahead of a lazily loaded route; otherwise they change value when the layer is adopted.
 - **Large pages that load Lyra late.** Without a static copy, the layer is adopted when the first
@@ -1201,8 +1176,7 @@ and the mode it sees. The list is closed: `:root`; the mode scopes `.lr-light`, 
   outer scope reaches a marked region exactly as it reaches an unmarked one, and adding a marker
   where nothing needs it changes nothing. With `theme.css`, mode scopes and the style-axis
   boundaries also re-resolve the inputs from the selected look, accent and mode, so an input set
-  above one of them stops there (set it on that boundary, or below it). A scope costs a little less
-  than one component did before 28.0.0, so put inputs on a common ancestor rather than marking every
+  above one of them stops there (set it on that boundary, or below it). A scope is cheap, so put inputs on a common ancestor rather than marking every
   row of a list.
 - **`applyLyraStyleScope()`** writes the marker whenever it writes inline inputs.
 - **Brand regions in the default look.** The marker re-derives outputs but is not a style boundary,
@@ -1481,7 +1455,7 @@ for dialogs or panels (so it also renders without the component bundle) and uses
 on an `.lr-surface-chrome` element overrides the Glass fill; declare a low-priority layer before
 Lyra's names (`@layer app-base, lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;`)
 for those fallbacks, or set `--lr-surface-background`. See
-[Application fallback fills and cascade layers](native-styles-and-utilities.md#application-fallback-fills-and-cascade-layers).
+[Application fallback fills and cascade layers](./shared/native-styles-and-utilities.md#application-fallback-fills-and-cascade-layers).
 
 <a id="the-shadcn-look--themesshadcncss"></a>
 
@@ -1523,7 +1497,6 @@ Override the look through an unlayered application rule or the lr-overrides laye
 }
 ~~~
 
-The former global themes/shadcn.css facade and its data-lr-theme-preset behavior have been removed.
 Use theme.css and the data-lr-look axis for new styling; looks/shadcn.css is needed only for the
 compatibility aliases above.
 
@@ -1619,8 +1592,7 @@ code. See each control's own reference page for its exact pair.
   takes precedence, and it has to: the shipped `design-tokens.css` declares
   `--lr-theme-icon-button-size` on `:root`, and a `var()` chain only falls through for a property
   that is unset *everywhere*, not merely shadowed nearer the element. Reading the theme tier first
-  therefore made this knob inert for anyone loading that stylesheet (a real 18.1.0 defect, fixed in
-  18.2.0). `--lr-icon-button-size`
+  therefore made this knob inert for anyone loading that stylesheet. `--lr-icon-button-size`
   is **element-scoped on purpose** and is not a wrapper knob: every component re-declares it on its
   own host so the touch-target floor can apply per element, so a value set on a wrapper is replaced
   at the first component in between and never reaches anything nested inside one. That behaviour is
@@ -1696,8 +1668,7 @@ sets `color-scheme`. **Every engine follows the nearest mode scope, with or with
 document layer carries mode to every scope through two inherited private switches, so a `.lr-light`
 island inside a `.lr-dark` region is light, a mode-neutral scope keeps its ancestor's mode, and the
 OS preference decides the root unless the root carries an explicit mode. A real `--lr-theme-*` value
-still wins over the built-in light or dark default. (Before 28.0.0 an ancestor mode reached
-components without `theme.css` only in Chromium, through `:host-context()`.)
+still wins over the built-in light or dark default.
 
 Each component host also keeps `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
@@ -1808,7 +1779,7 @@ the whole profile in it. A page whose bootstrap uses `data-lr-theme-restore="mod
 application-owned storage key does not pair with it: the start would apply axes or a record the
 bootstrap deliberately ignored. Such pages call `setLyraStyle()` with the policy they want.
 
-**Migrating the retired theme facade.** New code uses setLyraStyle() and getLyraStyle(). Map old auto mode to system, an old surface reference color to accentBackground, and an old token map to overrides; review custom CSS colors that share a gemstone name before choosing a named accent. Replace preset definitions with a LyraLook plus explicit style choices. Replace selectors for data-lr-theme-preset with the actual axis they need, such as data-lr-look="shadcn". Import theme.css in place of the removed fixed themes/shadcn.css facade and select the look with setLyraStyle({ look: "shadcn" }) or a scoped data-lr-look attribute. Listen for lr-style-change and read event.detail.style and event.detail.changed; the old theme and preset events are no longer emitted. For the complete project-by-project sequence, see [Upgrading from v23 to v24](v23-to-v24-migration.md).
+**Migrating the retired theme facade.** New code uses setLyraStyle() and getLyraStyle(). Map old auto mode to system, an old surface reference color to accentBackground, and an old token map to overrides; review custom CSS colors that share a gemstone name before choosing a named accent. Replace preset definitions with a LyraLook plus explicit style choices. Replace selectors for data-lr-theme-preset with the actual axis they need, such as data-lr-look="shadcn". Import theme.css in place of the removed fixed themes/shadcn.css facade and select the look with setLyraStyle({ look: "shadcn" }) or a scoped data-lr-look attribute. Listen for lr-style-change and read event.detail.style and event.detail.changed; the old theme and preset events are no longer emitted. For the complete project-by-project sequence, see [Upgrading from v23 to v24](./shared/v23-to-v24-migration.md).
 
 Historical v1 stored records remain readable by the runtime and bootstrap. The removed JavaScript functions, preset subpaths, preset event, root marker, and fixed stylesheet are not available in the current API.
 
@@ -2243,7 +2214,7 @@ application's fallback where it ranks below Lyra:
 An application layer declared after Lyra's (or unnamed until after `theme.css` loads) ranks above
 the surface layer and disables Glass in the same way as an unlayered rule. Keep unlayered
 `background` rules off `.lr-surface-chrome` elements, or exclude them with
-`:not(.lr-surface-chrome)`. See [Cascade layers](styles-and-tokens.md#cascade-layers) for the full
+`:not(.lr-surface-chrome)`. See [Cascade layers](./shared/styles-and-tokens.md#cascade-layers) for the full
 order.
 
 ## Localization: `locale`, `strings`, and the locale runtime
@@ -2307,8 +2278,6 @@ The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `LyraPluralMessage`, `LyraPluralCategory`, `LyraLocaleBridgeOptions` and `LyraLocaleBridgeCleanup`.
 The package root continues to re-export the runtime for compatibility and remains registration-free;
 use the dedicated entry when the application only needs locale setup and the narrower import graph.
-The former utility-scoped entry point was removed in 23.0.0. Change that import specifier to
-`@aceshooting/lyra-ui/localization.js`; the helper contracts are unchanged.
 **`LYRA_DEFAULT_STRINGS` is the authoritative key list** (matching the `LyraMessageKey` union) —
 read it to find the key to override rather than guessing one. Date, number, byte, relative-time and
 calendar output goes through `Intl`.
@@ -2797,7 +2766,7 @@ and adapters emit empty JavaScript and do not register elements.
 ## SSR and declarative shadow DOM
 
 When replacing the removed combined `ssr-loader.js` route, split browser hydration from component
-registration and server rendering as shown below. The [v23-to-v24 migration guide](v23-to-v24-migration.md)
+registration and server rendering as shown below. The [v23-to-v24 migration guide](./shared/v23-to-v24-migration.md)
 has the ordered upgrade steps and environment-specific import mapping.
 
 Root, `all.js`, and granular component imports are server-safe under the supported Node 22+ runtime.
@@ -3219,8 +3188,8 @@ they carry no `tag`: `components/media/flag/flag-peer.js`,
 stand in for. They are a separate array rather than tag-less rows mixed into `entries`, so a reader
 that keys `entries` by `tag` keeps working; `integrations`, `distModule` and `localeKeys` are all
 additive, which is why the schema version is unchanged. `registrationModule` is the `src/` path used
-internally; `distModule` is a retained published specifier and equals the stable `entry` for v24
-per-tag registrations and integration bridges. `registers` is every `lr-*` tag
+internally; `distModule` is a retained published specifier and equals the stable `entry` for per-tag
+registrations and integration bridges. `registers` is every `lr-*` tag
 importing `entry` defines, direct or transitive, derived from the same transitive-import analysis
 `scripts/check-component-dependencies.mjs` already performs against the real registration graph
 (not a second hand-maintained list). `localeKeys` is every `LyraMessageKey` the registered tags can
@@ -3263,8 +3232,7 @@ same way `all.js` registers its root-included tags (the package root itself regi
 and want a single import; reach for the granular
 `@aceshooting/lyra-ui/components/<tag>.js` path when you do not, because a barrel cannot be
 tree-shaken down to the two elements you actually render. The tag-shaped path remains stable if a
-component moves between Lyra's internal family folders. Duplicate nested registration paths were
-removed in v24; family barrels remain supported.
+component moves between Lyra's internal family folders.
 
 ```js
 import "@aceshooting/lyra-ui/components/forms"; // every form control
@@ -3702,7 +3670,7 @@ number; clearTimeout(handle: number): void }`.
 - **`localization` → `subscribeLyraLocale(listener): () => void` and
   `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime.
   Import these helpers from the side-effect-free `@aceshooting/lyra-ui/localization.js` entry.
-  The former `utilities/localization.js` route was removed in 23.0.0. The extensionless `@aceshooting/lyra-ui/utilities`
+  The extensionless `@aceshooting/lyra-ui/utilities`
   barrel keeps exporting them. `subscribeLyraLocale()` is distinct from
   `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization".
   `subscribeLyraLocale()` fires whenever the active selection changes, and when a newly registered
@@ -3828,90 +3796,90 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`ai-adapters-a2ui-contracts`** — AI adapter and runtime contracts.
   `A2UiAdapterLimits {
-  maxComponents: unknown;
-  maxDepth: unknown;
-  maxOutputNodes: unknown;
-  maxChildrenPerComponent: unknown;
-  maxNodes: unknown;
-  maxBytes: unknown;
-  maxStringCharacters: unknown;
+  maxComponents: number;
+  maxDepth: number;
+  maxOutputNodes: number;
+  maxChildrenPerComponent: number;
+  maxNodes: number;
+  maxBytes: number;
+  maxStringCharacters: number;
 }`
   `A2UiLikeAction {
-  id: unknown;
-  payload: unknown;
+  id: string;
+  payload?: unknown;
 }`
   `A2UiLikeComponent {
-  id: unknown;
-  type: unknown;
-  props: unknown;
-  text: unknown;
-  children: unknown;
-  action: unknown;
+  id: string;
+  type: string;
+  props?: Record<string, unknown>;
+  text?: string;
+  children?: string[];
+  action?: A2UiLikeAction;
 }`
   `A2UiLikeSurface {
-  surfaceId: unknown;
-  rootId: unknown;
-  components: unknown;
-  data: unknown;
+  surfaceId?: string;
+  rootId: string;
+  components: A2UiLikeComponent[];
+  data?: unknown;
 }`
-  `adaptA2UiSurface(/* public names: surface, typeMap, limits */): unknown`
+  `adaptA2UiSurface(surface: unknown, typeMap: unknown, limits: Partial<A2UiAdapterLimits> = {}): LyraWidgetDocument | null`
 
 - **`ai-adapters-ag-ui-contracts`** — AI adapter and runtime contracts.
   `AgUiAdapterLimits {
-  maxBufferedTools: unknown;
-  maxToolArgumentBytes: unknown;
-  maxTextDeltaCharacters: unknown;
-  maxDepth: unknown;
-  maxNodes: unknown;
-  maxBytes: unknown;
-  maxStringCharacters: unknown;
+  maxBufferedTools: number;
+  maxToolArgumentBytes: number;
+  maxTextDeltaCharacters: number;
+  maxDepth: number;
+  maxNodes: number;
+  maxBytes: number;
+  maxStringCharacters: number;
 }`
   `AgUiLikeEvent {
-  type: unknown;
-  eventId: unknown;
-  runId: unknown;
-  messageId: unknown;
-  role: unknown;
-  delta: unknown;
-  toolCallId: unknown;
-  toolCallName: unknown;
-  result: unknown;
-  message: unknown;
-  code: unknown;
-  snapshot: unknown;
-  messages: unknown;
+  type: string;
+  eventId?: string;
+  runId?: string;
+  messageId?: string;
+  role?: string;
+  delta?: unknown;
+  toolCallId?: string;
+  toolCallName?: string;
+  result?: unknown;
+  message?: string;
+  code?: string;
+  snapshot?: unknown;
+  messages?: unknown[];
 }`
 
 - **`ai-adapters-ai-sdk-contracts`** — AI adapter and runtime contracts.
   `adaptAiSdkMessage(message: unknown, limits?: Partial<AiSdkAdapterLimits>): ChatMessage | null`
   `AiSdkAdapterLimits {
-  maxParts: unknown;
-  maxDepth: unknown;
-  maxNodes: unknown;
-  maxBytes: unknown;
-  maxStringCharacters: unknown;
+  maxParts: number;
+  maxDepth: number;
+  maxNodes: number;
+  maxBytes: number;
+  maxStringCharacters: number;
 }`
   `AiSdkLikeMessage {
-  id: unknown;
-  role: unknown;
-  parts: unknown;
-  metadata: unknown;
+  id: string;
+  role: string;
+  parts?: unknown[];
+  metadata?: Record<string, unknown>;
 }`
 
 - **`ai-runtime-contracts`** — AI adapter and runtime contracts.
   `AgentStreamLimits {
-  maxMessages: unknown;
-  maxPartsPerMessage: unknown;
-  maxTools: unknown;
-  maxDeltaCharacters: unknown;
-  maxTextCharactersPerPart: unknown;
-  maxIdentifierCharacters: unknown;
-  maxStatusMessageCharacters: unknown;
-  maxPatchOperations: unknown;
-  maxSnapshotDepth: unknown;
-  maxSnapshotNodes: unknown;
-  maxSnapshotBytes: unknown;
-  maxRetainedBytes: unknown;
+  maxMessages: number;
+  maxPartsPerMessage: number;
+  maxTools: number;
+  maxDeltaCharacters: number;
+  maxTextCharactersPerPart: number;
+  maxIdentifierCharacters: number;
+  maxStatusMessageCharacters: number;
+  maxPatchOperations: number;
+  maxSnapshotDepth: number;
+  maxSnapshotNodes: number;
+  maxSnapshotBytes: number;
+  maxRetainedBytes: number;
 }`
   `AgentStreamState {
   generation: number;
@@ -3923,51 +3891,51 @@ These named interfaces and helper signatures are available to typed integrations
   messages: ChatMessage[];
   tools: ToolInvocation[];
   sharedState: unknown;
-  error?: { message: string; code?: string; };
+  error?: { message: string; code?: string };
 }`
-  `applySharedStatePatch(/* public names: value, patch */): unknown`
+  `applySharedStatePatch(value: unknown, patch: readonly JsonPatchOperation[]): unknown`
   `createAgentStreamState(limits?: Partial<AgentStreamLimits>): AgentStreamState`
-  `parseJsonPatch(/* public names: value, limits */): unknown`
+  `parseJsonPatch(value: unknown, limits: Partial<AgentStreamLimits> = {}): JsonPatchOperation[] | null`
   `reduceAgentStreamEvents(state: AgentStreamState, events: readonly AgentStreamEvent[]): AgentStreamState`
   `reduceAgentStream(state: AgentStreamState, event: AgentStreamEvent): AgentStreamState`
 
 - **`ai-snapshot-contracts`** — AI adapter and runtime contracts.
-  `createProviderSnapshotBudget(/* public names: limits */): unknown`
+  `createProviderSnapshotBudget(limits: Partial<ProviderSnapshotLimits> | Readonly<ProviderSnapshotLimits> = {}): ProviderSnapshotBudget`
   `ProviderSnapshotBudget {
-  limits: unknown;
-  bytes: unknown;
-  nodes: unknown;
+  readonly limits: Readonly<ProviderSnapshotLimits>;
+  bytes: number;
+  nodes: number;
 }`
   `ProviderSnapshotLimits {
-  maxDepth: unknown;
-  maxNodes: unknown;
-  maxBytes: unknown;
-  maxStringCharacters: unknown;
+  maxDepth: number;
+  maxNodes: number;
+  maxBytes: number;
+  maxStringCharacters: number;
 }`
-  `resolveProviderSnapshotLimits(/* public names: limits */): unknown`
-  `snapshotProviderValue(/* public names: value, budget */): unknown`
+  `resolveProviderSnapshotLimits(limits: Partial<ProviderSnapshotLimits> = {}): Readonly<ProviderSnapshotLimits>`
+  `snapshotProviderValue<T = unknown>(value: unknown, budget: ProviderSnapshotBudget = createProviderSnapshotBudget()): ProviderSnapshotResult<T>`
 
 - **`ai-types-contracts`** — AI adapter and runtime contracts.
   `AgentRun {
-  id: unknown;
-  status: unknown;
-  startedAt: unknown;
-  endedAt: unknown;
-  model: unknown;
-  costEstimate: unknown;
-  steps: unknown;
+  id: string;
+  status: AgentStatus;
+  startedAt?: number;
+  endedAt?: number;
+  model?: string;
+  costEstimate?: number;
+  steps: readonly AgentStep[];
 }`
   `AgentStatus {
-  kind: unknown;
-  message: unknown;
+  kind: AgentStatusKind;
+  message?: string;
 }`
   `AgentStep {
-  id: unknown;
-  kind: unknown;
-  label: unknown;
-  status: unknown;
-  startedAt: unknown;
-  endedAt: unknown;
+  id: string;
+  kind: string;
+  label: string;
+  status: AgentStatus;
+  startedAt?: number;
+  endedAt?: number;
 }`
   `AttachmentMessagePart {
   type: 'attachment';
@@ -3988,7 +3956,7 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `CancelEventDetail {
-  reason: unknown;
+  reason?: string;
 }`
   `ChatMessage {
   id: string;
@@ -4001,17 +3969,15 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `Citation {
-  id: unknown;
-  chunkId: unknown;
-  sourceId: unknown;
-  span: unknown;
-  start: unknown;
-  end: unknown;
-  label: unknown;
-  locator: unknown;
-  answerRange: unknown;
-  quote: unknown;
-  metadata: unknown;
+  id: string;
+  chunkId?: string;
+  sourceId?: string;
+  span?: { start: number; end: number };
+  label?: string;
+  locator?: DocumentLocator;
+  answerRange?: { start: number; end: number };
+  quote?: string;
+  metadata?: Record<string, unknown>;
 }`
   `CitationMessagePart {
   type: 'citation';
@@ -4022,7 +3988,7 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `CitationSelectEventDetail {
-  citation: unknown;
+  citation: Citation;
 }`
   `DataMessagePart {
   type: 'data';
@@ -4035,11 +4001,11 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `DocumentRef {
-  id: unknown;
-  name: unknown;
-  mimeType: unknown;
-  uri: unknown;
-  version: unknown;
+  id: string;
+  name: string;
+  mimeType?: string;
+  uri?: string;
+  version?: string;
 }`
   `ErrorMessagePart {
   type: 'error';
@@ -4052,26 +4018,24 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `ExportEventDetail {
-  format: unknown;
+  format: string;
 }`
   `GroundedClaim {
-  id: unknown;
-  text: unknown;
-  status: unknown;
-  citationIds: unknown;
-  answerRange: unknown;
-  start: unknown;
-  end: unknown;
-  confidence: unknown;
-  explanation: unknown;
+  id: string;
+  text: string;
+  status: GroundedClaimStatus;
+  citationIds: readonly string[];
+  answerRange?: { start: number; end: number };
+  confidence?: number;
+  explanation?: string;
 }`
   `GroundingAssessment {
-  supportedClaims: unknown;
-  unsupportedClaims: unknown;
-  coverage: unknown;
-  confidence: unknown;
-  warnings: unknown;
-  claims: unknown;
+  supportedClaims: number;
+  unsupportedClaims: number;
+  coverage: number;
+  confidence?: number;
+  warnings?: readonly string[];
+  claims?: readonly GroundedClaim[];
 }`
   `MessagePartBase {
   id: string;
@@ -4089,42 +4053,42 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `RetrievalChunk {
-  id: unknown;
-  text: unknown;
-  score: unknown;
-  source: unknown;
-  metadata: unknown;
-  rank: unknown;
-  locator: unknown;
-  queryId: unknown;
-  stage: unknown;
-  traceId: unknown;
-  scores: unknown;
+  id: string;
+  text: string;
+  score: number;
+  source: DocumentRef;
+  metadata?: Record<string, unknown>;
+  rank?: number;
+  locator?: DocumentLocator;
+  queryId?: string;
+  stage?: string;
+  traceId?: string;
+  scores?: RetrievalScoreBreakdown;
 }`
   `RetrievalProgressEventDetail {
-  queryId: unknown;
-  stage: unknown;
-  progress: unknown;
+  queryId: string;
+  stage: string;
+  progress?: number;
 }`
   `RetrievalQuery {
-  text: unknown;
-  filters: unknown;
-  mode: unknown;
-  scope: unknown;
+  text: string;
+  filters?: Record<string, unknown>;
+  mode: 'vector' | 'keyword' | 'hybrid';
+  scope?: string[];
 }`
   `RetrievalScoreBreakdown {
-  dense: unknown;
-  sparse: unknown;
-  rerank: unknown;
-  final: unknown;
+  dense?: number;
+  sparse?: number;
+  rerank?: number;
+  final: number;
 }`
   `RetryEventDetail {
-  attempt: unknown;
-  messageId: unknown;
+  attempt: number;
+  messageId?: string;
 }`
   `RunLifecycleEventDetail {
-  runId: unknown;
-  status: unknown;
+  runId: string;
+  status: AgentStatus;
 }`
   `TextMessagePart {
   type: 'text';
@@ -4135,8 +4099,8 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `ToolApprovalEventDetail {
-  invocationId: unknown;
-  approved: unknown;
+  invocationId: string;
+  approved: boolean;
 }`
   `ToolCallMessagePart {
   type: 'tool-call';
@@ -4147,16 +4111,16 @@ These named interfaces and helper signatures are available to typed integrations
   metadata?: Record<string, unknown>;
 }`
   `ToolInvocation {
-  id: unknown;
-  name: unknown;
-  displayName: unknown;
-  args: unknown;
-  status: unknown;
-  result: unknown;
-  error: unknown;
-  startedAt: unknown;
-  endedAt: unknown;
-  redactedFields: unknown;
+  id: string;
+  name: string;
+  displayName?: string;
+  args: Record<string, unknown>;
+  status: ToolStatus;
+  result?: unknown;
+  error?: string;
+  startedAt?: number;
+  endedAt?: number;
+  redactedFields?: readonly string[];
 }`
   `ToolResultErrorMessagePart {
   error: string;
@@ -4206,22 +4170,22 @@ These named interfaces and helper signatures are available to typed integrations
   readonly optionalPeers: readonly string[];
 }`
   `AutoloaderOptions {
-  optionalPeers: unknown;
-  events: unknown;
-  maxConcurrency: unknown;
-  maxElements: unknown;
-  maxRoots: unknown;
-  maxDepth: unknown;
-  maxWork: unknown;
+  readonly optionalPeers?: AutoloaderOptionalPeers;
+  readonly events?: boolean;
+  readonly maxConcurrency?: number;
+  readonly maxElements?: number;
+  readonly maxRoots?: number;
+  readonly maxDepth?: number;
+  readonly maxWork?: number;
 }`
   `AutoloaderTraversalErrorEventDetail {
-  limit: unknown;
-  maximum: unknown;
-  error: unknown;
+  readonly limit: RenderedTreeTraversalLimit;
+  readonly maximum: number;
+  readonly error: Error;
 }`
   `discover(root?: LyraDefinitionRoot | undefined, options?: AutoloaderOptions): Promise<readonly AutoloadableTagName[]>`
   `start(root?: LyraDefinitionRoot | undefined, options?: AutoloaderOptions): Promise<readonly AutoloadableTagName[]>`
-  `stop(): unknown`
+  `stop(): void`
 
 - **`custom-elements-jsx-contracts`** — Framework integration type contracts, including the multi-split
   `for` launcher id and `trigger` element reference.
@@ -4538,18 +4502,18 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`internal-ansi-contracts`** — Shared utility contracts.
   `AnsiStyles {
-  bold: unknown;
-  dim: unknown;
-  italic: unknown;
-  underline: unknown;
-  inverse: unknown;
-  fg: unknown;
-  bg: unknown;
+  bold: boolean;
+  dim: boolean;
+  italic: boolean;
+  underline: boolean;
+  inverse: boolean;
+  fg?: string;
+  bg?: string;
 }`
 
 - **`internal-canvas-color-contracts`** — Shared utility contracts.
-  `resolveCanvasColor(/* public names: scope, color, fallback */): unknown`
-  `resolveCanvasColors(/* public names: scope, colors, fallback */): unknown`
+  `resolveCanvasColor(scope: Element, color: string, fallback: string): string`
+  `resolveCanvasColors(scope: Element, colors: Iterable<string>, fallback: string): string[]`
 
 - **`internal-document-tokens-contracts`** — Shared utility contracts.
   `adoptLyraTokens(root: Document | ShadowRoot): void`
@@ -4562,21 +4526,21 @@ These named interfaces and helper signatures are available to typed integrations
   scope. Reads inline styles only and logs nothing.
 
 - **`internal-localization-runtime-contracts`** — Shared utility contracts.
-  `getLyraLocaleDirection(/* public names: locale */): unknown`
-  `getLyraLocale(): unknown`
-  `getRegisteredLyraLocaleKeys(/* public names: locale */): unknown`
-  `getRegisteredLyraLocales(): unknown`
+  `getLyraLocaleDirection(locale: string): LyraLocaleDirection`
+  `getLyraLocale(): string`
+  `getRegisteredLyraLocaleKeys(locale: string): readonly string[]`
+  `getRegisteredLyraLocales(): readonly string[]`
   `registerLyraLocale(locale: string, strings: LyraLocaleStrings, meta?: LyraLocaleMeta): void`
-  `resolveLyraDirection(/* public names: host */): unknown`
-  `resolveLyraLocale(/* public names: host */): unknown`
-  `setLyraLocale(/* public names: locale */): unknown`
-  `subscribeLyraLocaleRegistry(/* public names: listener */): unknown`
+  `resolveLyraDirection(host: Element): 'ltr' | 'rtl'`
+  `resolveLyraLocale(host: Element): string`
+  `setLyraLocale(locale: string): void`
+  `subscribeLyraLocaleRegistry(listener: () => void): () => void`
   `registerLyraLocaleDelta(locale: string, parent: string, strings: LyraLocaleStrings, meta?: LyraLocaleMeta): void`
 
 - **`internal-localization-types-contracts`** — Shared utility contracts.
   `LyraLocaleMeta {
-  dir: unknown;
-  name: unknown;
+  dir?: LyraLocaleDirection;
+  name?: string;
 }`
 
 - **`internal-localization-contracts`** — Shared utility contracts.
@@ -4584,87 +4548,83 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`internal-node-type-style-contracts`** — Shared utility contracts.
   `LyraNodeTypeStyle {
-  id: unknown;
-  label: unknown;
-  color: unknown;
-  shape: unknown;
+  readonly id: string;
+  readonly label: string;
+  readonly color?: string;
+  readonly shape?: 'circle' | 'square' | 'diamond';
 }`
 
 - **`internal-registered-animation-contracts`** — Shared utility contracts.
   `RegisteredAnimationSpec {
-  keyframes: unknown;
-  rtlKeyframes: unknown;
-  durationProperties: unknown;
-  easingProperties: unknown;
-  fallbackDuration: unknown;
-  fallbackEasing: unknown;
-  options: unknown;
+  keyframes: Keyframe[];
+  rtlKeyframes?: Keyframe[];
+  durationProperties: readonly string[];
+  easingProperties?: readonly string[];
+  fallbackDuration?: number;
+  fallbackEasing?: string;
+  options?: KeyframeAnimationOptions;
 }`
 
 - **`internal-text-viewer-target-contracts`** — Shared utility contracts.
   `LyraSearchChangeDetail {
-  query: unknown;
-  matchCount: unknown;
-  matchCountExact: unknown;
-  activeIndex: unknown;
+  query: string;
+  matchCount: number;
+  matchCountExact: boolean;
+  activeIndex: number;
 }`
   `LyraTextViewerTarget {
-  search: unknown;
-  query: unknown;
-  searchNext: unknown;
-  searchPrevious: unknown;
-  clearSearch: unknown;
-  highlights: unknown;
-  activeHighlightId: unknown;
-  anchor: unknown;
-  anchorKinds: unknown;
-  scrollToAnchor: unknown;
-  target: unknown;
+  search(query: string): Promise<number>;
+  searchNext(): Promise<boolean>;
+  searchPrevious(): Promise<boolean>;
+  clearSearch(): void;
+  highlights: readonly LyraHighlight[];
+  activeHighlightId: string | null;
+  anchor: LyraAnchor | string | null;
+  readonly anchorKinds: readonly LyraAnchorKind[];
+  scrollToAnchor(target: LyraAnchor | string): Promise<boolean>;
 }`
 
 - **`ssr-contracts`** — Shared utility contracts.
-  `buildLyraSsrStaticSafety(/* public names: tags, tagCapabilities, auditedStaticSafeTags */): unknown`
+  `buildLyraSsrStaticSafety(tags: readonly string[], tagCapabilities: Readonly<Record<string, LyraSsrTagCapabilities>>, auditedStaticSafeTags: readonly string[]): LyraSsrStaticSafetyResult`
   Fail-closed classifier behind `LYRA_SSR_STATIC_SAFETY`/`getLyraSsrStaticSafety`: a tag present in
   neither a non-empty `tagCapabilities` entry nor `auditedStaticSafeTags` is reported in the result's
   `unaudited` list instead of silently defaulting to `'static-safe'`. Pure and fixture-friendly --
   `scripts/check-ssr.mjs` calls it with the real inventory, tests call it with small fixture lists.
-  `deriveLyraSsrStaticSafety(/* public names: capabilities */): unknown`
+  `deriveLyraSsrStaticSafety(capabilities: LyraSsrTagCapabilities): LyraSsrStaticSafety`
   Derives static safety from one tag's capability record: any `'after-hydration'`/`'client-only'`
   entry makes it `'hydration-required'`; an empty record defaults to `'static-safe'`. That empty-
   record default is only valid for a record already known to reflect a completed review (as
   `LYRA_SSR_TAG_CAPABILITIES` entries do) -- `buildLyraSsrStaticSafety()` does not rely on it for a
   tag missing from that record entirely, which it instead routes through `auditedStaticSafeTags`.
-  `diagnoseLyraHydration(/* public names: root */): unknown`
-  `getLyraSsrMode(/* public names: tagName */): unknown`
-  `getLyraSsrStaticSafety(/* public names: tagName */): unknown`
+  `diagnoseLyraHydration(root?: ParentNode): Promise<readonly LyraHydrationDiagnostic[]>`
+  `getLyraSsrMode(tagName: string): LyraSsrMode | undefined`
+  `getLyraSsrStaticSafety(tagName: string): LyraSsrStaticSafety | undefined`
   Returns the static-safety classification for a `render-and-hydrate` Lyra tag, or `undefined` for a
   tag outside that tier. See "SSR and declarative shadow DOM" above for the full write-up.
   `LyraHydrationDiagnostic {
-  element: unknown;
-  tag: unknown;
-  mode: unknown;
-  status: unknown;
-  error: unknown;
+  element: Element;
+  tag: string;
+  mode: LyraSsrMode;
+  status: LyraHydrationStatus;
+  error?: unknown;
 }`
   `LyraLitElementRendererConstructor {
-  prototype: unknown;
-  matchesClass: unknown;
-  constructor: unknown;
-  tagName: unknown;
-  attributes: unknown;
+  new (tagName: string): object;
+  readonly prototype: object;
+  matchesClass(constructor: CustomElementConstructor, tagName: string, attributes: Map<string, string>): boolean;
 }`
   `LyraSsrClientRenderReason {
-  code: unknown;
-  detail: unknown;
+  code: LyraSsrClientRenderReasonCode;
+  detail: string;
 }`
   `LyraSsrStaticSafetyResult {
-  classification: unknown;
-  unaudited: unknown;
+  classification: Readonly<Record<string, LyraSsrStaticSafety>>;
+  unaudited: readonly string[];
 }`
   Return shape of `buildLyraSsrStaticSafety()`: `classification` holds one entry per classified tag
   (a tag absent from it was neither capability-bearing nor audited), and a non-empty `unaudited`
   means the check must fail closed.
-  `lyraSsrElementRenderers(/* public names: litElementRenderer */): unknown`
+  `lyraSsrElementRenderers<T extends LyraLitElementRendererConstructor>(litElementRenderer: T): readonly [typeof LyraSsrFallbackRenderer, T]`
 
 - **`svelte-contracts`** — Framework integration type contracts, including the multi-split
   `for` launcher id and `trigger` element reference.
@@ -5294,13 +5254,13 @@ These named interfaces and helper signatures are available to typed integrations
   See "Constructing a validated test event: `createLyraEvent()`" above for the full contract.
 
 - **`testing-happy-dom-shims-contracts`** — Shared utility contracts.
-  `installHappyDomFormAssociatedShims(): unknown`
-  `installHappyDomShadowFocusShim(): unknown`
-  `flattenCascadeLayers(/* public names: css */): unknown`
-  `installHappyDomAriaControlsShim(/* public names: proto */): unknown`
-  `installHappyDomCascadeLayerShim(/* public names: proto, misbehaves */): unknown`
-  `installHappyDomShims(): unknown`
-  `installStubInternalsForTest(/* public names: host */): unknown`
+  `installHappyDomFormAssociatedShims(): void`
+  `installHappyDomShadowFocusShim(): () => void`
+  `flattenCascadeLayers(css: string): string`
+  `installHappyDomAriaControlsShim(proto: object | undefined = globalThis.Element?.prototype): void`
+  `installHappyDomCascadeLayerShim(proto: SheetTextMethods | undefined = globalThis.CSSStyleSheet?.prototype, misbehaves: () => boolean = cascadeLayerRulesDropped): () => void`
+  `installHappyDomShims(): void`
+  `installStubInternalsForTest(host: Element): StubElementInternals`
 
 - **`testing-jsdom-shims-contracts`** — Shared utility contracts.
   `JsdomAdoptedStyleSheetsTargets {
@@ -5320,43 +5280,43 @@ These named interfaces and helper signatures are available to typed integrations
   See "jsdom: `installJsdomShims()`" above for the full contract.
 
 - **`testing-interaction-drivers-contracts`** — Shared utility contracts.
-  `chooseOption(/* public names: owner, value */): unknown`
-  `submitConfirmDecision(/* public names: owner, decision */): unknown`
-  `toggleSwitch(/* public names: switchEl */): unknown`
-  `activateStep(/* public names: stepper, target */): unknown`
-  `chooseSwatch(/* public names: picker, value */): unknown`
-  `chooseCurrency(/* public names: picker, code */): unknown`
+  `chooseOption(owner: LyraOptionListElement, value: string): Promise<void>`
+  `submitConfirmDecision(owner: LyraConfirmBar | LyraToolApprovalDialog, decision: ApprovalDecision): Promise<void>`
+  `toggleSwitch(switchEl: LyraSwitch): Promise<void>`
+  `activateStep(stepper: LyraStepper, target: number | string): Promise<void>`
+  `chooseSwatch(picker: LyraSwatchPicker, value: string): Promise<void>`
+  `chooseCurrency(picker: LyraCurrencyPicker, code: string): Promise<void>`
   `PopoverDriverOptions {
-  timeoutMs: unknown;
+  timeoutMs?: number;
 }`
   `ClosePopoverOptions {
-  via: unknown;
-  timeoutMs: unknown;
+  via?: 'escape' | 'trigger';
+  timeoutMs?: number;
 }`
-  `openPopover(/* public names: popover, options */): unknown`
-  `closePopover(/* public names: popover, options */): unknown`
+  `openPopover(popover: LyraPopover, options: PopoverDriverOptions = {}): Promise<void>`
+  `closePopover(popover: LyraPopover, options: ClosePopoverOptions = {}): Promise<void>`
   See "Driving a component's real activation path: interaction drivers" above for the full contract.
 
 - **`testing-wait-for-mount-contracts`** — Shared utility contracts.
-  `waitForLyraElement(/* public names: selector, options */): unknown`
+  `waitForLyraElement<T extends Element = HTMLElement>(selector: string, options: WaitForLyraElementOptions<T> = {}): Promise<T>`
   `WaitForLyraElementOptions {
-  root: unknown;
-  match: (element: unknown) => unknown;
-  timeoutMs: unknown;
+  root?: Node & ParentNode;
+  match?: (element: T) => boolean;
+  timeoutMs?: number;
 }`
-  `waitForToast(/* public names: match, options */): unknown`
+  `waitForToast(match?: ToastMatch, options: Omit<WaitForLyraElementOptions<LyraToastItem>, 'match'> = {}): Promise<LyraToastItem>`
   See "Awaiting a lazily registered mount: `waitForLyraElement()` and `waitForToast()`" above for the
   full contract.
 
 - **`theme-gemstones-data-contracts`** — Shared utility contracts.
   `GemstoneAccent {
-  key: unknown;
-  fill: unknown;
-  deep: unknown;
+  key: GemstoneKey;
+  fill: string;
+  deep: string;
 }`
 
 - **`theme-gemstones-contracts`** — Shared utility contracts.
-  `gemstoneGlyph(/* public names: color */): unknown`
+  `gemstoneGlyph(color = 'currentColor'): TemplateResult`
   `gemstoneSelectedGlyphStyles: CSSResult` — the shared "selected" halo/shine presentation for a
   rendered `gemstoneGlyph()`, applied via the `data-lr-gemstone-selected` boolean attribute on the
   element wrapping the glyph. `lr-swatch-picker mode="gemstone"` includes this exact stylesheet in
@@ -5928,7 +5888,7 @@ These named interfaces and helper signatures are available to typed integrations
 }): Promise<LyraScopedRegistry>`
 
 - **`utilities-scoped-registry-contracts`** — Public contracts from `utilities/scoped-registry.js`.
-  Native, document-bound isolation with class-only definitions. Unsupported/SSR environments report false from feature detection and throw on creation; no polyfill or global fallback is installed. Same-constructor definitions are idempotent; conflicts, unknown template tags, and cross-document usage fail. See [native scoped registry composition](imports-and-registration.md#optional-native-scoped-registries) for parser, Lit creation-scope, and shadow-root usage.
+  Native, document-bound isolation with class-only definitions. Unsupported/SSR environments report false from feature detection and throw on creation; no polyfill or global fallback is installed. Same-constructor definitions are idempotent; conflicts, unknown template tags, and cross-document usage fail. See [native scoped registry composition](./shared/imports-and-registration.md#optional-native-scoped-registries) for parser, Lit creation-scope, and shadow-root usage.
 
   `createScopedRegistry<Definitions extends LyraScopedDefinitions>(definitions: Definitions, options?: {
     document?: Document;
@@ -6171,32 +6131,27 @@ resolve again at each preference boundary, including a nested look or a local `s
 
 ### Compatibility and saved preferences
 
-When upgrading from v21, these component rendering changes also apply without opting into a style
-axis. `lr-button-group` sizes to its content in narrow allocations and no longer reserves an
-artificial intrinsic width. An explicit host width remains respected; set
-`lr-button-group::part(base) { inline-size: 100%; }` when the internal row should fill that width.
-The attachment menu inside `lr-prompt-input` now follows its explicit surrounding light/dark mode;
-WebKit previously could use operating-system colors when that scheme disagreed with the surrounding
-mode. Remove any application workaround that depended on that mismatch.
-Menus also clamp their minimum width to the containing allocation and viewport, and positioned
-submenus respect the positioner's available width. This prevents the former minimum from forcing
-overflow in narrow spaces or with enlarged text; it remains effective when sufficient space exists.
-The default Lyra dark control boundary changes from `#6b6b74` to `#787881` so it clears 3:1 on the
-dark overlay `#2b3038` (3.034:1); the previous value failed on raised and overlay surfaces. This
-changes `--lr-theme-color-surface-border` and its shared fallback only, keeping light boundaries,
-other looks and semantic palettes intact. Plain chromatic button text moves toward body text on
-hover/press, and selected tree rows use on-quiet text in those states, retaining 4.5:1 as their fills
-change. Resting plain-button/selected-row text and explicit component foreground overrides remain
-unchanged. Step numbers and interactive context-meter legend rows use matching semantic fill/text
-pairs; control-border colors no longer act as their text backgrounds. Material uses 8% hover and
-12% press state layers with its `currentColor` mix partner, keeping filled-action labels at 4.5:1.
+Component rendering contracts that apply without opting into a style axis: `lr-button-group` sizes to
+its content in narrow allocations and reserves no artificial intrinsic width. An explicit host width
+remains respected; set `lr-button-group::part(base) { inline-size: 100%; }` when the internal row
+should fill that width. The attachment menu inside `lr-prompt-input` follows its explicit
+surrounding light/dark mode. Menus clamp their minimum width to the containing allocation and
+viewport, and positioned submenus respect the positioner's available width, so the minimum never
+forces overflow in narrow spaces or with enlarged text; it remains effective when sufficient space
+exists. The default Lyra dark control boundary (`--lr-theme-color-surface-border` and its shared
+fallback) clears 3:1 on raised and overlay surfaces; light boundaries, other looks and semantic
+palettes are unaffected. Plain chromatic button text moves toward body text on hover/press, and
+selected tree rows use on-quiet text in those states, retaining 4.5:1 as their fills change.
+Resting plain-button/selected-row text and explicit component foreground overrides are unchanged.
+Step numbers and interactive context-meter legend rows use matching semantic fill/text pairs;
+control-border colors do not act as their text backgrounds. Material uses 8% hover and 12% press
+state layers with its `currentColor` mix partner, keeping filled-action labels at 4.5:1.
 
-Runtime custom accents, including `setLyraStyle({ accent })` and legacy gemstone presets, now
-floor the loud fill to 4.5:1 against its quiet fill and the built-in reference surfaces because the
-same token paints accent text. Its on-loud foreground follows the corrected fill. For example,
-light shadcn emerald changes from `#34d399` with black on-loud text to `#1a6a4d` with white text
-(6.537:1). Checked controls, brand text and streaming accents follow that loud token; secondary
-neutral controls stay unchanged. The requested and persisted accent color is retained.
+Runtime custom accents, including `setLyraStyle({ accent })` and legacy gemstone presets, floor the
+loud fill to 4.5:1 against its quiet fill and the built-in reference surfaces because the same token
+paints accent text. Its on-loud foreground follows the corrected fill. Checked controls, brand text
+and streaming accents follow that loud token; secondary neutral controls are unchanged. The
+requested and persisted accent color is retained.
 
 The runtime and no-flash bootstrap still read v1 records written by the retired theme API. On
 read, auto becomes system and the old accent reference surface becomes accentBackground. A saved
@@ -6290,22 +6245,8 @@ that stylesheet it retains an opaque scrim. Native audio/video controls stay bro
 
 Use the host `aria-label` attribute or native `ariaLabel` property to name a component. Where the
 component owns an internal role, it forwards that host name to the semantic element. An explicitly
-present host name, including `aria-label=""`, wins over the retained `accessibleLabel` fallback.
+present host name, including `aria-label=""`, is honored as given.
 This applies to `lr-table`'s grid and `lr-sequence-strip`'s list as well.
 
-On `lr-attachment-trigger`, `lr-callout`, `lr-carousel`, `lr-dialog`, `lr-drawer`, `lr-file-input`,
-`lr-lite-chart`, `lr-progress-bar`, `lr-progress-ring` and `lr-reorder-item`, the older
-`accessible-label` attribute was removed in 23.0.0 and no longer supplies an accessible name.
-Their `accessibleLabel` properties remain supported as deprecated fallbacks, with removal no
-earlier than 24.0.0. On `lr-table` and `lr-sequence-strip`, both `accessible-label` and
-`accessibleLabel` remain supported with removal no earlier than 24.0.0. These retained
-compatibility inputs can issue one-time development notices; use the native host name for new
-code. The migration reference lists each attribute and property independently.
-
-`lr-message-parts` retains a deprecated nullable `accessibleLabel` property, with removal no earlier
-than 24.0.0. It maps to the current `aria-label` attribute: authoring that attribute updates the
-property, and removing it restores `null` and the localized default name. Normal host attribute
-use and removal are supported without deprecation warnings. Assigning a non-null value directly to
-`accessibleLabel` while no host `aria-label` is present remains a working fallback and warns once
-in development. Use the host `aria-label` or native `ariaLabel` instead; an explicitly empty host
-name still takes precedence.
+Name components with the host `aria-label` / `ariaLabel`. The former `accessible-label` attribute and
+`accessibleLabel` property no longer exist (see the generated migration reference).

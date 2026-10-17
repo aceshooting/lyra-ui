@@ -14,8 +14,8 @@ This file is a short index. The primary documentation lives on the sites linked 
   parts/custom properties).
 - **[www.lyra-ui.com](https://www.lyra-ui.com/)** — project website.
 - **[Package README](../packages/lyra-ui/README.md)** — install instructions, quick start,
-  theming/i18n/RTL, framework integration (React/Vue/Angular/Svelte), SSR & Declarative Shadow DOM,
-  and browser/Node support matrix.
+  theming/i18n/RTL, framework integration (React/Vue/Angular/Svelte), and SSR & Declarative Shadow
+  DOM. Browser and Node support lives in the [support policy](support-policy.md).
 - **[Root README](../README.md)** — monorepo overview and the companion packages:
   [flag assets](../packages/lyra-flags/README.md),
   [experimental DOCX editor](../packages/lyra-docs/README.md),
@@ -29,6 +29,8 @@ This file is a short index. The primary documentation lives on the sites linked 
 - **[Component integration cards](component-integration.md)** — per-tag imports, optional peers,
   direct/transitive component dependencies, and bundle measurements when available.
 
+- **[Release history](../packages/lyra-ui/CHANGELOG.md)** — the package changelog; older majors in
+  the [archive](changelog/).
 - **[Roadmap](roadmap.md)** — shipped releases, standing contracts, release gates and open work;
   [native document editing](roadmap/document-editing.md) has its own delivery sequence.
 

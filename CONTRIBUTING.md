@@ -10,10 +10,9 @@ touching component internals.
 pnpm install
 ```
 
-The published package supports Node ≥ 22. Contributor, generation, and release commands use the
-exact Node `22.23.2` in [`.nvmrc`](.nvmrc): run `nvm use` before installing dependencies. For
-package-manager installs, Node ≥ 22, `pnpm@12.14.0` (pinned via `packageManager` in `package.json` —
-check that file if this drifts again).
+The published package supports Node ≥ 22. Contributor, generation and release commands use the
+exact Node `22.23.2` in [`.nvmrc`](.nvmrc) (run `nvm use`); package-manager installs need
+Node ≥ 22, `pnpm@12.14.0` (pinned via `packageManager` in `package.json`).
 
 ## Running things locally
 
@@ -43,9 +42,8 @@ query-based guide routes still share one HTML document and canonical URL.
 
 Under the exact Node `22.23.2` from `.nvmrc` with the repository-pinned pnpm, run
 `./scripts/ci.sh` to reproduce the six primary CI jobs as one local aggregate. Use
-`./scripts/ci.sh --platform-matrix` to add all 11
-platform-contract legs: Firefox and Safari under Node 20, plus Chromium, Chrome, Edge, Firefox,
-and Safari under Node 22. `.github/workflows/ci.yml` is the authoritative, up-to-date gate list;
+`./scripts/ci.sh --platform-matrix` to add the six Node 22 platform-contract legs: Chromium,
+Chrome, Edge, Firefox (two shards) and Safari. `.github/workflows/ci.yml` is the authoritative, up-to-date gate list;
 [`docs/agents/ci-and-gates.md`](./docs/agents/ci-and-gates.md) documents the local aggregate and
 its prerequisites.
 

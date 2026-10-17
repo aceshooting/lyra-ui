@@ -24,7 +24,9 @@ still open.
 | 24.0.0 | Removal of the eligible v22 compatibility APIs; implementation and test consolidation; documentation refresh. |
 | 25.0.0 | Shadcn, Glass, Emerald and System mode become the built-in appearance defaults; user-controlled Glass opacity. See `changelog/v25.md` for 25.x. |
 | 26.0.0 | Native `input`/`change` plus typed `lr-input`/`lr-change` across form controls; shared form-control size ladder; resize and focus event alignment; pickers mount options lazily. |
-| 27.0.0 | Editor data split into `@aceshooting/lyra-ide` and locale catalogs into `@aceshooting/lyra-translations`; agent skill bundled in the lyra-ui package (`npx lyra-ui init-agents`); see the pending changesets in `.changeset/`. |
+| 27.0.0 | Editor data split into `@aceshooting/lyra-ide` and locale catalogs into `@aceshooting/lyra-translations`; agent skill bundled in the lyra-ui package (`npx lyra-ui init-agents`). |
+| 28.0.0 | One document-level design-token layer declared once per document and re-derived only at theme scopes (RFC 0002), with `adoptLyraTokens()` and `lyra-ui-migrate --rule=theme-scopes`; see `changelog/v28.md` for 28.x. |
+| 29.0.0 | Map and document editing load on demand: `lr-map` defaults to the optional `@aceshooting/lyra-map` companion, and the document editor bundles its engine internally. |
 
 ## Standing contracts
 

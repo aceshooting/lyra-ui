@@ -272,9 +272,9 @@ server-rendered pages and for application elements that paint before any Lyra el
 `tokens-root.css` is the same layer alone, as a static stylesheet, for pages that do not use
 `theme.css`:
 
-- **Server-rendered pages.** Declarative shadow roots no longer carry the layer, so link
-  `theme.css` (or `tokens-root.css`) for a correct first paint before hydration (see
-  [Theme scopes](#theme-scopes) for application shadow roots).
+- **Server-rendered pages.** See
+  [SSR and declarative shadow DOM](./frameworks-and-ssr.md#ssr-and-declarative-shadow-dom) and
+  [Theme scopes](#theme-scopes) for application shadow roots.
 - **Application elements that paint before the first Lyra element is registered**, for example
   ahead of a lazily loaded route; otherwise they change value when the layer is adopted.
 - **Large pages that load Lyra late.** Without a static copy, the layer is adopted when the first
@@ -381,8 +381,7 @@ and the mode it sees. The list is closed: `:root`; the mode scopes `.lr-light`, 
   outer scope reaches a marked region exactly as it reaches an unmarked one, and adding a marker
   where nothing needs it changes nothing. With `theme.css`, mode scopes and the style-axis
   boundaries also re-resolve the inputs from the selected look, accent and mode, so an input set
-  above one of them stops there (set it on that boundary, or below it). A scope costs a little less
-  than one component did before 28.0.0, so put inputs on a common ancestor rather than marking every
+  above one of them stops there (set it on that boundary, or below it). A scope is cheap, so put inputs on a common ancestor rather than marking every
   row of a list.
 - **`applyLyraStyleScope()`** writes the marker whenever it writes inline inputs.
 - **Brand regions in the default look.** The marker re-derives outputs but is not a style boundary,
@@ -703,7 +702,6 @@ Override the look through an unlayered application rule or the lr-overrides laye
 }
 ~~~
 
-The former global themes/shadcn.css facade and its data-lr-theme-preset behavior have been removed.
 Use theme.css and the data-lr-look axis for new styling; looks/shadcn.css is needed only for the
 compatibility aliases above.
 
@@ -799,8 +797,7 @@ code. See each control's own reference page for its exact pair.
   takes precedence, and it has to: the shipped `design-tokens.css` declares
   `--lr-theme-icon-button-size` on `:root`, and a `var()` chain only falls through for a property
   that is unset *everywhere*, not merely shadowed nearer the element. Reading the theme tier first
-  therefore made this knob inert for anyone loading that stylesheet (a real 18.1.0 defect, fixed in
-  18.2.0). `--lr-icon-button-size`
+  therefore made this knob inert for anyone loading that stylesheet. `--lr-icon-button-size`
   is **element-scoped on purpose** and is not a wrapper knob: every component re-declares it on its
   own host so the touch-target floor can apply per element, so a value set on a wrapper is replaced
   at the first component in between and never reaches anything nested inside one. That behaviour is
@@ -876,8 +873,7 @@ sets `color-scheme`. **Every engine follows the nearest mode scope, with or with
 document layer carries mode to every scope through two inherited private switches, so a `.lr-light`
 island inside a `.lr-dark` region is light, a mode-neutral scope keeps its ancestor's mode, and the
 OS preference decides the root unless the root carries an explicit mode. A real `--lr-theme-*` value
-still wins over the built-in light or dark default. (Before 28.0.0 an ancestor mode reached
-components without `theme.css` only in Chromium, through `:host-context()`.)
+still wins over the built-in light or dark default.
 
 Each component host also keeps `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
@@ -1218,32 +1214,27 @@ resolve again at each preference boundary, including a nested look or a local `s
 
 ### Compatibility and saved preferences
 
-When upgrading from v21, these component rendering changes also apply without opting into a style
-axis. `lr-button-group` sizes to its content in narrow allocations and no longer reserves an
-artificial intrinsic width. An explicit host width remains respected; set
-`lr-button-group::part(base) { inline-size: 100%; }` when the internal row should fill that width.
-The attachment menu inside `lr-prompt-input` now follows its explicit surrounding light/dark mode;
-WebKit previously could use operating-system colors when that scheme disagreed with the surrounding
-mode. Remove any application workaround that depended on that mismatch.
-Menus also clamp their minimum width to the containing allocation and viewport, and positioned
-submenus respect the positioner's available width. This prevents the former minimum from forcing
-overflow in narrow spaces or with enlarged text; it remains effective when sufficient space exists.
-The default Lyra dark control boundary changes from `#6b6b74` to `#787881` so it clears 3:1 on the
-dark overlay `#2b3038` (3.034:1); the previous value failed on raised and overlay surfaces. This
-changes `--lr-theme-color-surface-border` and its shared fallback only, keeping light boundaries,
-other looks and semantic palettes intact. Plain chromatic button text moves toward body text on
-hover/press, and selected tree rows use on-quiet text in those states, retaining 4.5:1 as their fills
-change. Resting plain-button/selected-row text and explicit component foreground overrides remain
-unchanged. Step numbers and interactive context-meter legend rows use matching semantic fill/text
-pairs; control-border colors no longer act as their text backgrounds. Material uses 8% hover and
-12% press state layers with its `currentColor` mix partner, keeping filled-action labels at 4.5:1.
+Component rendering contracts that apply without opting into a style axis: `lr-button-group` sizes to
+its content in narrow allocations and reserves no artificial intrinsic width. An explicit host width
+remains respected; set `lr-button-group::part(base) { inline-size: 100%; }` when the internal row
+should fill that width. The attachment menu inside `lr-prompt-input` follows its explicit
+surrounding light/dark mode. Menus clamp their minimum width to the containing allocation and
+viewport, and positioned submenus respect the positioner's available width, so the minimum never
+forces overflow in narrow spaces or with enlarged text; it remains effective when sufficient space
+exists. The default Lyra dark control boundary (`--lr-theme-color-surface-border` and its shared
+fallback) clears 3:1 on raised and overlay surfaces; light boundaries, other looks and semantic
+palettes are unaffected. Plain chromatic button text moves toward body text on hover/press, and
+selected tree rows use on-quiet text in those states, retaining 4.5:1 as their fills change.
+Resting plain-button/selected-row text and explicit component foreground overrides are unchanged.
+Step numbers and interactive context-meter legend rows use matching semantic fill/text pairs;
+control-border colors do not act as their text backgrounds. Material uses 8% hover and 12% press
+state layers with its `currentColor` mix partner, keeping filled-action labels at 4.5:1.
 
-Runtime custom accents, including `setLyraStyle({ accent })` and legacy gemstone presets, now
-floor the loud fill to 4.5:1 against its quiet fill and the built-in reference surfaces because the
-same token paints accent text. Its on-loud foreground follows the corrected fill. For example,
-light shadcn emerald changes from `#34d399` with black on-loud text to `#1a6a4d` with white text
-(6.537:1). Checked controls, brand text and streaming accents follow that loud token; secondary
-neutral controls stay unchanged. The requested and persisted accent color is retained.
+Runtime custom accents, including `setLyraStyle({ accent })` and legacy gemstone presets, floor the
+loud fill to 4.5:1 against its quiet fill and the built-in reference surfaces because the same token
+paints accent text. Its on-loud foreground follows the corrected fill. Checked controls, brand text
+and streaming accents follow that loud token; secondary neutral controls are unchanged. The
+requested and persisted accent color is retained.
 
 The runtime and no-flash bootstrap still read v1 records written by the retired theme API. On
 read, auto becomes system and the old accent reference surface becomes accentBackground. A saved

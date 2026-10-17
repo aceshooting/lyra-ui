@@ -297,8 +297,8 @@ they carry no `tag`: `components/media/flag/flag-peer.js`,
 stand in for. They are a separate array rather than tag-less rows mixed into `entries`, so a reader
 that keys `entries` by `tag` keeps working; `integrations`, `distModule` and `localeKeys` are all
 additive, which is why the schema version is unchanged. `registrationModule` is the `src/` path used
-internally; `distModule` is a retained published specifier and equals the stable `entry` for v24
-per-tag registrations and integration bridges. `registers` is every `lr-*` tag
+internally; `distModule` is a retained published specifier and equals the stable `entry` for per-tag
+registrations and integration bridges. `registers` is every `lr-*` tag
 importing `entry` defines, direct or transitive, derived from the same transitive-import analysis
 `scripts/check-component-dependencies.mjs` already performs against the real registration graph
 (not a second hand-maintained list). `localeKeys` is every `LyraMessageKey` the registered tags can
@@ -341,8 +341,7 @@ same way `all.js` registers its root-included tags (the package root itself regi
 and want a single import; reach for the granular
 `@aceshooting/lyra-ui/components/<tag>.js` path when you do not, because a barrel cannot be
 tree-shaken down to the two elements you actually render. The tag-shaped path remains stable if a
-component moves between Lyra's internal family folders. Duplicate nested registration paths were
-removed in v24; family barrels remain supported.
+component moves between Lyra's internal family folders.
 
 ```js
 import "@aceshooting/lyra-ui/components/forms"; // every form control
@@ -780,7 +779,7 @@ number; clearTimeout(handle: number): void }`.
 - **`localization` → `subscribeLyraLocale(listener): () => void` and
   `bridgeLyraLocale(options?): () => void`** — the _active-locale_ half of the locale runtime.
   Import these helpers from the side-effect-free `@aceshooting/lyra-ui/localization.js` entry.
-  The former `utilities/localization.js` route was removed in 23.0.0. The extensionless `@aceshooting/lyra-ui/utilities`
+  The extensionless `@aceshooting/lyra-ui/utilities`
   barrel keeps exporting them. `subscribeLyraLocale()` is distinct from
   `subscribeLyraLocaleRegistry()`, which answers a different question — see "Localization".
   `subscribeLyraLocale()` fires whenever the active selection changes, and when a newly registered

@@ -124,12 +124,7 @@ const everyStandardUrl = await flagUrls();
 setFlagUrlResolver(createFlagUrlResolver()); // one shared eager map, standard tier only
 ```
 
-Bulk resolution never needed the other two tiers in the first place — it is backed by the same
-standard-tier-only eager map either way — so the root version's three-tier import is inherited
-purely from sharing a module with the variant-aware `flagUrl()`. Taking the bulk path through the
-root therefore re-acquired the whole detailed + compact lazy-chunk graph; on a real production
-build with a 156-country flag column, that was +65 detailed SVGs and +31 compact WebPs (+15.8MB of
-emitted assets) that no route rendered. The returned resolver accepts and ignores an `options`
+Bulk resolution is backed by the standard-tier-only eager map, so taking it through `./standard` avoids the detailed and compact lazy-chunk graphs that the root entry re-acquires. The returned resolver accepts and ignores an `options`
 argument, so `<lr-flag fidelity="detailed">` resolves to that code's standard asset rather than
 failing. `@aceshooting/lyra-ui/components/media/flag/flag-peer-bulk-standard.js` does this
 registration in one import, the tier-committed counterpart to `flag-peer-bulk.js`.

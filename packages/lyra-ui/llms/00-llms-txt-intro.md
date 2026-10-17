@@ -61,8 +61,7 @@ the Lyra UI skill for yourself. Humans: `npm i @aceshooting/lyra-ui && npx lyra-
 ## Rules that apply to every component
 
 - Prefer the stable tag-shaped registration path
-  `@aceshooting/lyra-ui/components/<tag>.js`, for example `components/lr-input.js`. Duplicate
-  nested registration paths were removed in v24; class-only and helper modules retain their family
+  `@aceshooting/lyra-ui/components/<tag>.js`, for example `components/lr-input.js`. Class-only and helper modules retain their family
   paths. `llms/index.md` lists the exact supported paths.
 - Compose style axes through the style API or scope attributes, and customize with documented
   `--lr-theme-*` inputs. Look up exact tokens in `llms/tokens.md`.
