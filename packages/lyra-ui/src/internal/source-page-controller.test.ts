@@ -505,3 +505,51 @@ it('does not revoke current work when the active host registers the same scope a
     expect(await current).to.equal(true); expect(test.control.state.result?.rows[0]?.key).to.equal('key-0');
   } finally { pending.resolve({ total: 1, rows: [record(0)] }); test.disconnect(); }
 });
+
+
+it('cancels queued work when its existing host moves to another composition owner', async () => {
+  const owner = {}; const movedOwner = {}; const pending = deferred<LyraPageResult<Row>>();
+  const source = provider(1); const calls: string[] = [];
+  source.query = request => {
+    calls.push(request.query.search);
+    return calls.length === 1 ? pending.promise : Promise.resolve({ total: 1, rows: [record(0)] });
+  };
+  const first = setup({}, owner); first.bind(source);
+  const held = first.control.request({ search: 'held' }, 0, 1);
+  await tick(); first.disconnect();
+  const moved = setup({}, owner); moved.bind(source);
+  let disconnectSuccessor: (() => void) | undefined;
+  try {
+    const canceled = moved.control.request({ search: 'obsolete' }, 0, 1);
+    await tick(); expect(calls).to.deep.equal(['held']);
+    setSourcePageScope(moved.host, movedOwner);
+    expect(await canceled).to.equal(false);
+    expect(moved.control.state.result).to.equal(undefined);
+    expect(await moved.control.request({ search: 'moved' }, 0, 1)).to.equal(true);
+    const successor = setup({}, owner); disconnectSuccessor = successor.disconnect; successor.bind(source);
+    const latest = successor.control.request({ search: 'successor' }, 0, 1);
+    await tick(); expect(calls).to.deep.equal(['held', 'moved']);
+    pending.resolve({ total: 1, rows: [record(0)] });
+    expect(await held).to.equal(false);
+    expect(await latest).to.equal(true);
+    expect(calls).to.deep.equal(['held', 'moved', 'successor']);
+    expect(successor.control.state.result?.rows[0]?.key).to.equal('key-0');
+  } finally { pending.resolve({ total: 1, rows: [record(0)] }); first.disconnect(); moved.disconnect(); disconnectSuccessor?.(); }
+});
+
+it('settles a scope revoked before its queued page starts without calling the provider', async () => {
+  const owner = {}; const source = provider(1); let calls = 0;
+  source.query = async () => { calls++; return { total: 1, rows: [record(0)] }; };
+  const obsolete = setup({}, owner); obsolete.bind(source);
+  const canceled = obsolete.control.request({ search: 'obsolete' }, 0, 1);
+  const current = setup({}, owner); current.bind(source);
+  try {
+    expect(await canceled).to.equal(false);
+    expect(calls).to.equal(0);
+    expect(obsolete.control.state.result).to.equal(undefined);
+    expect(obsolete.control.state.error).to.equal(undefined);
+    expect(await current.control.request({ search: 'current' }, 0, 1)).to.equal(true);
+    expect(calls).to.equal(1);
+    expect(current.control.state.result?.rows[0]?.key).to.equal('key-0');
+  } finally { obsolete.disconnect(); current.disconnect(); }
+});

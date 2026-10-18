@@ -4,7 +4,7 @@ import { css } from 'lit';
 export const styles = css`
   [part='input-limit'], [part='slices-limit'] {
     margin: 0;
-    font-size: var(--lr-font-size-s);
+    font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
     overflow-wrap: anywhere;
   }

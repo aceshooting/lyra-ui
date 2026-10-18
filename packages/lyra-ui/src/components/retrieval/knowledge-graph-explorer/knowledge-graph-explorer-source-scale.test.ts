@@ -152,3 +152,30 @@ it('rejects a retained legacy pin control when source mode begins',async()=>{
  const chip=el.shadowRoot!.querySelector('[part="pinned"] lr-chip')!;let pins=0;el.addEventListener('lr-pin-change',()=>pins++);
  el.graphSource=provider().source;chip.dispatchEvent(new CustomEvent('lr-remove',{bubbles:true,composed:true}));expect(pins).to.equal(0);expect(el.pinnedNodeIds).to.deep.equal(['0']);
 });
+
+it('resets source navigation when page size changes and renders the normalized record count', async () => {
+ const data = provider();
+ const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${data.source}></lr-knowledge-graph-explorer>`);
+ await ready(el);
+ const child = graph(el);
+ const rows = () => [...child.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-source-key]')];
+ expect(child.sourcePageSize).to.equal(100);
+ expect(rows().length).to.equal(100);
+ let currentSize = 100;
+ for (const [requested, expected] of [[0, 1], [501, 500], [12.75, 12], [NaN, 100]] as const) {
+  el.sourcePage = 2;
+  await waitUntil(() => rows()[0]?.dataset['sourceKey'] === `node:${2 * currentSize}`);
+  expect(el.sourcePage).to.equal(2);
+  expect(child.sourcePage).to.equal(2);
+
+  el.sourcePageSize = requested;
+  expect(el.sourcePage).to.equal(0);
+  expect(child.sourcePage).to.equal(0);
+  expect(child.sourcePageSize).to.equal(expected);
+  await waitUntil(() => rows().length === expected && rows()[0]?.dataset['sourceKey'] === 'node:0');
+  expect(rows().at(-1)?.dataset['sourceKey']).to.equal(`node:${expected - 1}`);
+  expect(data.queries.at(-1)!.page).to.equal(0);
+  expect(data.queries.at(-1)!.pageSize).to.equal(expected);
+  currentSize = expected;
+ }
+});

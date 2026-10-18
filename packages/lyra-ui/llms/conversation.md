@@ -3152,7 +3152,7 @@ focus. Home/End always resolve the first/last thread from that complete model, e
 starts in a middle window; group records, collapsed-group contents, and unavailable endpoint rows
 are skipped rather than becoming false boundaries.
 
-**Full-source paging:** `dataSource: ThreadListSource | undefined = undefined` (attribute:
+**Full-source paging:** `dataSource: ThreadListSource | undefined` (attribute:
 false) takes display precedence over `threads` and the default slot. An invalid defined provider
 fails visibly; setting `undefined` restores the current legacy data/slotted precedence.
 `sourcePage: number = 0` (`source-page`) is zero-based, and `sourcePageSize: number = 100`

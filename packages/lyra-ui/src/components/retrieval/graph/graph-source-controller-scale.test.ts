@@ -311,3 +311,37 @@ it('stops reading obsolete capabilities when the scene getter installs a newer b
   expect(await control.request(intent())).to.equal(true);
   expect(control.state.scene?.nodes[0]?.value.id).to.equal('newest');
 });
+
+
+it('owns finite bounded edge dash patterns independently of provider mutation', async () => {
+  const fixture = makeHost(); const control = new GraphSourceController(fixture.host, { onChange: () => {} });
+  const dash = Array.from({ length: 32 }, (_, index) => index);
+  const raw: Scene = { ...scene(), edges: [{ key: 'edge:e', source: 'node:a', target: 'node:a',
+    value: { id: 'e', source: 'a', target: 'a', dash } }] };
+  control.bind({ source: source(async () => raw), epoch: 0, locale: 'en' });
+  expect(await control.request(intent())).to.equal(true);
+  const accepted = control.state.scene!.edges[0]!.value.dash!;
+  expect(accepted).to.deep.equal(dash);
+  expect(accepted === dash).to.equal(false);
+  expect(Object.isFrozen(accepted)).to.equal(true);
+  dash[0] = 99;
+  expect(accepted[0]).to.equal(0);
+});
+
+it('rejects invalid edge dash patterns atomically without reading accessor entries', async () => {
+  const fixture = makeHost(); const control = new GraphSourceController(fixture.host, { onChange: () => {} });
+  let reads = 0;
+  const accessor = [1];
+  Object.defineProperty(accessor, '0', { get() { reads++; return 1; } });
+  const oversized = new Array<number>(33);
+  Object.defineProperty(oversized, '0', { get() { reads++; return 1; } });
+  for (const dash of [[1, -1], [Number.NaN], [1_000_001], new Array<number>(1), accessor, oversized]) {
+    const raw: Scene = { ...scene(), edges: [{ key: 'edge:e', source: 'node:a', target: 'node:a',
+      value: { id: 'e', source: 'a', target: 'a', dash } }] };
+    control.bind({ source: source(async () => raw), epoch: 0, locale: 'en' });
+    expect(await control.request(intent())).to.equal(false);
+    expect(control.state.error !== undefined).to.equal(true);
+    expect(control.state.scene).to.equal(undefined);
+  }
+  expect(reads).to.equal(0);
+});

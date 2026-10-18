@@ -188,7 +188,7 @@ export type {
   TaskListToggleDetail,
   LyraTaskListEventMap,
 } from './components/agent-tools/task-list/task-list.class.js';
-export type { LyraTerminalEventMap } from './components/agent-tools/terminal/terminal.class.js';
+export type { LyraTerminalEventMap, LyraTerminalOverflowDetail } from './components/agent-tools/terminal/terminal.class.js';
 export type { LyraTraceTreeEventMap, TraceTreeSource } from './components/agent-tools/trace-tree/trace-tree.class.js';
 export {
   MAX_RENDERED_LYRA_SPANS,
@@ -544,6 +544,7 @@ export type {
   LyraHeatmapMatrixRangeSelectDetail,
   LyraHeatmapCalendarGeometry,
 } from './components/data/heatmap/heatmap.class.js';
+export type { HeatmapSourceCell } from './components/data/heatmap/heatmap-matrix-source.js';
 export {
   linearAlpha,
   sqrtStep,
@@ -708,6 +709,7 @@ export type {
   LyraMapEngine,
   LyraMapFeatureRequirements,
 } from './components/media/map/map.class.js';
+export type { MapLibreSourceDataDiff } from './components/media/map/map-loader.js';
 export {
   DEFAULT_MAX_FILE_SIZE_BYTES,
 } from './components/media/file-input/file-intake.js';
@@ -1803,6 +1805,8 @@ export type {
   LyraRetrievalResultsEventMap,
   RetrievalResultsGrouping,
   RetrievalResultsPresentation,
+  RetrievalResultsSource,
+  RetrievalResultsSourceQuery,
 } from './components/retrieval/retrieval-results/retrieval-results.class.js';
 export type {
   LyraRetrievalCompareEventMap,

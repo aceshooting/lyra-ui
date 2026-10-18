@@ -888,7 +888,12 @@ const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   // Only lists above `virtualizeAt` need the virtualizer.
   'src/components/retrieval/entity-dossier/entity-dossier.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
   'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
+  // A supplied path enables the explorer's optional path strip; empty paths need no registration.
+  'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts -> src/components/retrieval/path-strip/path-strip.ts',
   'src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/layout/virtual-list/virtual-list.ts',
+  // Both GeoJSON class entry points load the JSON viewer only when the optional map peer is absent.
+  'src/components/viewers/geojson-view/geojson-view.class.ts -> src/components/viewers/geojson-view/geojson-viewer.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
+  'src/components/viewers/geojson-view/geojson-viewer.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
 ];
 
 function preview(entries, limit = 12) {

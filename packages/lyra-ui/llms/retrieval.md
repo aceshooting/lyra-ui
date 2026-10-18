@@ -27,7 +27,7 @@ A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d
 orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
 list of all admitted graph items. The 3D and list views require no optional peer.
 
-**Complete graph provider:** `graphSource: GraphSource | undefined = undefined` (attribute: false)
+**Complete graph provider:** `graphSource: GraphSource | undefined` (attribute: false)
 takes precedence over `nodes` and `edges`; an invalid defined source fails visibly. Setting
 `undefined` restores the current legacy arrays. `GraphSource` is
 `LyraGraphSource<LyraGraphNode, LyraGraphEdge & { readonly id: string }>`; see the
@@ -799,7 +799,7 @@ graph data) and never mutates a graph.
 With `graphSource` unset, the `limit` part reports retained/source relationship-row counts when input admission omits
 rows. Virtualization covers the retained rows; it does not recover omitted source rows.
 
-**Full-source neighborhood:** `graphSource: NeighborListSource | undefined = undefined`
+**Full-source neighborhood:** `graphSource: NeighborListSource | undefined`
 (attribute: false) takes precedence over `rows`; invalid defined providers fail visibly.
 Setting `undefined` restores the latest legacy rows. `NeighborListSource` aliases the public
 `GraphSource` contract. This adapter queries its `records` only; it never requests a graph scene,
@@ -1383,7 +1383,7 @@ no force simulation, no communities, no edge labels (that's `lr-graph`). Zero-de
 radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module, mirroring
 `lr-word-cloud`'s dependency-free precedent.
 
-**Complete source topics:** `treeSource: MindMapSource | undefined = undefined`
+**Complete source topics:** `treeSource: MindMapSource | undefined`
 (attribute: false) takes precedence over `topics`. Invalid defined sources fail visibly without
 legacy fallback; only `undefined` restores the current legacy topics and their expansion state.
 
@@ -2058,7 +2058,7 @@ first-wins before empty state, counts, virtualization, failure announcements, re
 
 **Provider pages:**
 
-- `dataSource: IngestionQueueSource | undefined = undefined` (attribute: false) —
+- `dataSource: IngestionQueueSource | undefined` (attribute: false) —
   `IngestionQueueSource = LyraPageSource<IngestionQueueItem, IngestionQueueSourceQuery>`, exported
   by `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
   `LyraPageSource` is exported by `@aceshooting/lyra-ui/data-sources.js`. The query is one frozen
@@ -2148,7 +2148,7 @@ Controlled source list for a retrieval knowledge base: sync status, indexing hea
 per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-stat`, and a per-row
 `lr-dropdown` containing `lr-menu`. Never syncs or indexes anything itself.
 
-**Full-source inventory:** `dataSource: KnowledgeBaseSource | undefined = undefined`
+**Full-source inventory:** `dataSource: KnowledgeBaseSource | undefined`
 (attribute: false) takes precedence over `sources`. Only `undefined` restores the current legacy
 array; invalid defined providers, including untyped null, fail visibly. The provider stays
 caller-owned by identity, with an immutable revision and records for that revision.
@@ -2374,7 +2374,7 @@ popovers use `getNodeScreenPosition()` so their viewport anchor follows the proj
 orbit, pan, dolly or focus. Spatial node activation includes optional world `z`; it never substitutes
 screen pixels for the existing event's coordinate domain.
 
-**Complete graph provider:** `graphSource: KnowledgeGraphExplorerSource | undefined = undefined`
+**Complete graph provider:** `graphSource: KnowledgeGraphExplorerSource | undefined`
 (attribute: false) takes precedence over legacy `nodes`/`edges`; invalid defined providers fail
 visibly. Setting `undefined` restores the current legacy model and local search/details behavior.
 `KnowledgeGraphExplorerSource` is exactly the public `GraphSource` alias, forwarded unchanged to
@@ -2748,7 +2748,7 @@ A localized `[part="limit"]` note reports retained and assigned-source counts ab
 ceiling, using the effective locale. Initial truncation is silent; a later transition into input
 truncation is announced politely. Virtualization continues to window the admitted result set.
 
-**Full-source paging:** `dataSource: RetrievalResultsSource | undefined = undefined`
+**Full-source paging:** `dataSource: RetrievalResultsSource | undefined`
 (attribute: false) supplies the complete logical collection while retaining only bounded pages.
 A defined source takes display precedence over `chunks`; an invalid defined source fails visibly.
 Setting `undefined` restores the current legacy chunks. `sourcePage: number = 0` (`source-page`)
@@ -3363,8 +3363,8 @@ admission truncates the source or ingestion array, an `input-limit` note for the
 the original assigned count; it does not infer that count from the already-truncated child input. Initial and reconnect notes
 are quiet, and later changed omissions are politely announced.
 
-**Provider forwarding:** `dataSource: KnowledgeBaseSource | undefined = undefined` and
-`ingestionSource: IngestionQueueSource | undefined = undefined` are property-only inputs
+**Provider forwarding:** `dataSource: KnowledgeBaseSource | undefined` and
+`ingestionSource: IngestionQueueSource | undefined` are property-only inputs
 (attribute: false). `dataSource` supplies the Sources tab's `lr-knowledge-base.dataSource`;
 `ingestionSource` supplies the Ingestion tab's `lr-ingestion-queue.dataSource`. Each takes
 precedence over its matching legacy `sources`/`ingestionItems` array. Set that provider to

@@ -28,5 +28,5 @@ export const hierarchySourceStyles = css`
   [part~='source-toggle']:where(:disabled) { cursor: default; opacity: var(--lr-opacity-disabled); }
   .source-toggle-space { inline-size: var(--lr-icon-button-size); flex-shrink: 0; }
   [part~='source-status'], [part~='source-error'] { padding: var(--lr-space-xs); overflow-wrap: anywhere; }
-  [part~='source-error'] { color: var(--lr-color-danger-text-normal); }
+  [part~='source-error'] { color: var(--lr-color-danger); }
 `;

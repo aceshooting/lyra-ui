@@ -492,7 +492,7 @@ Removing `query` clears matches while retaining null property readback. Before a
 `searchPrevious()` selects the final match; later next/previous navigation wraps. Navigation may
 reopen the selected match’s ancestors while unrelated manual collapse remains intact.
 
-**Complete provider hierarchy:** `treeSource: JsonViewerTreeSource | undefined = undefined`
+**Complete provider hierarchy:** `treeSource: JsonViewerTreeSource | undefined`
 (attribute: false) supplies a complete logical hierarchy without flattening it or copying it into
 `data`. A defined provider takes display precedence; invalid defined input shows a localized source
 error. Setting `undefined` restores the current `data`. `maxNodes` and `expandDepth` govern only

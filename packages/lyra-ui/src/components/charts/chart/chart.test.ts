@@ -3954,7 +3954,9 @@ it('maps a click on a row-sampled chart back to its original source row index/va
       'array',
     );
     expect(sourceIndexes.length).to.be.at.most(1000);
-    const visualRow = Math.floor(sourceIndexes.length / 2);
+    // Sampling may retain the midpoint unchanged; choose a row that exercises index remapping.
+    const visualRow = sourceIndexes.findIndex((sourceIndex, index) => sourceIndex !== index);
+    expect(visualRow, 'the sampled rows must include a remapped source index').to.be.at.least(0);
     const originalRow = sourceIndexes[visualRow]!;
     expect(originalRow).to.not.equal(visualRow);
 

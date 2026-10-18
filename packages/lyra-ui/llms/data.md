@@ -3183,7 +3183,7 @@ with `badges: [{ text: String(value) }]`. The former item-controller fields (`ac
 `depth`, `setSize`, `posInSet`) and context setters were never consumer state; they are now private
 owner context maintained by `<lr-tree>`.
 
-**Provider hierarchy:** `treeSource: TreeSource | undefined = undefined` (attribute: false) is an
+**Provider hierarchy:** `treeSource: TreeSource | undefined` (attribute: false) is an
 identity-owned full-source route. `TreeSource` is
 `LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery>` from
 `@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `data` and authored
@@ -3649,7 +3649,7 @@ import type {
 } from "@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js";
 ```
 
-**Complete workflow source:** `graphSource: FlowCanvasSource | undefined = undefined`
+**Complete workflow source:** `graphSource: FlowCanvasSource | undefined`
 (attribute: false) takes precedence over `nodes`/`edges`. Only `undefined` restores the latest
 legacy inputs; invalid defined providers fail visibly without falling back to those arrays.
 Provider identity/revision is caller-owned; the canvas admits bounded records and scenes.
@@ -4740,7 +4740,7 @@ former `--lr-timeline-item-*` plumbing names.
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
-**Provider hierarchy:** `treeSource: FileTreeSource | undefined = undefined` (attribute: false)
+**Provider hierarchy:** `treeSource: FileTreeSource | undefined` (attribute: false)
 uses `LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>` from
 `@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `nodes`, preserving
 its identity; invalid defined input shows a localized source error. Setting `undefined` restores

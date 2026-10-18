@@ -1599,7 +1599,7 @@ event-history style).
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
 
-**Complete provider timeline:** `treeSource: TraceTreeSource | undefined = undefined`
+**Complete provider timeline:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes precedence over `spans`; invalid defined providers show a localized failure.
 Setting `undefined` restores current legacy spans. The exact alias is shared with `lr-trace-tree`:
 `LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`.
@@ -1747,7 +1747,7 @@ several steps may be `running` at once. By default it is a status report; with `
 `reorderable` adds controlled keyboard reorder requests without changing ownership of `items`.
 Legacy status changes and confirmed moves are announced through an internal `<lr-live-region>`.
 
-**Complete source tasks:** `treeSource: TaskListSource | undefined = undefined`
+**Complete source tasks:** `treeSource: TaskListSource | undefined`
 (attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
 falling back to the array. Only `undefined` restores current legacy items.
 
@@ -2089,7 +2089,7 @@ columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
 
-**Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined = undefined`
+**Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes display precedence over `spans`, including when a defined provider is
 invalid. Invalid input shows a localized source failure; setting `undefined` restores current
 legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts.
@@ -2432,7 +2432,7 @@ alongside the plain failure message.
 
 Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
 
-**Full-source paging:** `dataSource: TestResultsSource | undefined = undefined` (attribute:
+**Full-source paging:** `dataSource: TestResultsSource | undefined` (attribute:
 false) takes display precedence over `suites`; invalid defined providers fail visibly.
 Setting `undefined` restores the current legacy suites. `sourcePage: number = 0` (`source-page`)
 is zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500.
@@ -3058,7 +3058,7 @@ hierarchical trace tree from one shared `spans` array.
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
 
-**Complete provider trace:** `treeSource: TraceTreeSource | undefined = undefined` (attribute:
+**Complete provider trace:** `treeSource: TraceTreeSource | undefined` (attribute:
 false) forwards the exact trace-tree provider contract above to the existing single child. It takes
 precedence over `spans`; invalid defined input fails visibly without restoring legacy content.
 Setting `undefined` restores current legacy spans, kind inventory and handoff quick-jumps.
@@ -3206,7 +3206,7 @@ number of retained examples. Pagination within those examples remains available 
 
 **Properties:**
 
-- `dataSource: EvalDatasetSource | undefined = undefined` (property only) — a host-owned full
+- `dataSource: EvalDatasetSource | undefined` (property only) — a host-owned full
   logical source; takes display precedence over `examples`. Invalid defined sources fail visibly;
   unsetting restores the current legacy examples without overwriting their getter.
 - `sourcePage: number = 0` (`source-page`) — zero-based source page.
@@ -3326,7 +3326,7 @@ The table uses `label` or the localized purpose-specific evaluation-runs name. A
 on `<lr-eval-result>` remains the overall host name and is not cloned onto the independently
 interactive table; use `label` to distinguish several comparison grids on one page.
 
-**Full-source comparison runs:** `dataSource: EvalResultSource | undefined = undefined`
+**Full-source comparison runs:** `dataSource: EvalResultSource | undefined`
 (attribute: false) takes precedence over `runs`; invalid defined providers fail visibly.
 Setting `undefined` restores current legacy runs. `sourcePage: number = 0` (`source-page`) is
 zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500. Readonly
