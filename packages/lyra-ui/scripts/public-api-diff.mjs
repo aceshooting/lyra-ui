@@ -1122,10 +1122,10 @@ function parseDeclarationModule(file, source, { publicGraph = false } = {}) {
       const records = indexDeclaration(module, statement.declaration, [], true);
       for (const record of records) {
         module.directExports.set(record.name, {
-          kind:
-            statement.exportKind === 'type'
-              ? 'type'
-              : declarationKind(record.node),
+          // Ambient value declarations can carry a type exportKind in the parser AST.
+          // Their declaration still exposes a runtime value; explicit type-only specifiers
+          // are handled separately below.
+          kind: declarationKind(record.node),
           localPath: record.path,
           source: null,
         });
@@ -1327,6 +1327,7 @@ function declarationGraph(filesValue) {
     tupleElementAliasCache: new Map(),
     moduleDependencyCache: new Map(),
     directDependencyCache: new Map(),
+    publicOrigins: new Map(),
   };
   return graph;
 }
@@ -2551,7 +2552,7 @@ function reachableContractReference(graph, resolved) {
   const rootIdentity = declarationIdentity(resolved);
   if (!graph.dependencyIdCache.has(rootIdentity)) {
     const contract = reachableContractValue(graph, resolved);
-    const serialized = JSON.stringify(contract);
+    const serialized = JSON.stringify([rootIdentity, contract]);
     const id = createHash('sha256').update(serialized).digest('hex');
     const existing = graph.dependencyDefinitions.get(id);
     if (existing && existing.edgeCount !== contract.edges.length) {
@@ -2565,6 +2566,7 @@ function reachableContractReference(graph, resolved) {
     const reachableId = createHash('sha256').update(reachableSerialized).digest('hex');
     graph.reachableDefinitions.set(reachableId, contract.reachable);
     graph.dependencyDefinitions.set(id, {
+      root: rootIdentity,
       edgeCount: contract.edges.length,
       reachableId,
     });
@@ -2600,6 +2602,7 @@ function normalizeNamedExports(declarations, entries, graph) {
     const base = `named-export:${name}`;
     addEntry(entries, base, 'named-export', 'export', { kind }, name);
     if (resolved) {
+      graph.publicOrigins.set(base, declarationIdentity(resolved));
       addCachedDeclarationSurface(entries, base, 'named-export', name, graph, resolved);
       addReachableTypeSurfaces(entries, base, 'named-export', graph, resolved);
     }
@@ -2674,6 +2677,7 @@ function normalizeSubpathDeclarations(exportTargets, entries, graph) {
       const base = `subpath-export:${variant.specifier}${conditionNamespace}:${name}`;
       addEntry(entries, base, 'subpath-export', 'export', { kind }, `${variant.specifier} ${name}`);
       if (resolved) {
+        graph.publicOrigins.set(base, declarationIdentity(resolved));
         addCompactDeclarationSurface(
           entries,
           base,
@@ -2822,6 +2826,18 @@ export function normalizePublicApi({ packageJson, manifest, declarations = {} })
     reachableClosures: Object.fromEntries(
       [...(graph?.reachableDefinitions ?? [])].sort(([left], [right]) =>
         left.localeCompare(right)),
+    ),
+    publicOrigins: Object.fromEntries(
+      [...(graph?.publicOrigins ?? [])].sort(([left], [right]) => left.localeCompare(right)),
+    ),
+    dependencyTopology: Object.fromEntries(
+      [...(graph?.directDependencyCache ?? [])]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([identity, dependencies]) => [identity, dependencies.map(({ reference, resolved }) => {
+          const target = declarationIdentity(resolved);
+          const prefix = `declaration:${target}`;
+          return [reference.startsWith(prefix) ? `declaration${reference.slice(prefix.length)}` : reference, target];
+        })]),
     ),
     typeAliases: normalizedTypeAliases(graph),
     shadowedReadonly: [...(graph?.modules.values() ?? [])].some((module) =>
@@ -2973,6 +2989,8 @@ function propertyAccessBump(before, after, baseline, current) {
 // One invocation can reach the same declaration through hundreds of exports. Reset between
 // comparisons so callers may mutate snapshots between runs without retaining a stale result.
 let declarationBumpCache = new WeakMap();
+let declarationOrigins = { forward: new Map(), conflicts: new Set() };
+let dependencyTopologyBumps = new Map();
 function declarationContractBump(before, after, baseline, current) {
   const cacheable = before && after && typeof before === 'object' && typeof after === 'object';
   const cache = cacheable ? declarationBumpCache.get(before) : undefined;
@@ -3036,32 +3054,55 @@ function isHeritageSpecialization(before, after) {
   return specialized;
 }
 
-/**
- * Bump for a changed `:dependencies` fingerprint — the set of declarations transitively REACHABLE
- * from a public export.
- *
- * This used to return an unconditional `major`, which made the gate unusable for additive releases.
- * Adding one property to a widely-composed base class rewrites the reachable fingerprint of every
- * subclass and of every subpath that re-exports it: 11.0.0 was reported as 287 breaking changes on
- * that basis, not one of which removed or altered a public member. A gate that calls every additive
- * release breaking gets overridden rather than heeded, which is worse than one that is merely
- * coarse.
- *
- * Only the edge COUNT survives into the snapshot — `reachableContractValue()` deliberately discards
- * the expanded closure because retaining it costs hundreds of megabytes — so this compares counts:
- *
- * - grew   -> `minor`. The reachable set gained declarations; nothing became unreachable.
- * - shrank -> `major`. Something became unreachable.
- * - equal but a different digest -> `major`. Same size, different set: an edge may have been
- *   swapped, which can hide a removal, and the retained fingerprint cannot tell the two apart.
- * - either count missing -> `major`, so a malformed or truncated snapshot fails closed.
- *
- * The one unsound case is a rewiring that removes fewer edges than it adds. That is narrow rather
- * than theoretical hand-waving: removing a public declaration emits its own `removed` entry, and
- * changing a declaration's shape moves its `:contract` entry through `declarationContractBump()` —
- * both independently `major`. What is left is an edge rewiring invisible to both, which is not an
- * observable break in the public surface.
- */
+/** Physical graph identities remain distinct within each snapshot. Only an unchanged public
+ * export can establish correspondence across snapshots, and aliases must agree one-to-one. */
+function publicOriginCorrespondence(baseline, current) {
+  const proposed = new Map();
+  const reverse = new Map();
+  for (const [route, before] of Object.entries(baseline.publicOrigins ?? {})) {
+    const after = current.publicOrigins?.[route];
+    const beforeExport = baseline.entries[route];
+    const afterExport = current.entries[route];
+    if (!after || beforeExport?.semantic !== 'export' || afterExport?.semantic !== 'export'
+      || !sameValue(beforeExport.value, afterExport.value)) continue;
+    // A move needs edge evidence from both snapshots; legacy metadata cannot prove it.
+    if (before !== after && (!baseline.dependencyTopology || !current.dependencyTopology)) continue;
+    if (!proposed.has(before)) proposed.set(before, new Set());
+    if (!reverse.has(after)) reverse.set(after, new Set());
+    proposed.get(before).add(after);
+    reverse.get(after).add(before);
+  }
+  const forward = new Map();
+  const conflicts = new Set();
+  for (const [before, targets] of proposed) {
+    const [after] = targets;
+    if (targets.size !== 1 || reverse.get(after).size !== 1) conflicts.add(before);
+    else forward.set(before, after);
+  }
+  return { forward, conflicts };
+}
+
+/** Compare each declaration's direct edges once, even when many public roots share it. */
+function dependencyTopologyBump(identity, baseline, current) {
+  if (!baseline.dependencyTopology || !current.dependencyTopology) return 'none';
+  if (dependencyTopologyBumps.has(identity)) return dependencyTopologyBumps.get(identity);
+  const translated = (value) => declarationOrigins.forward.get(value) ?? value;
+  const beforeEdges = baseline.dependencyTopology[identity];
+  const afterEdges = current.dependencyTopology[translated(identity)];
+  let bump = 'major';
+  if (beforeEdges && afterEdges) {
+    const afterSet = new Set(afterEdges.map((edge) => JSON.stringify(edge)));
+    if (beforeEdges.every(([reference, target]) =>
+      afterSet.has(JSON.stringify([reference, translated(target)])))) {
+      bump = afterEdges.length > beforeEdges.length ? 'minor' : 'none';
+    }
+  }
+  dependencyTopologyBumps.set(identity, bump);
+  return bump;
+}
+
+/** Explain a changed reachable fingerprint using full declaration contracts and direct edges.
+ * Older snapshots without retained closures keep their conservative count-based fallback. */
 function dependencyContractBump(before, after, baseline, current) {
   const beforeDefinition = baseline?.dependencies?.[before];
   const afterDefinition = current?.dependencies?.[after];
@@ -3087,17 +3128,24 @@ function dependencyContractBump(before, after, baseline, current) {
   // dropped something. Counting could only answer `major`, which made every additive release read
   // as breaking.
   let bump = 'none';
-  const identities = new Set([...Object.keys(beforeReachable), ...Object.keys(afterReachable)]);
+  const translated = (identity) => declarationOrigins.forward.get(identity) ?? identity;
+  const matched = new Set();
+  const identities = Object.keys(beforeReachable);
+  if (beforeDefinition.root) identities.push(beforeDefinition.root);
   for (const identity of identities) {
+    if (declarationOrigins.conflicts.has(identity)) return 'major';
+    const target = translated(identity);
+    if (identity === beforeDefinition.root && target !== afterDefinition.root) return 'major';
+    // Include the root's edges even though it is excluded from the interned reachable map.
+    // Otherwise rewiring a signature could preserve its complete reachable declaration set.
+    bump = maxBump(bump, dependencyTopologyBump(identity, baseline, current));
+    if (bump === 'major') return bump;
+    if (identity === beforeDefinition.root) continue;
     const beforeContract = beforeReachable[identity];
-    const afterContract = afterReachable[identity];
-    // Newly reachable: additive.
-    if (beforeContract === undefined) {
-      bump = maxBump(bump, 'minor');
-      continue;
-    }
+    const afterContract = afterReachable[target];
     // No longer reachable: a consumer's type could have depended on it.
     if (afterContract === undefined) return 'major';
+    matched.add(target);
     if (beforeContract === afterContract) continue;
     // Same declaration, different shape -- exactly what declarationContractBump() decides, and the
     // reason a reachable-but-unexported type narrowing is still caught here. It has no entry of its
@@ -3111,6 +3159,9 @@ function dependencyContractBump(before, after, baseline, current) {
         current,
       ),
     );
+  }
+  if (Object.keys(afterReachable).some((identity) => !matched.has(identity))) {
+    bump = maxBump(bump, 'minor');
   }
   return bump;
 }
@@ -3138,6 +3189,8 @@ function changedBump(entry, before, after, baseline, current) {
 
 export function diffPublicApi(baseline, current) {
   declarationBumpCache = new WeakMap();
+  declarationOrigins = publicOriginCorrespondence(baseline, current);
+  dependencyTopologyBumps = new Map();
   if (baseline.packageName !== current.packageName) {
     throw new Error(
       `Cannot compare different packages: ${baseline.packageName} and ${current.packageName}.`,

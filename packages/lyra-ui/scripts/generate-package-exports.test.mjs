@@ -146,6 +146,14 @@ const approvedPureHelperContracts = [
       'normalizeLyraSpanStatus',
     ],
     types: ['LyraSpan', 'LyraSpanKind', 'LyraSpanProjection', 'LyraSpanStatus'],
+    reexports: [
+      'type:LyraSpan from ./span-shared.js',
+      'type:LyraSpanKind from ./span-shared.js',
+      'type:LyraSpanStatus from ./span-shared.js',
+      'value:MAX_RENDERED_LYRA_SPANS from ./span-shared.js',
+      'value:normalizeLyraSpanKind from ./span-shared.js',
+      'value:normalizeLyraSpanStatus from ./span-shared.js',
+    ],
   },
   {
     sourceModule: 'src/components/agent-tools/agent-status-presentation.ts',
@@ -367,7 +375,7 @@ for (const contract of approvedPureHelperContracts) {
     {
       values: [...contract.values].sort(),
       types: [...contract.types].sort(),
-      reexports: [],
+      reexports: [...(contract.reexports ?? [])].sort(),
       defaults: [],
     },
     `${contract.sourceModule} must expose only its approved value/type symbol contract`

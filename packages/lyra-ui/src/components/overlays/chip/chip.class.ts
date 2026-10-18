@@ -304,6 +304,8 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
       this.updateBrowserDerivedState(() => this.recomputeLabelText());
     }, ['slot', 'role'], false,
   );
+  private labelObservationReady = false;
+  private pendingInitialLabelObservation?: object;
   private managedActionGroupRole = false;
   private pendingControlFocusRepair?: ComposedFocusRepairSnapshot;
   private readonly onLabelSlotChange = (event: Event): void => {
@@ -317,6 +319,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('slotchange', this.onLabelSlotChange);
+    if (this.hasUpdated) this.labelObservationReady = true;
     this.syncLabelObservation();
     const sampleBrowserState = (): void => {
       if (this.tracksActionLabel) this.recomputeLabelText(true, true);
@@ -335,13 +338,32 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private syncLabelObservation(): void {
-    this.labelTextObserver.setEnabled(this.tracksActionLabel);
+    if (this.labelObservationReady) this.labelTextObserver.setEnabled(this.tracksActionLabel);
+  }
+
+  private scheduleInitialLabelObservation(): void {
+    if (this.labelObservationReady || this.pendingInitialLabelObservation || !this.isConnected) return;
+    const ownerDocument = this.ownerDocument;
+    const ownerWindow = ownerDocument.defaultView;
+    if (!ownerWindow) return;
+    const pending = {};
+    this.pendingInitialLabelObservation = pending;
+    // First-render labels are already seeded. Bind visibility observation after sibling first
+    // renders, so each insertion/render does not force another shared-ancestor style calculation.
+    ownerWindow.queueMicrotask(() => {
+      if (this.pendingInitialLabelObservation !== pending || !this.isConnected || this.ownerDocument !== ownerDocument) return;
+      this.pendingInitialLabelObservation = undefined;
+      this.labelObservationReady = true;
+      this.syncLabelObservation();
+      if (this.tracksActionLabel) this.updateBrowserDerivedState(() => this.recomputeLabelText());
+    });
   }
 
   // `'slot'` widens the shared content-node filter: only the default slot's content names this
   // chip's actions, so a light-DOM child moving to or from the decorative `start`/`end` slots
   // changes the name.
   override disconnectedCallback(): void {
+    this.pendingInitialLabelObservation = undefined;
     this.removeEventListener('slotchange', this.onLabelSlotChange);
     this.releaseHostActionRole();
     this.pendingControlFocusRepair = undefined;
@@ -509,6 +531,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.scheduleInitialLabelObservation();
     this.syncHostActionRole();
     const repair = this.pendingControlFocusRepair;
     this.pendingControlFocusRepair = undefined;

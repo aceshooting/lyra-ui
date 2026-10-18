@@ -103,6 +103,74 @@ expectLocaleFallback('ar-EG', [
   'accessibleLabelSeparator',
 ]);
 describe('lr-trace-tree', () => {
+  describe('span projection foreign-data failures', () => {
+    const span = (id: string, endMs = 10) => ({
+      id,
+      name: id,
+      kind: 'tool',
+      status: 'success',
+      startMs: 0,
+      endMs,
+    });
+
+    it('omits a revoked row without losing valid neighboring spans', () => {
+      const revoked = Proxy.revocable(span('revoked', 100), {});
+      revoked.revoke();
+      const result = normalizeLyraSpans([span('first'), revoked.proxy, span('last', 20)]);
+
+      expect(result.spans.map(value => value.id)).to.deep.equal(['first', 'last']);
+      expect([...result.byId.keys()]).to.deep.equal(['first', 'last']);
+      expect(result.byId.has('revoked')).to.equal(false);
+      expect(result.extentEndMs).to.equal(20);
+      expect(result.truncated).to.equal(false);
+    });
+
+    it('discards partially iterated input and admits a later complete snapshot', () => {
+      const values = [span('first'), span('last', 20)];
+      Object.defineProperty(values, Symbol.iterator, {
+        configurable: true,
+        value: function* () {
+          yield values[0];
+          throw new Error('The provider stopped yielding spans');
+        },
+      });
+
+      const interrupted = normalizeLyraSpans(values);
+      expect(interrupted.spans.length).to.equal(0);
+      expect(interrupted.byId.size).to.equal(0);
+      expect(interrupted.extentEndMs).to.equal(0);
+      expect(interrupted.truncated).to.equal(false);
+
+      Reflect.deleteProperty(values, Symbol.iterator);
+      const recovered = normalizeLyraSpans(values);
+      expect(recovered.spans.map(value => value.id)).to.deep.equal(['first', 'last']);
+      expect([...recovered.byId.keys()]).to.deep.equal(['first', 'last']);
+      expect(recovered.extentEndMs).to.equal(20);
+    });
+
+    it('fails closed when input immutability cannot be inspected and recovers on retry', () => {
+      let unavailable = true;
+      const values = new Proxy([span('available', 20)], {
+        isExtensible(target) {
+          if (unavailable) throw new Error('The provider cannot expose its object state');
+          return Reflect.isExtensible(target);
+        },
+      });
+
+      const rejected = normalizeLyraSpans(values);
+      expect(rejected.spans.length).to.equal(0);
+      expect(rejected.byId.size).to.equal(0);
+      expect(rejected.extentEndMs).to.equal(0);
+      expect(rejected.truncated).to.equal(false);
+
+      unavailable = false;
+      const recovered = normalizeLyraSpans(values);
+      expect(recovered.spans.map(value => value.id)).to.deep.equal(['available']);
+      expect([...recovered.byId.keys()]).to.deep.equal(['available']);
+      expect(recovered.extentEndMs).to.equal(20);
+    });
+  });
+
   it('projects admitted span fields once from own data descriptors without invoking accessors', () => {
     let unsafeReads = 0;
     const accessorBacked = Object.create(null) as LyraSpan;

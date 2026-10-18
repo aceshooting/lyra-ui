@@ -503,10 +503,21 @@ describe('chart synchronization', () => {
     const source = document.createElement('lr-lite-chart') as LyraLiteChart;
     const peer = document.createElement('lr-lite-chart') as LyraLiteChart;
     for (const chart of [source, peer]) { chart.syncGroup = 'shadow'; chart.labels = ['A']; chart.datasets = [{ label: 'S', data: [4] }]; }
-    scroller.append(source); right.append(peer); await ready(source); await ready(peer);
-    await focusByKeyboard(source.shadowRoot!.querySelector('[data-mark-index="0"]') as unknown as HTMLElement);
+    source.height = '128px';
+    const spacer = document.createElement('div'); spacer.style.height = '200px';
+    scroller.append(source, spacer); right.append(peer); await ready(source); await ready(peer);
+    expect(scroller.scrollHeight - scroller.clientHeight).to.be.at.least(50);
+    const mark = source.shadowRoot!.querySelector('[data-mark-index="0"]') as unknown as HTMLElement;
+    const markRect = mark.getBoundingClientRect(); const scrollRect = scroller.getBoundingClientRect();
+    expect(markRect.top).to.be.at.least(scrollRect.top);
+    expect(markRect.bottom).to.be.at.most(scrollRect.bottom);
+    expect(scroller.scrollTop).to.equal(0);
+    await focusByKeyboard(mark);
     await waitUntil(() => crosshair(peer));
-    scroller.scrollTop = 50; await waitUntil(() => !crosshair(peer));
+    expect(scroller.scrollTop).to.equal(0);
+    scroller.scrollTop = 50;
+    await waitUntil(() => scroller.scrollTop === 50);
+    await waitUntil(() => !crosshair(peer));
   });
 
   it('isolates documents, clears adoption ownership and leaves reconnect transient state empty', async () => {

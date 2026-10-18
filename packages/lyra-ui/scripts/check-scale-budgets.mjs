@@ -1,6 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { isMainModule } from './is-main-module.mjs';
 
 const informational = /(?:ms$|time|duration|heap|memory|bytes)/i;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -87,7 +86,7 @@ export function writeBudgets(rows, fixture, { allowHigher = false, componentTags
   }
   return { ...fixture, measuredAt: new Date().toISOString(), budgets };
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   try {
     const args = process.argv.slice(2);
     if (args.some(arg => !['--write-budgets', '--allow-higher'].includes(arg)) || (args.includes('--allow-higher') && !args.includes('--write-budgets'))) throw new Error('Usage: check-scale-budgets.mjs [--write-budgets [--allow-higher]]');
