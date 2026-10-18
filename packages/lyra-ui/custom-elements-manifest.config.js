@@ -689,6 +689,30 @@ export const EVENT_RUNTIME_CONTRACTS = new Map([
   ['lr-zoomable-frame', { error: 'Event', load: 'Event' }],
 ]);
 
+function emptyNamedReexportsPlugin() {
+  const exportCounts = new WeakMap();
+  return {
+    name: 'lr-empty-named-reexports',
+    analyzePhase({ ts, node, moduleDoc }) {
+      const previousCount = exportCounts.get(moduleDoc) ?? 0;
+      // The analyzer treats an empty named clause as a wildcard. Remove only
+      // the entry appended for this node; an ignored clause appends nothing.
+      if (
+        ts.isExportDeclaration(node) && node.moduleSpecifier &&
+        node.exportClause && ts.isNamedExports(node.exportClause) &&
+        node.exportClause.elements.length === 0 &&
+        moduleDoc.exports.length === previousCount + 1
+      ) {
+        const entry = moduleDoc.exports.at(-1);
+        if (entry.kind === 'js' && entry.name === '*' && entry.declaration?.name === '*') {
+          moduleDoc.exports.pop();
+        }
+      }
+      exportCounts.set(moduleDoc, moduleDoc.exports.length);
+    },
+  };
+}
+
 export default {
   // Programmatic analysis must stay read-only. The analyzer's package-json helper resolves from
   // the caller's working directory rather than the explicit analysis cwd, while this package owns
@@ -699,6 +723,7 @@ export default {
   outdir: '.',
   litelement: true,
   plugins: [
+    emptyNamedReexportsPlugin(),
     {
       name: 'lr-define-element-registration',
       // `defineElement('name', Class)` is the library's idempotent registration

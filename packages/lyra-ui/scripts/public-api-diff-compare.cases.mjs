@@ -2248,6 +2248,58 @@ test('retains method narrowing, required options, return, defaults and metadata 
   ]) assert.equal(minimumRequiredBump(diffPublicApi(original, normalizePublicApi(next))), 'major');
 });
 
+function exportedFunctionFixture(signatures) {
+  return normalizePublicApi({
+    packageJson: { name: '@aceshooting/lyra-ui', version: '1.0.0', exports: {
+      '.': { types: './dist/lyra.d.ts', default: './dist/lyra.js' },
+      './sample.js': { types: './dist/sample.d.ts', default: './dist/sample.js' },
+    } },
+    manifest: { modules: [] },
+    declarations: {
+      files: {
+        'dist/lyra.d.ts': "export { project } from './sample.js';",
+        'dist/sample.d.ts': signatures,
+      },
+      packageFiles: ['dist/lyra.d.ts', 'dist/lyra.js', 'dist/sample.d.ts', 'dist/sample.js'],
+    },
+  });
+}
+
+test('exported function optional parameters remain additive through root and subpath contracts', () => {
+  const before = exportedFunctionFixture('export declare function project(values: readonly unknown[], active?: string | null): string[];');
+  const after = exportedFunctionFixture('export declare function project(values: readonly unknown[], active?: string | null, limit?: number): string[];');
+  const changes = diffPublicApi(before, after);
+  assert.equal(minimumRequiredBump(changes), 'minor');
+  assert.ok(changes.some((change) => change.id.startsWith('named-export:project:overload:')));
+  assert.ok(changes.some((change) => change.id === 'subpath-export:./sample.js:project:contract'));
+});
+
+test('exported function matching retains required parameters, narrowing, returns and generic breaks', () => {
+  const before = exportedFunctionFixture('export declare function project(value: string, active?: string | null): string[];');
+  for (const signature of [
+    'export declare function project(value: string, active: string | null, limit: number): string[];',
+    "export declare function project(value: 'fixed', active?: string | null, limit?: number): string[];",
+    'export declare function project(value: string, active?: string | null, limit?: number): readonly string[];',
+    'export declare function project(value: string): string[];',
+  ]) assert.equal(minimumRequiredBump(diffPublicApi(before, exportedFunctionFixture(signature))), 'major');
+  const generic = exportedFunctionFixture("export declare function project<T extends string = 'a'>(value: T): T;");
+  for (const signature of [
+    "export declare function project<T extends string = 'b'>(value: T, limit?: number): T;",
+    'export declare function project<T extends number = 1>(value: T, limit?: number): T;',
+  ]) assert.equal(minimumRequiredBump(diffPublicApi(generic, exportedFunctionFixture(signature))), 'major');
+});
+
+test('exported function overload matching remains one-to-one and does not hide removals', () => {
+  const before = exportedFunctionFixture('export declare function project(value: string): void; export declare function project(value: number): void;');
+  const widened = exportedFunctionFixture('export declare function project(value: string, limit?: number): void; export declare function project(value: number, limit?: number): void;');
+  assert.equal(minimumRequiredBump(diffPublicApi(before, widened)), 'minor');
+  for (const signature of [
+    'export declare function project(value: string | number, limit?: number): void;',
+    'export declare function project(value: string, limit?: number): void;',
+    'export declare function project(value: string, limit?: number): void; export declare function project(value: 1, limit?: number): void;',
+  ]) assert.equal(minimumRequiredBump(diffPublicApi(before, exportedFunctionFixture(signature))), 'major');
+});
+
 test('matches method overloads individually without concealing a removed or narrowed overload', () => {
   const fixture = (methods) => ({
     packageJson: { name: '@aceshooting/lyra-ui', version: '1.0.0', exports: {

@@ -463,7 +463,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     this.cancelLegacy();
     const generation = this.legacyGeneration;
     const owner = this.ownerDocument;
-    const current = () => generation === this.legacyGeneration && this.ownerDocument === owner && !this.sourceMode && this.isConnected;
+    // SSR has no document; normalize the same bounded first batch before hydration.
+    const current = () => generation === this.legacyGeneration && this.ownerDocument === owner && !this.sourceMode && (!owner || this.isConnected);
     const input = this.suites;
     this.legacyPending = true; this.legacyError = false;
     this.normalizedSuitesCache = []; this.projectedSuitesCache = []; this.legacyRows = [];
@@ -535,7 +536,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
             this.requestUpdate('legacyPending'); return;
           }
         }
-        this.legacyTimer = owner.defaultView?.setTimeout(step, 0);
+        this.legacyTimer = owner?.defaultView?.setTimeout(step, 0);
       } catch {
         if (!current()) return;
         this.legacyPending = false; this.legacyError = true;
@@ -637,7 +638,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   private rebuildDetailSlotNames(): void {
     this.detailSlotNames = new Set(
-      [...this.children]
+      [...(this.children ?? [])]
         .map((child) => child.getAttribute('slot'))
         .filter((name): name is string => name !== null),
     );

@@ -1,5 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './eval-result.js';
+import '../../../translations/fr.js';
+import '../../../translations/de.js';
 import type { EvalResultSource, EvalRunResult, LyraEvalResult } from './eval-result.class.js';
 import type { LyraSourceRecord } from '../../../data-sources.js';
 import type { LyraTable } from '../../data/table/table.class.js';

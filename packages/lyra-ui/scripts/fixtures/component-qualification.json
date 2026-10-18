@@ -15619,7 +15619,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2918,
+              "line": 2937,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16901,7 +16901,7 @@
           "evidence": [
             {
               "file": "src/components/utility/diff-view/diff-view.class.ts",
-              "line": 4,
+              "line": 5,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26233,7 +26233,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2814,
+              "line": 2820,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29473,7 +29473,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 664,
+              "line": 665,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31388,6 +31388,7 @@
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-direction.test.ts",
           "src/components/conversation/markdown/markdown-fallback-code.test.ts",
+          "src/components/conversation/markdown/markdown-language-loaders.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
@@ -31613,6 +31614,7 @@
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-direction.test.ts",
           "src/components/conversation/markdown/markdown-fallback-code.test.ts",
+          "src/components/conversation/markdown/markdown-language-loaders.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
@@ -50266,6 +50268,7 @@
         "tests": [
           "src/components/conversation/streaming-text/markdown-detection.test.ts",
           "src/components/conversation/streaming-text/streaming-text-core.test.ts",
+          "src/components/conversation/streaming-text/streaming-text-language-loaders.test.ts",
           "src/components/conversation/streaming-text/streaming-text-scale.test.ts",
           "src/components/conversation/streaming-text/streaming-text.test.ts"
         ],
@@ -50450,6 +50453,7 @@
         "tests": [
           "src/components/conversation/streaming-text/markdown-detection.test.ts",
           "src/components/conversation/streaming-text/streaming-text-core.test.ts",
+          "src/components/conversation/streaming-text/streaming-text-language-loaders.test.ts",
           "src/components/conversation/streaming-text/streaming-text-scale.test.ts",
           "src/components/conversation/streaming-text/streaming-text.test.ts"
         ],

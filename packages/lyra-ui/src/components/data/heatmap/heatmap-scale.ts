@@ -55,7 +55,7 @@ export function linearBucket(value: number, lo: number, hi: number, steps: numbe
  * any input is non-finite, so a mis-set midpoint degrades to today's behavior rather than
  * producing a a division by zero.
  */
-export function midpointRatio(
+function midpointRatio(
   value: number,
   lo: number,
   hi: number,

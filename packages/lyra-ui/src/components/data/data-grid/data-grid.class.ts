@@ -1370,6 +1370,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   private requestGeneration = 0;
   private requestController?: AbortController;
+  private serverRequestInputs?: readonly unknown[];
   /** The debounced server request. Scheduled on the realm the grid lives in at the time -- a grid
    *  adopted into another document must keep its pending request on that document's timer queue,
    *  and must still be able to cancel it there on teardown. `pending` is the "a request is already
@@ -1488,6 +1489,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.requestGeneration += 1;
     this.requestController?.abort();
     this.requestController = undefined;
+    this.serverRequestInputs = undefined;
     if (this.ownsLoadingState) this.loading = false;
     this.ownsLoadingState = false;
     this.cancelRequestTimer();
@@ -1549,11 +1551,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const serverDisabled = changed.has('server') && !this.usesServerData;
     if (
       (sourceReplaced || serverDisabled) &&
+      !this.matchesCurrentServerRequest() &&
       (this.requestController || this.requestDebounce.pending)
     ) {
       this.requestGeneration += 1;
       this.requestController?.abort();
       this.requestController = undefined;
+      this.serverRequestInputs = undefined;
       this.cancelRequestTimer();
       if (this.ownsLoadingState) this.loading = false;
       this.ownsLoadingState = false;
@@ -2851,13 +2855,27 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.requestDebounce.cancel();
   }
 
+  private currentServerRequestInputs(): readonly unknown[] {
+    return [this.ownerDocument, this.dataSource, this.server, this.sort, this.filters,
+      this.searchTerm, this.safePage, this.safePageSize];
+  }
+
+  private matchesCurrentServerRequest(): boolean {
+    const current = this.currentServerRequestInputs();
+    return this.serverRequestInputs?.every((value, index) => Object.is(value, current[index])) ?? false;
+  }
+
   private scheduleServerRequest(delayed: boolean): void {
     const owner = this.ownerDocument.defaultView;
     if (!this.isConnected || !owner || !this.usesServerData) return;
+    // A synchronous reload can already own this update's query. It must survive the later
+    // reactive update; reload itself always forces a new request, including unchanged inputs.
+    if (this.matchesCurrentServerRequest()) return;
     // The new query owns the result immediately, including its debounce interval.
     this.requestGeneration++;
     this.requestController?.abort();
     this.requestController = undefined;
+    this.serverRequestInputs = undefined;
     this.requestDebounce.delayMs = delayed ? finiteDuration(this.filterDebounce, 250) : 0;
     this.requestDebounce.push(owner);
   }
@@ -2870,6 +2888,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     )
       return;
     this.requestController?.abort();
+    this.serverRequestInputs = this.currentServerRequestInputs();
     const AbortControllerCtor = (owner as Window & typeof globalThis)
       .AbortController;
     this.requestController =

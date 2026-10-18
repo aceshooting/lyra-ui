@@ -442,5 +442,5 @@ export const HighlightLimit: Story = {
 };
 
 export const LazyGrammar: Story = {
-  render: () => html`<lr-code-block language="json" .languages=${{ json: () => import('shiki/langs/json.mjs') }} .code=${'{"lazy":true}'}></lr-code-block>`,
+  render: () => html`<lr-code-block language="json" .languageLoaders=${{ json: () => import('shiki/langs/json.mjs') }} .code=${'{"lazy":true}'}></lr-code-block>`,
 };

@@ -1268,11 +1268,15 @@ it("does not re-feed unchanged detail data on an unrelated re-render", async () 
     .retrievalChunks=${[chunk]}
   ></lr-agent-workspace>`);
   const timeline = el.shadowRoot!.querySelector("lr-tool-timeline") as LyraToolTimeline;
-  const results = el.shadowRoot!.querySelector("lr-retrieval-results") as HTMLElement & { chunks: unknown };
+  const results = el.shadowRoot!.querySelector("lr-retrieval-results") as HTMLElement & { chunks: readonly RetrievalChunk[] };
   const entries = timeline.entries;
   const chunks = results.chunks;
   el.composerValue = "draft";
   await el.updateComplete;
   expect(timeline.entries === entries).to.be.true;
   expect(results.chunks === chunks).to.be.true;
+  el.retrievalChunks = [{ ...chunk, id: 'replacement' }];
+  await el.updateComplete;
+  expect(results.chunks === chunks).to.be.false;
+  expect(results.chunks.map((entry) => entry.id)).to.deep.equal(['replacement']);
 });

@@ -1916,13 +1916,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private refreshPreparedModel(): void {
     if (!this.preparedDirty) return;
     this.preparedDirty = false;
-    this.preparedChanged = true;
     this.preparedInvalid = false;
     this.preparedRequestFailed = false;
     this.preparedBaseModel = this.preparedModel = undefined;
     this.preparedEffective = undefined;
     const generation = this.preparedGeneration;
     const input = this.preparedDataInput();
+    // A keyless refresh revalidates mutable sources, but an ordinary chart has no prepared
+    // canvas data to invalidate. Leaving prepared mode still requires the legacy-data redraw.
+    this.preparedChanged ||= this.preparedActive || input !== null;
     this.spatialActive = false;
     this.preparedActive = input !== null;
     try {

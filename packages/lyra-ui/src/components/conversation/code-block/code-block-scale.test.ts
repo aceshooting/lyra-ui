@@ -88,7 +88,7 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
 }
 it('full code block resolves only a requested lazy grammar', async () => {
   const el = document.createElement('lr-code-block'); let calls = 0; let unused = 0;
-  el.languages = { json: async () => { calls++; return { default: jsonGrammar }; }, unused: async () => { unused++; return { default: jsonGrammar }; } };
+  el.languageLoaders = { json: async () => { calls++; return { default: jsonGrammar }; }, unused: async () => { unused++; return { default: jsonGrammar }; } };
   el.language = 'json'; el.code = '{"lazy":true}'; document.body.append(el);
   try {
     await el.updateComplete;
@@ -177,3 +177,48 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
     } finally { el.remove(); }
   });
 }
+
+it('keeps concrete code grammars readable and gives them priority over opt-in loaders', async () => {
+  const el = document.createElement('lr-code-block');
+  expect(el.languageLoaders).equal(undefined);
+  let calls = 0;
+  const languages = { json: jsonGrammar };
+  el.languages = languages;
+  el.language = 'json'; el.code = '{"concrete":true}'; document.body.append(el);
+  try {
+    const seam = el as unknown as { highlightedHtml: string | null };
+    await waitUntil(() => seam.highlightedHtml !== null, 'concrete grammar did not highlight');
+    expect(el.languages).equal(languages);
+    el.languageLoaders = { json: async () => { calls++; return jsonGrammar; } };
+    await el.updateComplete;
+    await waitUntil(() => seam.highlightedHtml !== null, 'concrete grammar lost priority');
+    expect(calls).equal(0);
+    el.languages = undefined;
+    await el.updateComplete;
+    await waitUntil(() => calls === 1, 'loader did not become active after removing concrete grammar');
+  } finally { el.remove(); }
+});
+
+it('keeps the protected concrete grammar hook distinct from lazy availability and dispatches overrides', () => {
+  const el = document.createElement('lr-code-block');
+  const grammar = { name: 'example', scopeName: 'source.example' };
+  const hooks = el as unknown as {
+    preSuppliedGrammar(): typeof grammar | undefined;
+    hasPreSuppliedGrammar(): boolean;
+  };
+  el.language = 'example'; el.languages = { example: grammar };
+  expect(hooks.preSuppliedGrammar()).equal(grammar);
+  el.languages = undefined;
+  el.languageLoaders = { example: async () => grammar };
+  expect(hooks.preSuppliedGrammar()).equal(undefined);
+  expect(hooks.hasPreSuppliedGrammar()).equal(true);
+  let calls = 0;
+  hooks.preSuppliedGrammar = () => { calls++; return grammar; };
+  el.languageLoaders = undefined;
+  expect(hooks.hasPreSuppliedGrammar()).equal(true);
+  expect(calls).equal(1);
+  el.languages = { example: grammar };
+  hooks.preSuppliedGrammar = () => { calls++; return undefined; };
+  expect(hooks.hasPreSuppliedGrammar()).equal(false);
+  expect(calls).equal(2);
+});

@@ -35,7 +35,8 @@ it('full markdown resolves a lazy authored grammar exactly once', async () => {
     const languages = { json: async () => { loads++; return { default: jsonGrammar }; }, unused: async () => { throw new Error('Unused grammar must stay lazy'); } };
     const code = '{"lazy":true}\n'; const pending = { key: markdownHighlightKey('json', code), lang: 'json', code };
     const seam = el as unknown as { tokenizePendingHighlight(pending: PendingHighlight, languages: unknown, current: () => boolean): Promise<string | null | undefined> };
-    const output = await seam.tokenizePendingHighlight(pending, languages, () => true);
+    el.languageLoaders = languages;
+    const output = await seam.tokenizePendingHighlight(pending, el.languages, () => true);
     expect(typeof output).equal('string'); expect(loads).equal(1);
   } finally { el.remove(); }
 });

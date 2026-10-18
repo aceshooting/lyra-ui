@@ -83,8 +83,8 @@ test('currency picker selected catalog renders its real display before hydration
   assert.ok(selectedDisplay, 'the nested select must render its selected display');
   assert.equal(selectedDisplay[1].trim(), 'USD', 'the valid selected code must not render unavailable feedback');
   assert.match(markup, /<lr-option[^>]*value="USD"/);
-  assert.match(markup, /<lr-option[^>]*value="EUR"/);
-  assert.equal((markup.match(/<lr-option\s/g) ?? []).length, 2);
+  assert.doesNotMatch(markup, /<lr-option[^>]*value="EUR"/);
+  assert.equal((markup.match(/<lr-option\s/g) ?? []).length, 1, 'only the selected option mounts before interaction');
   assert.equal(globalThis.window, undefined);
   assert.equal(globalThis.document, undefined);
 });
@@ -103,6 +103,37 @@ test('highlight layer renders without an owner document during SSR', async () =>
   ></lr-highlight-layer>`, { elementRenderers: [LitElementRenderer] }));
   assert.match(markup, /part="rect-target"/);
   assert.match(markup, /part="rect"/);
+  assert.equal(globalThis.document, undefined);
+});
+
+test('test results normalize the first bounded batch without a browser document', async () => {
+  await import('@aceshooting/lyra-ui/components/lr-test-results.js');
+  for (const populated of [false, true]) {
+    const suites = populated ? [{ id: 'suite', name: 'Server suite', tests: [
+      { id: 'result', name: 'Server result', status: 'passed' },
+    ] }] : [];
+    const markup = replaceHtmlComments(await collectResult(render(html`<lr-test-results
+      .suites=${suites}
+    ></lr-test-results>`, { elementRenderers: [LitElementRenderer] })), () => '');
+    assert.doesNotMatch(markup, /part="source-status"/);
+    if (populated) {
+      assert.match(markup, /Server suite/);
+      assert.match(markup, /Server result/);
+    } else assert.match(markup, /part="empty"/);
+    assert.equal(globalThis.document, undefined);
+  }
+});
+
+test('test results keep large SSR inputs pending after one bounded batch', async () => {
+  await import('@aceshooting/lyra-ui/components/lr-test-results.js');
+  const suites = [{ id: 'large', name: 'Large suite', tests: Array.from({ length: 501 }, (_, index) => ({
+    id: String(index), name: `Result ${index}`, status: 'passed',
+  })) }];
+  const markup = replaceHtmlComments(await collectResult(render(html`<lr-test-results
+    .suites=${suites}
+  ></lr-test-results>`, { elementRenderers: [LitElementRenderer] })), () => '');
+  assert.match(markup, /part="source-status" aria-busy="true"/);
+  assert.doesNotMatch(markup, /part="input-error"/);
   assert.equal(globalThis.document, undefined);
 });
 
@@ -171,8 +202,9 @@ for (const fixture of catalogPickerFixtures) {
       assert.match(markup, /<template[^>]*shadowrootmode="open"/);
       assert.doesNotMatch(markup, /<span[^>]*part="unknown-value"/);
       assert.doesNotMatch(markup, /<[a-z][^>]*\bdata-unknown-value\b/);
-      assert.equal((markup.match(/<lr-option\s/g) ?? []).length, 2, 'the explicit catalog survives SSR');
-      for (const label of fixture.labels) assert.ok(markup.includes(label), label);
+      assert.equal((markup.match(/<lr-option\s/g) ?? []).length, 1, 'only the selected option mounts before interaction');
+      assert.ok(markup.includes(fixture.labels[0]), 'the selected catalog label survives SSR');
+      assert.equal(markup.includes(fixture.labels[1]), false, 'unselected options wait for interaction');
       assert.ok(markup.includes('Server guidance'), 'field guidance survives SSR');
       const controlTag = searchable ? 'lr-combobox' : 'lr-select';
       const control = markup.match(new RegExp(`<${controlTag}\\b[^>]*>`))?.[0];

@@ -1,5 +1,5 @@
 /** The existing independent page-controller operation lanes. */
-export type SourcePageLane = 'page' | 'selection' | 'locate';
+type SourcePageLane = 'page' | 'selection' | 'locate';
 type Release = () => void;
 interface Pending { cancel(): void; grant(): void; }
 interface Slot { held?: object; waiting?: Pending; }

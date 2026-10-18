@@ -7178,29 +7178,39 @@ describe('bounded chart fallback paths', () => {
     expect(y2.max).to.equal(9);
   });
 
-  it('uses unsampled source indexes for direct hit-testing and keyboard datums', () => {
-    const el = document.createElement('lr-chart') as LyraChart;
-    el.labels = ['A'];
-    el.datasets = [{ label: 'series', data: [5] }];
-    (el as any).visualDatasetSourceIndexes = undefined;
-    (el as any).visualRowSourceIndexes = undefined;
-    let detail: unknown;
-    el.addEventListener('lr-datum-activate', (event) => {
-      detail = (event as CustomEvent).detail;
-    });
-    (el as any).handlePointClick({}, {
-      getElementsAtEventForMode: () => [{ datasetIndex: 0, index: 0 }],
-    });
-    expect(detail).to.deep.include({ datasetIndex: 0, index: 0, value: 5 });
+  it('uses unsampled source indexes for current-peer hit-testing and keyboard datums', async () => {
+    const el = await fixture<LyraChart>(html`<lr-chart type="bar" without-animation
+      .labels=${['A']} .datasets=${[{ label: 'series', data: [5] }]}
+    ></lr-chart>`);
+    await waitUntil(() => !!el.chart, 'Chart.js initialized');
+    const peer = el.chart!;
+    const host = el as unknown as {
+      visualDatasetSourceIndexes: readonly number[] | undefined;
+      visualRowSourceIndexes: readonly number[] | undefined;
+      handlePointClick(event: unknown, chart: unknown): void;
+      chartDatums(): unknown[];
+    };
+    host.visualDatasetSourceIndexes = undefined;
+    host.visualRowSourceIndexes = undefined;
+    const details: unknown[] = [];
+    el.addEventListener('lr-datum-activate', (event) => details.push(event.detail));
+    const original = peer.getElementsAtEventForMode;
+    peer.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 0 }];
+    try {
+      host.handlePointClick({}, peer);
+      expect(details).to.deep.equal([{ datasetIndex: 0, index: 0, label: 'A', value: 5, kind: 'bar' }]);
+      expect(host.chartDatums()).to.deep.equal([
+        { datasetIndex: 0, index: 0, label: 'A', value: 5 },
+      ]);
 
-    (el as any).chart = { data: { labels: ['A'], datasets: [{ data: [5] }] } };
-    expect((el as any).chartDatums()).to.deep.equal([
-      { datasetIndex: 0, index: 0, label: 'A', value: 5 },
-    ]);
-    (el as any).chart = { data: { labels: [], datasets: [{}] } };
-    expect((el as any).chartDatums()).to.deep.equal([
-      { datasetIndex: 0, index: 0, label: 'A', value: 5 },
-    ]);
+      host.handlePointClick({}, { getElementsAtEventForMode: peer.getElementsAtEventForMode });
+      expect(details.length, 'a superseded peer cannot activate a datum').to.equal(1);
+      el.remove();
+      host.handlePointClick({}, peer);
+      expect(details.length, 'a disconnected chart cannot activate a datum').to.equal(1);
+    } finally {
+      peer.getElementsAtEventForMode = original;
+    }
   });
 
   it('covers remaining direct formatting and legend fallbacks', () => {

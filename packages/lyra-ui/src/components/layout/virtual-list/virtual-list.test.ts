@@ -337,21 +337,48 @@ it('does not scan an indexed source\'s declared count when active-item-id has no
       return index;
     },
   };
-  const el = await fixture<LyraVirtualList>(html`
-    <lr-virtual-list
-      row-height="40"
-      .source=${source}
-      .activeItemId=${999_999_999}
-      .renderItem=${(item: unknown) => String(item)}
-    ></lr-virtual-list>
-  `);
-  await el.updateComplete;
+  const warning = 'Virtual list scroll travel is scaled to fit browser layout limits; row sizes and public offsets remain in logical pixels.';
+  const warningKey = 'virtual-list-scroll-scaling';
+  const store = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  const wasIssued = store?.has(warningKey);
+  store?.delete(warningKey);
+  const previousWarn = console.warn;
+  let warningCount = 0;
+  console.warn = (...args: unknown[]) => {
+    if (args.length === 1 && args[0] === warning) warningCount++;
+    else previousWarn.apply(console, args);
+  };
+  let el: LyraVirtualList | undefined;
+  try {
+    el = await fixture<LyraVirtualList>(html`
+      <lr-virtual-list
+        row-height="40"
+        .source=${source}
+        .activeItemId=${999_999_999}
+        .renderItem=${(item: unknown) => String(item)}
+      ></lr-virtual-list>
+    `);
+    await el.updateComplete;
 
-  expect(reads).to.be.lessThan(100);
-  expect(keyReads).to.be.lessThan(100);
-  expect(
-    el.shadowRoot!.querySelector('[aria-current="true"]') === null
-  ).to.equal(true);
+    expect(reads).to.be.lessThan(100);
+    expect(keyReads).to.be.lessThan(100);
+    expect(
+      el.shadowRoot!.querySelector('[aria-current="true"]') === null
+    ).to.equal(true);
+    el.requestUpdate();
+    await el.updateComplete;
+    expect(warningCount).to.equal(store ? 1 : 0);
+  } finally {
+    try {
+      // Disconnect can schedule another render; keep the diagnostic captured through teardown.
+      el?.remove();
+      await el?.updateComplete;
+    } finally {
+      console.warn = previousWarn;
+      if (wasIssued) store?.add(warningKey);
+      else store?.delete(warningKey);
+    }
+  }
 });
 
 it("normalizes an invalid indexed count to an empty collection without reading it", async () => {
@@ -2704,29 +2731,57 @@ describe("public offset/index queries", () => {
   });
 
   it("saturates cumulative fixed-row offsets instead of serializing Infinitypx", async () => {
-    const el = (await fixture(
-      html`<lr-virtual-list
-        style="--lr-virtual-list-height:200px"
-        row-height=${Number.MAX_VALUE}
-        .items=${[1, 2, 3]}
-        .renderItem=${renderText}
-        .keyFunction=${numberKey}
-      ></lr-virtual-list>`
-    )) as LyraVirtualList;
-    await el.updateComplete;
+    const warning = 'Virtual list scroll travel is scaled to fit browser layout limits; row sizes and public offsets remain in logical pixels.';
+    const warningKey = 'virtual-list-scroll-scaling';
+    const store = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+    const wasIssued = store?.has(warningKey);
+    store?.delete(warningKey);
+    const previousWarn = console.warn;
+    let warningCount = 0;
+    console.warn = (...args: unknown[]) => {
+      if (args.length === 1 && args[0] === warning) warningCount++;
+      else previousWarn.apply(console, args);
+    };
+    let el: LyraVirtualList | undefined;
+    try {
+      el = (await fixture(
+        html`<lr-virtual-list
+          style="--lr-virtual-list-height:200px"
+          row-height=${Number.MAX_VALUE}
+          .items=${[1, 2, 3]}
+          .renderItem=${renderText}
+          .keyFunction=${numberKey}
+        ></lr-virtual-list>`
+      )) as LyraVirtualList;
+      await el.updateComplete;
 
-    const offsets = [0, 1, 2, 3].map((index) => el.offsetForIndex(index));
-    expect(offsets.every(Number.isFinite)).to.be.true;
-    expect(offsets).to.deep.equal([
-      0,
-      Number.MAX_VALUE,
-      Number.MAX_VALUE,
-      Number.MAX_VALUE,
-    ]);
-    const spacer = el.shadowRoot!.querySelector(
-      '[part="spacer"]'
-    ) as HTMLElement;
-    expect(spacer.getAttribute("style")).to.not.contain("Infinity");
+      const list = el;
+      const offsets = [0, 1, 2, 3].map((index) => list.offsetForIndex(index));
+      expect(offsets.every(Number.isFinite)).to.be.true;
+      expect(offsets).to.deep.equal([
+        0,
+        Number.MAX_VALUE,
+        Number.MAX_VALUE,
+        Number.MAX_VALUE,
+      ]);
+      const spacer = el.shadowRoot!.querySelector(
+        '[part="spacer"]'
+      ) as HTMLElement;
+      expect(spacer.getAttribute("style")).to.not.contain("Infinity");
+      el.requestUpdate();
+      await el.updateComplete;
+      expect(warningCount).to.equal(store ? 1 : 0);
+    } finally {
+      try {
+        // Disconnect can schedule another render; keep the diagnostic captured through teardown.
+        el?.remove();
+        await el?.updateComplete;
+      } finally {
+        console.warn = previousWarn;
+        if (wasIssued) store?.add(warningKey);
+        else store?.delete(warningKey);
+      }
+    }
   });
 
   it("indexAtOffset round-trips offsetForIndex for every index in a mixed-height list", async () => {

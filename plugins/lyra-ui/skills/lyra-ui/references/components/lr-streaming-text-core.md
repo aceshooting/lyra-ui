@@ -25,7 +25,7 @@ surface (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`
 only which Markdown element Markdown mode composes differs: this variant renders
 `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
 entry point instead of `streaming-text.js` never references `<lr-markdown>`'s ~200-language
-dynamic-import table at all. A fenced code block whose language isn't a key in `languages` always
+dynamic-import table at all. A fenced code block whose language is absent from both `languages` and `languageLoaders`
 renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
 mirroring `<lr-markdown-core>`'s own contract.
 
@@ -37,9 +37,11 @@ Direction behaves exactly as described for `<lr-streaming-text>` (**Direction** 
 `llms/components/lr-streaming-text.md`; `contentMode: StreamingTextContentMode = 'auto'` (attribute
 `content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
-Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to the composed
+Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
 `<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s (defaulting the composed
-element's own `languages` to `{}` when unset, unlike the full variant's `undefined`). The rest of
+element's own `languages` to `{}` when unset, unlike the full variant's `undefined`).
+`languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` adds lazy loaders with the same
+concrete-grammar priority and combined-map reuse as `<lr-streaming-text>`. The rest of
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
 attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
 `tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =

@@ -26,6 +26,8 @@ test('complete browser suites receive the built Map companion before their shard
   for (const [workflowPath, buildJob, testJob, buildCommand, testCommand] of [
     ['.github/workflows/ci.yml', 'build_and_coverage_build', 'build_and_coverage_coverage_shard',
       'run: pnpm build', 'name: Run coverage shard'],
+    ['.github/workflows/ci.yml', 'build_and_coverage_build', 'scale-budgets',
+      'run: pnpm build', 'run: pnpm --filter @aceshooting/lyra-ui test:scale'],
     ['.github/workflows/full-engine.yml', 'build', 'full-engine',
       'run: pnpm --filter @aceshooting/lyra-ui build', 'name: Run complete non-coverage test shard'],
     ['.github/workflows/test-all-browsers.yml', 'build', 'test',

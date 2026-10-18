@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
-import { normalizeLyraSpans, projectLyraSpans } from './span.js';
+import { normalizeLyraSpans } from './span.js';
+import { projectLyraSpans } from './span-projection.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 const source = () => Object.freeze(Array.from({length:10_000}, (_,index)=>({id:String(index),name:String(index),kind:'tool',status:'pending',startMs:index})));

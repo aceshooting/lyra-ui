@@ -81,7 +81,7 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
     const label = item.textLabel;
     const previous = this.typeAheadLabels.get(item);
     if (previous?.label === label && previous.locale === locale) return previous.folded;
-    const folded = label.toLocaleLowerCase(locale);
+    const folded = label.toLocaleLowerCase(resolveIntlLocale(locale));
     this.typeAheadLabels.set(item, { label, locale, folded });
     return folded;
   }

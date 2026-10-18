@@ -349,7 +349,7 @@ export interface LyraGraphEventMap {
   }>;
   'lr-node-expand': CustomEvent<{ nodeId: string }>;
   'lr-selection-change': CustomEvent<
-    LyraEventDetailSnapshot<{ selectedNodeIds: readonly string[]; selectedEdgeIds: readonly string[] }>
+    LyraEventDetailSnapshot<{ selectedNodeIds: string[]; selectedEdgeIds: string[] }>
   >;
   /** A hull was activated by pointer or keyboard. */
   'lr-community-activate': CustomEvent<{ communityId: string }>;

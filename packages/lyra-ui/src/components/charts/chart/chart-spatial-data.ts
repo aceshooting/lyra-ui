@@ -49,7 +49,7 @@ export function spatialPaintRadius(radius: number, width: number, height: number
   return Math.min(radius, Math.min(Number.MAX_VALUE, Math.hypot(width, height)));
 }
 
-export type SpatialCsvNumericColumn = 'sourceIndex' | 'x' | 'y' | 'radius' | 'minX' | 'maxX' | 'minY' | 'maxY' | 'count';
+type SpatialCsvNumericColumn = 'sourceIndex' | 'x' | 'y' | 'radius' | 'minX' | 'maxX' | 'minY' | 'maxY' | 'count';
 export type SpatialCsvNumericFormatter = (
   value: number,
   record: LyraSpatialChartPoint | LyraSpatialBin,

@@ -81,25 +81,28 @@ through an activatable gutter reuses the source lines and updates the previous a
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — a map of language
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (attribute: false) — a map of language
   id to a resolved shiki grammar (e.g. `{ bash: bashGrammar }` from a module-scope
-  `import bash from 'shiki/langs/bash.mjs'`) or a lazy loader, e.g.
-  `{ bash: () => import('@shikijs/langs/bash') }`. Only a requested loader runs. When `language`
+  `import bash from 'shiki/langs/bash.mjs'`). When `language`
   matches a key here, highlighting uses that grammar via a fine-grained `createHighlighterCore()`
   highlighter, bypassing the default ~200-language dynamic-import path (`loadShikiHighlighter()`)
   for that language — an additive, opt-in escape hatch for a build scoped to just the languages a
-  consumer actually needs. A `language` absent from this map (or `languages` left unset) falls back
+  consumer actually needs. A `language` absent from both this map and `languageLoaders` falls back
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
-  `import type { ShikiLanguageSource, ShikiLanguageLoader } from
-  '@aceshooting/lyra-ui/components/lr-code-block.js'`; `ShikiLanguageSource` is
-  `ShikiLanguageInput | ShikiLanguageLoader`, and a loader returns
-  `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`. `ShikiLanguageInput` remains
-  exported for resolved-grammar annotations. The type-only granular import emits no registration
-  side effect.
+  `import type { ShikiLanguageInput } from
+  '@aceshooting/lyra-ui/components/lr-code-block.js'` for resolved-grammar annotations.
+  The type-only granular import emits no registration side effect.
   The map key need not be the grammar module's own registered name or one of its declared
   aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
   `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
   second near-identical grammar) still highlights under that key, for a lazy loader entry too.
+
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (attribute: false) — lazy
+  grammar loaders, e.g. `{ bash: () => import('shiki/langs/bash.mjs') }`. Concrete `languages`
+  entries take priority for the requested language; otherwise only its loader executes. Leaving
+  this unset preserves the concrete-grammar and default highlighter paths. `ShikiLanguageLoader`
+  is exported from the same entry and returns
+  `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`; assign new map objects after edits.
 
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — how the
   header's copy control presents itself. `'text'` is the labelled button this component has always

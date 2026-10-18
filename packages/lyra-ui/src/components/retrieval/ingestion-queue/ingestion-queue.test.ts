@@ -35,6 +35,7 @@ function item(
 expectLocaleFallback('ar-u-nu-arab', [
   'ingestionQueueLabel',
   'ingestionStageEmbedding',
+  'ingestionStageFailed',
   'ingestionItemProgressLabel',
   'ingestionChunkCount',
   'ingestionEmbeddedOfTotal',

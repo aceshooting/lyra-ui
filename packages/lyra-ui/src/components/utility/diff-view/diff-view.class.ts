@@ -1,3 +1,4 @@
+import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -38,6 +39,7 @@ import {
   SHIKI_THEMES,
   type ShikiHighlighterCore,
   type ShikiLanguageInput,
+  type ShikiLanguageLoader,
   type ShikiLanguageSource,
   SHIKI_SOURCE_MAX_CODE_UNITS,
   resolvedShikiLanguages,
@@ -87,11 +89,11 @@ interface DiffSearchMatch {
 
 /** Copies grammar-map entries through data descriptors so optional loading never invokes a
  * consumer accessor while it discovers the requested language. Grammar values stay opaque. */
-function projectLanguages(value: unknown): Record<string, ShikiLanguageSource> | undefined {
+function projectLanguages<Value extends ShikiLanguageSource = ShikiLanguageSource>(value: unknown): Record<string, Value> | undefined {
   if (value === null || typeof value !== 'object') return undefined;
   try {
     if (Array.isArray(value)) return undefined;
-    const projected = Object.create(null) as Record<string, ShikiLanguageSource>;
+    const projected = Object.create(null) as Record<string, Value>;
     // Own-name discovery avoids Object.keys()/for-in's implicit enumerable-descriptor probe, so
     // one hostile Proxy descriptor cannot hide a later valid grammar. Structural reflection and
     // admitted enumerable grammars have separate limits: opaque/non-enumerable names never spend
@@ -110,7 +112,7 @@ function projectLanguages(value: unknown): Record<string, ShikiLanguageSource> |
       )
         continue;
       Object.defineProperty(projected, key, {
-        value: descriptor.value as ShikiLanguageSource,
+        value: descriptor.value as Value,
         enumerable: true,
         configurable: false,
         writable: false,
@@ -298,17 +300,21 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   }
 
   /** A shiki-recognized language id. Highlighting activates only when this has a matching entry in
-   *  `languages` -- there is deliberately no default full-table `lr-code-block`-style fallback, so
-   *  this component never reaches shiki's ~200-language dynamic-import table. */
+   *  `languages` or `languageLoaders` -- there is deliberately no default full-table
+   *  `lr-code-block`-style fallback, so this component never reaches shiki's dynamic-import table. */
   @property() language = '';
 
-  /** Grammar definitions this instance can highlight, same shape as `lr-code-block-core`'s own
-   *  `languages`. Values may be resolved grammars or lazy loader functions; only a requested
-   *  loader runs. If either input exceeds 8,192 UTF-16 code units, both sides retain their full
+  /** Resolved grammar definitions this instance can highlight. If either input exceeds 8,192
+   *  UTF-16 code units, both sides retain their full
    *  plain source and a localized `limit` notice replaces syntax highlighting. */
   @property({ attribute: false }) languages?: Readonly<
-    Record<string, ShikiLanguageSource>
+    Record<string, ShikiLanguageInput>
   >;
+
+  /** Optional lazy grammar loaders. Concrete `languages` entries take priority on duplicate keys;
+   * only a requested loader runs. Unset preserves concrete-grammar highlighting.
+   * Assign a new map object after changing entries. */
+  @property({ attribute: false }) languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>;
 
   /** How many unchanged lines to keep visible immediately before/after each change. Default
    *  `undefined` renders every line unconditionally, exactly like before this property existed. Set
@@ -387,10 +393,18 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
       this.oldTextSnapshot = typeof oldText === 'string' ? oldText : '';
       this.newTextSnapshot = typeof newText === 'string' ? newText : '';
     }
-    if (!this.hasUpdated || changed.has('language') || changed.has('languages')) {
+    if (!this.hasUpdated || changed.has('language') || changed.has('languages') || changed.has('languageLoaders')) {
       const language = this.language;
       this.languageSnapshot = typeof language === 'string' ? language : '';
-      this.languagesSnapshot = projectLanguages(this.languages);
+      const languages = projectLanguages<ShikiLanguageInput>(this.languages);
+      if (this.languageLoaders === undefined) {
+        this.languagesSnapshot = languages;
+      } else {
+        // Admit each caller-owned map before combining, then retain the existing total ceiling.
+        // Concrete entries come first so adding loaders cannot displace admitted concrete keys.
+        const loaders = projectLanguages<ShikiLanguageLoader>(this.languageLoaders);
+        this.languagesSnapshot = projectLanguages(combineShikiLanguageSources(languages, loaders));
+      }
     }
     if (
       this.hasUpdated &&
@@ -431,6 +445,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
       changed.has('newText') ||
       changed.has('language') ||
       changed.has('languages') ||
+      changed.has('languageLoaders') ||
       changed.has('maxLines')
     ) {
       this.syncHighlight();

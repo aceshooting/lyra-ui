@@ -1,10 +1,11 @@
+import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
 import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
-import type { ShikiLanguageSource } from '../code-block/shiki-types.js';
+import type { ShikiLanguageInput, ShikiLanguageLoader, ShikiLanguageSource } from '../code-block/shiki-types.js';
 import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import { streamingTailText } from '../markdown/markdown-streaming-tail.js';
 import { styles } from './streaming-text.styles.js';
@@ -66,7 +67,16 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
    *  explicit language-grammar bundle scoping shiki's build output to just those grammars. Unset
    *  leaves the composed element's own default untouched: the full variant falls back to its
    *  ~200-language dynamic-import table, the core variant renders unmatched fences as plain text. */
-  @property({ attribute: false }) languages?: Readonly<Record<string, ShikiLanguageSource>>;
+  @property({ attribute: false }) languages?: Readonly<Record<string, ShikiLanguageInput>>;
+
+  /** Lazy grammar loaders forwarded with `languages` to the composed Markdown element. Concrete
+   * entries win on duplicate keys. Unset forwards `languages` verbatim; the combined map is reused
+   * until either input map changes. Only requested loaders execute. Assign a new map object after edits. */
+  @property({ attribute: false }) languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>;
+
+  protected get markdownLanguages(): Readonly<Record<string, ShikiLanguageSource>> | undefined {
+    return combineShikiLanguageSources(this.languages, this.languageLoaders);
+  }
 
   /** Forwarded verbatim to the composed Markdown element's own `tabSize` -- the tab-stop width
    *  used to expand tabs in leading indentation before parsing. `4` (the default) matches the

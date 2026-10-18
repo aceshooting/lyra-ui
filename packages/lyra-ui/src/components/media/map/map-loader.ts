@@ -8,6 +8,8 @@ export interface MapLibreGeoJsonSource {
   setData(data: unknown): void;
   /** maplibre-gl 3+ incremental update. Optional because older peers lack it. */
   updateData?(diff: MapLibreSourceDataDiff): void;
+  /** Retains the automatic property-diff signature for extracted method parameter types. */
+  updateData?(diff: MapLibreGeoJsonDiff): void;
 }
 
 /** Consumer-authored incremental GeoJSON changes, forwarded to the active map engine. */

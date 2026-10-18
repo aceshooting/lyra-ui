@@ -1251,12 +1251,15 @@ over each rendered line's own text, one match per line ordered by that same op i
   the same diff alignment. Unsupported attributes and untyped property writes normalize to
   reflected `unified`.
 - `language: string = ''` — a shiki-recognized language id. Highlighting activates only when this
-  has a matching entry in `languages` — there is deliberately no default full-table
+  has a matching entry in `languages` or `languageLoaders` — there is deliberately no default full-table
   `lr-code-block`-style fallback, so this component never reaches shiki's ~200-language
   dynamic-import table.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — resolved grammar
-  definitions or lazy loader functions, same shape as `lr-code-block-core`'s own `languages`.
-  Only the requested loader runs; unused loader entries stay unresolved.
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (attribute: false) — resolved grammar
+  definitions.
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (attribute: false) — lazy
+  grammar loaders. Concrete `languages` entries take priority on duplicate keys. Only the requested
+  loader runs; unused loader entries stay unresolved. Unset preserves concrete-grammar behavior.
+  Assign new map objects after editing entries.
 - `contextLines: number | undefined` (attribute: `context-lines`) — keeps this many unchanged
   lines around each change and collapses longer unchanged runs into a localized fold marker. The
   default `undefined` shows every line; negative and non-finite values also disable folding.

@@ -70,6 +70,58 @@ if (!customElements.get('menu-item-label-forward-wrapper')) {
   );
 }
 
+it('updates live host and submenu names without rendering unchanged row content', async () => {
+  const el = await fixtureInMenu(html`<lr-menu-item>
+    <span id="live-label">Before</span>
+    <lr-menu slot="submenu"><lr-menu-item>Child</lr-menu-item></lr-menu>
+  </lr-menu-item>`);
+  const panel = el.querySelector<LyraMenu>('lr-menu')!;
+  const label = el.querySelector<HTMLSpanElement>('#live-label')!;
+  await waitUntil(() => el.hasSubmenu && panel.getAttribute('aria-label') === 'Before');
+  await nextFrame();
+  const originalRender = el.render;
+  let renders = 0;
+  el.render = function () {
+    renders++;
+    return originalRender.call(this);
+  };
+  try {
+    label.textContent = 'Renamed';
+    await waitUntil(() => el.getAttribute('aria-label') === 'Renamed' &&
+      panel.getAttribute('aria-label') === 'Renamed');
+    await nextFrame();
+    expect(el.getTextLabel()).to.equal('Renamed');
+    expect(el.shadowRoot!.querySelector<HTMLSlotElement>('[part="label"] slot')?.assignedElements().includes(label)).to.equal(true);
+    expect(renders, 'label observation updates names without a presentation update').to.equal(0);
+  } finally {
+    el.render = originalRender;
+  }
+});
+
+it('keeps consumer-authored accessible names reactive and authoritative', async () => {
+  const el = await fixtureInMenu(html`<lr-menu-item><span>Before</span></lr-menu-item>`);
+  await nextFrame();
+  const originalRender = el.render;
+  let renders = 0;
+  el.render = function () {
+    renders++;
+    return originalRender.call(this);
+  };
+  try {
+    el.setAttribute('aria-label', 'Author name');
+    await el.updateComplete;
+    expect(renders, 'consumer ARIA changes keep the inherited update contract').to.equal(1);
+    expect(el.getAttribute('aria-label')).to.equal('Author name');
+    el.querySelector('span')!.textContent = 'Renamed';
+    await waitUntil(() => el.getTextLabel() === 'Renamed');
+    await nextFrame();
+    expect(el.getAttribute('aria-label')).to.equal('Author name');
+    expect(renders).to.equal(1);
+  } finally {
+    el.render = originalRender;
+  }
+});
+
 it('defaults to value="", disabled=false, variant="default", type="normal", checked=false', async () => {
   const el = (await fixture(
     html`<lr-menu-item>Rename</lr-menu-item>`

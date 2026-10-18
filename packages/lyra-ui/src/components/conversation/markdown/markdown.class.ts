@@ -1,3 +1,4 @@
+import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
 import type { LyraClipboardWriteSuccess, LyraClipboardWriteFailure } from '../../../internal/clipboard.js';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -15,7 +16,7 @@ import {
   type ShikiHighlighter,
   type ShikiHighlighterCore,
 } from '../code-block/code-loader.js';
-import { ensureShikiLanguageLoaded, resolvedShikiLanguages, type ShikiLanguageSource } from '../code-block/shiki-types.js';
+import { ensureShikiLanguageLoaded, resolvedShikiLanguages, type ShikiLanguageInput, type ShikiLanguageLoader, type ShikiLanguageSource } from '../code-block/shiki-types.js';
 import {
   createMarkdownKatexState,
   tokenizeMarkdownHighlight,
@@ -370,13 +371,17 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   @property({ type: Boolean, attribute: 'without-syntax-highlighting' })
   override withoutSyntaxHighlighting = false;
 
-  /** Explicit grammars may be resolved values or lazy loaders; only a fenced block's matching
-   *  loader is invoked. Languages absent from the map, or an unset map, use the full loader's
-   *  built-in fallback. Replace the map identity when changing its grammars. */
+  /** Explicit resolved grammars. Languages absent from both this map and `languageLoaders`
+   * use the full loader's built-in fallback. Replace the map identity when changing grammars. */
   @property({ attribute: false }) override languages?: Readonly<Record<
     string,
-    ShikiLanguageSource
+    ShikiLanguageInput
   >>;
+
+  /** Optional lazy grammar loaders, resolved only for a requested fence language. Concrete
+   * `languages` entries take priority. Unset preserves concrete grammars and the default loader.
+   * Assign a new map object after changing entries. */
+  @property({ attribute: false }) languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>;
 
   /** Stamps a computed slug as `id` on every rendered heading. `getHeadingTree()` computes the
    *  same slugs regardless of this property -- it only controls whether the `id` attribute is
@@ -426,18 +431,23 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
     return LyraMarkdown.variant;
   }
 
+  protected override get highlightLanguageSources(): Readonly<Record<string, ShikiLanguageSource>> | undefined {
+    return combineShikiLanguageSources(this.languages, this.languageLoaders);
+  }
+
   protected override async tokenizePendingHighlight(
     pending: PendingHighlight,
-    languages: Readonly<Record<string, ShikiLanguageSource>> | undefined,
+    languages: Readonly<Record<string, ShikiLanguageInput>> | undefined,
     isCurrent: () => boolean
   ): Promise<MarkdownHighlightAttempt> {
     const normalizedLang = normalizeShikiLanguage(pending.lang);
+    const sources = combineShikiLanguageSources(languages, this.languageLoaders);
     let highlighter: ShikiHighlighter | ShikiHighlighterCore | null;
-    if (languages && (languages[normalizedLang] ?? languages[pending.lang])) {
-      highlighter = await loadShikiHighlighterCore(resolvedShikiLanguages(languages));
+    if (sources && (sources[normalizedLang] ?? sources[pending.lang])) {
+      highlighter = await loadShikiHighlighterCore(resolvedShikiLanguages(sources));
       if (!isCurrent()) return undefined;
       if (!highlighter) return null;
-      const loaded = await ensureShikiLanguageLoaded(highlighter, normalizedLang, languages[normalizedLang] ?? languages[pending.lang]!);
+      const loaded = await ensureShikiLanguageLoaded(highlighter, normalizedLang, sources[normalizedLang] ?? sources[pending.lang]!);
       if (!isCurrent()) return undefined;
       if (!loaded) return null;
     } else {

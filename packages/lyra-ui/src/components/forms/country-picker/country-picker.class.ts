@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
+import type { SelectionCatalogRow } from '../../../internal/selection-catalog.js';
 import { LyraCatalogPickerBase, type LyraCatalogPickerChangeDetail, type LyraCatalogPickerEventMap } from '../catalog-picker-base.js';
 import { COUNTRY_CODES, resolveCountryNames, snapshotCountryCatalog, type LyraCountryCatalog, type LyraCountryEntry } from '../../../countries.js';
 import { styles } from './country-picker.styles.js';

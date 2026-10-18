@@ -425,6 +425,7 @@ function codeBlockNeedsHighlightResync(
     changed.has('code') ||
     changed.has('language') ||
     changed.has('languages') ||
+    changed.has('languageLoaders') ||
     changed.has('lineNumbers') ||
     changed.has('activatableLines')
   );

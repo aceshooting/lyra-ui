@@ -293,6 +293,16 @@ it("aborts stale server requests and applies only the latest response", async ()
   await first;
   expect(firstRequest.signal?.aborted).to.equal(true);
   expect(element.data).to.deep.equal([rows[2]]);
+  await element.updateComplete;
+  expect(requests.at(-1)!.signal?.aborted).to.equal(false);
+  expect(element.loading).to.equal(false);
+
+  const previousCount = requests.length;
+  const repeated = element.reload();
+  expect(requests.length).to.equal(previousCount + 1);
+  resolvers.at(-1)!({ rows: [rows[1]!], total: 1 });
+  await repeated;
+  expect(element.data).to.deep.equal([rows[1]]);
 });
 
 it("abandons an in-flight server request when the data source is replaced", async () => {

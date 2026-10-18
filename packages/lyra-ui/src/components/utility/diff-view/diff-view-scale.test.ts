@@ -21,7 +21,7 @@ it('caps rendered operations when max-lines is unbounded', async () => {
 });
 it('loads a requested lazy diff grammar without the full highlighter module', async () => {
   const el = document.createElement('lr-diff-view'); let calls = 0; let unused = 0;
-  el.languages = { json: async () => { calls++; return { default: jsonGrammar }; }, unused: async () => { unused++; return { default: jsonGrammar }; } };
+  el.languageLoaders = { json: async () => { calls++; return { default: jsonGrammar }; }, unused: async () => { unused++; return { default: jsonGrammar }; } };
   el.language = 'json'; el.oldText = '{"x":1}'; el.newText = '{"x":2}'; document.body.append(el);
   try { await el.updateComplete; await waitUntil(() => calls === 1, 'lazy grammar did not resolve', { timeout: 2500 }); expect(unused).equal(0); }
   finally { el.remove(); }
@@ -55,7 +55,7 @@ it('retires a disconnected lazy grammar result and highlights again after reconn
   let resolveGrammar!: (value: typeof jsonGrammar) => void;
   const pending = new Promise<typeof jsonGrammar>((resolve) => { resolveGrammar = resolve; });
   let called = false;
-  el.languages = { json: () => { called = true; return pending; } };
+  el.languageLoaders = { json: () => { called = true; return pending; } };
   el.language = 'json'; el.oldText = '{"x":1}'; el.newText = '{"x":2}'; document.body.append(el);
   const seam = el as unknown as { highlightedOldLines: string[] | null };
   try {
@@ -78,7 +78,7 @@ it('shows current plain source while a replacement lazy grammar is unresolved', 
   try {
     await waitUntil(() => seam.highlightedOldLines !== null, 'initial highlighting missing');
     await el.updateComplete;
-    el.languages = { replacement: () => pending }; el.language = 'replacement';
+    el.languageLoaders = { replacement: () => pending }; el.language = 'replacement';
     el.oldText = '{"currentOld":3}'; el.newText = '{"currentNew":4}';
     await el.updateComplete;
     const rendered = el.shadowRoot!.textContent ?? '';
@@ -89,4 +89,51 @@ it('shows current plain source while a replacement lazy grammar is unresolved', 
     await el.updateComplete;
     expect(el.shadowRoot!.textContent).contain('currentOld').and.contain('currentNew');
   } finally { resolveGrammar(jsonGrammar); el.remove(); }
+});
+
+it('keeps concrete diff grammars readable and gives them priority over opt-in loaders', async () => {
+  const el = document.createElement('lr-diff-view');
+  expect(el.languageLoaders).equal(undefined);
+  let calls = 0;
+  const languages = { json: jsonGrammar };
+  el.languages = languages;
+  el.language = 'json'; el.oldText = '{"old":1}'; el.newText = '{"new":2}'; document.body.append(el);
+  try {
+    const seam = el as unknown as { highlightedOldLines: string[] | null };
+    await waitUntil(() => seam.highlightedOldLines !== null, 'concrete grammar did not highlight');
+    expect(el.languages).equal(languages);
+    el.languageLoaders = { json: async () => { calls++; return jsonGrammar; } };
+    await el.updateComplete;
+    await waitUntil(() => seam.highlightedOldLines !== null, 'concrete grammar lost priority');
+    expect(calls).equal(0);
+    el.languages = undefined;
+    await el.updateComplete;
+    await waitUntil(() => calls === 1, 'loader did not become active after removing concrete grammar');
+  } finally { el.remove(); }
+});
+
+it('bounds concrete and lazy grammar descriptor reads before combining opt-in maps', async () => {
+  const grammar = { name: 'example', scopeName: 'source.example' };
+  const concrete = Object.fromEntries(Array.from({ length: 30_000 }, (_, index) => [`grammar-${index}`, grammar]));
+  const lazy = Object.fromEntries(Array.from({ length: 30_000 }, (_, index) => [`loader-${index}`, async () => grammar]));
+  let concreteReads = 0;
+  let loaderReads = 0;
+  const el = document.createElement('lr-diff-view');
+  const seam = el as unknown as { loadHighlighterCore(languages: Record<string, unknown>): Promise<null> };
+  let admitted = 0;
+  seam.loadHighlighterCore = async (languages) => { admitted = Object.keys(languages).length; return null; };
+  el.languages = new Proxy(concrete, {
+    getOwnPropertyDescriptor(target, key) { concreteReads++; return Reflect.getOwnPropertyDescriptor(target, key); },
+  });
+  el.languageLoaders = new Proxy(lazy, {
+    getOwnPropertyDescriptor(target, key) { loaderReads++; return Reflect.getOwnPropertyDescriptor(target, key); },
+  });
+  el.language = 'grammar-0'; el.oldText = 'old'; el.newText = 'new'; document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(concreteReads).at.most(10_000);
+    expect(loaderReads).at.most(10_000);
+    expect(admitted).at.most(10_000);
+    expect(admitted).greaterThan(0);
+  } finally { el.remove(); }
 });

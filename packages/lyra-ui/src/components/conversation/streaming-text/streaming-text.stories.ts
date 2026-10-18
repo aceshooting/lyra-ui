@@ -302,3 +302,8 @@ export const ForwardedTaskListParts: Story = {
       .content=${'- [x] Draft the answer\n- [ ] Cite the sources\n\n| Step | Owner |\n| --- | --- |\n| Review | Platform team |'}></lr-streaming-text>
   `,
 };
+
+export const LazyGrammar: Story = {
+  render: () => html`<lr-streaming-text content-mode="markdown" .content=${'```json\n{"count":1}\n```'}
+    .languageLoaders=${{ json: () => import('shiki/langs/json.mjs') }}></lr-streaming-text>`,
+};

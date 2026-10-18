@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { create as analyzeExports, ts } from '@custom-elements-manifest/analyzer';
 
 import {
   MIGRATION_ATTRIBUTE_EXCLUSIONS,
@@ -75,6 +76,43 @@ const packageDir = path.resolve(
 );
 const readJson = (...segments) =>
   JSON.parse(fs.readFileSync(path.join(packageDir, ...segments), 'utf8'));
+
+function analyzedFixtureExports(source) {
+  const manifest = analyzeExports({
+    modules: [ts.createSourceFile('src/entry.ts', source, ts.ScriptTarget.Latest, true)],
+    plugins: cemConfig.plugins.map(({ name, analyzePhase }) => ({ name, analyzePhase })),
+  });
+  return manifest.modules[0].exports;
+}
+
+test('CEM empty named reexports introduce no exported names', () => {
+  assert.deepEqual(analyzedFixtureExports(`
+    export type {} from './fallback.js';
+    export type {} from 'external-fallback';
+    export {} from './fallback.js';
+    export {};
+  `), []);
+});
+
+for (const emptyFirst of [true, false]) {
+  test(`CEM preserves real reexports beside same-target empty clauses (${emptyFirst ? 'before' : 'after'})`, () => {
+    const empty = `export type {} from './fallback.js';`;
+    const real = `
+      export * from './fallback.js';
+      export { value as renamed } from './fallback.js';
+      export * as namespace from './fallback.js';
+      export type { Value } from './fallback.js';
+      export * from './component.class.js';
+    `;
+    const expected = analyzedFixtureExports(real);
+    assert.equal(expected.length, 5);
+    assert.deepEqual(
+      analyzedFixtureExports(emptyFirst ? `${empty}\n${real}` : `${real}\n${empty}`),
+      expected
+    );
+    assert.deepEqual(analyzedFixtureExports(`${real}\n/** @ignore */\n${empty}`), expected);
+  });
+}
 
 function callableSurfaceManifest(prefix = 'wa') {
   const className = prefix === 'wa' ? 'WaExample' : 'LyraExample';

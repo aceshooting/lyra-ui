@@ -140,11 +140,14 @@ uses for its own `[part="body"]`.
   optional `shiki` peer once it is available; set it to keep plain output even when `shiki` is
   installed. In progressive mode, a block can be highlighted after it settles; the mutable tail
   remains unhighlighted.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — explicit
-  grammars, supplied either resolved or as lazy loaders such as
-  `{ json: () => import('shiki/langs/json.mjs') }`. Only a matching fenced language invokes its
-  loader. Languages absent from the map, or an unset map, use the full loader's built-in fallback.
-  Replace the map identity when changing its grammars
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (attribute: false) — explicit
+  resolved grammars. Languages absent from both this map and `languageLoaders` use the full
+  loader's built-in fallback. Replace the map identity when changing its grammars.
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (attribute: false) — lazy
+  grammars such as `{ json: () => import('shiki/langs/json.mjs') }`. Only a matching fenced
+  language invokes its loader; concrete `languages` entries take priority on duplicate keys.
+  Unset preserves concrete-grammar readback and the default loader. Assign a new map object after
+  edits; changing either map invalidates pending highlights and isolates cached output.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,

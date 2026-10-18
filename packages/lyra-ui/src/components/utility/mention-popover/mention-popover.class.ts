@@ -21,7 +21,7 @@ import { resolveEffectivePositioningStrategy } from '../../../internal/positioni
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styles } from './mention-popover.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_noMatches } from '../../../internal/default-strings/shared.generated.js';
@@ -932,9 +932,9 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   }
 
   private readonly labelKeys = createHaystackMemo<Readonly<LyraMentionItem>>((item, locale) =>
-    typeof item.label === 'string' ? item.label.toLocaleLowerCase(locale) : '');
+    typeof item.label === 'string' ? item.label.toLocaleLowerCase(resolveIntlLocale(locale)) : '');
   private readonly descriptionKeys = createHaystackMemo<Readonly<LyraMentionItem>>((item, locale) =>
-    typeof item.description === 'string' ? item.description.toLocaleLowerCase(locale) : '');
+    typeof item.description === 'string' ? item.description.toLocaleLowerCase(resolveIntlLocale(locale)) : '');
   /** The current candidate set: runtime rows without a non-blank string `label` are omitted (a
    *  blank/whitespace-only label would otherwise render a focusable `role="option"` with no
    *  accessible name), then the remaining `items` are filtered by `query` via `filter` (or the

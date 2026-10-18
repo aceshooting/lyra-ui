@@ -2,6 +2,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './sequence-strip.js';
+import '../../../translations/fr/data.js';
+import '../../../translations/fr/shared.js';
 import type { LyraSequenceStrip, SequenceStripItem } from './sequence-strip.class.js';
 import type { LyraSequenceSource } from './sequence-strip-source.js';
 

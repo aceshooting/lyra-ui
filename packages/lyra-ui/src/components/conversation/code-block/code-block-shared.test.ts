@@ -14,6 +14,7 @@ import {
   scrollCodeBlockToAnchor,
 } from "./code-block-shared.js";
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 type LitWarningRuntime = typeof globalThis & { litIssuedWarnings?: Set<string> };
 
@@ -529,12 +530,14 @@ describe("owner-realm line interactions", () => {
       code: 'first\nsecond',
       collapsed: false,
     });
+    const code = document.createElement('code');
+    root.append(code);
     const first = document.createElement('button');
     const second = document.createElement('button');
     for (const [index, button] of [first, second].entries()) {
       button.dataset['line'] = String(index + 1);
       button.setAttribute('part', 'line-button');
-      root.append(button);
+      code.append(button);
     }
     const focused: number[] = [];
     const controller = new CodeBlockInteractionController({
@@ -553,7 +556,9 @@ describe("owner-realm line interactions", () => {
     });
     root.addEventListener('keydown', controller.onBodyKeyDown as EventListener);
     document.body.append(host);
+    controller.syncLineButtons(1);
     try {
+      await focusByKeyboard(first);
       const event = new KeyboardEvent('keydown', {
         key: 'ArrowDown',
         bubbles: true,
@@ -566,6 +571,8 @@ describe("owner-realm line interactions", () => {
       expect(event.defaultPrevented).to.equal(true);
       expect(focused).to.deep.equal([2]);
       expect(root.activeElement === second).to.equal(true);
+      expect(first.tabIndex).to.equal(-1);
+      expect(second.tabIndex).to.equal(0);
     } finally {
       host.remove();
     }

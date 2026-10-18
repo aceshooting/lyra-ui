@@ -1,3 +1,4 @@
+import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import type { LyraSourceRevision } from '../../../data-sources.js';
 import type { LyraSourceRequest, LyraSourceValue } from '../../../utilities/data-preparation.js';
 import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
@@ -27,7 +28,7 @@ export interface LyraAvCueSearch {
   getMatch(matchIndex: number, request: LyraSourceRequest): LyraSourceValue<{ readonly index: number; readonly cue: LyraAvCue }>;
 }
 
-export function cueField(value: unknown, name: string, optional = false): unknown {
+function cueField(value: unknown, name: string, optional = false): unknown {
   if (!value || typeof value !== 'object') throw new TypeError('Invalid cue source record');
   const descriptor = Object.getOwnPropertyDescriptor(value, name);
   if (!descriptor && optional) return undefined;
@@ -104,7 +105,8 @@ export function captureCueSearch(value: unknown, sourceSize: number): LyraAvCueS
 }
 
 export function sourceCueMatches(cue: LyraAvCue, query: string, locale: string): boolean {
-  const folded = query.toLocaleLowerCase(locale);
-  return folded.length > 0 && (cue.text.toLocaleLowerCase(locale).includes(folded) ||
-    (cue.speaker ?? '').toLocaleLowerCase(locale).includes(folded));
+  const effectiveIntlLocale = resolveIntlLocale(locale);
+  const folded = query.toLocaleLowerCase(effectiveIntlLocale);
+  return folded.length > 0 && (cue.text.toLocaleLowerCase(effectiveIntlLocale).includes(folded) ||
+    (cue.speaker ?? '').toLocaleLowerCase(effectiveIntlLocale).includes(folded));
 }

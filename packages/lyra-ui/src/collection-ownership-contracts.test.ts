@@ -84,6 +84,7 @@ const COLLECTION_LIMIT = 10_000;
 export interface CollectionPropertyCase {
   readonly tag: `lr-${string}`;
   readonly property: string;
+  readonly limit?: number;
 }
 
 export interface BespokeCollectionPropertyCase extends CollectionPropertyCase {
@@ -118,7 +119,6 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-prompt-studio', property: 'versions' },
   { tag: 'lr-json-schema-viewer', property: 'issues' },
   { tag: 'lr-subagent-panel', property: 'runs' },
-  { tag: 'lr-task-list', property: 'items' },
   { tag: 'lr-test-results', property: 'statusFilter' },
   { tag: 'lr-tool-call-block', property: 'redactedFields' },
   { tag: 'lr-tool-select-dialog', property: 'tools' },
@@ -132,7 +132,7 @@ export const APP_OWNED_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] =
   { tag: 'lr-box-plot', property: 'hiddenDatasets' },
   { tag: 'lr-message-actions', property: 'controls' },
   { tag: 'lr-message-parts', property: 'parts' },
-  { tag: 'lr-model-select', property: 'catalog' },
+  { tag: 'lr-model-select', property: 'catalog', limit: 1024 },
   { tag: 'lr-model-settings-panel', property: 'catalog' },
   { tag: 'lr-prompt-input', property: 'attachments' },
   { tag: 'lr-prompt-input', property: 'attachmentCapabilities' },
@@ -180,6 +180,7 @@ export const APP_OWNED_RECORD_PROPERTY_CASES: readonly CollectionPropertyCase[] 
 
 /** The only sequence fields in this lane whose caller item identity is the public contract. */
 export const APP_IDENTITY_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] = Object.freeze([
+  { tag: 'lr-task-list', property: 'items' },
   { tag: 'lr-agent-trace', property: 'spans' },
   { tag: 'lr-span-waterfall', property: 'spans' },
   { tag: 'lr-tool-timeline', property: 'entries' },
@@ -284,7 +285,7 @@ describe('original component collection ownership contracts', () => {
     for (const { tag, property } of cases) expectDevWarning(collectionTruncationWarningKey(tag, property));
   });
 
-  for (const { tag, property } of APP_OWNED_ARRAY_PROPERTY_CASES) {
+  for (const { tag, property, limit = COLLECTION_LIMIT } of APP_OWNED_ARRAY_PROPERTY_CASES) {
     it(`${tag}.${property} owns a bounded, recursively frozen array snapshot`, () => {
       const element = createDynamicElement(tag);
       // `data` keeps this shared adversarial row valid for the two chart-series accessors. Their
@@ -320,7 +321,7 @@ describe('original component collection ownership contracts', () => {
           ? { label: String(index), data: [index] }
           : index,
       );
-      expect((element[property] as readonly unknown[]).length).to.equal(COLLECTION_LIMIT);
+      expect((element[property] as readonly unknown[]).length).to.equal(limit);
       expect(Object.isFrozen(element[property])).to.equal(true);
     });
   }
@@ -593,12 +594,11 @@ describe('original component collection ownership contracts', () => {
     expect(Object.isFrozen(snapshot)).to.equal(true);
     expect(Object.isFrozen(snapshot[0])).to.equal(true);
 
-    // The accessor is the shared public-collection snapshot; the 1,024-row admission is the
-    // picker's render boundary (see voice-picker.test.ts), not the accessor's.
+    // Catalog admission owns only the first 1,024 source rows.
     expectDevWarning(collectionTruncationWarningKey('lr-voice-picker', 'catalog'));
     element.catalog = Array.from({ length: COLLECTION_LIMIT + 5 }, (_, index) => String(index));
-    expect(element.catalog!.length).to.equal(COLLECTION_LIMIT);
-    expect(element.catalog!.at(-1)).to.equal(String(COLLECTION_LIMIT - 1));
+    expect(element.catalog!.length).to.equal(1024);
+    expect(element.catalog!.at(-1)).to.equal('1023');
   });
 
   it('detaches and recursively freezes schema records and arrays in emitted details', async () => {

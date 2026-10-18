@@ -1058,7 +1058,7 @@ export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolea
     changed.has('headingAnchors') ||
     changed.has('math') ||
     changed.has('withoutSyntaxHighlighting') ||
-    changed.has('languages') ||
+    changed.has('languages') || changed.has('languageLoaders') ||
     changed.has('codeBlockHeader') || changed.has('streamingRender')
   );
 }
@@ -1066,12 +1066,12 @@ export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolea
 /** Whether the *highlighting* configuration changed, invalidating in-flight work and the
  *  permanently-failed key set. */
 export function markdownHighlightConfigChanged(changed: Map<PropertyKey, unknown>): boolean {
-  return changed.has('withoutSyntaxHighlighting') || changed.has('languages') || changed.has('codeBlockHeader');
+  return changed.has('withoutSyntaxHighlighting') || changed.has('languages') || changed.has('languageLoaders') || changed.has('codeBlockHeader');
 }
 
 /** Whether the *grammar set* changed, additionally invalidating already-highlighted output. */
 export function markdownLanguageSetChanged(changed: Map<PropertyKey, unknown>): boolean {
-  return changed.has('languages');
+  return changed.has('languages') || changed.has('languageLoaders');
 }
 
 /** The rendered outcome of one `renderMarkdownDocument()` pass. `headingTree` is non-`null`

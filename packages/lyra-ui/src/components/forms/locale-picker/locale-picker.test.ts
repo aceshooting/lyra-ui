@@ -66,6 +66,17 @@ function requiredItem<T>(items: ArrayLike<T>, index: number, description: string
   return item;
 }
 
+it('renders the localized catalog limit and removes it when the catalog fits', async () => {
+  const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker without-flags></lr-locale-picker>`);
+  el.strings = { localePickerInputLimit: 'Catalog admission is limited' };
+  el.locales = Array(513).fill('en');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('Catalog admission is limited');
+  el.locales = ['en'];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(0);
+});
+
 it('keeps the default flag-label trigger and exposes independent trigger label styling', async () => {
   const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker open value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`);
   expect(el.triggerDisplay).to.equal('flag-label');

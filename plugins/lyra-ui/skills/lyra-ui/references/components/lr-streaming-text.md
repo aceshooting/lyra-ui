@@ -38,10 +38,14 @@ streaming.
 - `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
   uses `looksLikeMarkdown`; `plain` and `markdown` force their named paths. Invalid values render as
   `auto` without installing a stale memoized decision.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to
   the composed `<lr-markdown>`'s own `languages`, the same fine-grained language-grammar scoping
   `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
-  untouched.
+  untouched when `languageLoaders` is unset.
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (property only) — lazy grammar
+  loaders forwarded separately from concrete `languages` to the composed Markdown element.
+  Concrete entries win on duplicate keys; only requested loaders execute. The composed element
+  reuses its combined map until either property receives a new map object.
 
 The rest of `<lr-markdown>`'s configuration surface forwards verbatim too, each defaulting to
 exactly `<lr-markdown>`'s own default so leaving it unset renders identically to before these

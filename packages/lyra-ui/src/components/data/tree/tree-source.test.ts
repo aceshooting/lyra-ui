@@ -18,16 +18,47 @@ function source(count = 1_000_000): LyraHierarchySource<LyraTreeNodeData, LyraHi
 }
 
 it('renders the real final logical hierarchy row without the legacy admission prefix', async () => {
-  const el = await fixture<LyraTree>(html`<lr-tree label="Source tree" style="height: 300px"></lr-tree>`);
-  el.treeSource = source();
-  el.requestUpdate();
-  await waitUntil(() => Boolean(el.shadowRoot?.querySelector('[part~="source-row"]')), 'source row', { timeout: 1500 });
-  const revealed = await el.revealSourceKey('n999999');
-  expect(revealed).to.equal(true);
-  const row = el.shadowRoot!.querySelector('[data-source-key="n999999"]')!;
-  expect(row.getAttribute('aria-posinset')).to.equal('1000000');
-  expect(row.getAttribute('aria-setsize')).to.equal('1000000');
-  expect(el.shadowRoot!.querySelectorAll('[part~="source-row"]').length).to.be.at.most(301);
+  const warning = 'Virtual list scroll travel is scaled to fit browser layout limits; row sizes and public offsets remain in logical pixels.';
+  const warningKey = 'virtual-list-scroll-scaling';
+  const store = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  const wasIssued = store?.has(warningKey);
+  store?.delete(warningKey);
+  const previousWarn = console.warn;
+  let warningCount = 0;
+  console.warn = (...args: unknown[]) => {
+    if (args.length === 1 && args[0] === warning) warningCount++;
+    else previousWarn.apply(console, args);
+  };
+  let el: LyraTree | undefined;
+  let list: import('../../layout/virtual-list/virtual-list.class.js').LyraVirtualList | undefined;
+  try {
+    el = await fixture<LyraTree>(html`<lr-tree label="Source tree" style="height: 300px"></lr-tree>`);
+    const host = el;
+    el.treeSource = source();
+    el.requestUpdate();
+    await waitUntil(() => Boolean(host.shadowRoot?.querySelector('[part~="source-row"]')), 'source row', { timeout: 1500 });
+    const revealed = await el.revealSourceKey('n999999');
+    expect(revealed).to.equal(true);
+    const row = el.shadowRoot!.querySelector('[data-source-key="n999999"]')!;
+    expect(row.getAttribute('aria-posinset')).to.equal('1000000');
+    expect(row.getAttribute('aria-setsize')).to.equal('1000000');
+    expect(el.shadowRoot!.querySelectorAll('[part~="source-row"]').length).to.be.at.most(301);
+    list = el.shadowRoot!.querySelector('lr-virtual-list') as import('../../layout/virtual-list/virtual-list.class.js').LyraVirtualList;
+    list.requestUpdate();
+    await list.updateComplete;
+    expect(warningCount).to.equal(store ? 1 : 0);
+  } finally {
+    try {
+      // Disconnect can schedule another render; keep the diagnostic captured through teardown.
+      el?.remove();
+      await el?.updateComplete;
+      await list?.updateComplete;
+    } finally {
+      console.warn = previousWarn;
+      if (wasIssued) store?.add(warningKey);
+      else store?.delete(warningKey);
+    }
+  }
 });
 
 it('ignores nested children, renders logical depth, and never fabricates legacy selection arrays', async () => {

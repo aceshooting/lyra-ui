@@ -419,6 +419,8 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     return this.nodesTruncated || Boolean(tree?.dataTruncated);
   }
   private _selectedPath: string | null = null;
+  /** Selected file path, or null when no file is selected.
+   * @default null */
   @property({ attribute: 'selected-path' })
   get selectedPath(): string | null { return this._selectedPath; }
   set selectedPath(value: string | null) {

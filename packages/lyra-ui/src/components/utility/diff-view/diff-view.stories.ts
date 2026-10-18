@@ -106,5 +106,5 @@ export const RenderLimit: Story = {
 };
 
 export const LazyGrammar: Story = {
-  render: () => html`<lr-diff-view language="json" .languages=${{ json: () => import('shiki/langs/json.mjs') }} .oldText=${'{"value":1}'} .newText=${'{"value":2}'}></lr-diff-view>`,
+  render: () => html`<lr-diff-view language="json" .languageLoaders=${{ json: () => import('shiki/langs/json.mjs') }} .oldText=${'{"value":1}'} .newText=${'{"value":2}'}></lr-diff-view>`,
 };

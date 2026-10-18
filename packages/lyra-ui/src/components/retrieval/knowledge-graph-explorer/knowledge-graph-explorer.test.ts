@@ -1108,6 +1108,23 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(event.detail.pinnedNodeIds).to.have.members(['pierre']);
   });
 
+  it('routes deferred path loading and failure messages through the shared announcement sink', async () => {
+    const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
+      .strings=${{ loading: 'Preparing route', statusError: 'Route unavailable' }}></lr-knowledge-graph-explorer>`);
+    const probe = el as unknown as { loadOptionalPath(): Promise<void> };
+    let rejectPath!: (reason: Error) => void;
+    probe.loadOptionalPath = () => new Promise<void>((_resolve, reject) => { rejectPath = reject; });
+    el.path = [{ kind: 'node', node: { id: 'marie', label: 'Marie Curie' } }];
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="path"]')?.textContent === 'Preparing route');
+    expect(el.shadowRoot!.querySelector('[part="path"]')?.getAttribute('role')).to.equal(null);
+    expect(sinkTexts().at(-1)).to.equal('Preparing route');
+    rejectPath(new Error('unavailable'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="path"]')?.textContent).to.equal('Route unavailable');
+    expect(el.shadowRoot!.querySelector('[part="path"]')?.getAttribute('role')).to.equal(null);
+    expect(sinkTexts().at(-1)).to.equal('Route unavailable');
+  });
+
   it('releases and reacquires its shared announcement sink across disconnect and reconnect', async () => {
     const el = (await fixture(
       html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`

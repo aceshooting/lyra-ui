@@ -341,8 +341,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     const previous = this._graphSource; this._graphSource = value;
     this.requestUpdate('graphSource', previous);
   }
-  /** Zero-based page of the sole child-owned global record navigator. */
   private _sourcePage = 0;
+  /** Zero-based page of the sole child-owned global record navigator. */
   @property({ type: Number, attribute: 'source-page', noAccessor: true })
   get sourcePage(): number { return this._sourcePage; }
   set sourcePage(value: number) {
@@ -351,8 +351,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (this.sourceChild && this.sourceChild.sourcePage !== page) this.sourceChild.sourcePage = page;
     this.requestUpdate('sourcePage', old);
   }
-  /** Records per page, default100 and normalized1–500 by the child. */
   private _sourcePageSize = 100;
+  /** Records per page, default 100 and normalized 1–500 by the child. */
   @property({ type: Number, attribute: 'source-page-size', noAccessor: true })
   get sourcePageSize(): number { return this._sourcePageSize; }
   set sourcePageSize(value: number) {
@@ -659,6 +659,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.optionalPending = undefined;
     this.optionalFailed = false;
     if (!path || this.pathReady) return;
+    if (this.hasUpdated) this.announcements.announcePolite(this.localize('loading'));
     const pending = this.loadOptionalPath()
       .then(() => {
         if (!this.isConnected || generation !== this.optionalGeneration) return;
@@ -1514,7 +1515,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
               .path=${this.path}
               @lr-entity-activate=${(event: Event) => event.stopPropagation()}
             ></lr-path-strip>`
-            : html`<p part="path" role="status">${this.localize(this.optionalFailed ? 'statusError' : 'loading')}</p>`
+            : html`<p part="path">${this.localize(this.optionalFailed ? 'statusError' : 'loading')}</p>`
           : nothing}
         <lr-graph
           part="graph"

@@ -15657,51 +15657,35 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   _other_ tinted columns' scale shifts around a cell that shows no tint at all. Define both on one
   column only when that override is the intent; to tint _and_ style, return only non-background
   declarations (`color`, `fontWeight`, `textAlign`, …) from `cellStyle`.
-- `columns[].editTrigger: 'double-click' | 'always'` — `'double-click'` opens one transient editor;
-  Enter commits and closes, Escape cancels and closes, and blur-after-change commits. `'always'`
-  renders an editor in
-  every body cell of that column, permanently:
-  - **Keyboard entry (`'double-click'` columns).** The resting (not-currently-editing) cell of a
-    `'double-click'` column is its own roving-focus stop — `tabindex="-1"`, carrying `[data-editable]`
-    — reachable once the row itself has focus: ArrowRight (ArrowLeft under RTL) enters at the first
-    editable cell in the row and steps forward through any further ones; ArrowLeft (ArrowRight under
-    RTL) steps back and, from the first editable cell, returns focus to the row. None of this is a Tab
-    stop — a table with a `'double-click'` column gains no new entry in the page's Tab order, only a
-    new arrow-reachable one — and a table with no `editTrigger` column at all renders no `tabindex`/
-    `[data-editable]` anywhere. `F2` or `Enter` on the focused cell opens its editor; `Enter` on the
-    row itself (no cell focused) still only activates the row. `editCell(rowKey, columnKey)` (see
-    Methods above) is the same open action as a public method. Closing the editor, by commit or by
-    cancel, returns focus to the cell that opened it.
-  - **Focus model (`'always'` columns).** Each editor is a plain tab stop — no `tabindex` of its own
-    — exactly like the
-    existing row-expand toggle, and stays _outside_ the header/row/cell roving-tabindex model. Tab
-    walks
-    down the column; arrow keys still navigate the grid from a row's own roving stop, and act as
-    ordinary caret movement once focus is inside a field. Non-editable columns are unaffected.
-  - **Value binding.** A persistent `'text'`/`'number'` editor binds its `value` as a **content
-    attribute**, not as the `.value` property, so native dirty-value-flag semantics apply.
-    Trade-off: once the user has typed into a cell, an out-of-band `rows` update to that same cell
-    will **not** visibly replace their draft. An editor the user has not touched still picks up a
-    new `rows` value normally. A persistent `'select'` editor has no equivalent protection —
-    `<select>`/`<option>` carry no native dirty-value flag, so an out-of-band `rows` update to that
-    cell re-applies the selection even after the user has picked a different, uncommitted option.
-    `lr-cell-edit` remains the only mutation channel — the table never mutates `row`.
-  - **Keys.** Enter commits (emits `lr-cell-edit`) and _keeps focus_ in the field, since there is no
-    closed state to fall back to. `change` (blur after a modification) commits in both modes.
-    Escape is **not** cancelled and does nothing to the editor — there is nothing to cancel back to
-    — so an ancestor dialog/popover still acts on it.
-  - **Focus across re-sorts and pagination.** Rows are keyed, so a re-sort _moves_ the editor's
-    `<input>` (the typed value rides along) and the table restores focus to the same logical cell
-    afterwards. If the focused row leaves the rendered page entirely (pagination, filtering), focus
-    is simply lost rather than yanked to whichever unrelated row now sits in that position.
-  - **Accessible name.** Each editor's name is `columns[].editLabel(row)` when the column defines
-    it, or otherwise the interpolated `tableEditCell` string (`Edit {column}`) — identical for every
-    row in that column, since the default has no row context. That default is adequate for
-    `'double-click'`, where at most one editor is ever open, but not for `'always'`: every row's
-    editor there is a permanent, individually focusable Tab stop, so leaving `editLabel` unset on an
-    `'always'` column exposes as many identically named controls as there are rows (e.g. fifty "Edit
-    Status" comboboxes), failing WCAG 2.4.6 and 1.3.1. Define `editLabel` for any `'always'` column
-    to give each row's editor its own name.
+- `columns[].editTrigger: 'double-click' | 'always'` — `'double-click'` opens one transient editor:
+  Enter commits/closes, Escape cancels/closes, and native `change` commits (including blur after
+  a text edit). `'always'` renders
+  persistent editors in every body cell of that column.
+  - **Keyboard entry (`'double-click'`).** Resting editable cells carry `tabindex="-1"` and
+    `[data-editable]`. From the focused row, ArrowRight enters the first editable cell and advances;
+    ArrowLeft moves back, returning to the row from the first cell (directions reverse under RTL).
+    These arrow-reachable cells add no page Tab stops. Without an `editTrigger` column, no editable
+    cell `tabindex`/`[data-editable]` is rendered. `F2`/`Enter` on the cell or
+    `editCell(rowKey, columnKey)` opens its editor; Enter on the row still activates the row.
+    Commit/cancel restores focus to the opening cell.
+  - **Focus (`'always'`).** Editors have no explicit `tabindex`: like row-expand toggles, they are
+    ordinary Tab stops outside header/row/cell roving focus. Tab walks down the column; arrows
+    navigate from the row stop but move the caret inside fields. Non-editable columns are unchanged.
+  - **Value binding.** Persistent text/number editors bind the `value` content attribute, not
+    `.value`, preserving native dirty-value semantics: new `rows` values update untouched editors
+    but cannot replace a typed draft. Persistent selects have no equivalent protection;
+    refreshed rows re-apply their selection even over an uncommitted choice. `lr-cell-edit` is
+    the only mutation channel; the table never mutates `row`.
+  - **Keys (`'always'`).** Enter emits `lr-cell-edit` and keeps field focus. `change` commits in
+    both modes. Escape neither changes the persistent editor nor cancels
+    the event, so ancestor dialogs/popovers can handle it.
+  - **Re-sorts/pages.** Keyed rows move the existing input with its draft; focus is restored to the
+    same logical cell after sorting. If filtering/pagination removes that row from the page, focus
+    is lost rather than moved to an unrelated replacement row.
+  - **Accessible names.** `editLabel(row)` overrides the default localized `tableEditCell`
+    (`Edit {column}`), which has no row context. The default is adequate for the single transient
+    editor. Always define `editLabel` for persistent editors: repeated identical names (e.g. fifty
+    “Edit Status” comboboxes) fail WCAG 2.4.6 and 1.3.1; each row needs a distinct editor name.
 - `hasHiddenPriorityColumns: boolean = false` (attribute `has-hidden-priority-columns`, reflected) —
   computed/read-only and true only while a priority column is actually hidden. It becomes false
   when `priorityColumnsVisible` reveals the columns. Measured via a `ResizeObserver` on
@@ -16199,66 +16183,49 @@ declaration to retheme every internal scroll container in the library, including
 
 **Known gotchas:**
 
-- The built-in sort transaction toggles between `asc` and `desc`; a tri-state header with an
-  unsorted state remains consumer-owned. Veto `lr-sort-request` to suppress state change and commit.
-- `sortValue`/`cell` are read off the column object by identity. Mutating a column **in place**
-  (`t.columns[0].sortValue = …`) neither re-renders nor re-sorts; assign a new `columns` array.
-- both single and multiple row selection use `selectedRowKeys`; the component does not synthesize a
-  checkbox column, so a bulk-select UI still belongs in `headerCell()`/`cell()` callbacks.
-- A host `aria-label` (or native `ariaLabel` property) names the internal `<table role="grid">`.
-  Presence wins, including an explicitly empty string. Caller text in the host `aria-label` bypasses localization.
-- `caption: string = ''` — an optional visible `<caption>` (exposed as the `caption` CSS part). When
-  no host `aria-label` is present the caption also names the grid via
+- Sorting toggles `asc`/`desc`; consumers own any third, unsorted state. Veto `lr-sort-request`
+  to prevent state change and commit.
+- `sortValue`/`cell` use column identity. In-place mutation (`t.columns[0].sortValue = …`)
+  neither renders nor re-sorts; assign a new `columns` array.
+- Single/multiple selection both use `selectedRowKeys`. No checkbox column is synthesized;
+  implement bulk selection through `headerCell()`/`cell()`.
+- Host `aria-label` (or native `ariaLabel`) names the internal `<table role="grid">` verbatim,
+  bypassing localization; its presence wins even when empty. `caption: string = ''` supplies an
+  optional visible `<caption>` (`caption` part); without a host label it also names the grid through
   `aria-labelledby`.
-- A grid with **none** of host `aria-label` or `caption` logs a one-time
-  `console.warn` on first render in development builds only — an unnamed grid is an accessibility
-  defect that otherwise renders silently. Production and unknown/unbundled runtimes do not log it.
-- `revealColumnsLabel`/`columnsHideLabel` only ever reach the DOM on
-  `[part='reveal-columns-button']`, which itself only renders while at least one column declares
-  `priority`. Setting either label with no `priority` column is therefore always inert — it logs
-  the same shape of one-time, development-only, production-silent `console.warn` as the missing
-  accessible-name check above, rather than failing silently.
-- The grid has one roving `tabindex="0"` stop among header cells and one among body rows.
-  Left/Right/Home/End navigate headers; Up/Down/Home/End navigate rows. Down from a header enters
-  the body, Up from its first row returns to the header, and Enter/Space sort or activate.
-  A `priority`-hidden header/cell is skipped when computing visible header stops,
-  so arrow-key navigation never strands the roving stop on a hidden column.
-- a `cell()` template can render its own interactive content without it being swallowed by
-  row/column activation. Delegated clicks and Enter/Space inspect the event's composed path for
-  native buttons, links, inputs, selects, textareas, summaries, and media with controls;
-  editable content; a non-negative `tabindex`; or role semantics (`button`, `checkbox`, `combobox`,
-  `listbox`, `menu`, `menuitem`, `option`, `radio`, `separator`, `slider`, `spinbutton`, `switch`,
-  `tab`, or `textbox`). Open-shadow custom controls expose those semantics through the composed path
-  and therefore keep their own action. A passive custom element — including a formatter or
-  display-only badge — remains part of the row activation surface instead of creating a dead zone
-  merely because its tag contains a hyphen. An opaque closed-shadow control can explicitly opt out
-  of row activation by adding `data-table-interactive` to its visible host.
-- `layout="fixed"` (and any `'auto'` that resolves to fixed) carries two consequences of the CSS
-  fixed algorithm. With no declared widths the **first** row — the header row included — determines
-  every column's width, so revealing a `priority`-hidden column via
-  `[part='reveal-columns-button']` re-measures and changes _all_ of them, not just the revealed one.
-  And `columns[].minWidth`/`maxWidth` are silently ignored by `table-layout: fixed`; declare `width`
-  instead when a specific column needs a specific size.
-- skeleton mode keeps geometry stable only when the browser isn't sizing columns from cell content.
-  Under the default `table-layout: auto`, placeholder cells have no intrinsic width, so the columns
-  re-measure when real content arrives — exactly as they do between any two different data sets. For
-  pixel-identical widths across the load, declare `columns[].width` or set `layout="fixed"`.
-  Initial declarative loading stays silent; every later transition into either loading appearance
-  appends the localized loading text to the document's shared light-DOM polite sink, including
-  repeated cycles. `[part="base"]` exposes `aria-busy`, `[part="loading"]` is an `aria-hidden`
-  mirror rather than a live region, and every placeholder opts out of `<lr-skeleton>`'s own
-  announcement, so a skeleton table never announces once per placeholder row.
-- `columns[].cellTitle` returning an empty string **or** `undefined` omits the `title` attribute
-  entirely rather than rendering `title=""` — an empty `title` would suppress an ancestor element's
-  own tooltip. The attribute is also suppressed while that cell is in inline-edit mode, so the
-  tooltip can't shadow the editor. Accessibility caveat: some screen readers announce a `<td title>`
-  as the cell's accessible _name_, replacing the cell's content rather than supplementing it (the
-  same caveat `lr-stat`'s `exactValue` carries). Use it for a longer form of what the cell already
-  shows, never for information that exists nowhere else.
-- For an externally authoritative value, re-key the row (`rowKey`) to recreate an `'always'`
-  editor, or use the transient `editTrigger: 'double-click'` editor. Persistent text/number editors
-  otherwise retain dirty drafts; persistent select editors re-apply refreshed selections, as
-  described under `columns[].editTrigger` above.
+  Without either name, first render issues one development-only `console.warn`; production and
+  unknown/unbundled runtimes stay silent.
+- `revealColumnsLabel`/`columnsHideLabel` only label `[part='reveal-columns-button']`, which
+  requires a `priority` column. Setting either without one is inert and issues the same one-time,
+  development-only warning; production and unknown/unbundled runtimes stay silent.
+- Headers and body rows each have one roving `tabindex="0"`. Left/Right/Home/End navigate headers;
+  Up/Down/Home/End navigate rows. Down enters the body from a header; Up from the first row
+  returns to the header. Enter/Space sort or activate. Priority-hidden columns are skipped.
+- `cell()` controls retain their actions. Delegated clicks/Enter/Space inspect the composed path
+  for buttons, links, inputs, selects, textareas, summaries, media with controls, editable content,
+  non-negative `tabindex`, or roles `button`, `checkbox`, `combobox`, `listbox`, `menu`, `menuitem`,
+  `option`, `radio`, `separator`, `slider`, `spinbutton`, `switch`, `tab`, `textbox`.
+  Open-shadow controls expose these semantics. Passive custom elements (formatters/badges) remain
+  row activation surfaces; a hyphenated tag alone is not an exemption. Closed-shadow controls can
+  opt out with `data-table-interactive` on their visible host.
+- Fixed layout (explicit or resolved from `'auto'`) uses the first row, including headers, to
+  determine widths when none are declared. Revealing priority columns through
+  `[part='reveal-columns-button']` can therefore resize every column. Fixed layout ignores
+  `columns[].minWidth`/`maxWidth`; declare `width` for a specific size.
+- Skeletons cannot stabilize content-sized columns: default `table-layout: auto` placeholders
+  lack intrinsic width, so arriving data re-measures columns as any data change can. Declare
+  `columns[].width` or `layout="fixed"` for identical loading/loaded widths. Initial declarative
+  loading is silent; each later transition into either loading appearance, including repeated
+  cycles, appends localized loading text to the shared light-DOM polite sink. `base` exposes
+  `aria-busy`; `loading` is an `aria-hidden` mirror, not a live region. Placeholders disable their
+  own `<lr-skeleton>` announcements to avoid one announcement per row.
+- `cellTitle` returning `''`/`undefined` omits `title`, preserving ancestor tooltips; inline editing
+  also suppresses it. Some screen readers replace the cell's accessible name with `<td title>`
+  rather than supplementing its content (also a caveat of `lr-stat`'s `exactValue`). Use it only
+  to expand visible information, never as the sole source of information.
+- To replace a persistent editor with an externally authoritative value, re-key its row (`rowKey`)
+  or use transient `editTrigger: 'double-click'`. Otherwise text/number editors retain dirty
+  drafts, while persistent selects re-apply refreshed selections (see `editTrigger`).
 
 ---
 
@@ -31766,12 +31733,15 @@ over each rendered line's own text, one match per line ordered by that same op i
   the same diff alignment. Unsupported attributes and untyped property writes normalize to
   reflected `unified`.
 - `language: string = ''` — a shiki-recognized language id. Highlighting activates only when this
-  has a matching entry in `languages` — there is deliberately no default full-table
+  has a matching entry in `languages` or `languageLoaders` — there is deliberately no default full-table
   `lr-code-block`-style fallback, so this component never reaches shiki's ~200-language
   dynamic-import table.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — resolved grammar
-  definitions or lazy loader functions, same shape as `lr-code-block-core`'s own `languages`.
-  Only the requested loader runs; unused loader entries stay unresolved.
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (attribute: false) — resolved grammar
+  definitions.
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (attribute: false) — lazy
+  grammar loaders. Concrete `languages` entries take priority on duplicate keys. Only the requested
+  loader runs; unused loader entries stay unresolved. Unset preserves concrete-grammar behavior.
+  Assign new map objects after editing entries.
 - `contextLines: number | undefined` (attribute: `context-lines`) — keeps this many unchanged
   lines around each change and collapses longer unchanged runs into a localized fold marker. The
   default `undefined` shows every line; negative and non-finite values also disable folding.
@@ -42842,11 +42812,14 @@ uses for its own `[part="body"]`.
   optional `shiki` peer once it is available; set it to keep plain output even when `shiki` is
   installed. In progressive mode, a block can be highlighted after it settles; the mutable tail
   remains unhighlighted.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — explicit
-  grammars, supplied either resolved or as lazy loaders such as
-  `{ json: () => import('shiki/langs/json.mjs') }`. Only a matching fenced language invokes its
-  loader. Languages absent from the map, or an unset map, use the full loader's built-in fallback.
-  Replace the map identity when changing its grammars
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (attribute: false) — explicit
+  resolved grammars. Languages absent from both this map and `languageLoaders` use the full
+  loader's built-in fallback. Replace the map identity when changing its grammars.
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (attribute: false) — lazy
+  grammars such as `{ json: () => import('shiki/langs/json.mjs') }`. Only a matching fenced
+  language invokes its loader; concrete `languages` entries take priority on duplicate keys.
+  Unset preserves concrete-grammar readback and the default loader. Assign a new map object after
+  edits; changing either map invalidates pending highlights and isolates cached output.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
@@ -44376,10 +44349,14 @@ streaming.
 - `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
   uses `looksLikeMarkdown`; `plain` and `markdown` force their named paths. Invalid values render as
   `auto` without installing a stale memoized decision.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to
   the composed `<lr-markdown>`'s own `languages`, the same fine-grained language-grammar scoping
   `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
-  untouched.
+  untouched when `languageLoaders` is unset.
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (property only) — lazy grammar
+  loaders forwarded separately from concrete `languages` to the composed Markdown element.
+  Concrete entries win on duplicate keys; only requested loaders execute. The composed element
+  reuses its combined map until either property receives a new map object.
 
 The rest of `<lr-markdown>`'s configuration surface forwards verbatim too, each defaulting to
 exactly `<lr-markdown>`'s own default so leaving it unset renders identically to before these
@@ -44544,7 +44521,7 @@ surface (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`
 only which Markdown element Markdown mode composes differs: this variant renders
 `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
 entry point instead of `streaming-text.js` never references `<lr-markdown>`'s ~200-language
-dynamic-import table at all. A fenced code block whose language isn't a key in `languages` always
+dynamic-import table at all. A fenced code block whose language is absent from both `languages` and `languageLoaders`
 renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
 mirroring `<lr-markdown-core>`'s own contract.
 
@@ -44556,9 +44533,11 @@ Direction behaves exactly as described for `<lr-streaming-text>` (**Direction** 
 `llms/components/lr-streaming-text.md`; `contentMode: StreamingTextContentMode = 'auto'` (attribute
 `content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
-Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to the composed
+Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
 `<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s (defaulting the composed
-element's own `languages` to `{}` when unset, unlike the full variant's `undefined`). The rest of
+element's own `languages` to `{}` when unset, unlike the full variant's `undefined`).
+`languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` adds lazy loaders with the same
+concrete-grammar priority and combined-map reuse as `<lr-streaming-text>`. The rest of
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
 attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
 `tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =
@@ -44800,25 +44779,28 @@ through an activatable gutter reuses the source lines and updates the previous a
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — a map of language
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (attribute: false) — a map of language
   id to a resolved shiki grammar (e.g. `{ bash: bashGrammar }` from a module-scope
-  `import bash from 'shiki/langs/bash.mjs'`) or a lazy loader, e.g.
-  `{ bash: () => import('@shikijs/langs/bash') }`. Only a requested loader runs. When `language`
+  `import bash from 'shiki/langs/bash.mjs'`). When `language`
   matches a key here, highlighting uses that grammar via a fine-grained `createHighlighterCore()`
   highlighter, bypassing the default ~200-language dynamic-import path (`loadShikiHighlighter()`)
   for that language — an additive, opt-in escape hatch for a build scoped to just the languages a
-  consumer actually needs. A `language` absent from this map (or `languages` left unset) falls back
+  consumer actually needs. A `language` absent from both this map and `languageLoaders` falls back
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
-  `import type { ShikiLanguageSource, ShikiLanguageLoader } from
-  '@aceshooting/lyra-ui/components/lr-code-block.js'`; `ShikiLanguageSource` is
-  `ShikiLanguageInput | ShikiLanguageLoader`, and a loader returns
-  `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`. `ShikiLanguageInput` remains
-  exported for resolved-grammar annotations. The type-only granular import emits no registration
-  side effect.
+  `import type { ShikiLanguageInput } from
+  '@aceshooting/lyra-ui/components/lr-code-block.js'` for resolved-grammar annotations.
+  The type-only granular import emits no registration side effect.
   The map key need not be the grammar module's own registered name or one of its declared
   aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
   `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
   second near-identical grammar) still highlights under that key, for a lazy loader entry too.
+
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (attribute: false) — lazy
+  grammar loaders, e.g. `{ bash: () => import('shiki/langs/bash.mjs') }`. Concrete `languages`
+  entries take priority for the requested language; otherwise only its loader executes. Leaving
+  this unset preserves the concrete-grammar and default highlighter paths. `ShikiLanguageLoader`
+  is exported from the same entry and returns
+  `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`; assign new map objects after edits.
 
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — how the
   header's copy control presents itself. `'text'` is the labelled button this component has always
@@ -47552,9 +47534,10 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/lr-code-block.js` or
   `@aceshooting/lyra-ui/components/lr-code-block-core.js`.
   `ShikiLanguageSource = ShikiLanguageInput | ShikiLanguageLoader`
-  One `languages` map entry for full or core code-block and Markdown consumers: either an
+  One `languages` map entry for core code-block and core Markdown consumers: either an
   already-resolved grammar (seeded eagerly into the `HighlighterCore` at creation) or a lazy
-  `ShikiLanguageLoader`.
+  `ShikiLanguageLoader`. Full code-block and Markdown expose concrete `languages` and separate
+  `languageLoaders` maps.
   Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
   `.../markdown/markdown-core.js`).
   `ShikiRegexEngine {

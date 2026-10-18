@@ -560,7 +560,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
           ? html`<section part="section">
               <h3 part="section-heading">${this.localize('agentWorkspaceRetrieval')}</h3>
               <lr-retrieval-results
-                .chunks=${retrievalChunks}
+                .chunks=${guard([retrievalChunks], () => retrievalChunks)}
                 .selectedChunkIds=${this.selectedRetrievalChunkIds}
                 .loading=${this.retrievalLoading}
                 .hasMore=${this.retrievalHasMore}

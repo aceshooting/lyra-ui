@@ -1,4 +1,5 @@
-import { resolvedShikiLanguages, ensureShikiLanguageLoaded, type ShikiLanguageSource } from './shiki-types.js';
+import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
+import { resolvedShikiLanguages, ensureShikiLanguageLoaded, type ShikiLanguageInput, type ShikiLanguageLoader } from './shiki-types.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -276,7 +277,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
   readonly anchorKinds: readonly LyraAnchor['kind'][] = ['line-range'];
 
-  /** A map of language id to a lazy grammar loader or an already-imported shiki grammar module's
+  /** A map of language id to an already-imported shiki grammar module's
    *  default export (e.g. `{ bash: bashGrammar }` where `bashGrammar` came
    *  from a module-scope `import bash from 'shiki/langs/bash.mjs'`). When
    *  `language` matches a key here, highlighting for it is seeded from
@@ -286,15 +287,19 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
    *  `loadLanguage()` import entirely for that language — see the class doc
    *  above for the build-output rationale. A `language` value absent from
    *  this map (or left unset, or when `languages` itself is unset) falls
-   *  back to that default dynamic-import path unchanged. Loader functions are resolved only
-   *  when their language is requested. For an
-   *  annotation, use `import type { ShikiLanguageSource } from
+   *  back to that default dynamic-import path unchanged. For an
+   *  annotation, use `import type { ShikiLanguageInput } from
    *  '@aceshooting/lyra-ui/components/lr-code-block.js'`;
    *  this granular type-only import emits no registration side effect. */
   @property({ attribute: false }) languages?: Readonly<Record<
     string,
-    ShikiLanguageSource
+    ShikiLanguageInput
   >>;
+
+  /** Optional lazy grammar loaders, resolved only when their language is requested. Concrete
+   * `languages` entries take priority on duplicate keys. Unset preserves the default highlighter
+   * and concrete-grammar paths. Assign a new map object after changing entries. */
+  @property({ attribute: false }) languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>;
   private highlighter?: ShikiHighlighter | null;
 
   private defaultHighlighterLoading = false;
@@ -302,7 +307,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
   override connectedCallback(): void {
     super.connectedCallback();
     this.ensureDefaultHighlighter();
-    if (this.preSuppliedGrammar() || this.highlighter) this.syncHighlight();
+    if (this.hasPreSuppliedGrammar() || this.highlighter) this.syncHighlight();
   }
 
   private ensureDefaultHighlighter(): void {
@@ -332,12 +337,18 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
   // `willUpdate()`/`updated()`/`render()`/`syncHighlight()` so they all agree
   // on whether this render is taking the fine-grained `languages` path or
   // the default `loadShikiHighlighter()` one.
-  protected override preSuppliedGrammar(): ShikiLanguageSource | undefined {
+  protected override preSuppliedGrammar(): ShikiLanguageInput | undefined {
     return codeBlockPreSuppliedGrammar(this.languages, this.language ?? '');
   }
 
+  protected override hasPreSuppliedGrammar(): boolean {
+    return Boolean(this.preSuppliedGrammar() || (this.languageLoaders && codeBlockPreSuppliedGrammar(
+      combineShikiLanguageSources(this.languages, this.languageLoaders), this.language ?? '',
+    )));
+  }
+
   protected override showsSkeleton(): boolean {
-    return codeBlockShowsSkeleton(this.shikiReady, this.language, !this.preSuppliedGrammar());
+    return codeBlockShowsSkeleton(this.shikiReady, this.language, !this.hasPreSuppliedGrammar());
   }
 
   /** Resolves a `line-range` anchor (or a `highlights` id string resolving to one) by scrolling
@@ -371,7 +382,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
       return;
     }
 
-    const languages = this.languages;
+    const languages = combineShikiLanguageSources(this.languages, this.languageLoaders);
     const source = languages?.[lang] ?? languages?.[this.language];
     if (languages && source) {
       // Fine-grained opt-in path -- entirely separate from `this.highlighter`

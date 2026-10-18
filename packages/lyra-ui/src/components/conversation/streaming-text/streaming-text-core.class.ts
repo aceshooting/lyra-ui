@@ -101,7 +101,7 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
       .streaming=${this.streaming}
       .streamingRender=${this.streamingRender}
       .codeBlockHeader=${this.codeBlockHeader}
-      .languages=${this.languages ?? {}}
+      .languages=${this.markdownLanguages ?? {}}
       .tabSize=${this.tabSize}
       .htmlMode=${this.htmlMode}
       .withoutGfm=${this.withoutGfm}

@@ -1,7 +1,10 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import './heatmap.js';
+import '../../../translations/fr/data.js';
+import '../../../translations/fr/shared.js';
 import type { LyraHeatmap } from './heatmap.class.js';
 
 type Rectangle = { rowStart: number; rowEnd: number; columnStart: number; columnEnd: number };
@@ -271,6 +274,10 @@ it('keeps long exact labels and native hit areas within a 320px allocation', asy
 });
 
 it('uses the unregistered English fallback and exposes a no-canvas source error', async () => {
+  expectLocaleFallback('zz-ZZ', [
+    'heatmapSourceSummary', 'heatmapValueLabel', 'heatmapMatrixLabel', 'loading',
+    'heatmapSourceKeyboardHelp', 'noData', 'heatmapNoDataValue', 'heatmapSourceError',
+  ]);
   const original = HTMLCanvasElement.prototype.getContext;
   HTMLCanvasElement.prototype.getContext = (() => null) as typeof original;
   try {
@@ -282,6 +289,44 @@ it('uses the unregistered English fallback and exposes a no-canvas source error'
     expect(await el.revealSourceCell(0, 0)).equal(false);
   } finally { HTMLCanvasElement.prototype.getContext = original; }
 });
+
+for (const change of ['replacement', 'rebind', 'disconnect'] as const) {
+  it(`does not apply a queued canvas failure after source ${change}`, async () => {
+    const source = provider(2, 2), next = provider(3, 3);
+    const el = await fixture<SourceHost>(html`<lr-heatmap style="width:320px" .matrixSource=${source}></lr-heatmap>`);
+    await waitUntil(() => el.exportData('csv') !== '');
+    await el.updateComplete;
+    const parent = el.parentNode!;
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    const getContext = canvas.getContext;
+    const controller = (el as unknown as { sourceController: { fail(): void } }).sourceController;
+    const fail = controller.fail;
+    let failures = 0, changed = false;
+    controller.fail = function () { failures++; fail.call(this); };
+    canvas.getContext = (() => {
+      canvas.getContext = getContext;
+      queueMicrotask(() => {
+        if (change === 'disconnect') el.remove();
+        else el.matrixSource = change === 'replacement' ? next : source;
+        changed = true;
+      });
+      return null;
+    }) as typeof getContext;
+    try {
+      el.matrixReducer = 'max';
+      await waitUntil(() => changed);
+      if (change === 'disconnect') parent.appendChild(el);
+      await waitUntil(() => el.exportData('csv') !== '');
+      await el.updateComplete;
+      expect(failures).equal(0);
+      expect(Boolean(el.shadowRoot!.querySelector('[part="source-error"]'))).equal(false);
+      expect(el.matrixSource === (change === 'replacement' ? next : source)).equal(true);
+    } finally {
+      canvas.getContext = getContext;
+      controller.fail = fail;
+    }
+  });
+}
 
 it('keeps initial errors quiet and announces a later source failure in light DOM once', async () => {
   const source = provider(2, 2), normal = source.query;

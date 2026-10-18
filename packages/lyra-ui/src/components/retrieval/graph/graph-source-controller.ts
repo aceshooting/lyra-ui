@@ -1,13 +1,11 @@
 import type { ReactiveControllerHost } from 'lit';
 import type { LyraGraphSource } from '../../../data-sources.js';
-import { GraphSceneController, type SceneBinding, type SceneDomain, type SceneState } from '../../../internal/graph-scene-controller.js';
+import { GraphSceneController, type SceneDomain } from '../../../internal/graph-scene-controller.js';
 import type { LyraGraphEdge, LyraGraphNode } from './graph-model.js';
 
 export type GraphSourceEdge = LyraGraphEdge & { readonly id: string };
 export type GraphSceneSource = LyraGraphSource<LyraGraphNode, GraphSourceEdge>;
 export type { GraphSceneIntent } from '../../../internal/graph-scene-controller.js';
-export type GraphSceneBinding = SceneBinding<LyraGraphNode, GraphSourceEdge>;
-export type GraphSceneState = SceneState<LyraGraphNode, GraphSourceEdge>;
 const graphSceneDomain: SceneDomain<LyraGraphNode, GraphSourceEdge> = {
   create: reader => ({
     node(value, entryPosition) {

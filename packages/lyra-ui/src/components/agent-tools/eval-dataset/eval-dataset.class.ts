@@ -12,7 +12,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
+import { getCollator, getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import type { LyraTableEventMap, TableColumn } from '../../data/table/table.class.js';
 import type { ChipSelectDetail } from '../../overlays/chip/chip.class.js';
@@ -428,7 +428,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   private normalizedRefresh = 0;
   private filterMemo?: { inputs: unknown[]; rows: EvalExample[] };
   private readonly searchCorpus = createHaystackMemo<EvalExample>((example, locale) =>
-    [example.input, example.expectedOutput ?? '', ...(example.tags ?? [])].join(' ').toLocaleLowerCase(locale));
+    [example.input, example.expectedOutput ?? '', ...(example.tags ?? [])].join(' ').toLocaleLowerCase(resolveIntlLocale(locale)));
 
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
     if (args[0] === undefined) this.explicitRefresh = (this.explicitRefresh ?? 0) + 1;

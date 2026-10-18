@@ -362,7 +362,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   @state() private submenuKind: 'panel' | 'items' | undefined;
   // The default slot's text, kept apart from `textContent` -- which, for a submenu parent, also
   // contains every label inside the submenu.
-  @state() private slottedLabel = '';
+  private slottedLabel = '';
 
   private submenuPanel: SubmenuPanel | null = null;
   private submenuPanelAttached = false;
@@ -382,6 +382,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   private owningMenu: MenuItemOwner | null = null;
   // A consumer-authored name always wins; these record that the computed one was ours to update.
   private readonly ownedName: OwnedAriaLabel = { owns: false, value: null };
+  private writingComputedName = false;
   private panelName: OwnedAriaLabel = { owns: false, value: null };
 
   /** Whether a nested `<lr-menu>` or direct mapped items are assigned to this item's `submenu`
@@ -466,6 +467,17 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       );
       if (submenuSlot) this.syncSubmenuSlot(submenuSlot);
     });
+  }
+
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    value: string | null
+  ): void {
+    // The computed name belongs to the host role and is already updated. It does not feed the
+    // shadow template; only author changes need the base class's reactive ARIA invalidation.
+    if (name === 'aria-label' && this.writingComputedName) return;
+    super.attributeChangedCallback(name, oldValue, value);
   }
 
   override disconnectedCallback(): void {
@@ -897,7 +909,12 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   /** Names the focusable host from its visual-only label text. This also prevents a submenu from
    *  leaking its open content into the parent item's name. */
   private applyComputedName(): void {
-    syncOwnedAriaLabel(this, this.slottedLabel, this.ownedName, this.hasAttribute('aria-labelledby'));
+    this.writingComputedName = true;
+    try {
+      syncOwnedAriaLabel(this, this.slottedLabel, this.ownedName, this.hasAttribute('aria-labelledby'));
+    } finally {
+      this.writingComputedName = false;
+    }
   }
 
   /** Names the submenu after its row without replacing an author's explicit panel name. */

@@ -228,6 +228,11 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   protected abstract get markdownVariant(): MarkdownVariantContext;
 
+  /** Effective grammar identities used to keep shared highlighted output scoped to its inputs. */
+  protected get highlightLanguageSources(): Readonly<Record<string, ShikiLanguageSource>> | undefined {
+    return this.languages;
+  }
+
   /** Performs only the variant-specific Shiki loading/tokenization step. */
   protected abstract tokenizePendingHighlight(
     pending: PendingHighlight,
@@ -686,8 +691,9 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
 
   private grammarCacheKey(key: string): string {
     const language = key.slice(0, key.indexOf(':'));
-    const authored = this.languages?.[language] ?? this.languages?.[normalizeShikiLanguage(language)];
-    return highlightGrammarKey(this.languages, `${authored ? 'authored' : this.markdownVariant.tag}:${key}`);
+    const languages = this.highlightLanguageSources;
+    const authored = languages?.[language] ?? languages?.[normalizeShikiLanguage(language)];
+    return highlightGrammarKey(languages, `${authored ? 'authored' : this.markdownVariant.tag}:${key}`);
   }
 
   private getCachedHighlight(key: string): string | undefined {

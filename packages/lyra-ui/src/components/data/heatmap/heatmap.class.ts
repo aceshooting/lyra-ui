@@ -916,9 +916,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const controller = this.sourceController, viewport = controller.viewport;
     const canvas = this.shadowRoot?.querySelector<HTMLCanvasElement>('canvas');
     if (!canvas || !viewport || controller.loading || controller.error) return;
+    const source = this.matrixSource!, epoch = controller.requests.epoch;
     const width = this.sourceWidth, ctx = this.sizeCanvas(canvas, width, width);
     const cs = this.ownerDocument.defaultView?.getComputedStyle(this);
-    if (!ctx || !cs) { this.sourceController.fail(); return; }
+    if (!ctx || !cs) {
+      this.scheduleAfterUpdate(() => {
+        if (this.sourceCurrent(source, epoch)) controller.fail();
+      }, 'heatmap-source-canvas-failure');
+      return;
+    }
     const ramp = this.colorRamp(RAMP_STEPS, cs).colors, noData = this.noDataFill(cs);
     const lo = this.cachedValueRange?.[0] ?? 0, hi = this.cachedValueRange?.[1] ?? 1;
     ctx.clearRect(0, 0, width, width);

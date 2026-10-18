@@ -1163,7 +1163,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const explicitRefresh = this.explicitRowRefresh;
     this.explicitRowRefresh = false;
     if (explicitRefresh || ['highlights', 'activeHighlightId', 'locale', 'strings', 'scrollTargetLineNumber'].some(key => changed.has(key))) {
-      this.renderRoot.querySelector<HTMLElement & { requestUpdate(): void }>('lr-virtual-list')?.requestUpdate();
+      this.renderRoot.querySelector<HTMLElement & { requestUpdate(): void }>(tag('virtual-list'))?.requestUpdate();
     }
   }
 

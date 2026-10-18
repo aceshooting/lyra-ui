@@ -27,7 +27,7 @@ function text(value: unknown, max: number): string {
   return value;
 }
 /** @internal */
-export function spatialBounds(value: unknown, guard: Guard = () => true): LyraSpatialBounds {
+function spatialBounds(value: unknown, guard: Guard = () => true): LyraSpatialBounds {
   const minX = finite(own(value, 'minX', guard)), maxX = finite(own(value, 'maxX', guard));
   const minY = finite(own(value, 'minY', guard)), maxY = finite(own(value, 'maxY', guard));
   if (minX > maxX || minY > maxY) throw new TypeError('Invalid bounds');

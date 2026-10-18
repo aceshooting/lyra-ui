@@ -26914,9 +26914,18 @@
             "default": ""
           },
           {
+            "name": "languageLoaders",
+            "attribute": null,
+            "type": "Readonly<Record<string, ShikiLanguageLoader>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "languages",
             "attribute": null,
-            "type": "Readonly<Record< string, ShikiLanguageSource >> | undefined",
+            "type": "Readonly<Record< string, ShikiLanguageInput >> | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -45914,9 +45923,18 @@
             "default": ""
           },
           {
+            "name": "languageLoaders",
+            "attribute": null,
+            "type": "Readonly<Record<string, ShikiLanguageLoader>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "languages",
             "attribute": null,
-            "type": "Readonly< Record<string, ShikiLanguageSource> > | undefined",
+            "type": "Readonly< Record<string, ShikiLanguageInput> > | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -59422,7 +59440,8 @@
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           }
         ],
         "properties": [
@@ -59480,7 +59499,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "treeSource",
@@ -65004,7 +65024,7 @@
           },
           {
             "name": "lr-selection-change",
-            "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeIds: readonly string[]; selectedEdgeIds: readonly string[] }> >",
+            "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeIds: string[]; selectedEdgeIds: string[] }> >",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -82484,6 +82504,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "languageLoaders",
+            "attribute": null,
+            "type": "Readonly<Record<string, ShikiLanguageLoader>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "languages",
@@ -130617,7 +130646,7 @@
           {
             "name": "languages",
             "attribute": null,
-            "type": "Readonly<Record<string, ShikiLanguageSource>> | undefined",
+            "type": "Readonly<Record<string, ShikiLanguageInput>> | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -131170,7 +131199,7 @@
           {
             "name": "languages",
             "attribute": null,
-            "type": "Readonly<Record<string, ShikiLanguageSource>> | undefined",
+            "type": "Readonly<Record<string, ShikiLanguageInput>> | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,

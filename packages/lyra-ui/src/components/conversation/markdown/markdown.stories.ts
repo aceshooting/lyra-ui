@@ -291,6 +291,6 @@ export const CanonicalFormattingControls: Story = {
 
 export const LazyLanguageGrammar: Story = {
   name: 'Load a grammar only when its fence is rendered',
-  render: () => html`<lr-markdown .languages=${{ json: () => import('shiki/langs/json.mjs') }}
+  render: () => html`<lr-markdown .languageLoaders=${{ json: () => import('shiki/langs/json.mjs') }}
     .content=${'```json\n{"loaded": "on demand"}\n```'}></lr-markdown>`,
 };

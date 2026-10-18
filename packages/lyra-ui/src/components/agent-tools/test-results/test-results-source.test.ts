@@ -1,3 +1,7 @@
+import { captureReentrantUpdateWarning } from '../../../../test/expected-lit-update.js';
+import '../../../translations/fr/agent-tools.js';
+import '../../../translations/fr/data.js';
+import '../../../translations/fr/shared.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './test-results.js';
@@ -237,7 +241,11 @@ it('rejects completion text made obsolete during localization', async () => {
   region.announce = (text, options) => { messages.push(text); original.call(region, text, options); };
   el.completionHook = () => { el.completionHook = undefined; el.dataSource = provider(async () => result()); el.runId = 'new'; };
   try {
-    el.runState = 'complete'; await el.updateComplete;
+    const warnings = await captureReentrantUpdateWarning('test-reentrant-results', async () => {
+      el.runState = 'complete'; await el.updateComplete;
+      await ready(el);
+    });
+    expect(warnings).to.equal(1);
     expect(messages.length).to.equal(0);
   } finally { region.announce = original; }
 });

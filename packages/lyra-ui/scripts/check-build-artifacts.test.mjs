@@ -187,6 +187,29 @@ test('declaration emit retains helpers referenced by the public component graph'
   assert.deepEqual(findBuildArtifactFindings([...declarations.keys()], (file) => declarations.get(file)), []);
 });
 
+test('GeoJSON declaration emit retains fallback tag typings without eager runtime loading', (t) => {
+  const source = fileURLToPath(new URL('../src/components/viewers/geojson-view/geojson-viewer.ts', import.meta.url));
+  const root = mkdtempSync(join(tmpdir(), 'lyra-geojson-declaration-emit-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(join(root, 'entry.ts'), readFileSync(source, 'utf8'));
+  writeFileSync(join(root, 'tsconfig.json'), JSON.stringify({
+    compilerOptions: {
+      declaration: true, stripInternal: true, noCheck: true, noResolve: true,
+      types: [], target: 'ESNext', module: 'ESNext', verbatimModuleSyntax: true,
+    },
+    files: ['entry.ts'],
+  }));
+  const require = createRequire(import.meta.url);
+  const compiler = resolve(dirname(require.resolve('typescript/package.json')), require('typescript/package.json').bin.tsc);
+  const result = spawnSync(process.execPath, [compiler, '-p', join(root, 'tsconfig.json')], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const fallbackReference = /['"]\.\.\/\.\.\/utility\/json-viewer\/json-viewer\.js['"]/;
+  assert.match(readFileSync(join(root, 'entry.d.ts'), 'utf8'), fallbackReference,
+    'the declaration must retain the fallback registration module and its transitive tag typings');
+  assert.doesNotMatch(readFileSync(join(root, 'entry.js'), 'utf8'), fallbackReference,
+    'fallback registration must remain deferred at runtime');
+});
+
 test('requires exact exported stylesheets to exist in the emitted package', () => {
   assert.deepEqual(
     findBuildArtifactFindings(['/workspace/dist/theme.css'], () => '', {

@@ -2870,16 +2870,16 @@ function isParameterWidening(before, after, baseline, current) {
   });
 }
 
-/** Signature text identifies overloads, but a compatible replacement keeps the same method.
+/** Signature text identifies overloads, but a compatible replacement keeps the same callable.
  * Match complete records one-to-one, so widening parameters cannot hide metadata or return breaks.
  */
-function alignCompatibleMethods(before, after, baseline, current) {
+function alignCompatibleCallables(before, after, baseline, current) {
   const groups = (entries, other) => {
     const result = new Map();
     for (const [id, entry] of Object.entries(entries)) {
-      const marker = id.indexOf(':method:');
-      if (other[id] || marker < 0 || entry.semantic !== 'presence' || !id.endsWith(')')) continue;
-      const start = marker + ':method:'.length;
+      const marker = /:(?:method|overload):/.exec(id);
+      if (other[id] || !marker || entry.semantic !== 'presence' || !id.endsWith(')')) continue;
+      const start = marker.index + marker[0].length;
       const opening = findTopLevelOpeningParen(id.slice(start));
       if (opening < 0) continue;
       const family = id.slice(0, start + opening);
@@ -2989,7 +2989,7 @@ function declarationContractBump(before, after, baseline, current) {
     return bump;
   };
   ({ before, after } = alignPropertyAccess(before ?? {}, after ?? {}));
-  after = alignCompatibleMethods(before, after, baseline, current);
+  after = alignCompatibleCallables(before, after, baseline, current);
   let bump = 'none';
   const ids = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
   for (const id of ids) {
@@ -3145,7 +3145,7 @@ export function diffPublicApi(baseline, current) {
   }
   const changes = [];
   const aligned = alignPropertyAccess(baseline.entries, current.entries);
-  const currentEntries = alignCompatibleMethods(aligned.before, aligned.after, baseline, current);
+  const currentEntries = alignCompatibleCallables(aligned.before, aligned.after, baseline, current);
   const ids = new Set([...Object.keys(aligned.before), ...Object.keys(currentEntries)]);
   for (const id of [...ids].sort()) {
     const beforeEntry = aligned.before[id];

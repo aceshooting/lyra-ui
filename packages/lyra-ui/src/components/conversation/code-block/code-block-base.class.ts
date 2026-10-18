@@ -188,7 +188,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     if (this.highlightLimited) {
       this.highlightToken++;
       this.highlightedHtml = null;
-    } else if (this.shikiReady || this.preSuppliedGrammar()) this.syncHighlight();
+    } else if (this.shikiReady || this.hasPreSuppliedGrammar()) this.syncHighlight();
     else this.highlightedHtml = null;
   }
 
@@ -206,6 +206,8 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
 
   protected beforeHighlightUpdate(_changed: PropertyValues): void {}
   protected abstract preSuppliedGrammar(): unknown;
+  /** Whether the active language has an explicitly supplied grammar or loader. */
+  protected hasPreSuppliedGrammar(): boolean { return Boolean(this.preSuppliedGrammar()); }
   protected abstract syncHighlight(): void;
   protected abstract showsSkeleton(): boolean;
 

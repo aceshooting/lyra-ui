@@ -144,11 +144,14 @@ uses for its own `[part="body"]`.
   optional `shiki` peer once it is available; set it to keep plain output even when `shiki` is
   installed. In progressive mode, a block can be highlighted after it settles; the mutable tail
   remains unhighlighted.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — explicit
-  grammars, supplied either resolved or as lazy loaders such as
-  `{ json: () => import('shiki/langs/json.mjs') }`. Only a matching fenced language invokes its
-  loader. Languages absent from the map, or an unset map, use the full loader's built-in fallback.
-  Replace the map identity when changing its grammars
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (attribute: false) — explicit
+  resolved grammars. Languages absent from both this map and `languageLoaders` use the full
+  loader's built-in fallback. Replace the map identity when changing its grammars.
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (attribute: false) — lazy
+  grammars such as `{ json: () => import('shiki/langs/json.mjs') }`. Only a matching fenced
+  language invokes its loader; concrete `languages` entries take priority on duplicate keys.
+  Unset preserves concrete-grammar readback and the default loader. Assign a new map object after
+  edits; changing either map invalidates pending highlights and isolates cached output.
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
@@ -1678,10 +1681,14 @@ streaming.
 - `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
   uses `looksLikeMarkdown`; `plain` and `markdown` force their named paths. Invalid values render as
   `auto` without installing a stale memoized decision.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to
   the composed `<lr-markdown>`'s own `languages`, the same fine-grained language-grammar scoping
   `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
-  untouched.
+  untouched when `languageLoaders` is unset.
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (property only) — lazy grammar
+  loaders forwarded separately from concrete `languages` to the composed Markdown element.
+  Concrete entries win on duplicate keys; only requested loaders execute. The composed element
+  reuses its combined map until either property receives a new map object.
 
 The rest of `<lr-markdown>`'s configuration surface forwards verbatim too, each defaulting to
 exactly `<lr-markdown>`'s own default so leaving it unset renders identically to before these
@@ -1846,7 +1853,7 @@ surface (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`
 only which Markdown element Markdown mode composes differs: this variant renders
 `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
 entry point instead of `streaming-text.js` never references `<lr-markdown>`'s ~200-language
-dynamic-import table at all. A fenced code block whose language isn't a key in `languages` always
+dynamic-import table at all. A fenced code block whose language is absent from both `languages` and `languageLoaders`
 renders the plain-text fallback — there is no default/full-table highlighter here to fall back to,
 mirroring `<lr-markdown-core>`'s own contract.
 
@@ -1858,9 +1865,11 @@ Direction behaves exactly as described for `<lr-streaming-text>` (**Direction** 
 `llms/components/lr-streaming-text.md`; `contentMode: StreamingTextContentMode = 'auto'` (attribute
 `content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
-Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to the composed
+Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
 `<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s (defaulting the composed
-element's own `languages` to `{}` when unset, unlike the full variant's `undefined`). The rest of
+element's own `languages` to `{}` when unset, unlike the full variant's `undefined`).
+`languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` adds lazy loaders with the same
+concrete-grammar priority and combined-map reuse as `<lr-streaming-text>`. The rest of
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
 attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
 `tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =
@@ -2102,25 +2111,28 @@ through an activatable gutter reuses the source lines and updates the previous a
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract.
-- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — a map of language
+- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (attribute: false) — a map of language
   id to a resolved shiki grammar (e.g. `{ bash: bashGrammar }` from a module-scope
-  `import bash from 'shiki/langs/bash.mjs'`) or a lazy loader, e.g.
-  `{ bash: () => import('@shikijs/langs/bash') }`. Only a requested loader runs. When `language`
+  `import bash from 'shiki/langs/bash.mjs'`). When `language`
   matches a key here, highlighting uses that grammar via a fine-grained `createHighlighterCore()`
   highlighter, bypassing the default ~200-language dynamic-import path (`loadShikiHighlighter()`)
   for that language — an additive, opt-in escape hatch for a build scoped to just the languages a
-  consumer actually needs. A `language` absent from this map (or `languages` left unset) falls back
+  consumer actually needs. A `language` absent from both this map and `languageLoaders` falls back
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
-  `import type { ShikiLanguageSource, ShikiLanguageLoader } from
-  '@aceshooting/lyra-ui/components/lr-code-block.js'`; `ShikiLanguageSource` is
-  `ShikiLanguageInput | ShikiLanguageLoader`, and a loader returns
-  `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`. `ShikiLanguageInput` remains
-  exported for resolved-grammar annotations. The type-only granular import emits no registration
-  side effect.
+  `import type { ShikiLanguageInput } from
+  '@aceshooting/lyra-ui/components/lr-code-block.js'` for resolved-grammar annotations.
+  The type-only granular import emits no registration side effect.
   The map key need not be the grammar module's own registered name or one of its declared
   aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
   `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
   second near-identical grammar) still highlights under that key, for a lazy loader entry too.
+
+- `languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>` (attribute: false) — lazy
+  grammar loaders, e.g. `{ bash: () => import('shiki/langs/bash.mjs') }`. Concrete `languages`
+  entries take priority for the requested language; otherwise only its loader executes. Leaving
+  this unset preserves the concrete-grammar and default highlighter paths. `ShikiLanguageLoader`
+  is exported from the same entry and returns
+  `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`; assign new map objects after edits.
 
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — how the
   header's copy control presents itself. `'text'` is the labelled button this component has always
@@ -4854,9 +4866,10 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/lr-code-block.js` or
   `@aceshooting/lyra-ui/components/lr-code-block-core.js`.
   `ShikiLanguageSource = ShikiLanguageInput | ShikiLanguageLoader`
-  One `languages` map entry for full or core code-block and Markdown consumers: either an
+  One `languages` map entry for core code-block and core Markdown consumers: either an
   already-resolved grammar (seeded eagerly into the `HighlighterCore` at creation) or a lazy
-  `ShikiLanguageLoader`.
+  `ShikiLanguageLoader`. Full code-block and Markdown expose concrete `languages` and separate
+  `languageLoaders` maps.
   Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also
   `.../markdown/markdown-core.js`).
   `ShikiRegexEngine {

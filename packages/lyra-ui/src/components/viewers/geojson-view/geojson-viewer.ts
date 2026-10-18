@@ -7,6 +7,7 @@ import {
   type LyraDocumentFile,
 } from '../document-viewer/registry.js';
 import '../../media/map/map.js';
+export type {} from '../../utility/json-viewer/json-viewer.js';
 import '../../overlays/skeleton/skeleton.js';
 
 defineElement('geojson-viewer', LyraGeoJsonViewer);
