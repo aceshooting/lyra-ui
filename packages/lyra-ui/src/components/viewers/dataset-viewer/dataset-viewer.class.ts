@@ -31,7 +31,7 @@ import { styles } from './dataset-viewer.styles.js';
 import { parseDelimitedRecordsYielding } from '../../../internal/delimited-data.js';
 import { LatestTask } from '../../../internal/latest-task.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { TableViewerSourceController, TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
+import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
 export type {
@@ -342,7 +342,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     header: () => true,
     columnLimit: () => this.effectiveMaxColumns,
     locale: () => this.effectiveLocale,
-    localize: key => this.localize(key),
+    localize: key => this.localize(TABLE_VIEWER_SOURCE_MESSAGE_KEYS[key]),
     repaint: () => super.requestUpdate(),
     error: error => {
       if (this.hasUpdated) this.tableController.announcements.announceAssertive(this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'));

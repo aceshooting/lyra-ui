@@ -9,7 +9,7 @@ import {
   normalizeLyraSpanKind,
   normalizeLyraSpanStatus,
   type LyraSpan,
-} from './span.js';
+} from './span-shared.js';
 
 /** A source span remains an opaque identity after its admitted data fields have been copied. */
 interface CanonicalLyraSpan {

@@ -1,7 +1,7 @@
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchyView, LyraTaskSourceSummary } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
-import { hierarchySourceStyles } from '../../../internal/hierarchy-source.styles.js';
+import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';

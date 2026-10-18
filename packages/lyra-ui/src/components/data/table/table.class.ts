@@ -57,6 +57,20 @@ export type TableLoadingAppearance = 'spinner' | 'skeleton';
  *  know how many. */
 const DEFAULT_SKELETON_ROWS = 3;
 
+const TABLE_OVERRIDE_MESSAGE_KEYS = {
+  tableLoading: 'tableLoading',
+  tableLoadingMore: 'tableLoadingMore',
+  tableLoadFailed: 'tableLoadFailed',
+  noColumns: 'noColumns',
+  noData: 'noData',
+  tableFilterLabel: 'tableFilterLabel',
+  tableFilterPlaceholder: 'tableFilterPlaceholder',
+  noMatches: 'noMatches',
+  showFewerColumns: 'showFewerColumns',
+  showAllColumns: 'showAllColumns',
+  loadMore: 'loadMore',
+} as const;
+
 /** Ceiling on every placeholder row count. `pageSize` and the public `skeletonRows` input are data
  *  values that can legitimately be very large, while one placeholder element per cell means an
  *  unbounded count would emit thousands of nodes for a transient loading state. */
@@ -1863,8 +1877,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this.announcements.adopted();
   }
 
-  private localizedOverride(key: string, override: string | undefined): string {
-    return override == null ? this.localize(key) : override;
+  private localizedOverride(key: keyof typeof TABLE_OVERRIDE_MESSAGE_KEYS, override: string | undefined): string {
+    return override == null ? this.localize(TABLE_OVERRIDE_MESSAGE_KEYS[key]) : override;
   }
 
   private loadingText(): string {

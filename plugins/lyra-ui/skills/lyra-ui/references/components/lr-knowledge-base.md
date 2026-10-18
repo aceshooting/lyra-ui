@@ -22,7 +22,7 @@ Controlled source list for a retrieval knowledge base: sync status, indexing hea
 per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-stat`, and a per-row
 `lr-dropdown` containing `lr-menu`. Never syncs or indexes anything itself.
 
-**Full-source inventory:** `dataSource: KnowledgeBaseSource | undefined = undefined`
+**Full-source inventory:** `dataSource: KnowledgeBaseSource | undefined`
 (attribute: false) takes precedence over `sources`. Only `undefined` restores the current legacy
 array; invalid defined providers, including untyped null, fail visibly. The provider stays
 caller-owned by identity, with an immutable revision and records for that revision.
@@ -178,6 +178,11 @@ retry button is activated. Preventing it keeps both the parent and table in the 
 Without a veto, the default action clears `error` and, for a current provider failure, retries its
 page. This component contains the nested table request and re-proposes its own canonical request,
 so hosts receive the parent event once.
+In source mode, `lr-sort-request` is the original cancelable table proposal with frozen
+`TableSortRequestDetail { phase: 'request', sortKey, sortDir }`; `sortDir` is `'asc' | 'desc'`.
+`lr-sort` is the accepted, noncancelable table commit with frozen
+`TableSortCommitDetail { phase: 'commit', sortKey, sortDir }`. Preventing the request suppresses
+the commit and leaves the current source sort unchanged.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while the host error or a current provider failure is shown.

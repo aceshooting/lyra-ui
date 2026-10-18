@@ -512,15 +512,15 @@ visibility or emit activation. Hidden-series, missing, invalid, disconnected, ca
 unrepresentable-pan targets resolve `false`. The existing `LyraSeriesPointRef` overload remains for
 ordered-series data and returns false for spatial input.
 
-Canvas keyboard navigation visits visible points, then density bins, using arrows/Home/End and
+**Events:** Canvas keyboard navigation visits visible points, then density bins, using arrows/Home/End and
 RTL-aware horizontal movement; Enter/Space activates the current bounded item. Point hits win over
 density underneath. Exact/representative point activation emits noncancelable immutable
-`lr-spatial-point-select`
-`{ revision, point }`, preserving original ID/sourceIndex/series/x/y/radius/label. Only admitted
+`lr-spatial-point-select` with `LyraChartSpatialPointSelectDetail`, shaped as `{ revision, point }`, preserving
+original ID/sourceIndex/series/x/y/radius/label. Only admitted
 representatives additionally emit `lr-point-activate`/`lr-datum-activate` with declared-series index
 and current plotted point offset. Exact-only overlays do not invent plotted-record events.
-Bin activation emits noncancelable immutable `lr-spatial-bin-select { revision, bounds, count }`; bins never
-synthesize point events. `selectedPointId` stays controlled and programmatic writes are silent.
+Bin activation emits noncancelable immutable `lr-spatial-bin-select` with
+`LyraSpatialBinSelectDetail { revision, bounds, count }`; bins never synthesize point events. `selectedPointId` stays controlled and programmatic writes are silent.
 
 The generated long-form table uses one data cell per distinct admitted point or bin, plus its row
 header; bins + points + exact overlays stay within M and the existing 1,000-cell bound. Point text
@@ -747,9 +747,10 @@ view retain its revision; obsolete callbacks cannot activate replacement data. T
 entry and package root; the component entry also re-exports `LyraPreparedSeriesData`,
 `LyraPreparedCategoryData` and `LyraSeriesPointRef`.
 
-Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
-`lr-datum-visibility-change` (accepted commit), carrying
-`{ index: number, visible: boolean, hiddenDatums: readonly number[] }`. Both details and their
+**Events:** Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
+`lr-datum-visibility-change` (accepted noncancelable commit), carrying
+`LyraChartDatumVisibilityChangeDetail { index: number, visible: boolean, hiddenDatums: readonly number[] }`.
+Both details and their
 complete, sorted index snapshots are frozen. `index` is the source category index, including when
 the displayed data is sampled; it applies across all rings. Programmatic assignments emit neither
 pair. `preventDefault()` leaves both controlled state and the chart unchanged.
@@ -1248,9 +1249,11 @@ bounded overview and one current refinement/overlay. Pending work exposes busy/l
 invalid replies retain the completed view and show a localized failure. Revealing does not select
 or activate a point. There is no zoom API on this component.
 
-Prepared activation additionally emits `lr-source-point-select` with
-`{ revision, seriesId, sourceIndex, point: { x, y } }`, or `lr-source-category-select` with
-`{ revision, seriesId, categoryId, value, observationCount }`. These carry original source identity;
+**Events:** Prepared activation additionally emits noncancelable `lr-source-point-select` with
+`LyraChartSourcePointSelectDetail { revision, seriesId, sourceIndex, point: { x, y } }`, or
+noncancelable `lr-source-category-select` with
+`LyraChartSourceCategorySelectDetail { revision, seriesId, categoryId, value, observationCount }`.
+These carry original source identity;
 the existing point/datum events retain plotted-index meaning. Actions on the displayed view stay
 bound to its committed revision while a replacement is pending; obsolete detached marks cannot
 act on the new model.
@@ -1576,8 +1579,7 @@ Unreadable positions are treated as invalid and do not block later queued append
 - Plot, table, CSV and `binnedBuckets()` expose the exact in-range bins. Bins are half-open except
   the final upper edge, which is inclusive. Below/above observations stay in the full summary,
   together with whole-source valid/invalid counts and observed range; they are not invented bars.
-  Existing point/datum activation keeps the bin index and frequency. No
-  `lr-source-category-select` or `lr-source-point-select` is emitted for bins.
+  Existing point/datum activation keeps the bin index and frequency.
 - Assignment or explicit keyless `requestUpdate()` recaptures mutable descriptors, including
   same-reference assignments and coalesced updates. Locale and series-label changes rebuild
   bounded labels. Replacing a same-locale catalog requires explicit `requestUpdate()`.
@@ -1602,9 +1604,10 @@ the bin width, with no fraction digits once the width reaches 10 and no forced t
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
 
-The inherited `lr-spatial-bin-select` and `lr-spatial-point-select` events are not emitted by
-this fixed-bar specialist: inherited spatial `preparedData` alone is rejected, and `distribution`
-supplies bin categories rather than a spatial route.
+**Events:** The inherited `lr-source-category-select` and `lr-source-point-select` events are not
+emitted for histogram bins. Inherited `lr-spatial-bin-select` and `lr-spatial-point-select` are
+also not emitted by this fixed-bar specialist: inherited spatial `preparedData` alone is rejected,
+and `distribution` supplies bin categories rather than a spatial route.
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 

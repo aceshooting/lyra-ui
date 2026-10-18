@@ -1,6 +1,6 @@
 import type { ReactiveControllerHost } from 'lit';
 import { SourceRequestController, sourceCount, sourceRevision, type SourceRequestLease } from '../../../internal/source-request-controller.js';
-import type { SequenceStripItem } from './sequence-strip.class.js';
+import type { SequenceStripItem } from './sequence-strip-item.js';
 import { sequenceItem, sequenceSnapshot, type LyraSequenceSource, type SequenceSourceSnapshot } from './sequence-strip-source.js';
 
 export interface SequenceExactRecord { readonly index: number; readonly item: SequenceStripItem; }

@@ -458,15 +458,15 @@ visibility or emit activation. Hidden-series, missing, invalid, disconnected, ca
 unrepresentable-pan targets resolve `false`. The existing `LyraSeriesPointRef` overload remains for
 ordered-series data and returns false for spatial input.
 
-Canvas keyboard navigation visits visible points, then density bins, using arrows/Home/End and
+**Events:** Canvas keyboard navigation visits visible points, then density bins, using arrows/Home/End and
 RTL-aware horizontal movement; Enter/Space activates the current bounded item. Point hits win over
 density underneath. Exact/representative point activation emits noncancelable immutable
-`lr-spatial-point-select`
-`{ revision, point }`, preserving original ID/sourceIndex/series/x/y/radius/label. Only admitted
+`lr-spatial-point-select` with `LyraChartSpatialPointSelectDetail`, shaped as `{ revision, point }`, preserving
+original ID/sourceIndex/series/x/y/radius/label. Only admitted
 representatives additionally emit `lr-point-activate`/`lr-datum-activate` with declared-series index
 and current plotted point offset. Exact-only overlays do not invent plotted-record events.
-Bin activation emits noncancelable immutable `lr-spatial-bin-select { revision, bounds, count }`; bins never
-synthesize point events. `selectedPointId` stays controlled and programmatic writes are silent.
+Bin activation emits noncancelable immutable `lr-spatial-bin-select` with
+`LyraSpatialBinSelectDetail { revision, bounds, count }`; bins never synthesize point events. `selectedPointId` stays controlled and programmatic writes are silent.
 
 The generated long-form table uses one data cell per distinct admitted point or bin, plus its row
 header; bins + points + exact overlays stay within M and the existing 1,000-cell bound. Point text
@@ -693,9 +693,10 @@ view retain its revision; obsolete callbacks cannot activate replacement data. T
 entry and package root; the component entry also re-exports `LyraPreparedSeriesData`,
 `LyraPreparedCategoryData` and `LyraSeriesPointRef`.
 
-Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
-`lr-datum-visibility-change` (accepted commit), carrying
-`{ index: number, visible: boolean, hiddenDatums: readonly number[] }`. Both details and their
+**Events:** Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
+`lr-datum-visibility-change` (accepted noncancelable commit), carrying
+`LyraChartDatumVisibilityChangeDetail { index: number, visible: boolean, hiddenDatums: readonly number[] }`.
+Both details and their
 complete, sorted index snapshots are frozen. `index` is the source category index, including when
 the displayed data is sampled; it applies across all rings. Programmatic assignments emit neither
 pair. `preventDefault()` leaves both controlled state and the chart unchanged.

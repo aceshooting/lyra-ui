@@ -469,6 +469,15 @@ interface CellRectangle {
   values?: readonly (readonly string[])[];
   units: number;
 }
+/** Finite message vocabulary forwarded by the table source adapters. */
+export const TABLE_VIEWER_SOURCE_MESSAGE_KEYS = {
+  documentPreviewResourceTooLarge: 'documentPreviewResourceTooLarge',
+  documentPreviewFailedToLoad: 'documentPreviewFailedToLoad',
+  noData: 'noData',
+  loadingDocument: 'loadingDocument',
+  sourceSearchUnavailable: 'sourceSearchUnavailable',
+} as const;
+
 interface TabularSourceHooks {
   source(): LyraTabularSource | LyraWorkbookSource | undefined;
   cancelAnchor(): void;
@@ -477,7 +486,7 @@ interface TabularSourceHooks {
   header(): boolean;
   columnLimit(): number;
   locale(): string;
-  localize(key: string): string;
+  localize(key: keyof typeof TABLE_VIEWER_SOURCE_MESSAGE_KEYS): string;
   repaint(): void;
   error(error: unknown): void;
   emitSearch(detail: LyraSearchChangeDetail): void;

@@ -45,7 +45,7 @@ lazily only when the map peer is unavailable. Loaded documents survive disconnec
 **Large spatial datasets:** `src` remains a bounded GeoJSON document preview; it accepts neither a
 tile manifest nor a catalog provider. For a million-record spatial source, keep records, indexing,
 global counts and identity lookup in a host-owned service and compose a separate
-[`lr-map`](../media.md#lr-map) with a tiled vector style through `mapStyle`. Query style-owned rendered
+[`lr-map`](./lr-map.md) with a tiled vector style through `mapStyle`. Query style-owned rendered
 features through that map's public `map` getter, then fetch a bounded selected-feature overlay or a
 deliberately sized GeoJSON preview document. Keep the full source total and preview scope visible
 in the host interface. The preview's feature count describes only the admitted file, and its

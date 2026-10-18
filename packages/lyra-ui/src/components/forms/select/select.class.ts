@@ -757,6 +757,7 @@ export class LyraSelect<
   /** Maximum prefix of popup rows mounted before an overflow notice. Selected and active rows
    * are retained up to an absolute 1,000-row ceiling; excess selections remain committed.
    * Zero mounts only retained rows. Invalid values use 200. */
+  // numeric-guard-exempt: capOptionRows() in internal/option-selection.ts bounds this value with finiteCount() before row selection.
   @property({ type: Number, attribute: 'max-render' }) maxRender = 200;
 
   @state() private options: LyraOption[] = [];

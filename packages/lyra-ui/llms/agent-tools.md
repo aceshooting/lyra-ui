@@ -3435,6 +3435,11 @@ model?: string; promptVersion?: string; output: string; scores?: RubricValue; re
 string; value: RubricValue }`), `lr-review-validity-change` (`detail: { runId: string; valid:
 boolean; errors: Record<string, string> }`), `lr-review-submit` (`detail: { runId: string; value:
 RubricValue }`), `lr-review-skip` (`detail: { runId: string }`).
+In source mode, `lr-sort-request` is the original cancelable table proposal with frozen
+`TableSortRequestDetail { phase: 'request', sortKey, sortDir }`; `sortDir` is `'asc' | 'desc'`.
+`lr-sort` is the accepted, noncancelable table commit with frozen
+`TableSortCommitDetail { phase: 'commit', sortKey, sortDir }`. Preventing the request suppresses
+the commit and leaves the current source sort unchanged.
 
 **CSS parts:** `base`, `empty`, `grid`, `source-status`, `selection-status`, `selection-retry`, `diff`, `diff-view`,
 `diff-labels`, `diff-label-old`, `diff-label-new`, `review`.

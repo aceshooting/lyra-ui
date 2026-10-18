@@ -66,7 +66,7 @@ import type {
 } from "@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js";
 ```
 
-**Complete workflow source:** `graphSource: FlowCanvasSource | undefined = undefined`
+**Complete workflow source:** `graphSource: FlowCanvasSource | undefined`
 (attribute: false) takes precedence over `nodes`/`edges`. Only `undefined` restores the latest
 legacy inputs; invalid defined providers fail visibly without falling back to those arrays.
 Provider identity/revision is caller-owned; the canvas admits bounded records and scenes.

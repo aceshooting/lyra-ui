@@ -36,7 +36,7 @@ that deferred too can instead import
 same registration lazily and exports `XML_VIEWER_TAG` (`'lr-xml-viewer'`) as a stable reference to
 the tag it eventually registers.
 
-**Complete provider hierarchy:** `treeSource: XmlViewerTreeSource | undefined = undefined`
+**Complete provider hierarchy:** `treeSource: XmlViewerTreeSource | undefined`
 (attribute: false) takes display precedence over `xml`/`src`. Invalid defined providers fail visibly;
 setting `undefined` restores the current inline XML or normal URL loading. The readonly `source`
 property remains the legacy text-source snapshot described below; it is not the provider input.

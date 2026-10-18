@@ -127,6 +127,7 @@ export const styles = css`
     font: inherit;
     padding: var(--lr-space-xs) var(--lr-space-s);
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part='source-retry']:hover { background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover)); }
   [part='source-retry']:active { background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }

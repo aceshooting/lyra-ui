@@ -30,7 +30,7 @@ The table uses `label` or the localized purpose-specific evaluation-runs name. A
 on `<lr-eval-result>` remains the overall host name and is not cloned onto the independently
 interactive table; use `label` to distinguish several comparison grids on one page.
 
-**Full-source comparison runs:** `dataSource: EvalResultSource | undefined = undefined`
+**Full-source comparison runs:** `dataSource: EvalResultSource | undefined`
 (attribute: false) takes precedence over `runs`; invalid defined providers fail visibly.
 Setting `undefined` restores current legacy runs. `sourcePage: number = 0` (`source-page`) is
 zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500. Readonly
@@ -139,6 +139,11 @@ model?: string; promptVersion?: string; output: string; scores?: RubricValue; re
 string; value: RubricValue }`), `lr-review-validity-change` (`detail: { runId: string; valid:
 boolean; errors: Record<string, string> }`), `lr-review-submit` (`detail: { runId: string; value:
 RubricValue }`), `lr-review-skip` (`detail: { runId: string }`).
+In source mode, `lr-sort-request` is the original cancelable table proposal with frozen
+`TableSortRequestDetail { phase: 'request', sortKey, sortDir }`; `sortDir` is `'asc' | 'desc'`.
+`lr-sort` is the accepted, noncancelable table commit with frozen
+`TableSortCommitDetail { phase: 'commit', sortKey, sortDir }`. Preventing the request suppresses
+the commit and leaves the current source sort unchanged.
 
 **CSS parts:** `base`, `empty`, `grid`, `source-status`, `selection-status`, `selection-retry`, `diff`, `diff-view`,
 `diff-labels`, `diff-label-old`, `diff-label-new`, `review`.

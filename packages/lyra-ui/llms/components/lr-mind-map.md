@@ -22,7 +22,7 @@ no force simulation, no communities, no edge labels (that's `lr-graph`). Zero-de
 radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module, mirroring
 `lr-word-cloud`'s dependency-free precedent.
 
-**Complete source topics:** `treeSource: MindMapSource | undefined = undefined`
+**Complete source topics:** `treeSource: MindMapSource | undefined`
 (attribute: false) takes precedence over `topics`. Invalid defined sources fail visibly without
 legacy fallback; only `undefined` restores the current legacy topics and their expansion state.
 

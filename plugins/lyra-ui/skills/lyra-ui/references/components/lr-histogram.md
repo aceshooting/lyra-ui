@@ -80,8 +80,7 @@ Unreadable positions are treated as invalid and do not block later queued append
 - Plot, table, CSV and `binnedBuckets()` expose the exact in-range bins. Bins are half-open except
   the final upper edge, which is inclusive. Below/above observations stay in the full summary,
   together with whole-source valid/invalid counts and observed range; they are not invented bars.
-  Existing point/datum activation keeps the bin index and frequency. No
-  `lr-source-category-select` or `lr-source-point-select` is emitted for bins.
+  Existing point/datum activation keeps the bin index and frequency.
 - Assignment or explicit keyless `requestUpdate()` recaptures mutable descriptors, including
   same-reference assignments and coalesced updates. Locale and series-label changes rebuild
   bounded labels. Replacing a same-locale catalog requires explicit `requestUpdate()`.
@@ -106,9 +105,10 @@ the bin width, with no fraction digits once the width reaches 10 and no forced t
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
 
-The inherited `lr-spatial-bin-select` and `lr-spatial-point-select` events are not emitted by
-this fixed-bar specialist: inherited spatial `preparedData` alone is rejected, and `distribution`
-supplies bin categories rather than a spatial route.
+**Events:** The inherited `lr-source-category-select` and `lr-source-point-select` events are not
+emitted for histogram bins. Inherited `lr-spatial-bin-select` and `lr-spatial-point-select` are
+also not emitted by this fixed-bar specialist: inherited spatial `preparedData` alone is rejected,
+and `distribution` supplies bin categories rather than a spatial route.
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 

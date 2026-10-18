@@ -34,7 +34,7 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
   are omitted and updates require a new collection assignment. `src` is passed to the embedded
   frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
-- `imageSource: LyraLightboxSource | undefined = undefined` (attribute: false) — identity-owned
+- `imageSource: LyraLightboxSource | undefined` (attribute: false) — identity-owned
   access to the complete ordered collection, taking precedence over `images` while defined.
   Invalid defined sources show a localized error and retry action; they never fall back to the
   legacy array. Setting `undefined` restores the current `images` input. Reassign the source,

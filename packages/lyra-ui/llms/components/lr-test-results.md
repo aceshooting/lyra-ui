@@ -22,7 +22,7 @@ alongside the plain failure message.
 
 Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
 
-**Full-source paging:** `dataSource: TestResultsSource | undefined = undefined` (attribute:
+**Full-source paging:** `dataSource: TestResultsSource | undefined` (attribute:
 false) takes display precedence over `suites`; invalid defined providers fail visibly.
 Setting `undefined` restores the current legacy suites. `sourcePage: number = 0` (`source-page`)
 is zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500.

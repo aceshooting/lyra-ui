@@ -2025,6 +2025,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * Summaries and CSV exports retain the complete admitted input (at most 10,000 entries per array).
    * @default 1000
    */
+  // numeric-guard-exempt: normalizeChartRecordLimit() in chart-table-sampling.ts normalizes render budgets through finiteCount().
   @property({ type: Number, attribute: 'max-records' }) maxRecords = 1_000;
   @state() private samplingWidth = 0;
   private labelsSnapshot?: { source: unknown; value: readonly string[] };

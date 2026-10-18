@@ -10,6 +10,7 @@ export const hierarchySourceStyles = css`
     padding-inline-start: calc(var(--source-depth) * var(--lr-space-m));
     padding-inline-end: var(--lr-space-xs); cursor: pointer;
     color: var(--lr-color-text); --_source-row-fill: var(--lr-color-surface); background: var(--_source-row-fill);
+    transition: var(--lr-transition-interactive);
   }
   [part~='source-row']:where(:hover) { background: color-mix(in srgb, var(--_source-row-fill), var(--lr-color-text) 8%); }
   [part~='source-row']:where(:active) { background: color-mix(in srgb, var(--_source-row-fill), var(--lr-color-text) 12%); }
@@ -22,6 +23,7 @@ export const hierarchySourceStyles = css`
   [part~='source-toggle'] {
     font: inherit; color: inherit; background: transparent; border: 0; cursor: pointer;
     min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); flex-shrink: 0;
+    transition: var(--lr-transition-interactive);
   }
   [part~='source-toggle']:where(:hover) { background: var(--lr-color-neutral-fill-quiet); }
   [part~='source-toggle']:where(:active) { background: color-mix(in srgb, var(--lr-color-neutral-fill-quiet), var(--lr-color-text) 12%); }

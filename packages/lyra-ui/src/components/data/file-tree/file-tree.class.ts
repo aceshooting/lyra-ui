@@ -1,7 +1,7 @@
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
-import { hierarchySourceStyles } from '../../../internal/hierarchy-source.styles.js';
+import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { type PropertyValues, html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';

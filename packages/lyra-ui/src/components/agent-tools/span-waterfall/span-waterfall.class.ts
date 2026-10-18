@@ -16,7 +16,7 @@ import type { TraceTreeSource } from '../trace-tree/trace-tree.class.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchyView, LyraTraceSourceSummary } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
-import { hierarchySourceStyles } from '../../../internal/hierarchy-source.styles.js';
+import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_spanWaterfallLimit } from '../../../internal/default-strings/agent-tools.generated.js';

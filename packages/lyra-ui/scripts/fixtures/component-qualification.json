@@ -21474,6 +21474,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/agent-tools/eval-result/eval-result-register.test.ts",
+          "src/components/agent-tools/eval-result/eval-result-source-projection.test.ts",
           "src/components/agent-tools/eval-result/eval-result-source-scale.test.ts",
           "src/components/agent-tools/eval-result/eval-result-source.test.ts",
           "src/components/agent-tools/eval-result/eval-result.test.ts"
@@ -26283,6 +26284,7 @@
           "src/components/data/heatmap/heatmap-matrix-presentation.test.ts",
           "src/components/data/heatmap/heatmap-matrix-source-authority.test.ts",
           "src/components/data/heatmap/heatmap-matrix-source-navigation-scale.test.ts",
+          "src/components/data/heatmap/heatmap-matrix-source-public-contracts.test.ts",
           "src/components/data/heatmap/heatmap-matrix-source-scale.test.ts",
           "src/components/data/heatmap/heatmap-matrix-source-validation.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas-dev-gate.test.ts",
@@ -46991,6 +46993,7 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
+          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -47086,10 +47089,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -47160,7 +47163,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 582,
+              "line": 563,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47184,7 +47187,7 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
-        "No component-owned motion declaration or programmatic animation was detected.",
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",

@@ -70,8 +70,13 @@ export const styles = css`
   [part='selection-retry'] {
     min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size);
     border: 0; background: transparent; color: var(--lr-color-brand); font: inherit; cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part='selection-retry']:hover { text-decoration: underline; }
+  [part='selection-retry']:active {
+    color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    text-decoration: underline;
+  }
   [part='selection-retry']:focus-visible { ${focusRing} }
   [part='limit'] {
     margin: 0;

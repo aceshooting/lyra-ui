@@ -41,8 +41,10 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part='source-clear']:hover { background: var(--lr-color-brand-quiet); }
+  [part='source-clear']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='source-clear']:focus-visible { ${focusRing} }
   [part='source-status'] { overflow-wrap: anywhere; margin-block: var(--lr-space-xs); }
   [part='search-results'] {

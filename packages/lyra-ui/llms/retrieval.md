@@ -2304,6 +2304,11 @@ retry button is activated. Preventing it keeps both the parent and table in the 
 Without a veto, the default action clears `error` and, for a current provider failure, retries its
 page. This component contains the nested table request and re-proposes its own canonical request,
 so hosts receive the parent event once.
+In source mode, `lr-sort-request` is the original cancelable table proposal with frozen
+`TableSortRequestDetail { phase: 'request', sortKey, sortDir }`; `sortDir` is `'asc' | 'desc'`.
+`lr-sort` is the accepted, noncancelable table commit with frozen
+`TableSortCommitDetail { phase: 'commit', sortKey, sortDir }`. Preventing the request suppresses
+the commit and leaves the current source sort unchanged.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while the host error or a current provider failure is shown.
@@ -3289,7 +3294,7 @@ unrepresentable-pan requests resolve `false`. Selected and revealed records have
 a selected record may remain retained outside the visible viewport. Accessible point ordinals use
 original `sourceIndex + 1`, not representative order.
 
-`lr-point-select` retains `{ point }` for exact original immutable point data, including ID and
+**Events:** `lr-point-select` retains `{ point }` for exact original immutable point data, including ID and
 sourceIndex. Activating a density bin emits noncancelable `lr-spatial-bin-select` with frozen
 `LyraSpatialBinSelectDetail { revision, bounds, count }`, never an exact-point event. Source mode
 adds `bin` and `error` parts; `limit` reports the complete global count/domain and current viewport

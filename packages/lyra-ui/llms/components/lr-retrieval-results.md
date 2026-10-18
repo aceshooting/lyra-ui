@@ -34,7 +34,7 @@ A localized `[part="limit"]` note reports retained and assigned-source counts ab
 ceiling, using the effective locale. Initial truncation is silent; a later transition into input
 truncation is announced politely. Virtualization continues to window the admitted result set.
 
-**Full-source paging:** `dataSource: RetrievalResultsSource | undefined = undefined`
+**Full-source paging:** `dataSource: RetrievalResultsSource | undefined`
 (attribute: false) supplies the complete logical collection while retaining only bounded pages.
 A defined source takes display precedence over `chunks`; an invalid defined source fails visibly.
 Setting `undefined` restores the current legacy chunks. `sourcePage: number = 0` (`source-page`)

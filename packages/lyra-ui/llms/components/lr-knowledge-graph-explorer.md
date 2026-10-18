@@ -41,7 +41,7 @@ popovers use `getNodeScreenPosition()` so their viewport anchor follows the proj
 orbit, pan, dolly or focus. Spatial node activation includes optional world `z`; it never substitutes
 screen pixels for the existing event's coordinate domain.
 
-**Complete graph provider:** `graphSource: KnowledgeGraphExplorerSource | undefined = undefined`
+**Complete graph provider:** `graphSource: KnowledgeGraphExplorerSource | undefined`
 (attribute: false) takes precedence over legacy `nodes`/`edges`; invalid defined providers fail
 visibly. Setting `undefined` restores the current legacy model and local search/details behavior.
 `KnowledgeGraphExplorerSource` is exactly the public `GraphSource` alias, forwarded unchanged to

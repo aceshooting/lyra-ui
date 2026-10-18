@@ -20,7 +20,7 @@ A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d
 orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
 list of all admitted graph items. The 3D and list views require no optional peer.
 
-**Complete graph provider:** `graphSource: GraphSource | undefined = undefined` (attribute: false)
+**Complete graph provider:** `graphSource: GraphSource | undefined` (attribute: false)
 takes precedence over `nodes` and `edges`; an invalid defined source fails visibly. Setting
 `undefined` restores the current legacy arrays. `GraphSource` is
 `LyraGraphSource<LyraGraphNode, LyraGraphEdge & { readonly id: string }>`; see the

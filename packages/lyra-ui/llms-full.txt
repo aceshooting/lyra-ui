@@ -17188,7 +17188,7 @@ Home/End reach row endpoints, Ctrl+Home/Ctrl+End source endpoints, and PageUp/Pa
 ARIA counts and absolute one-based row/column indices; the overview canvas is hidden from assistive
 technology. Without it, the named canvas owns the exact cursor.
 
-Exact Enter/Space and singleton-tile pointer activation resolve `getCell` and emit the existing
+**Events:** Exact Enter/Space and singleton-tile pointer activation resolve `getCell` and emit the existing
 `lr-cell-activate` `{ row, col, value }` with absolute coordinates; missing `null` maps to `NaN`.
 `cellText`, `cellInteractive` and `cellColor` receive exact values and absolute coordinates, never
 aggregate means. Multi-cell tile pointer activation or Shift+Enter emits noncancelable
@@ -17211,7 +17211,7 @@ rendered. The following dense matrix/calendar limits and geometry descriptions a
 
 **Exported matrix-source declarations:**
 
-Inherited viewport/tile fields are repeated to show the complete effective contracts. `HeatmapSourceCell` is the exact `{ value: number | null; rowLabel: string; columnLabel: string }` reply described above.
+Inherited viewport/tile fields are repeated to show the complete effective contracts. `HeatmapSourceCell { readonly value: number | null; readonly rowLabel: string; readonly columnLabel: string }` is the exact-cell reply described above.
 
 `LyraHeatmapMatrixViewport {
   readonly rowStart: number;
@@ -18094,7 +18094,7 @@ with `badges: [{ text: String(value) }]`. The former item-controller fields (`ac
 `depth`, `setSize`, `posInSet`) and context setters were never consumer state; they are now private
 owner context maintained by `<lr-tree>`.
 
-**Provider hierarchy:** `treeSource: TreeSource | undefined = undefined` (attribute: false) is an
+**Provider hierarchy:** `treeSource: TreeSource | undefined` (attribute: false) is an
 identity-owned full-source route. `TreeSource` is
 `LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery>` from
 `@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `data` and authored
@@ -18560,7 +18560,7 @@ import type {
 } from "@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js";
 ```
 
-**Complete workflow source:** `graphSource: FlowCanvasSource | undefined = undefined`
+**Complete workflow source:** `graphSource: FlowCanvasSource | undefined`
 (attribute: false) takes precedence over `nodes`/`edges`. Only `undefined` restores the latest
 legacy inputs; invalid defined providers fail visibly without falling back to those arrays.
 Provider identity/revision is caller-owned; the canvas admits bounded records and scenes.
@@ -19651,7 +19651,7 @@ former `--lr-timeline-item-*` plumbing names.
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
-**Provider hierarchy:** `treeSource: FileTreeSource | undefined = undefined` (attribute: false)
+**Provider hierarchy:** `treeSource: FileTreeSource | undefined` (attribute: false)
 uses `LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>` from
 `@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `nodes`, preserving
 its identity; invalid defined input shows a localized source error. Setting `undefined` restores
@@ -30974,7 +30974,7 @@ Removing `query` clears matches while retaining null property readback. Before a
 `searchPrevious()` selects the final match; later next/previous navigation wraps. Navigation may
 reopen the selected match’s ancestors while unrelated manual collapse remains intact.
 
-**Complete provider hierarchy:** `treeSource: JsonViewerTreeSource | undefined = undefined`
+**Complete provider hierarchy:** `treeSource: JsonViewerTreeSource | undefined`
 (attribute: false) supplies a complete logical hierarchy without flattening it or copying it into
 `data`. A defined provider takes display precedence; invalid defined input shows a localized source
 error. Setting `undefined` restores the current `data`. `maxNodes` and `expandDepth` govern only
@@ -31071,7 +31071,7 @@ mark it as the active `aria-current` result, announce its position, and scroll i
 they resolve `false` when there are no matches. `clearSearch()` resets `query` to `''`, clearing all
 matches and the cursor.
 
-**Events with `treeSource` unset:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
+**Events:** With `treeSource` unset, `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
 the top-level copy button or a per-node one only after the owning browsing context's clipboard write
 fulfills. `lr-error` (no detail) and `lr-copy-error` (`detail: LyraClipboardWriteFailure`) fire when
 serialization or clipboard writing fails; the detailed frozen outcome carries `ok: false`, the
@@ -35674,7 +35674,7 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
   are omitted and updates require a new collection assignment. `src` is passed to the embedded
   frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
-- `imageSource: LyraLightboxSource | undefined = undefined` (attribute: false) — identity-owned
+- `imageSource: LyraLightboxSource | undefined` (attribute: false) — identity-owned
   access to the complete ordered collection, taking precedence over `images` while defined.
   Invalid defined sources show a localized error and retry action; they never fall back to the
   legacy array. Setting `undefined` restores the current `images` input. Reassign the source,
@@ -37651,15 +37651,15 @@ visibility or emit activation. Hidden-series, missing, invalid, disconnected, ca
 unrepresentable-pan targets resolve `false`. The existing `LyraSeriesPointRef` overload remains for
 ordered-series data and returns false for spatial input.
 
-Canvas keyboard navigation visits visible points, then density bins, using arrows/Home/End and
+**Events:** Canvas keyboard navigation visits visible points, then density bins, using arrows/Home/End and
 RTL-aware horizontal movement; Enter/Space activates the current bounded item. Point hits win over
 density underneath. Exact/representative point activation emits noncancelable immutable
-`lr-spatial-point-select`
-`{ revision, point }`, preserving original ID/sourceIndex/series/x/y/radius/label. Only admitted
+`lr-spatial-point-select` with `LyraChartSpatialPointSelectDetail`, shaped as `{ revision, point }`, preserving
+original ID/sourceIndex/series/x/y/radius/label. Only admitted
 representatives additionally emit `lr-point-activate`/`lr-datum-activate` with declared-series index
 and current plotted point offset. Exact-only overlays do not invent plotted-record events.
-Bin activation emits noncancelable immutable `lr-spatial-bin-select { revision, bounds, count }`; bins never
-synthesize point events. `selectedPointId` stays controlled and programmatic writes are silent.
+Bin activation emits noncancelable immutable `lr-spatial-bin-select` with
+`LyraSpatialBinSelectDetail { revision, bounds, count }`; bins never synthesize point events. `selectedPointId` stays controlled and programmatic writes are silent.
 
 The generated long-form table uses one data cell per distinct admitted point or bin, plus its row
 header; bins + points + exact overlays stay within M and the existing 1,000-cell bound. Point text
@@ -37886,9 +37886,10 @@ view retain its revision; obsolete callbacks cannot activate replacement data. T
 entry and package root; the component entry also re-exports `LyraPreparedSeriesData`,
 `LyraPreparedCategoryData` and `LyraSeriesPointRef`.
 
-Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
-`lr-datum-visibility-change` (accepted commit), carrying
-`{ index: number, visible: boolean, hiddenDatums: readonly number[] }`. Both details and their
+**Events:** Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
+`lr-datum-visibility-change` (accepted noncancelable commit), carrying
+`LyraChartDatumVisibilityChangeDetail { index: number, visible: boolean, hiddenDatums: readonly number[] }`.
+Both details and their
 complete, sorted index snapshots are frozen. `index` is the source category index, including when
 the displayed data is sampled; it applies across all rings. Programmatic assignments emit neither
 pair. `preventDefault()` leaves both controlled state and the chart unchanged.
@@ -38386,9 +38387,11 @@ bounded overview and one current refinement/overlay. Pending work exposes busy/l
 invalid replies retain the completed view and show a localized failure. Revealing does not select
 or activate a point. There is no zoom API on this component.
 
-Prepared activation additionally emits `lr-source-point-select` with
-`{ revision, seriesId, sourceIndex, point: { x, y } }`, or `lr-source-category-select` with
-`{ revision, seriesId, categoryId, value, observationCount }`. These carry original source identity;
+**Events:** Prepared activation additionally emits noncancelable `lr-source-point-select` with
+`LyraChartSourcePointSelectDetail { revision, seriesId, sourceIndex, point: { x, y } }`, or
+noncancelable `lr-source-category-select` with
+`LyraChartSourceCategorySelectDetail { revision, seriesId, categoryId, value, observationCount }`.
+These carry original source identity;
 the existing point/datum events retain plotted-index meaning. Actions on the displayed view stay
 bound to its committed revision while a replacement is pending; obsolete detached marks cannot
 act on the new model.
@@ -38713,8 +38716,7 @@ Unreadable positions are treated as invalid and do not block later queued append
 - Plot, table, CSV and `binnedBuckets()` expose the exact in-range bins. Bins are half-open except
   the final upper edge, which is inclusive. Below/above observations stay in the full summary,
   together with whole-source valid/invalid counts and observed range; they are not invented bars.
-  Existing point/datum activation keeps the bin index and frequency. No
-  `lr-source-category-select` or `lr-source-point-select` is emitted for bins.
+  Existing point/datum activation keeps the bin index and frequency.
 - Assignment or explicit keyless `requestUpdate()` recaptures mutable descriptors, including
   same-reference assignments and coalesced updates. Locale and series-label changes rebuild
   bounded labels. Replacing a same-locale catalog requires explicit `requestUpdate()`.
@@ -38739,9 +38741,10 @@ the bin width, with no fraction digits once the width reaches 10 and no forced t
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
 
-The inherited `lr-spatial-bin-select` and `lr-spatial-point-select` events are not emitted by
-this fixed-bar specialist: inherited spatial `preparedData` alone is rejected, and `distribution`
-supplies bin categories rather than a spatial route.
+**Events:** The inherited `lr-source-category-select` and `lr-source-point-select` events are not
+emitted for histogram bins. Inherited `lr-spatial-bin-select` and `lr-spatial-point-select` are
+also not emitted by this fixed-bar specialist: inherited spatial `preparedData` alone is rejected,
+and `distribution` supplies bin categories rather than a spatial route.
 
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
@@ -41719,7 +41722,7 @@ that deferred too can instead import
 same registration lazily and exports `XML_VIEWER_TAG` (`'lr-xml-viewer'`) as a stable reference to
 the tag it eventually registers.
 
-**Complete provider hierarchy:** `treeSource: XmlViewerTreeSource | undefined = undefined`
+**Complete provider hierarchy:** `treeSource: XmlViewerTreeSource | undefined`
 (attribute: false) takes display precedence over `xml`/`src`. Invalid defined providers fail visibly;
 setting `undefined` restores the current inline XML or normal URL loading. The readonly `source`
 property remains the legacy text-source snapshot described below; it is not the provider input.
@@ -42040,7 +42043,7 @@ lazily only when the map peer is unavailable. Loaded documents survive disconnec
 **Large spatial datasets:** `src` remains a bounded GeoJSON document preview; it accepts neither a
 tile manifest nor a catalog provider. For a million-record spatial source, keep records, indexing,
 global counts and identity lookup in a host-owned service and compose a separate
-[`lr-map`](./llms/media.md#lr-map) with a tiled vector style through `mapStyle`. Query style-owned rendered
+[`lr-map`](./llms/components/lr-map.md) with a tiled vector style through `mapStyle`. Query style-owned rendered
 features through that map's public `map` getter, then fetch a bounded selected-feature overlay or a
 deliberately sized GeoJSON preview document. Keep the full source total and preview scope visible
 in the host interface. The preview's feature count describes only the admitted file, and its
@@ -45820,7 +45823,7 @@ focus. Home/End always resolve the first/last thread from that complete model, e
 starts in a middle window; group records, collapsed-group contents, and unavailable endpoint rows
 are skipped rather than becoming false boundaries.
 
-**Full-source paging:** `dataSource: ThreadListSource | undefined = undefined` (attribute:
+**Full-source paging:** `dataSource: ThreadListSource | undefined` (attribute:
 false) takes display precedence over `threads` and the default slot. An invalid defined provider
 fails visibly; setting `undefined` restores the current legacy data/slotted precedence.
 `sourcePage: number = 0` (`source-page`) is zero-based, and `sourcePageSize: number = 100`
@@ -49440,7 +49443,7 @@ event-history style).
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
 
-**Complete provider timeline:** `treeSource: TraceTreeSource | undefined = undefined`
+**Complete provider timeline:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes precedence over `spans`; invalid defined providers show a localized failure.
 Setting `undefined` restores current legacy spans. The exact alias is shared with `lr-trace-tree`:
 `LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`.
@@ -49588,7 +49591,7 @@ several steps may be `running` at once. By default it is a status report; with `
 `reorderable` adds controlled keyboard reorder requests without changing ownership of `items`.
 Legacy status changes and confirmed moves are announced through an internal `<lr-live-region>`.
 
-**Complete source tasks:** `treeSource: TaskListSource | undefined = undefined`
+**Complete source tasks:** `treeSource: TaskListSource | undefined`
 (attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
 falling back to the array. Only `undefined` restores current legacy items.
 
@@ -49929,7 +49932,7 @@ columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
 
-**Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined = undefined`
+**Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes display precedence over `spans`, including when a defined provider is
 invalid. Invalid input shows a localized source failure; setting `undefined` restores current
 legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts.
@@ -50272,7 +50275,7 @@ alongside the plain failure message.
 
 Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
 
-**Full-source paging:** `dataSource: TestResultsSource | undefined = undefined` (attribute:
+**Full-source paging:** `dataSource: TestResultsSource | undefined` (attribute:
 false) takes display precedence over `suites`; invalid defined providers fail visibly.
 Setting `undefined` restores the current legacy suites. `sourcePage: number = 0` (`source-page`)
 is zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500.
@@ -50897,7 +50900,7 @@ hierarchical trace tree from one shared `spans` array.
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
 
-**Complete provider trace:** `treeSource: TraceTreeSource | undefined = undefined` (attribute:
+**Complete provider trace:** `treeSource: TraceTreeSource | undefined` (attribute:
 false) forwards the exact trace-tree provider contract above to the existing single child. It takes
 precedence over `spans`; invalid defined input fails visibly without restoring legacy content.
 Setting `undefined` restores current legacy spans, kind inventory and handoff quick-jumps.
@@ -51045,7 +51048,7 @@ number of retained examples. Pagination within those examples remains available 
 
 **Properties:**
 
-- `dataSource: EvalDatasetSource | undefined = undefined` (property only) — a host-owned full
+- `dataSource: EvalDatasetSource | undefined` (property only) — a host-owned full
   logical source; takes display precedence over `examples`. Invalid defined sources fail visibly;
   unsetting restores the current legacy examples without overwriting their getter.
 - `sourcePage: number = 0` (`source-page`) — zero-based source page.
@@ -51165,7 +51168,7 @@ The table uses `label` or the localized purpose-specific evaluation-runs name. A
 on `<lr-eval-result>` remains the overall host name and is not cloned onto the independently
 interactive table; use `label` to distinguish several comparison grids on one page.
 
-**Full-source comparison runs:** `dataSource: EvalResultSource | undefined = undefined`
+**Full-source comparison runs:** `dataSource: EvalResultSource | undefined`
 (attribute: false) takes precedence over `runs`; invalid defined providers fail visibly.
 Setting `undefined` restores current legacy runs. `sourcePage: number = 0` (`source-page`) is
 zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500. Readonly
@@ -51274,6 +51277,11 @@ model?: string; promptVersion?: string; output: string; scores?: RubricValue; re
 string; value: RubricValue }`), `lr-review-validity-change` (`detail: { runId: string; valid:
 boolean; errors: Record<string, string> }`), `lr-review-submit` (`detail: { runId: string; value:
 RubricValue }`), `lr-review-skip` (`detail: { runId: string }`).
+In source mode, `lr-sort-request` is the original cancelable table proposal with frozen
+`TableSortRequestDetail { phase: 'request', sortKey, sortDir }`; `sortDir` is `'asc' | 'desc'`.
+`lr-sort` is the accepted, noncancelable table commit with frozen
+`TableSortCommitDetail { phase: 'commit', sortKey, sortDir }`. Preventing the request suppresses
+the commit and leaves the current source sort unchanged.
 
 **CSS parts:** `base`, `empty`, `grid`, `source-status`, `selection-status`, `selection-retry`, `diff`, `diff-view`,
 `diff-labels`, `diff-label-old`, `diff-label-new`, `review`.
@@ -52964,7 +52972,7 @@ A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d
 orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
 list of all admitted graph items. The 3D and list views require no optional peer.
 
-**Complete graph provider:** `graphSource: GraphSource | undefined = undefined` (attribute: false)
+**Complete graph provider:** `graphSource: GraphSource | undefined` (attribute: false)
 takes precedence over `nodes` and `edges`; an invalid defined source fails visibly. Setting
 `undefined` restores the current legacy arrays. `GraphSource` is
 `LyraGraphSource<LyraGraphNode, LyraGraphEdge & { readonly id: string }>`; see the
@@ -53736,7 +53744,7 @@ graph data) and never mutates a graph.
 With `graphSource` unset, the `limit` part reports retained/source relationship-row counts when input admission omits
 rows. Virtualization covers the retained rows; it does not recover omitted source rows.
 
-**Full-source neighborhood:** `graphSource: NeighborListSource | undefined = undefined`
+**Full-source neighborhood:** `graphSource: NeighborListSource | undefined`
 (attribute: false) takes precedence over `rows`; invalid defined providers fail visibly.
 Setting `undefined` restores the latest legacy rows. `NeighborListSource` aliases the public
 `GraphSource` contract. This adapter queries its `records` only; it never requests a graph scene,
@@ -54320,7 +54328,7 @@ no force simulation, no communities, no edge labels (that's `lr-graph`). Zero-de
 radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module, mirroring
 `lr-word-cloud`'s dependency-free precedent.
 
-**Complete source topics:** `treeSource: MindMapSource | undefined = undefined`
+**Complete source topics:** `treeSource: MindMapSource | undefined`
 (attribute: false) takes precedence over `topics`. Invalid defined sources fail visibly without
 legacy fallback; only `undefined` restores the current legacy topics and their expansion state.
 
@@ -54995,7 +55003,7 @@ first-wins before empty state, counts, virtualization, failure announcements, re
 
 **Provider pages:**
 
-- `dataSource: IngestionQueueSource | undefined = undefined` (attribute: false) —
+- `dataSource: IngestionQueueSource | undefined` (attribute: false) —
   `IngestionQueueSource = LyraPageSource<IngestionQueueItem, IngestionQueueSourceQuery>`, exported
   by `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
   `LyraPageSource` is exported by `@aceshooting/lyra-ui/data-sources.js`. The query is one frozen
@@ -55085,7 +55093,7 @@ Controlled source list for a retrieval knowledge base: sync status, indexing hea
 per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-stat`, and a per-row
 `lr-dropdown` containing `lr-menu`. Never syncs or indexes anything itself.
 
-**Full-source inventory:** `dataSource: KnowledgeBaseSource | undefined = undefined`
+**Full-source inventory:** `dataSource: KnowledgeBaseSource | undefined`
 (attribute: false) takes precedence over `sources`. Only `undefined` restores the current legacy
 array; invalid defined providers, including untyped null, fail visibly. The provider stays
 caller-owned by identity, with an immutable revision and records for that revision.
@@ -55241,6 +55249,11 @@ retry button is activated. Preventing it keeps both the parent and table in the 
 Without a veto, the default action clears `error` and, for a current provider failure, retries its
 page. This component contains the nested table request and re-proposes its own canonical request,
 so hosts receive the parent event once.
+In source mode, `lr-sort-request` is the original cancelable table proposal with frozen
+`TableSortRequestDetail { phase: 'request', sortKey, sortDir }`; `sortDir` is `'asc' | 'desc'`.
+`lr-sort` is the accepted, noncancelable table commit with frozen
+`TableSortCommitDetail { phase: 'commit', sortKey, sortDir }`. Preventing the request suppresses
+the commit and leaves the current source sort unchanged.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
 button, while the host error or a current provider failure is shown.
@@ -55311,7 +55324,7 @@ popovers use `getNodeScreenPosition()` so their viewport anchor follows the proj
 orbit, pan, dolly or focus. Spatial node activation includes optional world `z`; it never substitutes
 screen pixels for the existing event's coordinate domain.
 
-**Complete graph provider:** `graphSource: KnowledgeGraphExplorerSource | undefined = undefined`
+**Complete graph provider:** `graphSource: KnowledgeGraphExplorerSource | undefined`
 (attribute: false) takes precedence over legacy `nodes`/`edges`; invalid defined providers fail
 visibly. Setting `undefined` restores the current legacy model and local search/details behavior.
 `KnowledgeGraphExplorerSource` is exactly the public `GraphSource` alias, forwarded unchanged to
@@ -55685,7 +55698,7 @@ A localized `[part="limit"]` note reports retained and assigned-source counts ab
 ceiling, using the effective locale. Initial truncation is silent; a later transition into input
 truncation is announced politely. Virtualization continues to window the admitted result set.
 
-**Full-source paging:** `dataSource: RetrievalResultsSource | undefined = undefined`
+**Full-source paging:** `dataSource: RetrievalResultsSource | undefined`
 (attribute: false) supplies the complete logical collection while retaining only bounded pages.
 A defined source takes display precedence over `chunks`; an invalid defined source fails visibly.
 Setting `undefined` restores the current legacy chunks. `sourcePage: number = 0` (`source-page`)
@@ -56226,7 +56239,7 @@ unrepresentable-pan requests resolve `false`. Selected and revealed records have
 a selected record may remain retained outside the visible viewport. Accessible point ordinals use
 original `sourceIndex + 1`, not representative order.
 
-`lr-point-select` retains `{ point }` for exact original immutable point data, including ID and
+**Events:** `lr-point-select` retains `{ point }` for exact original immutable point data, including ID and
 sourceIndex. Activating a density bin emits noncancelable `lr-spatial-bin-select` with frozen
 `LyraSpatialBinSelectDetail { revision, bounds, count }`, never an exact-point event. Source mode
 adds `bin` and `error` parts; `limit` reports the complete global count/domain and current viewport
@@ -56300,8 +56313,8 @@ admission truncates the source or ingestion array, an `input-limit` note for the
 the original assigned count; it does not infer that count from the already-truncated child input. Initial and reconnect notes
 are quiet, and later changed omissions are politely announced.
 
-**Provider forwarding:** `dataSource: KnowledgeBaseSource | undefined = undefined` and
-`ingestionSource: IngestionQueueSource | undefined = undefined` are property-only inputs
+**Provider forwarding:** `dataSource: KnowledgeBaseSource | undefined` and
+`ingestionSource: IngestionQueueSource | undefined` are property-only inputs
 (attribute: false). `dataSource` supplies the Sources tab's `lr-knowledge-base.dataSource`;
 `ingestionSource` supplies the Ingestion tab's `lr-ingestion-queue.dataSource`. Each takes
 precedence over its matching legacy `sources`/`ingestionItems` array. Set that provider to

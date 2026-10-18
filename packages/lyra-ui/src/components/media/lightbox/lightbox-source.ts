@@ -3,7 +3,7 @@ import type { LyraSourceRecord } from '../../../data-sources.js';
 import { SourceRequestController, sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
 import { SourceWindowController } from '../../../internal/source-window-controller.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
-import type { LyraLightboxImage, LyraLightboxSource } from './lightbox.class.js';
+import type { LyraLightboxImage, LyraLightboxSource } from './lightbox-types.js';
 
 type Record = LyraSourceRecord<LyraLightboxImage>;
 type Host = HTMLElement & ReactiveControllerHost;

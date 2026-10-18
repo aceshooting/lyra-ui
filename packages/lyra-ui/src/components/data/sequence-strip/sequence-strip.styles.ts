@@ -18,6 +18,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     margin-block-start: var(--lr-space-s);
     cursor: pointer;
+    transition: var(--lr-transition-interactive);
   }
   [part='source-retry']:hover, [part='source-exact']:hover {
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));

@@ -744,6 +744,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Maximum sampled records across all series, bounded to 2–1,000 (default 1,000).
    * Fit layouts also respect the measured width. Sampling retains endpoints and bucket extrema;
    * callbacks and events continue to use source indexes. */
+  // numeric-guard-exempt: normalizeChartRecordLimit() in chart-table-sampling.ts normalizes render budgets through finiteCount().
   @property({ type: Number, attribute: 'max-records' }) maxRecords = 1_000;
   private _datasets: readonly LyraLiteChartSeries[] = Object.freeze([]);
   private datasetsTruncated = false;

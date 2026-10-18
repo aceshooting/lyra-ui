@@ -19,7 +19,7 @@ import {
   yieldViewerTask,
 } from '../../../internal/resource-loader.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
-import { TableViewerSourceController, TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
+import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
 import {
   DocumentAnchorTarget,
   type LyraAnchorTargetEventMap,
@@ -303,7 +303,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     header: () => !this.withoutHeaderRow,
     columnLimit: () => this.effectiveMaxColumns,
     locale: () => this.effectiveLocale,
-    localize: key => this.localize(key),
+    localize: key => this.localize(TABLE_VIEWER_SOURCE_MESSAGE_KEYS[key]),
     repaint: () => super.requestUpdate(),
     error: error => {
       if (this.hasUpdated) this.table.announcements.announceAssertive(this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'));

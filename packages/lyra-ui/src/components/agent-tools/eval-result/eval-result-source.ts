@@ -1,7 +1,7 @@
 import type { LyraSourceRecord } from '../../../data-sources.js';
 import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import type { RubricKey, RubricValue } from '../../forms/rubric-form/rubric-form.class.js';
-import type { EvalRunResult } from './eval-result.class.js';
+import type { EvalRunResult } from './eval-run-result.js';
 
 type Current = () => boolean;
 function read(value: unknown, key: string, current: Current, required = false): unknown {

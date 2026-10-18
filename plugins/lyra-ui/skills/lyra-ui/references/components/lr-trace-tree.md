@@ -23,7 +23,7 @@ columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
 
-**Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined = undefined`
+**Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined`
 (attribute: false) takes display precedence over `spans`, including when a defined provider is
 invalid. Invalid input shows a localized source failure; setting `undefined` restores current
 legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts.

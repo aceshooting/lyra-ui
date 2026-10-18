@@ -589,7 +589,7 @@ mark it as the active `aria-current` result, announce its position, and scroll i
 they resolve `false` when there are no matches. `clearSearch()` resets `query` to `''`, clearing all
 matches and the cursor.
 
-**Events with `treeSource` unset:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
+**Events:** With `treeSource` unset, `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
 the top-level copy button or a per-node one only after the owning browsing context's clipboard write
 fulfills. `lr-error` (no detail) and `lr-copy-error` (`detail: LyraClipboardWriteFailure`) fire when
 serialization or clipboard writing fails; the detailed frozen outcome carries `ok: false`, the

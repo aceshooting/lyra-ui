@@ -299,9 +299,11 @@ bounded overview and one current refinement/overlay. Pending work exposes busy/l
 invalid replies retain the completed view and show a localized failure. Revealing does not select
 or activate a point. There is no zoom API on this component.
 
-Prepared activation additionally emits `lr-source-point-select` with
-`{ revision, seriesId, sourceIndex, point: { x, y } }`, or `lr-source-category-select` with
-`{ revision, seriesId, categoryId, value, observationCount }`. These carry original source identity;
+**Events:** Prepared activation additionally emits noncancelable `lr-source-point-select` with
+`LyraChartSourcePointSelectDetail { revision, seriesId, sourceIndex, point: { x, y } }`, or
+noncancelable `lr-source-category-select` with
+`LyraChartSourceCategorySelectDetail { revision, seriesId, categoryId, value, observationCount }`.
+These carry original source identity;
 the existing point/datum events retain plotted-index meaning. Actions on the displayed view stay
 bound to its committed revision while a replacement is pending; obsolete detached marks cannot
 act on the new model.

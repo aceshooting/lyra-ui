@@ -1,3 +1,5 @@
+import type { EvalRunResult } from './eval-run-result.js';
+export type { EvalRunResult } from './eval-run-result.js';
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord, LyraSourceRevision } from '../../../data-sources.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -30,24 +32,6 @@ const runId = (run: EvalRunResult): unknown => run.id;
 const columnKey = (column: TableColumn<EvalRunResult>): unknown => column.key;
 const rubricKey = (key: RubricKey): unknown => key.key;
 const rowKey = (row: EvalRunResult): string => row.id;
-
-/**
- * One model/prompt-version's output for a single evaluation example, plus whatever automated
- * `scores` it already carries and whatever `review` a human has entered for it so far. `scores`
- * and `review` are both keyed the same way as the `rubricKeys` passed to this component -- the
- * same `RubricValue` shape `<lr-rubric-form>` itself reads and writes -- so a `TableColumn`'s
- * `cell()` accessor and the rubric form's own `value` binding can both read a run's fields with
- * no conversion.
- */
-export interface EvalRunResult {
-  readonly id: string;
-  readonly label: string;
-  readonly model?: string;
-  readonly promptVersion?: string;
-  readonly output: string;
-  readonly scores?: RubricValue;
-  readonly review?: RubricValue;
-}
 
 /** Full-source server order for the comparison grid. */
 export interface EvalResultSourceQuery {

@@ -29,7 +29,7 @@ import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode, LyraSourceSearchResult } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, type HierarchyCapabilityResult } from '../../../internal/hierarchy-source-controller.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
-import { hierarchySourceStyles } from '../../../internal/hierarchy-source.styles.js';
+import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 export type XmlViewerTreeSource = LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>;
 const INSPECTION_KINDS = new Set(['object', 'array', 'scalar', 'element', 'attribute', 'text', 'comment', 'processing-instruction']);
 type SourceHits = Extract<HierarchyCapabilityResult<LyraSourceSearchResult<{ readonly key: string }>>, { status: 'ready' }>;

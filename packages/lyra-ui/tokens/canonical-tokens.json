@@ -4427,9 +4427,8 @@
         "src/components/media/video/video.styles.ts",
         "src/components/retrieval/knowledge-base/knowledge-base.styles.ts",
         "src/components/utility/export-button/export-button.styles.ts",
-        "src/components/viewers/csv-viewer/csv-viewer.class.ts",
         "src/components/viewers/dataset-viewer/dataset-viewer.styles.ts",
-        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts"
+        "src/components/viewers/table-viewer-shared.ts"
       ]
     },
     "--lr-size-neg-0-15rem": {

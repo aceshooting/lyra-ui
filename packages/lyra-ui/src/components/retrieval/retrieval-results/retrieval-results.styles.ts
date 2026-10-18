@@ -155,6 +155,9 @@ export const styles = css`
   [part='source-retry']:hover, [part='source-selection-retry']:hover {
     background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
   }
+  [part='source-retry']:active, [part='source-selection-retry']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   [part='source-retry']:focus-visible, [part='source-selection-retry']:focus-visible {
     ${focusRing}
   }

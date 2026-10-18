@@ -22,7 +22,7 @@ import {
   yieldViewerTask,
 } from '../../../internal/resource-loader.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
-import { TableViewerSourceController, TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
+import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight } from '../table-viewer-shared.js';
 import { delimitedColumnCount } from '../../../internal/delimited-data.js';
 import {
   DocumentAnchorTarget,
@@ -324,7 +324,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
     header: () => true,
     columnLimit: () => this.effectiveMaxColumns,
     locale: () => this.effectiveLocale,
-    localize: key => this.localize(key),
+    localize: key => this.localize(TABLE_VIEWER_SOURCE_MESSAGE_KEYS[key]),
     repaint: () => super.requestUpdate(),
     error: error => {
       if (this.hasUpdated) this.table.announcements.announceAssertive(this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'));

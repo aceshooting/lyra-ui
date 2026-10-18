@@ -23,7 +23,7 @@ graph data) and never mutates a graph.
 With `graphSource` unset, the `limit` part reports retained/source relationship-row counts when input admission omits
 rows. Virtualization covers the retained rows; it does not recover omitted source rows.
 
-**Full-source neighborhood:** `graphSource: NeighborListSource | undefined = undefined`
+**Full-source neighborhood:** `graphSource: NeighborListSource | undefined`
 (attribute: false) takes precedence over `rows`; invalid defined providers fail visibly.
 Setting `undefined` restores the latest legacy rows. `NeighborListSource` aliases the public
 `GraphSource` contract. This adapter queries its `records` only; it never requests a graph scene,

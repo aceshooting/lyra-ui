@@ -35,8 +35,9 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius);
     max-inline-size: 100%;
   }
-  [part='source-navigator'] button, [part='source-status'] button { cursor: pointer; overflow-wrap: anywhere; }
+  [part='source-navigator'] button, [part='source-status'] button { cursor: pointer; overflow-wrap: anywhere; transition: var(--lr-transition-interactive); }
   [part='source-navigator'] button:where(:hover), [part='source-status'] button:where(:hover) { background: var(--lr-color-neutral-fill-quiet); }
+  [part='source-navigator'] button:where(:active), [part='source-status'] button:where(:active) { background: color-mix(in oklab, var(--lr-color-neutral-fill-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
   [part='source-navigator'] :where(button, input, select):where(:focus-visible), [part='source-status'] button:where(:focus-visible) {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
   }

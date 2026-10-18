@@ -22,7 +22,7 @@ hierarchical trace tree from one shared `spans` array.
 With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
 
-**Complete provider trace:** `treeSource: TraceTreeSource | undefined = undefined` (attribute:
+**Complete provider trace:** `treeSource: TraceTreeSource | undefined` (attribute:
 false) forwards the exact trace-tree provider contract above to the existing single child. It takes
 precedence over `spans`; invalid defined input fails visibly without restoring legacy content.
 Setting `undefined` restores current legacy spans, kind inventory and handoff quick-jumps.

@@ -19,7 +19,7 @@
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
-**Provider hierarchy:** `treeSource: FileTreeSource | undefined = undefined` (attribute: false)
+**Provider hierarchy:** `treeSource: FileTreeSource | undefined` (attribute: false)
 uses `LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>` from
 `@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `nodes`, preserving
 its identity; invalid defined input shows a localized source error. Setting `undefined` restores

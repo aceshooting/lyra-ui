@@ -24,7 +24,7 @@ number of retained examples. Pagination within those examples remains available 
 
 **Properties:**
 
-- `dataSource: EvalDatasetSource | undefined = undefined` (property only) — a host-owned full
+- `dataSource: EvalDatasetSource | undefined` (property only) — a host-owned full
   logical source; takes display precedence over `examples`. Invalid defined sources fail visibly;
   unsetting restores the current legacy examples without overwriting their getter.
 - `sourcePage: number = 0` (`source-page`) — zero-based source page.

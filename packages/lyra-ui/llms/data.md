@@ -2277,7 +2277,7 @@ Home/End reach row endpoints, Ctrl+Home/Ctrl+End source endpoints, and PageUp/Pa
 ARIA counts and absolute one-based row/column indices; the overview canvas is hidden from assistive
 technology. Without it, the named canvas owns the exact cursor.
 
-Exact Enter/Space and singleton-tile pointer activation resolve `getCell` and emit the existing
+**Events:** Exact Enter/Space and singleton-tile pointer activation resolve `getCell` and emit the existing
 `lr-cell-activate` `{ row, col, value }` with absolute coordinates; missing `null` maps to `NaN`.
 `cellText`, `cellInteractive` and `cellColor` receive exact values and absolute coordinates, never
 aggregate means. Multi-cell tile pointer activation or Shift+Enter emits noncancelable
@@ -2300,7 +2300,7 @@ rendered. The following dense matrix/calendar limits and geometry descriptions a
 
 **Exported matrix-source declarations:**
 
-Inherited viewport/tile fields are repeated to show the complete effective contracts. `HeatmapSourceCell` is the exact `{ value: number | null; rowLabel: string; columnLabel: string }` reply described above.
+Inherited viewport/tile fields are repeated to show the complete effective contracts. `HeatmapSourceCell { readonly value: number | null; readonly rowLabel: string; readonly columnLabel: string }` is the exact-cell reply described above.
 
 `LyraHeatmapMatrixViewport {
   readonly rowStart: number;

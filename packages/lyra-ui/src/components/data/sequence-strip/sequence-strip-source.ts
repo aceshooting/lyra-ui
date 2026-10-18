@@ -1,7 +1,7 @@
 import type { LyraSourceRevision } from '../../../data-sources.js';
 import type { LyraSourceRequest, LyraSourceValue } from '../../../utilities/data-preparation.js';
 import { sourceCount } from '../../../internal/source-request-controller.js';
-import type { SequenceStripItem } from './sequence-strip.class.js';
+import type { SequenceStripItem } from './sequence-strip-item.js';
 
 /** Immutable complete sequence with provider-owned indexing and aggregation. */
 export interface LyraSequenceSource<T> {

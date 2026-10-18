@@ -75,7 +75,7 @@ unrepresentable-pan requests resolve `false`. Selected and revealed records have
 a selected record may remain retained outside the visible viewport. Accessible point ordinals use
 original `sourceIndex + 1`, not representative order.
 
-`lr-point-select` retains `{ point }` for exact original immutable point data, including ID and
+**Events:** `lr-point-select` retains `{ point }` for exact original immutable point data, including ID and
 sourceIndex. Activating a density bin emits noncancelable `lr-spatial-bin-select` with frozen
 `LyraSpatialBinSelectDetail { revision, bounds, count }`, never an exact-point event. Source mode
 adds `bin` and `error` parts; `limit` reports the complete global count/domain and current viewport

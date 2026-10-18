@@ -80,7 +80,7 @@ first-wins before empty state, counts, virtualization, failure announcements, re
 
 **Provider pages:**
 
-- `dataSource: IngestionQueueSource | undefined = undefined` (attribute: false) —
+- `dataSource: IngestionQueueSource | undefined` (attribute: false) —
   `IngestionQueueSource = LyraPageSource<IngestionQueueItem, IngestionQueueSourceQuery>`, exported
   by `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
   `LyraPageSource` is exported by `@aceshooting/lyra-ui/data-sources.js`. The query is one frozen

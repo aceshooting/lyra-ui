@@ -23,7 +23,7 @@ several steps may be `running` at once. By default it is a status report; with `
 `reorderable` adds controlled keyboard reorder requests without changing ownership of `items`.
 Legacy status changes and confirmed moves are announced through an internal `<lr-live-region>`.
 
-**Complete source tasks:** `treeSource: TaskListSource | undefined = undefined`
+**Complete source tasks:** `treeSource: TaskListSource | undefined`
 (attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
 falling back to the array. Only `undefined` restores current legacy items.
 

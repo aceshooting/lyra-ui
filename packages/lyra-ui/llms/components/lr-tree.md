@@ -39,7 +39,7 @@ with `badges: [{ text: String(value) }]`. The former item-controller fields (`ac
 `depth`, `setSize`, `posInSet`) and context setters were never consumer state; they are now private
 owner context maintained by `<lr-tree>`.
 
-**Provider hierarchy:** `treeSource: TreeSource | undefined = undefined` (attribute: false) is an
+**Provider hierarchy:** `treeSource: TreeSource | undefined` (attribute: false) is an
 identity-owned full-source route. `TreeSource` is
 `LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery>` from
 `@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `data` and authored
