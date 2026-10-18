@@ -22,7 +22,7 @@ const manifest = JSON.parse(
 
 test('checks every live typed export while preserving blocked retired routes', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 749, 'the reviewed package has 749 live typed exports (the locale catalogs publish from @aceshooting/lyra-translations)');
+  assert.equal(entrypoints.length, 752, 'the reviewed package has 752 live typed exports (the locale catalogs publish from @aceshooting/lyra-translations)');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
@@ -35,6 +35,9 @@ test('checks every live typed export while preserving blocked retired routes', (
   }
   for (const name of ['currency', 'countries', 'time-zones', 'units']) {
     assert.ok(entrypoints.includes(`./${name}.js`), `${name} public helper is checked`);
+  }
+  for (const route of ['./data-sources.js', './utilities/data-preparation.js', './utilities/data-spatial.js']) {
+    assert.ok(entrypoints.includes(route), `${route} public helper is checked`);
   }
   for (const route of ['./utilities/*', './theme/presets.js', './theme/presets/shadcn.js']) {
     assert.equal(manifest.exports[route], null, `${route} remains an explicit closed door`);

@@ -251,6 +251,8 @@ function canvasIsDrawn(canvas, peer) {
 
 function chartState(descriptor) {
   const element = create('lr-bar-chart');
+  // Keep the allocated width large enough for the declared rendered-record workload.
+  element.style.inlineSize = `${descriptor.parameters.plotBudget}px`;
   element.withoutAnimation = true;
   element.withoutLegend = true;
   element.height = '260px';
@@ -275,25 +277,32 @@ function chartState(descriptor) {
     const canvas = element.shadowRoot.querySelector('canvas');
     // Chart.getChart is the peer's public lookup API; no component implementation state is read.
     const peer = canvas ? Chart.getChart(canvas) : undefined;
-    const plotted = peer?.data.datasets[0]?.data ?? [];
+    const plotted = Array.from(peer?.data.datasets[0]?.data ?? []);
     const labels = peer?.data.labels ?? [];
     const table = element.shadowRoot.querySelector('[part="data-table"] table');
     const rows = [...(table?.querySelectorAll('tbody tr') ?? [])];
     const expectedRows = Math.min(descriptor.size, 1000);
     const offset = descriptor.parameters.labelOnly ? 0 : state.variant;
-    const expectedIndices = Array.from({ length: expectedRows }, (_, index) =>
-      Math.round(index * (descriptor.size - 1) / (expectedRows - 1)));
-    const correctValues = rows.length === expectedRows && rows.every((entry, index) =>
-      entry.querySelector('th')?.textContent.trim() === `Category ${expectedIndices[index]}` &&
-      entry.querySelector('td button')?.textContent.trim() === String(expectedIndices[index] + 10 + offset));
+    // Uniform and extrema-preserving samplers may retain different interior categories.
+    // Validate source identity and ordering independently, then check every plotted/table value.
+    const sourceIndices = Array.from(labels, (label) => typeof label === 'string' && /^Category (0|[1-9]\d*)$/.test(label)
+      ? Number(label.slice('Category '.length)) : -1);
+    const validSample = sourceIndices.length === expectedRows && sourceIndices.every((index, position) =>
+      Number.isSafeInteger(index) && index >= 0 && index < descriptor.size &&
+      (position === 0 || index > sourceIndices[position - 1]));
+    const correctValues = validSample && rows.length === expectedRows && rows.every((entry, index) =>
+      entry.querySelector('th')?.textContent.trim() === labels[index] &&
+      entry.querySelector('td button')?.textContent.trim() === String(sourceIndices[index] + 10 + offset));
     return { checks: [
       ['chart-peer-ready', Boolean(peer)],
-      ['chart-retained-count', element.labels.length === descriptor.size && element.datasets[0]?.data.length === descriptor.size],
+      ['chart-retained-count', element.labels.length === descriptor.size && element.datasets[0]?.data.length === descriptor.size &&
+        Array.from(element.labels).every((label, index) => label === `Category ${index}`) &&
+        Array.from(element.datasets[0].data).every((value, index) => value === index + 10 + offset)],
       ['chart-plot-bound', plotted.length === expectedRows],
       ['chart-table-bound', rows.length === expectedRows],
-      ['chart-sample-endpoints', labels[0] === 'Category 0' && labels.at(-1) === `Category ${descriptor.size - 1}`],
-      ['chart-plot-values', canvasIsDrawn(canvas, peer) && plotted.length === expectedRows && plotted.every((value, index) =>
-        value === expectedIndices[index] + 10 + offset)],
+      ['chart-sample-endpoints', validSample && labels[0] === 'Category 0' && labels.at(-1) === `Category ${descriptor.size - 1}`],
+      ['chart-plot-values', validSample && canvasIsDrawn(canvas, peer) && plotted.length === expectedRows && plotted.every((value, index) =>
+        value === sourceIndices[index] + 10 + offset)],
       ['chart-table-values', correctValues],
       ['chart-accessible-label', canvas?.getAttribute('aria-label')?.includes(element.label) === true],
     ], counts: { sourceCount: descriptor.size, retainedCount: element.datasets[0]?.data.length ?? 0,
