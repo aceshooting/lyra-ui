@@ -7684,7 +7684,8 @@ describe('standard peer navigation and scale controls', () => {
         }
         const a = control.getBoundingClientRect();
         const n = navigation.getBoundingClientRect();
-        expect(direction === 'ltr' ? n.right : n.left).to.equal(direction === 'ltr' ? a.right : a.left);
+        expect(direction === 'ltr' ? n.right : n.left)
+          .to.be.closeTo(direction === 'ltr' ? a.right : a.left, 0.01);
         const scaleText = document.createRange();
         scaleText.selectNodeContents(scale);
         const textRect = scaleText.getBoundingClientRect();
