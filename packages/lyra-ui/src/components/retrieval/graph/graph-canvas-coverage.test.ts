@@ -2547,30 +2547,46 @@ describe('coverage: dangling link DOM-cache shrink', () => {
 });
 
 describe('coverage: connectedCallback lazy-load resolution edge case', () => {
-  it('bails out of the post-load resolution when updateComplete rejects mid-flight (catch branch)', async () => {
+  it('bails out of post-load resolution when initial update completion rejects', async () => {
     const el = asTestGraph(document.createElement('lr-graph'));
-    let descriptor: PropertyDescriptor | undefined;
-    for (
-      let proto = Object.getPrototypeOf(el) as object | null;
-      proto;
-      proto = Object.getPrototypeOf(proto)
-    ) {
-      descriptor = Object.getOwnPropertyDescriptor(proto, 'updateComplete');
-      if (descriptor) break;
-    }
-    Object.defineProperty(el, 'updateComplete', {
-      configurable: true,
-      get: () =>
-        Promise.reject(new Error('synthetic updateComplete rejection')),
-    });
-    document.body.appendChild(el);
+    const internal = el as unknown as {
+      loadLibrary(): Promise<null>;
+      loading: boolean;
+      loadFailed: boolean;
+    };
+    const originalLoader = internal.loadLibrary;
+    let resolveLoad!: (value: null) => void;
+    internal.loadLibrary = () => new Promise<null>((resolve) => { resolveLoad = resolve; });
+    const base = Object.getPrototypeOf(LyraGraphElement.prototype) as {
+      getUpdateComplete(): Promise<boolean>;
+    };
+    const descriptor = Object.getOwnPropertyDescriptor(base, 'getUpdateComplete');
+    const originalComplete = base.getUpdateComplete;
+    let rejected = false;
     try {
-      await aTimeout(300); // let the real d3 dynamic import resolve and hit the rejecting updateComplete
-      expect((el as unknown as { loading: boolean }).loading).to.equal(true); // catch{return;} bailed first
+      document.body.appendChild(el);
+      await el.updateComplete;
+      // The loader awaits the base method directly; scope the rejection to this host.
+      Object.defineProperty(base, 'getUpdateComplete', {
+        configurable: true,
+        value(this: object) {
+          if (this === el) {
+            rejected = true;
+            return Promise.reject(new Error('synthetic initial update rejection'));
+          }
+          return originalComplete.call(this);
+        },
+      });
+      resolveLoad(null);
+      await waitUntil(() => rejected, 'the load continuation did not await initial completion');
+      expect(internal.loading).to.equal(true);
+      expect(internal.loadFailed).to.equal(false);
     } finally {
       el.remove();
-      if (descriptor) Object.defineProperty(el, 'updateComplete', descriptor);
-      else Reflect.deleteProperty(el, 'updateComplete');
+      if (descriptor) Object.defineProperty(base, 'getUpdateComplete', descriptor);
+      else Reflect.deleteProperty(base, 'getUpdateComplete');
+      internal.loadLibrary = originalLoader;
+      resolveLoad?.(null);
     }
   });
 });

@@ -469,6 +469,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    if (this.hasUpdated && changed.size > 0 && [...changed.keys()].every(key =>
+      key === 'selected' || key === 'disabled',
+    )) this.labelTextObserver.preserveBindingForNextUpdate();
     if (changed.has('removable') && !this.removable) this.removeAttribute('with-remove');
     if (changed.has('removable') || changed.has('toggleable')) {
       this.syncLabelObservation();

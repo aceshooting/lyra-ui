@@ -19,7 +19,6 @@ import {
   establishesFixedContainingBlock,
   findFixedContainingBlockAncestor,
   isNativeTopLayerElement,
-  usesWebKitContainingBlockRules,
 } from './fixed-containing-block.js';
 import {
   applyReferenceHidden,
@@ -405,10 +404,9 @@ function writeHoverBridge(
 }
 
 /**
- * Overrides only `@floating-ui/dom`'s default `platform.getOffsetParent` -- merged over every
- * other default platform method wherever it is passed as `{ ...platform, getOffsetParent:
- * correctedGetOffsetParent }` -- to correct fixed containing-block detection and absolute
- * containing blocks hidden from native `offsetParent` by shadow boundaries or ancestor zoom.
+ * Corrects fixed containing-block detection and absolute containing blocks hidden from native
+ * `offsetParent` by shadow boundaries or ancestor zoom. Other platform geometry remains native
+ * except for the measured inline coordinate system installed for each placement pass.
  */
 async function correctedGetOffsetParent(
   element: Element,
@@ -431,32 +429,38 @@ async function correctedGetOffsetParent(
       (Math.abs(ancestorZoom(element) - 1) > 1e-6 ? view : defaultOffsetParent);
   }
   if (position !== 'fixed') return defaultOffsetParent;
-  // Floating UI's fallback can also mistake an ineffective inline transform for a containing
-  // block, so validate its element answer before retaining it.
+  // Floating UI can skip a nearer filtered inline in WebKit and return an outer transformed
+  // block. Resolve the rendered ancestry first so both measurements and insets use the nearest
+  // effective containing block, including across slots and shadow roots.
+  const nearestContainingBlock = findFixedContainingBlockAncestor(element);
+  if (nearestContainingBlock) return nearestContainingBlock;
+  // Retain a valid platform fallback outside the ancestry walk, such as the document body.
   if (defaultOffsetParent instanceof Element && establishesFixedContainingBlock(defaultOffsetParent)) {
     return defaultOffsetParent;
   }
-  return findFixedContainingBlockAncestor(element) ?? view;
+  return view;
 }
 
-/** Measures the browser's fixed containing-block origin without touching the popup's own
- *  transform. Insertion in the containing block avoids changing the popup's slot assignment. */
-function fixedInlineOriginCorrection(
-  containingBlock: HTMLElement,
-  expectedOrigin: { left: number; top: number },
-  scale: { x: number; y: number },
-): { x: number; y: number } {
+/** Measures fixed containing-block coordinates without touching the popup's own transform.
+ * Inline font-box metrics cannot reliably distinguish effective scale from rounding. */
+function fixedInlineCoordinates(containingBlock: HTMLElement): {
+  origin: { left: number; top: number };
+  scale: { x: number; y: number };
+} | undefined {
   const probe = containingBlock.ownerDocument.createElement('span');
   probe.setAttribute('aria-hidden', 'true');
   probe.style.cssText = 'all:initial!important;position:fixed!important;left:0!important;top:0!important;width:0!important;height:0!important;visibility:hidden!important';
   try {
     (containingBlock.shadowRoot ?? containingBlock).appendChild(probe);
-    if (probe.getClientRects().length === 0) return { x: 0, y: 0 };
-    const actualOrigin = validatedClientRect(probe.getBoundingClientRect(), 'place() fixed origin');
-    return {
-      x: (expectedOrigin.left - actualOrigin.left) / scale.x,
-      y: (expectedOrigin.top - actualOrigin.top) / scale.y,
-    };
+    if (probe.getClientRects().length === 0) return undefined;
+    const origin = validatedClientRect(probe.getBoundingClientRect(), 'place() fixed origin');
+    // A fixed box has definite dimensions, unlike the inline's font box. Its viewport size
+    // includes real ancestor transforms and zoom. Preserve the zero-size origin above.
+    probe.style.setProperty('width', '100px', 'important');
+    probe.style.setProperty('height', '100px', 'important');
+    const size = validatedClientRect(probe.getBoundingClientRect(), 'place() fixed scale');
+    const scale = { x: size.width / 100, y: size.height / 100 };
+    return scale.x > 0 && scale.y > 0 ? { origin, scale } : undefined;
   } finally {
     probe.remove();
   }
@@ -468,16 +472,19 @@ async function popupRectAtPosition(
   strategy: PlaceStrategy,
   x: number,
   y: number,
+  placementPlatform = platform,
 ): Promise<HoverBridgeRect> {
   const currentRect = validatedClientRect(popup.getBoundingClientRect(), 'place() popup rect');
   const offsetParent = await correctedGetOffsetParent(popup);
-  const rect = await platform.convertOffsetParentRelativeRectToViewportRelativeRect({
+  const rect = await placementPlatform.convertOffsetParentRelativeRectToViewportRelativeRect({
     elements: { reference: anchor, floating: popup },
-    rect: { x, y, width: currentRect.width, height: currentRect.height },
+    // Convert only the local origin: the measured popup dimensions are already in viewport units.
+    rect: { x, y, width: 0, height: 0 },
     offsetParent: offsetParent as Element,
     strategy,
   });
-  const { x: left, y: top, width, height } = rect;
+  const { x: left, y: top } = rect;
+  const { width, height } = currentRect;
   // Preserve raw numeric values rather than constructing a DOMRect, whose coercions could turn
   // invalid platform values into accepted numbers. The shared guard also checks edge overflow.
   return validatedClientRect({
@@ -758,15 +765,57 @@ function placeImpl(
       if (element === popup) resolvedOffsetParent = result;
       return result;
     };
+    let inlineCoordinates: ReturnType<typeof fixedInlineCoordinates>;
+    let inlineOffsetParent: HTMLElement | undefined;
+    const placementPlatform: typeof platform = {
+      ...platform,
+      getOffsetParent: recordingGetOffsetParent,
+      async getElementRects(data) {
+        const rects = await platform.getElementRects.call(this, data);
+        const parent = resolvedOffsetParent;
+        // Inline font-box metrics can invent scale, including under ancestor zoom. Measure
+        // their actual fixed origin and scale before dimension-dependent middleware.
+        const calibrate = strategy === 'fixed' && parent instanceof HTMLElement &&
+          !(parent instanceof HTMLSlotElement) &&
+          getComputedStyle(parent).display === 'inline' &&
+          // A popup's own zoom also scales its insets; it is outside this parent-coordinate fix.
+          ['', 'normal', '1'].includes(getComputedStyle(popup).zoom || '');
+        inlineCoordinates = calibrate ? fixedInlineCoordinates(parent) : undefined;
+        inlineOffsetParent = inlineCoordinates ? parent as HTMLElement : undefined;
+        if (!inlineCoordinates || !inlineOffsetParent) return rects;
+        const viewport = await platform.convertOffsetParentRelativeRectToViewportRelativeRect({
+          elements: { reference: data.reference, floating: data.floating },
+          rect: rects.reference, offsetParent: inlineOffsetParent, strategy,
+        });
+        const { origin, scale } = inlineCoordinates;
+        return { ...rects, reference: {
+          x: finiteGeometry((viewport.x - origin.left) / scale.x, 'place() inline reference x'),
+          y: finiteGeometry((viewport.y - origin.top) / scale.y, 'place() inline reference y'),
+          width: finiteGeometry(viewport.width / scale.x, 'place() inline reference width'),
+          height: finiteGeometry(viewport.height / scale.y, 'place() inline reference height'),
+        } };
+      },
+      getScale(element) {
+        return inlineCoordinates && element === inlineOffsetParent
+          ? inlineCoordinates.scale : platform.getScale!(element);
+      },
+      convertOffsetParentRelativeRectToViewportRelativeRect(data) {
+        if (inlineCoordinates && data.offsetParent === inlineOffsetParent && data.strategy === 'fixed') {
+          const { origin, scale } = inlineCoordinates;
+          return {
+            x: origin.left + data.rect.x * scale.x, y: origin.top + data.rect.y * scale.y,
+            width: data.rect.width * scale.x, height: data.rect.height * scale.y,
+          };
+        }
+        return platform.convertOffsetParentRelativeRectToViewportRelativeRect(data);
+      },
+    };
     void computePosition(anchor, popup, {
       strategy,
       placement: opts.placement ?? 'bottom-start',
       middleware: middlewareFor(styleTransaction, stagedStyles, isCurrent),
-      // Use the same containing block for computation and the browser's eventual inset writes.
-      platform: {
-        ...platform,
-        getOffsetParent: recordingGetOffsetParent,
-      },
+      // Use the same containing-block coordinates for middleware and the eventual inset writes.
+      platform: placementPlatform,
     }).then(
       async ({ x, y, placement, middlewareData }) => {
         if (!isCurrent()) {
@@ -799,26 +848,6 @@ function placeImpl(
             }
           }
           escapeReruns = 0;
-          // WebKit gives a fixed descendant of a filtered inline box the line-box origin, which
-          // can differ from that inline's border rect. Measure only that parent's origin so an
-          // author transform on the popup remains independent of the placement coordinates.
-          const calibrateInlineOrigin = strategy === 'fixed' &&
-            resolvedOffsetParent instanceof HTMLElement &&
-            !(resolvedOffsetParent instanceof HTMLSlotElement) &&
-            usesWebKitContainingBlockRules() &&
-            getComputedStyle(resolvedOffsetParent).display === 'inline' &&
-            // A popup's own zoom also scales its insets; it is outside this parent-origin fix.
-            ['', 'normal', '1'].includes(getComputedStyle(popup).zoom || '');
-          let inlineOriginCorrection: { x: number; y: number } | undefined;
-          if (calibrateInlineOrigin) {
-            const expectedOrigin = await popupRectAtPosition(anchor, popup, strategy, 0, 0);
-            const scale = await platform.getScale!(resolvedOffsetParent as HTMLElement);
-            if (!isCurrent()) {
-              rollback();
-              return;
-            }
-            inlineOriginCorrection = fixedInlineOriginCorrection(resolvedOffsetParent as HTMLElement, expectedOrigin, scale);
-          }
           if (hoverBridge) {
             const anchorRect = validatedClientRect(
               anchor.getBoundingClientRect(),
@@ -830,6 +859,7 @@ function placeImpl(
               strategy,
               x,
               y,
+              placementPlatform,
             );
             if (!isCurrent()) {
               rollback();
@@ -855,8 +885,8 @@ function placeImpl(
               stagedStyles.availableBlock,
             );
           }
-          styleTransaction.set(popup, 'left', `${finiteGeometry(x + (inlineOriginCorrection?.x ?? 0), 'place() resolved x')}px`);
-          styleTransaction.set(popup, 'top', `${finiteGeometry(y + (inlineOriginCorrection?.y ?? 0), 'place() resolved y')}px`);
+          styleTransaction.set(popup, 'left', `${finiteGeometry(x, 'place() resolved x')}px`);
+          styleTransaction.set(popup, 'top', `${finiteGeometry(y, 'place() resolved y')}px`);
           if (hoverBridge && bridgeQuad) writeHoverBridge(hoverBridge, bridgeQuad, styleTransaction);
           const ownedSyncDimensions = sync
             ? {

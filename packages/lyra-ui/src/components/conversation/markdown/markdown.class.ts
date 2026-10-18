@@ -347,8 +347,9 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   /** How content is displayed while `streaming` is true. `plain` (the default) keeps the current
    * accumulated source as plain text. `progressive` parses complete top-level Markdown blocks as
    * they settle, keeps only the mutable trailing block as text, and renders an open fenced block
-   * as unhighlighted code. Once `streaming` becomes false the component performs its regular full
-   * document parse, including cross-block reference links. */
+   * as unhighlighted code. The offscreen plain-text tail reserves an estimated height until
+   * revealed, while its complete text remains in the DOM. Once `streaming` becomes false the
+   * component performs its regular full document parse, including cross-block reference links. */
   @property({ attribute: 'streaming-render' })
   override streamingRender: MarkdownStreamingRender = 'plain';
 

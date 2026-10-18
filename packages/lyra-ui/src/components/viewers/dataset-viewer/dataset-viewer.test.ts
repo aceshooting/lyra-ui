@@ -35,8 +35,8 @@ function fetchText(value: string): () => void {
     window.fetch = original;
   };
 }
-expectLocaleFallback('ar', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument', 'noData']);
-expectLocaleFallback('tr', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument']);
+expectLocaleFallback('ar', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument', 'noData', 'highlightWithLabel', 'cellHighlightWithLabel']);
+expectLocaleFallback('tr', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument', 'highlightWithLabel', 'cellHighlightWithLabel']);
 
 describe('lr-dataset-viewer', () => {
   it('keeps loaded cells and later updates working when a highlight omits its anchor', async () => {

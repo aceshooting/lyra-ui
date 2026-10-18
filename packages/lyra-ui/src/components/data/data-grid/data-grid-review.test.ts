@@ -64,6 +64,7 @@ for (const dir of ['ltr', 'rtl']) it(`keeps flexible column geometry stable as c
   body.scrollLeft = dir === 'rtl' ? -20000 : 20000;
   body.dispatchEvent(new Event('scroll'));
   await settle(element);
+  expect(Math.abs(body.scrollLeft - (dir === 'rtl' ? -20000 : 20000))).lessThan(1);
   const cell = element.shadowRoot!.querySelector<HTMLElement>('[part="cell"][data-column-id="c500"]');
   expect(cell !== null).equal(true);
   expect(Math.abs(cell!.getBoundingClientRect().width - firstWidth)).lessThan(1);
@@ -76,6 +77,7 @@ for (const dir of ['ltr', 'rtl']) it(`keeps flexible column geometry stable as c
     body.scrollTop = position ? 2500 : 0;
     body.scrollLeft = dir === 'rtl' ? -position : position;
     body.dispatchEvent(new Event('scroll')); await settle(element);
+    expect(Math.abs(body.scrollLeft - (dir === 'rtl' ? -position : position))).lessThan(1);
     const target = element.shadowRoot!.querySelector<HTMLElement>(`[part="cell"][data-column-id="c${position ? 500 : 0}"]`)!;
     expect(target !== null).equal(true);
     expect(Math.abs(target.getBoundingClientRect().width - firstWidth)).lessThan(1);

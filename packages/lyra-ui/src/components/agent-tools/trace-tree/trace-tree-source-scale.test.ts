@@ -315,7 +315,7 @@ it('uses translated source controls and does not announce loaded historical stat
   const retry = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="source-error"] button')!;
   expect(retry.textContent).to.equal('Try trace'); failed = false; retry.click(); await ready(el);
   expect(el.shadowRoot!.textContent).to.contain('1,000,000 visible / 1,000,000 total');
-  expect(el.shadowRoot!.querySelector('lr-live-region')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('lr-live-region') === null).to.equal(true);
 });
 
 it('retains only four ranged pages plus the focused row for a large allocated viewport', async () => {

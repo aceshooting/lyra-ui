@@ -5,7 +5,44 @@ import type { LyraCsvViewer } from './csv-viewer/csv-viewer.js';
 import type { LyraTabularSource } from '../../data-sources.js';
 const make = (_kind: 'csv', source: LyraTabularSource) => fixture<LyraCsvViewer>(html`<lr-csv-viewer style="width:400px" .dataSource=${source}></lr-csv-viewer>`);
 
-it('revokes old document reads during adoption and reveals using the new owner document', async () => {
+async function withScaledScrollWarning(run: (mount: typeof make) => Promise<void>): Promise<void> {
+  const warning = 'Virtual list scroll travel is scaled to fit browser layout limits; row sizes and public offsets remain in logical pixels.';
+  const warningKey = 'virtual-list-scroll-scaling';
+  const store = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  const wasIssued = store?.has(warningKey);
+  store?.delete(warningKey);
+  const previousWarn = console.warn;
+  let warningCount = 0;
+  console.warn = (...args: unknown[]) => {
+    if (args.length === 1 && args[0] === warning) warningCount++;
+    else previousWarn.apply(console, args);
+  };
+  const viewers: LyraCsvViewer[] = [];
+  try {
+    await run(async (kind, source) => {
+      const viewer = await make(kind, source);
+      viewers.push(viewer);
+      return viewer;
+    });
+  } finally {
+    try {
+      // Disconnect can schedule another render; keep the diagnostic captured through teardown.
+      for (const viewer of viewers) {
+        const list = viewer.shadowRoot!.querySelector('lr-virtual-list');
+        viewer.remove();
+        await viewer.updateComplete;
+        await list?.updateComplete;
+      }
+    } finally {
+      console.warn = previousWarn;
+      if (wasIssued) store?.add(warningKey);
+      else store?.delete(warningKey);
+    }
+  }
+  expect(warningCount).to.equal(store ? 1 : 0);
+}
+
+it('revokes old document reads during adoption and reveals using the new owner document', async () => withScaledScrollWarning(async make => {
   type Request = import('../../data-sources.js').LyraTabularReadRequest;
   const pending: Array<{ request: Request; resolve(value: readonly (readonly string[])[]): void }> = [];
   let calls = 0;
@@ -29,9 +66,9 @@ it('revokes old document reads during adoption and reveals using the new owner d
     expect(viewer.ownerDocument === frame.contentDocument).to.equal(true);
     expect(viewer.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.textContent).to.include('999999:2');
   } finally { parent.append(viewer); }
-});
+}));
 
-it('updates fixed source row geometry after a token-only theme change on a settled viewer', async () => {
+it('updates fixed source row geometry after a token-only theme change on a settled viewer', async () => withScaledScrollWarning(async make => {
   const source: LyraTabularSource = { revision: 1, rowCount: 1000000, columnCount: 3, columnAt: i => ({ key: String(i), label: 'Header' }), cellAt: () => 'value' };
   const viewer = await make('csv', source);
   await nextFrame(); await nextFrame(); await nextFrame();
@@ -41,7 +78,7 @@ it('updates fixed source row geometry after a token-only theme change on a settl
   await waitUntil(() => list.rowHeight === 64);
   expect(viewer.getBoundingClientRect().height).to.equal(before);
   expect(getComputedStyle(list.shadowRoot!.querySelector('[part="data-row"]')!).height).to.equal('64px');
-});
+}));
 
 it('covers the unaligned compact visible interval across both bounded rectangles', async () => {
   const source: LyraTabularSource = { revision: 1, rowCount: 1000000, columnCount: 100, columnAt: i => ({ key: String(i), label: 'Header' }), cellAt: (r, c) => `${r}:${c}` };
@@ -51,7 +88,7 @@ it('covers the unaligned compact visible interval across both bounded rectangles
   await waitUntil(() => list.shadowRoot!.querySelector('[data-row-index="250"] [aria-colindex="100"]')?.textContent === '250:99');
 });
 
-for (const action of ['search', 'clear'] as const) it(`revokes pending public anchor retries when ${action} changes navigation intent`, async () => {
+for (const action of ['search', 'clear'] as const) it(`revokes pending public anchor retries when ${action} changes navigation intent`, async () => withScaledScrollWarning(async make => {
   type Request = import('../../data-sources.js').LyraTabularReadRequest;
   const pending: Array<{ request: Request; resolve(value: readonly (readonly string[])[]): void }> = [];
   let calls = 0;
@@ -68,9 +105,9 @@ for (const action of ['search', 'clear'] as const) it(`revokes pending public an
   await next;
   expect(await old).to.equal(false);
   if (action === 'search') expect(viewer.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.textContent).to.include('999999:2');
-});
+}));
 
-it('clears header search coordinates and pending navigation when CSV hides labels without rereading cells', async () => {
+it('clears header search coordinates and pending navigation when CSV hides labels without rereading cells', async () => withScaledScrollWarning(async make => {
   let cells = 0;
   const source: LyraTabularSource = { revision: 1, rowCount: 1000000, columnCount: 3, columnAt: i => ({ key: String(i), label: 'Header' }), cellAt: (r, c) => { cells++; return `${r}:${c}`; },
     search: async () => ({ hits: [{ row: -1, column: 0 }, { row: 999999, column: 2 }], total: 2, exhaustive: true }) };
@@ -88,7 +125,7 @@ it('clears header search coordinates and pending navigation when CSV hides label
   expect(await viewer.searchNext()).to.equal(false);
   expect(await viewer.search('Header')).to.equal(1);
   expect(details.at(-1)).to.include({ matchCount: 1, matchCountExact: false });
-});
+}));
 
 const sizedSource = (rows: number, columns: number): LyraTabularSource => ({ revision: 1, rowCount: rows, columnCount: columns,
   columnAt: index => ({ key: String(index), label: String(index) }), cellAt: (row, column) => `${row}:${column}` });

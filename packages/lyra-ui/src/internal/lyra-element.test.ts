@@ -2447,19 +2447,31 @@ it('keeps the lr-heatmap data record an identity passthrough', () => {
   );
 });
 
-it('keeps lr-task-list items clone-owned and frozen', () => {
-  const el = document.createElement(tag('task-list')) as LyraTaskList;
+it('keeps task records by identity while owning their rendered display fields', async () => {
+  const el = await fixture<LyraTaskList>(`<${tag('task-list')}></${tag('task-list')}>`);
   const items = [{ id: 'a', label: 'First', status: 'pending' as const }];
 
   el.items = items;
+  await el.updateComplete;
   const owned = el.items;
   items[0]!.label = 'changed';
   items.push({ id: 'b', label: 'Later', status: 'pending' as const });
 
   expect(owned).to.not.equal(items);
   expect(Object.isFrozen(owned)).to.be.true;
-  expect(Object.isFrozen(owned[0])).to.be.true;
-  expect(el.items.map((item) => item.label)).to.deep.equal(['First']);
+  expect(owned[0]).to.equal(items[0]);
+  expect(Object.isFrozen(owned[0])).to.be.false;
+  expect(el.items.map((item) => item.label)).to.deep.equal(['changed']);
+
+  el.heading = 'Updated heading';
+  await el.updateComplete;
+  const labels = () => [...el.shadowRoot!.querySelectorAll('[part="item-label"]')]
+    .map(label => label.textContent?.trim());
+  expect(labels()).to.deep.equal(['First']);
+
+  el.items = [...items];
+  await el.updateComplete;
+  expect(labels()).to.deep.equal(['changed', 'Later']);
 });
 
 it('keeps an accessor-backed enrolled collection clone-owned and frozen', () => {

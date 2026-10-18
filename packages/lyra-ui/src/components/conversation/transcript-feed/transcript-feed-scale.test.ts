@@ -18,5 +18,5 @@ it('discloses newest caption retention independently of the rendered window', as
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('Newest captions retained');
   el.entries = [];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="limit"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
 });

@@ -11,6 +11,7 @@ import type { LyraVoicePicker } from '../components/conversation/voice-picker/vo
 import type { LyraStepper } from '../components/layout/stepper/stepper.class.js';
 import type { LyraSwatchPicker } from '../components/forms/swatch-picker/swatch-picker.class.js';
 import type { LyraCurrencyPicker } from '../components/forms/currency-picker/currency-picker.class.js';
+import { DEFAULT_CURRENCY_ENTRIES, normalizeCurrencyCatalog } from '../components/forms/currency-picker/currency-catalog.js';
 import type { LyraPopover } from '../components/overlays/overlay/popover.class.js';
 import type { LyraOption } from '../components/forms/combobox/option.class.js';
 import { tag } from '../internal/prefix.js';
@@ -229,6 +230,18 @@ export async function chooseCurrency(picker: LyraCurrencyPicker, code: string): 
   if (!control) {
     throw new Error('chooseCurrency(): the currency picker has not rendered its control yet.');
   }
+  await control.updateComplete;
+  const catalog = normalizeCurrencyCatalog(picker.currencies) ?? DEFAULT_CURRENCY_ENTRIES;
+  const entry = catalog.find((candidate) => candidate.code === code);
+  if (!entry) {
+    throw new Error(`chooseCurrency(): ${JSON.stringify(code)} is not in the picker's catalog.`);
+  }
+  if (entry.disabled) {
+    throw new Error(`chooseCurrency(): ${JSON.stringify(code)} is disabled in the picker's catalog.`);
+  }
+  control.open = true;
+  await control.updateComplete;
+  await picker.updateComplete;
   await control.updateComplete;
   const option = Array.from(control.querySelectorAll<LyraOption>(tag('option'))).find((candidate) => candidate.value === code);
   if (!option) {

@@ -27,7 +27,7 @@ it('discloses newest-entry retention and clears the notice', async () => {
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('Newest entries retained');
   el.entries = [];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="limit"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
 });
 
 it('refreshes virtual callback output after an explicit coalesced update', async () => {

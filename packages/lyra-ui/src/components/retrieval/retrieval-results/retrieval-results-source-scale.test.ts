@@ -62,7 +62,7 @@ it('locates the final active canonical ID once without overriding manual pages',
 });
 it('fails closed for a present invalid source and restores legacy chunks when unset', async () => {
   const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .chunks=${[entry(1).value]} .dataSource=${{} as RetrievalResultsSource}></lr-retrieval-results>`);
-  await waitUntil(() => !!el.shadowRoot!.querySelector('[part="source-retry"]')); expect(el.shadowRoot!.querySelector('[data-chunk-id]')).to.equal(null);
+  await waitUntil(() => !!el.shadowRoot!.querySelector('[part="source-retry"]')); expect(el.shadowRoot!.querySelector('[data-chunk-id]') === null).to.equal(true);
   el.dataSource = undefined; await el.updateComplete; expect(el.shadowRoot!.querySelector('[data-chunk-id="c1"]') !== null).to.equal(true); expect(el.sourceTotal).to.equal(null);
 });
 it('forwards global grouping callbacks without invoking them on page-local rows', async () => {
@@ -154,7 +154,7 @@ it('rejects oversized required text and grouped pages with missing coverage', as
   const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .dataSource=${provider}></lr-retrieval-results>`);
   await waitUntil(() => !!el.shadowRoot!.querySelector('[part="source-retry"]')); expect(el.sourceTotal).to.equal(null);
   provider.query = async () => ({ total: 1, rows: [entry(0)] }); el.grouping = 'source'; el.dataSource = provider;
-  await el.updateComplete; await waitUntil(() => !!el.shadowRoot!.querySelector('[part="source-retry"]')); expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.equal(null);
+  await el.updateComplete; await waitUntil(() => !!el.shadowRoot!.querySelector('[part="source-retry"]')); expect(el.shadowRoot!.querySelector('lr-virtual-list') === null).to.equal(true);
 });
 it('preserves a pending user selection transaction across a failed page retry', async () => {
   const provider = source(); let release!: (rows: ReturnType<typeof entry>[]) => void; let lookups = 0;
@@ -313,7 +313,7 @@ it('stops obsolete source descriptor capture when an early field navigates pages
   el.dataSource = provider;
   const virtual = await list(el, 'c1');
   expect(laterReads).to.equal(0); expect(el.sourcePage).to.equal(1);
-  expect(virtual.items.length).to.equal(1); expect(el.shadowRoot!.querySelector('[part="source-retry"]')).to.equal(null);
+  expect(virtual.items.length).to.equal(1); expect(el.shadowRoot!.querySelector('[part="source-retry"]') === null).to.equal(true);
 });
 it('keeps canonical selection projection current when its descriptor changes only the page', async () => {
   const provider = source(); const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .dataSource=${provider}></lr-retrieval-results>`);
@@ -328,7 +328,7 @@ it('keeps canonical selection projection current when its descriptor changes onl
   const events: string[][] = []; el.addEventListener('lr-selection-change', event => events.push([...event.detail.selectedChunkIds]));
   control.click(); await list(el, 'c100'); await waitUntil(() => events.length === 1);
   expect(textReads).to.equal(1); expect(events).to.deep.equal([['c0']]);
-  expect(el.selectedChunkIds).to.deep.equal(['c0']); expect(el.shadowRoot!.querySelector('[part="source-selection-retry"]')).to.equal(null);
+  expect(el.selectedChunkIds).to.deep.equal(['c0']); expect(el.shadowRoot!.querySelector('[part="source-selection-retry"]') === null).to.equal(true);
 });
 for (const field of ['quote', 'rect'] as const) {
   it(`rejects object-valued locator ${field} scalars before traversing nested caller data`, async () => {

@@ -306,7 +306,7 @@ it('keeps zero and all-invalid prepared sources as valid empty summaries', async
   for (const count of [0, 10]) {
     const prepared = await prepareLyraSeriesData([{ id: 'empty', label: 'Empty', input: { revision: 'r', count, read: (_start, size) => Array.from({ length: size }, () => ({ x: NaN, y: null })) } }]);
     const element = await mounted(prepared);
-    expect(element.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+    expect(element.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
     expect(element.chart!.data.datasets[0]!.data).to.have.length(0);
     expect(element.shadowRoot!.querySelector('[part="description"]')?.textContent).to.include('0 valid observations');
     element.remove();

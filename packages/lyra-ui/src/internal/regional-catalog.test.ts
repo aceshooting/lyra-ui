@@ -11,6 +11,45 @@ import {
 } from './localization-runtime.js';
 import { LYRA_DEFAULT_STRINGS } from './localization.js';
 
+const regionalOverrideKeys = [
+  'calendarViewerMissingParser',
+  'chartMissingLibrary',
+  'close',
+  'closeNavigation',
+  'closeWithContext',
+  'closeWithTruncatedContext',
+  'datasetViewerMissingParser',
+  'diffViewTooLarge',
+  'dockPanelResize',
+  'documentPreviewResourceTooLarge',
+  'documentViewerMissingSanitizer',
+  'docxViewerMissingConverter',
+  'emailViewerMissingParser',
+  'fileInputRejectedMaxTotalSize',
+  'fileInputRejectedSize',
+  'graphMissingLibrary',
+  'histogramInputLimit',
+  'iconSanitizerMissing',
+  'iconTooLarge',
+  'imageViewerAnnotationHint',
+  'imageViewerFitActual',
+  'mapMissingLibrary',
+  'memoryPanelAddWithContext',
+  'noMatchesQuery',
+  'pdfViewerMissingLibrary',
+  'pdfViewerZoomIn',
+  'qrCodeMissingLibrary',
+  'queryBuilderOperatorGreaterThan',
+  'queryBuilderOperatorGreaterThanOrEqual',
+  'resizeNavigation',
+  'toolParamMissingProperty',
+  'toolTimelineInputLimit',
+  'unsupportedFieldType',
+  'videoExitPictureInPicture',
+  'widgetExpandToFullscreen',
+  'zoomIn',
+];
+
 it('loads the matching parent family before a sparse regional slice and lazily completes both catalogs without selecting either', async () => {
   const active = getLyraLocale();
   const { loadLyraLocale } = await import('../locale-loader.js');
@@ -27,7 +66,7 @@ it('loads the matching parent family before a sparse regional slice and lazily c
   await first;
   expect(getLyraLocale()).to.equal(active);
   expect(getRegisteredLyraLocaleKeys('de').length).to.equal(Object.keys(LYRA_DEFAULT_STRINGS).length);
-  expect(getRegisteredLyraLocaleKeys('de-CH').length).to.equal(34);
+  expect([...getRegisteredLyraLocaleKeys('de-CH')].sort()).to.deep.equal(regionalOverrideKeys);
   expect(resolveLyraString(host, 'close')).to.equal('Schliessen');
   expect(getRegisteredLyraLocales().includes('de-AT')).to.equal(false);
 });
@@ -48,7 +87,7 @@ it('keeps regional overrides and direction while inherited messages update live 
     expect(resolveLyraString(host, 'openCalendar')).to.equal('Updated parent calendar');
     expect(resolveLyraString(host, 'close')).to.equal('Schliessen');
     expect(getLyraLocaleDirection('de-CH')).to.equal('ltr');
-    expect(getRegisteredLyraLocaleKeys('de-CH').length).to.equal(34);
+    expect([...getRegisteredLyraLocaleKeys('de-CH')].sort()).to.deep.equal(regionalOverrideKeys);
   } finally {
     stop();
     registerLyraLocale('de', saved, { dir: direction });

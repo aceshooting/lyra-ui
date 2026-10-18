@@ -1302,6 +1302,115 @@ describe('fixed-position containing blocks', () => {
 });
 
 describe('containing blocks across shadow boundaries', () => {
+  for (const [ancestorStyle, scaleX, scaleY] of [
+    ['', 1, 1], ['transform: scale(1.25)', 1.25, 1.25],
+    ['transform: scale(0.75, 1.25)', 0.75, 1.25], ['zoom: 1.2', 1.2, 1.2],
+  ] as const) {
+    for (const placement of ['bottom-start', 'top-end', 'right-end'] as const) {
+      it(`preserves ${placement} geometry and offset under a filtered inline with ${ancestorStyle || 'no ancestor scale'}`, async () => {
+        const container = await fixture<HTMLElement>(html`
+          <div style="position: fixed; left: 20px; top: 20px; padding: 40px; width: 240px; height: 120px;
+            transform-origin: 0 0; ${ancestorStyle}">
+            <span style="filter: blur(0px)">
+              <button id="scaled-inline-anchor" style="width: 80px; height: 24px">Anchor</button>
+              <div id="scaled-inline-popup" style="width: 60px; height: 30px"></div>
+            </span>
+            <div id="scaled-inline-bridge"></div>
+          </div>
+        `);
+        const anchor = container.querySelector<HTMLElement>('#scaled-inline-anchor')!;
+        const popup = container.querySelector<HTMLElement>('#scaled-inline-popup')!;
+        const bridge = container.querySelector<HTMLElement>('#scaled-inline-bridge')!;
+        const childCount = popup.parentNode!.childNodes.length;
+        let placed = false;
+        const stop = place(anchor, popup, {
+          strategy: 'fixed', placement, offset: 7, flip: false, shift: false, hoverBridge: bridge,
+          onPlaced: () => placed = true,
+        });
+        try {
+          await waitFor(() => placed, Boolean);
+          expect(container.getBoundingClientRect().width / container.offsetWidth).to.be.closeTo(scaleX, 0.01);
+          expect(container.getBoundingClientRect().height / container.offsetHeight).to.be.closeTo(scaleY, 0.01);
+          const anchorRect = anchor.getBoundingClientRect();
+          const popupRect = popup.getBoundingClientRect();
+          if (placement === 'bottom-start') {
+            expect(popupRect.left).to.be.closeTo(anchorRect.left, 1);
+            expect(popupRect.top).to.be.closeTo(anchorRect.bottom + 7 * scaleY, 1);
+          } else if (placement === 'top-end') {
+            expect(popupRect.right).to.be.closeTo(anchorRect.right, 1);
+            expect(popupRect.bottom).to.be.closeTo(anchorRect.top - 7 * scaleY, 1);
+          } else {
+            expect(popupRect.left).to.be.closeTo(anchorRect.right + 7 * scaleX, 1);
+            expect(popupRect.bottom).to.be.closeTo(anchorRect.bottom, 1);
+          }
+          const expectedQuad: readonly [
+            readonly [number, number], readonly [number, number],
+            readonly [number, number], readonly [number, number],
+          ] = placement === 'bottom-start' ? [
+            [anchorRect.left, anchorRect.bottom], [anchorRect.right, anchorRect.bottom],
+            [popupRect.right, popupRect.top], [popupRect.left, popupRect.top],
+          ] : placement === 'top-end' ? [
+            [popupRect.left, popupRect.bottom], [popupRect.right, popupRect.bottom],
+            [anchorRect.right, anchorRect.top], [anchorRect.left, anchorRect.top],
+          ] : [
+            [anchorRect.right, anchorRect.top], [popupRect.left, popupRect.top],
+            [popupRect.left, popupRect.bottom], [anchorRect.right, anchorRect.bottom],
+          ];
+          const corners = ['top-left', 'top-right', 'bottom-right', 'bottom-left'] as const;
+          const axes = ['x', 'y'] as const;
+          for (const index of [0, 1, 2, 3] as const) {
+            const corner = corners[index];
+            for (const axisIndex of [0, 1] as const) {
+              const axis = axes[axisIndex];
+              const coordinate = Number.parseFloat(bridge.style.getPropertyValue(
+                `--lr-positioner-hover-bridge-${corner}-${axis}`,
+              ));
+              expect(coordinate, `${corner} ${axis}`).to.be.closeTo(expectedQuad[index][axisIndex], 1);
+            }
+          }
+          expect(popup.parentNode!.childNodes.length).to.equal(childCount);
+        } finally {
+          stop();
+        }
+      });
+    }
+  }
+
+  it('removes the inline scale probe without changing scroll extent near the viewport edge', async () => {
+    const container = await fixture<HTMLElement>(html`
+      <div style="position: fixed; right: 8px; bottom: 8px; width: 80px; height: 40px;">
+        <span style="filter: blur(0px)">
+          <button id="edge-anchor" style="width: 80px; height: 24px">Anchor</button>
+          <div id="edge-popup" style="position: fixed; left: 0; top: 0; width: 40px; height: 20px;"></div>
+        </span>
+      </div>
+    `);
+    const anchor = container.querySelector<HTMLElement>('#edge-anchor')!;
+    const popup = container.querySelector<HTMLElement>('#edge-popup')!;
+    const scrollingElement = document.scrollingElement!;
+    const scrollState = () => [
+      scrollingElement.scrollWidth, scrollingElement.scrollHeight,
+      scrollingElement.scrollLeft, scrollingElement.scrollTop,
+      container.scrollWidth, container.scrollHeight, container.scrollLeft, container.scrollTop,
+    ];
+    const beforeScroll = scrollState();
+    const childCount = popup.parentNode!.childNodes.length;
+    let placed = false;
+    const stop = place(anchor, popup, {
+      strategy: 'fixed', placement: 'top-end', offset: 4, flip: false, shift: false,
+      onPlaced: () => placed = true,
+    });
+    try {
+      await waitFor(() => placed, Boolean);
+      expect(popup.getBoundingClientRect().right).to.be.closeTo(anchor.getBoundingClientRect().right, 1);
+      expect(popup.getBoundingClientRect().bottom).to.be.closeTo(anchor.getBoundingClientRect().top - 4, 1);
+      expect(scrollState()).to.deep.equal(beforeScroll);
+      expect(popup.parentNode!.childNodes.length).to.equal(childCount);
+    } finally {
+      stop();
+    }
+  });
+
   for (const authoredTransform of ['transform: translate(11px, 7px)', 'translate: 11px 7px']) {
     it(`preserves authored ${authoredTransform} under a filtered inline fixed containing block`, async () => {
       const container = await fixture<HTMLElement>(html`

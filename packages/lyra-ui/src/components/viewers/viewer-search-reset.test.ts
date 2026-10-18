@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './archive-viewer/archive-viewer.js';
 import './csv-viewer/csv-viewer.js';
 import './dataset-viewer/dataset-viewer.js';
@@ -13,6 +13,11 @@ interface SearchResetViewer extends HTMLElement {
   updateComplete: Promise<boolean>;
   requestUpdate(name?: PropertyKey, oldValue?: unknown): void;
   searchNext(): Promise<boolean>;
+}
+
+interface TabularSearchResetViewer extends SearchResetViewer {
+  src: string;
+  search(query: string): Promise<number>;
 }
 
 const canonicalReset = {
@@ -37,25 +42,57 @@ async function expectSourceReset(
 }
 
 describe('viewer source search resets', () => {
+  const rows = [['Value'], ...Array.from({ length: 1_001 }, () => ['hit'])];
+  const tabularCases: Array<{
+    name: string;
+    create: () => Promise<TabularSearchResetViewer>;
+  }> = [
+    {
+      name: 'CSV',
+      create: () => fixture(html`<lr-csv-viewer src="previous-source" .rows=${rows}></lr-csv-viewer>`),
+    },
+    {
+      name: 'dataset',
+      create: () => fixture(html`<lr-dataset-viewer src="previous-source" .table=${{
+        fields: ['Value'], rows: Array.from({ length: 1_001 }, () => ({ Value: 'hit' })),
+      }}></lr-dataset-viewer>`),
+    },
+    {
+      name: 'spreadsheet',
+      create: () => fixture(html`<lr-spreadsheet-viewer src="previous-source" .workbook=${{
+        sheets: [{ name: 'One', rows }],
+      }}></lr-spreadsheet-viewer>`),
+    },
+  ];
+
+  for (const testCase of tabularCases) {
+    it(`${testCase.name} emits the canonical reset before new-source navigation`, async () => {
+      const viewer = await testCase.create();
+      const renderedRow = (current = false): Element | null | undefined => viewer.shadowRoot
+        ?.querySelector('lr-virtual-list')?.shadowRoot
+        ?.querySelector(current ? '[part="row"][aria-current="true"]' : '[part="row"]');
+      await waitUntil(() => Boolean(renderedRow()));
+      const searched = oneEvent(viewer, 'lr-search-change');
+      expect(await viewer.search('hit')).to.equal(1_000);
+      expect((await searched as CustomEvent).detail).to.deep.equal({
+        query: 'hit', matchCount: 1_000, matchCountExact: false, activeIndex: 0,
+      });
+      expect(renderedRow(true)?.textContent ?? '').to.include('hit');
+
+      const reset = oneEvent(viewer, 'lr-search-change');
+      viewer.src = '';
+      expect((await reset as CustomEvent).detail).to.deep.equal(canonicalReset);
+      await viewer.updateComplete;
+      await waitUntil(() => Boolean(renderedRow()) && !renderedRow(true));
+      expect(await viewer.searchNext()).to.be.false;
+    });
+  }
+
   const cases: Array<{
     name: string;
     create: () => Promise<SearchResetViewer>;
     seed: (target: Record<string, unknown>) => void;
   }> = [
-    ...[
-      ['CSV', () => fixture(html`<lr-csv-viewer></lr-csv-viewer>`)],
-      ['dataset', () => fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)],
-      ['spreadsheet', () => fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)],
-    ].map(([name, create]) => ({
-      name: name as string,
-      create: create as () => Promise<SearchResetViewer>,
-      seed: (target: Record<string, unknown>) => Object.assign((target['table'] as { search: object }).search, {
-        query: 'hit',
-        matches: [{}],
-        exact: false,
-        activeIndex: 0,
-      }),
-    })),
     {
       name: 'ebook',
       create: () => fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`),

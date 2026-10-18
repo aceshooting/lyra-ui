@@ -214,7 +214,7 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
 });
 
 it('keeps flow-canvas decoration churn within the large-flow budget', async function () {
-  // The initial fixture mounts 1,000 declarative cards before the warmed update samples.
+  // The fixture retains 1,000 logical nodes before the warmed update samples.
   this.timeout(60000);
   const FLOW_NODE_COUNT = 1_000;
   const COLUMNS = 20;
@@ -237,25 +237,29 @@ it('keeps flow-canvas decoration churn within the large-flow budget', async func
   host.nodes = nodes;
   host.edges = edges;
   await host.updateComplete;
-  // Every node here is a default (non-consumer-authored) card, so each renders as declarative
-  // `<slot>` FALLBACK content inside the shadow tree -- see flow-canvas.class.ts's renderNodes()
-  // and its class-doc `@slot` entry ("a declarative `lr-flow-node` fallback remains in shadow
-  // DOM"). That moved the default card out of the light DOM (avoiding node-churn
-  // leaking into the consumer's light DOM), but this wait was never updated to match: querying
-  // `host` (light DOM) instead of `host.shadowRoot` can never see these 1,000 elements and always
-  // polls 0 -- a deterministic, always-reproducing failure (confirmed locally under plain
-  // Chromium, in isolation, with no other test run first), not a slow-render timing flake. Widening
-  // this wait's timeout in earlier fix attempts this session could never have helped: 0 does not
-  // become 1,000 by waiting longer. `benchmark()`'s own `domNodes` measurement below already reads
-  // `host.shadowRoot` correctly (see its definition), which is why only this readiness wait was
-  // wrong. The 15s budget itself (well past this file's other per-node-count waits) is kept as
-  // real headroom for the initial render on a loaded CI worker, now that the condition can actually
-  // become true.
+  // The viewport renders the visible cards and connections from the complete logical graph.
   await waitUntil(
-    () => host.shadowRoot!.querySelectorAll('lr-flow-node').length === FLOW_NODE_COUNT,
-    'flow-canvas did not finish its initial 1,000-node render',
+    () => host.shadowRoot!.querySelectorAll('[part="node"] [part="node-control"]').length > 0 &&
+      host.shadowRoot!.querySelectorAll('[part="edges"] [part="edge"]').length > 0,
+    'flow-canvas did not render its visible nodes and connections',
     { timeout: 15000 },
   );
+  const renderedNodes = host.shadowRoot!.querySelectorAll<HTMLElement>('[part="node"]');
+  expect(host.nodes.length).to.equal(FLOW_NODE_COUNT);
+  expect(host.edges.length).to.equal(FLOW_NODE_COUNT - 1);
+  expect(renderedNodes.length).to.be.lessThan(FLOW_NODE_COUNT);
+  for (const node of renderedNodes) {
+    const source = nodes.find((entry) => entry.id === node.dataset['nodeId']);
+    expect(source !== undefined).to.equal(true);
+    expect(node.querySelector('[part="node-control"]')?.getAttribute('aria-label')).to.contain(String(source!.data!['label']));
+  }
+  const renderedEdges = host.shadowRoot!.querySelectorAll<SVGPathElement>('[part="edges"] [part="edge"]');
+  expect(renderedEdges.length).to.be.at.most(FLOW_NODE_COUNT - 1);
+  for (const edge of renderedEdges) {
+    expect(edge.getAttribute('role')).to.equal('button');
+    expect(Boolean(edge.getAttribute('aria-label'))).to.equal(true);
+    expect(Boolean(edge.getAttribute('d'))).to.equal(true);
+  }
   const result = await benchmark(
     host,
     (iteration) => {

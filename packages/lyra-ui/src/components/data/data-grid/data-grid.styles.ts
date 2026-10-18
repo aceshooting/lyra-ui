@@ -351,6 +351,16 @@ export const styles = css`
     overscroll-behavior: contain;
   }
 
+  /* Keep the full column extent while keyed rows leave and enter the window. Without a
+     persistent box, removing the old rows can clamp the native inline scroll offset to zero. */
+  [part="body"]:where(.column-windowed)::before {
+    content: '';
+    display: grid;
+    grid-template-columns: var(--data-grid-columns);
+    min-inline-size: max-content;
+    block-size: 0;
+  }
+
   [part~="row"],
   [part="group-row"],
   [part="footer-row"] {

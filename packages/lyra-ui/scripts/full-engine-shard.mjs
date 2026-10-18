@@ -148,22 +148,23 @@ export function shouldRunNativeScrollbarVerification(testFiles) {
   return testFiles.includes(NATIVE_SCROLLBAR_OWNER_FILE);
 }
 
+function headedBrowserCommand(executable, args, { sessionBus = false } = {}) {
+  return {
+    command: 'xvfb-run',
+    args: ['-a', ...(sessionBus ? ['dbus-run-session', '--'] : []), executable, ...args],
+  };
+}
+
 export function nativeScrollbarVerificationCommand(
   browser,
   { executable = process.platform === 'win32' ? 'wtr.cmd' : 'wtr' } = {},
 ) {
   const product = String(browser ?? 'chromium').toLowerCase();
   if (product === 'webkit' || product === 'safari') {
-    return {
-      command: 'xvfb-run',
-      args: ['-a', 'dbus-run-session', '--', executable, NATIVE_SCROLLBAR_TEST_FILE],
-    };
+    return headedBrowserCommand(executable, [NATIVE_SCROLLBAR_TEST_FILE], { sessionBus: true });
   }
   if (product === 'firefox') {
-    return {
-      command: 'xvfb-run',
-      args: ['-a', executable, NATIVE_SCROLLBAR_TEST_FILE],
-    };
+    return headedBrowserCommand(executable, [NATIVE_SCROLLBAR_TEST_FILE]);
   }
   return { command: executable, args: [NATIVE_SCROLLBAR_TEST_FILE] };
 }
@@ -217,6 +218,7 @@ export function runShard(
   environment = process.env,
   {
     spawn = spawnSync,
+    platform = process.platform,
     runNativeScrollbarVerification: runNative = runNativeScrollbarVerification,
   } = {},
 ) {
@@ -236,13 +238,25 @@ export function runShard(
   );
   for (const file of selectedFiles) console.log(`  ${file}`);
 
-  const executable = process.platform === 'win32' ? 'wtr.cmd' : 'wtr';
-  const result = spawn(executable, selectedFiles, {
+  const executable = platform === 'win32' ? 'wtr.cmd' : 'wtr';
+  // Linux Firefox needs a headed display for software WebGL2, including native map peers.
+  const platformSuite = String(environment.WTR_TEST_SUITE ?? '').trim().toLowerCase() === 'platform';
+  const headedFirefox = platform === 'linux' && !platformSuite &&
+    String(environment.WTR_BROWSER ?? 'chromium').toLowerCase() === 'firefox';
+  const { command, args } = headedFirefox
+    ? headedBrowserCommand(executable, selectedFiles)
+    : { command: executable, args: selectedFiles };
+  const result = spawn(command, args, {
     cwd: packageDirectory,
-    env: environment,
+    env: headedFirefox ? { ...environment, WTR_HEADED: '1' } : environment,
     stdio: 'inherit',
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    if (headedFirefox && result.error.code === 'ENOENT') {
+      throw new Error('Firefox full-engine tests require xvfb-run on Linux.');
+    }
+    throw result.error;
+  }
   if (result.signal) {
     throw new Error(`Web Test Runner was terminated by signal ${result.signal}.`);
   }

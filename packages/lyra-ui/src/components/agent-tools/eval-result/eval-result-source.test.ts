@@ -51,7 +51,7 @@ describe('eval result source', () => {
     const { source } = provider();
     const el = await fixture<LyraEvalResult>(html`<lr-eval-result .runs=${[record(99).value]} selected-run-id="missing" .dataSource=${source}></lr-eval-result>`);
     await table(el, 'r0'); await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('lr-rubric-form')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('lr-rubric-form') === null).to.equal(true);
     expect(el.runs[0]!.id).to.equal('r99'); el.dataSource = undefined;
     await table(el, 'r99'); expect(el.sourceTotal).to.equal(null);
   });
@@ -156,7 +156,7 @@ it('rejects malformed fixed fields and oversized configured review without trave
   data.source.query = async () => ({ total: 1, rows: [{ key: 'r0', order: 0, value: huge }] }); data.source.lookup = async () => [{ key: 'r0', order: 0, value: huge }];
   el.rubricKeys = [{ key: 'notes', type: 'comment' }]; el.dataSource = data.source;
   await table(el, 'r0'); await waitUntil(() => !!el.shadowRoot!.querySelector('[part="selection-retry"]'));
-  expect(el.shadowRoot!.querySelector('lr-rubric-form')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('lr-rubric-form') === null).to.equal(true);
 });
 it('clears retained page and pair work on disconnect and reconnects at the requested page', async () => {
   const data = provider(); const el = await fixture<LyraEvalResult>(html`<lr-eval-result .dataSource=${data.source} .sourcePage=${1} .sourcePageSize=${3}></lr-eval-result>`);
@@ -321,7 +321,7 @@ it('uses native RTL header navigation and resets the provider page after keyboar
 it('renders successful emptiness without comparison or a fabricated selection failure', async () => {
   const data = provider(0); const el = await fixture<LyraEvalResult>(html`<lr-eval-result .dataSource=${data.source}></lr-eval-result>`);
   await waitUntil(() => el.sourceTotal === 0); await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-rubric-form')).to.equal(null); expect(el.shadowRoot!.querySelector('[part="selection-retry"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('lr-rubric-form') === null).to.equal(true); expect(el.shadowRoot!.querySelector('[part="selection-retry"]') === null).to.equal(true);
   expect(data.lookups.length).to.equal(0); expect(el.shadowRoot!.querySelector<LyraTable>('lr-table')!.error).to.equal(false);
 });
 it('still refreshes the selected cache when an explicit refresh follows a locale attribute change', async () => {
@@ -379,6 +379,6 @@ it('keeps an explicit pair projection current when its descriptor changes only t
   element = await fixture<LyraEvalResult>(html`<lr-eval-result .sourcePageSize=${2} selected-run-id="r5" baseline-run-id="r4"></lr-eval-result>`);
   element.dataSource = data.source;
   await table(element, 'r2'); await review(element, 'r5');
-  expect(labels).to.equal(1); expect(element.shadowRoot!.querySelector('[part="selection-retry"]')).to.equal(null);
+  expect(labels).to.equal(1); expect(element.shadowRoot!.querySelector('[part="selection-retry"]') === null).to.equal(true);
   expect(element.sourcePage).to.equal(1); expect(element.selectedRunId).to.equal('r5');
 });

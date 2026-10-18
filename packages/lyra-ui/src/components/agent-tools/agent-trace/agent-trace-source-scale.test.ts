@@ -50,7 +50,7 @@ it('shows six global filter choices and no legacy handoff list in source mode', 
   await ready(el);
   const legend = el.shadowRoot!.querySelector<LyraGraphLegend>('lr-graph-legend')!;
   expect(legend.types.map(item => item.id)).to.deep.equal(['agent', 'llm', 'tool', 'retriever', 'embedding', 'other']);
-  expect(el.shadowRoot!.querySelector('[part="handoffs"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="handoffs"]') === null).to.equal(true);
   el.hiddenKinds = ['tool']; await el.updateComplete;
   await waitUntil(() => p.queries.length === 2);
   expect(p.queries[1]).to.deep.equal(['tool']);
@@ -131,7 +131,7 @@ it('never reads the legacy span model while a source is present and restores it 
 it('keeps invalid source presence authoritative and can reveal immediately after assignment', async () => {
   const el = await fixture<Trace>(html`<lr-agent-trace .spans=${[span(0)]} .treeSource=${null}></lr-agent-trace>`);
   await waitUntil(() => Boolean(tree(el).shadowRoot!.querySelector('[part~="source-error"]')));
-  expect(el.shadowRoot!.querySelector('[part="handoff"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="handoff"]') === null).to.equal(true);
   el.treeSource = provider().source;
   expect(await el.revealSourceKey('span999999')).to.equal(true); await ready(el, 'span999999');
   expect(await el.revealSourceKey('missing')).to.equal(false);

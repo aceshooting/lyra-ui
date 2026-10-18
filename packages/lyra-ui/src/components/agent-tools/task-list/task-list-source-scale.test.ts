@@ -63,7 +63,7 @@ it('navigates End without a task selection action or event', async () => {
 it('gives an invalid present source precedence over nonempty legacy items', async () => {
   const el = await fixture<TaskList>(html`<lr-task-list .items=${[row(0).value]} .treeSource=${null}></lr-task-list>`);
   await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part~="source-error"]')));
-  expect(el.shadowRoot!.querySelector('[data-id]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[data-id]') === null).to.equal(true);
   el.treeSource = undefined; await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[data-id="task0"]') !== null).to.equal(true);
 });

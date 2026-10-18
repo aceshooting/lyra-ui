@@ -33,7 +33,7 @@ it('forwards provider identity to only the active child and remounts at page zer
   let child = await inventory(host); expect(child.dataSource === sources.source).to.equal(true); expect(sources.pages).to.deep.equal([0]); expect(items.pages).to.deep.equal([]);
   child.sourcePage = 2; await waitUntil(() => child.sourceTotal === 201 && child.sourcePage === 2); expect(sources.pages).to.deep.equal([0, 2]);
   host.activeTab = 'ingestion'; const ingestionChild = await queue(host); expect(ingestionChild.dataSource === items.source).to.equal(true); expect(items.pages).to.deep.equal([0]);
-  expect(host.shadowRoot!.querySelector('lr-knowledge-base')).to.equal(null);
+  expect(host.shadowRoot!.querySelector('lr-knowledge-base') === null).to.equal(true);
   host.activeTab = 'sources'; child = await inventory(host); expect(child.sourcePage).to.equal(0); expect(sources.pages).to.deep.equal([0, 2, 0]);
 });
 it('keeps inactive providers opaque and stores same-reference assignments silently', async () => {

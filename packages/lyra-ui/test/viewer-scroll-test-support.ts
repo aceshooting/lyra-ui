@@ -39,12 +39,13 @@ export async function assertScrollFrameFollowsAdoption(
   let topMotionQueries = 0;
   let frameMotionQueries = 0;
 
-  const target = {
-    scrollIntoView: (options: ScrollIntoViewOptions) => {
-      if (options.behavior) scrollBehaviors.push(options.behavior);
-    },
+  const target = document.createElement('div');
+  target.setAttribute('aria-colindex', '2');
+  target.scrollIntoView = (options?: boolean | ScrollIntoViewOptions): void => {
+    if (typeof options === 'object' && options.behavior) scrollBehaviors.push(options.behavior);
   };
-  const row = { querySelectorAll: () => [target, target] };
+  const row = document.createElement('div');
+  row.append(target);
   const list = {
     get isConnected(): boolean { return el.isConnected; },
     updateComplete: Promise.resolve(),

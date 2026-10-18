@@ -6093,6 +6093,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           ${this.renderHeader()}
           <div
             part="body"
+            class=${this.visibleColumns.length > 50 && this.displayItems.length > 0 && (!this.error || this.loading)
+              ? 'column-windowed' : nothing}
             role="rowgroup"
             tabindex="0"
             @scroll=${this.onBodyScroll}

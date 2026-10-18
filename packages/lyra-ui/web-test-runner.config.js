@@ -351,20 +351,22 @@ const browserLaunchers = {
   safari: { product: 'webkit', launchOptions: nativeWebkitLaunchOptions },
   firefox: {
     product: 'firefox',
-    ...(nativeScrollbarVerification
-      ? {
-          launchOptions: {
-            headless: false,
-            firefoxUserPrefs: { 'widget.gtk.overlay-scrollbars.enabled': false },
-          },
-        }
-      : {}),
+    launchOptions: {
+      firefoxUserPrefs: {
+        'webgl.force-enabled': true,
+        ...(nativeScrollbarVerification ? { 'widget.gtk.overlay-scrollbars.enabled': false } : {}),
+      },
+      ...(nativeScrollbarVerification ? { headless: false } : {}),
+    },
   },
   webkit: { product: 'webkit', launchOptions: nativeWebkitLaunchOptions },
 };
 const launcherConfig = browserLaunchers[browserProduct];
 if (!launcherConfig) {
   throw new Error(`Unsupported WTR_BROWSER value: ${browserProduct}`);
+}
+if (process.env.WTR_HEADED === '1') {
+  launcherConfig.launchOptions = { ...launcherConfig.launchOptions, headless: false };
 }
 
 const strictConsole = process.env.WTR_STRICT_CONSOLE === '1';

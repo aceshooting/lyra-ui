@@ -4604,12 +4604,17 @@ describe('node overlays escape the canvas', () => {
   });
 
   it('opens a slotted node dropdown outside the clipped canvas at zoom 1.5', async () => {
-    const { el, dropdown, popup } = await canvasWithNodeMenu({ items: 6 });
+    const { el, dropdown, popup } = await canvasWithNodeMenu({ items: 6, style: 'position:fixed;top:8px;left:8px' });
     el.setViewport({ x: 0, y: 0, zoom: 1.5 });
     await el.updateComplete;
     await dropdown.show();
     await waitUntil(() => popup.style.left !== '' && popup.matches(':popover-open'));
     const items = [...el.querySelectorAll<HTMLElement>('lr-dropdown-item')];
+    expect(items.length).to.equal(6);
+    await waitUntil(() => [popup, ...items].every(item => {
+      const rect = item.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    }));
     const canvasRect = el.getBoundingClientRect();
     const outside = items.filter((item) => {
       const rect = item.getBoundingClientRect();
@@ -4617,7 +4622,7 @@ describe('node overlays escape the canvas', () => {
       return y > canvasRect.bottom || y < canvasRect.top;
     });
     expect(outside.length, 'part of the menu lies outside the clipped canvas').to.be.greaterThan(0);
-    for (const item of outside) {
+    for (const item of items) {
       const rect = item.getBoundingClientRect();
       const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
       expect(hit?.closest('lr-dropdown-item')?.getAttribute('value')).to.equal(item.getAttribute('value'));

@@ -80,7 +80,7 @@ it('admits500 isolated samples but visibly rejects501, multiple series and acces
   await element.updateComplete;
   expect(element.shadowRoot!.querySelector('[part="status"]')!.textContent).to.equal('Summary unavailable');
   element.preparedData = { ...original, series: [original.series[0]!, { ...original.series[0]!, id: 'other' }] }; await element.updateComplete;
-  expect(element.shadowRoot!.querySelector('svg')).to.equal(null);
+  expect(element.shadowRoot!.querySelector('svg') === null).to.equal(true);
   let reads = 0;
   const samples = [...original.series[0]!.samples]; Object.defineProperty(samples, '0', { get() { reads++; throw new Error('Accessor evaluated'); } });
   element.preparedData = { ...original, series: [{ ...original.series[0]!, samples }] }; await element.updateComplete;
@@ -110,9 +110,9 @@ it('handles zero/all-invalid summaries and reconnect without reading the source'
     const data: LyraPreparedSeriesData = { ...original, series: [{ ...original.series[0]!, samples: [], counts: { sourceCount: count, validCount: 0, invalidCount: count }, xDomain: null, yDomain: null }] };
     const element = await fixture<PreparedSparkline>(html`<lr-sparkline .preparedData=${data}></lr-sparkline>`);
     expect(element.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.include('0 valid observations');
-    expect(element.shadowRoot!.querySelector('[part="status"]')).to.equal(null);
+    expect(element.shadowRoot!.querySelector('[part="status"]') === null).to.equal(true);
     element.remove(); document.body.append(element); await element.updateComplete;
-    expect(element.shadowRoot!.querySelector('[part="line"]')).to.equal(null);
+    expect(element.shadowRoot!.querySelector('[part="line"]') === null).to.equal(true);
     await expect(element).to.be.accessible();
   }
 });

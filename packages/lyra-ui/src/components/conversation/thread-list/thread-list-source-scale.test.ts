@@ -74,7 +74,7 @@ it('preserves provider row identity in render hooks and suppresses stale row act
 it('keeps source precedence over slots and restores legacy slotted mode when removed', async () => {
   const el = await fixture<LyraThreadList>(html`<lr-thread-list grouping="none" .dataSource=${source()}><lr-conversation-item conversation-id="slotted" label="Slotted"></lr-conversation-item></lr-thread-list>`);
   await list(el, 't0'); expect(el.sourceTotal).to.equal(1_000_000); el.dataSource = undefined;
-  await el.updateComplete; await nextFrame(); expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.equal(null);
+  await el.updateComplete; await nextFrame(); expect(el.shadowRoot!.querySelector('lr-virtual-list') === null).to.equal(true);
   expect(el.itemElement('slotted')?.conversationId).to.equal('slotted');
 });
 it('keeps page work bounded and totals unknown while ignored-abort requests settle', async () => {
@@ -145,7 +145,7 @@ it('rejects missing or incomplete global group metadata instead of grouping a pa
   await waitUntil(() => el.shadowRoot!.querySelector('[part="retry-button"]') !== null); expect(el.sourceTotal).to.equal(null);
   provider.query = async () => ({ total: 2, rows: [entry(0), entry(1)], groups: [{ key: 'partial', label: 'Partial', startIndex: 0, itemCount: 1 }] });
   el.dataSource = provider; await el.updateComplete; await waitUntil(() => el.shadowRoot!.querySelector('[part="retry-button"]') !== null);
-  expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('lr-virtual-list') === null).to.equal(true);
 });
 
 for (const boundary of ['replacement', 'removal', 'query', 'disconnect'] as const) {
@@ -220,5 +220,5 @@ it('stops obsolete source descriptor capture when an early field navigates pages
   el.dataSource = provider;
   const virtual = await list(el, 't1');
   expect(laterReads).to.equal(0); expect(el.sourcePage).to.equal(1);
-  expect(virtual.items.length).to.equal(1); expect(el.shadowRoot!.querySelector('[part="source-retry"]')).to.equal(null);
+  expect(virtual.items.length).to.equal(1); expect(el.shadowRoot!.querySelector('[part="source-retry"]') === null).to.equal(true);
 });

@@ -910,8 +910,8 @@ const selectedCurrencyDisplay = selectedCurrencyHtml.match(/<span[^>]*part="disp
 assert.ok(selectedCurrencyDisplay, 'selected currency SSR must render the nested display');
 assert.equal(selectedCurrencyDisplay[1].trim(), 'USD', 'selected currency SSR must not mislabel a catalog value as unavailable');
 assert.match(selectedCurrencyHtml, /<lr-option[^>]*value="USD"/, 'selected currency SSR must retain its selected catalog entry');
-assert.match(selectedCurrencyHtml, /<lr-option[^>]*value="EUR"/, 'selected currency SSR must retain the alternate catalog entry');
-assert.equal((selectedCurrencyHtml.match(/<lr-option\s/g) ?? []).length, 2, 'selected currency SSR must retain its explicit catalog');
+assert.doesNotMatch(selectedCurrencyHtml, /<lr-option[^>]*value="EUR"/, 'closed currency SSR must defer unselected catalog entries');
+assert.equal((selectedCurrencyHtml.match(/<lr-option\s/g) ?? []).length, 1, 'closed currency SSR must retain only its selected catalog entry');
 const inventoryTags = inventory.components.map(({ tag }) => tag).sort();
 const declaredTags = [
   ...loader.LYRA_SSR_RENDER_AND_HYDRATE_TAGS,

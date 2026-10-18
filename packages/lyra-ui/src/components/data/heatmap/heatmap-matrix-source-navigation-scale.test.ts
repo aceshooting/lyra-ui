@@ -95,7 +95,7 @@ it('renders at most400 exact cells with full source ARIA and restores the legacy
   await el.updateComplete;
   expect(el.exportData('csv')).to.contain('legacy,value,42');
   expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).equal(1);
-  expect(el.shadowRoot!.querySelector('[part="source-summary"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="source-summary"]') === null).to.equal(true);
 });
 
 it('keeps named presentation changes query-free and revokes an obsolete exact reveal promptly', async () => {

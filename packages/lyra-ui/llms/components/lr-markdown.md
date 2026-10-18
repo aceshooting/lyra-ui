@@ -116,7 +116,10 @@ uses for its own `[part="body"]`.
   use plain streaming; inline extensions and renderer overrides remain supported. A text tail
   follows the surrounding direction, while its open-fence preview uses code direction. Work is
   bounded per animation frame; after 2,000 settled groups the remaining source stays plain until
-  completion. Large code blocks defer highlighting until completion.
+  completion. Large code blocks defer highlighting until completion. The offscreen plain-text tail
+  uses native rendering containment: its complete text stays in the DOM, but its height is estimated
+  until it is revealed, then remembered by the browser. The scroll extent can adjust as pending text
+  comes into view or becomes settled Markdown. This applies to both Markdown variants.
   Known limits of progressive mode: an in-progress list or table stays plain text until another
   block follows it (and a code fence inside it reads in page direction until then); raw HTML or a
   consumer renderer override that leaves an element open, and a reference definition whose title is

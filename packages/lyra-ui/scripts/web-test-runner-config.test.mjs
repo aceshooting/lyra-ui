@@ -22,6 +22,7 @@ function runConfigInspection({
   concurrency,
   browser,
   nativeScrollbar = false,
+  headed = false,
   coverageConcurrency,
   timingReport,
 } = {}) {
@@ -42,6 +43,8 @@ function runConfigInspection({
   else environment.WTR_BROWSER = browser;
   if (nativeScrollbar) environment.WTR_NATIVE_SCROLLBAR = '1';
   else delete environment.WTR_NATIVE_SCROLLBAR;
+  if (headed) environment.WTR_HEADED = '1';
+  else delete environment.WTR_HEADED;
 
   const source = `
     import config from ${JSON.stringify(configUrl)};
@@ -225,6 +228,36 @@ test('isolates Firefox pages and preserves the bounded WebKit default', () => {
   assert.equal(inspectConfig({ browser: 'chromium' }).concurrency, null);
 });
 
+test('enables real WebGL2 in ordinary and native-scrollbar Firefox sessions', () => {
+  const ordinary = inspectConfig({ browser: 'firefox' });
+  assert.deepEqual(ordinary.launch.firefoxUserPrefs, { 'webgl.force-enabled': true });
+  assert.equal(ordinary.launch.headless, null);
+  const native = inspectConfig({ browser: 'firefox', nativeScrollbar: true });
+  assert.deepEqual(native.launch.firefoxUserPrefs, {
+    'webgl.force-enabled': true,
+    'widget.gtk.overlay-scrollbars.enabled': false,
+  });
+  assert.equal(native.launch.headless, false);
+});
+
+test('headed mode preserves ordinary browser settings and native-scrollbar isolation', () => {
+  for (const browser of ['chromium', 'chrome', 'edge', 'firefox', 'webkit', 'safari']) {
+    const ordinary = inspectConfig({ browser });
+    const headed = inspectConfig({ browser, headed: true });
+    assert.equal(headed.launch.headless, false, browser);
+    assert.deepEqual(headed, {
+      ...ordinary,
+      launch: { ...ordinary.launch, headless: false },
+    });
+    assert.equal(headed.nativeScrollbarMarker, false);
+  }
+  assert.equal(inspectConfig({ browser: 'firefox', headed: true, concurrency: '8' }).concurrency, 1);
+  assert.deepEqual(
+    inspectConfig({ browser: 'firefox', nativeScrollbar: true, headed: true }),
+    inspectConfig({ browser: 'firefox', nativeScrollbar: true }),
+  );
+});
+
 test('keeps native-scrollbar browser setup opt-in and engine-specific', () => {
   const normalChromium = inspectConfig({ browser: 'chromium' });
   assert.deepEqual(normalChromium.launch, {
@@ -250,7 +283,7 @@ test('keeps native-scrollbar browser setup opt-in and engine-specific', () => {
   assert.deepEqual(nativeFirefox.launch, {
     args: null,
     ignoreDefaultArgs: null,
-    firefoxUserPrefs: { 'widget.gtk.overlay-scrollbars.enabled': false },
+    firefoxUserPrefs: { 'webgl.force-enabled': true, 'widget.gtk.overlay-scrollbars.enabled': false },
     headless: false,
     webkitSoftwareGl: null,
   });

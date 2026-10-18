@@ -16,9 +16,9 @@ it('suppresses only the provider-covered admission notice and restores original 
   const ingestionSource: IngestionQueueSource = { revision: 1, query: async () => ({ total: 0, rows: [] }), lookup: async () => [], locate: async () => null };
   const host = await fixture<LyraKnowledgeBaseAdmin>(html`<lr-knowledge-base-admin .sources=${sources} .ingestionItems=${items} .dataSource=${dataSource} .ingestionSource=${ingestionSource}></lr-knowledge-base-admin>`);
   const sourceLoss = publicCollectionTruncation(host, 'sources')!; const itemLoss = publicCollectionTruncation(host, 'ingestionItems')!;
-  expect(sourceLoss.source).to.equal(12_000); expect(itemLoss.source).to.equal(12_000); expect(host.shadowRoot!.querySelector('[part="input-limit"]')).to.equal(null);
+  expect(sourceLoss.source).to.equal(12_000); expect(itemLoss.source).to.equal(12_000); expect(host.shadowRoot!.querySelector('[part="input-limit"]') === null).to.equal(true);
   host.dataSource = undefined; await host.updateComplete; expect(host.shadowRoot!.querySelector('[part="input-limit"]')!.textContent).to.contain('12,000');
-  host.activeTab = 'ingestion'; await host.updateComplete; expect(host.shadowRoot!.querySelector('[part="input-limit"]')).to.equal(null);
+  host.activeTab = 'ingestion'; await host.updateComplete; expect(host.shadowRoot!.querySelector('[part="input-limit"]') === null).to.equal(true);
   host.ingestionSource = undefined; await host.updateComplete; expect(host.shadowRoot!.querySelector('[part="input-limit"]')!.textContent).to.contain('12,000');
   expect(publicCollectionTruncation(host, 'sources')!.retained).to.equal(sourceLoss.retained); expect(publicCollectionTruncation(host, 'ingestionItems')!.retained).to.equal(itemLoss.retained);
   recordScaleMeasurement('lr-knowledge-base-admin', 'provider removal restores n=12000 legacy admission', { sourceRetained: sourceLoss.retained, itemRetained: itemLoss.retained, visibleNotices: host.shadowRoot!.querySelectorAll('[part="input-limit"]').length });

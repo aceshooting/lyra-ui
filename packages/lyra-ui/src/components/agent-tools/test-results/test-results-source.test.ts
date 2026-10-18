@@ -319,5 +319,5 @@ it('stops obsolete source descriptor capture when an early field replaces the pr
   el.dataSource = provider(async () => page);
   await waitUntil(() => el.shadowRoot!.querySelector('[part="test-name"]')?.textContent?.trim() === 'current');
   expect(laterReads).to.equal(0); expect(el.shadowRoot!.textContent).not.to.include('obsolete');
-  expect(el.shadowRoot!.querySelector('[part="source-retry"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="source-retry"]') === null).to.equal(true);
 });

@@ -1445,7 +1445,7 @@ try {
     for (const [phase, semantics] of semanticPhases(hydrationResult('lr-currency-picker'))) {
       assert.equal(semantics.currencyValue, 'USD', `${phase}: selected currency value must survive`);
       assert.equal(semantics.currencyDisplay, 'USD', `${phase}: selected currency display must be correct`);
-      assert.equal(semantics.currencyOptionCount, 2, `${phase}: the explicit currency catalog must survive`);
+      assert.equal(semantics.currencyOptionCount, 1, `${phase}: closed currency picker must retain only its selected catalog entry`);
     }
   }
 

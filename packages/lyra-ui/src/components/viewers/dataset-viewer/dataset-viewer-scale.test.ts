@@ -103,7 +103,7 @@ for (const direction of ['ltr', 'rtl']) it(`initializes and follows the ${direct
     const mounted = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer scroll-mode="page" style="width:200px" .table=${table}></lr-dataset-viewer>`);
     await mounted.updateComplete;
     const header = mounted.shadowRoot!.querySelector('[part="header-row"]')!;
-    expect(header.querySelector('[aria-colindex="1"]')).to.not.exist;
+    expect(header.querySelector('[aria-colindex="1"]') === null).to.equal(true);
     expect(header.querySelectorAll('[role="columnheader"]').length).to.be.at.least(9).and.at.most(20);
     expect(await mounted.scrollToAnchor({ kind: 'cell-range', range: 'CV2' })).to.equal(true);
     const list = mounted.shadowRoot!.querySelector('lr-virtual-list')!;

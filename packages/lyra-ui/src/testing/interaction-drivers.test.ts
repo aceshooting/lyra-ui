@@ -402,6 +402,7 @@ describe('chooseCurrency', () => {
 
   it('commits through the composed select: input, lr-input, change and lr-change have fired once when it resolves', async () => {
     const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker label="Currency" value="EUR" .currencies=${currencies}></lr-currency-picker>`);
+    expect(el.shadowRoot!.querySelector('lr-select')!.querySelectorAll('lr-option').length).to.equal(1);
     const seen = recordEvents(el, ['input', 'lr-input', 'change', 'lr-change']);
     const changed = oneEvent(el, 'lr-change');
     await chooseCurrency(el, 'USD');
@@ -412,6 +413,8 @@ describe('chooseCurrency', () => {
 
   it('drives a searchable picker through its lazily loaded combobox', async () => {
     const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker label="Currency" searchable .currencies=${currencies}></lr-currency-picker>`);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-combobox')!.querySelectorAll('lr-option').length).to.equal(0);
     const changed = oneEvent(el, 'lr-change');
     await chooseCurrency(el, 'EUR');
     expect((await changed).detail.value).to.equal('EUR');
@@ -421,20 +424,35 @@ describe('chooseCurrency', () => {
 
   it('throws for a disabled picker, a disabled entry, or a code outside the catalog without committing', async () => {
     const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker label="Currency" value="EUR" .currencies=${currencies}></lr-currency-picker>`);
-    const seen = recordEvents(el, ['change', 'lr-change']);
+    const control = el.shadowRoot!.querySelector<LyraSelect>('lr-select')!;
+    const seen = recordEvents(el, ['input', 'lr-input', 'change', 'lr-change', 'lr-show']);
     let error: unknown;
     try { await chooseCurrency(el, 'GBP'); } catch (caught) { error = caught; }
     expect(String(error)).to.include('is disabled');
     error = undefined;
     try { await chooseCurrency(el, 'JPY'); } catch (caught) { error = caught; }
     expect(String(error)).to.include('not in the picker');
+    error = undefined;
+    try { await chooseCurrency(el, 'usd'); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('not in the picker');
+    expect(control.open).to.be.false;
+    expect(control.querySelectorAll('lr-option').length).to.equal(1);
     el.disabled = true;
     await el.updateComplete;
     error = undefined;
     try { await chooseCurrency(el, 'USD'); } catch (caught) { error = caught; }
     expect(String(error)).to.include('disabled');
     expect(el.value).to.equal('EUR');
+    expect(control.open).to.be.false;
     expect(seen).to.deep.equal([]);
+  });
+
+  it('chooses an initially unmounted entry from the default catalog', async () => {
+    const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker value="USD"></lr-currency-picker>`);
+    const changed = oneEvent(el, 'lr-change');
+    await chooseCurrency(el, 'EUR');
+    expect((await changed).detail).to.deep.equal({ value: 'EUR', previousValue: 'USD' });
+    expect(el.value).to.equal('EUR');
   });
 });
 

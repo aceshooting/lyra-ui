@@ -250,9 +250,9 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     this.contentLabel = undefined;
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
-    if (this.hostAccessibleLabel !== null) return;
-    const Observer = this.ownerDocument.defaultView?.MutationObserver;
-    if (!Observer || !this.isConnected) return;
+    if (this.hostAccessibleLabel !== null || !this.isConnected) return;
+    const Observer = this.ownerDocument?.defaultView?.MutationObserver;
+    if (!Observer) return;
     this.contentObserver = new Observer(() => { this.contentLabel = undefined; this.requestUpdate(); });
     this.contentObserver.observe(this, {
       attributes: true,

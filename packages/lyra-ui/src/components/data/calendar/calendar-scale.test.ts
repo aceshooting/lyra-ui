@@ -26,5 +26,5 @@ it('discloses input loss in either calendar view and clears it on replacement', 
   expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('Input limited');
   el.events = [];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="limit"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
 });

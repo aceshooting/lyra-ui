@@ -231,3 +231,54 @@ test('covers every ReactiveElement lifecycle hook with a callable superclass imp
     ],
   );
 });
+
+
+test('allows direct Lit Directive update replacements without invoking their render fallback', () => {
+  for (const [specifier, binding] of [['lit/directive.js', 'Directive'], ['lit-html/directive.js', 'BaseDirective']]) {
+    const source = `
+      import { Directive as ${binding} } from '${specifier}';
+      class Blocks extends ${binding} {
+        render(blocks) { return blocks.map(renderBlock); }
+        override update(part, [blocks, revision, start]) {
+          if (this.revision === revision) return noChange;
+          this.revision = revision;
+          this.updateChangedParts(part, blocks, start);
+          return noChange;
+        }
+      }
+    `;
+    assert.deepEqual(findLifecycleSuperOmissions(source), []);
+  }
+});
+
+test('keeps update policy for unproven, type-only, shadowed, and intermediate directive bases', () => {
+  const sources = [
+    `class Directive {} class Example extends Directive { override update() {} }`,
+    `import { Directive } from './directive.js'; class Example extends Directive { override update() {} }`,
+    `import type { Directive } from 'lit/directive.js'; class Example extends Directive { override update() {} }`,
+    `import { type Directive } from 'lit/directive.js'; class Example extends Directive { override update() {} }`,
+    `import { Directive } from 'lit/directive.js'; function factory(Directive) {
+      return class Example extends Directive { override update() {} };
+    }`,
+    `import { Directive } from 'lit/directive.js'; class Intermediate extends Directive {}
+      class Example extends Intermediate { override update() {} }`,
+    `import { Directive } from 'lit/directive.js'; class Example extends Directive { override ['update']() {} }`,
+    `import { Directive } from 'lit/directive.js'; class Example extends Directive { static override update() {} }`,
+    `import { Directive } from 'lit/directive.js'; class Example extends Directive { override get update() {} }`,
+    `import { Directive } from 'lit/directive.js'; class Example extends Directive { override set update(value) {} }`,
+  ];
+  for (const source of sources) {
+    assert.deepEqual(findLifecycleSuperOmissions(source).map(({ hook }) => hook), ['update']);
+  }
+});
+
+test('does not exempt other lifecycle hooks in direct Lit Directive subclasses', () => {
+  const source = `
+    import { Directive } from 'lit/directive.js';
+    export class Example extends Directive {
+      override update() { return noChange; }
+      override connectedCallback() {}
+    }
+  `;
+  assert.deepEqual(findLifecycleSuperOmissions(source), [{ hook: 'connectedCallback', line: 5 }]);
+});

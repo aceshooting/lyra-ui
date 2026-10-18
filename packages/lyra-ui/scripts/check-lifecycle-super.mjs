@@ -120,13 +120,38 @@ export function findLifecycleSuperOmissions(source) {
     return undefined;
   };
 
+  // Directive.update is a render adapter, not a ReactiveElement lifecycle hook. A direct
+  // replacement manages its own parts; calling the adapter would also render the entire value.
+  // Resolve only top-level value imports and direct bases, so a shadowed or intermediate
+  // implementation cannot bypass the superclass policy merely by using the name Directive.
+  const directiveBindings = new Set(parsed.program.body
+    .filter(node => node.type === 'ImportDeclaration' && node.importKind !== 'type' &&
+      ['lit/directive.js', 'lit-html/directive.js'].includes(node.source.value))
+    .flatMap(node => node.specifiers.filter(specifier => specifier.type === 'ImportSpecifier' &&
+      specifier.importKind !== 'type' && methodName(specifier.imported) === 'Directive')
+      .map(specifier => specifier.local.name)));
+  const replaceableDirectiveUpdates = new Set();
+  for (const statement of parsed.program.body) {
+    const declaration = ['ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(statement.type)
+      ? statement.declaration : statement;
+    if (declaration?.type !== 'ClassDeclaration' || declaration.superClass?.type !== 'Identifier' ||
+      !directiveBindings.has(declaration.superClass.name)) continue;
+    for (const member of declaration.body.body) {
+      if (member.type === 'MethodDefinition' && !member.computed && !member.static &&
+        member.kind === 'method' && methodName(member.key) === 'update') {
+        replaceableDirectiveUpdates.add(member);
+      }
+    }
+  }
+
   const visit = (node) => {
     const hook = node.type === 'MethodDefinition' ? methodName(node.key) : undefined;
     if (
       node.type === 'MethodDefinition' &&
       node.override &&
       node.value.body &&
-      callableHooks.has(hook)
+      callableHooks.has(hook) &&
+      !replaceableDirectiveUpdates.has(node)
     ) {
       if (!statementsCallReachableSuper(node.value.body.body, hook)) {
         const line = source.slice(0, node.start).split(/\r?\n/).length;

@@ -228,6 +228,10 @@ to 10 broke hover assertions in `lr-span-waterfall` and `lr-test-results`, becau
 timing degrade under CPU contention regardless of core count. (The coarser `platform-contracts`
 matrix is the opposite trade: its small subset loses to per-job overhead when split finer.)
 
+On Linux, Firefox full-engine shards run headed under `xvfb-run` so software WebGL2 remains available;
+install Xvfb before running them. A focused direct WTR invocation that exercises native maps needs
+`WTR_HEADED=1 xvfb-run -a` before its command as well.
+
 `test:platform` remains the blocking pull-request contract and does not substitute for this sweep.
 Releases require a manual-dispatch run from `main` with every shard for both browsers successful on
 the exact release commit. Reproduce one shard locally (run `pnpm build` first when it includes

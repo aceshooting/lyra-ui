@@ -119,13 +119,13 @@ it('corrects a stale page once and keeps a settled empty total distinct from unk
   await page(el, 'Document 100'); expect(pages).to.deep.equal([9999, 1]); expect(el.sourcePage).to.equal(1);
   empty = true; el.dataSource = provider; await waitUntil(() => el.sourceTotal === 0); await el.updateComplete;
   expect(el.shadowRoot!.querySelector<LyraPagination>('lr-pagination')!.total).to.equal(0);
-  expect(el.shadowRoot!.querySelector('[part="source-retry"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="source-retry"]') === null).to.equal(true);
 });
 it('fails provider rejections without an Error value visibly instead of treating them as empty', async () => {
   const provider = source(); provider.query = () => Promise.reject(undefined);
   const el = await fixture<LyraIngestionQueue>(html`<lr-ingestion-queue .dataSource=${provider}></lr-ingestion-queue>`);
   await waitUntil(() => el.shadowRoot!.querySelector('[part="source-retry"]') !== null);
-  expect(el.sourceTotal).to.equal(null); expect(el.shadowRoot!.querySelector('lr-empty')).to.equal(null);
+  expect(el.sourceTotal).to.equal(null); expect(el.shadowRoot!.querySelector('lr-empty') === null).to.equal(true);
 });
 it('rejects accessor or oversized source rows without invoking getters or showing a silent prefix', async () => {
   const provider = source(); let getters = 0;
@@ -186,7 +186,7 @@ it('revokes retained provider retry controls after replacement, clear and discon
   const live = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="source-retry"]')!;
   live.click(); await waitUntil(() => failures === disconnectedCalls + 1);
   await el.updateComplete; el.dataSource = undefined; await el.updateComplete; live.click(); await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-pagination')).to.equal(null); expect(failures).to.equal(disconnectedCalls + 1);
+  expect(el.shadowRoot!.querySelector('lr-pagination') === null).to.equal(true); expect(failures).to.equal(disconnectedCalls + 1);
 });
 
 it('stops old row descriptor reads when an early descriptor changes the source page', async () => {

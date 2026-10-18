@@ -65,7 +65,7 @@ it('keeps explicit view overrides and keyboard End on the provider preorder', as
 it('gives an invalid present source precedence over nonempty legacy spans', async () => {
   const el = await fixture<Waterfall>(html`<lr-span-waterfall .spans=${[row(0).value]} .treeSource=${null}></lr-span-waterfall>`);
   await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part~="source-error"]')));
-  expect(el.shadowRoot!.querySelector('[data-id]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[data-id]') === null).to.equal(true);
   el.treeSource = undefined; await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[data-id="span0"]') !== null).to.equal(true);
 });
@@ -263,7 +263,7 @@ it('keeps provider order and one row focus owner while emitting only accepted sp
   const el = await fixture<Waterfall>(html`<lr-span-waterfall aria-label="Trace timeline" .treeSource=${source}></lr-span-waterfall>`); await ready(el);
   expect([...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-source-key]')].map(item => item.dataset['sourceKey'])).to.deep.equal(['span0', 'span1']);
   expect(el.shadowRoot!.querySelector('[role="tree"]')!.getAttribute('aria-label')).to.equal('Trace timeline');
-  expect(el.shadowRoot!.querySelector('button[part="bar"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('button[part="bar"]') === null).to.equal(true);
   expect(el.shadowRoot!.querySelectorAll('[role="treeitem"] [tabindex="0"]').length).to.equal(0);
   const events: string[] = []; let toggles = 0;
   el.addEventListener('lr-span-select', event => events.push(event.detail.spanId));
@@ -298,7 +298,7 @@ it('preserves explicit invalid, negative and degenerate window normalization wit
   el.viewStartMs = 300; el.viewEndMs = 100; await el.updateComplete;
   expect(el.shadowRoot!.querySelector<HTMLElement>('[part="bar"]')!.hidden).to.equal(true);
   expect(el.shadowRoot!.querySelectorAll('[data-source-key]').length).to.be.greaterThan(0);
-  el.withoutAxis = true; await el.updateComplete; expect(el.shadowRoot!.querySelector('[part="axis"]')).to.equal(null);
+  el.withoutAxis = true; await el.updateComplete; expect(el.shadowRoot!.querySelector('[part="axis"]') === null).to.equal(true);
   expect(p.counters.projects).to.equal(1);
   expect(el.shadowRoot!.innerHTML).not.to.contain('NaN'); expect(el.shadowRoot!.innerHTML).not.to.contain('Infinity');
 });
@@ -335,7 +335,7 @@ it('refreshes only for source authority changes and never reads the legacy sorte
   el.treeSource = p.source; await waitUntil(() => p.counters.projects === 3); await ready(el);
   Object.defineProperty(p.source, 'revision', { value: 2 }); el.requestUpdate();
   await waitUntil(() => p.counters.projects === 4); await ready(el);
-  expect(el.shadowRoot!.querySelector('[part="limit"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
 });
 it('stops span descriptor reads after an ID trap replaces the source', async () => {
   const replacement = provider(); let el: Waterfall; let staleReads = 0; let replaced = false;

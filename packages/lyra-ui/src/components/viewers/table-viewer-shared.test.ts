@@ -38,6 +38,25 @@ describe('TableViewerScrollController', () => {
     expect(scrolled).to.equal(2);
   });
 
+  it('addresses a virtualized cell by its logical column index rather than its rendered position', async () => {
+    const host = await fixture<HTMLElement>(html`<div></div>`);
+    const list = Object.assign(document.createElement('div'), { updateComplete: Promise.resolve() });
+    host.append(list);
+    const row = document.createElement('div');
+    row.setAttribute('part', 'row');
+    row.setAttribute('aria-current', 'true');
+    let scrolledColumn = 0;
+    for (const column of [101, 102]) {
+      const cell = document.createElement('div');
+      cell.setAttribute('aria-colindex', String(column));
+      cell.scrollIntoView = () => { scrolledColumn = column; };
+      row.append(cell);
+    }
+    list.attachShadow({ mode: 'open' }).append(row);
+    await new TableViewerScrollController(host).scrollColumnIntoView(list, 101);
+    expect(scrolledColumn).to.equal(102);
+  });
+
   it('settles a canceled frame without scrolling a stale row', async () => {
     const host = await fixture<HTMLElement>(html`<div></div>`);
     const list = Object.assign(document.createElement('div'), { updateComplete: Promise.resolve() });

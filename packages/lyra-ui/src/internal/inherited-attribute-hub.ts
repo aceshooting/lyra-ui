@@ -12,16 +12,25 @@ export interface InheritedAttributeRelease {
   flush(): void;
 }
 
+interface SubscriptionSignals {
+  readonly attributes: readonly string[];
+  readonly childList: boolean;
+  readonly characterData: boolean;
+}
+
 interface RootHub {
   readonly observer: MutationObserver;
-  readonly subscribers: Set<InheritedAttributeSubscription>;
+  readonly subscribers: Map<InheritedAttributeSubscription, SubscriptionSignals>;
+  readonly attributeOwners: Map<string, number>;
+  childListOwners: number;
+  characterDataOwners: number;
   readonly target: Node;
 }
 
 const hubs = new WeakMap<Node, RootHub>();
 
 function deliver(hub: RootHub, records: MutationRecord[]): void {
-  for (const subscriber of [...hub.subscribers]) {
+  for (const subscriber of [...hub.subscribers.keys()]) {
     if (!hub.subscribers.has(subscriber)) continue;
     const relevant = records.filter((record) =>
       record.type === 'attributes'
@@ -34,16 +43,38 @@ function deliver(hub: RootHub, records: MutationRecord[]): void {
   }
 }
 
+/** Only changes to the effective signal union require a native observer reconfiguration. */
+function updateSignals(hub: RootHub, signals: SubscriptionSignals, delta: 1 | -1): boolean {
+  let changed = false;
+  for (const attribute of signals.attributes) {
+    const previous = hub.attributeOwners.get(attribute) ?? 0;
+    const next = previous + delta;
+    if (next === 0) hub.attributeOwners.delete(attribute);
+    else hub.attributeOwners.set(attribute, next);
+    changed ||= (previous === 0) !== (next === 0);
+  }
+  if (signals.childList) {
+    const previous = hub.childListOwners;
+    hub.childListOwners += delta;
+    changed ||= (previous === 0) !== (hub.childListOwners === 0);
+  }
+  if (signals.characterData) {
+    const previous = hub.characterDataOwners;
+    hub.characterDataOwners += delta;
+    changed ||= (previous === 0) !== (hub.characterDataOwners === 0);
+  }
+  return changed;
+}
+
 function configure(hub: RootHub): void {
-  const subscribers = [...hub.subscribers];
-  if (!subscribers.length) return;
-  const attributes = [...new Set(subscribers.flatMap((item) => item.attributes))];
+  if (!hub.subscribers.size) return;
+  const attributes = [...hub.attributeOwners.keys()];
   hub.observer.observe(hub.target, {
     subtree: true,
     attributes: attributes.length > 0,
     ...(attributes.length ? { attributeFilter: attributes } : {}),
-    childList: subscribers.some((item) => item.childList),
-    characterData: subscribers.some((item) => item.characterData),
+    childList: hub.childListOwners > 0,
+    characterData: hub.characterDataOwners > 0,
   });
 }
 
@@ -67,37 +98,62 @@ export function subscribeInheritedAttributes(
   if (!target) return undefined;
   let hub = hubs.get(root);
   if (!hub) {
-    const subscribers = new Set<InheritedAttributeSubscription>();
+    const subscribers = new Map<InheritedAttributeSubscription, SubscriptionSignals>();
     const created: RootHub = {
       subscribers,
+      attributeOwners: new Map(),
+      childListOwners: 0,
+      characterDataOwners: 0,
       target,
       observer: new Observer((records) => deliver(created, records)),
     };
     hub = created;
     hubs.set(root, hub);
   }
-  hub.subscribers.add(subscription);
+  let signals = hub.subscribers.get(subscription);
+  const wasEmpty = hub.subscribers.size === 0;
+  let added = false;
   try {
-    configure(hub);
+    let changed = false;
+    if (!signals) {
+      signals = {
+        attributes: [...new Set(subscription.attributes)],
+        childList: Boolean(subscription.childList),
+        characterData: Boolean(subscription.characterData),
+      };
+      hub.subscribers.set(subscription, signals);
+      added = true;
+      changed = updateSignals(hub, signals, 1);
+    }
+    if (changed || wasEmpty) configure(hub);
   } catch {
-    hub.subscribers.delete(subscription);
+    if (added && signals) {
+      hub.subscribers.delete(subscription);
+      updateSignals(hub, signals, -1);
+    }
     if (!hub.subscribers.size) {
       const failed = hub;
       safely(() => failed.observer.disconnect());
-      hubs.delete(root);
+      if (hubs.get(root) === failed) hubs.delete(root);
     }
     return undefined;
   }
   const release = () => {
-    if (!hub?.subscribers.delete(subscription)) return;
+    const signals = hub?.subscribers.get(subscription);
+    if (!hub || !signals) return;
     const owner = hub;
+    owner.subscribers.delete(subscription);
+    const changed = updateSignals(owner, signals, -1);
     let pending: MutationRecord[] = [];
     safely(() => { pending = owner.observer.takeRecords(); });
     if (pending.length) deliver(owner, pending);
-    if (owner.subscribers.size) safely(() => configure(owner));
+    if (owner.subscribers.size) {
+      if (changed) safely(() => configure(owner));
+    }
     else {
       safely(() => owner.observer.disconnect());
-      hubs.delete(root);
+      // Pending delivery may have retired this hub and created another one for the same root.
+      if (hubs.get(root) === owner) hubs.delete(root);
     }
   };
   return Object.assign(release, {

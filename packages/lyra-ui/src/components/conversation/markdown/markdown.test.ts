@@ -1720,19 +1720,40 @@ describe("syntax-highlighting cache plumbing (no async loading yet)", () => {
     expect(el.languages).to.equal(undefined);
   });
 
-  it("renders a fenced code block plain (no cache entry yet) even with highlighting on (unchanged default)", async () => {
+  it("renders a fenced code block plain while its enabled highlight is pending", async () => {
     const el = (await fixture(
       html`<lr-markdown></lr-markdown>`
     )) as LyraMarkdown;
-    el.content = "```ts\nconst x = 1;\n```";
-    await el.updateComplete;
-    const pre = el.shadowRoot!.querySelector(
-      '[part="code-block"]'
-    ) as HTMLElement;
-    expect(pre != null).to.equal(true);
-    expect(pre.querySelectorAll("span").length).to.equal(0); // no shiki spans -- still plain
-    expect(pre.querySelector("code")!.className).to.equal("language-ts");
-    expect(pre.querySelector("code")!.textContent).to.equal("const x = 1;\n");
+    const code = "const pendingCacheFixtureValue = 17;\n";
+    const key = markdownHighlightKey("ts", code);
+    expect(internalsOf(el).getCachedHighlight(key)).to.equal(undefined);
+    const internal = el as unknown as {
+      tokenizePendingHighlight(): Promise<string | null | undefined>;
+    };
+    const originalTokenize = internal.tokenizePendingHighlight;
+    let release!: (value: undefined) => void;
+    const pending = new Promise<undefined>((resolve) => { release = resolve; });
+    let tokenizeCalls = 0;
+    internal.tokenizePendingHighlight = () => {
+      tokenizeCalls += 1;
+      return pending;
+    };
+    try {
+      el.content = "```ts\n" + code + "```";
+      await el.updateComplete;
+      const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
+      expect(el.withoutSyntaxHighlighting).to.equal(false);
+      expect(tokenizeCalls).to.equal(1);
+      expect(internalsOf(el).getCachedHighlight(key)).to.equal(undefined);
+      expect(pre != null).to.equal(true);
+      expect(pre.querySelectorAll("span").length).to.equal(0);
+      expect(pre.querySelector("code")!.className).to.equal("language-ts");
+      expect(pre.querySelector("code")!.textContent).to.equal(code);
+    } finally {
+      el.remove();
+      release(undefined);
+      internal.tokenizePendingHighlight = originalTokenize;
+    }
   });
 
   it("uses a pre-populated cache entry on render, keyed by lang+code", async () => {

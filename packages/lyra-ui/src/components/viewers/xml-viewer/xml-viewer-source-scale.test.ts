@@ -127,7 +127,7 @@ it('refreshes same-identity sources on explicit keyless intent and restores curr
   await waitUntil(() => el.shadowRoot!.textContent!.includes('Second')); expect(counters.projects).to.equal(calls + 1);
   el.xml = '<current />'; await el.updateComplete;
   el.treeSource = undefined; await el.updateComplete;
-  expect(el.shadowRoot!.textContent).to.include('current'); expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.equal(null);
+  expect(el.shadowRoot!.textContent).to.include('current'); expect(el.shadowRoot!.querySelector('lr-virtual-list') === null).to.equal(true);
 });
 
 it('rejects malformed display records without getters and renders compact million-deep metadata', async () => {

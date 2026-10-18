@@ -120,7 +120,10 @@ uses for its own `[part="body"]`.
   use plain streaming; inline extensions and renderer overrides remain supported. A text tail
   follows the surrounding direction, while its open-fence preview uses code direction. Work is
   bounded per animation frame; after 2,000 settled groups the remaining source stays plain until
-  completion. Large code blocks defer highlighting until completion.
+  completion. Large code blocks defer highlighting until completion. The offscreen plain-text tail
+  uses native rendering containment: its complete text stays in the DOM, but its height is estimated
+  until it is revealed, then remembered by the browser. The scroll extent can adjust as pending text
+  comes into view or becomes settled Markdown. This applies to both Markdown variants.
   Known limits of progressive mode: an in-progress list or table stays plain text until another
   block follows it (and a code fence inside it reads in page direction until then); raw HTML or a
   consumer renderer override that leaves an element open, and a reference definition whose title is
@@ -428,6 +431,10 @@ support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highligh
 `lr-text-select`/`lr-anchor-result` events), math via the optional `katex` peer, the sanitize/
 `htmlMode`/streaming fallback matrix and known gotchas — is identical to `<lr-markdown>`; see that
 section above for the full write-up of shared behavior.
+
+During progressive streaming, the complete plain-text tail stays in the DOM; its offscreen height
+is estimated until revealed, so the scroll extent can adjust as pending text comes into view or
+becomes settled Markdown.
 
 **Properties:** `content: string = ''`, `tabSize: number = 4` (attribute `tab-size`) — the same
 finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; finite values are

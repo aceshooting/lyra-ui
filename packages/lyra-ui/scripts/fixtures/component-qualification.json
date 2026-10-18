@@ -10226,6 +10226,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/chip/chip-group.test.ts",
+          "src/components/overlays/chip/chip-label-observation-scale.test.ts",
           "src/components/overlays/chip/chip-remediation.test.ts",
           "src/components/overlays/chip/chip.test.ts"
         ],
@@ -10403,6 +10404,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/chip/chip-group.test.ts",
+          "src/components/overlays/chip/chip-label-observation-scale.test.ts",
           "src/components/overlays/chip/chip-remediation.test.ts",
           "src/components/overlays/chip/chip.test.ts"
         ],
@@ -25199,8 +25201,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/graph/graph-fallbacks.test.ts",
-              "line": 165,
+              "file": "src/components/retrieval/graph/graph-canvas-coverage.test.ts",
+              "test": "bails out of post-load resolution when initial update completion rejects",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -59724,6 +59726,7 @@
           "src/components/layout/virtual-list/virtual-list-composition-demand.test.ts",
           "src/components/layout/virtual-list/virtual-list-composition-scale.test.ts",
           "src/components/layout/virtual-list/virtual-list-indexed-groups.test.ts",
+          "src/components/layout/virtual-list/virtual-list-indexed-measurement.test.ts",
           "src/components/layout/virtual-list/virtual-list-layout-fallback.test.ts",
           "src/components/layout/virtual-list/virtual-list-remediation.test.ts",
           "src/components/layout/virtual-list/virtual-list-scale.test.ts",

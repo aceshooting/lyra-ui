@@ -202,5 +202,5 @@ it('discloses clone-budget loss of selected cells and clears the notice', async 
   expect(el.shadowRoot!.querySelector('[part="projection-limit"]')?.textContent?.trim()).to.equal('Selection limited');
   el.selectedCells = [];
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="projection-limit"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part="projection-limit"]') === null).to.equal(true);
 });

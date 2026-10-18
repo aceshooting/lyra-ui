@@ -43,6 +43,10 @@ support (`highlights`, `activeHighlightId`, `scrollToAnchor()`, the `lr-highligh
 `htmlMode`/streaming fallback matrix and known gotchas — is identical to `<lr-markdown>`; see that
 section above for the full write-up of shared behavior.
 
+During progressive streaming, the complete plain-text tail stays in the DOM; its offscreen height
+is estimated until revealed, so the scroll extent can adjust as pending text comes into view or
+becomes settled Markdown.
+
 **Properties:** `content: string = ''`, `tabSize: number = 4` (attribute `tab-size`) — the same
 finite-integer-guarded leading-indentation expansion used by `<lr-markdown>`; finite values are
 clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite values (`NaN`,

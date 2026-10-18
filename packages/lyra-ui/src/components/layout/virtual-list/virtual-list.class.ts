@@ -2110,19 +2110,33 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.readScrollMetrics()?.rawScrollTop ?? this.containerScrollTop;
     let scrollAdjustment = 0;
     let changed = false;
+    const indexed = isIndexedSource(this.effectiveSource);
+    const measuredByIndex = indexed ? new Map<number, string>() : undefined;
+    if (measuredByIndex) {
+      // Retained measurements are window-bounded; build ownership once for the whole batch.
+      for (const [identity, index] of this.measuredIndices) measuredByIndex.set(index, identity);
+    }
     for (const [key, { index, height }] of observations) {
-      const prev = this.measuredHeights.get(key);
-      // A sub-pixel-only difference (common with fractional layout/zoom)
-      // isn't worth a full offsets rebuild + re-render.
-      if (prev === undefined || Math.abs(prev - height) > 0.5) {
-        const oldBottom = this.rowBottomAt(index);
+      // A ranged source can replace a loading identity with its resolved row key. An observer
+      // delivery from the discarded wrapper must not reclaim that logical position.
+      if (indexed && (index < 0 || index >= this.itemCount || this.identityAt(index) !== key)) continue;
+      const previousKey = measuredByIndex?.get(index) ?? key;
+      const prev = this.measuredHeights.get(previousKey);
+      const replaced = previousKey !== key;
+      // Even an equal-height replacement must retire the old identity: each index contributes
+      // exactly one height delta to the sparse prefix.
+      if (replaced || prev === undefined || Math.abs(prev - height) > 0.5) {
+        const oldHeight = prev ?? DEFAULT_ROW_ESTIMATE_PX;
+        const oldBottom = indexed ? finiteAdd(this.offsetAt(index), oldHeight) : this.rowBottomAt(index);
         this.offsetDirtyStart = Math.min(this.offsetDirtyStart, index);
+        if (replaced) {
+          this.measuredHeights.delete(previousKey);
+          this.measuredIndices.delete(previousKey);
+        }
         this.measuredHeights.set(key, height);
         this.measuredIndices.set(key, index);
-        // Keep the first visible row anchored while a row fully above it
-        // changes size. Otherwise auto-height measurement makes the viewport
-        // jump as soon as an earlier row is laid out.
-        const oldHeight = prev ?? DEFAULT_ROW_ESTIMATE_PX;
+        measuredByIndex?.set(index, key);
+        // Preserve the visible anchor using the displaced measurement, not a fresh estimate.
         if (oldBottom <= oldScrollTop)
           scrollAdjustment += height - oldHeight;
         changed = true;

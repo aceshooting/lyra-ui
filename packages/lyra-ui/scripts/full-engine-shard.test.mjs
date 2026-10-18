@@ -159,6 +159,67 @@ test('propagates native verification results after, but not before, the owner sh
   assert.equal(ranNative, false);
 });
 
+test('runs Linux Firefox shards headed under Xvfb without native-scrollbar mode', () => {
+  const files = ['src/example.test.ts'];
+  const environment = { WTR_BROWSER: 'firefox', WTR_STRICT_CONSOLE: '1', WTR_CONCURRENCY: '1' };
+  const calls = [];
+  const status = runShard(files, { shardIndex: 1, shardTotal: 1 }, environment, {
+    platform: 'linux',
+    spawn: (command, args, options) => {
+      calls.push({ command, args, options });
+      return { status: 0 };
+    },
+    runNativeScrollbarVerification: () => 0,
+  });
+  assert.equal(status, 0);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].command, 'xvfb-run');
+  assert.deepEqual(calls[0].args, ['-a', 'wtr', ...files]);
+  assert.deepEqual(calls[0].options.env, { ...environment, WTR_HEADED: '1' });
+  assert.equal('WTR_NATIVE_SCROLLBAR' in calls[0].options.env, false);
+  assert.equal('WTR_HEADED' in environment, false);
+});
+
+test('preserves ordinary launches outside Linux Firefox', () => {
+  for (const [platform, browser] of [['linux', 'chromium'], ['linux', 'webkit'], ['darwin', 'firefox']]) {
+    let call;
+    const environment = { WTR_BROWSER: browser };
+    assert.equal(runShard(['src/example.test.ts'], { shardIndex: 1, shardTotal: 1 }, environment, {
+      platform,
+      spawn: (command, args, options) => {
+        call = { command, args, options };
+        return { status: 2 };
+      },
+    }), 2);
+    assert.equal(call.command, 'wtr');
+    assert.deepEqual(call.args, ['src/example.test.ts']);
+    assert.equal(call.options.env, environment);
+  }
+});
+
+test('keeps Linux Firefox platform contracts outside automatic headed routing', () => {
+  const environment = { WTR_BROWSER: 'firefox', WTR_TEST_SUITE: ' PLATFORM ' };
+  let call;
+  assert.equal(runShard(['src/example.test.ts'], { shardIndex: 1, shardTotal: 1 }, environment, {
+    platform: 'linux',
+    spawn: (command, args, options) => {
+      call = { command, args, options };
+      return { status: 2 };
+    },
+  }), 2);
+  assert.equal(call.command, 'wtr');
+  assert.deepEqual(call.args, ['src/example.test.ts']);
+  assert.equal(call.options.env, environment);
+});
+
+test('fails clearly when Linux Firefox cannot launch Xvfb', () => {
+  assert.throws(() => runShard(['src/example.test.ts'], { shardIndex: 1, shardTotal: 1 },
+    { WTR_BROWSER: 'firefox' }, {
+      platform: 'linux',
+      spawn: () => ({ error: Object.assign(new Error('not found'), { code: 'ENOENT' }) }),
+    }), /Firefox full-engine tests require xvfb-run/u);
+});
+
 test('creates deterministic, disjoint, exhaustive round-robin shards', () => {
   const files = [
     'src/g.test.ts',

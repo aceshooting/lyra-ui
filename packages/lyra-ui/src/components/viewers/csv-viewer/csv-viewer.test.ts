@@ -13,6 +13,7 @@ import {
 } from '@open-wc/testing';
 import './csv-viewer.js';
 import '../../../translations/fr/viewers.js';
+import '../../../translations/fr/shared.js';
 import type { LyraCsvViewer } from './csv-viewer.js';
 import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 
@@ -37,7 +38,7 @@ function fetchText(value: string): () => void {
   };
 }
 expectLocaleFallback('ar', ['noData']);
-expectLocaleFallback('tr', ['csvViewerLabel', 'documentPreviewEmpty', 'documentPreviewTypeDocument', 'loadingDocument']);
+expectLocaleFallback('tr', ['csvViewerLabel', 'documentPreviewEmpty', 'documentPreviewTypeDocument', 'loadingDocument', 'highlightWithLabel', 'cellHighlightWithLabel']);
 
 describe('lr-csv-viewer', () => {
   it('renders an empty localized state by default', async () => {

@@ -38,6 +38,10 @@ export const styles = css`
     contain: paint;
   }
   [part='streaming-tail'] {
+    /* Committing groups moves the remaining text below the viewport. Keep that text in the DOM
+       without repeatedly laying out the entire pending suffix on every streaming frame. */
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto var(--lr-size-24rem);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }

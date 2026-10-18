@@ -441,6 +441,12 @@ describe('chart synchronization idle cost', () => {
     await waitUntil(() => peer(owner!) !== undefined && peer(recipient!) !== undefined, 'charts', {
       timeout: 5000,
     });
+    await waitUntil(
+      () => [owner!, recipient!].every(chart =>
+        (chart as unknown as { chartSync: { enabled: boolean } }).chartSync.enabled),
+      'chart synchronization did not initialize',
+      { timeout: 5000 },
+    );
     await Promise.all([owner!.updateComplete, recipient!.updateComplete]);
     const point = peer(owner!)!.getDatasetMeta(0).data[2]!;
     const canvas = owner!.shadowRoot!.querySelector('canvas')!;

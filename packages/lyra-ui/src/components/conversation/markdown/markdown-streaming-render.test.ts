@@ -121,6 +121,57 @@ it('appends to the same tail Text node without collapsing live range offsets', a
   }
 });
 
+it('reveals the complete offscreen text tail and preserves its live range during append', async () => {
+  await preloadMarkdown();
+  const scrollPosition = { left: window.scrollX, top: window.scrollY };
+  try {
+    for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
+      window.scrollTo(0, 0);
+      const el = document.createElement(tag);
+      el.streaming = true;
+      el.streamingRender = 'progressive';
+      el.withoutSyntaxHighlighting = true;
+      const seam = el as unknown as {
+        scheduleStreamingRender(): void;
+        runStreamingFrame(): void;
+        progressiveSession: { tail: { text: string } };
+      };
+      // Pause commits after one real batch so the pending suffix stays available for scrolling.
+      seam.scheduleStreamingRender = () => {};
+      el.content = Array.from({ length: 120 }, (_, index) => `# ${index} ${'x'.repeat(2050)}\n\n`).join('') + 'tail';
+      mounted.push(el);
+      document.body.append(el);
+      try {
+        await el.updateComplete;
+        seam.runStreamingFrame();
+        await el.updateComplete;
+        const tail = el.shadowRoot!.querySelector<HTMLElement>('[part="streaming-tail"]')!;
+        expect(tail.textContent).to.equal(seam.progressiveSession.tail.text);
+        expect(tail.textContent!.length).to.be.greaterThan(150000);
+        const estimatedHeight = tail.getBoundingClientRect().height;
+        tail.scrollIntoView({ block: 'start' });
+        await waitUntil(() => tail.getBoundingClientRect().height > estimatedHeight,
+          'the pending tail did not reveal its full text layout');
+        const text = [...tail.childNodes].find(node => node.nodeType === Node.TEXT_NODE)!;
+        const range = document.createRange();
+        range.setStart(text, 2);
+        range.setEnd(text, 12);
+        const selected = range.toString();
+        el.content += ' appended';
+        await el.updateComplete;
+        expect(range.startContainer === text && range.endContainer === text).to.equal(true);
+        expect([range.startOffset, range.endOffset]).to.deep.equal([2, 12]);
+        expect(range.toString()).to.equal(selected);
+        expect(tail.textContent).to.equal(seam.progressiveSession.tail.text);
+      } finally {
+        el.remove();
+      }
+    }
+  } finally {
+    window.scrollTo(scrollPosition);
+  }
+});
+
 it('adopts identical settled output at completion and keeps normalized blank lines out of the tail', async () => {
   await preloadMarkdown();
   for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
