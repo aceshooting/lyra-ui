@@ -1,3 +1,5 @@
+import { getOwnDataDescriptor } from '../../../internal/data-descriptors.js';
+import { createHaystackMemo } from '../../../internal/search-haystack.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { waitForTransitionSettle } from '../../../internal/css-motion-time.js';
 import {
@@ -23,10 +25,11 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_noMatches } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_mentionMoreResults, LYRA_DEFAULT_mentionResultCount, LYRA_DEFAULT_mentionResultPosition, LYRA_DEFAULT_mentionSuggestions } from '../../../internal/default-strings/utility.generated.js';
+import { LYRA_DEFAULT_mentionInputLimit, LYRA_DEFAULT_mentionMoreResults, LYRA_DEFAULT_mentionResultCount, LYRA_DEFAULT_mentionResultPosition, LYRA_DEFAULT_mentionSuggestions } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const MAX_VISIBLE_MENTION_ITEMS = 50;
+const MAX_MENTION_ITEMS = 10000;
 
 /** One candidate row — an `@`-mentionable person/entity, or a `/`-command. */
 export interface LyraMentionItem {
@@ -137,7 +140,7 @@ const MIRROR_CSS_PROPS = [
  * in viewport coordinates, via the classic "hidden mirror div + marker span"
  * technique: there is no native DOM API for this -- `getBoundingClientRect()`
  * on a text control only reports the control's own box, never a cursor
- * position inside it. A throwaway off-screen clone of `el` is built (font/
+ * position inside it. A cached off-screen mirror of `el` is reused (font/
  * box metrics copied via `MIRROR_CSS_PROPS` above), a marker `<span>` is
  * inserted at the caret's text offset, its rect is measured relative to the
  * mirror's own rect (so the absolute off-screen position of the mirror
@@ -145,6 +148,7 @@ const MIRROR_CSS_PROPS = [
  * `getBoundingClientRect()` minus its current scroll offset. Returns `null`
  * for a zero-size (e.g. `display: none`) control.
  */
+const caretMirrors = new WeakMap<TextControl, { mirror: HTMLDivElement; prefix: Text; marker: HTMLSpanElement; suffix: Text }>();
 function caretClientRect(el: TextControl): DOMRect | null {
   const owner = el.ownerDocument;
   const view = owner.defaultView;
@@ -153,7 +157,17 @@ function caretClientRect(el: TextControl): DOMRect | null {
   if (elRect.width === 0 || elRect.height === 0) return null;
 
   const computed = view.getComputedStyle(el);
-  const mirror = owner.createElement('div');
+  let cached = caretMirrors.get(el);
+  if (!cached || cached.mirror.ownerDocument !== owner) {
+    const mirror = owner.createElement('div');
+    const prefix = owner.createTextNode('');
+    const marker = owner.createElement('span');
+    const suffix = owner.createTextNode('');
+    marker.append(suffix); mirror.append(prefix, marker);
+    cached = { mirror, prefix, marker, suffix };
+    caretMirrors.set(el, cached);
+  }
+  const { mirror, prefix, marker, suffix } = cached;
   mirror.style.position = 'absolute';
   mirror.style.visibility = 'hidden';
   mirror.style.top = '0';
@@ -168,13 +182,10 @@ function caretClientRect(el: TextControl): DOMRect | null {
   }
 
   const index = el.selectionStart ?? el.value.length;
-  mirror.append(owner.createTextNode(el.value.slice(0, index)));
-  const marker = owner.createElement('span');
-  // A marker with no content at all collapses to zero width -- a hair of
-  // content keeps it reliably measurable even for a caret sitting at the
-  // very end of the value.
-  marker.textContent = el.value.slice(index) || '​';
-  mirror.appendChild(marker);
+  const before = el.value.slice(0, index);
+  const after = el.value.slice(index) || '​';
+  if (prefix.data !== before) prefix.data = before;
+  if (suffix.data !== after) suffix.data = after;
   owner.body.appendChild(mirror);
 
   const mirrorRect = mirror.getBoundingClientRect();
@@ -306,6 +317,7 @@ export interface LyraMentionPopoverEventMap {
  * transitioning to `false` by any other means (a direct host assignment included). Never fires
  * for a close that followed a `lr-mention-select` commit.
  * @csspart listbox - The popover's root element (`role="listbox"`).
+ * @csspart limit - Candidate admission limit notice.
  * @csspart option - A candidate row (`role="option"`). Carries `aria-disabled="true"` while that
  *   row's `disabled` is set.
  * @csspart option-icon - A row's leading icon glyph, when `icon` is set.
@@ -339,6 +351,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    mentionInputLimit: LYRA_DEFAULT_mentionInputLimit,
     mentionMoreResults: LYRA_DEFAULT_mentionMoreResults,
     mentionResultCount: LYRA_DEFAULT_mentionResultCount,
     mentionResultPosition: LYRA_DEFAULT_mentionResultPosition,
@@ -373,6 +386,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     ) {
       this._textareaFocusSessionGeneration += 1;
     }
+    if (name === undefined) this.filteredMemo = undefined;
     super.requestUpdate(name, oldValue, options);
   }
 
@@ -390,9 +404,11 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  that element's own box, the same as `<lr-combobox>`'s trigger. */
   @property({ attribute: false }) anchor?: HTMLElement;
 
+  private itemPositions = new WeakMap<object, number>();
   private _items: readonly Readonly<LyraMentionItem>[] = Object.freeze([]);
 
-  /** The full candidate set, pre-`query`-filtering. Assignment takes a shallow frozen snapshot;
+  /** The candidate set, pre-`query`-filtering. Admits the first 10,000 array positions and
+   *  displays a localized limit notice when additional candidates are omitted. Assignment takes a shallow frozen snapshot;
    *  malformed rows without a string `label` remain in that snapshot but are omitted from every
    *  filtered/rendered projection. */
   get items(): readonly Readonly<LyraMentionItem>[] {
@@ -401,8 +417,29 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
 
   set items(next: readonly LyraMentionItem[]) {
     const previous = this._items;
+    if (next === previous) { this.requestUpdate(); return; }
     const source = Array.isArray(next) ? next : [];
-    this._items = Object.freeze(source.map((item) => Object.freeze({ ...item })));
+    this.inputLimited = source.length > MAX_MENTION_ITEMS;
+    const rows: Readonly<LyraMentionItem>[] = new Array(Math.min(source.length, MAX_MENTION_ITEMS));
+    this.itemPositions = new WeakMap();
+    for (let index = 0; index < Math.min(source.length, MAX_MENTION_ITEMS); index++) {
+      const descriptor = getOwnDataDescriptor(source, String(index));
+      if (typeof descriptor === 'symbol') continue;
+      const item = descriptor.value;
+      const copy: Record<string, unknown> = {};
+      if (item && typeof item === 'object') {
+        let keys: string[] = [];
+        try { keys = Object.keys(item); } catch { /* Invalid rows remain unselectable. */ }
+        for (const key of keys) {
+          const field = getOwnDataDescriptor(item, key);
+          if (typeof field !== 'symbol') Object.defineProperty(copy, key, {value:field.value,enumerable:true});
+        }
+      }
+      const snapshot = Object.freeze(copy) as unknown as Readonly<LyraMentionItem>;
+      rows[index] = snapshot;
+      this.itemPositions.set(snapshot, index);
+    }
+    this._items = Object.freeze(rows);
     this.requestUpdate('items', previous);
   }
 
@@ -528,8 +565,11 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     }
   }
 
+  private limitMounted = false;
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.limitMounted && changed.has('inputLimited') && this.inputLimited) this.announcements.announcePolite(this.localize('mentionInputLimit'));
+    this.limitMounted = true;
     if (changed.has('open')) {
       if (this.open) {
         this.reposition();
@@ -891,6 +931,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     this.syncActiveDescendant(control);
   }
 
+  private readonly labelKeys = createHaystackMemo<Readonly<LyraMentionItem>>((item, locale) =>
+    typeof item.label === 'string' ? item.label.toLocaleLowerCase(locale) : '');
+  private readonly descriptionKeys = createHaystackMemo<Readonly<LyraMentionItem>>((item, locale) =>
+    typeof item.description === 'string' ? item.description.toLocaleLowerCase(locale) : '');
   /** The current candidate set: runtime rows without a non-blank string `label` are omitted (a
    *  blank/whitespace-only label would otherwise render a focusable `role="option"` with no
    *  accessible name), then the remaining `items` are filtered by `query` via `filter` (or the
@@ -901,14 +945,13 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     const memo = this.filteredMemo;
     if (memo && memo[0] === items && memo[1] === query && memo[2] === filter && memo[3] === locale) return memo[4];
     const q = (query ?? '').trim().toLocaleLowerCase(locale);
-    const rows = items.filter((item) => {
+    const labels = filter ? undefined : this.labelKeys(items, locale);
+    const descriptions = filter ? undefined : this.descriptionKeys(items, locale);
+    const rows = items.filter((item, index) => {
       if (typeof item.label !== 'string' || item.label.trim().length === 0) return false;
       if (!q) return true;
       if (this.filter) return this.filter(item, q);
-      return item.label.toLocaleLowerCase(locale).includes(q) ||
-        (typeof item.description === 'string' ? item.description : '')
-          .toLocaleLowerCase(locale)
-          .includes(q);
+      return labels![index]!.includes(q) || descriptions![index]!.includes(q);
     });
     this.filteredMemo = [items, query, filter, locale, rows];
     return rows;
@@ -1164,7 +1207,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  this library. */
   private commit(item: Readonly<LyraMentionItem>): void {
     if (item.disabled) return;
-    const index = this.items.indexOf(item);
+    const index = this.itemPositions.get(item) ?? -1;
     if (index < 0) return;
     const relationshipControl = this.anchorRelationship?.control;
     if (relationshipControl && isTextareaAnchor(relationshipControl)) {
@@ -1313,13 +1356,15 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     `;
   }
 
+  @state() private inputLimited = false;
   override render(): TemplateResult {
-    const rows = this.visibleItems;
+    const rows = this.listboxHidden ? [] : this.visibleItems;
     const remaining = this.filteredItems.length - rows.length;
     const idx = this.clampedIndex(rows);
     const activeId = idx >= 0 ? this.rowId(idx) : '';
 
     return html`
+      ${this.inputLimited ? html`<p part="limit">${this.localize('mentionInputLimit')}</p>` : nothing}
       <div
         part="listbox"
         ?hidden=${this.listboxHidden}
@@ -1333,10 +1378,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         @keydown=${this.onListboxKeyDown}
       >
         <span class="glass-scroll-layer" aria-hidden="true"></span>
-        ${rows.length === 0
+        ${this.listboxHidden ? nothing : rows.length === 0
           ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${this.effectiveEmptyText}</div>`
           : rows.map((item, i) => this.renderRow(item, i, activeId))}
-        ${remaining > 0 ? html`<div part="more-results" id=${`${this._listId}-more`}>
+        ${!this.listboxHidden && remaining > 0 ? html`<div part="more-results" id=${`${this._listId}-more`}>
           ${this.localize('mentionMoreResults', undefined, {
             count: getNumberFormat(this.effectiveLocale).format(remaining),
             pluralCount: remaining,

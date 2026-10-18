@@ -8,6 +8,7 @@ export const LYRA_DEFAULT_diffViewHiddenLines: LyraMessage = {
     one: '{count} unchanged line',
     other: '{count} unchanged lines',
   };
+export const LYRA_DEFAULT_diffViewHighlightLimit: LyraMessage = 'Long code is shown without syntax highlighting.';
 export const LYRA_DEFAULT_diffViewNewLabel: LyraMessage = 'Modified';
 export const LYRA_DEFAULT_diffViewOldLabel: LyraMessage = 'Original';
 export const LYRA_DEFAULT_diffViewTooLarge: LyraMessage = 'Diff is too large to display.';
@@ -28,6 +29,7 @@ export const LYRA_DEFAULT_jsonViewerLimit: LyraMessage = 'Only the first {count}
 export const LYRA_DEFAULT_knownDateDay: LyraMessage = 'Day';
 export const LYRA_DEFAULT_knownDateMonth: LyraMessage = 'Month';
 export const LYRA_DEFAULT_knownDateYear: LyraMessage = 'Year';
+export const LYRA_DEFAULT_mentionInputLimit: LyraMessage = 'Only the first 10,000 mention candidates are available.';
 export const LYRA_DEFAULT_mentionMoreResults: LyraMessage = { one: '{count} more suggestion', other: '{count} more suggestions' };
 export const LYRA_DEFAULT_mentionResultCount: LyraMessage = { one: '{count} suggestion', other: '{count} suggestions' };
 export const LYRA_DEFAULT_mentionResultPosition: LyraMessage = 'Suggestion {current} of {total}';

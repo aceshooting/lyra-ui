@@ -37,7 +37,7 @@ Direction behaves exactly as described for `<lr-streaming-text>` (**Direction** 
 `llms/components/lr-streaming-text.md`; `contentMode: StreamingTextContentMode = 'auto'` (attribute
 `content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
-Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
+Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to the composed
 `<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s (defaulting the composed
 element's own `languages` to `{}` when unset, unlike the full variant's `undefined`). The rest of
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,

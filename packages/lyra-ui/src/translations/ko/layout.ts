@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} 명령',
   },
+  commandPaletteInputLimit: '입력 한도에 도달하여 일부 명령이 생략되었습니다.',
 };
 
 registerLyraLocale('ko', strings);

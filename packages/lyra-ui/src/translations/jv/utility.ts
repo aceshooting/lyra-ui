@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '{count} saran liyane',
   },
+  mentionInputLimit: 'Mung 10.000 saran sebutan kapisan sing kasedhiya.',
+  diffViewHighlightLimit: 'Kode dawa ditampilake tanpa panyorotan sintaks.',
 };
 
 registerLyraLocale('jv', strings);

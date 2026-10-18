@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: 'ہور {count} تجویز',
     other: 'ہور {count} تجویزاں',
   },
+  mentionInputLimit: 'ذکر کرن لئی صرف پہلے 10,000 امیدوار دستیاب نیں۔',
+  diffViewHighlightLimit: 'لمبا کوڈ سنٹیکس ہائی لائٹنگ توں بغیر وکھایا جاندا اے۔',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

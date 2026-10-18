@@ -61,6 +61,7 @@ const strings: LyraLocaleStrings = {
     few: '{count} naredbe',
     other: '{count} naredbi',
   },
+  commandPaletteInputLimit: 'Zbog ograničenja ulaza izostavljene su neke stavke: naredbe.',
 };
 
 registerLyraLocale('hr', strings);

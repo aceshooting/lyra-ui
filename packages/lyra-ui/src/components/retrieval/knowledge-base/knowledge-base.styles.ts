@@ -11,6 +11,11 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-m);
   }
+  [part='source-status'] {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--lr-color-text-quiet);
+  }
   [part='toolbar'] {
     display: flex;
     flex-wrap: wrap;

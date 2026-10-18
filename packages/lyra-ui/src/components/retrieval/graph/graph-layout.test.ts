@@ -1871,15 +1871,7 @@ describe('community hulls', () => {
 
   it('memoizes the per-community member walk once per structural update instead of once per graphItemCount() call site', async () => {
     const el = await mountHulls();
-    type WithCommunityMembers = { communityMembers: (c: unknown) => unknown };
-    let calls = 0;
-    const original = (
-      el as unknown as WithCommunityMembers
-    ).communityMembers.bind(el);
-    (el as unknown as WithCommunityMembers).communityMembers = (c: unknown) => {
-      calls++;
-      return original(c);
-    };
+    const internals = el as unknown as { simNodes: GraphSimulationNode[]; visibleCommunities: () => { members: GraphSimulationNode[] }[] };
     // A structural change (a genuinely new nodes array) is the only thing that should force a fresh
     // recompute -- the render this triggers reads the community/member walk from many places (every
     // node/link/hull tabindex expression, the outer <svg> tabindex, the live-region branch, the
@@ -1897,7 +1889,15 @@ describe('community hulls', () => {
         timeout: NODE_COUNT_TIMEOUT,
       }
     );
-    expect(calls).to.equal(communities.length);
+    const indexed = internals.visibleCommunities();
+    let visits = 0;
+    const original = internals.simNodes.forEach;
+    internals.simNodes.forEach = function (...args) { visits += this.length; return original.apply(this, args); };
+    try {
+      for (let i = 0; i < 20; i++) expect(internals.visibleCommunities() === indexed).to.equal(true);
+      expect(visits).to.equal(0);
+      expect(indexed.flatMap(entry => entry.members.map(node => node.id))).to.include('d');
+    } finally { internals.simNodes.forEach = original; }
   });
 });
 

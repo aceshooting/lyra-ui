@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} نمونهٔ معتبر در تمام توزیع؛ {belowCount} نمونه پایین‌تر و {aboveCount} نمونه بالاتر از بازه‌های نمایش‌داده‌شده؛ {invalidCount} نمونهٔ نامعتبر.',
+  histogramDistributionRange: 'محدودۀ نمونه‌های مشاهده‌شده: از {min} تا {max}.',
   chartCategory: 'دسته‌بندی',
   chartTotal: 'مجموع',
   chartAxisTotal: 'مجموع {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, شعاع {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'روند افزایشی',
-  chartTrendDecreasing: 'روند کاهشی',
-  chartTrendFlat: 'بدون تغییر',
-  chartSummary: '{label}: {count} مقدار، بازه از {min} تا {max}، روند {trend}',
   chartSeriesNoData: '{label}: اطلاعاتی نیست',
   chartSummaryWithData: 'نمودار {type}. {summaries}.',
   chartSummaryEmpty: 'نمودار {type} بدون اطلاعات.',
-  chartSummarySeparator: '. ',
   chartData: 'اطلاعات نمودار',
   chartRenderUnavailable: 'نمایش نمودار در دسترس نیست.',
+  chartPreparedSummaryZoom: 'بزرگ‌نمایی خلاصهٔ آماده‌شده را نمایش می‌دهد؛ جزئیات بیشتر از طریق نمایه در دسترس نیست.',
+  chartSpatialSummary: 'تمام منبع: {count} نقطه، x از {minX} تا {maxX}، y از {minY} تا {maxY}. نما: {matchedCount} نقطه، x از {viewMinX} تا {viewMaxX}، y از {viewMinY} تا {viewMaxY}.',
+  chartSpatialRadiusDomain: 'شعاع در تمام منبع: از {min} تا {max}.',
+  chartSpatialDensityLegend: 'تراکم تمام مجموعه‌ها را شامل می‌شود؛ نمایان بودن مجموعه‌ها تنها بر لایه‌های رویی نقطه‌ها تأثیر دارد.',
+  chartSpatialPoint: '{series}: {id}، موقعیت در منبع {sourceIndex}، {coordinates}{hidden}',
+  chartSpatialBin: 'ناحیۀ تراکم: {count} نقطه، x از {minX} تا {maxX}، y از {minY} تا {maxY}.',
+  chartSpatialHidden: ' (مجموعه پنهان است)',
   chartDataSampled: 'نمودار و جدول اطلاعات تولیدشده نمونه‌ای از حداکثر ۱٬۰۰۰ رکورد را نشان می‌دهند. برای دسترسی به همهٔ اطلاعات نمودار، جدول اطلاعات دلخواه‌تان را فراهم کنید.',
   chartPlotSampled: 'نمودار نمونه‌ای از حداکثر ۱٬۰۰۰ رکورد را نشان می‌دهد؛ جدول اطلاعات همهٔ اطلاعات را فهرست می‌کند.',
   chartZoomUnavailable: 'بزرگ‌نمایی در دسترس نیست، اما نمودار اصلی همچنان نمایش داده می‌شود.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} از {total})',
   chartMissingLibrary: 'برای نمایش نمودار، بستهٔ اختیاری "chart.js" را نصب کنید.',
   boxPlotMissingLibrary: 'برای نمایش نمودار جعبه‌ای، بستهٔ اختیاری نمودار جعبه‌ای را نصب کنید.',
+  chartInputLimit: 'برخی داده‌های نمودار به‌دلیل رسیدن به حد ورودی حذف شدند. برای نمایش مقادیر حذف‌شده، یک مجموعهٔ دادهٔ کوچک‌تر یا از پیش جمع‌بندی‌شده فراهم کنید.',
+  histogramInputLimit: 'تنها تازه‌ترین ۱۰٬۰۰۰ نمونه نگهداری می‌شوند. برای نمایش یک توزیع بزرگ‌تر، شمارهای از پیش گروه‌بندی‌شده در بازه‌ها را به lr-chart بدهید.',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

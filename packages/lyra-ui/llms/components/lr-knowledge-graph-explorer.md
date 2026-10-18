@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 15 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,6 +28,10 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
 `lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
 `query`, `matchCount`, `matchCountExact`, and `activeIndex: -1`.
 
+With `graphSource` unset, the `input-limit` part preserves the outer `nodes` and `edges` admission counts before the
+bounded model is passed to the graph. Counts describe retained/source root entries, independently
+of filtering, search limits and child rendering.
+
 `view: LyraGraphView = '2d'` and `camera?: LyraGraphCamera` forward the graph's spatial/list
 options. `nodes[].position` supplies real x/y/z coordinates. The default remains the existing 2D
 view; spatial/list views need no d3 peer. Search, filtering, selection, pinning and neighborhood
@@ -36,6 +40,86 @@ controls work with all views. User toolbar changes update the explorer's `view` 
 popovers use `getNodeScreenPosition()` so their viewport anchor follows the projected node after
 orbit, pan, dolly or focus. Spatial node activation includes optional world `z`; it never substitutes
 screen pixels for the existing event's coordinate domain.
+
+**Complete graph provider:** `graphSource: KnowledgeGraphExplorerSource | undefined = undefined`
+(attribute: false) takes precedence over legacy `nodes`/`edges`; invalid defined providers fail
+visibly. Setting `undefined` restores the current legacy model and local search/details behavior.
+`KnowledgeGraphExplorerSource` is exactly the public `GraphSource` alias, forwarded unchanged to
+the existing single `lr-graph` child.
+
+```ts
+import type { KnowledgeGraphExplorerSource } from
+  "@aceshooting/lyra-ui/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js";
+import type { GraphSource } from
+  "@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js";
+import type { LyraGraphSourceQuery, LyraGraphSourceSummary } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+The child owns global record pages, accepted bounded diagram scenes, camera/focus and bounded
+exact selection lookup; the explorer adds no second source controller or loaded graph cache.
+The source has immutable `revision`, same-revision `records` with `query`/`lookup`/`locate`, required
+`scene(request)` and optional `overview(request)`. Record/scene summaries report complete
+`{ nodes, edges }` counts. Global record keys are `'node:' + node.id` and `'edge:' + edge.id`, with
+explicit stable edge IDs; user event payloads keep original entity/edge IDs. Full-source record
+navigation is separate from the bounded accepted canvas scene: a source does not imply every
+record is drawn simultaneously or that a global minimap is available. Source editing remains
+read-only; existing editing/drag mutation controls do not become provider write operations.
+
+`sourcePage: number = 0` (`source-page`) is the child's zero-based global record page;
+`sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500, and size changes reset page
+zero. Readonly `sourceTotal: number | null` is the exact active filtered node/edge record total,
+distinct from the complete graph summary. It is null without an accepted current total, without a
+source, or for an invalid type catalog. The child retains at most 500 page records, diagram scenes
+of at most 500 nodes/1,000 edges, and at most 32 active/focused lookup reservations. Lookup for
+explorer selection shares that child lane rather than enumerating the graph. Source pagination,
+node/edge kind and incident/global navigation remain available in the child.
+
+The explorer toolbar is the sole search input in source mode; its legacy local match list is
+absent. `query` supplies global provider search, with at most 65,536 UTF-16 units forwarded.
+Toolbar query/type changes reset the child to global node scope rather than leaving an unrelated
+edge/incident filter active. `lr-search-change` waits for the latest user query's accepted exact
+source total, not a page-local count. It retains `{ query, matchCount, matchCountExact: true,
+activeIndex: -1 }`; empty query reports zero. Direct controlled query assignments remain silent.
+
+When `hiddenTypes` is nonempty, configured `nodeTypes` must describe the provider's complete type
+catalog, with at most 500 canonical nonblank IDs, each at most 65,536 UTF-16 units and together at
+most 2,000,000. The source query receives the positive complement of those IDs. With no hidden
+types, no positive filter applies and unknown provider types remain navigable. A partial catalog
+cannot represent a correct hidden-type complement. Hiding every configured type intentionally
+suppresses/revokes record, scene and neighbor requests and reports zero scoped matches; it never
+sends an empty positive array as a false claim that the entire graph is empty. The complete source
+summary stays distinct. `source-status` explains all-hidden/invalid catalog state and `source-clear`
+clears hidden types to restore the unfiltered scope. Existing `lr-hidden-types-change` reports
+user commits; controlled assignments remain silent.
+
+Controlled `selectedNodeId` resolves an off-scene original ID through exact lookup without moving
+the record page, opening details or emitting selection. Only a current authoritative global
+absence proof clears it silently. User entity activation resolves the exact original ID, updates
+selection and emits the existing `lr-selection-change` once, then requires an accepted scene and
+real mounted list-row or projected camera anchor before opening the details popover. Reentrant
+selection listeners can revoke that continuation. The details `lr-neighbor-list` binds its source
+only after actual opening and is synchronously unbound on close/source change; hidden closed
+details do not fetch neighbors. Unknown degree is omitted unless `entityDetails` supplies it,
+rather than inferred from the partial scene. Pins and `path` remain bounded host configuration;
+the explorer does not look up every configured ID or compute a full graph traversal.
+
+`revealSourceKey(key: string): Promise<boolean>` clears toolbar query/hidden types and delegates
+global node/edge reveal to the sole child, without selection or detail activation. Keys retain the
+canonical node/edge prefixes above. Missing, invalid, failed, obsolete, disconnected or unset-source
+requests resolve `false`. Off-page list entity activation likewise clears toolbar scope before
+its global focus/details flow. `fit`, `resetView` and `focusNode` retain the child's bounded current
+scene semantics; they do not promise a full-source canvas fit.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named presentation changes reuse accepted data. Source replacement/removal and lifecycle
+transitions revoke obsolete controls, focus/selection continuations and popover/neighbor bindings.
+Changed scope invalidates obsolete child requests and controls. The child's fixed page/scene/lookup scheduling keeps ignored-abort
+physical calls occupied until settlement and coalesces newer intent. Existing original-ID
+activation/expansion/path/pin/camera/view events keep their payloads and ownership; there is no
+new source selection or editing event. `detail-neighbors` identifies the open-details neighborhood;
+existing graph/legend/details parts remain applicable. The following local-array lookup/search
+rules describe the legacy route unless a source qualification is stated.
 
 **Properties:** (host-supplied data, identity-normalized before rendering)
 
@@ -56,10 +140,13 @@ screen pixels for the existing event's coordinate domain.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
   node id. Merged onto the matching `LyraGraphNode` to build the entity shown in the details popover and
   neighbor rows. A node with no entry still renders: `degree` falls back to a live count derived from
-  `edges`, `description`/`properties` are omitted
+  `edges` in the legacy route; source mode leaves unknown degree omitted.
+  `description`/`properties` are omitted
 - `path: LyraPathElement[] = []` (attribute: false) — host-supplied path-finding _result_, rendered
   via `lr-path-strip` (`{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string;
-directed?: boolean; reverse?: boolean }`). Empty renders no strip
+directed?: boolean; reverse?: boolean }`). Empty renders no strip. The child registers on the
+  first nonempty path; await `updateComplete` before accessing it. The `path` part shows localized
+  loading or error status while unavailable. Clearing and replacing the path retries a failed load.
 
 (self-managed but presettable/observable — this component toggles its own copy on interaction, the
 same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature works with zero host wiring)
@@ -67,8 +154,10 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
 - `hiddenTypes: string[] = []` (attribute: false) — forwarded to both `lr-graph.hiddenTypes` and
   `lr-graph-legend.hiddenTypes`; hidden nodes are also excluded from explorer search results,
   neighbor rows, and activation
-- `selectedNodeId: string | null = null` (attribute `selected-node-id`) — drives the details popover
-  and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
+- `selectedNodeId: string | null = null` (attribute `selected-node-id`) — drives
+  `lr-graph.selectedNodeIds`; legacy selection drives the details popover, while controlled source
+  selection resolves silently and user activation opens it. `null` shows no selection and keeps
+  the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
 - `query: string = ''` — the filter applied to the visible node
@@ -107,7 +196,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `graphExplorerLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty on the group
 
-**Methods:** `fit(options?: { padding?: number })` frames every visible node in the composed
+**Methods:** `fit(options?: { padding?: number })` frames every currently visible node in the composed
 graph (forwards to `lr-graph.fit()`); `resetView()` is `fit()` with the default padding, for a
 reset-view action; `focusNode(id, options?: { zoom? }): Promise<boolean>` centers a visible node
 without selecting it or opening the details popover (resolves `false` for an unknown or
@@ -136,8 +225,9 @@ filtered-out id). None change `selectedNodeId` or filters.
 - `lr-search-change` (`detail: { query: string; matchCount: number; matchCountExact: boolean }`) —
   the user typed in the toolbar's search box. `query` is the canonical `LyraSearchChangeDetail`
   field name. `matchCount` is the same live node-filter total the result list and its live-region
-  announcement already compute (`0` while the query is empty). `matchCountExact` is always `true` —
-  this component's node filter has no truncating ceiling, unlike a paginated text-search viewer.
+  announcement compute in the legacy route (`0` while the query is empty). In source mode the
+  event waits for the accepted global query total described above. `matchCountExact` is `true`
+  for emitted accepted results.
   `activeIndex` is `-1`: this is a live node filter with no search cursor. The component
   has already applied the query to its own `query` property before emitting, so reassigning
   it back is optional and a direct host assignment stays silent.
@@ -149,7 +239,7 @@ filtered-out id). None change `selectedNodeId` or filters.
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
 Receives no data; an overriding consumer reads the selected entity from `selectedNodeId`/`nodes`
-itself. `detail-body` — additive content appended inside the default `lr-entity-card`'s body,
+in the legacy route, or resolves the controlled original ID from its own provider in source mode. `detail-body` — additive content appended inside the default `lr-entity-card`'s body,
 alongside its `lr-neighbor-list`; no effect while `details` is overridden. `detail-actions` —
 additive content appended into the default `lr-entity-card`'s `actions` slot, beside its built-in
 pin toggle; no effect while `details` is overridden.
@@ -159,7 +249,8 @@ pin toggle; no effect while `details` is overridden.
 composed `lr-graph-legend`), `search-results` (only while `query` is non-empty; at most 50 rows,
 one tab stop moved with ArrowUp/ArrowDown/Home/End, while the announced count covers every match),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `search-limit` (a localized
-shown/total notice when more than 50 nodes match), `details-limit` (a localized shown/total notice when `entityDetails` is too large to keep), `pinned` (only while
+shown/total notice when more than 50 nodes match), `input-limit` (outer node/edge admission notice),
+`details-limit` (a localized shown/total notice when `entityDetails` is too large to keep), `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
 
@@ -197,6 +288,7 @@ the composed graph too. Retheme the composed graph through `lr-graph`'s own cust
 - Selecting a node any _other_ way (search result, neighbor row, path element, keyboard Enter/Space
   on a graph node — which dispatches no native `click`) has no rect to read, so it calls
   `lr-graph.focusNode(id)` and anchors at the graph element's own bounding-box center instead; no
-  continuous tracking applies on that path.
+  continuous tracking applies on that legacy path. Source activation instead waits for the
+  authoritative scene and real row/projected anchor described above.
 
 ---

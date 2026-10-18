@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{total}ൽ ചിത്രം {index}',
   playWithContext: '{name} പ്ലേ ചെയ്യുക',
   pauseWithContext: '{name} താൽക്കാലികമായി നിർത്തുക',
+  avPlayerWaveformUnavailable: 'തരംഗരൂപ ഡാറ്റ ലഭ്യമല്ല അല്ലെങ്കിൽ ഈ മീഡിയയുമായി പൊരുത്തപ്പെടുന്നില്ല.',
+  avPlayerTranscriptUnavailable: 'ട്രാൻസ്ക്രിപ്റ്റ് ഡാറ്റ ലഭ്യമല്ല.',
   dropzoneReleaseToAdd: 'ഫയൽ ചേർക്കാൻ വിട്ടുകൊടുക്കുക.',
   dropzoneRejectedType: 'ഈ ഫയൽ തരം സ്വീകരിക്കുന്നില്ല.',
   attachmentAdd: 'അറ്റാച്ച്മെന്റ് ചേർക്കുക',

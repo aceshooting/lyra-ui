@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: 'మరో {count} సూచన',
     other: 'మరో {count} సూచనలు',
   },
+  mentionInputLimit: 'ప్రస్తావించడానికి మొదటి 10,000 అభ్యర్థులు మాత్రమే అందుబాటులో ఉన్నారు.',
+  diffViewHighlightLimit: 'పొడవైన కోడ్ సింటాక్స్ హైలైటింగ్ లేకుండా చూపబడుతుంది.',
 };
 
 registerLyraLocale('te', strings);

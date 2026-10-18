@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} کمانډ',
     other: '{count} حکمونه',
   },
+  commandPaletteInputLimit: 'د ننوتلو حد ته د رسېدو له امله ځینې امرونه پرېښودل شوي دي.',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

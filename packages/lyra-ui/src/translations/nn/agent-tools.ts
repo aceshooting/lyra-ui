@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Berre dei første {count} testresultata blir viste.',
   toolTimelineLimit: 'Høgst {count} verktøykall blir viste.',
   toolSelectLimit: 'Berre dei første {count} verktøya blir viste.',
+  testResultsInputTooLarge: 'Detaljane i testresultata overskrid visingsgrensa.',
   toolCall: 'Verktøykall',
   maximize: 'Maksimer',
   promptStudioVariableName: 'Namn på variabel {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Berre dei første {count} filene blir viste.',
   taskListLimit: 'Berre dei første {count} oppgåvene blir viste.',
   evalDatasetLimit: 'Berre dei første {count} eksempla blir viste.',
+  activityFeedInputLimit: 'Berre dei nyaste {count} av {total} oppføringar blir tekne vare på.',
+  spanWaterfallLimit: 'Viser {shown} av {total} spenn.',
+  toolTimelineInputLimit: 'Berre dei nyaste {count} av {total} verktøykall blir tekne vare på.',
 };
 
 registerLyraLocale('nn', strings);

@@ -3,8 +3,18 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphCommunity, type LyraGraphEdge, type LyraGraphNode, type LyraGraphPosition, type LyraGraphView, type NormalizedGraphModel } from './graph-model.js';
-import { fittedGraphCamera, normalizeGraphCamera, panGraphCamera, pickSpatialScene, projectSpatialPoint, projectSpatialScene, spatialNodePosition,
+import { SpatialHitIndex, SpatialProjectionWorkspace, fittedGraphCamera, normalizeGraphCamera, panGraphCamera, projectSpatialPoint, projectSpatialScene, spatialNodePosition,
   type SpatialHit, type SpatialProjectedNode, type SpatialScene, type SpatialSegment, type SpatialViewport, type SpatialWorldNode } from './graph-spatial.js';
+
+const EMPTY_DASH = { values: [] as number[], key: '' };
+const DANGLING_DASH = { values: [4, 4], key: '4,4' };
+const selectionSets = new WeakMap<readonly string[], ReadonlySet<string>>();
+function selectedIds(ids: readonly string[]): ReadonlySet<string> {
+  if (!Object.isFrozen(ids)) return new Set(ids);
+  let result = selectionSets.get(ids);
+  if (!result) { result = new Set(ids); selectionSets.set(ids, result); }
+  return result;
+}
 
 interface GraphSpatialHost extends Pick<HTMLElement, 'isConnected' | 'ownerDocument' | 'shadowRoot' | 'getBoundingClientRect'> {
   readonly renderRoot: HTMLElement | DocumentFragment;
@@ -24,7 +34,6 @@ interface GraphSpatialHost extends Pick<HTMLElement, 'isConnected' | 'ownerDocum
   readonly edgeLabelMinZoom: number;
   readonly minZoom: number;
   readonly maxZoom: number;
-  requestUpdate(): void;
 }
 
 interface SpatialPaint {
@@ -38,6 +47,7 @@ interface SpatialPaint {
   readonly dimmedOpacity: number;
 }
 export interface GraphSpatialOptions {
+  readonly repaint: () => void;
   readonly model: () => NormalizedGraphModel;
   readonly locale: () => string;
   readonly direction: () => 'ltr' | 'rtl';
@@ -86,9 +96,20 @@ export class GraphSpatialController {
   private canvas?: HTMLCanvasElement;
   private context?: CanvasRenderingContext2D;
   private scene?: SpatialScene;
+  private hitIndex?: SpatialHitIndex;
+  private projectedById = new Map<string, SpatialProjectedNode>();
+  private hoverFrame?: number;
+  private hoverFrameWindow?: Window;
+  private hoverGeneration = 0;
+  private pendingHover?: { x: number; y: number };
+
+  private readonly projectionWorkspace = new SpatialProjectionWorkspace();
   private sceneViewport?: SpatialViewport;
   private sceneVisibleEdges?: ReadonlySet<string>;
   private paint?: SpatialPaint;
+  private readonly edgeDashes = new WeakMap<LyraGraphEdge, { values: number[]; key: string }>();
+  private readonly textWidths = new Map<string, number>();
+  private measuredFont = '';
   private resize?: ResizeObserver;
   private intersection?: IntersectionObserver;
   private visible = true;
@@ -160,9 +181,9 @@ export class GraphSpatialController {
     }
   }
 
-  update(): void {
+  update(repaint = true): void {
     if (!this.host.isConnected || this.host.view === '2d') { this.disconnect(); return; }
-    this.paint = undefined;
+    if (repaint) this.paint = undefined;
     const next = this.host.renderRoot.querySelector<HTMLCanvasElement>('[part="spatial-canvas"]') ?? undefined;
     if (this.canvas !== next) {
       this.cancelGesture();
@@ -179,7 +200,7 @@ export class GraphSpatialController {
         this.options.afterUpdate(() => {
           if (!this.contextFailed || this.host.view !== '3d') return;
           this.options.unavailable();
-          this.host.requestUpdate();
+          this.options.repaint();
         }, 'graph-spatial-context');
       }
       const view = this.host.ownerDocument.defaultView as (Window & typeof globalThis) | null;
@@ -209,6 +230,8 @@ export class GraphSpatialController {
   }
 
   disconnect(): void {
+    this.cancelHover();
+    this.hitIndex = undefined;
     this.cancelGesture();
     if (this.frame !== undefined) this.frameWindow?.cancelAnimationFrame(this.frame);
     this.frame = undefined;
@@ -264,7 +287,7 @@ export class GraphSpatialController {
     if (!node) return false;
     if (this.host.view === 'list' || this.contextFailed) {
       this.page = Math.floor((this.nodeIndexById.get(id) ?? 0) / PAGE_SIZE);
-      this.host.requestUpdate();
+      this.options.repaint();
     }
     this.changeCamera({ ...this.currentCamera, target: node.position, distance: zoom === undefined ? this.currentCamera.distance : this.fittedDistance / this.safeZoom(zoom) });
     return true;
@@ -310,19 +333,31 @@ export class GraphSpatialController {
     });
   }
 
-  private projectedScene(): SpatialScene {
+  private projectedScene(viewport = this.viewport()): SpatialScene {
     const paint = this.paint ??= this.options.paint(this.world, this.edges);
-    const viewport = this.viewport();
     const previousEdges = this.sceneVisibleEdges;
     if (this.sceneViewport?.width !== viewport.width || this.sceneViewport.height !== viewport.height ||
-      !previousEdges || previousEdges.size !== paint.visibleEdges.size || [...paint.visibleEdges].some((id) => !previousEdges.has(id)))
+      (!previousEdges || (previousEdges !== paint.visibleEdges && (previousEdges.size !== paint.visibleEdges.size || [...paint.visibleEdges].some((id) => !previousEdges.has(id))))))
       this.scene = undefined;
     if (!this.scene) {
-      this.scene = projectSpatialScene(this.world, this.edges.filter((edge) => paint.visibleEdges.has(graphLinkIdentity(edge))), this.currentCamera, viewport);
+      this.scene = projectSpatialScene(this.world, this.edges.filter((edge) => paint.visibleEdges.has(graphLinkIdentity(edge))), this.currentCamera, viewport, this.projectionWorkspace);
+      this.hitIndex = new SpatialHitIndex(this.scene);
+      this.projectedById = new Map(this.scene.nodes.map(node => [node.node.id, node]));
       this.sceneViewport = viewport;
-      this.sceneVisibleEdges = paint.visibleEdges;
     }
+    this.sceneVisibleEdges = paint.visibleEdges;
     return this.scene;
+  }
+
+  private textWidth(ctx: CanvasRenderingContext2D, text: string): number {
+    if (this.measuredFont !== ctx.font) { this.measuredFont = ctx.font; this.textWidths.clear(); }
+    let width = this.textWidths.get(text);
+    if (width === undefined) {
+      width = ctx.measureText(text).width;
+      if (this.textWidths.size >= 10000) this.textWidths.delete(this.textWidths.keys().next().value!);
+      this.textWidths.set(text, width);
+    }
+    return width;
   }
 
   private draw(): void {
@@ -336,24 +371,33 @@ export class GraphSpatialController {
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.clearRect(0, 0, size.width, size.height);
     const paint = this.paint ??= this.options.paint(this.world, this.edges);
+    ctx.save();
     ctx.font = `${paint.fontSize}px ${paint.font}`;
     ctx.textBaseline = 'middle';
-    const selectedNodes = new Set(this.host.selectedNodeIds), selectedEdges = new Set(this.host.selectedEdgeIds);
-    const dimmedNodes = new Set(this.host.dimmedNodeIds), dimmedEdges = new Set(this.host.dimmedEdgeIds);
+    const selectedNodes = selectedIds(this.host.selectedNodeIds), selectedEdges = selectedIds(this.host.selectedEdgeIds);
+    const dimmedNodes = selectedIds(this.host.dimmedNodeIds), dimmedEdges = selectedIds(this.host.dimmedEdgeIds);
     const zoom = this.fittedDistance / this.currentCamera.distance;
-    const scene = this.projectedScene();
-    const projectedById = new Map(scene.nodes.map((node) => [node.node.id, node]));
+    const scene = this.projectedScene(size);
+    const outside = (left: number, top: number, right: number, bottom: number) =>
+      right < 0 || bottom < 0 || left > size.width || top > size.height;
+    const nodeLabels = this.host.nodeLabels !== 'none' && (this.host.nodeLabels === 'always' || zoom >= 0.5);
+    let strokeStyle: string | undefined;
+    const flushStroke = () => { if (strokeStyle !== undefined) { ctx.stroke(); strokeStyle = undefined; } };
     for (const primitive of scene.primitives) {
-      ctx.save();
       if (primitive.kind === 'node') {
         const entry = primitive.value, id = entry.node.id;
+        const radius = entry.screenRadius * Math.SQRT2 + Math.max(6, paint.fontSize);
+        const labelWidth = nodeLabels ? this.textWidth(ctx, entry.node.label ?? id) : 0;
+        if (outside(entry.x - radius, entry.y - radius, entry.x + radius + labelWidth, entry.y + radius)) continue;
+        flushStroke();
+        ctx.setLineDash([]); ctx.textAlign = 'left';
         ctx.globalAlpha = dimmedNodes.has(id) ? paint.dimmedOpacity : 1;
         this.drawNode(ctx, entry, paint.nodes.get(id) ?? paint.text);
         if (selectedNodes.has(id) || this.host.focusNodeId === id || (this.hover?.kind === 'node' && this.hover.id === id)) {
           ctx.strokeStyle = paint.selected; ctx.lineWidth = 2;
           ctx.beginPath(); ctx.arc(entry.x, entry.y, entry.screenRadius + 4, 0, Math.PI * 2); ctx.stroke();
         }
-        if (this.host.nodeLabels !== 'none' && (this.host.nodeLabels === 'always' || zoom >= 0.5)) {
+        if (nodeLabels) {
           ctx.fillStyle = paint.text;
           ctx.fillText(entry.node.label ?? entry.node.id, entry.x + entry.screenRadius + 4, entry.y);
         }
@@ -362,15 +406,41 @@ export class GraphSpatialController {
         }
       } else {
         const entry = primitive.value;
-        ctx.globalAlpha = dimmedEdges.has(entry.id) ? paint.dimmedOpacity : 1;
+        const padding = Math.max(6, finiteRange(entry.edge.width ?? 1.5, 1.5, 0, 1000) * 3, this.projectedById.get(entry.edge.target)?.screenRadius ?? 0);
+        const labelPoint = entry.labelPoint ?? entry.a;
+        const labelWidth = entry.middle && this.host.withEdgeLabels && entry.edge.label ? this.textWidth(ctx, entry.edge.label) : 0;
+        if (outside(Math.min(entry.a.x, entry.b.x, labelWidth ? labelPoint.x : entry.a.x) - padding,
+          Math.min(entry.a.y, entry.b.y, labelWidth ? labelPoint.y : entry.a.y) - padding - paint.fontSize,
+          Math.max(entry.a.x, entry.b.x, labelWidth ? labelPoint.x + labelWidth : entry.a.x) + padding,
+          Math.max(entry.a.y, entry.b.y, labelWidth ? labelPoint.y : entry.a.y) + padding)) continue;
+        const alpha = dimmedEdges.has(entry.id) ? paint.dimmedOpacity : 1;
         const selected = selectedEdges.has(entry.id) || (this.hover?.kind === 'link' && this.hover.id === entry.id);
-        this.drawSegment(ctx, entry, selected ? paint.selected : paint.edges.get(entry.id) ?? paint.text, selected, projectedById.get(entry.edge.target)?.screenRadius ?? 0);
+        const color = selected ? paint.selected : paint.edges.get(entry.id) ?? paint.text;
+        const width = finiteRange(entry.edge.width ?? 1.5, 1.5, 0, 1000);
+        const labeled = entry.middle && this.host.withEdgeLabels && entry.edge.label;
+        const dash = this.dashPattern(entry.edge, entry.dangling);
+        // Repeated translucent strokes accumulate coverage, so only opaque runs may share a path.
+        const opaque = alpha === 1 && (/^rgb\([\d.,\s]+\)$/.test(color) || /^#[\da-f]{6}$/i.test(color));
+        if (!entry.edge.directed && !labeled && width > 0 && opaque) {
+          const style = `${color}|${width + (selected ? 2 : 0)}|${alpha}|${dash.key}|${entry.offset}`;
+          if (strokeStyle !== style) {
+            flushStroke(); ctx.beginPath(); strokeStyle = style;
+            ctx.strokeStyle = color; ctx.lineWidth = width + (selected ? 2 : 0);
+            ctx.globalAlpha = alpha; ctx.setLineDash(dash.values); ctx.lineDashOffset = -entry.offset;
+          }
+          ctx.moveTo(entry.a.x, entry.a.y); ctx.lineTo(entry.b.x, entry.b.y);
+          continue;
+        }
+        flushStroke();
+        ctx.globalAlpha = alpha;
+        this.drawSegment(ctx, entry, selected ? paint.selected : paint.edges.get(entry.id) ?? paint.text, selected, this.projectedById.get(entry.edge.target)?.screenRadius ?? 0);
         if (entry.middle && this.host.withEdgeLabels && zoom >= finiteRange(this.host.edgeLabelMinZoom, 0.6, 0.001, 1000) && entry.edge.label) {
-          ctx.fillStyle = paint.text; ctx.fillText(entry.edge.label, entry.a.x, entry.a.y - paint.fontSize);
+          ctx.fillStyle = paint.text; ctx.fillText(entry.edge.label, labelPoint.x, labelPoint.y - paint.fontSize);
         }
       }
-      ctx.restore();
     }
+    flushStroke();
+    ctx.restore();
   }
 
   private drawNode(ctx: CanvasRenderingContext2D, node: SpatialProjectedNode, fill: string): void {
@@ -389,12 +459,22 @@ export class GraphSpatialController {
     ctx.fill();
   }
 
+  private dashPattern(edge: LyraGraphEdge, dangling: boolean): { values: number[]; key: string } {
+    if (dangling) return DANGLING_DASH;
+    const cached = this.edgeDashes.get(edge);
+    if (cached) return cached;
+    const dash = edge.dash;
+    const result = Array.isArray(dash) && dash.length > 0 && dash.length <= 32 && dash.every(value => Number.isFinite(value) && value >= 0)
+      ? { values: [...dash], key: dash.join(',') } : EMPTY_DASH;
+    if (Object.isFrozen(edge)) this.edgeDashes.set(edge, result);
+    return result;
+  }
+
   private drawSegment(ctx: CanvasRenderingContext2D, segment: SpatialSegment, color: string, selected: boolean, targetRadius: number): void {
     const { a, b, edge } = segment;
     ctx.strokeStyle = color; ctx.fillStyle = color;
     ctx.lineWidth = finiteRange(edge.width ?? 1.5, 1.5, 0, 1000) + (selected ? 2 : 0);
-    const dash = edge.dash;
-    ctx.setLineDash(segment.dangling ? [4, 4] : Array.isArray(dash) && dash.length <= 32 && dash.every((value) => Number.isFinite(value) && value >= 0) ? [...dash] : []);
+    ctx.setLineDash(this.dashPattern(edge, segment.dangling).values);
     ctx.lineDashOffset = -segment.offset;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     if (segment.last && edge.directed) {
@@ -412,9 +492,34 @@ export class GraphSpatialController {
   private hit(clientX: number, clientY: number): SpatialHit | undefined {
     const bounds = this.canvas?.getBoundingClientRect();
     if (!bounds) return undefined;
-    const scene = this.projectedScene();
-    const hit = pickSpatialScene(scene, clientX - bounds.left, clientY - bounds.top);
-    return hit;
+    this.projectedScene();
+    return this.hitIndex?.hit(clientX - bounds.left, clientY - bounds.top);
+  }
+
+  private cancelHover(): void {
+    this.hoverGeneration++;
+    if (this.hoverFrame !== undefined) this.hoverFrameWindow?.cancelAnimationFrame(this.hoverFrame);
+    this.hoverFrame = undefined;
+    this.hoverFrameWindow = undefined;
+    this.pendingHover = undefined;
+  }
+
+  private queueHover(x: number, y: number): void {
+    this.pendingHover = { x, y };
+    if (this.hoverFrame !== undefined) return;
+    const view = this.host.ownerDocument.defaultView;
+    if (!view) return;
+    const generation = this.hoverGeneration;
+    this.hoverFrameWindow = view;
+    this.hoverFrame = view.requestAnimationFrame(() => {
+      if (generation !== this.hoverGeneration) return;
+      this.hoverFrame = undefined;
+      this.hoverFrameWindow = undefined;
+      const point = this.pendingHover;
+      this.pendingHover = undefined;
+      if (point && this.host.isConnected && this.host.view === '3d' && !this.gesture)
+        this.setHover(this.hit(point.x, point.y));
+    });
   }
 
   private setHover(next: SpatialHit | undefined): void {
@@ -433,6 +538,7 @@ export class GraphSpatialController {
 
   private readonly pointerDown = (event: PointerEvent): void => {
     if (event.button !== 0 || this.gesture) return;
+    this.cancelHover();
     this.canvas?.focus();
     this.gesture = { id: event.pointerId, startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY, moved: false, pan: event.shiftKey };
     try { this.canvas?.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers need no capture. */ }
@@ -440,7 +546,7 @@ export class GraphSpatialController {
   };
   private readonly pointerMove = (event: PointerEvent): void => {
     const gesture = this.gesture;
-    if (!gesture) { this.setHover(this.hit(event.clientX, event.clientY)); return; }
+    if (!gesture) { this.queueHover(event.clientX, event.clientY); return; }
     if (gesture.id !== event.pointerId) return;
     gesture.moved ||= Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) > 5;
     const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
@@ -458,7 +564,7 @@ export class GraphSpatialController {
       if (hit) this.options.activate(hit, event);
     }
   };
-  private readonly pointerCancel = (event: PointerEvent): void => { if (event.pointerId === this.gesture?.id) this.cancelGesture(); };
+  private readonly pointerCancel = (event: PointerEvent): void => { this.cancelHover(); if (event.pointerId === this.gesture?.id) this.cancelGesture(); };
   private readonly wheel = (event: WheelEvent): void => {
     if (this.host.shadowRoot?.activeElement !== this.canvas && !this.gesture) return;
     event.preventDefault();
@@ -482,7 +588,7 @@ export class GraphSpatialController {
     this.cancelGesture();
     if (view === '3d') this.contextFailed = false;
     this.host.view = view;
-    this.host.requestUpdate();
+    this.options.repaint();
     this.focusAfterViewChange = true;
     this.options.viewChanged();
   }
@@ -490,7 +596,7 @@ export class GraphSpatialController {
   private changePage(delta: number): void {
     this.page = Math.max(0, Math.min(Math.ceil(this.items.length / PAGE_SIZE) - 1, this.page + delta));
     this.focusAfterViewChange = true;
-    this.host.requestUpdate();
+    this.options.repaint();
   }
 
   private listKeyDown(item: ListItem, event: KeyboardEvent): void {
@@ -514,7 +620,7 @@ export class GraphSpatialController {
     const list = this.host.view === 'list' || this.contextFailed;
     const pageItems = this.items.slice(this.page * PAGE_SIZE, (this.page + 1) * PAGE_SIZE);
     const number = getNumberFormat(this.options.locale());
-    const selectedNodes = new Set(this.host.selectedNodeIds), selectedEdges = new Set(this.host.selectedEdgeIds);
+    const selectedNodes = selectedIds(this.host.selectedNodeIds), selectedEdges = selectedIds(this.host.selectedEdgeIds);
     const button = (action: string, label: string, callback: () => void) => html`<button type="button" part="spatial-control" data-spatial-action=${action} @click=${callback}>${label}</button>`;
     return html`<div part="base" class="spatial-base">
       <div part="spatial-toolbar" role="group" aria-label=${messages['controls']}>
@@ -545,7 +651,7 @@ export class GraphSpatialController {
       </div>` : html`<p part="spatial-instructions" id=${this.instructionsId}>${messages['instructions']}</p>
         <canvas part="spatial-canvas" tabindex="0" role="img" aria-label=${this.host.accessibleLabel ?? this.host.label ?? messages['view3d']}
           aria-describedby=${this.instructionsId} @pointerdown=${this.pointerDown} @pointermove=${this.pointerMove} @pointerup=${this.pointerUp}
-          @pointercancel=${this.pointerCancel} @lostpointercapture=${this.pointerCancel} @pointerleave=${() => { if (!this.gesture) this.setHover(undefined); }}
+          @pointercancel=${this.pointerCancel} @lostpointercapture=${this.pointerCancel} @pointerleave=${() => { if (!this.gesture) { this.cancelHover(); this.setHover(undefined); } }}
           @wheel=${this.wheel} @keydown=${this.keyDown} @dblclick=${(event: MouseEvent) => { const hit = this.hit(event.clientX, event.clientY); if (hit?.kind === 'node') this.options.expand(hit.id); }}
         ></canvas>
         ${!this.world.length ? html`<p part="empty">${messages['noData']}</p>` : nothing}`}

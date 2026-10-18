@@ -2,7 +2,7 @@ import { finiteNumber } from '../../../internal/numbers.js';
 
 /** One synced transcript entry. `end` is exclusive; an omitted `end` extends to the next strictly chronological
  * start (or forever, for the last one). Equal starts do not end one another; caller order is
- * retained. The player indexes starts on assignment so playback reconciliation stays linear. Cue collections require a trimmed nonempty `cueId` and retain the
+ * retained. The player builds a bounded interval index so playback reconciliation uses logarithmic lookup. Cue collections require a trimmed nonempty `cueId` and retain the
  * first occurrence when IDs repeat. */
 export interface LyraAvCue {
   readonly cueId: string;
@@ -23,9 +23,9 @@ export interface LyraAvTrack {
 
 const MAX_LYRA_AV_CUES = 10_000;
 const MAX_LYRA_AV_TRACKS = 64;
-const MAX_CUE_ID_CHARS = 256;
-const MAX_CUE_TEXT_CHARS = 100_000;
-const MAX_CUE_SPEAKER_CHARS = 4_096;
+export const MAX_CUE_ID_CHARS = 256;
+export const MAX_CUE_TEXT_CHARS = 100_000;
+export const MAX_CUE_SPEAKER_CHARS = 4_096;
 const MAX_TRACK_SRC_CHARS = 16_384;
 const MAX_TRACK_LANGUAGE_CHARS = 128;
 const MAX_TRACK_LABEL_CHARS = 4_096;

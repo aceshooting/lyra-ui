@@ -314,9 +314,24 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
    *  blank id (see `normalizeCatalog`), so the find would miss and `?? id` would return `''` too --
    *  and is kept only to skip the scan on the common empty-field path. It is therefore not an
    *  instance of the `''`-as-missing-value shape corrected in `<lr-select>`/`<lr-combobox>`. */
+  private readonly rowIndexes = new WeakMap<readonly LyraCatalogEntry[], Map<string, number>>();
+  private indexesFor(rows: readonly LyraCatalogEntry[]): Map<string, number> {
+    let indexes = this.rowIndexes.get(rows);
+    if (!indexes) {
+      indexes = new Map();
+      rows.forEach((entry, index) => { if (!indexes!.has(entry.id)) indexes!.set(entry.id, index); });
+      this.rowIndexes.set(rows, indexes);
+    }
+    return indexes;
+  }
+  entryFor(id: string): DisplayCatalogEntry<T> | undefined {
+    const rows = this.effectiveEntries;
+    const index = this.indexesFor(rows).get(id);
+    return index === undefined ? undefined : rows[index];
+  }
   labelFor(id: string): string {
     if (!id) return '';
-    return this.effectiveEntries.find((entry) => entry.id === id)?.label ?? id;
+    return this.entryFor(id)?.label ?? id;
   }
 
   get activeIndex(): number {
@@ -421,7 +436,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
       this.setListboxHidden(false);
       if (this.closedMode) {
         this.setActiveIndex(
-          this.effectiveEntries.findIndex((entry) => entry.id === this._value && entry.disabled !== true),
+          this.entryFor(this._value)?.disabled === true ? -1 : (this.indexesFor(this.effectiveEntries).get(this._value) ?? -1),
         );
       }
     } else {
@@ -504,14 +519,14 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
 
   commitValue(next: string): void {
     if (this.isReadonly) return;
-    const inCatalog = this.normalizedCatalog.some((entry) => entry.id === next);
+    const inCatalog = this.indexesFor(this.normalizedCatalog).has(next);
     this.value = next;
     this.hide();
     this.options.emitChange({ value: next, inCatalog });
     this.emitValueEvents({ value: next, inCatalog });
   }
 
-  emitValueEvents(detail: CatalogPickerChangeDetail = { value: this._value, inCatalog: this.normalizedCatalog.some((entry) => entry.id === this._value) }): void {
+  emitValueEvents(detail: CatalogPickerChangeDetail = { value: this._value, inCatalog: this.indexesFor(this.normalizedCatalog).has(this._value) }): void {
     dispatchNativeEvent(this.host, 'input');
     this.options.emitInput(detail);
     dispatchNativeEvent(this.host, 'change');
@@ -533,7 +548,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
 
   reconcileRows(activeValue: string | undefined, rebaseQuery: boolean, clampMissing = true): void {
     const rows = this.visibleEntries;
-    const remapped = activeValue ? rows.findIndex((entry) => entry.id === activeValue) : -1;
+    const remapped = activeValue ? (this.indexesFor(rows).get(activeValue) ?? -1) : -1;
     this.setActiveIndex(
       remapped >= 0
         ? remapped
@@ -560,7 +575,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     const rows = this.effectiveEntries;
     const current = this._open
       ? this._activeIndex
-      : rows.findIndex((entry) => entry.id === this._value);
+      : (this.indexesFor(rows).get(this._value) ?? -1);
     const index = this.typeBuffer.match(rows, current, row => row.label, locale, row => row.disabled !== true);
     if (index !== null) {
       const row = rows[index]!;
@@ -667,7 +682,7 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.setQuery(input.value);
     this.setActiveIndex(-1);
     this.show();
-    const detail = { value: this._value, inCatalog: this.normalizedCatalog.some((entry) => entry.id === this._value) };
+    const detail = { value: this._value, inCatalog: this.indexesFor(this.normalizedCatalog).has(this._value) };
     relayNativeEvent(this.host, event);
     this.options.emitInput(detail);
   }
@@ -728,7 +743,9 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     const option = (event.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
     const value = option?.dataset['value'];
     if (value === undefined) return;
-    const entry = this.visibleEntries.find((candidate) => candidate.id === value);
+    const rows = this.visibleEntries;
+    const index = this.indexesFor(rows).get(value);
+    const entry = index === undefined ? undefined : rows[index];
     if (entry) this.selectEntry(entry);
   }
 
@@ -810,6 +827,11 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   updated(reposition: boolean): void {
+    const previous = this.host.renderRoot.querySelector('[part="option"][data-active]');
+    const listbox = this.host.renderRoot.querySelector('[part="listbox"]');
+    const activeId = this._open && this._activeIndex >= 0 ? `${listbox?.id}-opt-${this._activeIndex}` : '';
+    if (previous?.id !== activeId) previous?.removeAttribute('data-active');
+    if (activeId) this.host.renderRoot.querySelector(`[id="${activeId}"]`)?.setAttribute('data-active', '');
     if (reposition) this.syncPopup();
     if (this.revealPending && this._open) this.revealActiveRow();
     this.revealPending = false;

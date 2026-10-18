@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Vain ensimmäiset {count} testitulosta näytetään.',
   toolTimelineLimit: 'Enintään {count} työkalukutsua näytetään.',
   toolSelectLimit: 'Vain ensimmäiset {count} työkalua näytetään.',
+  testResultsInputTooLarge: 'Testitulosten yksityiskohdat ylittävät näyttörajan.',
   toolCall: 'Työkalukutsu',
   maximize: 'Suurenna',
   promptStudioVariableName: 'Muuttujan {index} nimi',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Vain ensimmäiset {count} tiedostoa näytetään.',
   taskListLimit: 'Vain ensimmäiset {count} tehtävää näytetään.',
   evalDatasetLimit: 'Vain ensimmäiset {count} esimerkkiä näytetään.',
+  activityFeedInputLimit: 'Vain uusimmat {count} merkintää yhteensä {total} merkinnästä säilytetään.',
+  spanWaterfallLimit: 'Näkyvät jäljitysjaksot: {shown}/{total}.',
+  toolTimelineInputLimit: 'Säilytetään vain uusimmat työkalukutsut: {count}/{total}.',
 };
 
 registerLyraLocale('fi', strings);

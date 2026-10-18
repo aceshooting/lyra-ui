@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{total} görselden {index}. görsel',
   playWithContext: '{name} öğesini oynat',
   pauseWithContext: '{name} öğesini duraklat',
+  avPlayerWaveformUnavailable: 'Dalga biçimi verileri kullanılamıyor veya bu medyayla eşleşmiyor.',
+  avPlayerTranscriptUnavailable: 'Döküm verileri kullanılamıyor.',
   dropzoneReleaseToAdd: 'Dosyayı eklemek için bırakın.',
   dropzoneRejectedType: 'Bu dosya türü kabul edilmiyor.',
   attachmentAdd: 'Ek ekle',

@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'ಸಂಪೂರ್ಣ ವಿತರಣೆಯಲ್ಲಿ {validCount} ಮಾನ್ಯ ಮಾದರಿಗಳು; ತೋರಿಸಿದ ಮಧ್ಯಂತರಗಳ ಕೆಳಗೆ {belowCount} ಮತ್ತು ಮೇಲೆ {aboveCount}; {invalidCount} ಅಮಾನ್ಯ ಮಾದರಿಗಳು.',
+  histogramDistributionRange: 'ಗಮನಿಸಿದ ಮಾದರಿಗಳ ವ್ಯಾಪ್ತಿ: {min}ರಿಂದ {max}ವರೆಗೆ.',
   chartCategory: 'ವರ್ಗ',
   chartTotal: 'ಒಟ್ಟು',
   chartAxisTotal: '{axis} ಒಟ್ಟು',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ತ್ರಿಜ್ಯ {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'ಹೆಚ್ಚುತ್ತಿದೆ',
-  chartTrendDecreasing: 'ಕಡಿಮೆಯಾಗುತ್ತಿದೆ',
-  chartTrendFlat: 'ಸ್ಥಿರವಾಗಿದೆ',
-  chartSummary: '{label}: {count} ಮೌಲ್ಯಗಳು, ವ್ಯಾಪ್ತಿ {min}ರಿಂದ {max}ವರೆಗೆ, {trend} ಪ್ರವೃತ್ತಿ',
   chartSeriesNoData: '{label}: ಡೇಟಾ ಇಲ್ಲ',
   chartSummaryWithData: '{type} ಚಾರ್ಟ್. {summaries}.',
   chartSummaryEmpty: 'ಡೇಟಾ ಇಲ್ಲದ {type} ಚಾರ್ಟ್.',
-  chartSummarySeparator: '। ',
   chartData: 'ಚಾರ್ಟ್ ಡೇಟಾ',
   chartRenderUnavailable: 'ಚಾರ್ಟ್ ಪ್ರದರ್ಶನ ಲಭ್ಯವಿಲ್ಲ.',
+  chartPreparedSummaryZoom: 'ಜೂಮ್ ಸಿದ್ಧಪಡಿಸಿದ ಸಾರಾಂಶವನ್ನು ತೋರಿಸುತ್ತದೆ; ಸೂಚ್ಯಂಕದ ಮೂಲಕ ಹೆಚ್ಚಿನ ವಿವರ ಲಭ್ಯವಿಲ್ಲ.',
+  chartSpatialSummary: 'ಸಂಪೂರ್ಣ ಮೂಲ: {count} ಬಿಂದುಗಳು, x {minX}ರಿಂದ {maxX}, y {minY}ರಿಂದ {maxY}. ನೋಟ: {matchedCount} ಬಿಂದುಗಳು, x {viewMinX}ರಿಂದ {viewMaxX}, y {viewMinY}ರಿಂದ {viewMaxY}.',
+  chartSpatialRadiusDomain: 'ಸಂಪೂರ್ಣ ಮೂಲದಲ್ಲಿನ ತ್ರಿಜ್ಯ: {min}ರಿಂದ {max}.',
+  chartSpatialDensityLegend: 'ಸಾಂದ್ರತೆಯು ಎಲ್ಲ ಸರಣಿಗಳನ್ನು ಒಳಗೊಂಡಿದೆ; ಸರಣಿಗಳ ಗೋಚರತೆಯು ಬಿಂದುಗಳ ಮೇಲ್ಪದರಗಳ ಮೇಲೆ ಮಾತ್ರ ಪರಿಣಾಮ ಬೀರುತ್ತದೆ.',
+  chartSpatialPoint: '{series}: {id}, ಮೂಲದಲ್ಲಿನ ಸ್ಥಾನ {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'ಸಾಂದ್ರತಾ ಪ್ರದೇಶ: {count} ಬಿಂದುಗಳು, x {minX}ರಿಂದ {maxX}, y {minY}ರಿಂದ {maxY}.',
+  chartSpatialHidden: ' (ಸರಣಿ ಮರೆಮಾಡಲಾಗಿದೆ)',
   chartDataSampled: 'ಚಾರ್ಟ್ ಮತ್ತು ರಚಿಸಿದ ಡೇಟಾ ಟೇಬಲ್ ಗರಿಷ್ಠ 1,000 ದಾಖಲೆಗಳ ಮಾದರಿಯನ್ನು ತೋರಿಸುತ್ತವೆ. ಎಲ್ಲಾ ಚಾರ್ಟ್ ಡೇಟಾವನ್ನು ಪಡೆಯಲು ಕಸ್ಟಮ್ ಡೇಟಾ ಟೇಬಲ್ ಒದಗಿಸಿ.',
   chartPlotSampled: 'ಚಾರ್ಟ್ ಗರಿಷ್ಠ 1,000 ದಾಖಲೆಗಳ ಮಾದರಿಯನ್ನು ತೋರಿಸುತ್ತದೆ; ಡೇಟಾ ಟೇಬಲ್ ಎಲ್ಲಾ ಡೇಟಾವನ್ನು ಪಟ್ಟಿ ಮಾಡುತ್ತದೆ.',
   chartZoomUnavailable: 'ಜೂಮ್ ಲಭ್ಯವಿಲ್ಲ, ಆದರೆ ಮುಖ್ಯ ಚಾರ್ಟ್ ಲಭ್ಯವಿದೆ.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total}ರಲ್ಲಿ {index})',
   chartMissingLibrary: 'ಚಾರ್ಟ್‌ಗಳನ್ನು ರೆಂಡರ್ ಮಾಡಲು ಈ ಘಟಕಕ್ಕೆ ಐಚ್ಛಿಕ "chart.js" ಪ್ಯಾಕೇಜ್ ಸ್ಥಾಪಿಸಬೇಕು.',
   boxPlotMissingLibrary: 'ಬಾಕ್ಸ್ ಪ್ಲಾಟ್‌ಗಳನ್ನು ರೆಂಡರ್ ಮಾಡಲು ಈ ಘಟಕಕ್ಕೆ ಐಚ್ಛಿಕ box-plot ಚಾರ್ಟ್ ಪ್ಯಾಕೇಜ್ ಸ್ಥಾಪಿಸಬೇಕು.',
+  chartInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಚಾರ್ಟ್‌ನ ಕೆಲವು ಡೇಟಾವನ್ನು ಬಿಡಲಾಗಿದೆ. ಬಿಟ್ಟ ಮೌಲ್ಯಗಳನ್ನು ಪ್ರತಿನಿಧಿಸಲು ಚಿಕ್ಕದಾದ ಅಥವಾ ಮೊದಲೇ ಒಟ್ಟುಗೂಡಿಸಿದ ಡೇಟಾಸೆಟ್ ನೀಡಿ.',
+  histogramInputLimit: 'ಅತ್ಯಂತ ಹೊಸ 10,000 ಮಾದರಿಗಳನ್ನು ಮಾತ್ರ ಉಳಿಸಿಕೊಳ್ಳಲಾಗುತ್ತದೆ. ದೊಡ್ಡ ವಿತರಣೆಯನ್ನು ಪ್ರತಿನಿಧಿಸಲು ಮೊದಲೇ ಮಧ್ಯಂತರಗಳಾಗಿ ಗುಂಪುಮಾಡಿದ ಎಣಿಕೆಗಳನ್ನು lr-chart ಗೆ ನೀಡಿ.',
 };
 
 registerLyraLocale('kn', strings);

@@ -565,8 +565,10 @@ export interface LyraComponentTypeMap {
       | 'hiddenKinds'
       | 'label'
       | 'locale'
+      | 'maxNodes'
       | 'spans'
       | 'strings'
+      | 'treeSource'
       | 'withCost'
       | 'withoutBars'
       | 'withTokens',
@@ -579,6 +581,7 @@ export interface LyraComponentTypeMap {
     cssNames:       | '--lr-agent-trace-handoff-active-bg';
     attributeAliases: {
       'active-span-id'?: LyraAgentTrace['activeSpanId'];
+      'max-nodes'?: LyraAgentTrace['maxNodes'];
       'with-cost'?: LyraAgentTrace['withCost'];
       'with-tokens'?: LyraAgentTrace['withTokens'];
       'without-bars'?: LyraAgentTrace['withoutBars'];
@@ -1146,6 +1149,7 @@ export interface LyraComponentTypeMap {
       | 'anchor'
       | 'controlsSurface'
       | 'cues'
+      | 'cueSource'
       | 'currentTime'
       | 'highlights'
       | 'kind'
@@ -1162,7 +1166,8 @@ export interface LyraComponentTypeMap {
       | 'src'
       | 'strings'
       | 'tracks'
-      | 'volume',
+      | 'volume'
+      | 'waveform',
       {}
     >;
     events: LyraAvPlayerEventMap;
@@ -1339,9 +1344,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'size'
       | 'stacked'
       | 'stackedAxes'
@@ -1352,6 +1360,7 @@ export interface LyraComponentTypeMap {
       | 'tooltipTitleFormatter'
       | 'type'
       | 'valueFormatter'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -1370,6 +1379,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -1417,6 +1430,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraBarChart['legendDisplay'];
       'legend-mode'?: LyraBarChart['legendMode'];
       'legend-position'?: LyraBarChart['legendPosition'];
+      'max-records'?: LyraBarChart['maxRecords'];
       'scale-type'?: LyraBarChart['scaleType'];
       'stack-totals'?: LyraBarChart['stackTotals'];
       'sync-group'?: LyraBarChart['syncGroup'];
@@ -1612,9 +1626,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'size'
       | 'stacked'
       | 'stackedAxes'
@@ -1625,6 +1642,7 @@ export interface LyraComponentTypeMap {
       | 'tooltipTitleFormatter'
       | 'type'
       | 'valueFormatter'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -1643,6 +1661,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -1690,6 +1712,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraBubbleChart['legendDisplay'];
       'legend-mode'?: LyraBubbleChart['legendMode'];
       'legend-position'?: LyraBubbleChart['legendPosition'];
+      'max-records'?: LyraBubbleChart['maxRecords'];
       'scale-type'?: LyraBubbleChart['scaleType'];
       'stack-totals'?: LyraBubbleChart['stackTotals'];
       'sync-group'?: LyraBubbleChart['syncGroup'];
@@ -2086,9 +2109,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'size'
       | 'stacked'
       | 'stackedAxes'
@@ -2099,6 +2125,7 @@ export interface LyraComponentTypeMap {
       | 'tooltipTitleFormatter'
       | 'type'
       | 'valueFormatter'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -2117,6 +2144,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -2164,6 +2195,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraChart['legendDisplay'];
       'legend-mode'?: LyraChart['legendMode'];
       'legend-position'?: LyraChart['legendPosition'];
+      'max-records'?: LyraChart['maxRecords'];
       'scale-type'?: LyraChart['scaleType'];
       'stack-totals'?: LyraChart['stackTotals'];
       'sync-group'?: LyraChart['syncGroup'];
@@ -3477,10 +3509,15 @@ export interface LyraComponentTypeMap {
       LyraCsvViewer,
       | 'activeHighlightId'
       | 'anchor'
+      | 'dataSource'
       | 'highlights'
       | 'locale'
+      | 'maxBytes'
+      | 'maxColumns'
       | 'maxHeight'
+      | 'maxRows'
       | 'name'
+      | 'rows'
       | 'src'
       | 'strings'
       | 'withoutHeaderRow',
@@ -3496,7 +3533,10 @@ export interface LyraComponentTypeMap {
       | '--lr-csv-viewer-max-height';
     attributeAliases: {
       'active-highlight-id'?: LyraCsvViewer['activeHighlightId'];
+      'max-bytes'?: LyraCsvViewer['maxBytes'];
+      'max-columns'?: LyraCsvViewer['maxColumns'];
       'max-height'?: LyraCsvViewer['maxHeight'];
+      'max-rows'?: LyraCsvViewer['maxRows'];
       'without-header-row'?: LyraCsvViewer['withoutHeaderRow'];
     };
   };
@@ -3613,6 +3653,7 @@ export interface LyraComponentTypeMap {
       | 'loading'
       | 'locale'
       | 'maxMultiSort'
+      | 'maxRows'
       | 'page'
       | 'pageSize'
       | 'pageSizeOptions'
@@ -3707,6 +3748,7 @@ export interface LyraComponentTypeMap {
       'filter-from-leaf-rows'?: LyraDataGrid['filterFromLeafRows'];
       'group-by'?: LyraDataGrid['groupBy'];
       'max-multi-sort'?: LyraDataGrid['maxMultiSort'];
+      'max-rows'?: LyraDataGrid['maxRows'];
       'page-size'?: LyraDataGrid['pageSize'];
       'row-key'?: LyraDataGrid['rowKey'];
       'selection-mode'?: LyraDataGrid['selectionMode'];
@@ -3723,13 +3765,18 @@ export interface LyraComponentTypeMap {
       LyraDatasetViewer,
       | 'activeHighlightId'
       | 'anchor'
+      | 'dataSource'
       | 'highlights'
       | 'locale'
+      | 'maxBytes'
+      | 'maxColumns'
       | 'maxHeight'
+      | 'maxRows'
       | 'name'
       | 'scrollMode'
       | 'src'
-      | 'strings',
+      | 'strings'
+      | 'table',
       {}
     >;
     events: LyraDatasetViewerEventMap;
@@ -3743,7 +3790,10 @@ export interface LyraComponentTypeMap {
       | '--lr-dataset-viewer-max-height';
     attributeAliases: {
       'active-highlight-id'?: LyraDatasetViewer['activeHighlightId'];
+      'max-bytes'?: LyraDatasetViewer['maxBytes'];
+      'max-columns'?: LyraDatasetViewer['maxColumns'];
       'max-height'?: LyraDatasetViewer['maxHeight'];
+      'max-rows'?: LyraDatasetViewer['maxRows'];
       'scroll-mode'?: LyraDatasetViewer['scrollMode'];
     };
   };
@@ -4233,6 +4283,7 @@ export interface LyraComponentTypeMap {
     element: LyraDocumentLibrary;
     properties: LyraElementProperties<
       LyraDocumentLibrary,
+      | 'dataSource'
       | 'documents'
       | 'error'
       | 'errorDescription'
@@ -4246,6 +4297,8 @@ export interface LyraComponentTypeMap {
       | 'size'
       | 'sortDir'
       | 'sortKey'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'strings'
       | 'tagFilter',
       {}
@@ -4264,6 +4317,8 @@ export interface LyraComponentTypeMap {
       'search-term'?: LyraDocumentLibrary['searchTerm'];
       'sort-dir'?: LyraDocumentLibrary['sortDir'];
       'sort-key'?: LyraDocumentLibrary['sortKey'];
+      'source-page'?: LyraDocumentLibrary['sourcePage'];
+      'source-page-size'?: LyraDocumentLibrary['sourcePageSize'];
     };
   };
   'lr-document-preview': {
@@ -4415,9 +4470,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'size'
       | 'stacked'
       | 'stackedAxes'
@@ -4428,6 +4486,7 @@ export interface LyraComponentTypeMap {
       | 'tooltipTitleFormatter'
       | 'type'
       | 'valueFormatter'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -4446,6 +4505,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -4493,6 +4556,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraDoughnutChart['legendDisplay'];
       'legend-mode'?: LyraDoughnutChart['legendMode'];
       'legend-position'?: LyraDoughnutChart['legendPosition'];
+      'max-records'?: LyraDoughnutChart['maxRecords'];
       'scale-type'?: LyraDoughnutChart['scaleType'];
       'stack-totals'?: LyraDoughnutChart['stackTotals'];
       'sync-group'?: LyraDoughnutChart['syncGroup'];
@@ -4821,13 +4885,17 @@ export interface LyraComponentTypeMap {
       | 'height'
       | 'label'
       | 'locale'
+      | 'maxRenderedPoints'
       | 'points'
       | 'selectedPointId'
-      | 'strings',
+      | 'source'
+      | 'strings'
+      | 'viewport',
       {}
     >;
     events: LyraEmbeddingExplorerEventMap;
-    eventNames:       | 'lr-point-select';
+    eventNames:       | 'lr-point-select'
+      | 'lr-spatial-bin-select';
     cssNames:       | '--lr-color-chart-1'
       | '--lr-color-chart-2'
       | '--lr-color-chart-3'
@@ -4840,6 +4908,7 @@ export interface LyraComponentTypeMap {
       | '--lr-embedding-explorer-selected-stroke';
     attributeAliases: {
       'aria-label'?: LyraEmbeddingExplorer['accessibleLabel'];
+      'max-rendered-points'?: LyraEmbeddingExplorer['maxRenderedPoints'];
       'selected-point-id'?: LyraEmbeddingExplorer['selectedPointId'];
     };
   };
@@ -5060,6 +5129,7 @@ export interface LyraComponentTypeMap {
       | 'autocapitalize'
       | 'autocomplete'
       | 'autoCorrect'
+      | 'dataSource'
       | 'disabled'
       | 'enterKeyHint'
       | 'examples'
@@ -5068,6 +5138,8 @@ export interface LyraComponentTypeMap {
       | 'label'
       | 'locale'
       | 'searchable'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'spellcheck'
       | 'strings',
       {}
@@ -5086,6 +5158,8 @@ export interface LyraComponentTypeMap {
       'autocorrect'?: LyraEvalDataset['autoCorrect'];
       'enterkeyhint'?: LyraEvalDataset['enterKeyHint'];
       'inputmode'?: LyraEvalDataset['inputMode'];
+      'source-page'?: LyraEvalDataset['sourcePage'];
+      'source-page-size'?: LyraEvalDataset['sourcePageSize'];
     };
   };
   'lr-eval-result': {
@@ -5094,6 +5168,7 @@ export interface LyraComponentTypeMap {
       LyraEvalResult,
       | 'baselineRunId'
       | 'columns'
+      | 'dataSource'
       | 'disabled'
       | 'label'
       | 'locale'
@@ -5101,6 +5176,8 @@ export interface LyraComponentTypeMap {
       | 'rubricKeys'
       | 'runs'
       | 'selectedRunId'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'strings',
       {}
     >;
@@ -5109,12 +5186,16 @@ export interface LyraComponentTypeMap {
       | 'lr-review-skip'
       | 'lr-review-submit'
       | 'lr-review-validity-change'
-      | 'lr-run-activate';
+      | 'lr-run-activate'
+      | 'lr-sort'
+      | 'lr-sort-request';
     cssNames: never;
     attributeAliases: {
       'baseline-run-id'?: LyraEvalResult['baselineRunId'];
       'review-skippable'?: LyraEvalResult['reviewSkippable'];
       'selected-run-id'?: LyraEvalResult['selectedRunId'];
+      'source-page'?: LyraEvalResult['sourcePage'];
+      'source-page-size'?: LyraEvalResult['sourcePageSize'];
     };
   };
   'lr-eval-run': {
@@ -5308,9 +5389,11 @@ export interface LyraComponentTypeMap {
       LyraFileTree,
       | 'label'
       | 'locale'
+      | 'maxNodes'
       | 'nodes'
       | 'selectedPath'
-      | 'strings',
+      | 'strings'
+      | 'treeSource',
       {}
     >;
     events: LyraFileTreeEventMap;
@@ -5319,6 +5402,7 @@ export interface LyraComponentTypeMap {
       | 'lr-load-children';
     cssNames: never;
     attributeAliases: {
+      'max-nodes'?: LyraFileTree['maxNodes'];
       'selected-path'?: LyraFileTree['selectedPath'];
     };
   };
@@ -5380,6 +5464,7 @@ export interface LyraComponentTypeMap {
       | 'decorations'
       | 'droppable'
       | 'edges'
+      | 'graphSource'
       | 'grid'
       | 'layerGap'
       | 'locale'
@@ -5392,6 +5477,8 @@ export interface LyraComponentTypeMap {
       | 'readonly'
       | 'selectedEdgeIds'
       | 'selectedNodeIds'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'strings'
       | 'viewport',
       {}
@@ -5430,6 +5517,8 @@ export interface LyraComponentTypeMap {
       'min-zoom'?: LyraFlowCanvas['minZoom'];
       'node-gap'?: LyraFlowCanvas['nodeGap'];
       'nodes-draggable'?: LyraFlowCanvas['nodesDraggable'];
+      'source-page'?: LyraFlowCanvas['sourcePage'];
+      'source-page-size'?: LyraFlowCanvas['sourcePageSize'];
     };
   };
   'lr-flow-controls': {
@@ -5755,6 +5844,7 @@ export interface LyraComponentTypeMap {
       | 'edges'
       | 'fitTo'
       | 'focusNodeId'
+      | 'graphSource'
       | 'height'
       | 'hiddenTypes'
       | 'label'
@@ -5770,6 +5860,8 @@ export interface LyraComponentTypeMap {
       | 'selectedEdgeIds'
       | 'selectedNodeIds'
       | 'selectionMode'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'strings'
       | 'view'
       | 'width'
@@ -5817,6 +5909,8 @@ export interface LyraComponentTypeMap {
       'min-zoom'?: LyraGraph['minZoom'];
       'node-labels'?: LyraGraph['nodeLabels'];
       'selection-mode'?: LyraGraph['selectionMode'];
+      'source-page'?: LyraGraph['sourcePage'];
+      'source-page-size'?: LyraGraph['sourcePageSize'];
       'with-edge-labels'?: LyraGraph['withEdgeLabels'];
     };
   };
@@ -5969,6 +6063,10 @@ export interface LyraComponentTypeMap {
       | 'legendStops'
       | 'locale'
       | 'matrixGeometry'
+      | 'matrixReducer'
+      | 'matrixSource'
+      | 'matrixViewport'
+      | 'maxCells'
       | 'maxCellSize'
       | 'midpoint'
       | 'minCellSize'
@@ -5988,6 +6086,7 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-calendar-geometry-change'
       | 'lr-cell-activate'
       | 'lr-matrix-geometry-change'
+      | 'lr-matrix-range-select'
       | 'lr-selection-change';
     cssNames:       | '--lr-heatmap-annotation-color'
       | '--lr-heatmap-color-steps-gradient'
@@ -6013,7 +6112,9 @@ export interface LyraComponentTypeMap {
       'col-label-interval'?: LyraHeatmap['colLabelInterval'];
       'col-label-rotation'?: LyraHeatmap['colLabelRotation'];
       'fit-to-width'?: LyraHeatmap['fitToWidth'];
+      'matrix-reducer'?: LyraHeatmap['matrixReducer'];
       'max-cell-size'?: LyraHeatmap['maxCellSize'];
+      'max-cells'?: LyraHeatmap['maxCells'];
       'min-cell-size'?: LyraHeatmap['minCellSize'];
       'row-height'?: LyraHeatmap['rowHeight'];
       'row-label-width'?: LyraHeatmap['rowLabelWidth'];
@@ -6065,6 +6166,7 @@ export interface LyraComponentTypeMap {
       | 'dataLabels'
       | 'dataTableToggle'
       | 'description'
+      | 'distribution'
       | 'formatter'
       | 'grid'
       | 'height'
@@ -6077,9 +6179,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'seriesLabel'
       | 'size'
       | 'stacked'
@@ -6092,6 +6197,7 @@ export interface LyraComponentTypeMap {
       | 'type'
       | 'valueFormatter'
       | 'values'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -6110,6 +6216,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -6157,6 +6267,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraHistogram['legendDisplay'];
       'legend-mode'?: LyraHistogram['legendMode'];
       'legend-position'?: LyraHistogram['legendPosition'];
+      'max-records'?: LyraHistogram['maxRecords'];
       'scale-type'?: LyraHistogram['scaleType'];
       'series-label'?: LyraHistogram['seriesLabel'];
       'stack-totals'?: LyraHistogram['stackTotals'];
@@ -6439,9 +6550,12 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraIngestionQueue,
       | 'announce'
+      | 'dataSource'
       | 'items'
       | 'label'
       | 'locale'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'strings'
       | 'virtualizeAt',
       {}
@@ -6451,6 +6565,8 @@ export interface LyraComponentTypeMap {
       | 'lr-retry';
     cssNames:       | '--lr-ingestion-queue-max-height';
     attributeAliases: {
+      'source-page'?: LyraIngestionQueue['sourcePage'];
+      'source-page-size'?: LyraIngestionQueue['sourcePageSize'];
       'virtualize-at'?: LyraIngestionQueue['virtualizeAt'];
     };
   };
@@ -6628,8 +6744,10 @@ export interface LyraComponentTypeMap {
       | 'expandDepth'
       | 'locale'
       | 'maxHeight'
+      | 'maxNodes'
       | 'query'
-      | 'strings',
+      | 'strings'
+      | 'treeSource',
       {}
     >;
     events: LyraJsonViewerEventMap;
@@ -6649,6 +6767,7 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'expand-depth'?: LyraJsonViewer['expandDepth'];
       'max-height'?: LyraJsonViewer['maxHeight'];
+      'max-nodes'?: LyraJsonViewer['maxNodes'];
     };
   };
   'lr-kbd': {
@@ -6670,12 +6789,15 @@ export interface LyraComponentTypeMap {
     element: LyraKnowledgeBase;
     properties: LyraElementProperties<
       LyraKnowledgeBase,
+      | 'dataSource'
       | 'error'
       | 'errorDescription'
       | 'errorHeading'
       | 'headingLevel'
       | 'label'
       | 'locale'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'sources'
       | 'strings'
       | 'withoutCreate'
@@ -6684,6 +6806,8 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraKnowledgeBaseEventMap;
     eventNames:       | 'lr-retry-request'
+      | 'lr-sort'
+      | 'lr-sort-request'
       | 'lr-source-create'
       | 'lr-source-delete'
       | 'lr-source-pause'
@@ -6702,6 +6826,8 @@ export interface LyraComponentTypeMap {
       'error-description'?: LyraKnowledgeBase['errorDescription'];
       'error-heading'?: LyraKnowledgeBase['errorHeading'];
       'heading-level'?: LyraKnowledgeBase['headingLevel'];
+      'source-page'?: LyraKnowledgeBase['sourcePage'];
+      'source-page-size'?: LyraKnowledgeBase['sourcePageSize'];
       'without-create'?: LyraKnowledgeBase['withoutCreate'];
       'without-summary'?: LyraKnowledgeBase['withoutSummary'];
     };
@@ -6711,8 +6837,10 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraKnowledgeBaseAdmin,
       | 'activeTab'
+      | 'dataSource'
       | 'headingLevel'
       | 'ingestionItems'
+      | 'ingestionSource'
       | 'label'
       | 'locale'
       | 'sources'
@@ -6746,6 +6874,7 @@ export interface LyraComponentTypeMap {
       | 'edges'
       | 'entityDetails'
       | 'fitTo'
+      | 'graphSource'
       | 'height'
       | 'hiddenTypes'
       | 'highlight'
@@ -6759,6 +6888,8 @@ export interface LyraComponentTypeMap {
       | 'query'
       | 'renderer'
       | 'selectedNodeId'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'strings'
       | 'view'
       | 'width',
@@ -6782,6 +6913,8 @@ export interface LyraComponentTypeMap {
       'fit-to'?: LyraKnowledgeGraphExplorer['fitTo'];
       'node-labels'?: LyraKnowledgeGraphExplorer['nodeLabels'];
       'selected-node-id'?: LyraKnowledgeGraphExplorer['selectedNodeId'];
+      'source-page'?: LyraKnowledgeGraphExplorer['sourcePage'];
+      'source-page-size'?: LyraKnowledgeGraphExplorer['sourcePageSize'];
     };
   };
   'lr-known-date': {
@@ -6861,6 +6994,7 @@ export interface LyraComponentTypeMap {
       | 'accessibleLabel'
       | 'fit'
       | 'images'
+      | 'imageSource'
       | 'index'
       | 'lightDismiss'
       | 'locale'
@@ -6921,9 +7055,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'size'
       | 'stacked'
       | 'stackedAxes'
@@ -6934,6 +7071,7 @@ export interface LyraComponentTypeMap {
       | 'tooltipTitleFormatter'
       | 'type'
       | 'valueFormatter'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -6952,6 +7090,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -6999,6 +7141,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraLineChart['legendDisplay'];
       'legend-mode'?: LyraLineChart['legendMode'];
       'legend-position'?: LyraLineChart['legendPosition'];
+      'max-records'?: LyraLineChart['maxRecords'];
       'scale-type'?: LyraLineChart['scaleType'];
       'stack-totals'?: LyraLineChart['stackTotals'];
       'sync-group'?: LyraLineChart['syncGroup'];
@@ -7033,8 +7176,10 @@ export interface LyraComponentTypeMap {
       | 'legendText'
       | 'locale'
       | 'maxLabels'
+      | 'maxRecords'
       | 'minBarHeight'
       | 'pointText'
+      | 'preparedData'
       | 'roundedBars'
       | 'scale'
       | 'selectedIndices'
@@ -7057,7 +7202,9 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraLiteChartEventMap;
     eventNames:       | 'lr-datum-activate'
-      | 'lr-point-activate';
+      | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select';
     cssNames:       | '--lr-chart-color-1'
       | '--lr-chart-color-2'
       | '--lr-chart-color-3'
@@ -7089,6 +7236,7 @@ export interface LyraComponentTypeMap {
       'data-table-toggle'?: LyraLiteChart['dataTableToggle'];
       'legend-position'?: LyraLiteChart['legendPosition'];
       'max-labels'?: LyraLiteChart['maxLabels'];
+      'max-records'?: LyraLiteChart['maxRecords'];
       'min-bar-height'?: LyraLiteChart['minBarHeight'];
       'rounded-bars'?: LyraLiteChart['roundedBars'];
       'skip-zero'?: LyraLiteChart['skipZero'];
@@ -7749,7 +7897,8 @@ export interface LyraComponentTypeMap {
       | 'label'
       | 'locale'
       | 'strings'
-      | 'topics',
+      | 'topics'
+      | 'treeSource',
       {}
     >;
     events: LyraMindMapEventMap;
@@ -8152,11 +8301,17 @@ export interface LyraComponentTypeMap {
     element: LyraNeighborList;
     properties: LyraElementProperties<
       LyraNeighborList,
+      | 'centerKey'
       | 'expandable'
+      | 'graphSource'
       | 'groupByRelation'
       | 'label'
       | 'locale'
       | 'rows'
+      | 'sourceDirection'
+      | 'sourceNodeTypes'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'strings'
       | 'types'
       | 'virtualizeAt',
@@ -8168,6 +8323,9 @@ export interface LyraComponentTypeMap {
     cssNames: never;
     attributeAliases: {
       'group-by-relation'?: LyraNeighborList['groupByRelation'];
+      'source-direction'?: LyraNeighborList['sourceDirection'];
+      'source-page'?: LyraNeighborList['sourcePage'];
+      'source-page-size'?: LyraNeighborList['sourcePageSize'];
       'virtualize-at'?: LyraNeighborList['virtualizeAt'];
     };
   };
@@ -8871,9 +9029,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'size'
       | 'stacked'
       | 'stackedAxes'
@@ -8884,6 +9045,7 @@ export interface LyraComponentTypeMap {
       | 'tooltipTitleFormatter'
       | 'type'
       | 'valueFormatter'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -8902,6 +9064,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -8949,6 +9115,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraPieChart['legendDisplay'];
       'legend-mode'?: LyraPieChart['legendMode'];
       'legend-position'?: LyraPieChart['legendPosition'];
+      'max-records'?: LyraPieChart['maxRecords'];
       'scale-type'?: LyraPieChart['scaleType'];
       'stack-totals'?: LyraPieChart['stackTotals'];
       'sync-group'?: LyraPieChart['syncGroup'];
@@ -8989,9 +9156,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'size'
       | 'stacked'
       | 'stackedAxes'
@@ -9002,6 +9172,7 @@ export interface LyraComponentTypeMap {
       | 'tooltipTitleFormatter'
       | 'type'
       | 'valueFormatter'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -9020,6 +9191,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -9067,6 +9242,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraPolarAreaChart['legendDisplay'];
       'legend-mode'?: LyraPolarAreaChart['legendMode'];
       'legend-position'?: LyraPolarAreaChart['legendPosition'];
+      'max-records'?: LyraPolarAreaChart['maxRecords'];
       'scale-type'?: LyraPolarAreaChart['scaleType'];
       'stack-totals'?: LyraPolarAreaChart['stackTotals'];
       'sync-group'?: LyraPolarAreaChart['syncGroup'];
@@ -9603,9 +9779,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'size'
       | 'stacked'
       | 'stackedAxes'
@@ -9616,6 +9795,7 @@ export interface LyraComponentTypeMap {
       | 'tooltipTitleFormatter'
       | 'type'
       | 'valueFormatter'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -9634,6 +9814,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -9681,6 +9865,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraRadarChart['legendDisplay'];
       'legend-mode'?: LyraRadarChart['legendMode'];
       'legend-position'?: LyraRadarChart['legendPosition'];
+      'max-records'?: LyraRadarChart['maxRecords'];
       'scale-type'?: LyraRadarChart['scaleType'];
       'stack-totals'?: LyraRadarChart['stackTotals'];
       'sync-group'?: LyraRadarChart['syncGroup'];
@@ -10228,6 +10413,7 @@ export interface LyraComponentTypeMap {
       | 'activeChunkId'
       | 'announce'
       | 'chunks'
+      | 'dataSource'
       | 'errorText'
       | 'groupBy'
       | 'grouping'
@@ -10240,6 +10426,8 @@ export interface LyraComponentTypeMap {
       | 'presentation'
       | 'selectedChunkIds'
       | 'sort'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'strings'
       | 'thresholds'
       | 'virtualizeAt'
@@ -10257,6 +10445,8 @@ export interface LyraComponentTypeMap {
       'active-chunk-id'?: LyraRetrievalResults['activeChunkId'];
       'error-text'?: LyraRetrievalResults['errorText'];
       'has-more'?: LyraRetrievalResults['hasMore'];
+      'source-page'?: LyraRetrievalResults['sourcePage'];
+      'source-page-size'?: LyraRetrievalResults['sourcePageSize'];
       'virtualize-at'?: LyraRetrievalResults['virtualizeAt'];
       'without-dedupe'?: LyraRetrievalResults['withoutDedupe'];
       'without-selection'?: LyraRetrievalResults['withoutSelection'];
@@ -10402,9 +10592,12 @@ export interface LyraComponentTypeMap {
       | 'legendPosition'
       | 'locale'
       | 'max'
+      | 'maxRecords'
       | 'min'
       | 'plugins'
+      | 'preparedData'
       | 'scaleType'
+      | 'selectedPointId'
       | 'size'
       | 'stacked'
       | 'stackedAxes'
@@ -10415,6 +10608,7 @@ export interface LyraComponentTypeMap {
       | 'tooltipTitleFormatter'
       | 'type'
       | 'valueFormatter'
+      | 'viewport'
       | 'withDataTable'
       | 'withoutAnimation'
       | 'withoutLegend'
@@ -10433,6 +10627,10 @@ export interface LyraComponentTypeMap {
       | 'lr-legend-visibility-change'
       | 'lr-legend-visibility-change-request'
       | 'lr-point-activate'
+      | 'lr-source-category-select'
+      | 'lr-source-point-select'
+      | 'lr-spatial-bin-select'
+      | 'lr-spatial-point-select'
       | 'lr-zoom';
     cssNames:       | '--border-color-1'
       | '--border-color-2'
@@ -10480,6 +10678,7 @@ export interface LyraComponentTypeMap {
       'legend-display'?: LyraScatterChart['legendDisplay'];
       'legend-mode'?: LyraScatterChart['legendMode'];
       'legend-position'?: LyraScatterChart['legendPosition'];
+      'max-records'?: LyraScatterChart['maxRecords'];
       'scale-type'?: LyraScatterChart['scaleType'];
       'stack-totals'?: LyraScatterChart['stackTotals'];
       'sync-group'?: LyraScatterChart['syncGroup'];
@@ -10588,6 +10787,7 @@ export interface LyraComponentTypeMap {
       | 'loading'
       | 'locale'
       | 'maxOptionsVisible'
+      | 'maxRender'
       | 'multiple'
       | 'name'
       | 'open'
@@ -10669,6 +10869,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraSelect['errorText'];
       'help-text'?: LyraSelect['helpText'];
       'max-options-visible'?: LyraSelect['maxOptionsVisible'];
+      'max-render'?: LyraSelect['maxRender'];
       'positioning-strategy'?: LyraSelect['positioningStrategy'];
       'top-layer'?: LyraSelect['topLayer'];
       'with-clear'?: LyraSelect['withClear'];
@@ -10745,6 +10946,7 @@ export interface LyraComponentTypeMap {
       | 'locale'
       | 'markerLabel'
       | 'selectedIndex'
+      | 'source'
       | 'strings'
       | 'withLegend',
       {}
@@ -11009,6 +11211,7 @@ export interface LyraComponentTypeMap {
       | 'locale'
       | 'spans'
       | 'strings'
+      | 'treeSource'
       | 'viewEndMs'
       | 'viewStartMs'
       | 'withoutAxis',
@@ -11046,6 +11249,7 @@ export interface LyraComponentTypeMap {
       | 'mark'
       | 'max'
       | 'min'
+      | 'preparedData'
       | 'strings'
       | 'trend'
       | 'values',
@@ -11129,12 +11333,17 @@ export interface LyraComponentTypeMap {
       LyraSpreadsheetViewer,
       | 'activeHighlightId'
       | 'anchor'
+      | 'dataSource'
       | 'highlights'
       | 'locale'
+      | 'maxBytes'
+      | 'maxColumns'
       | 'maxHeight'
+      | 'maxRows'
       | 'name'
       | 'src'
-      | 'strings',
+      | 'strings'
+      | 'workbook',
       {}
     >;
     events: LyraSpreadsheetViewerEventMap;
@@ -11147,7 +11356,10 @@ export interface LyraComponentTypeMap {
       | '--lr-spreadsheet-viewer-max-height';
     attributeAliases: {
       'active-highlight-id'?: LyraSpreadsheetViewer['activeHighlightId'];
+      'max-bytes'?: LyraSpreadsheetViewer['maxBytes'];
+      'max-columns'?: LyraSpreadsheetViewer['maxColumns'];
       'max-height'?: LyraSpreadsheetViewer['maxHeight'];
+      'max-rows'?: LyraSpreadsheetViewer['maxRows'];
     };
   };
   'lr-stack-trace': {
@@ -11689,6 +11901,7 @@ export interface LyraComponentTypeMap {
       | 'loadingMore'
       | 'loadingMoreLabel'
       | 'locale'
+      | 'maxRows'
       | 'moreLabel'
       | 'page'
       | 'pageSize'
@@ -11783,6 +11996,7 @@ export interface LyraComponentTypeMap {
       'loading-label'?: LyraTable['loadingLabel'];
       'loading-more'?: LyraTable['loadingMore'];
       'loading-more-label'?: LyraTable['loadingMoreLabel'];
+      'max-rows'?: LyraTable['maxRows'];
       'more-label'?: LyraTable['moreLabel'];
       'page-size'?: LyraTable['pageSize'];
       'pagination-format'?: LyraTable['paginationFormat'];
@@ -11860,9 +12074,11 @@ export interface LyraComponentTypeMap {
       | 'headingLevel'
       | 'items'
       | 'locale'
+      | 'maxNodes'
       | 'reorderable'
       | 'size'
       | 'strings'
+      | 'treeSource'
       | 'withoutCollapse',
       {}
     >;
@@ -11886,6 +12102,7 @@ export interface LyraComponentTypeMap {
       | '--lr-task-list-success-color';
     attributeAliases: {
       'heading-level'?: LyraTaskList['headingLevel'];
+      'max-nodes'?: LyraTaskList['maxNodes'];
       'without-collapse'?: LyraTaskList['withoutCollapse'];
     };
   };
@@ -11917,6 +12134,7 @@ export interface LyraComponentTypeMap {
       | 'lr-error'
       | 'lr-follow-change'
       | 'lr-highlight-activate'
+      | 'lr-overflow'
       | 'lr-search-change'
       | 'lr-text-select';
     cssNames:       | '--lr-terminal-border-color'
@@ -11949,9 +12167,12 @@ export interface LyraComponentTypeMap {
     element: LyraTestResults;
     properties: LyraElementProperties<
       LyraTestResults,
+      | 'dataSource'
       | 'locale'
       | 'runId'
       | 'runState'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'statusFilter'
       | 'strings'
       | 'suites'
@@ -11974,6 +12195,8 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'run-id'?: LyraTestResults['runId'];
       'run-state'?: LyraTestResults['runState'];
+      'source-page'?: LyraTestResults['sourcePage'];
+      'source-page-size'?: LyraTestResults['sourcePageSize'];
       'without-auto-expand-failures'?: LyraTestResults['withoutAutoExpandFailures'];
     };
   };
@@ -12106,6 +12329,7 @@ export interface LyraComponentTypeMap {
       LyraThreadList,
       | 'activeConversationId'
       | 'collapsedGroupIds'
+      | 'dataSource'
       | 'error'
       | 'errorDescription'
       | 'errorHeading'
@@ -12126,6 +12350,8 @@ export interface LyraComponentTypeMap {
       | 'rowActions'
       | 'searchable'
       | 'size'
+      | 'sourcePage'
+      | 'sourcePageSize'
       | 'stickyGroups'
       | 'strings'
       | 'threads'
@@ -12171,6 +12397,8 @@ export interface LyraComponentTypeMap {
       'active-conversation-id'?: LyraThreadList['activeConversationId'];
       'error-description'?: LyraThreadList['errorDescription'];
       'error-heading'?: LyraThreadList['errorHeading'];
+      'source-page'?: LyraThreadList['sourcePage'];
+      'source-page-size'?: LyraThreadList['sourcePageSize'];
       'sticky-groups'?: LyraThreadList['stickyGroups'];
       'with-archived'?: LyraThreadList['withArchived'];
       'without-rename'?: LyraThreadList['withoutRename'];
@@ -12584,6 +12812,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'label'
       | 'locale'
+      | 'maxTokensVisible'
       | 'name'
       | 'pill'
       | 'placeholder'
@@ -12641,6 +12870,7 @@ export interface LyraComponentTypeMap {
       'aria-label'?: LyraTokenInput['accessibleLabel'];
       'custom-error'?: LyraTokenInput['customError'];
       'error-text'?: LyraTokenInput['errorText'];
+      'max-tokens-visible'?: LyraTokenInput['maxTokensVisible'];
       'value'?: LyraTokenInput['defaultValue'];
     };
   };
@@ -13042,8 +13272,10 @@ export interface LyraComponentTypeMap {
       | 'hiddenKinds'
       | 'label'
       | 'locale'
+      | 'maxNodes'
       | 'spans'
       | 'strings'
+      | 'treeSource'
       | 'withCost'
       | 'withoutBars'
       | 'withTokens',
@@ -13065,6 +13297,7 @@ export interface LyraComponentTypeMap {
       | '--lr-trace-tree-toggle-hover-bg';
     attributeAliases: {
       'active-span-id'?: LyraTraceTree['activeSpanId'];
+      'max-nodes'?: LyraTraceTree['maxNodes'];
       'with-cost'?: LyraTraceTree['withCost'];
       'with-tokens'?: LyraTraceTree['withTokens'];
       'without-bars'?: LyraTraceTree['withoutBars'];
@@ -13103,9 +13336,11 @@ export interface LyraComponentTypeMap {
       | 'data'
       | 'label'
       | 'locale'
+      | 'maxNodes'
       | 'reorderable'
       | 'selection'
-      | 'strings',
+      | 'strings'
+      | 'treeSource',
       {}
     >;
     events: LyraTreeEventMap;
@@ -13118,13 +13353,16 @@ export interface LyraComponentTypeMap {
       | 'lr-node-select'
       | 'lr-node-toggle'
       | 'lr-reorder'
-      | 'lr-selection-change';
+      | 'lr-selection-change'
+      | 'lr-source-selection-change';
     cssNames:       | '--indent-guide-color'
       | '--indent-guide-offset'
       | '--indent-guide-style'
       | '--indent-guide-width'
       | '--indent-size';
-    attributeAliases: {};
+    attributeAliases: {
+      'max-nodes'?: LyraTree['maxNodes'];
+    };
   };
   'lr-tree-item': {
     element: LyraTreeItem;
@@ -13586,6 +13824,7 @@ export interface LyraComponentTypeMap {
       | 'maxFontSize'
       | 'minFontSize'
       | 'palette'
+      | 'preparedWords'
       | 'scale'
       | 'strings'
       | 'withLegend'
@@ -13620,11 +13859,15 @@ export interface LyraComponentTypeMap {
       | 'expandDepth'
       | 'highlights'
       | 'locale'
+      | 'maxBytes'
       | 'maxHeight'
+      | 'maxNodes'
+      | 'maxRows'
       | 'name'
       | 'source'
       | 'src'
       | 'strings'
+      | 'treeSource'
       | 'xml',
       {}
     >;
@@ -13651,7 +13894,10 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'active-highlight-id'?: LyraXmlViewer['activeHighlightId'];
       'expand-depth'?: LyraXmlViewer['expandDepth'];
+      'max-bytes'?: LyraXmlViewer['maxBytes'];
       'max-height'?: LyraXmlViewer['maxHeight'];
+      'max-nodes'?: LyraXmlViewer['maxNodes'];
+      'max-rows'?: LyraXmlViewer['maxRows'];
     };
   };
   'lr-zoomable-frame': {

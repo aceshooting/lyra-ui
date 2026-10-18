@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} ትዕዛዝ',
     other: '{count} ያዛል',
   },
+  commandPaletteInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ ትዕዛዞች ተወግደዋል።',
 };
 
 registerLyraLocale('am', strings);

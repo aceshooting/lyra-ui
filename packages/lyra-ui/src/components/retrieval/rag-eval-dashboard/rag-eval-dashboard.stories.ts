@@ -68,3 +68,9 @@ export const UnavailableControlledSlice: Story = {
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;">${renderDashboard()}</div>`,
 };
+
+export const BoundedSliceControls: Story = {
+  parameters: { docs: { description: { story: 'All plus 499 slice controls remain bounded, with the controlled final slice reserved. Metric values still come from the complete admitted filtered runs, and separate notices disclose run admission and omitted facets.' } } },
+  render: () => html`<lr-rag-eval-dashboard without-chart slice="Slice 11999" .metrics=${metrics}
+    .runs=${Array.from({ length: 12000 }, (_, i) => ({ id: `r${i}`, label: `Run ${i}`, slice: `Slice ${i}`, metrics: { mrr: i / 12000, groundedness: 0.9 } }))}></lr-rag-eval-dashboard>`,
+};

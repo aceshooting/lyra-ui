@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 29 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 36 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,12 +18,25 @@
 
 A pannable/zoomable DAG workflow canvas: positions HTML node cards, draws SVG edges between their
 handles, runs a shared layered auto-layout for unpositioned nodes, and owns all selection/drag/
-connect interaction. It is readonly by default; opt into editor gestures with `nodes-draggable`,
+connect interaction. Editor gestures are opt-in with `nodes-draggable`,
 `connectable`, and `droppable`. The component snapshots model inputs instead of retaining mutable
 caller aliases, and reports edit intent for the host to apply.
 
-Input/output handle IDs are reserved only after their complete handle record is admitted; unreadable
+With `graphSource` unset, node cards and edges outside the visible viewport are culled. Active and selected nodes, active
+and selected edge endpoints, connection targets and their incident edges remain available.
+Keyboard navigation retains the complete model order and pans to reveal its destination. Panning
+queries retained geometry indexes; companion snapshots contain the complete admitted model.
+Viewport culling preserves existing collection-admission limits and controlled model semantics.
+Without a measurable viewport, including during SSR, the complete model is rendered.
+
+For legacy array inputs, input/output handle IDs are reserved only after their complete handle record is admitted; unreadable
 optional labels cannot suppress a later valid handle with the same ID.
+
+Legacy node metadata uses a shared 50,000-position inspection budget per node assignment, at most
+10,000 own keys per record and 16 descendant levels. Cloned JSON references and cycles are shared
+across node data roots and frozen; non-plain leaves remain opaque. The `input-limit` part reports
+node/edge or metadata admission loss separately from `layout-limit`. JavaScript key enumeration
+itself can still scale with an individual object's key count.
 
 Anchored Lyra overlays in a node's slotted content (a node menu, a tooltip) resolve the `fixed`
 strategy by default, because a node is translated inside a scaled, clipped world where an
@@ -52,6 +65,121 @@ import type {
   FlowStructureSnapshot,
 } from "@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js";
 ```
+
+**Complete workflow source:** `graphSource: FlowCanvasSource | undefined = undefined`
+(attribute: false) takes precedence over `nodes`/`edges`. Only `undefined` restores the latest
+legacy inputs; invalid defined providers fail visibly without falling back to those arrays.
+Provider identity/revision is caller-owned; the canvas admits bounded records and scenes.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-flow-canvas.js";
+import type { FlowCanvasSource } from
+  "@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js";
+import type { FlowNode, FlowEdge, FlowStructureSnapshot } from
+  "@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js";
+import type { LyraGraphSource, LyraGraphSourceQuery, LyraGraphSourceSummary,
+  LyraGraphOverview, LyraSourceBounds } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`FlowCanvasSource = LyraGraphSource<FlowNode, FlowEdge>`; the exact generic protocols are in
+[shared source contracts](../shared/events-and-types.md). It provides `revision`, `records`,
+`scene(request)` and optional `overview(request)`. Source and records revisions must agree and
+be a nonempty string or finite number. `records` supplies `query`, `lookup` and `locate` for the
+complete logical workflow, separately from the bounded positioned scene.
+
+**Global record navigation:** `sourcePage: number = 0` (`source-page`) is zero-based;
+`sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500. Readonly
+`sourceTotal: number | null` is the accepted current record-query total, or null while unavailable
+or without a source. Size/query changes reset page zero; an out-of-range page receives at most
+one corrective last-page request and publishes the accepted corrected page. The navigator offers
+nodes or edges, full-source search, incident-edge scope with in/out/both direction, endpoint
+links, page entry/previous/next and global Home/End/Up/Down record navigation.
+
+The navigator sends `LyraGraphSourceQuery`, initially
+`{ kind: 'nodes', search: '', centerKey: null, direction: 'both', nodeTypes: [] }`.
+Search is bounded to 65,536 UTF-16 units; these controls query the whole source rather than
+filtering a loaded scene/page. `records.query({ revision, locale, signal, page, pageSize, query })`
+returns `{ rows, total, summary: { nodes, edges } }`. Each row is `{ key, order, value }`, where
+`value` is `{ kind: 'node', value: FlowNode }` or `{ kind: 'edge', value: FlowEdge }` and its key is
+exactly `node:<id>` or `edge:<id>` with a nonblank original ID. Safe nonnegative canonical `order`
+and keys are unique within a page; rows exactly fill the requested in-bounds page. The required
+summary gives complete global node/edge counts; unfiltered total equals the matching summary
+count, filtered/incident total cannot exceed it, and accepted scenes must agree with those counts.
+Totals and summary counts are safe nonnegative integers.
+Groups/tags are not accepted on this route. Invalid/duplicate/oversized responses fail atomically,
+without local filtering, sorting or silent trimming. Record pages copy only bounded display fields
+and edge endpoints; they do not materialize complete node metadata.
+
+`revealSourceKey(key: string): Promise<boolean>` accepts canonical `node:<id>`/`edge:<id>`, clears
+search/incident scope for that kind, uses global `locate`, loads the matching page and attempts to
+focus its navigator row. It resolves false for unset/invalid/missing, failed or superseded work. This is
+separate from synchronous `focusNode(id, options)`, which moves camera/focus only for a node
+already known in the current scene and does not fetch globally. Reveal does not promise a camera
+move or a new scene. Reveal, controlled paging/selection and rebind emit no activation or selection
+event; actual row activation retains `lr-node-activate`/`lr-edge-activate` and selection payloads
+with original IDs. Scene absence does not prove global record absence.
+
+**Bounded scene and source geometry:** `scene` receives viewport bounds, at most 32 selected/focus
+reservation keys, `nodeLimit: 500` and `edgeLimit: 1000`. It returns at most those exact node/edge
+entries, global `total`, explicit `coverage: 'complete' | 'neighborhood' | 'aggregate'` and non-null
+`worldBounds`. Requests include revision/locale/signal, `mode: 'viewport'`, `centerKey: null`,
+`bounds` and `includeKeys`. Nodes require finite explicit entry positions inside authoritative world
+bounds; an optional value position must agree. Position/world rectangle endpoints stay within ±1,000,000,
+with nonnegative world dimensions and finite endpoints. Scene edge keys/endpoints must match
+value IDs and resolve to nodes in that scene. Missing positions never trigger local auto-layout.
+The same revision must keep world bounds and global totals consistent. `source-coverage` reports
+shown versus global counts, rather than suggesting every record is drawn.
+
+Source scenes preserve FlowNode type, accessible label, disabled state, input/output handles and
+data, plus FlowEdge handles, label and tone. They read own data descriptors; accessors reject.
+`data` accepts plain records/arrays of strings, finite numbers, booleans and null, with shared
+references/cycles preserved in detached frozen copies. Opaque leaves such as functions or Dates
+reject. Each container/handle collection allows at most 10,000 entries, descendant container depth
+is at most 16, and metadata/handle inspection shares a 50,000-field scene budget. Each admitted
+text/key is at most 65,536 UTF-16 units, with a 2,000,000-unit cumulative text ceiling per scene
+or record-page response. Overflow fails the complete response without clipping. JavaScript's
+eager own-key enumeration can still allocate/work in proportion to one input object's key count
+before that object's entry limit is rejected; these bounds do not make provider work constant.
+
+Provider-derived retained data covers the current record page (at most 500 rows), current scene
+(at most 500 nodes/1,000 edges) and bounded geometry/overview. Controlled selection keeps its existing first-10,000
+candidate-ID bound and preserves offscene IDs instead of pruning them by scene membership;
+scene reservations are at most 32 keys. This route does not materialize the full provider workflow
+or cache historic pages.
+Page/locate work, scene and overview each keep their fixed request lanes, with one physical call
+per lane and only the latest queued intent. Ignored aborts keep physical permits until settlement;
+providers should settle promptly. Paging does not reset the camera or refetch an unchanged scene;
+pan/zoom/resize changes the viewport scene without restarting the record query. Accepted overview
+is reused across viewport changes.
+
+Source mode disables model editing: drag/nudge/connect/drop/delete and full-array layout/model
+mutations, including gestures started before the source was assigned. It does not force public
+`readonly`; pan/zoom/navigation and minimap controls remain usable when unlocked. Public
+`readonly` still locks viewport interaction and makes viewport-mutating methods inert. Source
+mode emits no model-edit/layout event presenting a bounded scene as the complete workflow.
+`fit()` frames accepted global world bounds; legacy `fit()` frames admitted node geometry.
+
+Companion snapshots add optional
+`source: Readonly<{ coverage: 'complete' | 'neighborhood' | 'aggregate'; total: LyraGraphSourceSummary;
+worldBounds: LyraSourceBounds; overview: LyraGraphOverview | null }>` when accepted source bounds
+are available. Their node/edge arrays remain bounded exact scene geometry. `locked` still means
+public `readonly`. Optional `overview({ revision, locale, signal, limit: 1024 })` must describe
+those exact world bounds with at most 1,024 finite contained nonoverlapping bins whose counts sum
+to the global node total. Null/unavailable/rejected overview is distinct from accepted empty
+bins; the minimap never invents a global overview from scene nodes. The frozen accepted overview
+identity is shared across viewport notifications.
+
+Reassign even the same source or call a keyless `requestUpdate()` after revision/state changes.
+Named local presentation paints reuse accepted provider data unless source revision/effective
+locale changed. Replacement, unset, disconnect and adoption revoke old provider callbacks, gestures
+and effects; superseding query/reveal revokes obsolete record controls. Reconnect captures current
+input. Source navigator/status parts are `source-navigator`, `source-controls`, `source-status`, `source-coverage`,
+`source-records` and `source-record`. Loading, successful empty, missing record, record failure
+and scene failure remain distinct localized states with current guarded retry controls.
+
+The following array admission, legacy auto-layout and complete-model snapshot rules apply with
+`graphSource` unset; source behavior is described above.
 
 **Properties:**
 
@@ -85,13 +213,13 @@ import type {
 - `readonly: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
-  window pointer listeners so a later release cannot commit. The one-shot initial framing still
-  applies to a `readonly` canvas, and waits until the canvas has a rendered size (a hidden tab or
+  window pointer listeners so a later release cannot commit. The legacy one-shot initial framing
+  still applies to a `readonly` canvas, and waits until the canvas has a rendered size (a hidden tab or
   closed dialog is framed when it is first shown).
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
   false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
-  omits blank/later duplicates first-wins, and prunes identities absent from the current canonical
-  node/edge model. Reassign after changes. Activation and clear-selection gestures update frozen
+  omits blank/later duplicates first-wins, and, with `graphSource` unset, prunes identities absent
+  from the current canonical node/edge model. Reassign after changes. Activation and clear-selection gestures update frozen
   arrays before emitting `lr-selection-change`; model shrinkage prunes stale ids without claiming
   a user selection gesture occurred.
 - `minZoom: number = 0.25` (attribute `min-zoom`), `maxZoom: number = 2` (attribute `max-zoom`)
@@ -109,21 +237,25 @@ import type {
 - `viewport` (readonly getter) — a frozen `{ x, y, zoom }` snapshot
 
 **Methods:** `setViewport({ x, y, zoom })`, `zoomIn()`, `zoomOut()`, `resetZoom()`,
-`fit(options?: { padding?: number })` (frames every node), `focusNode(id, options?: { zoom? })`
-(pans/zooms to one node and moves roving focus onto it), `toContentPoint(clientX, clientY)` (maps a
+`fit(options?: { padding?: number })` (frames legacy admitted nodes or source global world bounds),
+`focusNode(id, options?: { zoom? })` (pans/zooms to one currently known node and moves roving focus
+onto it), `toContentPoint(clientX, clientY)` (maps a
 pointer position to content coordinates, RTL-aware), `registerCompanion(cb: (snapshot:
 FlowStructureSnapshot) => void): () => void` — the subscription `lr-flow-minimap` uses to read
 live node/edge/viewport geometry without this canvas ever importing the minimap.
+`revealSourceKey(key: string): Promise<boolean>` provides the global record navigation described above.
 All viewport-mutating methods, including `focusNode()`, are inert while `readonly`; coordinate mapping
 and companion subscription remain available because neither mutates viewport or edit state.
 Each companion observer receives its own deeply frozen `FlowStructureSnapshot`: readonly node and
 edge geometry/status arrays (shared between observers and reused, by identity, across
 viewport-only frames until the structure changes), viewport `{ x, y, zoom, width, height, minZoom, maxZoom }`, and the
 effective `readonly` state (as the snapshot's `locked` key), `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
-sorted even when public inputs are invalid or reversed.
+sorted even when public inputs are invalid or reversed. Source snapshots additionally carry the
+accepted `source` descriptor above; their scene arrays do not imply full-source coverage.
 
-**Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId, source, target
-}`), `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
+**Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId,
+sourceNodeId, targetNodeId, source, target }`, both endpoint-name pairs are supplied),
+`lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
 (`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),
@@ -131,7 +263,7 @@ position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, t
 previously unpositioned nodes). Every detail and nested coordinate/array is readonly and frozen.
 
 **Slots:** default (consumer-authored cards matched by `node-id` and assigned to generated
-`node-{id}` slots), `top-start`, `top-end`, `bottom-start`, `bottom-end`. Each node always has a
+`node-{id}` slots), `top-start`, `top-end`, `bottom-start`, `bottom-end`. Each rendered node has a
 declarative shadow-DOM fallback card, so SSR and hydration do not depend on imperative light-DOM
 card creation. An authored card replaces only its matching fallback; unmatched cards are unslotted
 with a warning. Opposite-side companion slots share wrapping rails in narrow allocations.
@@ -141,7 +273,8 @@ with a warning. Opposite-side companion slots share wrapping rails in narrow all
 (a dangling-edge stub line), `connection-line` (in-progress connect gesture), `node`, `empty`,
 `node-control` (the native per-node roving/activation control), `live-region`, `edge-list` (a
 visually hidden list only for dangling/unrenderable edges), `layout-limit` (a visible notice whose
-announcement uses the shared light-DOM polite sink), `overlay-rail`, and the
+announcement uses the shared light-DOM polite sink), `input-limit` (node/edge or metadata
+admission notice), `overlay-rail`, and the
 fallback-card parts `node-card`, `node-card-base`, `node-card-surface`, `node-card-header`,
 `node-card-heading`, `node-card-status`, `node-card-progress`, `node-card-body`, `node-card-toolbar`,
 `node-card-handle`, `node-card-handle-input`, and `node-card-handle-output`. A node whose `type`

@@ -3,6 +3,7 @@ export * from './retrieval-results.class.js';
 import { LyraRetrievalResults } from './retrieval-results.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import '../../layout/virtual-list/virtual-list.js';
+import '../../data/pagination/pagination.js';
 import '../chunk-inspector/chunk-inspector.js';
 import '../../forms/checkbox/checkbox.js';
 import '../../overlays/spinner/spinner.js';

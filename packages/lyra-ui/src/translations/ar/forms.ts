@@ -127,6 +127,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'القلم لأسفل',
   signaturePadPenUp: 'القلم لأعلى',
+  localePickerInputLimit: 'تتوفر أول 512 إدخالًا للإعدادات المحلية فقط.',
+  emojiPickerInputLimit: 'حُذفت بعض بيانات الرموز التعبيرية لبلوغ حد الإدخال.',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

@@ -131,6 +131,9 @@ function itemEpochMs(element: Element): number | null {
  * exposes `cluster` and `cluster-count` parts on that representative `<lr-timeline-item>`.
  *
  * @customElement lr-timeline
+ * This is a declarative light-DOM list: every assigned item remains mounted; it does not window
+ * large collections. Time-mode allocation changes may remeasure the full mounted list.
+ *
  * @slot - `<lr-timeline-item>` children, in display order.
  * @event lr-cluster-activate - A `collision="cluster"` count marker was activated by pointer,
  *   Enter, or Space. `detail: { items }` contains a fresh frozen snapshot of the member
@@ -293,6 +296,15 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   private timeExtentFrame?: number;
   private timeExtentView?: Window;
   private focusRepairGeneration = 0;
+  private cachedTimelineItems?: LyraTimelineItem[];
+  private readonly timePositionedItems = new Set<LyraTimelineItem>();
+  private readonly overflowObservedItems = new Set<Element>();
+  private overflowItemsPending = true;
+  private timeGeometryObserver?: ResizeObserver;
+  private timeGeometryBase?: HTMLElement;
+  private timeGeometryView?: Window;
+  private readonly geometryObservedItems = new Set<Element>();
+  private readonly itemGeometry = new Map<Element, { bottom: number; extent: number }>();
 
   /** Gates the horizontal [part='base'] edge fade on the strip genuinely overflowing, with
    *  one-sided/RTL-aware logical-edge state -- see --lr-scroll-fade-size and timeline.styles.ts.
@@ -314,6 +326,11 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     }
   );
 
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.itemGeometry?.clear();
+    super.requestUpdate(...args);
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) {
@@ -331,6 +348,10 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     this.restoreClusterPresentation();
     this.restoreClusterVisibility();
     this.syncTimestampObservers([]);
+    this.cachedTimelineItems = undefined;
+    this.overflowObservedItems.clear();
+    this.overflowItemsPending = true;
+    this.stopTimeGeometryObserver();
     if (this.collisionClusters.length > 0) {
       this.collisionClusters = EMPTY_TIMELINE_CLUSTERS;
     }
@@ -362,13 +383,11 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    // Each slotted item's own intrinsic geometry (a longer title, an icon loading in) can alter
-    // scroll reachability without [part='base']'s own border box changing at all -- the primary
-    // observer above only watches that one container, so every currently-slotted item rides along
-    // on its single ResizeObserver instance instead of a second one of its own. Cluster actions
-    // join that observer because their public size token can change without the fixed time axis's
-    // own border box changing; their footprint directly controls collision membership.
-    this.scrollOverflow.observeExtra(this.timelineItems());
+    // Flow items share overflow observation; time-positioned items use target-specific geometry
+    // invalidation so an item resize does not remeasure every sibling. Structural updates enroll
+    // only new targets, while allocation and placement changes refresh the complete geometry.
+    if (changed.size === 0 || [...changed.keys()].some(key => key !== 'accessibleLabel')) this.invalidateTimeGeometry();
+    if (this.overflowItemsPending || changed.has('scale') || changed.has('orientation')) this.syncItemObservations();
     // After the controller's own `hostUpdated()` measurement, which Lit runs before this method,
     // so the overflow attribute read below is this render's.
     this.syncScrollTabStop();
@@ -425,8 +444,11 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
           const slot = this.shadowRoot!.querySelector(
             'slot'
           ) as HTMLSlotElement;
+          this.cachedTimelineItems = undefined;
+          this.overflowItemsPending = true;
           this.slottedCount = this.countTimelineItems(slot);
           this.applyTimeScale();
+          this.syncItemObservations();
         }),
       'timeline-first-slot-reconciliation'
     );
@@ -439,10 +461,16 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     return this.slottedCount;
   }
 
-  private onSlotChange = (e: Event): void => {
+  private onSlotChange = (): void => {
+    this.cachedTimelineItems = undefined;
+    this.overflowItemsPending = true;
+    this.invalidateTimeGeometry();
+    const current = new Set(this.timelineItems());
+    for (const item of this.overflowObservedItems) if (!current.has(item as LyraTimelineItem)) this.overflowObservedItems.delete(item);
     this.updateBrowserDerivedState(() => {
-      this.slottedCount = this.countTimelineItems(e.target as HTMLSlotElement);
+      this.slottedCount = current.size;
       this.applyTimeScale();
+      this.syncItemObservations();
     });
   };
 
@@ -479,6 +507,10 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   /** The slotted `<lr-timeline-item>` children, in document order. */
   private timelineItems(): LyraTimelineItem[] {
+    return this.cachedTimelineItems ??= this.collectTimelineItems();
+  }
+
+  private collectTimelineItems(): LyraTimelineItem[] {
     const slot = this.shadowRoot?.querySelector('slot') as HTMLSlotElement | null;
     const elements = slot
       ? slot.assignedElements({ flatten: true })
@@ -501,10 +533,12 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     if (pinnedStart !== null && pinnedEnd !== null && pinnedEnd > pinnedStart) {
       return [pinnedStart, pinnedEnd];
     }
-    const finite = stamps.filter((value): value is number => value !== null);
-    if (finite.length < 2) return null;
-    const lo = Math.min(...finite);
-    const hi = Math.max(...finite);
+    let lo = Infinity, hi = -Infinity;
+    for (const stamp of stamps) {
+      if (stamp === null) continue;
+      if (stamp < lo) lo = stamp;
+      if (stamp > hi) hi = stamp;
+    }
     return hi > lo ? [lo, hi] : null;
   }
 
@@ -518,16 +552,29 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
    */
   private applyTimeScale(): void {
     this.scheduleTimeExtentMeasurement();
-    const items = this.timelineItems();
-    this.syncTimestampObservers(items);
     if (this.scale !== 'time') {
-      for (const item of items) {
+      this.overflowItemsPending = true;
+      if (this.timestampObservedItems.size) this.syncTimestampObservers([]);
+      for (const item of this.timePositionedItems) {
         item.style.removeProperty('--_lr-timeline-item-offset');
         item.style.removeProperty('--_lr-timeline-item-lane');
       }
+      this.timePositionedItems.clear();
       this.applyCollisionClusters([]);
       return;
     }
+    this.invalidateTimeGeometry();
+    const items = this.timelineItems();
+    const currentItems = new Set(items);
+    this.syncTimestampObservers(items);
+    const clusterThreshold = this.collision === 'cluster' ? this.clusterCollisionThreshold() : TIMELINE_COLLISION_THRESHOLD;
+    for (const previous of this.timePositionedItems) {
+      if (currentItems.has(previous)) continue;
+      previous.style.removeProperty('--_lr-timeline-item-offset');
+      previous.style.removeProperty('--_lr-timeline-item-lane');
+    }
+    this.timePositionedItems.clear();
+    for (const item of items) this.timePositionedItems.add(item);
     const stamps = items.map((item) => itemEpochMs(item));
     const range = this.timeRange(stamps);
     const lastIndex = Math.max(1, items.length - 1);
@@ -552,7 +599,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
         ? this.buildCollisionClusters(
             items,
             offsets,
-            this.clusterCollisionThreshold()
+            clusterThreshold
           )
         : []
     );
@@ -675,7 +722,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   }
 
   /** Absolute time items do not contribute intrinsic height. Measure their layout boxes and
-   * lane offsets after layout, sharing the existing item ResizeObserver for later content changes. */
+   * lane offsets after layout; target-specific resize notifications invalidate only changed geometry. */
   private scheduleTimeExtentMeasurement(): void {
     const view = this.ownerDocument?.defaultView;
     if (!view) return;
@@ -693,7 +740,8 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       if (this.scale === 'time' && this.orientation !== 'horizontal') {
         const bottom = base.getBoundingClientRect().bottom;
         for (const item of this.timelineItems()) {
-          if (item.getClientRects().length) overhang = Math.max(overhang, item.getBoundingClientRect().bottom - bottom);
+          const geometry = this.timeItemGeometry(item, bottom);
+          overhang = Math.max(overhang, geometry.bottom);
         }
       }
       const trailing = `${Math.ceil(overhang)}px`;
@@ -706,16 +754,90 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       }
       let extent = 0;
       for (const item of this.timelineItems()) {
-        if (!item.getClientRects().length) continue;
-        // Integer layout APIs avoid applying author transforms twice; one pixel covers their
-        // rounding. Include native horizontal scrollbar space so clientHeight covers every item.
-        extent = Math.max(extent, item.offsetTop + item.offsetHeight + 1);
+        extent = Math.max(extent, this.timeItemGeometry(item, 0).extent);
       }
       const height = `${extent + Math.max(0, base.offsetHeight - base.clientHeight)}px`;
       if (base.style.getPropertyValue('--_lr-timeline-content-height') !== height) {
         base.style.setProperty('--_lr-timeline-content-height', height);
       }
     });
+  }
+
+  private syncItemObservations(): void {
+    this.syncTimeGeometryObserver();
+    if (this.overflowItemsPending) {
+      const items = this.timelineItems();
+      const added = items.filter(item => !this.overflowObservedItems.has(item));
+      if (added.length && this.scale !== 'time') {
+        this.scrollOverflow.observeExtra(added);
+        for (const item of added) this.overflowObservedItems.add(item);
+      }
+      this.overflowItemsPending = false;
+    }
+  }
+
+  private invalidateTimeGeometry(item?: Element): void {
+    if (item) this.itemGeometry.delete(item);
+    else this.itemGeometry.clear();
+  }
+
+  private timeItemGeometry(item: LyraTimelineItem, baseBottom: number): { bottom: number; extent: number } {
+    let geometry = this.itemGeometry.get(item);
+    if (!geometry) {
+      geometry = item.getClientRects().length
+        ? { bottom: this.orientation === 'horizontal' ? 0 : item.getBoundingClientRect().bottom - baseBottom,
+          extent: this.orientation === 'horizontal' ? item.offsetTop + item.offsetHeight + 1 : 0 }
+        : { bottom: 0, extent: 0 };
+      this.itemGeometry.set(item, geometry);
+    }
+    return geometry;
+  }
+
+  private stopTimeGeometryObserver(): void {
+    this.timeGeometryObserver?.disconnect();
+    this.timeGeometryObserver = undefined;
+    this.timeGeometryBase = undefined;
+    this.timeGeometryView = undefined;
+    this.geometryObservedItems.clear();
+    this.itemGeometry.clear();
+  }
+
+  private syncTimeGeometryObserver(): void {
+    const view = this.ownerDocument?.defaultView;
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    if (this.scale !== 'time' || !this.isConnected || !view || !base) {
+      this.stopTimeGeometryObserver();
+      return;
+    }
+    if (view !== this.timeGeometryView || base !== this.timeGeometryBase) {
+      this.stopTimeGeometryObserver();
+      const Observer = view.ResizeObserver;
+      if (!Observer) return;
+      const observer = new Observer(entries => {
+        if (this.timeGeometryObserver !== observer || this.ownerDocument.defaultView !== view) return;
+        for (const entry of entries) this.invalidateTimeGeometry(entry.target === base ? undefined : entry.target);
+        this.scrollOverflow.measure();
+        this.syncScrollTabStop();
+        this.scheduleTimeExtentMeasurement();
+        if (this.collision === 'cluster') this.scheduleClusterMeasurement();
+      });
+      this.timeGeometryObserver = observer;
+      this.timeGeometryBase = base;
+      this.timeGeometryView = view;
+      observer.observe(base);
+    }
+    const items = new Set(this.timelineItems());
+    for (const previous of this.geometryObservedItems) {
+      if (items.has(previous as LyraTimelineItem)) continue;
+      this.timeGeometryObserver?.unobserve(previous);
+      this.geometryObservedItems.delete(previous);
+      this.itemGeometry.delete(previous);
+    }
+    for (const item of items) {
+      if (this.geometryObservedItems.has(item)) continue;
+      this.timeGeometryObserver?.observe(item);
+      this.geometryObservedItems.add(item);
+    }
   }
 
   private cancelTimeExtentMeasurement(): void {

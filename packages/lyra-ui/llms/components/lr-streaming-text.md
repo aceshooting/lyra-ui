@@ -38,7 +38,7 @@ streaming.
 - `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
   uses `looksLikeMarkdown`; `plain` and `markdown` force their named paths. Invalid values render as
   `auto` without installing a stale memoized decision.
-- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to
+- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to
   the composed `<lr-markdown>`'s own `languages`, the same fine-grained language-grammar scoping
   `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
   untouched.

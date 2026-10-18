@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'በሙሉ ስርጭቱ ውስጥ {validCount} ትክክለኛ ናሙናዎች አሉ፤ {belowCount} ከሚታዩት ክፍሎች በታች እና {aboveCount} በላይ ናቸው፤ {invalidCount} ናሙናዎች ልክ አይደሉም።',
+  histogramDistributionRange: 'የታዩ ናሙናዎች ክልል፦ ከ{min} እስከ {max}።',
   chartCategory: 'ምድብ',
   chartTotal: 'ጠቅላላ',
   chartAxisTotal: 'የ{axis} ጠቅላላ',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ራዲየስ {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'እየጨመረ',
-  chartTrendDecreasing: 'እየቀነሰ',
-  chartTrendFlat: 'ጠፍጣፋ',
-  chartSummary: '{label}: {count} እሴቶች፣ ክልል {min} እስከ {max}፣ {trend} አዝማሚያ',
   chartSeriesNoData: '{label}: ውሂብ የለም',
   chartSummaryWithData: '{type} ገበታ። {summaries}።',
   chartSummaryEmpty: 'ውሂብ የሌለው {type} ገበታ።',
-  chartSummarySeparator: '. ',
   chartData: 'የገበታ ውሂብ',
   chartRenderUnavailable: 'የገበታ ማሳያ አይገኝም።',
+  chartPreparedSummaryZoom: 'ማጉላት አስቀድሞ የተዘጋጀውን ማጠቃለያ ያሳያል፤ በመረጃ ጠቋሚ አማካይነት የበለጠ ዝርዝር ማግኘት አይቻልም።',
+  chartSpatialSummary: 'ሙሉ ምንጭ፦ {count} ነጥቦች፣ x ከ{minX} እስከ {maxX}፣ y ከ{minY} እስከ {maxY}። እይታ፦ {matchedCount} ነጥቦች፣ x ከ{viewMinX} እስከ {viewMaxX}፣ y ከ{viewMinY} እስከ {viewMaxY}።',
+  chartSpatialRadiusDomain: 'የሙሉ ምንጩ ራዲየስ፦ ከ{min} እስከ {max}።',
+  chartSpatialDensityLegend: 'ጥግግቱ ሁሉንም ተከታታዮች ያካትታል፤ የተከታታይ ታይነት በነጥቦች ተደራቢ ንብርብሮች ላይ ብቻ ተጽዕኖ አለው።',
+  chartSpatialPoint: '{series}፦ {id}፣ በምንጩ ያለው ቦታ {sourceIndex}፣ {coordinates}{hidden}',
+  chartSpatialBin: 'የጥግግት ክልል፦ {count} ነጥቦች፣ x ከ{minX} እስከ {maxX}፣ y ከ{minY} እስከ {maxY}።',
+  chartSpatialHidden: ' (ተከታታዩ ተደብቋል)',
   chartDataSampled: 'ገበታው እና የተፈጠረው የውሂብ ሰንጠረዥ እስከ 1,000 መዝገቦች ድረስ ናሙና ያሳያሉ። ሁሉንም የገበታ ውሂብ ለማግኘት ብጁ የውሂብ ሰንጠረዥ ያቅርቡ።',
   chartPlotSampled: 'ገበታው እስከ 1,000 መዝገቦች ድረስ ናሙና ያሳያል፤ የውሂብ ሰንጠረዡ ሁሉንም ውሂብ ይዘረዝራል።',
   chartZoomUnavailable: 'ማጉላት አይገኝም፣ ግን ዋናው ገበታ ይገኛል።',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} (ከ{total} {index}ኛ)',
   chartMissingLibrary: 'ገበታዎችን ለማሳየት ይህ ክፍል አማራጭ "chart.js" ጥቅል እንዲጫን ይፈልጋል።',
   boxPlotMissingLibrary: 'የሳጥን ግራፎችን ለማሳየት ይህ ክፍል አማራጭ የሳጥን ግራፍ ጥቅል እንዲጫን ይፈልጋል።',
+  chartInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ የገበታ ውሂብ ተወግዷል። የተወገዱትን እሴቶች ለማካተት ያነሰ ወይም አስቀድሞ የተጠቃለለ የውሂብ ስብስብ ያቅርቡ።',
+  histogramInputLimit: 'የቅርብ ጊዜዎቹ 10,000 ናሙናዎች ብቻ ይቀመጣሉ። ሰፊ ስርጭትን ለማሳየት አስቀድሞ በክፍሎች የተመደቡ ብዛቶችን ለlr-chart ያቅርቡ።',
 };
 
 registerLyraLocale('am', strings);

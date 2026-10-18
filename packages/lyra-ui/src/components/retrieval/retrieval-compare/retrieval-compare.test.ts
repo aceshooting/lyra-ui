@@ -225,7 +225,7 @@ it('renders a labeled overlap summary for every pair of result sets', async () =
   ]);
 });
 
-it("computes each set's ranked chunk list once per render, not once per overlap pair or per usage", async () => {
+it("reuses each set's ranked chunk list on an unchanged explicit refresh", async () => {
   const threeSets: RetrievalComparisonSet[] = [
     ...sets,
     { id: 'hybrid', label: 'Hybrid', chunks: [chunk('a', 0.9), chunk('d', 0.6)] },
@@ -247,10 +247,7 @@ it("computes each set's ranked chunk list once per render, not once per overlap 
   el.requestUpdate();
   await el.updateComplete;
 
-  // With 3 sets (3 pairwise overlaps + 3 rendered columns), a naive per-callsite orderedChunks(set)
-  // call recomputes it O(N^2) times -- 2N + N(N-1)/2 = 9 for N=3. A single per-render cache built
-  // once and shared by overlaps() and renderSet() needs exactly one call per set.
-  expect(calls).to.equal(3);
+  expect(calls).to.equal(0);
 });
 
 it('scrolls the sets row only on the inline axis, with no forced-auto phantom vertical scrollbar', async () => {

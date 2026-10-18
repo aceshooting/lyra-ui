@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} ਕਮਾਂਡ',
     other: '{count} ਕਮਾਂਡਾਂ',
   },
+  commandPaletteInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਕੁਝ ਕਮਾਂਡਾਂ ਛੱਡ ਦਿੱਤੀਆਂ ਗਈਆਂ ਹਨ।',
 };
 
 registerLyraLocale('pa', strings);

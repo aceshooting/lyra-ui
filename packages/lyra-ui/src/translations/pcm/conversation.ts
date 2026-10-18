@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'No conversation yet',
   agentWorkspaceLabel: 'Place wey agent dey work',
+  agentWorkspaceInputLimit: '{collection}: na only {count} out of {total} entry dem keep.',
   agentWorkspaceConversation: 'Chat wey dey here',
   agentWorkspaceDetails: 'Details about di run',
   agentWorkspaceRun: 'Wetin agent do',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Try dis part again',
   promptQueueLabel: 'Prompts wey dey queue',
   promptQueueEmpty: 'No prompt dey queue',
+  promptQueueInputLimit: 'Dem leave some prompt wey dey queue or attachment because input don reach im limit.',
+  promptQueueAttachmentLimit: 'Na {shown} out of {total} attachment wey dem keep dey show.',
   promptQueueSendNow: 'Send am now',
   selectionToolbarLabel: 'Wetin you fit do with di selection',
   selectionAsk: 'Ask am',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} token',
     other: '{count} tokens',
   },
+  threadListInputLimit: 'Dem leave some chat thread because input don reach im limit.',
+  promptInputInputLimit: 'Dem leave some suggestion or catalog entry because input don reach im limit.',
+  transcriptFeedInputLimit: 'Na only di newest {count} out of {total} entries dem dey keep.',
+  codeBlockHighlightLimit: 'Long code dey show without syntax highlighting.',
 };
 
 registerLyraLocale('pcm', strings);

@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '分布全体の有効なサンプルは {validCount} 件です。表示中の階級より下は {belowCount} 件、上は {aboveCount} 件です。無効なサンプルは {invalidCount} 件です。',
+  histogramDistributionRange: '観測されたサンプルの範囲：{min}～{max}。',
   chartCategory: 'カテゴリ',
   chartTotal: '合計',
   chartAxisTotal: '{axis} の合計',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}、y {y}',
   chartBubblePointCoordinates: 'x {x}、y {y}、半径 {radius}',
   chartLabeledPoint: '{label}：{coordinates}',
-  chartTrendIncreasing: '上昇',
-  chartTrendDecreasing: '下降',
-  chartTrendFlat: '横ばい',
-  chartSummary: '{label}：{count} 件の値、範囲は {min} から {max}、傾向は{trend}',
   chartSeriesNoData: '{label}：データなし',
   chartSummaryWithData: '{type}チャート。{summaries}。',
   chartSummaryEmpty: 'データのない{type}チャート。',
-  chartSummarySeparator: '。',
   chartData: 'チャートのデータ',
   chartRenderUnavailable: 'グラフの描画は利用できません。',
+  chartPreparedSummaryZoom: 'ズームでは準備済みの要約を表示します。インデックスを使用した詳細表示は利用できません。',
+  chartSpatialSummary: 'ソース全体：{count} 個の点、x {minX}～{maxX}、y {minY}～{maxY}。表示範囲：{matchedCount} 個の点、x {viewMinX}～{viewMaxX}、y {viewMinY}～{viewMaxY}。',
+  chartSpatialRadiusDomain: 'ソース全体の半径：{min}～{max}。',
+  chartSpatialDensityLegend: '密度にはすべての系列が含まれます。系列の表示設定は、重ねて表示する点にのみ影響します。',
+  chartSpatialPoint: '{series}：{id}、ソース内の位置 {sourceIndex}、{coordinates}{hidden}',
+  chartSpatialBin: '密度領域：{count} 個の点、x {minX}～{maxX}、y {minY}～{maxY}。',
+  chartSpatialHidden: ' (系列は非表示)',
   chartDataSampled: 'チャートと生成されたデータテーブルには、最大 1,000 件のレコードのサンプルが表示されます。すべてのチャートデータにアクセスするには、カスタムデータテーブルを指定してください。',
   chartPlotSampled: 'チャートには最大 1,000 件のレコードのサンプルが表示され、データテーブルにはすべてのデータが一覧表示されます。',
   chartZoomUnavailable: 'ズームは利用できませんが、チャート本体は引き続き利用できます。',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content}（{total} 件中 {index} 件目）',
   chartMissingLibrary: 'このコンポーネントでチャートを表示するには、オプションの "chart.js" パッケージをインストールしてください。',
   boxPlotMissingLibrary: 'このコンポーネントで箱ひげ図を表示するには、オプションの箱ひげ図チャートパッケージをインストールしてください。',
+  chartInputLimit: '入力上限に達したため、グラフデータの一部が省略されました。省略された値を表すには、より小さいデータセット、または事前に集計したデータセットを指定してください。',
+  histogramInputLimit: '最新の10,000件のサンプルのみが保持されます。より大きな分布を表すには、あらかじめ階級ごとに集計した度数をlr-chartに渡してください。',
 };
 
 registerLyraLocale('ja', strings);

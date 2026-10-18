@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Hanya {count} hasil ujian pertama dipaparkan.',
   toolTimelineLimit: 'Maksimum {count} panggilan alat dipaparkan.',
   toolSelectLimit: 'Hanya {count} alat pertama dipaparkan.',
+  testResultsInputTooLarge: 'Butiran keputusan ujian melebihi had paparan.',
   toolCall: 'Panggilan alat',
   maximize: 'Maksimumkan',
   promptStudioVariableName: 'Nama pemboleh ubah {index}',
@@ -292,6 +293,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Hanya {count} fail pertama dipaparkan.',
   taskListLimit: 'Hanya {count} tugasan pertama ditunjukkan.',
   evalDatasetLimit: 'Hanya {count} contoh pertama dipaparkan.',
+  activityFeedInputLimit: 'Hanya {count} entri terkini daripada {total} entri dikekalkan.',
+  spanWaterfallLimit: 'Memaparkan {shown} daripada {total} span.',
+  toolTimelineInputLimit: 'Hanya {count} panggilan alat terkini daripada {total} dikekalkan.',
 };
 
 registerLyraLocale('ms', strings);

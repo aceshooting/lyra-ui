@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecated part** `base` since `8.0.0`; use part `::part(sparkline)`; removal not before `10.0.0` — The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
 - **Optional peers** none
-- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,6 +23,13 @@ both dimensions through the aspect ratio.
 An empty or removed `data` attribute uses the `values` collection. With no usable fallback samples,
 no trend path is rendered. Attribute removal preserves `null` property readback, and supplying later
 space-separated samples restores the attribute-driven path.
+Derived values reuse the input array identity. Reassign after changes, or call `requestUpdate()`
+after mutating the current array, to refresh the projection.
+Large inputs retain at most 500 plotted samples, using the first and last finite samples plus
+bucket minima and maxima in source order. The accessible summary reports the full finite count
+and actual final value. Admission scans the current array or numeric string once without keeping
+a second full numeric array; this existing input path still performs synchronous work proportional
+to input length. Invalid samples are omitted, so plotted positions refer to finite-sample order.
 
 **Properties:**
 
@@ -51,13 +58,38 @@ space-separated samples restores the attribute-driven path.
   (including an intentional empty value), then nonempty `label`, then a nonempty programmatic
   `accessibleLabel`, then the localized generated summary
 
+**Prepared whole-source input:**
+
+- `preparedData: LyraPreparedSeriesData | null = null` (attribute: false) — accepts exactly one
+  ordered series with at most 500 semantic samples. While non-null it takes precedence over
+  `data` and `values`, without reading either legacy input. Clearing it restores the legacy route.
+  Invalid, accessor-backed, multiseries or oversized descriptors show localized unavailable text
+  through `status`; they are never resampled or replaced by the raw fallback.
+- Geometry uses original numeric x positions against the full `xDomain`, mirrored for RTL, and
+  the full `yDomain`; explicit `min`/`max` still override the y scale. Source-index order is kept
+  even when x is nonmonotonic. `breakBefore` splits every curve mode and each fill, so gaps are
+  never joined. Valid empty/all-invalid input remains an empty graphic.
+- The generated accessible summary reports full valid/invalid counts, displayed sample count,
+  full y domain and endpoint trend. The naming precedence above still applies.
+- Assignment, including the same reference, or explicit keyless `requestUpdate()` recaptures
+  mutable descriptors. Named presentation updates reuse the bounded capture. Disconnect releases
+  captured geometry; reconnect captures it again. The property still retains the caller's input
+  and its closures until replaced or cleared.
+
+Prepare data in host code with `prepareLyraSeriesData`, imported from
+`@aceshooting/lyra-ui/utilities/data-preparation.js` (the same module exports
+`LyraPreparedSeriesData`). Preparation scans all source positions in bounded yielding chunks and
+accepts an `AbortSignal`; the host owns that work, cancellation and assignment of the current
+result. Sparkline never calls `getPoint` or `queryRange` and starts no asynchronous source request.
+It adds no table, CSV or source-selection event.
+
 **Events:** none.
 
 **Slots:** none.
 
 **CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
 area path for solid/gradient appearance, `line` is the stroke path, and the additive `bar` is each
-extension-mode rectangle.
+extension-mode rectangle. `status` is the visible invalid-prepared-input message.
 
 **Themeable custom properties:** `--fill-color` (area/gradient stop color), `--line-color` (stroke
 color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
@@ -86,15 +118,14 @@ No canvas bridge or manual refresh is needed.
 - flat data (every value equal, so the auto-computed range spans zero) now renders a centered
   midline/mid-height bars instead of collapsing every point to the bottom edge, and a single-value
   additive `values` series renders a visible flat line. Mirrored `data` deliberately requires two
-  values. **Every** rendering mode
-  (`mark="line"` with any appearance, or `mark="bar"`) decimates a `values` array past 500 points
-  down to at most 500 plotted
-  samples — evenly sampled by index, always keeping the first and last value exactly, not
-  aggregated/averaged. `mark="bar"` caps at 500 rendered `<rect>`s directly; line marks cap the
-  point count baked into the single `<path>`'s `d` string instead (an uncapped path string also
-  grows unbounded, even though the element count stays at one `<path>`). Auto `min`/`max` is still
-  scanned from the _full_ pre-decimation `values` array, so a real extreme value that decimation
-  happens to drop can't silently narrow the rendered scale.
+  values. Every legacy rendering mode (`mark="line"` with any appearance, or `mark="bar"`)
+  retains at most 500 finite samples from `values` or numeric `data`: the first and last finite
+  samples plus each source bucket's minimum and maximum, deduplicated and kept in source order.
+  Buckets follow array positions or token offsets in the source string; plotted x positions follow
+  finite-sample order. Values are never averaged, and global extrema are retained, so the automatic
+  scale covers the full finite input range. `mark="bar"` renders at most 500 `<rect>`s; line marks
+  bound the sample count in their path geometry. Prepared input is already bounded and is not
+  reduced again.
 - Point order mirrors under RTL while the numeric sample order remains unchanged. There are no
   animations, so reduced-motion mode needs no alternate timing branch.
 - **9.0 migration:** rename additive `type="bar"`/`"line"` to `mark="bar"`/`"line"`. Replace

@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Qalamni gadi',
   signaturePadPenUp: 'Qalamni ol',
+  localePickerInputLimit: 'Galmeewwan afaanii fi naannoo jalqabaa 512 qofa argamu.',
+  emojiPickerInputLimit: 'Daangaan galtee waan gaʼameef daataan emoji tokko tokko hafee jira.',
 };
 
 registerLyraLocale('om', strings);

@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Bado hakuna mazungumzo',
   agentWorkspaceLabel: 'Eneo la kazi la wakala',
+  agentWorkspaceInputLimit: '{collection}: ni maingizo {count} tu kati ya {total} yanayohifadhiwa.',
   agentWorkspaceConversation: 'Mazungumzo',
   agentWorkspaceDetails: 'Maelezo ya uendeshaji',
   agentWorkspaceRun: 'Uendeshaji wa wakala',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Jaribu tena sehemu hii',
   promptQueueLabel: 'Maagizo yaliyowekwa kwenye foleni',
   promptQueueEmpty: 'Hakuna maagizo kwenye foleni',
+  promptQueueInputLimit: 'Baadhi ya maagizo yaliyo kwenye foleni au viambatisho vimeachwa kwa sababu kikomo cha ingizo kimefikiwa.',
+  promptQueueAttachmentLimit: 'Inaonyesha {shown} kati ya viambatisho {total} vilivyohifadhiwa.',
   promptQueueSendNow: 'Tuma sasa',
   selectionToolbarLabel: 'Vitendo vya uteuzi',
   selectionAsk: 'Uliza',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: 'tokeni {count}',
     other: 'tokeni {count}',
   },
+  threadListInputLimit: 'Baadhi ya nyuzi za mazungumzo zimeachwa kwa sababu kikomo cha ingizo kimefikiwa.',
+  promptInputInputLimit: 'Baadhi ya mapendekezo au maingizo ya katalogi yameachwa kwa sababu kikomo cha ingizo kimefikiwa.',
+  transcriptFeedInputLimit: 'Ni maingizo mapya zaidi {count} kati ya {total} pekee yanayohifadhiwa.',
+  codeBlockHighlightLimit: 'Msimbo mrefu unaonyeshwa bila uangaziaji wa sintaksia.',
 };
 
 registerLyraLocale('sw', strings);

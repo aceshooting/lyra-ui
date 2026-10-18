@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} mẫu hợp lệ trong toàn bộ phân phối; {belowCount} dưới và {aboveCount} trên giới hạn các khoảng được hiển thị; {invalidCount} mẫu không hợp lệ.',
+  histogramDistributionRange: 'Khoảng mẫu quan sát được: từ {min} đến {max}.',
   chartCategory: 'Danh mục',
   chartTotal: 'Tổng',
   chartAxisTotal: 'Tổng {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, bán kính {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'tăng',
-  chartTrendDecreasing: 'giảm',
-  chartTrendFlat: 'đi ngang',
-  chartSummary: '{label}: {count} giá trị, khoảng {min} đến {max}, xu hướng {trend}',
   chartSeriesNoData: '{label}: chưa có dữ liệu',
   chartSummaryWithData: 'Biểu đồ {type}. {summaries}.',
   chartSummaryEmpty: 'Biểu đồ {type} chưa có dữ liệu.',
-  chartSummarySeparator: '. ',
   chartData: 'Dữ liệu biểu đồ',
   chartRenderUnavailable: 'Không thể hiển thị biểu đồ.',
+  chartPreparedSummaryZoom: 'Thu phóng hiển thị bản tóm tắt đã chuẩn bị; không có khả năng xem chi tiết hơn qua chỉ mục.',
+  chartSpatialSummary: 'Toàn bộ nguồn: {count} điểm, x từ {minX} đến {maxX}, y từ {minY} đến {maxY}. Chế độ xem: {matchedCount} điểm, x từ {viewMinX} đến {viewMaxX}, y từ {viewMinY} đến {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Bán kính trong toàn bộ nguồn: từ {min} đến {max}.',
+  chartSpatialDensityLegend: 'Mật độ bao gồm tất cả chuỗi dữ liệu; trạng thái hiển thị của chuỗi chỉ ảnh hưởng đến các lớp phủ điểm.',
+  chartSpatialPoint: '{series}: {id}, vị trí trong nguồn {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Vùng mật độ: {count} điểm, x từ {minX} đến {maxX}, y từ {minY} đến {maxY}.',
+  chartSpatialHidden: ' (chuỗi dữ liệu bị ẩn)',
   chartDataSampled: 'Biểu đồ và bảng dữ liệu được tạo chỉ hiển thị tối đa 1.000 bản ghi mẫu. Hãy cung cấp bảng dữ liệu tùy chỉnh để truy cập toàn bộ dữ liệu biểu đồ.',
   chartPlotSampled: 'Biểu đồ chỉ hiển thị tối đa 1.000 bản ghi mẫu; bảng dữ liệu liệt kê toàn bộ dữ liệu.',
   chartZoomUnavailable: 'Không thể thu phóng, nhưng biểu đồ chính vẫn khả dụng.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} trên {total})',
   chartMissingLibrary: 'Cần cài gói tùy chọn "chart.js" để hiển thị biểu đồ.',
   boxPlotMissingLibrary: 'Cần cài gói biểu đồ hộp tùy chọn để hiển thị biểu đồ hộp.',
+  chartInputLimit: 'Một số dữ liệu biểu đồ đã bị bỏ qua vì đạt giới hạn đầu vào. Hãy cung cấp tập dữ liệu nhỏ hơn hoặc đã được tổng hợp trước để biểu diễn các giá trị bị bỏ qua.',
+  histogramInputLimit: 'Chỉ giữ lại 10.000 mẫu mới nhất. Hãy cung cấp cho lr-chart số lượng đã được nhóm trước theo các khoảng để biểu diễn phân phối lớn hơn.',
 };
 
 registerLyraLocale('vi', strings);

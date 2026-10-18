@@ -299,3 +299,7 @@ export const TopLayer: Story = {
     </div>
   `,
 };
+
+export const InputLimit: Story = {
+  render: () => html`<lr-locale-picker label="Bounded catalog" without-flags .locales=${Array.from({length:513}, (_, i) => ({tag:`en-x-${i}`,label:`Locale ${i}`}))}></lr-locale-picker>`,
+};

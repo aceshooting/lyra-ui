@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Εμφανίζονται μόνο τα πρώτα {count} αποτελέσματα δοκιμών.',
   toolTimelineLimit: 'Εμφανίζονται έως {count} κλήσεις εργαλείων.',
   toolSelectLimit: 'Εμφανίζονται μόνο τα πρώτα {count} εργαλεία.',
+  testResultsInputTooLarge: 'Οι λεπτομέρειες των αποτελεσμάτων δοκιμών υπερβαίνουν το όριο εμφάνισης.',
   toolCall: 'Κλήση εργαλείου',
   maximize: 'Μεγιστοποίηση',
   promptStudioVariableName: 'Όνομα μεταβλητής {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Εμφανίζονται μόνο τα πρώτα {count} αρχεία.',
   taskListLimit: 'Εμφανίζονται μόνο οι πρώτες {count} εργασίες.',
   evalDatasetLimit: 'Εμφανίζονται μόνο τα πρώτα {count} παραδείγματα.',
+  activityFeedInputLimit: 'Διατηρούνται μόνο οι πιο πρόσφατες {count} από {total} καταχωρίσεις.',
+  spanWaterfallLimit: 'Εμφανίζονται {shown} από {total} τμήματα ιχνηλάτησης.',
+  toolTimelineInputLimit: 'Διατηρούνται μόνο οι {count} πιο πρόσφατες από τις {total} κλήσεις εργαλείων.',
 };
 
 registerLyraLocale('el', strings);

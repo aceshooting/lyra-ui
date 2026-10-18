@@ -4,6 +4,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './chat-viewport.js';
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraChatViewport } from './chat-viewport.class.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 
 const meta: Meta = {
   title: 'ChatViewport',
@@ -179,4 +180,25 @@ export const Narrow320px: Story = {
       </lr-chat-viewport>
     </div>
   `,
+};
+
+/** The indexed source allocates only the visible message window. */
+export const MillionMessageGrowth: Story = {
+  render: () => {
+    const viewport = createRef<LyraChatViewport>();
+    const source = { count: 1_000_000, itemAt: (index: number) => index, keyAt: (index: number) => index };
+    return html`
+      <button @click=${() => {
+        source.count += 1000;
+        viewport.value?.querySelector<LyraVirtualList>('lr-virtual-list')?.requestUpdate();
+      }}>Append 1,000 messages</button>
+      <div style="block-size:320px;border:1px solid var(--lr-color-border)">
+        <lr-chat-viewport ${ref(viewport)} unread-start-index="1000000">
+          <lr-virtual-list row-height="48" .source=${source}
+            .renderItem=${(item: unknown) => bubble(`Message ${Number(item) + 1}`)}
+          ></lr-virtual-list>
+        </lr-chat-viewport>
+      </div>
+    `;
+  },
 };

@@ -9,15 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
-- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-dataset-viewer`
 
-Fetches tab-, pipe-, or delimiter-separated text and renders a virtualized, accessible table (a
-`role="table"` container with a sticky `role="row"` header, composed with `<lr-virtual-list
+Fetches tab-, pipe-, or delimiter-separated text, or reads a host-owned `dataSource`, and renders a
+virtualized, accessible table (a `role="table"` container with a sticky `role="row"` header, composed with `<lr-virtual-list
 item-role="row">` for the body) using the optional `papaparse` peer. The document registry matches
 `.tsv`, `.psv`, and `.dat` filenames.
 
@@ -26,7 +26,7 @@ header row always occupying row 1 (this component always parses with a header ro
 is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed row into view via
 the virtualized list's `active-item-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
 focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact. A jump
-whose document is replaced by a concurrent `src` reassignment mid-flight reports `found: false`
+whose document is replaced by a concurrent `src`, `table`, or `dataSource` reassignment mid-flight reports `found: false`
 rather than a phantom success, and a header-row target scrolls with the same
 `prefers-reduced-motion`-gated smooth behavior every other row uses.
 
@@ -50,12 +50,90 @@ complementary, matching `lr-csv-viewer`/`lr-archive-viewer`'s base-vs-content sp
 `anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported `LyraAnchor.kind`
 values for the shared anchor-target contract).
 
-**Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
-every body cell's raw string value, ordered row then column (empty/whitespace query behaves like
+Input properties and legacy limits:
+
+- `maxRows: number = 10000` (attribute `max-rows`) — data rows, excluding the separate header;
+  effective range 1–100,000.
+- `maxColumns: number = 1000` (attribute `max-columns`) — fields; effective range 1–10,000.
+- `maxBytes: number = 26214400` (attribute `max-bytes`) — source bytes, default 25 MiB;
+  effective range 1–262,144,000 bytes (250 MiB).
+- `table: DatasetTable | undefined` (property only, default `undefined`) — an already parsed
+  `{ fields: string[]; rows: Record<string, string>[] }` table, with the header in `fields` rather
+  than in `rows`. Field names must be unique strings. Runtime scalar cell values are normalized to
+  strings, with `null` and `undefined` becoming empty text.
+
+- `dataSource: DatasetViewerSource | undefined` (property only, default `undefined`) — a host-owned
+  logical source, described below; `DatasetViewerSource = LyraTabularSource`.
+
+Limits truncate finite fractions and clamp to their effective ranges; non-finite inputs use the
+stated defaults. Set limits before assigning `table`. In-memory input bypasses fetching and
+PapaParse, takes precedence over `src` even when empty, and setting it to `undefined` restores
+the configured URL source. Admission reads own data properties, rejecting accessors in those
+fields without invoking them, and accepts only string, number, boolean, `null` or `undefined`
+cells. The table, rows and records are frozen snapshots. Reassigning the accepted caller object or
+getter snapshot is a no-op while effective limits are unchanged; replace the outer table after
+caller mutation. Limit changes revalidate the current snapshot. Byte admission counts the UTF-8
+text of cells and field names; the independent 1,000,000-cell budget includes the header.
+Malformed or over-limit input displays a localized error and emits `lr-render-error`.
+
+**Host-owned source input:** A defined `dataSource` takes precedence over `table` and `src`,
+bypassing file fetching and parsing. Invalid defined sources show a localized error and emit
+`lr-render-error`; they do not fall back to legacy input. Setting `dataSource = undefined` cancels
+source work and restores the current `table` or URL input. Source pages never overwrite the
+legacy `table` getter. The source remains host-owned by identity rather than being cloned. After
+changing its data or revision, reassign it (the same identity is accepted) or call the viewer's
+unnamed `requestUpdate()`. Source replacement, refresh and locale changes invalidate stale reads,
+search results and navigation. Unrelated presentation updates reuse source data.
+
+The source supplies `revision`, full logical body `rowCount`, `columnCount` and `columnAt(index)`
+returning `{ key, label }`, plus either synchronous scalar `cellAt(row, column)` or asynchronous
+`readCells(request)`. Requests carry revision, locale, an `AbortSignal`, and an absolute zero-based
+rectangle; return exactly its requested rows and columns. Accepted cells are strings, finite
+numbers, booleans, `null` or `undefined`, with nullish values displaying empty text.
+Logical body rows are not truncated by `maxRows` or materialized as a complete array. Each active
+source's `columnCount` must fit `maxColumns` (default 1,000, effective hard maximum 10,000); an
+oversized column count is an error. Reads remain bounded to at most 500 rows, 100 columns and
+10,000 cells per rectangle, with two retained rectangles. Each scalar's display text and each
+column key/label is limited to 65,536 UTF-16 units. Retained cell and column metadata text shares a
+2,000,000-unit ceiling.
+Malformed or oversized replies fail visibly instead of silently clipping source values.
+
+Only source mode uses fixed row boxes and matching virtual-list row geometry, both resolved live
+from `--lr-size-3rem` (3rem, or 48px at a 16px root font). Oversized cell display stays within that
+row box without changing the source scalar. Legacy file and in-memory rows keep their automatic
+heights. Column windows retain absolute `aria-colindex` values; anchors still use one-based display
+coordinates and can reveal unloaded rows and offscreen columns.
+Source column labels always occupy display row 1; hit `row: -1` addresses those labels and body
+row `0` appears at display row 2. The same mapping applies in both `scrollMode` values.
+
+In source mode, `search(query)` delegates to the source's global search capability rather than
+scanning loaded rectangles or an admitted prefix. The viewer requests at most 1,000 hits and keeps
+`matchCount` equal to retained, cursor-addressable hits. A larger known provider total does not
+replace that count; `matchCountExact` is true only for exhaustive, fully retained results. Without
+that capability, a nonempty query returns 0 with `matchCountExact: false` and `part="search-status"`
+shows the localized `sourceSearchUnavailable` message. This adds no local search toolbar or event
+fields. `searchNext()`/`searchPrevious()` report whether the target was actually revealed;
+`clearSearch()` cancels pending search and dependent navigation.
+`LyraTabularHit` coordinates use zero-based body `row` (or -1 for labels) and zero-based `column`.
+
+`DatasetViewerSource` is available from the component entry and package root. The component entry also
+re-exports `LyraSourceCell`, `LyraTabularColumn`, `LyraTabularHit`, `LyraTabularReadRequest`,
+`LyraSourceSearchRequest` and `LyraSourceSearchResult`. Shared contracts can be imported with
+`import type` from `@aceshooting/lyra-ui/data-sources.js`.
+
+Both body rows and columns are windowed. Header and body share the visible column window, with
+`aria-colindex` retaining each cell's full-grid position. Search and anchors reveal offscreen
+columns before navigating; admitted row/column counts and raw-grid anchor coordinates remain
+complete. This also applies to the page scroll mode.
+
+**Methods:** With `dataSource` undefined, `search(query)` resolves the match count via a
+case-insensitive substring search over header fields followed by every body cell's raw string
+value, ordered row then column (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
 `detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
 `severity: 'warning'`, `fatal: false`, `cause: errors`) while the partial table remains rendered.
@@ -73,7 +151,7 @@ every fetch state), `body`, `table`, `header-row`, `header-cell`, `data-row`, `c
 `cell-highlight-action` (the native button filling a highlighted cell — focusable, emits
 `lr-highlight-activate` on click or Enter/Space; its complete accessible name uses the localized
 `cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders), `spinner`,
-`error`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump
+`error`, `search-status` (global source-search unavailable notice), and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest anchor-jump
 message; the spoken copy is appended to the shared document-level polite sink only while the viewer
 and its composed ancestors are exposed to the accessibility tree). `data-row`, `cell`,
 `cell-highlight` and `cell-highlight-action` render inside the internal `<lr-virtual-list>` and are
@@ -96,7 +174,10 @@ sticky header row, independent of the highlight outline above.
 
 **Optional peer dependency:** `papaparse`.
 
-Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 data rows,
-1,000 fields in any row, 1,000,000 aggregate cells (including the header), or more than 100 parser
-diagnostics; streaming record callbacks enforce the same ceilings again. Exceeding any ceiling
+Remote resources use `maxBytes`. By default, a quote-aware scan stops before PapaParse at 10,000
+data rows and 1,000 fields in any row; `maxRows` and `maxColumns` configure those limits. The
+1,000,000 aggregate-cell ceiling (including the header) and 100-parser-diagnostic budget remain
+independent. Streaming record callbacks enforce the same ceilings again. Exceeding a ceiling
 surfaces the localized `documentPreviewResourceTooLarge` message instead of a partial table.
+The fetched-text path yields between dialect detection, structural admission and materialization;
+each parse pass remains synchronous.

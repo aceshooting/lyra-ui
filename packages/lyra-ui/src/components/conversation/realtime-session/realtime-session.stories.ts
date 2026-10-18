@@ -73,3 +73,8 @@ export const Narrow320: Story = {
     </div>
   `,
 };
+
+export const RetainedCaptions: Story = {
+  parameters: { docs: { description: { story: 'The session discloses original input loss before forwarding its newest retained captions to the transcript feed.' } } },
+  render: () => html`<lr-realtime-session without-capture .entries=${Array.from({ length: 12000 }, (_, i) => ({ id: `e${i}`, text: `Caption ${i}` }))}></lr-realtime-session>`,
+};

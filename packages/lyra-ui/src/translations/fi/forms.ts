@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Kynä alhaalla',
   signaturePadPenUp: 'Kynä ylhäällä',
+  localePickerInputLimit: 'Vain ensimmäiset 512 kieli- ja alueasetusmerkintää ovat käytettävissä.',
+  emojiPickerInputLimit: 'Osa emojitiedoista jätettiin pois syöterajan täyttymisen vuoksi.',
 };
 
 registerLyraLocale('fi', strings);

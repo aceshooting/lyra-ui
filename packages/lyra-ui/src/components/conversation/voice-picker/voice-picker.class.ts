@@ -1,3 +1,5 @@
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { guard } from 'lit/directives/guard.js';
 import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -21,11 +23,11 @@ import {
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { publicCollectionTruncation, collectionSupport } from '../../../internal/collection-snapshot.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_voice, LYRA_DEFAULT_voicePickerNoVoices, LYRA_DEFAULT_voicePickerPreview, LYRA_DEFAULT_voicePickerRequired, LYRA_DEFAULT_voicePickerStopPreview } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 installFormControlLabelSupport();
@@ -143,6 +145,7 @@ export interface LyraVoicePickerEventMap {
  * @attr size - Visual size on the shared six-tier control ladder (`2xs`–`xl`, default `m`). The
  *   `small`/`medium`/`large` aliases render as `s`/`m`/`l`. Preview actions retain the shared 40px
  *   minimum hit area even when the field chrome uses a smaller tier.
+ * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The complete label, control, hint, error, and listbox frame.
  * @csspart form-control-label - The `<label>` element containing the `label` property and slot.
  * @csspart trigger - The trigger button (closed-dropdown mode).
@@ -236,6 +239,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    catalogPickerInputLimit: LYRA_DEFAULT_catalogPickerInputLimit,
     noMatches: LYRA_DEFAULT_noMatches,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
     voice: LYRA_DEFAULT_voice,
@@ -252,6 +256,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
+  protected static readonly ownedCollectionLimits = { catalog: { entries: 1024 } };
 
   static override properties = {
     value: { attribute: false, noAccessor: true },
@@ -487,8 +492,16 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     this.catalogPicker.hide();
   }
 
+  private readonly limitAnnouncements = new AnnouncementSinkController(this);
+  private limitMounted = false;
+  private previousInputLimit = false;
+  private get inputLimited(): boolean { return publicCollectionTruncation(this, 'catalog') !== undefined; }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const limited = this.inputLimited;
+    if (this.limitMounted && limited && !this.previousInputLimit) this.limitAnnouncements.announcePolite(this.localize('catalogPickerInputLimit'));
+    this.previousInputLimit = limited;
+    this.limitMounted = true;
     this.syncCatalogDescription(this.controlId);
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     this.catalogPicker.updated(reposition);
@@ -554,7 +567,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     if (!voiceId) return;
     const currentTarget = this.internalPreviewTargetId;
     if (currentTarget !== null && currentTarget !== voiceId) this.stopInternalPreview();
-    const entry = this.effectiveEntries.find((e) => e.id === voiceId);
+    const entry = this.catalogPicker.entryFor(voiceId);
     const previewUrl = entry?.previewUrl;
     const event = this.emit(
       'lr-preview-request',
@@ -779,9 +792,9 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
         @click=${this.onListboxClick}
       >
         <span class="glass-scroll-layer" aria-hidden="true"></span>
-        ${rows.length === 0
+        ${this.catalogPicker.listboxHidden ? nothing : rows.length === 0
           ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${emptyText}</div>`
-          : this.renderRows(rows, activeId)}
+          : guard([rows, this.value, this.effectiveLocale, this.strings, this.localize('notInCatalog'), this.withoutPreview, this.previewingId], () => this.renderRows(rows, activeId))}
       </div>
     `;
   }
@@ -921,6 +934,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
 
   override render(): TemplateResult {
     return html`<div part="form-control" tabindex="-1">
+      ${this.inputLimited ? html`<p part="limit">${this.localize('catalogPickerInputLimit')}</p>` : nothing}
       ${this.closedMode ? this.renderClosed() : this.renderFreeText()}
     </div>`;
   }

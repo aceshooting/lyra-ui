@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Сурет {index}, барлығы {total}',
   playWithContext: 'Ойнату: {name}',
   pauseWithContext: 'Кідірту: {name}',
+  avPlayerWaveformUnavailable: 'Толқын пішіні деректері қолжетімсіз немесе осы медиаға сәйкес келмейді.',
+  avPlayerTranscriptUnavailable: 'Транскрипт деректері қолжетімсіз.',
   dropzoneReleaseToAdd: 'Файлды қосу үшін қоя беріңіз.',
   dropzoneRejectedType: 'Бұл файл түрі қабылданбайды.',
   attachmentAdd: 'Тіркеме қосу',

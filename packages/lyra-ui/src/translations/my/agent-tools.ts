@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'ပထမဆုံး စမ်းသပ်မှုရလဒ် {count} ခုကိုသာ ပြထားသည်။',
   toolTimelineLimit: 'ကိရိယာခေါ်ဆိုမှု {count} ခုအထိသာ ပြထားသည်။',
   toolSelectLimit: 'ပထမဆုံး ကိရိယာ {count} ခုကိုသာ ပြထားသည်။',
+  testResultsInputTooLarge: 'စမ်းသပ်မှုရလဒ် အသေးစိတ်များသည် ပြသနိုင်သည့် ကန့်သတ်ချက်ကို ကျော်လွန်နေသည်။',
   toolCall: 'ကိရိယာခေါ်ဆိုမှု',
   maximize: 'အကြီးဆုံးပြရန်',
   promptStudioVariableName: 'ကိန်းရှင် {index} အမည်',
@@ -292,6 +293,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'ပထမ {count} ဖိုင်များကိုသာ ပြသထားသည်။',
   taskListLimit: 'ပထမဆုံး လုပ်ဆောင်စရာ {count} ခုကိုသာ ပြသထားသည်။',
   evalDatasetLimit: 'ပထမဆုံး နမူနာ {count} ခုကိုသာ ပြထားသည်။',
+  activityFeedInputLimit: 'မှတ်တမ်း {total} ခုအနက် နောက်ဆုံး {count} ခုကိုသာ ထိန်းသိမ်းထားသည်။',
+  spanWaterfallLimit: 'စပန် {total} ခုအနက် {shown} ခုကို ပြထားသည်။',
+  toolTimelineInputLimit: 'ကိရိယာခေါ်ဆိုမှု {total} ခုအနက် နောက်ဆုံး {count} ခုကိုသာ ထိန်းသိမ်းထားသည်။',
 };
 
 registerLyraLocale('my', strings);

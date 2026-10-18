@@ -928,7 +928,7 @@ it("keeps virtualization active when optional child/detail/group capabilities ar
   expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.be.lessThan(100);
 });
 
-it('devirtualizes every row when an expanded detail is present in a 100+ row grid', async () => {
+it('keeps virtualization when an expanded detail is present in a 100+ row grid', async () => {
   const manyRows: Person[] = Array.from({ length: 101 }, (_value, id) => ({
     id,
     name: `Person ${id}`,
@@ -952,21 +952,16 @@ it('devirtualizes every row when an expanded detail is present in a 100+ row gri
     ),
   ];
 
-  expect(renderedRows).to.have.length(101);
-  expect(
-    renderedRows.map((row) => Number(row.dataset['visibleIndex']))
-  ).to.deep.equal(Array.from({ length: 101 }, (_value, index) => index));
+  expect(renderedRows.length).to.be.lessThan(30);
+  element.scrollToIndex(50, { align: 'start' });
+  await settleFrames();
   expect(
     element.shadowRoot!.querySelector('[part="row-detail"]')?.textContent
   ).to.contain('Details for Person 50');
 });
 
 it("evaluates the expanded-detail-row offset per pre-window item once virtualized, with nothing actually expanded", async () => {
-  // rowDetail + any *currently rendered* expanded row disables virtualization outright (see
-  // virtualWindow's own `expandedDetails` guard), so the only way to exercise the pre-window
-  // expanded-row offset scan with virtualization still active is to configure rowDetail while
-  // leaving expandedKeys empty -- the scan still runs over every pre-window item and evaluates
-  // arrayHasKey() for each one, it just never finds a hit.
+  // Detail offsets are computed once per display projection, including an empty expansion set.
   const manyRows: Person[] = Array.from({ length: 100 }, (_value, index) => ({
     id: index,
     name: `Person ${index}`,

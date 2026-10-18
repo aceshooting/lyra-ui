@@ -2,6 +2,18 @@ import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
+  .source-axes { display: flex; justify-content: space-between; gap: var(--lr-space-xs); font-size: var(--lr-font-size-sm); }
+  [part="source-exact-window"] { overflow: auto; max-inline-size: 100%; contain: inline-size; }
+  [part="source-exact-window"] [role="row"] { display: flex; inline-size: max-content; }
+  [part="source-exact-window"] [role="gridcell"] { flex: none; }
+  [part="source-exact-window"] [part="cell"] {
+    position: relative; inline-size: auto; block-size: auto;
+    min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-xs); white-space: nowrap;
+    color: var(--lr-color-text); background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+
   :host {
     display: block;
     min-inline-size: 0;

@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} forslag til',
     other: '{count} flere forslag',
   },
+  mentionInputLimit: 'Bare de første 10 000 kandidatene til omtale er tilgjengelige.',
+  diffViewHighlightLimit: 'Lang kode vises uten syntaksutheving.',
 };
 
 registerLyraLocale('nb', strings);

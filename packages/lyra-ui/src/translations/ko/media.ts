@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '전체 {total}개 중 {index}번째 이미지',
   playWithContext: '{name} 재생',
   pauseWithContext: '{name} 일시 중지',
+  avPlayerWaveformUnavailable: '파형 데이터를 사용할 수 없거나 이 미디어와 일치하지 않습니다.',
+  avPlayerTranscriptUnavailable: '대화 기록 데이터를 사용할 수 없습니다.',
   dropzoneReleaseToAdd: '파일을 추가하려면 놓습니다.',
   dropzoneRejectedType: '허용되지 않는 파일 형식입니다.',
   attachmentAdd: '첨부 추가',

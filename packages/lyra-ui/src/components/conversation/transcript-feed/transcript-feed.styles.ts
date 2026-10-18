@@ -113,6 +113,12 @@ export const styles = [
     [part='jump-button']:active {
       background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
     }
+    [part='limit'] {
+      margin: 0;
+      padding: var(--lr-space-s);
+      color: var(--lr-color-text-quiet);
+      font-size: var(--lr-font-size-sm);
+    }
   `,
   srOnly,
 ];

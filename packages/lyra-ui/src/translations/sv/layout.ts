@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} kommando',
     other: '{count} kommandon',
   },
+  commandPaletteInputLimit: 'Vissa kommandon utelämnades eftersom indatagränsen nåddes.',
 };
 
 registerLyraLocale('sv', strings);

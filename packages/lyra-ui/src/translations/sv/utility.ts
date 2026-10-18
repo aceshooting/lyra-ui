@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} förslag till',
     other: '{count} fler förslag',
   },
+  mentionInputLimit: 'Endast de första 10 000 kandidaterna för omnämnande är tillgängliga.',
+  diffViewHighlightLimit: 'Lång kod visas utan syntaxmarkering.',
 };
 
 registerLyraLocale('sv', strings);

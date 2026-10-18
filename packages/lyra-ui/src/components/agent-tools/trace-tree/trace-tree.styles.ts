@@ -3,6 +3,19 @@ import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
+  [part~='source-label'] { flex: 1; }
+  [part~='source-row']:where([data-active]) {
+    --_source-row-fill: var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-trace-tree-row-active-color, var(--lr-color-text));
+  }
+  .source-span {
+    display: flex; align-items: center; flex-wrap: wrap; gap: var(--lr-space-xs);
+    min-inline-size: 0; inline-size: 100%; padding-block: var(--lr-space-xs);
+  }
+  .source-span [part='name'] { flex: 1; min-inline-size: var(--lr-size-4rem); }
+  .source-span [part='bar-track'] { inline-size: var(--_lr-trace-tree-bar-column); }
+  .source-span:where([data-active]) { color: var(--lr-trace-tree-row-active-color, var(--lr-color-text)); }
+
   :host {
     display: block;
     container-type: inline-size;

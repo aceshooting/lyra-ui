@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} öneri daha',
     other: '{count} öneri daha',
   },
+  mentionInputLimit: 'Yalnızca ilk 10.000 bahsetme adayı kullanılabilir.',
+  diffViewHighlightLimit: 'Uzun kod, sözdizimi vurgulaması olmadan gösterilir.',
 };
 
 registerLyraLocale('tr', strings);

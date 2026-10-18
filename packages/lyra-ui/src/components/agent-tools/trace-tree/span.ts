@@ -4,7 +4,7 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 
 export type LyraSpanKind = 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
 
@@ -211,38 +211,96 @@ function canonicalLyraSpans(values: readonly unknown[]): readonly CanonicalLyraS
   return result;
 }
 
+/** Stable component-owned projection; public callers receive independent mutable containers. @internal */
+export interface InternalLyraSpanProjection {
+  readonly spans: readonly LyraSpan[];
+  readonly byId: ReadonlyMap<string, LyraSpan>;
+  readonly truncated: boolean;
+  readonly extentEndMs: number;
+}
+
+function protectedSpanProjection(spans: LyraSpan[], sourceCount: number, extentEndMs: number): InternalLyraSpanProjection {
+  const backing = new Map(spans.map(span => [span.id, span]));
+  const byId: ReadonlyMap<string, LyraSpan> = Object.freeze({
+    get size() { return backing.size; },
+    get: (key: string) => backing.get(key),
+    has: (key: string) => backing.has(key),
+    entries: () => backing.entries(),
+    keys: () => backing.keys(),
+    values: () => backing.values(),
+    [Symbol.iterator]: () => backing[Symbol.iterator](),
+    forEach(callback: (value: LyraSpan, key: string, map: ReadonlyMap<string, LyraSpan>) => void, thisArg?: unknown) {
+      backing.forEach((value, key) => callback.call(thisArg, value, key, byId));
+    },
+  });
+  return Object.freeze({ spans: Object.freeze(spans), byId, truncated: spans.length < sourceCount, extentEndMs });
+}
+
+interface SpanModel {
+  spans: LyraSpan[];
+  byId: Map<string, LyraSpan>;
+  extentEndMs: number;
+  projections: Map<number, InternalLyraSpanProjection>;
+  reservation?: {active: string | null; limit: number; projection: InternalLyraSpanProjection};
+}
+const spanModels = new WeakMap<readonly CanonicalLyraSpan[], SpanModel>();
+
 /** One bounded, runtime-safe projection shared by every agent trace view. Invalid records and
- * later duplicate ids are omitted, while closed provider enums normalize to their documented
- * fallbacks. When `activeSpanId` resolves, that span and as much of its nearest ancestor path as
- * fits reserve positions inside the 500-row ceiling; ordinary rows then fill the remaining
- * positions in input order. */
+ * later duplicate ids are omitted. The default remains 500 rows; an optional limit permits
+ * 1..5000 rows. A resolved active span and its nearest ancestors reserve positions, with
+ * remaining positions filled in input order. @internal */
+export function projectLyraSpans(
+  values: readonly unknown[],
+  activeSpanId: string | null = null,
+  limit: number = MAX_RENDERED_LYRA_SPANS,
+): InternalLyraSpanProjection {
+  const canonical = canonicalLyraSpans(Array.isArray(values) ? values : []);
+  let model = spanModels.get(canonical);
+  if (!model) {
+    const spans = canonical.map(({span}) => span);
+    const byId = new Map(spans.map(span => [span.id, span]));
+    let extentEndMs = 0;
+    for (const span of spans) extentEndMs = Math.max(extentEndMs, span.endMs ?? span.startMs, span.startMs);
+    model = {spans, byId, extentEndMs, projections: new Map()};
+    spanModels.set(canonical, model);
+  }
+  const count = Math.max(1, Math.min(5000, finiteCount(limit, MAX_RENDERED_LYRA_SPANS)));
+  let base = model.projections.get(count);
+  if (!base) {
+    const spans = model.spans.slice(0, count);
+    base = protectedSpanProjection(spans, model.spans.length, model.extentEndMs);
+    // Keep only the current budget rather than accumulating every possible public limit.
+    model.projections.clear();
+    model.projections.set(count, base);
+  }
+  if (model.reservation?.active === activeSpanId && model.reservation.limit === count) return model.reservation.projection;
+  const chosenIds = new Set<string>();
+  let current = activeSpanId ? model.byId.get(activeSpanId) : undefined;
+  let contained = true;
+  while (current && chosenIds.size < count && !chosenIds.has(current.id)) {
+    chosenIds.add(current.id);
+    contained &&= base.byId.has(current.id);
+    current = current.parentId ? model.byId.get(current.parentId) : undefined;
+  }
+  if (contained) return base;
+  for (const span of model.spans) {
+    if (chosenIds.size >= count) break;
+    chosenIds.add(span.id);
+  }
+  const spans = model.spans.filter(span => chosenIds.has(span.id));
+  const projection = protectedSpanProjection(spans, model.spans.length, model.extentEndMs);
+  model.reservation = {active: activeSpanId, limit: count, projection};
+  return projection;
+}
+
+/** Runtime-safe projection with independent mutable result containers. The default is 500 rows;
+ * an optional limit permits 1..5000. A resolved active span and its nearest ancestors reserve
+ * positions before ordinary input-order rows. Invalid records and later duplicate ids are omitted. */
 export function normalizeLyraSpans(
   values: readonly unknown[],
   activeSpanId: string | null = null,
+  limit: number = MAX_RENDERED_LYRA_SPANS,
 ): LyraSpanProjection {
-  const source = Array.isArray(values) ? values : [];
-  const normalized = canonicalLyraSpans(source).map(({ span }) => span);
-  const normalizedById = new Map<string, LyraSpan>();
-  for (const span of normalized) normalizedById.set(span.id, span);
-
-  const chosenIds = new Set<string>();
-  const visitedPath = new Set<string>();
-  let current = activeSpanId ? normalizedById.get(activeSpanId) : undefined;
-  while (current && chosenIds.size < MAX_RENDERED_LYRA_SPANS && !visitedPath.has(current.id)) {
-    chosenIds.add(current.id);
-    visitedPath.add(current.id);
-    current = current.parentId ? normalizedById.get(current.parentId) : undefined;
-  }
-  for (const span of normalized) {
-    if (chosenIds.size >= MAX_RENDERED_LYRA_SPANS) break;
-    chosenIds.add(span.id);
-  }
-
-  const spans = normalized.filter((span) => chosenIds.has(span.id));
-  const byId = new Map(spans.map((span) => [span.id, span]));
-  let extentEndMs = 0;
-  for (const span of normalized) {
-    extentEndMs = Math.max(extentEndMs, span.endMs ?? span.startMs, span.startMs);
-  }
-  return { spans, byId, truncated: spans.length < normalized.length, extentEndMs };
+  const projection = projectLyraSpans(values, activeSpanId, limit);
+  return { ...projection, spans: [...projection.spans], byId: new Map(projection.byId) };
 }

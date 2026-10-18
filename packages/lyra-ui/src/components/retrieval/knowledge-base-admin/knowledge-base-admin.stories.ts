@@ -1,8 +1,8 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './knowledge-base-admin.js';
-import type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
-import type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
+import type { KnowledgeBaseSource, KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
+import type { IngestionQueueSource, IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 
 const meta: Meta = { title: 'KnowledgeBaseAdmin', component: 'lr-knowledge-base-admin', tags: ['autodocs'] };
 export default meta;
@@ -58,4 +58,30 @@ export const Narrow320: Story = {
       <lr-knowledge-base-admin .sources=${sources} .ingestionItems=${ingestionItems}></lr-knowledge-base-admin>
     </div>
   `,
+};
+
+export const InputAdmissionNotice: Story = {
+  parameters: { docs: { description: { story: 'Each active tab discloses its original input admission limit. Inactive tab content remains unmounted.' } } },
+  render: () => html`<lr-knowledge-base-admin .sources=${Array.from({ length: 12000 }, (_, i) => ({ ...sources[0]!, id: `s${i}` }))} .ingestionItems=${ingestionItems}></lr-knowledge-base-admin>`,
+};
+
+export const Providers: Story = {
+  parameters: { docs: { description: { story: 'Only the active panel queries its provider. Switching back mounts a fresh child at page zero; provider removal restores the corresponding legacy collection.' } } },
+  render: () => {
+    const sourceRecords = sources.map((value, order) => ({ key: value.id, order, value }));
+    const ingestionRecords = ingestionItems.map((value, order) => ({ key: value.id, order, value }));
+    const dataSource: KnowledgeBaseSource = {
+      revision: 1,
+      query: async ({ page, pageSize }) => ({ total: sourceRecords.length, summary: { total: sourceRecords.length, synced: sourceRecords.length, syncing: 0, attention: 0 }, rows: sourceRecords.slice(page * pageSize, (page + 1) * pageSize) }),
+      lookup: async keys => sourceRecords.filter(record => keys.includes(record.key)),
+      locate: async key => sourceRecords.find(record => record.key === key)?.order ?? null,
+    };
+    const ingestionSource: IngestionQueueSource = {
+      revision: 1,
+      query: async ({ page, pageSize }) => ({ total: ingestionRecords.length, rows: ingestionRecords.slice(page * pageSize, (page + 1) * pageSize) }),
+      lookup: async keys => ingestionRecords.filter(record => keys.includes(record.key)),
+      locate: async key => ingestionRecords.find(record => record.key === key)?.order ?? null,
+    };
+    return html`<lr-knowledge-base-admin .dataSource=${dataSource} .ingestionSource=${ingestionSource}></lr-knowledge-base-admin>`;
+  },
 };

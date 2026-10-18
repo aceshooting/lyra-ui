@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -76,7 +76,11 @@ focus move.
 - `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false) — the full model list. Omit (or
   leave empty) to fall back to plain free-text entry. Ids use the shared unique, nonempty,
   first-wins catalog rule above. The array is clone-owned, bounded, and frozen; reassign a new
-  catalog array after changing its rows.
+  catalog array after changing its rows. Admission retains the first 1,024 source rows within the
+  shared 50,000-value deep snapshot budget; normalization examines that admitted prefix. The
+  localized `limit` part reports omitted input through `catalogPickerInputLimit`. A synthetic row
+  for a committed value outside the catalog can still be appended. Closed listboxes contain no
+  option rows after their exit transition; trigger labels and free-text behavior remain available.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
 - `label: string = ''` — optional visible title above the control, rendered alongside the `label`
@@ -208,7 +212,7 @@ constraint validation — its own `disabled` or `readonly`, or an ancestor `<fie
 reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`, matching native `:invalid`. `required`/`optional` keep publishing.
 
-**CSS parts:** `form-control` (the complete label, control, hint, error, and listbox frame),
+**CSS parts:** `limit` (input-loss notice), `form-control` (the complete label, control, hint, error, and listbox frame),
 `form-control-label` (the `<label>` element containing the `label` property and slot), `trigger` (closed-dropdown mode's
 `<button role="combobox">`, also its positioning anchor), `combobox` (free-text mode's input
 container, also its positioning anchor), `combobox-input` (the free-text `<input>`),

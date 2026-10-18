@@ -26,6 +26,10 @@ export const styles = css`
        lr-json-viewer itself still wins, and [part='value'] re-enables pre-wrap for values. */
     white-space: normal;
   }
+  .source-shell { min-inline-size: 0; }
+  .source-shell .source-tree { block-size: var(--lr-json-viewer-max-height, var(--lr-size-20rem)); max-block-size: var(--lr-json-viewer-max-height, var(--lr-size-20rem)); }
+  .source-shell [part~='source-list'] { block-size: 100%; }
+  [part='search-status'] { padding: var(--lr-space-xs); color: var(--lr-color-text-quiet); }
   [part="base"] {
     display: block;
     max-block-size: var(

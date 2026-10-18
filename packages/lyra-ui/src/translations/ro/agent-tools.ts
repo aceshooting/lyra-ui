@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Sunt afișate doar primele {count} rezultate de test.',
   toolTimelineLimit: 'Sunt afișate cel mult {count} apeluri de instrumente.',
   toolSelectLimit: 'Sunt afișate doar primele {count} instrumente.',
+  testResultsInputTooLarge: 'Detaliile rezultatelor testelor depășesc limita de afișare.',
   toolCall: 'Apel de instrument',
   maximize: 'Maximizează',
   promptStudioVariableName: 'Numele variabilei {index}',
@@ -296,6 +297,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Sunt afișate doar primele {count} fișiere.',
   taskListLimit: 'Sunt afișate doar primele {count} sarcini.',
   evalDatasetLimit: 'Sunt afișate doar primele {count} exemple.',
+  activityFeedInputLimit: 'Sunt păstrate doar cele mai recente {count} din {total} de înregistrări.',
+  spanWaterfallLimit: 'Span-uri afișate: {shown} din {total}.',
+  toolTimelineInputLimit: 'Sunt păstrate doar cele mai recente apeluri de instrumente: {count} din {total}.',
 };
 
 registerLyraLocale('ro', strings);

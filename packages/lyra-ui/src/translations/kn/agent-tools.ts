@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'ಮೊದಲ {count} ಪರೀಕ್ಷಾ ಫಲಿತಾಂಶಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
   toolTimelineLimit: 'ಗರಿಷ್ಠ {count} ಟೂಲ್ ಕರೆಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
   toolSelectLimit: 'ಮೊದಲ {count} ಟೂಲ್‌ಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
+  testResultsInputTooLarge: 'ಪರೀಕ್ಷಾ ಫಲಿತಾಂಶಗಳ ವಿವರಗಳು ಪ್ರದರ್ಶನ ಮಿತಿಯನ್ನು ಮೀರಿವೆ.',
   toolCall: 'ಟೂಲ್ ಕರೆ',
   maximize: 'ಗರಿಷ್ಠಗೊಳಿಸಿ',
   promptStudioVariableName: 'ವೇರಿಯೇಬಲ್ {index} ಹೆಸರು',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'ಮೊದಲ {count} ಫೈಲ್‌ಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
   taskListLimit: 'ಮೊದಲ {count} ಕಾರ್ಯಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
   evalDatasetLimit: 'ಮೊದಲ {count} ಉದಾಹರಣೆಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸಲಾಗಿದೆ.',
+  activityFeedInputLimit: '{total} ನಮೂದುಗಳಲ್ಲಿ ಅತ್ಯಂತ ಹೊಸ {count} ನಮೂದುಗಳನ್ನು ಮಾತ್ರ ಉಳಿಸಿಕೊಳ್ಳಲಾಗುತ್ತದೆ.',
+  spanWaterfallLimit: 'ಒಟ್ಟು {total} ಸ್ಪ್ಯಾನ್‌ಗಳಲ್ಲಿ {shown} ತೋರಿಸಲಾಗುತ್ತಿದೆ.',
+  toolTimelineInputLimit: 'ಒಟ್ಟು {total} ಟೂಲ್ ಕರೆಗಳಲ್ಲಿ ಇತ್ತೀಚಿನ {count} ಮಾತ್ರ ಉಳಿಸಿಕೊಳ್ಳಲಾಗುತ್ತದೆ.',
 };
 
 registerLyraLocale('kn', strings);

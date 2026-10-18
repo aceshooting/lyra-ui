@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'ہن تک کوئی گفتگو نئیں',
   agentWorkspaceLabel: 'ایجنٹ دی کارگاہ',
+  agentWorkspaceInputLimit: '{collection}: {total} اندراجاں وچوں صرف {count} رکھے جاندے نیں۔',
   agentWorkspaceConversation: 'گفتگو',
   agentWorkspaceDetails: 'رن دی تفصیل',
   agentWorkspaceRun: 'ایجنٹ رن',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'ایہہ حصہ فیر آزماؤ',
   promptQueueLabel: 'قطار وچ پرامپٹ',
   promptQueueEmpty: 'قطار وچ کوئی پرامپٹ نئیں',
+  promptQueueInputLimit: 'اِن پُٹ دی حد پوری ہون کارن قطار وچ پئے کجھ پرامپٹ یا اٹیچمنٹ چھڈ دتے گئے نیں۔',
+  promptQueueAttachmentLimit: 'رکھیاں {total} اٹیچمنٹس وچوں {shown} وکھائیاں جا رہیاں نیں۔',
   promptQueueSendNow: 'ہن بھیجو',
   selectionToolbarLabel: 'چناؤ دے عمل',
   selectionAsk: 'پچھو',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} ٹوکن',
     other: '{count} ٹوکن',
   },
+  threadListInputLimit: 'اِن پُٹ دی حد پوری ہون کارن گل بات دے کجھ تھریڈ چھڈ دتے گئے نیں۔',
+  promptInputInputLimit: 'اِن پُٹ دی حد پوری ہون کارن کجھ تجویزاں یا کیٹلاگ اندراج چھڈ دتے گئے نیں۔',
+  transcriptFeedInputLimit: '{total} اندراجاں وچوں صرف سب توں نویں {count} رکھے جاندے نیں۔',
+  codeBlockHighlightLimit: 'لمبا کوڈ سنٹیکس ہائی لائٹنگ توں بغیر وکھایا جاندا اے۔',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Gambar {index} dari {total}',
   playWithContext: 'Putar {name}',
   pauseWithContext: 'Jeda {name}',
+  avPlayerWaveformUnavailable: 'Data bentuk gelombang tidak tersedia atau tidak cocok dengan media ini.',
+  avPlayerTranscriptUnavailable: 'Data transkrip tidak tersedia.',
   dropzoneReleaseToAdd: 'Lepaskan untuk menambahkan file.',
   dropzoneRejectedType: 'Jenis file ini tidak diterima.',
   attachmentAdd: 'Tambahkan lampiran',

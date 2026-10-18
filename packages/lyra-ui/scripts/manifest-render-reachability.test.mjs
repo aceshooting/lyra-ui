@@ -176,3 +176,125 @@ for (const [name, component] of [
     assert.doesNotMatch(renderSurfaceFor("src/example.ts", sources), /phantom-controller/);
   });
 }
+
+test("render reachability follows an invoked exported view with a markup body", () => {
+  const sources = new Map([
+    ["src/example.ts", `import { hierarchySourceView } from './view.js'; class Example { render() { return hierarchySourceView(); } }`],
+    ["src/view.ts", `export function hierarchySourceView() { return html\`<div part="view-owned"></div>\`; }`],
+  ]);
+  assert.match(renderSurfaceFor("src/example.ts", sources), /view-owned/);
+});
+
+for (const [name, component, helper] of [
+  ["uninvoked view", `import { hierarchySourceView } from './view.js'; class Example {}`, `export function hierarchySourceView() { return html\`<div part="phantom-view"></div>\`; }`],
+  ["type-only view", `import type { hierarchySourceView } from './view.js'; class Example { render() { return hierarchySourceView(); } }`, `export function hierarchySourceView() { return html\`<div part="phantom-view"></div>\`; }`],
+  ["comment-only call", `import { hierarchySourceView } from './view.js'; /* hierarchySourceView() */ class Example {}`, `export function hierarchySourceView() { return html\`<div part="phantom-view"></div>\`; }`],
+  ["string-only markup", `import { hierarchySourceView } from './view.js'; hierarchySourceView();`, `export function hierarchySourceView() { return 'html\`<div part="phantom-view"></div>\`'; }`],
+  ["stylesheet-only body", `import { hierarchySourceView } from './view.js'; hierarchySourceView();`, `export function hierarchySourceView() { return css\`[part="phantom-view"] {}\`; }`],
+  ["unrelated exported template", `import { dataView } from './view.js'; dataView();`, `export function dataView() { return []; } export function otherView() { return html\`<div part="phantom-view"></div>\`; }`],
+]) {
+  test(`render reachability excludes ${name}`, () => {
+    const sources = new Map([["src/example.ts", component], ["src/view.ts", helper]]);
+    assert.doesNotMatch(renderSurfaceFor("src/example.ts", sources), /phantom-view/);
+  });
+}
+
+const lazyFactoryComponent = `
+  import type { Spatial as SpatialType } from './spatial.js';
+  // @renderController SpatialType
+  class Example {
+    load() { return import('./spatial.js'); }
+    ensure() { return this.load().then(({ Spatial: Loaded }) => this.create(Loaded)); }
+    create(Ctor: typeof SpatialType) { return new Ctor(this); }
+  }
+`;
+const lazyFactorySources = component => new Map([
+  ["src/example.ts", component],
+  ["src/spatial.ts", `export class Spatial { render() { return html\`<div part="lazy-factory-owned"></div>\`; } }`],
+  ["src/other.ts", `export class Other { render() { return html\`<div part="unrelated-lazy"></div>\`; } }`],
+]);
+
+test("render reachability follows an annotated literal lazy controller through a typed host factory", () => {
+  const surface = renderSurfaceFor("src/example.ts", lazyFactorySources(lazyFactoryComponent));
+  assert.match(surface, /lazy-factory-owned/);
+  assert.doesNotMatch(surface, /unrelated-lazy/);
+});
+
+for (const [name, component] of [
+  ["missing annotation", lazyFactoryComponent.replace('// @renderController SpatialType', '')],
+  ["string annotation", lazyFactoryComponent.replace('// @renderController SpatialType', `const note = '@renderController SpatialType';`)],
+  ["string import", lazyFactoryComponent.replace(`return import('./spatial.js')`, `return "import('./spatial.js')"`)],
+  ["wrong lazy module", lazyFactoryComponent.replace(`return import('./spatial.js')`, `return import('./other.js')`)],
+  ["wrong factory type", lazyFactoryComponent.replace('Ctor: typeof SpatialType', 'Ctor: typeof Other')],
+  ["wrong export", lazyFactoryComponent.replace('Spatial: Loaded', 'Other: Loaded')],
+  ["wrong constructor", lazyFactoryComponent.replace('new Ctor(this)', 'new Other(this)')],
+  ["another host", lazyFactoryComponent.replace('new Ctor(this)', 'new Ctor(otherHost)')],
+  ["unused factory", lazyFactoryComponent.replace('this.create(Loaded)', 'Loaded')],
+  ["wrong factory argument", lazyFactoryComponent.replace('this.create(Loaded)', 'this.create(Other)')],
+  ["factory from another class", lazyFactoryComponent.replace('create(Ctor: typeof SpatialType)', '} class Other { create(Ctor: typeof SpatialType)')],
+]) {
+  test(`render reachability excludes lazy ${name}`, () => {
+    assert.doesNotMatch(renderSurfaceFor("src/example.ts", lazyFactorySources(component)), /lazy-factory-owned/);
+  });
+}
+
+for (const [name, component] of [
+  ["callback without lexical this", lazyFactoryComponent.replace('({ Spatial: Loaded }) => this.create(Loaded)', 'function ({ Spatial: Loaded }) { return this.create(Loaded); }')],
+  ["nested unbound factory construction", lazyFactoryComponent.replace('return new Ctor(this)', 'return function () { return new Ctor(this); }')],
+  ["shadowed callback binding", lazyFactoryComponent.replace('this.create(Loaded)', '(() => { const Loaded = Other; return this.create(Loaded); })()')],
+  ["shadowed factory parameter", lazyFactoryComponent.replace('return new Ctor(this)', '{ const Ctor = Other; return new Ctor(this); }')],
+]) {
+  test(`render reachability rejects lazy ${name}`, () => {
+    assert.doesNotMatch(renderSurfaceFor("src/example.ts", lazyFactorySources(component)), /lazy-factory-owned/);
+  });
+}
+
+test("render reachability rejects a shadowed imported view call", () => {
+  const sources = new Map([
+    ["src/example.ts", `import { dataView } from './view.js'; class Example { render(dataView) { return dataView(); } }`],
+    ["src/view.ts", `export function dataView() { return html\`<div part="phantom-view"></div>\`; }`],
+  ]);
+  assert.doesNotMatch(renderSurfaceFor("src/example.ts", sources), /phantom-view/);
+});
+
+for (const [name, component] of [
+  ["reassigned factory parameter", lazyFactoryComponent.replace('return new Ctor(this)', 'Ctor = Other; return new Ctor(this)')],
+  ["reassigned callback binding", lazyFactoryComponent.replace('({ Spatial: Loaded }) => this.create(Loaded)', '({ Spatial: Loaded }) => { Loaded = Other; return this.create(Loaded); }')],
+]) {
+  test(`render reachability rejects lazy ${name}`, () => {
+    assert.doesNotMatch(renderSurfaceFor("src/example.ts", lazyFactorySources(component)), /lazy-factory-owned/);
+  });
+}
+
+test("render reachability rejects a helper whose only markup is in an uninvoked nested function", () => {
+  const sources = new Map([
+    ["src/example.ts", `import { dataView } from './view.js'; dataView();`],
+    ["src/view.ts", `export function dataView() { function unused() { return html\`<div part="phantom-nested"></div>\`; } return []; }`],
+  ]);
+  assert.doesNotMatch(renderSurfaceFor("src/example.ts", sources), /phantom-nested/);
+});
+
+for (const [name, body] of [
+  ["module block", `{ const dataView = () => []; dataView(); }`],
+  ["destructured block", `{ const { dataView } = other; dataView(); }`],
+  ["catch parameter", `try {} catch (dataView) { dataView(); }`],
+  ["for initializer", `for (let dataView = other; condition; ) dataView();`],
+  ["for-of binding", `for (const dataView of others) dataView();`],
+  ["switch binding", `switch (value) { case 0: const dataView = other; dataView(); }`],
+]) {
+  test(`render reachability rejects imported view shadowing in a ${name}`, () => {
+    const sources = new Map([
+      ["src/example.ts", `import { dataView } from './view.js'; ${body}`],
+      ["src/view.ts", `export function dataView() { return html\`<div part="phantom-scoped"></div>\`; }`],
+    ]);
+    assert.doesNotMatch(renderSurfaceFor("src/example.ts", sources), /phantom-scoped/);
+  });
+}
+
+test("render reachability keeps an imported call outside a shadowing block", () => {
+  const sources = new Map([
+    ["src/example.ts", `import { dataView } from './view.js'; { const dataView = other; dataView(); } dataView();`],
+    ["src/view.ts", `export function dataView() { return html\`<div part="scoped-owned"></div>\`; }`],
+  ]);
+  assert.match(renderSurfaceFor("src/example.ts", sources), /scoped-owned/);
+});

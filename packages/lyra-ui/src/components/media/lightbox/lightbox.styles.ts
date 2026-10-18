@@ -87,6 +87,7 @@ export const styles = css`
   [part="actions"][hidden] {
     display: none;
   }
+  [part="source-retry"],
   [part="close-button"],
   [part="previous-button"],
   [part="next-button"] {
@@ -109,6 +110,7 @@ export const styles = css`
   /* :where() zeroes the wrapped selectors, leaving only :hover -- (0,1,0), the same weight as the
      pressed rule below, which therefore takes the control on source order while the pointer is
      down. */
+  :where([part="source-retry"]):hover,
   :where([part="close-button"]):hover,
   :where([part="previous-button"]):hover:where(:not(:disabled)),
   :where([part="next-button"]):hover:where(:not(:disabled)) {
@@ -118,6 +120,7 @@ export const styles = css`
   /* Pressed carries the hover fill further toward --lr-color-mix-partner: these controls float
      over arbitrary photography, so the press must be legible on its own rather than relying on the
      image for contrast. */
+  :where([part="source-retry"]):active,
   :where([part="close-button"]):active,
   :where([part="previous-button"]):active:where(:not(:disabled)),
   :where([part="next-button"]):active:where(:not(:disabled)) {
@@ -128,6 +131,7 @@ export const styles = css`
     );
     color: var(--lr-color-brand);
   }
+  [part="source-retry"]:focus-visible,
   [part="close-button"]:focus-visible,
   [part="previous-button"]:focus-visible,
   [part="next-button"]:focus-visible {
@@ -144,6 +148,19 @@ export const styles = css`
   [part="next-glyph"] {
     display: block;
   }
+  [part="source-loading"], [part="source-error"] {
+    position: absolute;
+    inset: var(--lr-space-l);
+    z-index: var(--lr-layer-content);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--lr-space-s);
+    color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
+    overflow-wrap: anywhere;
+  }
+  [part="source-retry"] { padding-inline: var(--lr-space-s); }
   [part="stage"] {
     position: relative;
     flex: 1 1 auto;

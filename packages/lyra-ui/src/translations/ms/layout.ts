@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} arahan',
   },
+  commandPaletteInputLimit: 'Sebahagian perintah telah digugurkan kerana had input dicapai.',
 };
 
 registerLyraLocale('ms', strings);

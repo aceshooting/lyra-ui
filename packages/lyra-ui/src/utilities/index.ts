@@ -120,3 +120,29 @@ export type {
   LyraAnchorTarget,
   LyraAnchorTargetEventMap,
 } from './anchor-target.js';
+export {
+  prepareLyraSeriesData,
+  prepareLyraCategoryData,
+  prepareLyraHistogram,
+  prepareLyraWordCloud,
+  prepareLyraWaveform,
+} from './data-preparation.js';
+export type {
+  LyraSourceValue,
+  LyraSourceRequest,
+  LyraIndexedInput,
+  LyraPreparationOptions,
+  LyraObservationCounts,
+  LyraNumericDomain,
+  LyraSeriesObservation,
+  LyraSeriesSample,
+  LyraPreparedSeries,
+  LyraSeriesRangeRequest,
+  LyraSeriesPointRef,
+  LyraPreparedSeriesData,
+  LyraPreparedCategoryData,
+  LyraHistogramDistribution,
+  LyraWeightedWord,
+  LyraPreparedWordCloud,
+  LyraPreparedWaveform,
+} from './data-preparation.js';

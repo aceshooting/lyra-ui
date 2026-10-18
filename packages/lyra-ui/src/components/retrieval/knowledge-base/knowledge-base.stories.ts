@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './knowledge-base.js';
-import type { KnowledgeSource } from './knowledge-base.class.js';
+import type { KnowledgeBaseSource, KnowledgeSource } from './knowledge-base.class.js';
 
 const meta: Meta = {
   title: 'Knowledge Base',
@@ -112,4 +112,32 @@ export const LoadFailed: Story = {
 export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`<div style="max-width:320px"><lr-knowledge-base .sources=${sources}></lr-knowledge-base></div>`,
+};
+
+/** A provider returns already ordered pages and authoritative full-source counts. */
+export const ServerPages: Story = {
+  render: () => {
+    const total = 240;
+    const record = (index: number) => ({ key: `source-${index}`, order: index, value: { id: `source-${index}`, name: `Source ${String(index + 1).padStart(3, '0')}`, syncStatus: 'synced' as const } });
+    const indexOf = (key: string): number | null => {
+      if (!/^source-\d+$/.test(key)) return null;
+      const index = Number(key.slice(7));
+      return Number.isSafeInteger(index) && index >= 0 && index < total ? index : null;
+    };
+    const source: KnowledgeBaseSource = {
+      revision: 1,
+      query: async ({ page, pageSize, query }) => ({
+        total,
+        summary: { total, synced: total, syncing: 0, attention: 0 },
+        rows: Array.from({ length: Math.min(pageSize, Math.max(0, total - page * pageSize)) }, (_, offset) => {
+          const order = page * pageSize + offset;
+          const index = query.sortDir === 'desc' ? total - order - 1 : order;
+          return record(index);
+        }),
+      }),
+      lookup: async keys => keys.flatMap(key => { const index = indexOf(key); return index === null ? [] : [record(index)]; }),
+      locate: async (key, query) => { const index = indexOf(key); return index === null ? null : query.sortDir === 'desc' ? total - index - 1 : index; },
+    };
+    return html`<lr-knowledge-base .dataSource=${source} .sourcePageSize=${25}></lr-knowledge-base>`;
+  },
 };

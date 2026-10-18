@@ -30,7 +30,7 @@ import type { OptionalPeerFailure } from '../../../internal/optional-peer-failur
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerPeerMissing, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_emojiPickerSearchPlaceholder } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerInputLimit, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerPeerMissing, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_emojiPickerSearchPlaceholder } from '../../../internal/default-strings/forms.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -79,6 +79,9 @@ const MAX_EMOJI_GROUPS = 64;
 const MAX_EMOJIS = 20_000;
 const MAX_SHORTCODES_PER_EMOJI = 64;
 
+const groupSnapshotLimits = new WeakMap<object, boolean>();
+const loadedGroupSnapshots = new WeakMap<object, readonly EmojiPickerGroup[]>();
+
 function snapshotEmojiGroups(
   source: unknown,
   itemSnapshots: WeakMap<object, EmojiPickerItem>,
@@ -87,6 +90,7 @@ function snapshotEmojiGroups(
   if (!Array.isArray(source)) return Object.freeze([]);
   const groups: EmojiPickerGroup[] = [];
   let remaining = MAX_EMOJIS;
+  let limited = source.length > MAX_EMOJI_GROUPS;
   for (let groupIndex = 0; groupIndex < Math.min(source.length, MAX_EMOJI_GROUPS) && remaining > 0; groupIndex += 1) {
     try {
       const rawGroup = source[groupIndex];
@@ -96,6 +100,7 @@ function snapshotEmojiGroups(
       const label = group['label'];
       const rawEmojis = group['emojis'];
       if (typeof key !== 'string' || typeof label !== 'string' || !Array.isArray(rawEmojis)) continue;
+      if (rawEmojis.length > remaining) limited = true;
       const emojis: EmojiPickerItem[] = [];
       const length = Math.min(rawEmojis.length, remaining);
       for (let itemIndex = 0; itemIndex < length; itemIndex += 1) {
@@ -110,6 +115,7 @@ function snapshotEmojiGroups(
             typeof emoji !== 'string' || typeof name !== 'string' ||
             (rawShortcodes !== undefined && !Array.isArray(rawShortcodes))
           ) continue;
+          if (rawShortcodes !== undefined && rawShortcodes.length > MAX_SHORTCODES_PER_EMOJI) limited = true;
           const shortcodes = rawShortcodes === undefined
             ? undefined
             : Object.freeze(rawShortcodes.slice(0, MAX_SHORTCODES_PER_EMOJI).filter(
@@ -136,6 +142,8 @@ function snapshotEmojiGroups(
       // A hostile getter invalidates only its own group; later valid groups remain reachable.
     }
   }
+  if (remaining === 0 && groups.length < Math.min(source.length, MAX_EMOJI_GROUPS)) limited = true;
+  groupSnapshotLimits.set(groups, limited);
   return Object.freeze(groups);
 }
 
@@ -230,6 +238,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * ancestor theme wrapper override the active size tier. A value set directly on the picker still
  * wins through normal custom-property inheritance.
  *
+ * Admission retains at most 64 groups, 20,000 emoji items total and 64 shortcodes per item. Input loss is disclosed through the limit part.
+ *
  * @customElement lr-emoji-picker
  * @event input - Native `InputEvent` emitted in the host's current owner realm after a user pick.
  * @event change - Native commit `Event` emitted in the host's current owner realm with `input`.
@@ -243,6 +253,7 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
+ * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The outer wrapper around label, base, error and hint.
  * @csspart form-control-label - The visible label.
  * @csspart base - The wrapper around the search input and grid.
@@ -352,6 +363,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     emojiPickerGroupSymbols: LYRA_DEFAULT_emojiPickerGroupSymbols,
     emojiPickerGroupTravelPlaces: LYRA_DEFAULT_emojiPickerGroupTravelPlaces,
     emojiPickerGroupUnknown: LYRA_DEFAULT_emojiPickerGroupUnknown,
+    emojiPickerInputLimit: LYRA_DEFAULT_emojiPickerInputLimit,
     emojiPickerLoadError: LYRA_DEFAULT_emojiPickerLoadError,
     emojiPickerPeerMissing: LYRA_DEFAULT_emojiPickerPeerMissing,
     emojiPickerSearchLabel: LYRA_DEFAULT_emojiPickerSearchLabel,
@@ -396,7 +408,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   /** The full, ungrouped data set to search/render. Consumer-supplied — this component ships no
    *  emoji data of its own. Leaving the property unset allows the optional convenience loader to
    *  provide defaults; explicitly assigning `[]` opts out and renders only the search input and
-   *  empty state. See `emoji-data-loader.ts` for the loader contract. */
+   *  empty state. Admission retains at most 64 groups, 20,000 emoji items total, and 64 shortcodes
+   *  per item. Input loss is disclosed through the limit part. See `emoji-data-loader.ts` for the loader contract. */
   @property({ attribute: false })
   get groups(): readonly EmojiPickerGroup[] {
     return this._groups;
@@ -418,7 +431,10 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // the optional loader. Only connectedCallback's successful private load restores provenance.
     this.builtInGroups = new WeakSet<EmojiPickerGroup>();
     const replacements = new Map<EmojiPickerItem, EmojiPickerItem>();
-    this._groups = snapshotEmojiGroups(value, this.itemSnapshots, replacements);
+    const shared = this.applyingBuiltInGroups ? loadedGroupSnapshots.get(value) : undefined;
+    this._groups = shared ?? snapshotEmojiGroups(value, this.itemSnapshots, replacements);
+    this.inputLimited = groupSnapshotLimits.get(this._groups) ?? false;
+    if (this.applyingBuiltInGroups && !shared) loadedGroupSnapshots.set(value, this._groups);
     if (this.pendingGridFocus?.item) {
       this.pendingGridFocus.item = replacements.get(this.pendingGridFocus.item) ?? this.pendingGridFocus.item;
     }
@@ -1145,12 +1161,17 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (this.isVirtualized && this.geometryProbe) this.geometryCache = undefined;
+    if (changed.has('groups')) this.geometryCache = undefined;
     this.syncGeometryProbe();
   }
 
+  @state() private inputLimited = false;
+  private readonly limitAnnouncements = new AnnouncementSinkController(this);
+  private limitMounted = false;
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.limitMounted && changed.has('inputLimited') && this.inputLimited) this.limitAnnouncements.announcePolite(this.localize('emojiPickerInputLimit'));
+    this.limitMounted = true;
     this.bindRenderedGeometryProbe();
     this.syncGridObserver();
     this.syncExternalDescription();
@@ -1320,6 +1341,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
           ${this.label}<slot name="label"></slot>
         </div>
         <div part="base">
+          ${this.inputLimited ? html`<p part="limit">${this.localize('emojiPickerInputLimit')}</p>` : nothing}
           <div part="search-wrapper">
             <input
               part="search"

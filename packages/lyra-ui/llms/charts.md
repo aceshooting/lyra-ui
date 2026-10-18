@@ -86,6 +86,11 @@ Changing the data or calling `refreshTheme()` retries rendering, so the plot rec
 canvas capability becomes available.
 
 **Properties:**
+- `maxRecords: number = 1000` (`max-records`) — rendered record budget, normalized to 2–1,000.
+  With `preparedData = null`, allocated chart width can reduce the rendered row count further;
+  the limit also applies to raw `config.data`. Prepared summaries instead undergo aggregate
+  admission, including gap and exact-point overlay capacity, without width-based resampling
+  (see below). The eight typed aliases and `lr-histogram` inherit this property.
 - `axes: LyraChartAxes = 'both'` — `'x' | 'y' | 'both' | 'none'`, controlling complete cartesian
   axes: labels, ticks, borders and grid lines. The `y` setting includes `y2`; invalid values use
   `both`. Radial charts ignore this setting. Use `grid` when only grid lines should disappear.
@@ -110,6 +115,10 @@ canvas capability becomes available.
   'radar' | 'polarArea' | 'bubble'` — every named default used by a typed `lr-*-chart` is
   already a first-class member, so `<lr-chart type="pie">` needs no subclass or cast to work;
   unknown runtime attribute/property values fall back to `bar` before reaching Chart.js
+- `preparedData: LyraChartPreparedData | null = null` (property only) — a whole-source prepared
+  summary or indexed spatial source; `LyraChartPreparedData = LyraPreparedSeriesData |
+  LyraPreparedCategoryData | LyraSpatialChartSource`. Takes
+  precedence over `labels`, `datasets` and `config.data`; see the prepared-data contract below.
 - `description: string | null = null` — accessible chart description
 - `grid: 'x'|'y'|'both'|'none' = 'both'` — controls cartesian grid lines. On a radial chart, `x`
   controls angle lines and `y` controls concentric grid lines
@@ -222,7 +231,7 @@ canvas capability becomes available.
   Simplified pie/doughnut datasets with magnitudes above `Number.MAX_SAFE_INTEGER` are uniformly
   rescaled for finite canvas geometry. Lyra tooltips, data labels, legends, events and CSV retain
   original values; direct Chart.js callbacks see the rescaled peer data. Explicit `config.data`
-  remains the unmodified full-fidelity escape hatch.
+  keeps its authored numeric values; the shared rendering sample still applies.
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — accepts the
   Chart.js `left|top|right|bottom|center|chartArea|{ [scaleId]: number }` positions plus logical
   `start`/`end`; the additive `auto` chooses right above 480px and bottom below that allocation
@@ -323,7 +332,8 @@ canvas capability becomes available.
   compatible with Chart.js's `ChartConfiguration`, deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
   escape hatch, so a caller-supplied `config.type` is passed through rather than normalized.
-  Explicit `config.data.labels` and `config.data.datasets` arrays are authoritative independently:
+  With `preparedData = null`, explicit `config.data.labels` and `config.data.datasets` arrays are
+  authoritative independently:
   an omitted member still comes from the simplified `labels`/`datasets` properties, while an
   explicit array replaces that generated member rather than concatenating with it. This effective
   model drives canvas rendering, `appendData()`, export, the accessible name/summary, keyboard
@@ -333,7 +343,7 @@ canvas capability becomes available.
   `options.elements.bar`, or root `options` are left for Chart.js to resolve, including scriptable,
   indexable and `barBorderWidth`/`barBorderRadius` forms. Unset values retain Lyra's `--border-width`
   and `--border-radius` defaults; removing config restores those defaults. Raw `config.data.datasets`
-  remain authoritative. Dense charts with transparent borders should set
+  remain authoritative on that legacy route. Dense charts with transparent borders should set
   `config.options.datasets.bar.borderWidth = 0` (or the public `--border-width: 0` CSS hook):
   a one-pixel transparent stroke can consume the fill of a bar narrower than two pixels.
   As a declarative alternative, place one `<script type="application/json">` in the default slot;
@@ -361,12 +371,244 @@ canvas capability becomes available.
   the live Chart.js instance; absent before load and after disconnect
 - `appendData(label, values, maxPoints?)` — appends one aligned numeric category and keeps a
   rolling window of the newest `maxPoints` (at most 10,000, also the default: `labels` and each
-  series keep only the first 10,000 entries of a longer assigned array, with a development-mode
-  warning). Each labels/datasets member is written back to the surface
+  series keep only the first 10,000 entries of a longer assigned array, with a localized `limit`
+  notice). Existing canonical points are reused without re-admission. Each labels/datasets member is written back to the surface
   that owns it: an explicitly overridden `config.data` member stays in `config`, while an omitted
   member continues through the simplified property and retains its generated Chart.js styling.
   Point-based scatter/bubble series are left unchanged because appending their x/y/r coordinates
-  needs a richer caller-defined contract.
+  needs a richer caller-defined contract. `appendData()` is inactive while `preparedData` is set.
+
+**Prepared whole-source data:** The full chart and its eight typed subclasses accept prepared
+series/category summaries or a spatial source. Compatibility follows the effective type (`config.type` when supplied,
+otherwise writable `type`), including after changing a typed tag's default:
+
+| Effective type | Accepted prepared kind |
+| --- | --- |
+| `line` | `series` |
+| `bar` | `series` or `categories` |
+| `pie`, `doughnut`, `radar`, `polarArea` | `categories` |
+| `scatter`, `bubble` | `spatial`, with linear scales; see the spatial contract below |
+
+The following summary admission rules describe `series` and `categories`. A series descriptor supplies `revision`, series IDs/labels, whole-source `counts`
+(`sourceCount`, `validCount`, `invalidCount`), full `xDomain`/`yDomain`, ordered `samples`, and an
+exact `getPoint(ref, { signal })` reader. Samples carry `x`, `y`, original `sourceIndex` and
+`breakBefore`; domains may be `null` for an all-invalid series. A category descriptor supplies
+`revision`, whole-source `counts`, category IDs/labels, `categoryCounts`, aligned numeric series
+values, and `aggregation: 'count' | 'sum' | 'mean' | 'host-defined'`. Category counts must conserve
+the full valid observation count. Rendering and export do not enumerate or read the original
+source. The generated accessible table and localized summary disclose that displayed values are
+a summary and report whole-source valid/invalid counts. Series scales retain the supplied whole
+domains; endpoint trend remains based on the original overview after an interior point reveal.
+
+Admission copies the bounded summary and validates own data fields, unique IDs, safe counts,
+finite domains/coordinates, sample order and gap flags. Sparse or accessor-backed descriptor
+arrays are invalid; their accessors are not invoked. Each series/category collection admits at
+most 1,000 entries before aggregate limits apply. IDs are limited to 256 UTF-16 units, labels to
+1,024, and their combined metadata to 65,536. Malformed, incompatible or oversized summaries show
+a localized visible error rather than falling back to legacy input or silently resampling.
+
+`maxRecords` (normalized to 2–1,000) is a global peer-entry capacity across all series, not a
+per-series sample target. Every line-gap separator consumes an entry. Series input requires
+`maxRecords >= 5` and reserves two additional entries for an isolating separator and one exact
+point: four overview points without gaps need at least six entries. Semantic samples including
+the selected overlay stay within 9,000; rectangular generated-table data cells stay within 1,000,
+including the overlay reservation across every series. Category values also share the global
+peer-entry and rectangular-cell limits. An admitted descriptor reaches the plot and table without
+a second sampling stage; line gaps stay disconnected.
+
+The host owns the descriptor and its readers. After changing a host-authored descriptor or its
+revision, assign `preparedData` again (the same identity is accepted) or call the chart's unnamed
+`requestUpdate()`. The chart revalidates and captures a fresh bounded snapshot; unrelated
+presentation changes reuse it. Setting `preparedData = null` cancels source work and restores the
+current legacy inputs. Source replacement, explicit refresh, disconnect and adoption invalidate
+pending readers; late replies cannot replace the current view. The chart retains one bounded
+overview and one displayed refinement/overlay, while reader closures may retain host-owned source
+data. These bounds do not release data retained by the host.
+
+**Complete spatial scatter/bubble source:** supply `preparedData: LyraSpatialChartSource` to
+`lr-chart`, `lr-scatter-chart` or `lr-bubble-chart` with an effective scatter/bubble type and
+`scaleType: 'linear'` (the default). Other effective types, logarithmic scales and
+`lr-lite-chart` reject this kind visibly; invalid spatial input never restores raw data silently.
+`labels`, raw `datasets` and `config.data` are inactive. Effective `config.type` still has its
+established precedence over writable `type`. Clearing `preparedData` restores the current raw
+route. Existing series/category preparation and histogram distribution contracts are separate.
+
+```ts
+import type { LyraChartPreparedData } from
+  "@aceshooting/lyra-ui/components/charts/chart/chart.class.js";
+import type {
+  LyraSpatialChartSource, LyraSpatialChartSeries, LyraSpatialChartPoint,
+  LyraSpatialBounds, LyraSpatialBin, LyraChartSpatialPointSelectDetail,
+  LyraSpatialBinSelectDetail,
+} from "@aceshooting/lyra-ui/utilities/data-spatial.js";
+```
+
+`LyraSpatialChartSource` extends `LyraSpatialPointSource<LyraSpatialChartPoint>` with
+`kind: 'spatial'`, readonly `series`, and optional `radiusDomain`. It supplies immutable `revision`
+(nonempty string at most 256 UTF-16 units or finite number), safe nonnegative global `count`, and
+complete `bounds: { minX, maxX, minY, maxY } | null`; bounds are finite/ordered and null exactly for
+an empty source. Methods/metadata and returned payload fields must be own data properties:
+`query({ signal, bounds, maxPoints, maxBins })` returns `{ points, bins, matchedCount }`, and
+`getPoint(id, { signal })` returns an exact original point or `null`. Both accept synchronous or
+PromiseLike results. Indexing, aggregation and provider backing storage remain host-owned.
+
+A `LyraSpatialChartPoint` is `{ id, sourceIndex, seriesId, x, y, radius?, label? }`. ID is globally
+unique across series, nonblank and at most 256 UTF-16 units. Original `sourceIndex` is a safe
+zero-based index below `count`; x/y are finite within global bounds. Required `seriesId` names one
+of 1–1,000 declared `LyraSpatialChartSeries { id, label, color? }` records. Series IDs are unique,
+nonblank and at most 256 units, labels at most 1,024, optional scalar colors at most 256, and all
+series metadata together at most 65,536. Point labels are at most 1,024 units. Every declared
+series gets a stable dataset/legend position, including empty series; no per-series population is
+inferred from representatives. Source colors/labels govern these datasets; missing colors use the
+existing series palette. Bounded duplicate/conflicting records reject, while global uniqueness
+and complete-source consistency remain provider obligations.
+
+A `LyraSpatialBin` is `{ bounds, count }` with positive safe count. All bin counts sum exactly to
+`matchedCount <= source.count`, accounting for every matching observation across all series.
+Representatives are point overlays of that same population and never increase the total. Bins
+can leave spatial holes but cannot overlap interiors; normal-axis ownership is half-open with
+inclusive final viewport edges. Representatives must belong to a bin and cannot outnumber its
+population. Empty/collapsed global axes retain their exact semantics; no artificial domain extent
+is added. The summary exposes global count/bounds, current viewport count/bounds and, for bubbles,
+the complete radius domain. It distinguishes complete all-series density from bounded overlays.
+
+Bubble sources require an own `radiusDomain`: finite nonnegative `{ min, max }` for a nonempty
+source, exactly `null` for an empty source. Every bubble point requires finite nonnegative
+`radius` within that complete domain; missing radius rejects instead of borrowing a raw-point
+default. Scatter permits absent/null radius metadata and absent radius; a supplied radius requires
+a valid containing domain. Scatter still paints ordinary markers. Semantic radius, including very
+large finite values, remains unchanged in events/table/export; only bubble paint radius is bounded
+to finite plot geometry. Density count controls its separate fill, never bubble radius.
+
+`viewport: LyraSpatialBounds | null = null` (property only) uses global bounds when null. An explicit
+viewport must lie within them with positive span on each noncollapsed global axis; collapsed axes
+stay exactly collapsed. `selectedPointId: string = ''` (property only) controls one exact overlay,
+independently of imperative reveal. For normalized `M = maxRecords` (default/maximum 1,000), spatial
+mode requires `M >= 3`. Two exact slots fit inside M; the remaining `A = M - 2` permits
+`ceil(A / 2)` bins and `A - ceil(A / 2)` representatives: default 499 + 499 + two exact slots.
+Unused quotas are not borrowed. Exact selected/revealed points deduplicate against representatives
+and each other. The source is never width-resampled after admission. Per-query metadata is at most
+997,000 UTF-16 units; series metadata, current/pending responses, exact records and bounded intent
+strings share the existing 2,000,000-unit envelope. Query and exact lookup each allow one physically
+unsettled call plus only the latest desired intent; ignored abort holds its permit until settlement.
+No full point array, per-cell occupancy map or all-ID index is retained.
+
+Source geometry uses private normalized linear peer axes to handle extreme finite coordinates
+without overflow; displayed ticks, formatters, semantic data, table and events retain original
+units. A collapsed axis paints at its center with its actual coordinate as the tick. Source data,
+axes, linear type and x/y orientation cannot be overridden by geometry-changing raw config.
+Existing `zoomable` x-axis wheel/drag/pinch interaction updates semantic x viewport bounds and
+queries that viewport; y stays current. `resetZoom()` sets viewport null. Programmatic viewport
+supports both axes; no pan interface is added.
+
+`hiddenDatasets`/legend toggles hide declared-series point overlays only. Complete all-series density
+and its counts remain unchanged, and the summary/legend explains this distinction. Hidden or
+outside-viewport exact records can stay retained without drawing. The bounded table/CSV include
+admitted records from hidden series; spoken table text marks those point series hidden.
+`revealSourcePoint(id: string): Promise<boolean>` directly resolves an exact original ID, minimally
+pans an explicit viewport while preserving its representable size, then makes that point keyboard
+current and focuses the canvas. Null viewport stays global. It does not select, change controlled
+visibility or emit activation. Hidden-series, missing, invalid, disconnected, canceled, obsolete or
+unrepresentable-pan targets resolve `false`. The existing `LyraSeriesPointRef` overload remains for
+ordered-series data and returns false for spatial input.
+
+Canvas keyboard navigation visits visible points, then density bins, using arrows/Home/End and
+RTL-aware horizontal movement; Enter/Space activates the current bounded item. Point hits win over
+density underneath. Exact/representative point activation emits noncancelable immutable
+`lr-spatial-point-select`
+`{ revision, point }`, preserving original ID/sourceIndex/series/x/y/radius/label. Only admitted
+representatives additionally emit `lr-point-activate`/`lr-datum-activate` with declared-series index
+and current plotted point offset. Exact-only overlays do not invent plotted-record events.
+Bin activation emits noncancelable immutable `lr-spatial-bin-select { revision, bounds, count }`; bins never
+synthesize point events. `selectedPointId` stays controlled and programmatic writes are silent.
+
+The generated long-form table uses one data cell per distinct admitted point or bin, plus its row
+header; bins + points + exact overlays stay within M and the existing 1,000-cell bound. Point text
+includes original source position/coordinates/radius; bin text includes count and bounds. Existing
+data-table disclosure, fallback and slot behavior apply. Spatial `exportData('csv')` synchronously
+exports only this bounded admitted snapshot, with header
+`kind,seriesId,seriesLabel,id,sourceIndex,label,x,y,radius,minX,maxX,minY,maxY,count`.
+Point rows leave bin fields blank; bin rows leave point fields blank. Hidden-series records remain
+included. Numeric precision stays unlocalized by default; existing export formatters receive
+original values and source index/label metadata for points, and strings remain formula-safe. No provider reads or full raw-source CSV is
+implied. PNG follows the current rendered plot.
+
+Same-reference `preparedData` assignment or keyless `requestUpdate()` refreshes the immutable
+source; named presentation changes reuse accepted results. Replacement, type/budget/viewport
+changes and lifecycle cancellation revoke obsolete requests/actions/reveals. Disconnect/adoption
+clear ownership and reconnect uses current input. Provider closures may retain their own storage.
+Appending remains inactive while preparedData is supplied.
+
+**Exported spatial declarations:**
+
+Inherited fields are repeated below to show each complete effective contract.
+
+`LyraSpatialBounds {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minY: number;
+  readonly maxY: number;
+}`
+
+`LyraSpatialPoint {
+  readonly id: string;
+  readonly sourceIndex: number;
+  readonly x: number;
+  readonly y: number;
+}`
+
+`LyraSpatialBin {
+  readonly bounds: LyraSpatialBounds;
+  readonly count: number;
+}`
+
+`LyraSpatialQuery<T extends LyraSpatialPoint> {
+  readonly points: readonly T[];
+  readonly bins: readonly LyraSpatialBin[];
+  readonly matchedCount: number;
+}`
+
+`LyraSpatialPointSource<T extends LyraSpatialPoint> {
+  readonly revision: LyraSourceRevision;
+  readonly count: number;
+  readonly bounds: LyraSpatialBounds | null;
+  query(request: LyraSourceRequest & {
+    readonly bounds: LyraSpatialBounds;
+    readonly maxPoints: number;
+    readonly maxBins: number;
+  }): LyraSourceValue<LyraSpatialQuery<T>>;
+  getPoint(id: string, request: LyraSourceRequest): LyraSourceValue<T | null>;
+}`
+
+`LyraSpatialChartPoint extends LyraSpatialPoint {
+  readonly seriesId: string;
+  readonly radius?: number;
+  readonly label?: string;
+  readonly id: string;
+  readonly sourceIndex: number;
+  readonly x: number;
+  readonly y: number;
+}`
+
+`LyraSpatialChartSource extends LyraSpatialPointSource<LyraSpatialChartPoint> {
+  readonly kind: 'spatial';
+  readonly series: readonly LyraSpatialChartSeries[];
+  readonly radiusDomain?: LyraNumericDomain | null;
+  readonly revision: LyraSourceRevision;
+  readonly count: number;
+  readonly bounds: LyraSpatialBounds | null;
+  query(request: LyraSourceRequest & {
+    readonly bounds: LyraSpatialBounds;
+    readonly maxPoints: number;
+    readonly maxBins: number;
+  }): LyraSourceValue<LyraSpatialQuery<LyraSpatialChartPoint>>;
+  getPoint(id: string, request: LyraSourceRequest): LyraSourceValue<LyraSpatialChartPoint | null>;
+}`
+
+`LyraChartSpatialPointSelectDetail {
+  readonly revision: LyraSourceRevision;
+  readonly point: LyraSpatialChartPoint;
+}`
 
 **Methods:** `renderChart()` requests a connected/visibility-gated render or incremental update.
 `resetZoom()` resets any active zoom/pan to the original view. `refreshTheme()` forces
@@ -379,7 +621,29 @@ when a DOM legend is present its computed swatch colors are refreshed too.
 `exportData('csv' | 'png')` returns a spreadsheet-safe CSV snapshot or the current PNG data URL
 when Chart.js is loaded. Numeric datasets retain the compact one-column-per-series CSV shape.
 Point datasets expand into `<series> x`, `<series> y`, and, when present, `<series> r` and
-`<series> label` columns so radius and per-point labels are not flattened away.
+`<series> label` columns so radius and per-point labels are not flattened away. CSV keeps its
+existing leading `label` column and series-column schema outside spatial mode. With nonspatial
+prepared data it synchronously
+exports only the current displayed bounded summary, refinement or exact overlay: series use x/y
+columns and categories use numeric columns. It does not fetch full-source values, call a reader,
+or add revision/source-ID columns.
+
+`revealSourcePoint(ref: LyraSeriesPointRef): Promise<boolean>` resolves one original series
+position, where `LyraSeriesPointRef { readonly seriesId: string; readonly sourceIndex: number }`.
+`sourceIndex` is the original zero-based position, never a plotted offset. The chart calls
+`getPoint(ref, { signal })` directly without scanning the source; the `prepareLyraSeriesData`
+helper's reader performs one exact `[sourceIndex, 1]` read. A host may additionally supply
+`queryRange({ seriesId, startIndex, endIndex, maxPoints, signal })` for a bounded original-index
+neighborhood, with exclusive `endIndex`. Its allowance accounts for peer gaps, the overlay and
+rectangular table expansion; returned indices, coordinates, order and capacity are validated. The
+helper does not invent this optional capability. A revealed point is isolated from omitted path
+segments and preserves full counts/domains. The promise resolves `false` for disconnected,
+incompatible, missing, invalid, canceled or obsolete results, including readers that ignore abort.
+Calling this method alone emits no activation event.
+
+For ordered-series data, zoom and pan remain summary-only. They never infer a source-index range from an x-axis interval or
+call `queryRange` automatically, even when it is supplied; refinement is requested only by an
+explicit `revealSourcePoint()` call.
 
 **The categorical series ramp.** Eight tokens, `--lr-color-chart-1` … `--lr-color-chart-8`, with a
 separate set of values for light and dark mode. A series that sets no `color` of its own is assigned
@@ -466,6 +730,23 @@ Also emitted: `lr-legend-visibility-change-request` (cancelable proposal), and
 `{ datasetIndex: number, visible: boolean, hiddenDatasets: readonly number[] }`; the latter is the
 complete, sorted, valid next snapshot. Call `preventDefault()` on the proposal to veto the toggle;
 then no property change or commit event occurs.
+Prepared datum activation additionally emits `lr-source-point-select` for series or
+`lr-source-category-select` for categories. Their immutable details carry the committed original
+revision and series/category identity, rather than a plotted offset:
+
+- `LyraChartSourcePointSelectDetail { readonly revision: LyraSourceRevision; readonly seriesId:
+  string; readonly sourceIndex: number; readonly point: LyraSeriesObservation }`, where `point`
+  is a frozen coordinate snapshot with `readonly x: number` and `readonly y: number | null`.
+- `LyraChartSourceCategorySelectDetail { readonly revision: LyraSourceRevision; readonly seriesId:
+  string; readonly categoryId: string; readonly value: number; readonly observationCount: number }`.
+
+Existing `lr-point-activate` and `lr-datum-activate` still accompany activation and retain their
+plotted-index meanings. While replacement/refinement is pending, actions on the committed visible
+view retain its revision; obsolete callbacks cannot activate replacement data. The alias
+`LyraChartPreparedData` and both source-event interfaces are exported from the chart component
+entry and package root; the component entry also re-exports `LyraPreparedSeriesData`,
+`LyraPreparedCategoryData` and `LyraSeriesPointRef`.
+
 Category toggles use a separate pair, `lr-datum-visibility-change-request` (cancelable proposal) and
 `lr-datum-visibility-change` (accepted commit), carrying
 `{ index: number, visible: boolean, hiddenDatums: readonly number[] }`. Both details and their
@@ -489,17 +770,21 @@ pair. `preventDefault()` leaves both controlled state and the chart unchanged.
 alternative; `center` —
 optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
 
-**Bounded rendering and data alternative:** simplified `labels`/`datasets` canvas rendering, the
+**Bounded rendering and data alternative (with `preparedData = null`):** simplified and raw
+`config.data` canvas rendering, the
 DOM legend, generated table, keyboard-operable datum model, generated point-details in the summary,
-and automatic canvas name process at most 1,000 category×series records. When sampling is necessary,
-every series stays plotted and listed in the legend; only categories are thinned to the first,
-last and evenly spaced entries (series are thinned only beyond 500); a localized `data-truncation` notice
-is shown and announced. The sample is evenly spaced, not extreme-preserving: an isolated spike
-between sampled categories is not drawn, so pre-aggregate (for example a minimum and maximum per
-bucket) when every spike must stay visible. Supplying `slot="data-table"` suppresses the generated detailed sample and
-changes the notice to say only the plot is sampled, so use that escape hatch when the complete data set needs pagination, virtualization, or
-another application-owned presentation. Explicit `config.data` is the deliberate full-fidelity
-Chart.js escape hatch and is not rewritten by the simplified-surface sampler.
+and automatic canvas name share a sample bounded by `maxRecords` and the allocated width. Numeric
+sampling keeps endpoints and bucket extrema, plus representative gaps when the budget permits;
+canvas, keyboard datums and accessible sampled rows share source indexes. Per-record styles retain
+their source-index meaning. A localized `data-truncation` notice is shown and announced. A bounded
+sample cannot preserve every local extremum; pre-aggregate when every spike must remain represented.
+Supplying `slot="data-table"` suppresses the generated detailed sample and changes the notice to
+say only the plot is sampled. Use that slot for a complete, paginated or virtualized presentation.
+Export retains the full admitted semantic dataset. Input admission is separate: at most the first
+10,000 entries of each input collection are retained, and a localized `limit` notice discloses
+omitted input. Hidden streamed tables refresh during idle, with a 250ms timeout; visible tables,
+including canvas-failure fallbacks, refresh immediately. Explicit content refreshes invalidate any
+pending streamed snapshot.
 
 **CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`,
 `sync-crosshair` (decorative category line during an admitted synchronized interaction; the native
@@ -508,7 +793,7 @@ wrapping DOM legend), `legend-item` (a dataset/category visibility button), `leg
 (added while the dataset/category is hidden), `legend-swatch`,
 `reset-zoom-button`, `description`, `notices` (wrapper for nonfatal feature warnings and
 bounded-alternative truncation notices), `data-table`, `data-table-toggle` (the `dataTableToggle` disclosure button), `data-truncation` (the bounded-alternative
-notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the
+notice), `limit` (input-admission notice), `feature-warning` (a nonfatal missing optional-feature warning), `center` (the
 chart-area-centered wrapper for the `center` slot), `error` (neutral visible message rendered in
 place of `canvas` when the optional `chart.js` peer dependency fails to load; the failure transition
 is announced through the shared document-level light-DOM assertive sink)
@@ -665,7 +950,8 @@ announced. In particular, unavailable data labels do not remove generated table 
   `stacked`, `stackedAxes`, any `without*` control, `dataLabels`, `stackTotals`, `config`, the parsed
   slotted config, `zoomable`, `locale`, `strings`, or the internal loading state actually changed in
   that update (so an
-  unrelated property/state update, or a bare `requestUpdate()`, draws nothing). Resize callbacks
+  unrelated property/state update draws nothing; an unnamed `requestUpdate()` also refreshes
+  prepared input when set). Resize callbacks
   ignore unchanged inline sizes and coalesce into one animation-frame task; a responsive legend
   position change and its reactive update share that same single redraw. `refreshTheme()`, resize,
   optional-plugin completion, and histogram data changes all use the same connected/visible gate.
@@ -705,6 +991,16 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 
 **Properties:**
 - `type: LyraLiteChartType = 'bar'` — `'bar' | 'line'`
+- `maxRecords: number = 1000` (attribute `max-records`) — rendered record budget, normalized to
+  2–1,000; invalid values or a removed attribute use the default. With `preparedData = null`, fit
+  layouts also sample to the measured allocation width; callbacks and events retain original
+  source category indexes, and scroll category widths follow the sampled categories. Prepared
+  input instead uses the global entry and table-cell admission limits described below.
+- `preparedData: LyraChartPreparedData | null = null` (property only) — a bounded whole-source
+  series or category summary. It takes precedence over `labels` and `datasets`; see the prepared
+  route below for original coordinates, activation identities and exact-point lookup. The shared
+  union also names `LyraSpatialChartSource`; lite rejects that kind visibly and has no spatial
+  density, ID-reveal or scatter/bubble route.
 - `labels: readonly string[] = []` (attribute: false)
 - `datasets: readonly LyraLiteChartSeries[] = []` (attribute: false) —
   `LyraLiteChartSeries { readonly label: string; readonly data: readonly (number|null)[];
@@ -728,7 +1024,9 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `withoutZeroBaseline: boolean = false` (attribute `without-zero-baseline`) — lets the value axis
   start at the data minimum instead of always including zero.
 - `stacked: boolean = false` — sums each category's bars into one segmented bar instead of grouping
-  them side by side; ignored for `type="line"`
+  them side by side; ignored for legacy `type="line"`. Prepared ordered series reject `stacked`
+  in either chart type because their source indexes are independent; prepared categories retain
+  category stacking.
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
   display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
   Falls back to the built-in "nice numbers" formatter when unset. The returned string is painted
@@ -790,9 +1088,9 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   negative values fall back to it, and a finite value is capped so the category run stays within
   1,000,000px.
 - `maxLabels?: number | 'auto'` (attribute `max-labels`) — decimates which category axis labels
-  actually render *text*: after the global record sampler runs, it selects from those retained
-  categories, always shows the first and last sampled label, and roughly evenly distributes the
-  rest between them. A number is authoritative up to the number of sampled categories. `'auto'`
+  actually render *text*: after legacy sampling or prepared-summary admission, it selects from
+  those retained categories, always shows the first and last retained label, and roughly evenly
+  distributes the rest between them. A number is authoritative up to the retained category count. `'auto'`
   re-selects after each resize from the resolved tick positions and the widest rendered caller
   label, using the same deterministic 7px-per-character estimate as label ellipsis. Whenever the
   first and last labels fit side by side, it keeps at least 10px of breathing room between every
@@ -805,8 +1103,8 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   It therefore responds to either `layout` mode without DOM text measurement or browser-specific
   font metrics. Unset (the default) renders every label, unchanged. Each rendered category label
   is allocation-aware: narrow/long text is ellipsized before paint, with the complete caller label
-  retained as its accessible name. Independently, the global 1,000-record safety sampler may bound
-  both marks and labels for very large category×series input.
+  retained as its accessible name. With `preparedData = null`, the global 1,000-record safety
+  sampler may independently bound marks and labels for very large category×series input.
 - `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
   consumer can pixel-align this chart's bars with a sibling `<lr-heatmap>` calendar's week columns
@@ -827,8 +1125,9 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   the label alone when unset; no-op while `withLegend` is `false`.
 - `axisLabelText?: (label: string, index: number) => string | null` (attribute: false) — a
   display-only override for one category-axis tick's text; returning `null` renders no tick there at
-  all. `labels` stays the single authoritative source for the generated accessible table's row
-  headers, the per-mark `<title>`/accessible name, the live announcement and CSV export, so blanking
+  all. Effective category labels (`labels` for legacy input, descriptor labels for prepared
+  categories) remain authoritative for table row headers, per-mark `<title>`/accessible names,
+  live announcements and CSV export, so blanking
   a tick never blanks the same category where a reader or a spreadsheet needs it. Complements
   `maxLabels` rather than replacing it: that even decimation is applied FIRST, so a category it
   already dropped never reaches this callback — use this one for ticks that must line up with an
@@ -889,7 +1188,8 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   in the bounded rendered sample select matching bars and line points, which receive
   `data-selected` and explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`.
   For a multi-series chart, a selected source category selects the matching rendered mark in every
-  dataset. Empty is the default.
+  dataset. Empty is the default. For prepared input, these remain plotted indexes (including
+  separator offsets), not original source indexes; use `revealSourcePoint()` for source lookup.
   Style the built-in highlight through `--lr-lite-chart-selected-outline-color` and
   `--lr-lite-chart-selected-outline-width`. Note
   `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
@@ -898,15 +1198,62 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
 - `labels`, `datasets`, and `selectedIndices` are clone-owned, bounded, frozen snapshots. Mutating
   a previously assigned array or nested series data has no effect; create and reassign a new
   collection. `labels` keeps its first 10,000 entries; each series keeps its first 10,000 values,
-  fewer when more than four series share the 45,000-value bound (a development-mode warning reports
-  the trim), so a long series is shortened rather than dropped.
+  fewer when more than four series share the 45,000-value bound, so a long series is shortened
+  rather than dropped. A localized `limit` notice discloses input loss separately from the
+  `data-truncation` rendering notice.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values; finite input is capped at 1,000,000px before derived SVG geometry is
   calculated. Authored floors can exceed the available plot height. Linear and logarithmic stacks
   push subsequent segments along their signed pixel cursor; zero values remain unfloored.
 - `appendData(label, values, maxPoints?)` — appends one aligned category and keeps a rolling window
   of the newest `maxPoints` categories, never more than the `datasets` bound above (also the
-  default)
+  default). The immutable window copy remains proportional to the retained window; existing
+  canonical points are not re-admitted. Hidden generated multi-series table formatting coalesces
+  append-only updates during idle, with a 250ms timeout. Visible tables, single-series data lists,
+  keyboard announcements and exports remain immediate. External data, formatter or locale changes
+  and explicit refreshes cancel deferred work. `appendData()` is inactive while `preparedData`
+  is supplied.
+
+**Prepared whole-source data:** use `prepareLyraSeriesData` or `prepareLyraCategoryData` from
+`@aceshooting/lyra-ui/utilities/data-preparation.js`, or supply a compatible bounded descriptor.
+Ordered series support `line` and `bar`; category aggregates support `bar`. The shared descriptor
+contract and validation limits are described under `lr-chart` above. Invalid, incompatible or
+over-budget input shows a localized visible message instead of reading legacy arrays or sampling
+again. `maxRecords` bounds entries across all series, and every line-gap separator costs an entry.
+Ordered-series admission additionally reserves two render entries for an isolating separator and
+one exact point. The 9,000 semantic-sample ceiling includes that one extra observation, and the
+1,000 rectangular-cell ceiling includes the reserved rows across all series. Category aggregates
+use the global entry/cell limits without an exact-point reservation.
+
+Each ordered series retains its own original x coordinates, source indexes and disconnected gaps;
+nonmonotonic x remains in source order. Full x domains drive horizontal positions; full y domains
+drive value geometry and the accessible min/max/trend summary, with the existing value-scale and
+zero-baseline settings. Categorical synchronization,
+`barX` and `barSlotWidth` are inactive for ordered series. Their accessible alternative uses a
+bounded list even with multiple series, naming each observation's original index and x/y values.
+Category input retains the category table/list behavior. The summary reports complete valid and
+invalid observation counts as well as the displayed count.
+
+The host owns the descriptor and reader closures. Reassign `preparedData` (including the same
+identity), or call unnamed `requestUpdate()`, after changing a descriptor or its revision.
+Presentation changes reuse the captured summary. Replacement, explicit refresh, disconnection and
+adoption cancel pending source work and prevent obsolete replies from replacing the current view.
+Setting `preparedData = null` restores the current legacy arrays. Reader closures may retain
+host-owned backing data; component admission does not release that storage.
+
+`revealSourcePoint(ref: LyraSeriesPointRef): Promise<boolean>` looks up an original series ID and
+source index. It may refine a bounded source-index neighborhood through an optional host
+`queryRange`; it never guesses an index from x or scans the full source. The component retains one
+bounded overview and one current refinement/overlay. Pending work exposes busy/loading state;
+invalid replies retain the completed view and show a localized failure. Revealing does not select
+or activate a point. There is no zoom API on this component.
+
+Prepared activation additionally emits `lr-source-point-select` with
+`{ revision, seriesId, sourceIndex, point: { x, y } }`, or `lr-source-category-select` with
+`{ revision, seriesId, categoryId, value, observationCount }`. These carry original source identity;
+the existing point/datum events retain plotted-index meaning. Actions on the displayed view stay
+bound to its committed revision while a replacement is pending; obsolete detached marks cannot
+act on the new model.
 
 **Events:** `lr-datum-activate` — canonical family activation with `kind: 'bar'|'point'`,
 `datasetIndex`, `index`, `label`, and `value`. `lr-point-activate` is emitted for the same pointer
@@ -916,10 +1263,15 @@ rendered point in two-dimensional screen space; an exact distance tie retains th
 target received the click.
 
 **Methods:** `exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the current SVG
-markup. CSV rows cover the canonical record count — the maximum of `labels.length` and every
+markup. With `preparedData = null`, CSV rows cover the canonical record count — the maximum of `labels.length` and every
 `dataset.data.length` — and use empty cells for missing labels/values, so a longer or ragged series
 is never truncated or shifted. The method does not download a file; pair it with
-`lr-export-button` for download UX.
+`lr-export-button` for download UX. Prepared exports synchronously serialize the current bounded
+summary/refinement and start no source reads. Ordered-series CSV keeps the label-plus-series
+column schema: each observation gets a row labelled with its original index and localized x/y
+coordinates, a value in its own series column, and empty cells for other series. `skipZero` may
+hide a zero bar but does not omit that admitted value from CSV. SVG exports the current rendered
+view. Complete raw-source export remains host-owned.
 
 Axis titles retain their complete `xLabel`/`yLabel` values and accessible names. In the browser,
 visible titles fit their plot allocation using the rendered SVG font; long titles end with an
@@ -936,33 +1288,30 @@ anchoring keeps working correctly under RTL without inverting which rendered cat
 keyword. Built-in mark summaries are complete localized templates and format values with
 `effectiveLocale`.
 
-**Performance:** `render()` recomputes the grid/marks on every update rather than memoizing against a
-content signature — `datasets`/`labels` can hold callbacks (`tickFormat`, `barX`) or arbitrary,
-possibly circular or BigInt-bearing application data that a fingerprint can't serialize safely, so a
-fresh, small SVG render is cheaper and more correct than a lossy cache. The shared sampling path
-keeps that render bounded to 1,000 category×series marks/keyboard records, retaining endpoints
-instead of materializing an unbounded hidden DOM or SVG tree. The sample is evenly spaced, not
-extreme-preserving, while the value axis still spans the complete data: a line can stop short of
-the axis maximum when the spike that set it falls between samples. Pre-aggregate (for example a
-minimum and maximum per bucket) when every spike must be drawn.
+**Performance:** focus movement patches the active marks without rebuilding the SVG. Derived table
+content reuses canonical input identity; arbitrary formatter callback results are not cached by a
+serialized content fingerprint. With `preparedData = null`, the shared sampling plan bounds marks, keyboard records and
+generated alternatives by `maxRecords`, retaining endpoints and bucket extrema within the available
+budget. Fit layouts also use allocation width. The value axis still spans admitted data; a finite
+sample cannot retain every extremum from arbitrarily many series, so pre-aggregate when every spike
+must be represented.
 
 **Slots:** `data-table` — optional consumer-provided complete, paginated, or virtualized accessible
 data alternative.
 
-**CSS parts:** `base`, `description`, `grid-line`, `axis-label`, `axis-title`,
+**CSS parts:** `base`, `description` (accessible summary and visible prepared loading/error text), `grid-line`, `axis-label`, `axis-title`,
 `sync-crosshair` (decorative synchronized category line), `sync-tooltip` (noninteractive positioned
 text tooltip while `syncGroup` is active), `bar` and `point` (each carries
 `data-selected` when its category index is in `selectedIndices`, with explicit pressed state on every
 mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after
 the series label, rendered only when `legendText` is set), `live-region` (the current mark
 announcement for keyboard users), `data-list` (a visually hidden sampled list of plotted data
-points — single-series only), `data-table` (the generated/slotted alternative container),
+points — single-series legacy/category input or any prepared ordered series), `data-table` (the generated/slotted alternative container),
 `data-table-toggle` (the `dataTableToggle` disclosure button), `table`
-(the generated semantic category×series table rendered when there is more than one dataset), and
-`data-truncation` (the
-visible/announced sampling notice).
+(the generated semantic category×series table for multi-series legacy/category input), and
+`data-truncation` (the visible/announced sampling notice), and `limit` (the input-admission notice).
 
-**Screen-reader data alternative:** a single dataset renders the flat `data-list` (one `<li>` per
+**Screen-reader data alternative (legacy or prepared categories):** a single dataset renders the flat `data-list` (one `<li>` per
 plotted point, matching the roving-tabindex mark order). More than one dataset instead renders a
 `data-table` — a category-labelled `<caption>` (the shared localized `chartData` string), one
 `<th scope="col">` per series (plus a leading `chartCategory` corner header), and one
@@ -972,7 +1321,7 @@ Finite table cells use `tableCellFormatter` when supplied and otherwise use the 
 effective locale. A stacked multi-series bar chart with `tableTotals` adds a localized total
 column; null/non-finite inputs are skipped, while an all-missing category leaves the total cell
 blank instead of reporting a misleading zero. Built-in SVG marks, keyboard targets, and this data
-alternative share one endpoint-preserving sample of at most 1,000 category×series records. When
+alternative share the same endpoint/extremum sample bounded by `maxRecords`. When
 sampling occurs, a localized `data-truncation` notice is shown and announced; provide
 `slot="data-table"` for a complete paginated, virtualized, or application-owned alternative, which
 suppresses the generated sample; the notice then says only the plot is sampled.
@@ -1060,6 +1409,19 @@ types leave it inert; changing `type` or raw `config` to an admitted vertical ca
 configuration enables participation regardless of the tag. Horizontal or continuous-x
 configurations remain outside synchronization.
 
+`preparedData: LyraChartPreparedData | null = null` is inherited as a property-only input. Its
+compatibility follows the effective writable type: ordered series for `line`/`bar`, categories for
+`bar`/`pie`/`doughnut`/`radar`/`polarArea`, and `LyraSpatialChartSource` (`kind: 'spatial'`)
+for `scatter`/`bubble` with linear scales. Changing `type`
+can therefore make a previously admitted descriptor incompatible; it does not convert the
+descriptor. Whole-source counts/domains, aggregate gap/overlay/table admission, explicit exact
+point reveal, bounded displayed CSV export and refresh/unset behavior follow the core contract.
+Series/category zoom stays summary-only; spatial zoom updates and queries its explicit viewport.
+The spatial contract includes complete all-series density, bounded representatives plus independent
+selected/revealed exact overlays, semantic radius/original coordinates, and the spatial event/table/CSV
+routes described above. Scatter/bubble typed class entries re-export spatial source/point/series,
+viewport and immutable spatial event-detail types; import them from their granular class routes.
+
 Everything else is inherited verbatim from `lr-chart`; each name below has the same type, default,
 and behavior there. **See `llms/components/lr-chart.md` for the details, code example, and gotchas
 of every entry in these lists.**
@@ -1070,19 +1432,29 @@ of every entry in these lists.**
 `stacked`, `stackedAxes`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`,
-`tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`, `zoomable`,
+`tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`, `zoomable`, `preparedData`,
+`viewport` (property only, default null), `selectedPointId` (property only, default ''),
 `height`, `y2Label` (`y2-label`), `withoutZeroBaseline` (`without-zero-baseline`), `dataLabels`
 (`data-labels`), `stackTotals` (`stack-totals`), `config`, `withDataTable`
-(`with-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly), and `chart`.
+(`with-data-table`), `dataTableToggle` (`data-table-toggle`), `maxRecords` (`max-records`, default
+`1000`, range 2–1,000), `chartArea` (readonly), and `chart`.
 `type` differs only in its initial value.
 
 **Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `renderChart()`, `resetZoom()`,
-`refreshTheme()`.
+`refreshTheme()`, `revealSourcePoint(ref: LyraSeriesPointRef): Promise<boolean>` and
+`revealSourcePoint(id: string): Promise<boolean>` (spatial only).
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-activate` (`detail: { datasetIndex,
 index, label, value }`), `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
 complete `hiddenDatasets` snapshot).
+Prepared activation additionally emits `lr-source-point-select` or `lr-source-category-select`
+with the core chart's immutable original-reference details. Spatial activation uses
+`lr-spatial-point-select`/`lr-spatial-bin-select` with the exact core source semantics;
+existing activation events retain
+plotted indices. The typed component entries re-export `LyraChartPreparedData`,
+`LyraChartSourcePointSelectDetail`, `LyraChartSourceCategorySelectDetail`, `LyraPreparedSeriesData`,
+`LyraPreparedCategoryData` and `LyraSeriesPointRef`.
 Radial category legends additionally emit `lr-datum-visibility-change-request` (cancelable) and
 `lr-datum-visibility-change`, carrying `index`, `visible` and the frozen `hiddenDatums` snapshot.
 
@@ -1092,7 +1464,7 @@ Radial category legends additionally emit `lr-datum-visibility-change-request` (
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `sync-crosshair` (inherited decorative category line, rendered only for an admitted synchronized
 configuration; the native canvas tooltip has no CSS part),
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).
@@ -1146,7 +1518,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 **Properties:**
 - `bins: number = 10` — finite values are floored and clamped to 0–1,000 before allocation;
   non-finite values produce no buckets
-- `values: number[] = []` (attribute: false)
+- `values: readonly number[] = []` (attribute: false)
 - `seriesLabel: string = ''` (attribute `series-label`) — dataset label used for the
   legend/tooltip/table; empty falls back to localized "Frequency". Inherited `label` keeps its
   chart-wide accessible-name meaning.
@@ -1158,9 +1530,10 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   bucket range strings, so different bin boundaries do not match unless their labels are exactly
   equal. Horizontal or continuous-x raw configurations do not participate.
 - `labels`/`datasets`/`type` are **derived, read-only** (installed as getter/setter pairs on the
-  prototype; direct writes are silently ignored) — `labels`/`datasets` are computed from
-  `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the
-  normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
+  prototype; direct writes are silently ignored) — on the legacy raw route, `labels`/`datasets`
+  are computed from `values`/`bins` (memoized per instance, keyed by reference equality on `values`
+  plus the normalized `bins`). A supplied `distribution` takes precedence and supplies the exact
+  bin categories/counts instead. `type` always reads back `'bar'` regardless of any assignment. This
   specialist owns its controller because a non-bar type would contradict the derived distribution.
 - All other `LyraChart` properties are inherited and usable: `description`, `grid`, `axes`, `size`, `indexAxis`
   (`index-axis`), `hiddenDatasets`, `hiddenDatums`, `legendPosition` (`legend-position`),
@@ -1170,14 +1543,54 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   `tooltipFooterFormatter`, `area`, `zoomable`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `withoutZeroBaseline` (`without-zero-baseline`),
   `stacked`, `stackedAxes`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `withDataTable`
-  (`with-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly).
+  (`with-data-table`), `dataTableToggle` (`data-table-toggle`), `maxRecords` (`max-records`, default
+  `1000`, range 2–1,000), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
 maxSamples?)` appends finite raw samples and keeps a rolling window of the newest `maxSamples`
 (at most 10,000, also the default; an assigned `values` array longer than that keeps its newest
-10,000 samples, with a development-mode warning).
+10,000 samples, with a localized `limit` notice). The bounded immutable window reuses existing
+canonical samples without re-admission. Use `distribution` below to represent a larger whole-source distribution.
+Appends inspect newest positions first and stop once the retained window is full. Invalid-heavy
+batches yield after 10,000 inspected positions and may finish asynchronously. Concurrent appends
+apply in call order; assigning `values` or disconnecting cancels unfinished batches. Pending input
+arrays remain caller-owned and must stay unchanged until their batch is applied or canceled.
+Unreadable positions are treated as invalid and do not block later queued appends.
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
+
+**Prepared whole-source distribution:**
+
+- `distribution: LyraHistogramDistribution | null = null` (attribute: false) — exact bounded
+  bins, normally from `prepareLyraHistogram`, imported from
+  `@aceshooting/lyra-ui/utilities/data-preparation.js` with its `LyraHistogramDistribution` type.
+  A supplied distribution takes precedence over `values`, `bins` and inherited `preparedData`.
+  Inherited `preparedData` alone is incompatible with histogram bin semantics and fails visibly.
+- Own data properties supply a revision, conserving safe nonnegative source/valid/invalid counts,
+  observed `domain` (null only without valid observations), strict finite increasing `edges`,
+  exact `binCounts`, `belowCount` and `aboveCount`. There are at most 1,000 bins and 1,001 edges;
+  valid empty input may have no edges. Every occupied interval and represented extremum must
+  agree with the observed domain and counts. Accessors, sparse arrays and malformed descriptors
+  are rejected without invoking getters. All bins must fit effective `maxRecords` (2–1,000) and
+  the inherited rectangular accessible-table and metadata budgets; no bins are sampled or merged.
+- Plot, table, CSV and `binnedBuckets()` expose the exact in-range bins. Bins are half-open except
+  the final upper edge, which is inclusive. Below/above observations stay in the full summary,
+  together with whole-source valid/invalid counts and observed range; they are not invented bars.
+  Existing point/datum activation keeps the bin index and frequency. No
+  `lr-source-category-select` or `lr-source-point-select` is emitted for bins.
+- Assignment or explicit keyless `requestUpdate()` recaptures mutable descriptors, including
+  same-reference assignments and coalesced updates. Locale and series-label changes rebuild
+  bounded labels. Replacing a same-locale catalog requires explicit `requestUpdate()`.
+  Distribution assignment cancels unfinished raw appends; raw append methods are inactive while
+  it is supplied. Clearing it restores the previous raw values without stale queued commits.
+  Disconnect retains the existing cancellation and peer lifecycle.
+
+The component retains bounded owned copies and the property retains the caller's descriptor until
+replaced or cleared. It never reads raw samples to render this route. `prepareLyraHistogram` scans
+all positions in bounded yielding chunks and accepts an `AbortSignal`; its source reader execution
+and cancellation remain host-owned. Invalid or overbudget distributions use the inherited visible
+localized error; valid empty/all-invalid distributions remain valid. No new events or parts are
+added; `limit` and the accessible description carry the full distribution summary.
 
 **Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-activate`, `lr-datum-visibility-change-request`
 (cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
@@ -1194,7 +1607,7 @@ bar controller and dataset legend even with `legend-mode="datum"`.
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `sync-crosshair` (inherited decorative category line during synchronization; the native canvas
 tooltip has no CSS part),
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).
@@ -1237,7 +1650,8 @@ their semantics, defaults, and gotchas.
 - non-finite samples in `values` are dropped before bucketing rather than corrupting bucket-index
   math; a constant domain produces one truthful single-value bucket, including at numeric extremes.
 - raw `config.options` and plugins remain available, but `config.type` and `config.data` are ignored:
-  the histogram owns its bar controller and derives all categories from `values`/`bins`.
+  the histogram owns its bar controller and derives categories from `values`/`bins` on the legacy
+  raw route, or from `distribution` when provided, which takes precedence.
 - `values`/`bins`/`seriesLabel` changes join the inherited connected-and-visible redraw path. There is no
   second post-update refresh, so a same-tick disconnect cannot recreate Chart.js on a detached
   canvas and off-screen sample updates do not repaint it.
@@ -1252,6 +1666,14 @@ their semantics, defaults, and gotchas.
 
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
+
+A bounded set of group summaries can cover every observation in a much larger population: four
+groups can, for example, summarize one million observations. Compute each group's five numbers on
+the host or server, and keep its sample count, quantile definition, and exact or approximate
+provenance in the surrounding description or data table. Raw observation access and quantile
+computation remain with the host; the component consumes the summaries. Distinct group counts
+still obey the collection and rendering bounds below. Query a bounded group window or use a
+paged data browser to traverse a large group catalogue.
 
 If the browser cannot acquire a 2D canvas context, a localized visible message replaces the plot
 and the generated or slotted data table becomes visible. No failed Chart.js instance is retained.

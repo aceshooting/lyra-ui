@@ -96,3 +96,15 @@ export const EmptyDocument: Story = {
   },
   render: () => html`<lr-diff-view .oldText=${''} .newText=${'created'} copyable></lr-diff-view>`,
 };
+
+export const HighlightLimit: Story = {
+  render: () => html`<lr-diff-view language="json" .oldText=${'// long readable source\n'.repeat(400)} .newText=${'// long readable source\n'.repeat(400) + 'changed'} max-height="12rem"></lr-diff-view>`,
+};
+
+export const RenderLimit: Story = {
+  render: () => html`<lr-diff-view .maxLines=${Infinity} .oldText=${'line\n'.repeat(10001)} .newText=${'line\n'.repeat(10001)}></lr-diff-view>`,
+};
+
+export const LazyGrammar: Story = {
+  render: () => html`<lr-diff-view language="json" .languages=${{ json: () => import('shiki/langs/json.mjs') }} .oldText=${'{"value":1}'} .newText=${'{"value":2}'}></lr-diff-view>`,
+};

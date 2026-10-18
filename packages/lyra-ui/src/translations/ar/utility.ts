@@ -84,6 +84,8 @@ const strings: LyraLocaleStrings = {
     many: '{count} اقتراحًا إضافيًا',
     other: '{count} اقتراح إضافي',
   },
+  mentionInputLimit: 'لا تتوفر سوى أول 10,000 اقتراح للإشارة.',
+  diffViewHighlightLimit: 'يُعرض الكود الطويل دون تلوين الصياغة البرمجية.',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

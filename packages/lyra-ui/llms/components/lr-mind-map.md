@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,25 +22,101 @@ no force simulation, no communities, no edge labels (that's `lr-graph`). Zero-de
 radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module, mirroring
 `lr-word-cloud`'s dependency-free precedent.
 
+**Complete source topics:** `treeSource: MindMapSource | undefined = undefined`
+(attribute: false) takes precedence over `topics`. Invalid defined sources fail visibly without
+legacy fallback; only `undefined` restores the current legacy topics and their expansion state.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-mind-map.js";
+import type { MindMapSource, LyraTopic } from
+  "@aceshooting/lyra-ui/components/retrieval/mind-map/mind-map.class.js";
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`MindMapSource = LyraHierarchySource<LyraTopic, LyraHierarchyQuery>`; its exact shared protocols
+are in [shared source contracts](../shared/events-and-types.md). The provider implements
+`project({ revision, locale, signal, query, state, action })`, with fixed query
+`{ search: '', hiddenKinds: [] }`. Revision is a nonempty string or finite number. A projection
+supplies a nonempty immutable `state` token of at most 65,536 UTF-16 units, global logical `total`,
+a complete visible-preorder `rows` view and optional `focusIndex`. `rows.count <= total`, and the view is either indexed
+`count`/`itemAt`/`keyAt`/`indexOfKey`, or ranged `count`/`read`/`indexOfKey` with exact in-bounds
+reads and direct key resolution. Provider preorder, parent keys, one-based `level`, `position`
+and `setSize`, `childCount`, `expanded`, `selected`, optional `disabled` and `selectionState`
+remain authoritative. This route never reads nested `value.children`, seeds expansion from
+`expandDepth`, or applies local expansion overrides.
+
+The semantic tree navigator reaches the complete provider-visible preorder, with global
+Home/End, Up/Down, RTL-aware expansion/parent keys and disabled-row handling.
+`revealSourceKey(key: string): Promise<boolean>` asks the provider to reveal any logical key and
+focuses its returned `focusIndex`; false means unset/invalid/absent/disabled, failed focus
+transfer or superseded work. Reveal, refresh and reconnect emit no topic event.
+
+The SVG is a bounded view of one connected represented subtree drawn from ready mounted
+navigator rows, at most 301. Its local root is the first represented row whose parent is absent
+from that mounted set. Only exact represented parent links join the subtree; omitted ancestors
+and other disconnected branches are not fabricated. The local root need not be the global root.
+The navigator keeps full global depth/sibling metadata even when ancestry lies outside the cache.
+The diagram uses provider child counts and expansion flags, so a clipped parent is still a parent.
+A localized `limit` notice reports diagram nodes shown versus the complete visible-preorder
+count, rather than implying the SVG contains the full source. `source-diagram` has a bounded
+`var(--lr-size-20rem)` block size; the global navigator remains available with that view.
+No full-source layout or second provider collection is built.
+
+Only own data fields `id` and `label` are projected; `id` must be nonblank and equal `row.key`,
+nonstring labels normalize to empty text, and accessor-backed/oversized fields fail visibly.
+Each normalized row's key, parent key, id and label share a 65,536 UTF-16-unit budget; retained
+rows, focused reserve and pending admission share a 2,000,000-unit payload ceiling. Four 100-row
+pages retain at most 400 rows plus one focused row; at most 301 navigator rows mount and at most
+two physical range reads run. Projection work permits one physical call plus only the latest
+queued intent. Ignored aborts keep physical permits until settlement; providers should settle
+promptly after cancellation. Diagram rows reference only current normalized mounted rows and
+bounded geometry; provider storage/index construction remains caller-owned.
+
+Accepted current user parent expansion emits the existing `lr-topic-toggle { topicId, expanded }`;
+accepted current leaf selection emits `lr-topic-select { topicId }`, always with the original key.
+Source activations delegate provider actions instead of mutating legacy expansion state. Diagram
+keyboard navigation delegates to the global navigator. Loading, failure and obsolete actions
+cannot emit events against a replacement row, even if it reuses the key. Source parts are
+`source-list`, `source-row`, `source-toggle`, `source-label`, `source-status`, `source-error` and
+`source-diagram`; localized loading, complete visible/logical counts, empty and projection/row
+failure with retry are distinct states.
+
+Reassign even the same source or call a keyless `requestUpdate()` after revision/state changes.
+Named local paints, resize and direction changes reuse admitted rows; effective locale/revision
+changes request a new projection. Replacement, superseding project/reveal, unset, disconnect and
+adoption revoke old diagram rows, navigation callbacks and actions; reconnect requests current
+input. The accepted request's original revision/signal remains authoritative during normalization,
+so a reentrant source change cannot finish an obsolete display record.
+
+The following array admission, initial-depth expansion and 500-node sampling rules apply with
+`treeSource` unset.
+
 **Properties:**
 
-- `topics: LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
-LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub.
-  A tree too large for one collection snapshot (10,000 entries / 50,000 values) keeps its first
-  50,000 topics, shallowest first, as `{ id, label, children }` records
+- `topics: readonly LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
+readonly LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub.
+  Assignment copies own data fields without invoking accessors, inspecting at most 50,000 source
+  positions breadth-first and retaining at most 64 descendant levels. Invalid entries consume
+  the inspection allowance. Shared occurrences keep the existing depth-first first-ID layout
+  behavior
 - `label?: string` — accessible name for the SVG group and the implicit hub's text; omission uses
   the localized mind-map label, while an explicit empty string stays empty
 - `expandDepth: number = 1` (attribute `expand-depth`) — initial expansion depth (root + first
   ring); expansion state afterward is component-managed per topic id and survives `topics`
   reassignment
 
-Above 500 currently-visible nodes (per the current expand/collapse state), the SVG and the
+With `treeSource` unset, above 500 currently-visible nodes (per the current expand/collapse state),
+the SVG and the
 parallel sr-only tree both render a deterministic, connectivity-preserving, subtree-size-weighted
 sample instead of every node: a kept node's parent, if any, is always kept too (no floating nodes
 with a dangling connector or a gap in the `role="tree"` walk), and a larger branch keeps
 proportionally more of its own nodes than a small one, sampled evenly across a wide/flat branch's
 own child list rather than dropping its tail outright. A surviving node keeps the position the
 full layout gave it. A localized "showing N of M" notice appears in `[part="limit"]`.
+
+The legacy `input-limit` part reports omitted branches even when collapsed. Unseen descendant
+totals are not counted; the render-decimation notice describes only the retained hierarchy.
 
 **Events:** `lr-topic-select` (`detail: { topicId }`, a _leaf_ topic was activated),
 `lr-topic-toggle` (`detail: { topicId, expanded }`, a parent topic was activated, or auto-expanded by
@@ -50,8 +126,9 @@ keyboard descent).
 
 **CSS parts:** `base`, `svg` (the single-tab-stop focus target), `node`, `node-label`, `link`
 (parent-child connector), `focus-ring` (keyboard focus ring), `limit` (the "showing N of M"
-render-cap notice, present only above 500 currently-visible nodes), `live-region` (visually hidden
-announcement region), `empty` (shown when `topics` is empty).
+render-cap notice, present above 500 legacy visible nodes and always in source mode),
+`input-limit` (legacy input-admission notice), `live-region` (visually hidden
+announcement region), `empty` (shown when legacy `topics` is empty).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
 ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
@@ -82,13 +159,13 @@ clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 
 **Known gotchas:**
 
-- A user's explicit expand/collapse only ever overrides the `depth < expandDepth` default in the
+- With `treeSource` unset, a user's explicit expand/collapse only ever overrides the `depth < expandDepth` default in the
   direction chosen — reassigning `topics` (even with the same ids) never silently discards that
   override.
 - Node-position transitions use `--lr-transition-base`, which already collapses to near-zero under
   `prefers-reduced-motion: reduce` globally, so expansion snaps rather than tweening for a
   reduced-motion user with no extra branching in this component.
-- Topic ids must be nonblank and unique across the complete hierarchy. Later depth-first duplicates
+- Legacy topic ids must be nonblank and unique across the complete hierarchy. Later depth-first duplicates
   and their subtrees are omitted before layout, navigation, expansion state, rendering, or events.
 
 ---

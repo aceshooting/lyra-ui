@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} parancsot',
     other: '{count} parancsot',
   },
+  commandPaletteInputLimit: 'A bemeneti korlát elérése miatt egyes parancsok kimaradtak.',
 };
 
 registerLyraLocale('hu', strings);

@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'कलम नीचे',
   signaturePadPenUp: 'कलम ऊपर',
+  localePickerInputLimit: 'खाली पहिलका 512 गो भाषा-क्षेत्र प्रविष्टि उपलब्ध बा।',
+  emojiPickerInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से इमोजी के कुछ डेटा छोड़ दिहल गइल बा।',
 };
 
 registerLyraLocale('bho', strings);

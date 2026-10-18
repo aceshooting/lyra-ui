@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'اڃا ڪي گفتگوون ناهن',
   agentWorkspaceLabel: 'ايجنٽ جي ڪم واري جاءِ',
+  agentWorkspaceInputLimit: '{collection}: {total} داخلائن مان رڳو {count} رکيون وڃن ٿيون.',
   agentWorkspaceConversation: 'گفتگو',
   agentWorkspaceDetails: 'رن جا تفصيل',
   agentWorkspaceRun: 'ايجنٽ رن',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'هن حصي کي ٻيهر آزمايو',
   promptQueueLabel: 'قطار ۾ پرامپٽ',
   promptQueueEmpty: 'قطار ۾ ڪو پرامپٽ ناهي',
+  promptQueueInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب قطار ۾ موجود ڪجهه پرامپٽ يا منسلڪ فائلون ڇڏيون ويون آهن.',
+  promptQueueAttachmentLimit: 'رکيل {total} منسلڪ فائلن مان {shown} ڏيکاريون پيون وڃن.',
   promptQueueSendNow: 'هاڻي موڪليو',
   selectionToolbarLabel: 'چونڊ جا عمل',
   selectionAsk: 'پڇو',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} ٽوڪن',
     other: '{count} ٽوڪن',
   },
+  threadListInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب ڳالهه ٻولهه جا ڪجهه ٿريڊ ڇڏيا ويا آهن.',
+  promptInputInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب ڪجهه تجويزون يا ڪيٽلاگ داخلائون ڇڏيون ويون آهن.',
+  transcriptFeedInputLimit: '{total} داخلائن مان صرف سڀ کان نيون {count} رکيون وڃن ٿيون.',
+  codeBlockHighlightLimit: 'ڊگهو ڪوڊ سنٽيڪس هاءِ لائٽنگ کان سواءِ ڏيکاريو وڃي ٿو.',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

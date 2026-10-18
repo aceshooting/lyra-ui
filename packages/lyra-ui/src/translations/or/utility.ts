@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} ଅଧିକ ପରାମର୍ଶ |',
     other: '{count} ଅଧିକ ପରାମର୍ଶ |',
   },
+  mentionInputLimit: 'କେବଳ ପ୍ରଥମ 10,000ଟି ଉଲ୍ଲେଖ ପ୍ରାର୍ଥୀ ଉପଲବ୍ଧ।',
+  diffViewHighlightLimit: 'ଲମ୍ବା କୋଡ୍ ସିଣ୍ଟାକ୍ସ ହାଇଲାଇଟିଂ ବିନା ଦେଖାଯାଏ।',
 };
 
 registerLyraLocale('or', strings);

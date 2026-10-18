@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'ከ{total} ምስሎች {index}ኛ',
   playWithContext: '{name}ን አጫውት',
   pauseWithContext: '{name}ን አቁም',
+  avPlayerWaveformUnavailable: 'የሞገድ ቅርጽ ውሂብ አይገኝም ወይም ከዚህ ሚዲያ ጋር አይጣጣምም።',
+  avPlayerTranscriptUnavailable: 'የግልባጭ ውሂብ አይገኝም።',
   dropzoneReleaseToAdd: 'ፋይሉን ለመጨመር ይልቀቁ።',
   dropzoneRejectedType: 'ይህ የፋይል አይነት አይቀበልም።',
   attachmentAdd: 'አባሪ ጨምር',

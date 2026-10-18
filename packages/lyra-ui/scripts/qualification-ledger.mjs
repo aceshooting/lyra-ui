@@ -621,7 +621,7 @@ function accessibilityFor(component, tests, packageDir, exemption) {
   };
 }
 
-function componentRecord({ component, packageDir, exemptions, visualManifest, ssr, interactiveTags }) {
+function componentRecord({ component, packageDir, exemptions, visualManifest, ssr, interactiveTags, scaleBudgets }) {
   const directory = path.join(packageDir, path.dirname(component.classModule));
   const tests = readComponentTestFiles(directory);
   const sources = readSourceFiles(component, packageDir);
@@ -650,8 +650,21 @@ function componentRecord({ component, packageDir, exemptions, visualManifest, ss
   const peerApplicable = (component.optionalPeers ?? []).length > 0;
   const securityApplicable = peerApplicable || Boolean(securitySignal);
   const ssrEntry = ssr.get(component.tag);
+  const scaleScenarios = Object.keys(scaleBudgets?.budgets?.[component.tag] ?? {}).sort();
 
   const dimensions = {
+    scale: {
+      applicability: 'applicable',
+      status: scaleScenarios.length ? 'measured' : 'unmeasured',
+      scenarios: scaleScenarios,
+      measuredAt: scaleScenarios.length ? scaleBudgets.measuredAt : null,
+      evidence: scaleScenarios.length
+        ? [{ file: 'scripts/fixtures/scale-budgets.json', kind: 'measured deterministic counter ceilings' }]
+        : [],
+      limitation: scaleScenarios.length
+        ? 'Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.'
+        : 'No deterministic scale budget has been measured for this tag.',
+    },
     accessibility,
     keyboard: sourceDimension({
       applicable: Boolean(interactiveSignal || keyboardSignal),
@@ -758,7 +771,7 @@ function componentRecord({ component, packageDir, exemptions, visualManifest, ss
 
   const evidenceGaps = Object.entries(dimensions)
     .filter(([, dimension]) =>
-      ['missing', 'not-recorded', 'not-enrolled', 'not-verified', 'unclassified'].includes(dimension.status))
+      ['missing', 'not-recorded', 'not-enrolled', 'not-verified', 'unclassified', 'unmeasured'].includes(dimension.status))
     .map(([dimension]) => dimension);
 
   return {
@@ -819,7 +832,7 @@ function interactiveInventoryTags(inventory, packageDir) {
   return interactiveTags;
 }
 
-export function buildQualificationLedger({ packageDir, inventory, exemptions, visualManifest, ssrSource }) {
+export function buildQualificationLedger({ packageDir, inventory, exemptions, visualManifest, ssrSource, scaleBudgets }) {
   const normalized = normalizeExemptions(exemptions);
   if (normalized.problems.length > 0) throw new Error(normalized.problems.join('\n'));
   const tags = inventory.components.map((component) => component.tag);
@@ -833,6 +846,7 @@ export function buildQualificationLedger({ packageDir, inventory, exemptions, vi
       visualManifest,
       ssr,
       interactiveTags,
+      scaleBudgets,
     }))
     .sort((a, b) => a.tag.localeCompare(b.tag));
   const count = (dimension, status) => components.filter((component) => component.dimensions[dimension].status === status).length;
@@ -844,6 +858,7 @@ export function buildQualificationLedger({ packageDir, inventory, exemptions, vi
       exemptions: 'scripts/qualification-exemptions.json',
       visual: 'visual-baselines/manifest.json',
       ssr: 'src/ssr.ts',
+      scale: 'scripts/fixtures/scale-budgets.json',
     },
     humanReview: {
       status: 'pending',
@@ -872,6 +887,7 @@ export function buildQualificationLedger({ packageDir, inventory, exemptions, vi
       visualEnrolled: components.filter((component) => component.dimensions.visual.stories.length > 0).length,
       forcedColorsEnrolled: count('forcedColors', 'enrolled-automated-visual'),
       assistiveTechnologyVerified: components.filter((component) => component.dimensions.assistiveTechnology.status === 'verified').length,
+      scaleMeasured: count('scale', 'measured'),
     },
     components,
   };
@@ -957,6 +973,7 @@ export function renderQualificationDashboard(ledger) {
     `- Visual-regression enrollment: **${ledger.summary.visualEnrolled}** tags`,
     `- Forced-colors visual enrollment: **${ledger.summary.forcedColorsEnrolled}** tags`,
     `- Manually verified assistive-technology pairings: **${ledger.summary.assistiveTechnologyVerified}**`,
+    `- Scale counter budgets: **${ledger.summary.scaleMeasured}** tags`,
     '',
     `Human review status: **${ledger.humanReview.status}**. Reviewer: **none recorded**. Review date: **none recorded**.`,
     '',
@@ -983,13 +1000,13 @@ export function renderQualificationDashboard(ledger) {
     '',
     '## Per-tag matrix',
     '',
-    '| Tag | Maturity | Axe state | Keyboard | RTL | Reduced motion | 320px | Engines | SSR/hydration | Visual | Peer failure | Security | Forced colors | AT |',
-    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+    '| Tag | Maturity | Axe state | Keyboard | RTL | Reduced motion | 320px | Engines | SSR/hydration | Visual | Peer failure | Security | Forced colors | AT | Scale |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   for (const component of ledger.components) {
     const d = component.dimensions;
     lines.push(
-      `| [\`${component.tag}\`](component-integration.md#${component.tag}) | ${component.maturity} | ${compact(d.accessibility)} | ${compact(d.keyboard)} | ${compact(d.rtl)} | ${compact(d.reducedMotion)} | ${compact(d.narrowAllocation)} | ${compact(d.engines)} | ${d.ssrHydration.mode} | ${compact(d.visual)} | ${compact(d.peerFailure)} | ${compact(d.security)} | ${compact(d.forcedColors)} | ${compact(d.assistiveTechnology)} |`,
+      `| [\`${component.tag}\`](component-integration.md#${component.tag}) | ${component.maturity} | ${compact(d.accessibility)} | ${compact(d.keyboard)} | ${compact(d.rtl)} | ${compact(d.reducedMotion)} | ${compact(d.narrowAllocation)} | ${compact(d.engines)} | ${d.ssrHydration.mode} | ${compact(d.visual)} | ${compact(d.peerFailure)} | ${compact(d.security)} | ${compact(d.forcedColors)} | ${compact(d.assistiveTechnology)} | ${compact(d.scale)} |`,
     );
   }
   lines.push(
@@ -1009,6 +1026,8 @@ export function renderQualificationDashboard(ledger) {
     '  security audit or that every failure mode has been manually exercised.',
     '- AT remains “not verified” until a record names the technology/browser/OS versions, date, tested',
     '  components, reviewer, and findings.',
+    '- Scale is “measured” only for tags with recorded deterministic counter budgets. It covers the',
+    '  named scenarios, not every workload; the Chromium scale gate checks current measurements.',
   );
   return `${lines.join('\n').trimEnd()}\n`;
 }

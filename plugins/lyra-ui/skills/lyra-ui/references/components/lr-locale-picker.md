@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,8 +47,10 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   the derived `localeNativeName(tag)` endonym only when it is non-blank; an explicitly blank (or
   whitespace-only) `label` is treated the same as an omitted one and still falls back to
   `localeNativeName(tag)`. Explicit catalogs are
-  capped, cloned and frozen at assignment; mutate a new array/entry and reassign it to update the
-  list. `country` (ISO 3166-1 alpha-2 or alpha-3) overrides a row's derived flag — e.g.
+  capped at the first 512 source entries, cloned and frozen at assignment; mutate a new array/entry
+  and reassign it to update the list. The localized `limit` part reports omitted input through
+  `localePickerInputLimit`. Closed listboxes contain no option rows after their exit transition;
+  the trigger still resolves the selected label. `country` (ISO 3166-1 alpha-2 or alpha-3) overrides a row's derived flag — e.g.
   showing Lebanon's flag for an `'ar'` row instead of the library's default Saudi Arabia mapping;
   only available on the `{tag,label,country}` object form, not the bare `string[]` form. Replacing
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
@@ -191,7 +193,7 @@ priority until cleared.
 
 **Slots:** `label`, `hint`, `error`.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`,
+**CSS parts:** `limit` (input-loss notice), `form-control`, `form-control-label`, `trigger`,
 `trigger-flag` (the trigger's leading `<lr-flag>` for the current value, present only while
 `withoutFlags` is off and `triggerDisplay` is not `label`), `trigger-label` (the current language,
 visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present only while `withoutFlags` is off),

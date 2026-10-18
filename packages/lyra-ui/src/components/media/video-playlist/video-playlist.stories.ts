@@ -145,3 +145,8 @@ export const RightToLeft: Story = {
 export const Empty: Story = {
   render: () => html`<lr-video-playlist></lr-video-playlist>`,
 };
+
+export const LiveChildrenReplaceSeed: Story = {
+  parameters: { docs: { description: { story: 'After direct videos are adopted, live child metadata owns the list. Retained server-rendering seed metadata is no longer inspected during playlist updates.' } } },
+  render: () => html`<lr-video-playlist .items=${INITIAL_ITEMS}><lr-video title="Current live video" src=${VIDEO_SRC}></lr-video></lr-video-playlist>`,
+};

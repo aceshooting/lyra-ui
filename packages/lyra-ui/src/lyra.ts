@@ -5,6 +5,86 @@
 // Component constructors are available from their canonical registration-free `*.class.js`
 // subpaths. This curated root contains shared helpers and types without registering custom elements.
 export type {
+  LyraSourceRevision,
+  LyraSourceContext,
+  LyraSourceRecord,
+  LyraSourceSearchRequest,
+  LyraSourceSearchResult,
+  LyraSourceRangeRequest,
+  LyraRangeSource,
+  LyraIndexedView,
+  LyraHierarchyView,
+  LyraSourceSummary,
+  LyraSourceCell,
+  LyraTabularColumn,
+  LyraTabularHit,
+  LyraTabularReadRequest,
+  LyraTabularSourceBase,
+  LyraTabularSource,
+  LyraWorkbookHit,
+  LyraWorkbookSource,
+  LyraSourceFacet,
+  LyraSourceGroup,
+  LyraPageRequest,
+  LyraPageResult,
+  LyraPageSource,
+  LyraHierarchyRow,
+  LyraHierarchyAction,
+  LyraHierarchyRequest,
+  LyraHierarchyProjection,
+  LyraHierarchySource,
+  LyraInspectionNode,
+  LyraHierarchyQuery,
+  LyraTraceSourceSummary,
+  LyraTaskSourceSummary,
+  LyraSourceBounds,
+  LyraGraphSourceQuery,
+  LyraGraphRecord,
+  LyraGraphSourceSummary,
+  LyraGraphSceneRequest,
+  LyraGraphScene,
+  LyraGraphOverview,
+  LyraGraphSource,
+} from './data-sources.js';
+export {
+  prepareLyraSeriesData,
+  prepareLyraCategoryData,
+  prepareLyraHistogram,
+  prepareLyraWordCloud,
+  prepareLyraWaveform,
+} from './utilities/data-preparation.js';
+export type {
+  LyraSourceValue,
+  LyraSourceRequest,
+  LyraIndexedInput,
+  LyraPreparationOptions,
+  LyraObservationCounts,
+  LyraNumericDomain,
+  LyraSeriesObservation,
+  LyraSeriesSample,
+  LyraPreparedSeries,
+  LyraSeriesRangeRequest,
+  LyraSeriesPointRef,
+  LyraPreparedSeriesData,
+  LyraPreparedCategoryData,
+  LyraHistogramDistribution,
+  LyraWeightedWord,
+  LyraPreparedWordCloud,
+  LyraPreparedWaveform,
+} from './utilities/data-preparation.js';
+export type {
+  LyraSpatialBounds,
+  LyraSpatialPoint,
+  LyraSpatialBin,
+  LyraSpatialQuery,
+  LyraSpatialPointSource,
+  LyraSpatialBinSelectDetail,
+  LyraSpatialChartSeries,
+  LyraSpatialChartPoint,
+  LyraSpatialChartSource,
+  LyraChartSpatialPointSelectDetail,
+} from './utilities/data-spatial.js';
+export type {
   EnvEntry,
   LyraEnvListEventMap,
 } from './components/data/env-list/env-list.class.js';
@@ -103,12 +183,13 @@ export type {
 export type {
   TaskStatus,
   TaskItem,
+  TaskListSource,
   TaskListAppearance,
   TaskListToggleDetail,
   LyraTaskListEventMap,
 } from './components/agent-tools/task-list/task-list.class.js';
 export type { LyraTerminalEventMap } from './components/agent-tools/terminal/terminal.class.js';
-export type { LyraTraceTreeEventMap } from './components/agent-tools/trace-tree/trace-tree.class.js';
+export type { LyraTraceTreeEventMap, TraceTreeSource } from './components/agent-tools/trace-tree/trace-tree.class.js';
 export {
   MAX_RENDERED_LYRA_SPANS,
   normalizeLyraSpanKind,
@@ -146,6 +227,8 @@ export type {
 export type {
   SequenceStripItem,
   SequenceStripCategory,
+  LyraSequenceSource,
+  LyraSequenceRangeSummary,
 } from './components/data/sequence-strip/sequence-strip.class.js';
 export type {
   EmojiPickerItem,
@@ -271,6 +354,7 @@ export type {
 } from './components/utility/known-date/known-date.class.js';
 export type {
   LyraLightboxImage,
+  LyraLightboxSource,
   LyraLightboxCloseReason,
   LyraLightboxHideDetail,
   LyraLightboxEventMap,
@@ -453,6 +537,11 @@ export type {
   LyraHeatmapCellClickDetail,
   LyraHeatmapExportFormat,
   LyraHeatmapMatrixGeometryChangeDetail,
+  LyraHeatmapMatrixSource,
+  LyraHeatmapTile,
+  LyraHeatmapMatrixViewport,
+  LyraHeatmapMatrixReducer,
+  LyraHeatmapMatrixRangeSelectDetail,
   LyraHeatmapCalendarGeometry,
 } from './components/data/heatmap/heatmap.class.js';
 export {
@@ -461,12 +550,14 @@ export {
 } from './components/data/heatmap/heatmap-scale.js';
 export type {
   LyraTreeNodeData,
+  TreeSource,
   TreeBadge,
   TreeSelection,
   LyraTreeEventMap,
 } from './components/data/tree/tree.class.js';
 export type {
   FileTreeNode,
+  FileTreeSource,
   GitStatus,
   LyraFileTreeEventMap,
 } from './components/data/file-tree/file-tree.class.js';
@@ -498,6 +589,10 @@ export type {
   TestRunState,
   TestCaseResult,
   TestSuiteResult,
+  TestResultsSource,
+  TestResultsSourceQuery,
+  TestResultsSourceRow,
+  TestResultsSourceSummary,
   LyraTestResultsEventMap,
 } from './components/agent-tools/test-results/test-results.class.js';
 export type {
@@ -535,8 +630,11 @@ export type {
   LyraChartLegendPosition,
   LyraChartPlugin,
   LyraChartPoint,
+  LyraChartPreparedData,
   LyraChartScaleType,
   LyraChartSeries,
+  LyraChartSourceCategorySelectDetail,
+  LyraChartSourcePointSelectDetail,
   LyraChartStatistic,
   LyraChartTooltipGroupFormatter,
   LyraChartType,
@@ -558,6 +656,7 @@ export type {
 } from './components/charts/chart/box-plot.class.js';
 export type {
   LyraGraphCamera,
+  GraphSource,
   LyraGraphCommunity,
   LyraGraphEdge,
   LyraGraphFit,
@@ -604,6 +703,7 @@ export type {
   LyraMapMarkerActivationDetail,
   LyraMapMarkerActivationSource,
   LyraMapStyleSpecification,
+  LyraMapSourceDataDiff,
   LyraMapInstance,
   LyraMapEngine,
   LyraMapFeatureRequirements,
@@ -1017,6 +1117,7 @@ export type {
 } from './components/media/file-icon/file-type-metadata.js';
 export type {
   DatasetTable,
+  DatasetViewerSource,
   DatasetViewerScrollMode,
 } from './components/viewers/dataset-viewer/dataset-viewer.class.js';
 export type {
@@ -1310,6 +1411,9 @@ export type {
 } from './components/media/image-viewer/image-viewer.class.js';
 export type {
   LyraAvCue,
+  LyraAvCueSource,
+  LyraAvActiveCue,
+  LyraAvCueSearch,
   LyraAvTrack,
   LyraAvKind,
   LyraAvPreload,
@@ -1372,6 +1476,8 @@ export type {
   ThreadGroupContext,
   ThreadGroupToggleDetail,
   ThreadListGrouping,
+  ThreadListSource,
+  ThreadListSourceQuery,
   ThreadRowAction,
 } from './components/conversation/thread-list/thread-list.class.js';
 export type {
@@ -1399,6 +1505,7 @@ export type {
 export { DEFAULT_WIDGET_TYPE_REGISTRY } from './components/conversation/widget-renderer/default-registry.js';
 export { FLOW_PALETTE_MIME_TYPE } from './components/data/flow-canvas/flow-canvas.class.js';
 export type {
+  FlowCanvasSource,
   FlowHandle,
   FlowNode,
   FlowEdge,
@@ -1429,6 +1536,8 @@ export type {
   LyraEntityChipEventMap,
 } from './components/retrieval/entity-chip/entity-chip.class.js';
 export type {
+  NeighborListSource,
+  NeighborSourceDirection,
   LyraNeighborRow,
   LyraNeighborListEventMap,
 } from './components/retrieval/neighbor-list/neighbor-list.class.js';
@@ -1456,6 +1565,7 @@ export type {
 } from './components/retrieval/provenance-panel/provenance-panel.class.js';
 export type {
   LyraTopic,
+  MindMapSource,
   LyraMindMapEventMap,
 } from './components/retrieval/mind-map/mind-map.class.js';
 export type {
@@ -1519,6 +1629,8 @@ export type {
   LibraryDocumentFreshness,
   LibraryDocument,
   LibraryDocumentSortKey,
+  DocumentLibrarySource,
+  DocumentLibrarySourceQuery,
   DocumentLibraryFilterChangeDetail,
   DocumentLibrarySortRequestDetail,
   DocumentLibrarySortCommitDetail,
@@ -1550,10 +1662,14 @@ export type {
 } from './components/retrieval/entity-dossier/entity-dossier.class.js';
 export type {
   EvalExample,
+  EvalDatasetSource,
+  EvalDatasetSourceQuery,
   LyraEvalDatasetEventMap,
 } from './components/agent-tools/eval-dataset/eval-dataset.class.js';
 export type {
   EvalRunResult,
+  EvalResultSource,
+  EvalResultSourceQuery,
   LyraEvalResultEventMap,
 } from './components/agent-tools/eval-result/eval-result.class.js';
 export type {
@@ -1616,6 +1732,8 @@ export type {
 export type {
   IngestionStage,
   IngestionQueueItem,
+  IngestionQueueSource,
+  IngestionQueueSourceQuery,
   IngestionRetryEventDetail,
   IngestionCancelEventDetail,
   LyraIngestionQueueEventMap,
@@ -1625,6 +1743,9 @@ export type {
   KnowledgeSourceIndexingHealth,
   KnowledgeSourcePermission,
   KnowledgeSource,
+  KnowledgeBaseSource,
+  KnowledgeBaseSourceQuery,
+  KnowledgeBaseSourceSummary,
   LyraKnowledgeBaseEventMap,
 } from './components/retrieval/knowledge-base/knowledge-base.class.js';
 export type {
@@ -1650,6 +1771,7 @@ export type {
 export type {
   LyraKnowledgeGraphEntityDetails,
   KnowledgeGraphHighlight,
+  KnowledgeGraphExplorerSource,
   LyraKnowledgeGraphExplorerEventMap,
 } from './components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js';
 export type {
@@ -1729,15 +1851,19 @@ export type {
   LyraSubagentPanelEventMap,
 } from './components/agent-tools/subagent-panel/subagent-panel.class.js';
 export type {
+  SpreadsheetViewerWorkbook,
+  SpreadsheetViewerSource,
   LyraSpreadsheetViewerEventMap,
 } from './components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.js';
 export * from './components/viewers/spreadsheet-viewer/spreadsheet-loader.js';
 export type {
   LyraCsvViewerEventMap,
+  CsvViewerSource,
 } from './components/viewers/csv-viewer/csv-viewer.class.js';
 export type {
   LyraXmlViewerEventMap,
   LyraXmlViewerSource,
+  XmlViewerTreeSource,
 } from './components/viewers/xml-viewer/xml-viewer.class.js';
 export type {
   DocxHeadingItem,
@@ -1782,7 +1908,7 @@ export type { LyraNumberInputEventMap } from './components/forms/input/number-in
 export type { LyraTimeInputEventMap } from './components/forms/input/time-input.class.js';
 export type { LyraRadioEventMap } from './components/forms/radio/radio.class.js';
 export type { LyraRadioGroupEventMap } from './components/forms/radio/radio-group.class.js';
-export type { LyraJsonViewerEventMap } from './components/utility/json-viewer/json-viewer.class.js';
+export type { LyraJsonViewerEventMap, JsonViewerTreeSource } from './components/utility/json-viewer/json-viewer.class.js';
 export type { LyraLiteChartEventMap } from './components/charts/chart/lite-chart.class.js';
 export type { LyraMapEventMap } from './components/media/map/map.class.js';
 export type {

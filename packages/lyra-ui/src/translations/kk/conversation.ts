@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Сөйлесулер әлі жоқ',
   agentWorkspaceLabel: 'Агент жұмыс кеңістігі',
+  agentWorkspaceInputLimit: '{collection}: {total} жазбаның {count} жазбасы ғана сақталады.',
   agentWorkspaceConversation: 'Сөйлесу',
   agentWorkspaceDetails: 'Іске қосылым мәліметтері',
   agentWorkspaceRun: 'Агент іске қосылымы',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Осы бөлікті қайталау',
   promptQueueLabel: 'Кезектегі промпттар',
   promptQueueEmpty: 'Кезекте промпттар жоқ',
+  promptQueueInputLimit: 'Енгізу шегіне жеткендіктен, кейбір кезектегі промпттар немесе тіркемелер алынып тасталды.',
+  promptQueueAttachmentLimit: 'Сақталған {total} тіркеменің {shown} тіркемесі көрсетіліп тұр.',
   promptQueueSendNow: 'Қазір жіберу',
   selectionToolbarLabel: 'Таңдау әрекеттері',
   selectionAsk: 'Сұрау',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} токен',
     other: '{count} токен',
   },
+  threadListInputLimit: 'Енгізу шегіне жеткендіктен, кейбір әңгіме тізбектері алынып тасталды.',
+  promptInputInputLimit: 'Енгізу шегіне жеткендіктен, кейбір ұсыныстар немесе каталог жазбалары алынып тасталды.',
+  transcriptFeedInputLimit: '{total} жазбаның ең жаңа {count} жазбасы ғана сақталады.',
+  codeBlockHighlightLimit: 'Ұзын код синтаксисті ерекшелеусіз көрсетіледі.',
 };
 
 registerLyraLocale('kk', strings);

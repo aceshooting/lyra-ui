@@ -64,3 +64,18 @@ export const Default: Story = {
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;">${renderComparison()}</div>`,
 };
+
+/** Every admitted set is reachable; overlap covers the current eight-column page. */
+export const PagedComparison: Story = {
+  render: () => html`<lr-retrieval-compare .sets=${Array.from({ length: 24 }, (_, index) => ({
+    id: `set-${index}`, label: `Run ${index + 1}`,
+    chunks: Array.from({ length: 120 }, (_, rank) => ({ id: `c${rank}`, text: `Result ${rank + 1}`, score: 1,
+      source: { id: `s${rank}`, name: `Source ${rank + 1}` } })),
+  }))} .topK=${200}></lr-retrieval-compare>`,
+};
+
+export const InputLimit: Story = {
+  render: () => html`<lr-retrieval-compare .sets=${Array.from({ length: 10_001 }, (_, index) => ({
+    id: `set-${index}`, label: `Run ${index + 1}`, chunks: [],
+  }))}></lr-retrieval-compare>`,
+};

@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Valjani uzorci u cijeloj distribuciji: {validCount}; ispod prikazanih razreda: {belowCount}, iznad njih: {aboveCount}; nevaljani uzorci: {invalidCount}.',
+  histogramDistributionRange: 'Opaženi raspon uzoraka: od {min} do {max}.',
   chartCategory: 'Kategorija',
   chartTotal: 'Ukupno',
   chartAxisTotal: 'Ukupno ({axis})',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, polumjer {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'rastući',
-  chartTrendDecreasing: 'padajući',
-  chartTrendFlat: 'stabilan',
-  chartSummary: '{label}: broj vrijednosti {count}, raspon od {min} do {max}, trend: {trend}',
   chartSeriesNoData: '{label}: nema podataka',
   chartSummaryWithData: 'Grafikon ({type}). {summaries}.',
   chartSummaryEmpty: 'Grafikon ({type}) bez podataka.',
-  chartSummarySeparator: '. ',
   chartData: 'Podaci grafikona',
   chartRenderUnavailable: 'Iscrtavanje grafikona nije dostupno.',
+  chartPreparedSummaryZoom: 'Zumiranje prikazuje pripremljeni sažetak; detaljniji prikaz putem indeksa nije dostupan.',
+  chartSpatialSummary: 'Cijeli izvor: {count} točaka, x od {minX} do {maxX}, y od {minY} do {maxY}. Prikaz: {matchedCount} točaka, x od {viewMinX} do {viewMaxX}, y od {viewMinY} do {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Polumjer u cijelom izvoru: od {min} do {max}.',
+  chartSpatialDensityLegend: 'Gustoća uključuje sve serije; vidljivost serija utječe samo na preklopljene točke.',
+  chartSpatialPoint: '{series}: {id}, položaj u izvoru {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Područje gustoće: {count} točaka, x od {minX} do {maxX}, y od {minY} do {maxY}.',
+  chartSpatialHidden: ' (serija skrivena)',
   chartDataSampled: 'Grafikon i generirana tablica podataka prikazuju uzorak od najviše 1.000 zapisa. Za pristup svim podacima grafikona navedite prilagođenu tablicu podataka.',
   chartPlotSampled: 'Grafikon prikazuje uzorak od najviše 1.000 zapisa; tablica podataka navodi sve podatke.',
   chartZoomUnavailable: 'Zumiranje nije dostupno, ali osnovni grafikon ostaje dostupan.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} od {total})',
   chartMissingLibrary: 'Za prikaz grafikona ova komponenta zahtijeva instaliran izborni paket „chart.js”.',
   boxPlotMissingLibrary: 'Za prikaz kutijastih dijagrama ova komponenta zahtijeva instaliran izborni paket za kutijaste dijagrame.',
+  chartInputLimit: 'Neki podaci grafikona izostavljeni su jer je dosegnuto ograničenje ulaza. Za prikaz izostavljenih vrijednosti dostavite manji ili unaprijed agregirani skup podataka.',
+  histogramInputLimit: 'Zadržava se samo najnovijih 10.000 uzoraka. Za prikaz veće distribucije dostavite komponenti lr-chart brojeve uzoraka unaprijed grupirane u razrede.',
 };
 
 registerLyraLocale('hr', strings);

@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: 'Nog {count} suggestie',
     other: '{count} meer suggesties',
   },
+  mentionInputLimit: 'Alleen de eerste 10.000 kandidaten voor een vermelding zijn beschikbaar.',
+  diffViewHighlightLimit: 'Lange code wordt zonder syntaxiskleuring getoond.',
 };
 
 registerLyraLocale('nl', strings);

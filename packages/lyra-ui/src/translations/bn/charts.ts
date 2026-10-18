@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'সম্পূর্ণ বণ্টনে {validCount}টি বৈধ নমুনা; দেখানো ব্যবধানগুলির নিচে {belowCount}টি এবং উপরে {aboveCount}টি; {invalidCount}টি অবৈধ নমুনা।',
+  histogramDistributionRange: 'পর্যবেক্ষিত নমুনার পরিসর: {min} থেকে {max}।',
   chartCategory: 'বিভাগ',
   chartTotal: 'মোট',
   chartAxisTotal: '{axis} মোট',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ব্যাসার্ধ {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'ঊর্ধ্বমুখী',
-  chartTrendDecreasing: 'নিম্নমুখী',
-  chartTrendFlat: 'সমতল',
-  chartSummary: '{label}: {count}টি মান, পরিসর {min} থেকে {max}, প্রবণতা {trend}',
   chartSeriesNoData: '{label}: কোনো ডেটা নেই',
   chartSummaryWithData: '{type} চার্ট। {summaries}।',
   chartSummaryEmpty: 'কোনো ডেটা ছাড়া {type} চার্ট।',
-  chartSummarySeparator: '. ',
   chartData: 'চার্টের ডেটা',
   chartRenderUnavailable: 'চার্ট প্রদর্শন উপলব্ধ নেই।',
+  chartPreparedSummaryZoom: 'জুম করলে প্রস্তুত করা সারাংশই দেখানো হয়; সূচি ব্যবহার করে আরও বিশদ তথ্য পাওয়া যায় না।',
+  chartSpatialSummary: 'সম্পূর্ণ উৎস: {count}টি বিন্দু, x {minX} থেকে {maxX}, y {minY} থেকে {maxY}। দৃশ্য: {matchedCount}টি বিন্দু, x {viewMinX} থেকে {viewMaxX}, y {viewMinY} থেকে {viewMaxY}।',
+  chartSpatialRadiusDomain: 'সম্পূর্ণ উৎসের ব্যাসার্ধ: {min} থেকে {max}।',
+  chartSpatialDensityLegend: 'ঘনত্বে সব সিরিজ অন্তর্ভুক্ত; সিরিজের দৃশ্যমানতা শুধু বিন্দুর উপরিস্তরগুলিকে প্রভাবিত করে।',
+  chartSpatialPoint: '{series}: {id}, উৎসে অবস্থান {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'ঘনত্বের অঞ্চল: {count}টি বিন্দু, x {minX} থেকে {maxX}, y {minY} থেকে {maxY}।',
+  chartSpatialHidden: ' (সিরিজ লুকানো)',
   chartDataSampled: 'চার্ট এবং তৈরি করা ডেটা টেবিলে সর্বোচ্চ ১,০০০টি রেকর্ডের নমুনা দেখানো হয়। চার্টের সব ডেটা পেতে একটি কাস্টম ডেটা টেবিল দিন।',
   chartPlotSampled: 'চার্টে সর্বোচ্চ ১,০০০টি রেকর্ডের নমুনা দেখানো হয়; ডেটা টেবিলে সব ডেটা রয়েছে।',
   chartZoomUnavailable: 'জুম করা যাচ্ছে না, তবে মূল চার্টটি ব্যবহার করা যাবে।',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total}টির মধ্যে {index})',
   chartMissingLibrary: 'চার্ট দেখাতে এই কম্পোনেন্টের ঐচ্ছিক "chart.js" প্যাকেজটি ইনস্টল থাকা প্রয়োজন।',
   boxPlotMissingLibrary: 'বক্স প্লট দেখাতে এই কম্পোনেন্টের ঐচ্ছিক বক্স-প্লট চার্ট প্যাকেজটি ইনস্টল থাকা প্রয়োজন।',
+  chartInputLimit: 'ইনপুটের সীমা পূর্ণ হওয়ায় চার্টের কিছু তথ্য বাদ দেওয়া হয়েছে। বাদ পড়া মানগুলি দেখাতে আরও ছোট বা আগে থেকে একত্রিত করা ডেটাসেট দিন।',
+  histogramInputLimit: 'শুধু সবচেয়ে সাম্প্রতিক 10,000টি নমুনা রাখা হয়। আরও বড় বণ্টন দেখাতে আগে থেকে ব্যবধান অনুযায়ী গোষ্ঠীবদ্ধ সংখ্যা lr-chart-এ দিন।',
 };
 
 registerLyraLocale('bn', strings);

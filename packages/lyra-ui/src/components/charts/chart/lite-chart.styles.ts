@@ -189,8 +189,9 @@ export const styles = css`
     overflow-x: auto;
     overflow-y: hidden;
   }
+  .notices { grid-area: notice; }
+  [part='limit'],
   [part='data-truncation'] {
-    grid-area: notice;
     margin: 0;
     padding: var(--lr-space-xs);
     color: var(--lr-color-warning);

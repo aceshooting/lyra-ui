@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Тек алғашқы {count} тест нәтижесі көрсетіледі.',
   toolTimelineLimit: 'Ең көбі {count} құрал шақыруы көрсетіледі.',
   toolSelectLimit: 'Тек алғашқы {count} құрал көрсетіледі.',
+  testResultsInputTooLarge: 'Сынақ нәтижелерінің мәліметтері көрсету шегінен асады.',
   toolCall: 'Құрал шақыруы',
   maximize: 'Барынша үлкейту',
   promptStudioVariableName: 'Айнымалы {index} атауы',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Алғашқы {count} файл ғана көрсетіледі.',
   taskListLimit: 'Алғашқы {count} тапсырма ғана көрсетіледі.',
   evalDatasetLimit: 'Тек алғашқы {count} мысал көрсетіледі.',
+  activityFeedInputLimit: '{total} жазбаның ең жаңа {count} жазбасы ғана сақталады.',
+  spanWaterfallLimit: '{total} бақылау аралығының {shown} аралығы көрсетілген.',
+  toolTimelineInputLimit: '{total} құрал шақыруының ең жаңа {count} шақыруы ғана сақталады.',
 };
 
 registerLyraLocale('kk', strings);

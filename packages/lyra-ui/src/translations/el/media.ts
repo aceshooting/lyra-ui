@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Εικόνα {index} από {total}',
   playWithContext: 'Αναπαραγωγή {name}',
   pauseWithContext: 'Παύση {name}',
+  avPlayerWaveformUnavailable: 'Τα δεδομένα κυματομορφής δεν είναι διαθέσιμα ή δεν αντιστοιχούν σε αυτό το μέσο.',
+  avPlayerTranscriptUnavailable: 'Τα δεδομένα απομαγνητοφώνησης δεν είναι διαθέσιμα.',
   dropzoneReleaseToAdd: 'Αφήστε για να προσθέσετε το αρχείο.',
   dropzoneRejectedType: 'Αυτός ο τύπος αρχείου δεν γίνεται αποδεκτός.',
   attachmentAdd: 'Προσθήκη συνημμένου',

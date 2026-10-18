@@ -3,6 +3,13 @@ import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
+  [part='input-limit'], [part='slices-limit'] {
+    margin: 0;
+    font-size: var(--lr-font-size-s);
+    color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
+  }
+
   :host {
     display: block;
     container-type: inline-size;

@@ -23,6 +23,11 @@ async function settled(picker: LyraCurrencyPicker): Promise<void> {
   await picker.updateComplete;
 }
 
+async function mountOptions(picker: LyraCurrencyPicker): Promise<void> {
+  select(picker).open = true;
+  await waitUntil(() => select(picker).shadowRoot!.querySelector('[part~="option"]') !== null);
+}
+
 describe('lr-currency-picker composed field ownership', () => {
   it('starts with one empty external form value and no inferred currency', async () => {
     const form = await fixture<HTMLFormElement>(html`<form>
@@ -43,6 +48,7 @@ describe('lr-currency-picker composed field ownership', () => {
     </form>`);
     const picker = form.querySelector<LyraCurrencyPicker>('lr-currency-picker')!;
     await settled(picker);
+    await mountOptions(picker);
     const events: string[] = [];
     const details: unknown[] = [];
     for (const type of ['input', 'lr-input', 'change', 'lr-change']) {
@@ -288,6 +294,7 @@ describe('lr-currency-picker composed field ownership', () => {
     </form>`);
     const picker = form.querySelector<LyraCurrencyPicker>('lr-currency-picker')!;
     await settled(picker);
+    await mountOptions(picker);
     const button = form.querySelector<HTMLButtonElement>('button')!;
     await focusByKeyboard(button);
     let aliases = 0;
@@ -387,6 +394,7 @@ describe('lr-currency-picker composed field ownership', () => {
   it('uses the pinned default catalog without selecting a currency and restores it after an empty override', async () => {
     const picker = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker></lr-currency-picker>`);
     await settled(picker);
+    await mountOptions(picker);
     expect(select(picker).querySelectorAll('lr-option').length).to.equal(176);
     expect(picker.value).to.equal('');
     expect(picker.currencies).to.equal(undefined);
@@ -408,6 +416,7 @@ describe('lr-currency-picker composed field ownership', () => {
     picker.currencies = [...source, accessor] as typeof source;
     source[0]!.label = 'Changed';
     await settled(picker);
+    await mountOptions(picker);
     expect(getterCalls).to.equal(0);
     expect(picker.currencies).to.deep.equal([{ code: 'EUR', label: 'Original', symbol: '€' }]);
     expect(Object.isFrozen(picker.currencies)).to.equal(true);
@@ -422,6 +431,7 @@ describe('lr-currency-picker composed field ownership', () => {
     const picker = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker locale="fr"
       .currencies=${[{ code: 'EUR' }, { code: 'USD', label: '', symbol: '' }]}></lr-currency-picker>`);
     await settled(picker);
+    await mountOptions(picker);
     const row = select(picker).querySelector('lr-option') as HTMLElement & { sub: string };
     expect(row.sub).to.include(new Intl.DisplayNames('fr', { type: 'currency' }).of('EUR'));
     const custom = select(picker).querySelectorAll('lr-option')[1] as HTMLElement & { sub: string };
@@ -453,7 +463,7 @@ describe('lr-currency-picker composed field ownership', () => {
       expect(calls).to.equal(8);
       picker.currencies = ['EUR'];
       await settled(picker);
-      expect(calls).to.equal(10);
+      expect(calls).to.equal(8);
     } finally {
       Intl.NumberFormat.prototype.formatToParts = original;
     }

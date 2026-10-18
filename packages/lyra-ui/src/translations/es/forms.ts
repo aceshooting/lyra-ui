@@ -118,6 +118,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Lápiz abajo',
   signaturePadPenUp: 'Lápiz arriba',
+  localePickerInputLimit: 'Solo están disponibles las primeras 512 entradas de configuración regional.',
+  emojiPickerInputLimit: 'Se omitieron algunos datos de emojis porque se alcanzó un límite de entrada.',
 };
 
 registerLyraLocale('es', strings);

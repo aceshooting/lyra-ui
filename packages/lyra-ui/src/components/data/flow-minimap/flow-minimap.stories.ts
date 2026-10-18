@@ -175,3 +175,35 @@ export const HugeCanvasViewportFloor: Story = {
     </div>
   `,
 };
+
+
+export const SourceOverview: Story = {
+  name: 'Source aggregate overview',
+  parameters: { docs: { description: { story: 'Source mode shows provider aggregate bins within exact global bounds. The viewport remains interactive; a missing overview displays an unavailable message.' } } },
+  render: () => {
+    const world = { x: -1000, y: -500, width: 2000, height: 1000 };
+    const values: FlowNode[] = Array.from({ length: 4 }, (_, index) => ({ id: String(index), position: { x: -800 + index * 400, y: -200 + index * 100 }, data: { label: `Step ${index + 1}` } }));
+    const row = (value: FlowNode) => ({ key: `node:${value.id}`, order: Number(value.id), value: { kind: 'node' as const, value } });
+    const source: import('../../../data-sources.js').LyraGraphSource<FlowNode, FlowEdge> = {
+      revision: 1,
+      records: {
+        revision: 1,
+        query: async ({ query, page, pageSize }) => {
+          const matches = query.kind === 'nodes' ? values.filter(value => !query.search || value.id.includes(query.search)) : [];
+          return { rows: matches.slice(page * pageSize, (page + 1) * pageSize).map(row), total: matches.length, summary: { nodes: 4, edges: 0 } };
+        },
+        lookup: async keys => values.filter(value => keys.includes(`node:${value.id}`)).map(row),
+        locate: async (key, query) => {
+          const index = query.kind === 'nodes' ? values.filter(value => !query.search || value.id.includes(query.search)).findIndex(value => `node:${value.id}` === key) : -1;
+          return index < 0 ? null : index;
+        },
+      },
+      scene: async () => ({ nodes: values.map(value => ({ key: `node:${value.id}`, value, position: value.position! })), edges: [], total: { nodes: 4, edges: 0 }, coverage: 'complete', worldBounds: world }),
+      overview: async () => ({ bounds: world, bins: [
+        { bounds: { x: -1000, y: -500, width: 1000, height: 1000 }, count: 2 },
+        { bounds: { x: 0, y: -500, width: 1000, height: 1000 }, count: 2 },
+      ] }),
+    };
+    return html`<lr-flow-canvas style="width:100%;height:24rem" .graphSource=${source}><lr-flow-minimap slot="bottom-end"></lr-flow-minimap></lr-flow-canvas>`;
+  },
+};

@@ -41,9 +41,16 @@ export interface LyraCountryEntry {
 }
 export type LyraCountryCatalog = readonly string[] | readonly LyraCountryEntry[];
 
+const normalizeCountryCatalogCode = (code: string) => code.trim().toUpperCase();
+const acceptsCountryCatalogCode = (code: string) => /^[A-Z]{2}$/.test(code);
+/** @internal Shared admission rules for picker-owned and public country catalogs. */
+export function snapshotCountryCatalog(source: unknown): readonly LyraCountryEntry[] | undefined {
+  return snapshotSelectionCatalog(source, normalizeCountryCatalogCode, acceptsCountryCatalogCode);
+}
+
 /** Display-only localization; explicit caller names and ordering remain authoritative. */
 export function resolveCountryNames(countries: LyraCountryCatalog, locale: string): readonly SelectionCatalogRow[] {
-  const entries = snapshotSelectionCatalog(countries, (code) => code.trim().toUpperCase(), (code) => /^[A-Z]{2}$/.test(code)) ?? [];
+  const entries = snapshotCountryCatalog(countries) ?? [];
   return Object.freeze(entries.map((entry) => {
     let name = entry.code;
     try { name = getDisplayNames(locale, { type: 'region', fallback: 'code' }).of(entry.code) ?? entry.code; }

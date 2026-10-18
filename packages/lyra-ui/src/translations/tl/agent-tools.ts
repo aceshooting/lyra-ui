@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Ang unang {count} resulta ng test lang ang ipinapakita.',
   toolTimelineLimit: 'Hanggang {count} tawag ng tool lang ang ipinapakita.',
   toolSelectLimit: 'Ang unang {count} tool lang ang ipinapakita.',
+  testResultsInputTooLarge: 'Lampas sa limitasyon ng pagpapakita ang mga detalye ng resulta ng pagsubok.',
   toolCall: 'Tawag ng tool',
   maximize: 'Palakihin',
   promptStudioVariableName: 'Pangalan ng variable {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Ang unang {count} (na) file lamang ang ipinapakita.',
   taskListLimit: 'Tanging ang unang {count} mga gawain ang ipinapakita.',
   evalDatasetLimit: 'Ang unang {count} halimbawa lang ang ipinapakita.',
+  activityFeedInputLimit: 'Ang pinakabagong {count} sa {total} tala lang ang pinananatili.',
+  spanWaterfallLimit: 'Ipinapakita ang {shown} sa {total} span.',
+  toolTimelineInputLimit: 'Ang pinakabagong {count} lang sa {total} tawag sa tool ang pinapanatili.',
 };
 
 registerLyraLocale('tl', strings);

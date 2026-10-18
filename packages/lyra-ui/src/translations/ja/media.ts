@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{total} 枚中 {index} 枚目の画像',
   playWithContext: '{name} を再生',
   pauseWithContext: '{name} を一時停止',
+  avPlayerWaveformUnavailable: '波形データを利用できないか、このメディアと一致しません。',
+  avPlayerTranscriptUnavailable: '文字起こしデータは利用できません。',
   dropzoneReleaseToAdd: 'ドロップしてファイルを追加します。',
   dropzoneRejectedType: 'このファイル形式は受け付けられません。',
   attachmentAdd: '添付ファイルを追加',

@@ -155,20 +155,63 @@ export function matchesFilter<Row>(
   );
 }
 
+/** A lazy folded cell corpus; callers replace it when canonical rows or locale change. */
+export function textFilterCorpus<Row>(locale: string): (column: DataGridColumn<Row>, row: Row) => string {
+  const intlLocale = resolveIntlLocale(locale);
+  const columns = new Map<DataGridColumn<Row>, Map<Row, string>>();
+  return (column, row) => {
+    let cells = columns.get(column);
+    if (!cells) { cells = new Map(); columns.set(column, cells); }
+    let text = cells.get(row);
+    if (text === undefined) {
+      text = comparableText(columnValue(column, row)).toLocaleLowerCase(intlLocale);
+      cells.set(row, text);
+    }
+    return text;
+  };
+}
+
 export function filterRows<Row>(
   rows: readonly Row[],
   columns: readonly DataGridColumn<Row>[],
   filters: readonly DataGridFilter[],
   locale: string,
+  textFor?: (column: DataGridColumn<Row>, row: Row) => string,
 ): Row[] {
   if (filters.length === 0) return [...rows];
   const byId = new Map(columns.map((column, index) => [columnId(column, index), column]));
-  return rows.filter((row) =>
-    filters.every((filter) => {
-      const column = byId.get(filter.id);
-      return !column || matchesFilter(row, column, filter.value, locale);
-    }),
-  );
+  const predicates = filters.flatMap(filter => {
+    const column = byId.get(filter.id);
+    if (!column) return [];
+    if (!column.filterFn && (column.filterType === undefined || column.filterType === 'text')) {
+      if (valuesFromFilter(filter.value).length === 0) return [(_row: Row) => true];
+      const intlLocale = resolveIntlLocale(locale);
+      const needle = comparableText(filter.value).toLocaleLowerCase(intlLocale);
+      return [(row: Row) => (textFor ? textFor(column, row) : comparableText(columnValue(column, row)).toLocaleLowerCase(intlLocale)).includes(needle)];
+    }
+    if (!column.filterFn && (column.filterType === 'number-range' || column.filterType === 'date-range') && Array.isArray(filter.value)) {
+      const date = column.filterType === 'date-range';
+      const read = date ? (value: unknown) => localCalendarDay(value) ?? numericDate(value) : finiteValue;
+      const start = read(filter.value[0]);
+      let end = read(filter.value[1]);
+      if (date && end !== undefined) {
+        const dayEnd = new Date(end); dayEnd.setHours(23, 59, 59, 999); end = dayEnd.getTime();
+      }
+      return [(row: Row) => {
+        const value = read(columnValue(column, row));
+        return value !== undefined && (start === undefined || value >= start) && (end === undefined || value <= end);
+      }];
+    }
+    return [(row: Row) => matchesFilter(row, column, filter.value, locale)];
+  });
+  return rows.filter(row => predicates.every(predicate => predicate(row)));
+}
+
+/** Per-column strings preserve matching boundaries between adjacent cells. */
+export function searchHaystacks<Row>(rows: readonly Row[], columns: readonly DataGridColumn<Row>[], locale: string): ReadonlyMap<Row, readonly string[]> {
+  const intlLocale = resolveIntlLocale(locale);
+  const searchable = columns.filter(column => (column.field || column.value) && column.searchable !== false);
+  return new Map(rows.map(row => [row, searchable.map(column => comparableText(columnValue(column, row)).toLocaleLowerCase(intlLocale))]));
 }
 
 export function searchRows<Row>(
@@ -177,12 +220,14 @@ export function searchRows<Row>(
   term: string,
   locale: string,
   searchFn: ((value: unknown, term: string, row: Row) => boolean) | null,
+  haystacks?: ReadonlyMap<Row, readonly string[]>,
 ): Row[] {
   const intlLocale = resolveIntlLocale(locale);
   const needle = term.trim();
   if (!needle) return [...rows];
   const searchable = columns.filter((column) => (column.field || column.value) && column.searchable !== false);
   const normalizedNeedle = searchFn ? '' : needle.toLocaleLowerCase(intlLocale);
+  if (!searchFn && haystacks) return rows.filter(row => haystacks.get(row)?.some(value => value.includes(normalizedNeedle)));
   return rows.filter((row) =>
     searchable.some((column) => {
       const value = columnValue(column, row);

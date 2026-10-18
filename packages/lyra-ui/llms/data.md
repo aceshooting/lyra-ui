@@ -7,6 +7,13 @@ both dimensions through the aspect ratio.
 An empty or removed `data` attribute uses the `values` collection. With no usable fallback samples,
 no trend path is rendered. Attribute removal preserves `null` property readback, and supplying later
 space-separated samples restores the attribute-driven path.
+Derived values reuse the input array identity. Reassign after changes, or call `requestUpdate()`
+after mutating the current array, to refresh the projection.
+Large inputs retain at most 500 plotted samples, using the first and last finite samples plus
+bucket minima and maxima in source order. The accessible summary reports the full finite count
+and actual final value. Admission scans the current array or numeric string once without keeping
+a second full numeric array; this existing input path still performs synchronous work proportional
+to input length. Invalid samples are omitted, so plotted positions refer to finite-sample order.
 
 **Properties:**
 
@@ -35,13 +42,38 @@ space-separated samples restores the attribute-driven path.
   (including an intentional empty value), then nonempty `label`, then a nonempty programmatic
   `accessibleLabel`, then the localized generated summary
 
+**Prepared whole-source input:**
+
+- `preparedData: LyraPreparedSeriesData | null = null` (attribute: false) — accepts exactly one
+  ordered series with at most 500 semantic samples. While non-null it takes precedence over
+  `data` and `values`, without reading either legacy input. Clearing it restores the legacy route.
+  Invalid, accessor-backed, multiseries or oversized descriptors show localized unavailable text
+  through `status`; they are never resampled or replaced by the raw fallback.
+- Geometry uses original numeric x positions against the full `xDomain`, mirrored for RTL, and
+  the full `yDomain`; explicit `min`/`max` still override the y scale. Source-index order is kept
+  even when x is nonmonotonic. `breakBefore` splits every curve mode and each fill, so gaps are
+  never joined. Valid empty/all-invalid input remains an empty graphic.
+- The generated accessible summary reports full valid/invalid counts, displayed sample count,
+  full y domain and endpoint trend. The naming precedence above still applies.
+- Assignment, including the same reference, or explicit keyless `requestUpdate()` recaptures
+  mutable descriptors. Named presentation updates reuse the bounded capture. Disconnect releases
+  captured geometry; reconnect captures it again. The property still retains the caller's input
+  and its closures until replaced or cleared.
+
+Prepare data in host code with `prepareLyraSeriesData`, imported from
+`@aceshooting/lyra-ui/utilities/data-preparation.js` (the same module exports
+`LyraPreparedSeriesData`). Preparation scans all source positions in bounded yielding chunks and
+accepts an `AbortSignal`; the host owns that work, cancellation and assignment of the current
+result. Sparkline never calls `getPoint` or `queryRange` and starts no asynchronous source request.
+It adds no table, CSV or source-selection event.
+
 **Events:** none.
 
 **Slots:** none.
 
 **CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
 area path for solid/gradient appearance, `line` is the stroke path, and the additive `bar` is each
-extension-mode rectangle.
+extension-mode rectangle. `status` is the visible invalid-prepared-input message.
 
 **Themeable custom properties:** `--fill-color` (area/gradient stop color), `--line-color` (stroke
 color), and `--line-width` (stroke width). Each reads through the live CSS cascade; line/fill
@@ -70,15 +102,14 @@ No canvas bridge or manual refresh is needed.
 - flat data (every value equal, so the auto-computed range spans zero) now renders a centered
   midline/mid-height bars instead of collapsing every point to the bottom edge, and a single-value
   additive `values` series renders a visible flat line. Mirrored `data` deliberately requires two
-  values. **Every** rendering mode
-  (`mark="line"` with any appearance, or `mark="bar"`) decimates a `values` array past 500 points
-  down to at most 500 plotted
-  samples — evenly sampled by index, always keeping the first and last value exactly, not
-  aggregated/averaged. `mark="bar"` caps at 500 rendered `<rect>`s directly; line marks cap the
-  point count baked into the single `<path>`'s `d` string instead (an uncapped path string also
-  grows unbounded, even though the element count stays at one `<path>`). Auto `min`/`max` is still
-  scanned from the _full_ pre-decimation `values` array, so a real extreme value that decimation
-  happens to drop can't silently narrow the rendered scale.
+  values. Every legacy rendering mode (`mark="line"` with any appearance, or `mark="bar"`)
+  retains at most 500 finite samples from `values` or numeric `data`: the first and last finite
+  samples plus each source bucket's minimum and maximum, deduplicated and kept in source order.
+  Buckets follow array positions or token offsets in the source string; plotted x positions follow
+  finite-sample order. Values are never averaged, and global extrema are retained, so the automatic
+  scale covers the full finite input range. `mark="bar"` renders at most 500 `<rect>`s; line marks
+  bound the sample count in their path geometry. Prepared input is already bounded and is not
+  reduced again.
 - Point order mirrors under RTL while the numeric sample order remains unchanged. There are no
   animations, so reduced-motion mode needs no alternate timing branch.
 - **9.0 migration:** rename additive `type="bar"`/`"line"` to `mark="bar"`/`"line"`. Replace
@@ -287,18 +318,34 @@ only that page plus the header. In server mode, `total` still drives `pageCount`
 does not inflate `aria-rowcount` while `aria-rowindex` restarts for each loaded page. Treat these
 ARIA values as page-local positions rather than as the dataset-wide total.
 
+Row details remain virtualized as part of their owning row's measured block. `--max-height: none`
+still opts out of row virtualization. Wide grids mount columns intersecting the inline viewport
+plus overscan, pinned columns, and the focused column; ARIA column positions refer to the complete
+visible column sequence. Above 50 columns, CSS-resolved widths stay stable while scrolling; newly
+mounted content fits those widths. Column definitions/widths, row projection, allocation, font
+changes and explicit refresh recalculate them. Header, body and footer share these tracks.
+Search and text filters reuse folded cells, sorting is independent of query changes, and
+footers/aggregates reuse results until their row/column inputs change. Call `requestUpdate()` after
+changing borrowed row content or callback-dependent external state in place.
+
 **Properties:**
 
 - `appearance: 'outlined' | 'plain' = 'outlined'` (`appearance`, reflected).
 - `childRows: string | ((row) => readonly Row[] | undefined) | null = null` (`child-rows`) — dot path or
   callback for nested rows. Tree sorting stays within each parent and paging keeps a subtree with
-  its top-level parent. Projection is iterative, cycle-safe, and bounded to 10,000 total rows and
+  its top-level parent. Projection is iterative, cycle-safe, and bounded to `maxRows` total rows and
   64 descendant levels; exceeding a budget renders the localized `tree-limit` notice.
 - `columnOrder: readonly string[] = []` (JS-only) — empty preserves declaration order.
 - `columns: readonly DataGridColumn<Row>[] = []` (JS-only).
 - `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
-  Flat input beyond 10,000 rows shows the localized `row-limit` notice; nested input retains its
+  Flat input beyond `maxRows` rows shows the localized `row-limit` notice; nested input retains its
   `tree-limit` notice when the node or depth budget is reached.
+- `maxRows: number = 10000` (`max-rows`) — client-row and tree-descendant admission limit,
+  normalized to 1–100,000. Set it before assigning `data`; after raising it, reassign the source
+  array to restore excluded rows. Admission reads at most `maxRows` source positions through own
+  data descriptors while preserving row object identities. Tree depth remains bounded to 64
+  descendant levels, and column definitions retain at most 10,000 entries. Controlled selected
+  and expanded keys remain independent of this row-admission cap.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
 - `error: boolean = false` (`error`, reflected) — replaces the body row with the failed-load
@@ -313,7 +360,7 @@ ARIA values as page-local positions rather than as the dataset-wide total.
   The mirrored `expandedKeys` spelling remains a compatibility alias for this same state.
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
 - `filteredCount: number` (read-only, JS-only) — matching client rows before paging.
-- `dataTruncated: boolean` (read-only, JS-only) — true when projection drops input over 10,000 rows
+- `dataTruncated: boolean` (read-only, JS-only) — true when projection drops input over `maxRows` rows
   or 64 nesting levels; controlled `selectedRowKeys` remain because omitted keys may exist.
 - `filterFromLeafRows: boolean = false` (`filter-from-leaf-rows`) — retains ancestors of matching
   tree descendants.
@@ -422,9 +469,11 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   group/tree/detail display rows, and scrolls with `align: 'start' | 'center' | 'end'`. A row hidden
   in a collapsed branch is a no-op.
 
-**Server mode:** `dataSource` receives `{ sort, filters, search, page, pageSize, signal }`. A newer
-request aborts and supersedes the previous one; rejected requests keep prior rows and emit
-`lr-data-error`. Filter/search requests use `filterDebounce`; sorting and paging load immediately.
+**Server mode:** `dataSource` receives `{ sort, filters, search, page, pageSize, signal }`. A new
+query immediately aborts and supersedes the previous request, including while its replacement
+waits for `filterDebounce`. Obsolete results and errors cannot update the grid even when a loader
+ignores the signal. A rejected current request keeps prior rows and emits `lr-data-error`.
+Filter/search requests use `filterDebounce`; sorting and paging load immediately.
 For event-driven loading, set `server`, listen to the mirrored `request` event, and assign `data`,
 `total`, and `loading` yourself. The redundant Lyra-only `lr-data-request` event was removed in
 9.0.0; rename that listener to `request`. Each dispatch carries a fresh frozen detail that cannot
@@ -751,10 +800,20 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   lasting effect; it is recomputed on the next render or resize. The toggle remains available while
   a narrow table is revealed, even though this property truthfully reports false
 - `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection bounded to the first
-  10,000 rows; reassign a new array to update — rebinding the array `rows`, `columns`,
+  `maxRows` rows, 10,000 by default; reassign a new array to update — rebinding the array `rows`, `columns`,
   `selectedRowKeys` or `expandedRowKeys` last received is a no-op). Records are retained
   here; one canonical `rowKey` projection omits blank and later-duplicate identities first-wins
   before filtering, counts, pagination, focus, actions, and events
+- `maxRows: number = 10000` (attribute `max-rows`) — row and controlled-key admission limit,
+  normalized to 1–100,000; non-finite values use the default. Configure it before assigning `rows`.
+  After changing it, assign a new row collection to deterministically supply rows excluded by the
+  previous cap. A cap change can also reread the original collection while the caller retains it;
+  recovery does not depend on keeping that source alive. Column inspection remains bounded to
+  10,000 source positions. Pagination still renders 100 rows by default and at most 500 per page.
+  Lowering the cap also trims retained selected and expanded key sets without emitting selection
+  or expansion events. Reassign controlled key collections after raising it to restore excluded keys.
+  At the key cap, existing keys retain priority over a newly toggled key; selection and expansion
+  events report the actual retained state.
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
   column shares the available width evenly and long cell content is clipped/wrapped instead of
@@ -788,13 +847,14 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   (client-mode) sorting, ignoring pagination — the same set `columns[].footer(rows)`/
   `grandTotal(rows)`/the heat-tint domain already compute over. Read this instead of
   re-implementing filtering/sorting in a consumer that needs "what the grid currently shows" (e.g.
-  to export it). A fresh, frozen array on every read: mutating the result cannot reach or corrupt
-  the table's own internal state
+  to export it). The frozen projection retains its identity until row, sort or filter inputs change.
+  Row objects retain their existing identity contract
 - `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
-  currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
-- `rowsTruncated: boolean` (readonly) — `true` when the assigned `rows` held more than the 10,000
-  rows the snapshot keeps; the rest are not shown, counted, paged or exported. The localized
-  `row-limit` part makes this visible alongside the table.
+  currently rendered in `<tbody>`. This frozen projection retains its identity until its row,
+  sort, filter or page inputs change
+- `rowsTruncated: boolean` (readonly) — `true` when the assigned rows exceed admission capacity;
+  excluded rows are not shown, counted, paged or exported. The localized `row-limit` part reports
+  the number actually retained, and post-mount truncation changes are announced politely.
 - `rowKey?: (row: T) => K` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
@@ -805,7 +865,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
 - `selectedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
-  store in every mode, bounded to 10,000 keys. Single mode enforces at most one key; multiple mode
+  store in every mode, bounded to `maxRows` keys. Single mode enforces at most one key; multiple mode
   toggles membership. Malformed and whitespace-only string keys are omitted, while valid
   unmatched/off-page keys remain controlled state for server pagination. Reads return immutable detached `ReadonlySet`
   facades; reassign a new set to update
@@ -815,7 +875,10 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   attribute clears the effective filter safely while retaining native removal readback; a later
   supplied value filters normally.
 - `filter?: (row: T, text: string) => boolean` (attribute: false) — typed predicate used by the
-  filter field; when omitted, rows are matched against their JSON representation
+  filter field; when omitted, rows are matched against their JSON representation. Default search
+  reuses locale-folded text for primitive and frozen scalar records. Mutable rows, nested containers,
+  accessors and custom `toJSON` retain per-query reads; reassign collections after data changes to
+  invalidate sorted and aggregate projections
 - `filterLabel?: string` (attribute `filter-label`) and `filterPlaceholder?: string`
   (attribute `filter-placeholder`) — omission localizes `tableFilterLabel`/
   `tableFilterPlaceholder`; any supplied string, including the built-in English text or `''`, is
@@ -906,7 +969,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   for the detail to carry and is reported through `expandedRowKeys` alone. An unrecognized attribute
   value falls back to the controlled behaviour rather than self-managing
 - `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false; `ReadonlySet<K>` on a
-  parameterized element) — expanded state bounded to 10,000 keys. Who writes it depends on
+  parameterized element) — expanded state bounded to `maxRows` keys. Who writes it depends on
   `expansionMode`: under the default `'none'` the table never mutates it and consumers reassign it
   after `lr-row-expand-toggle`; under `'single'`/`'multiple'` the table writes it on each accepted
   activation, and a `preventDefault()` on `lr-row-expand-request` hands that one change back.
@@ -1077,7 +1140,7 @@ button, while `error` is set. Left unfilled, the built-in `[part='error']` `<lr-
 this slot's fallback content.
 
 **CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `row-limit` (localized
-notice when the assigned row collection exceeds 10,000 entries), `cell`, `more-button`, `sort-icon`
+notice when the assigned row collection exceeds admission capacity), `cell`, `more-button`, `sort-icon`
 (each sort indicator), `sort-icon-active` (the active chevron, rotated per `sortDir`),
 `sort-icon-inactive` (the muted bidirectional indicator under `sort-indicators="all"`), `reveal-columns-button`
 (shown when priority columns are hidden or when a narrow allocation is currently force-visible),
@@ -1730,6 +1793,12 @@ bar whose length is that stage's share of the **first** stage, read top-to-botto
 drop-off. It sits beside `lr-gauge` and `lr-heatmap` as an analytics primitive rather than a general
 chart type.
 
+Supply `stages` and `comparison` as aggregate counts or measures computed across their complete
+cohorts. A few stages can summarize one million underlying observations when each value includes
+every applicable cohort member. The host or server performs the raw-event aggregation; the
+component receives stage totals, and each comparison cohort normalizes to its own first stage.
+The 500-stage rendering ceiling bounds stage cardinality independently of the observation count.
+
 When a positive finite stage value divided by a positive finite baseline overflows to `Infinity`,
 the main or comparison data fill clamps to 100%. Nonfinite input normalization, nonpositive-baseline
 behavior, percentage and drop-off text, and overflow border styling keep their existing rules.
@@ -1741,6 +1810,14 @@ Reach for `lr-bar-chart`/`lr-lite-chart` when you actually want a value axis and
 The whole chart is plain HTML — stage names, absolute values, shares and drop-off percentages are
 real text inside an `<ol>`, so there is no sighted-only drawing needing a separate transcript. The
 list carries the accessible name; a host `aria-label` overrides `label`.
+Stage and comparison projections reuse their input identities. Reassign after changes, or call
+`requestUpdate()` after mutating the current arrays. The component resolves at most the first 501
+valid stages to detect overflow and renders at most 500.
+Validation inspects at most 10,000 source positions per chunk and continues through malformed
+entries until it reaches that valid-stage boundary or the end. The last completed chart stays
+visible with `aria-busy` while a replacement is inspected. Keep pending source arrays and records
+unchanged, or reassign/explicitly refresh to restart inspection. Replacement and disconnect cancel
+unfinished work; reconnect derives the current input again.
 
 **Properties:**
 
@@ -1870,6 +1947,10 @@ remain nonnegative; placement budgets, font-size limits, and the omitted-word po
 
 **Properties:**
 
+- `preparedWords: LyraPreparedWordCloud | null = null` (property only) — whole-catalog weighted
+  summary, taking precedence over `words`. Invalid non-null input shows a localized `error`;
+  setting it to `null` restores the current legacy word snapshot without changing the `words`
+  getter. See the prepared-catalog contract below.
 - `words: readonly WordCloudWord[] = []` (attribute: false) — readonly `{ text: string, weight:
 number, color?: string, group?: string }` snapshots; malformed/hostile records are skipped while
   later valid records survive. `weight` is normalized once to a finite nonnegative value used by
@@ -1913,13 +1994,70 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection.
 
+**Prepared weighted catalogs:** `LyraPreparedWordCloud` supplies `revision`, `counts`
+(`sourceCount`, `validCount`, `invalidCount`), `totalWeight`, `retainedWeight`, and readonly
+`words: readonly LyraWeightedWord[]`. Each `LyraWeightedWord` has readonly `id: string`,
+`text: string` and `weight: number`. IDs represent already aggregated catalog entries and must be
+globally unique; distinct IDs may have the same display text. This input is a weighted catalog,
+not a sequence of raw tokens whose frequencies the component computes.
+
+The component admits at most 150 selected words, with nonblank IDs/text limited to 256 UTF-16
+units each and selected text totaling at most 16,384 units. Labels and IDs remain exact; they are
+not clipped or admitted through the legacy prefix budget. Retained IDs must be unique. Counts
+must be safe nonnegative integers conserving the complete source (`validCount + invalidCount =
+sourceCount`); selected length cannot exceed `validCount`, and a nonempty valid catalog requires
+a selection. Weights and their totals must be finite and nonnegative; `retainedWeight` must equal
+the sum of selected weights in descriptor order. The full total must include each selected
+weight; when every valid word is selected, full and retained totals must agree within bounded
+floating-point accumulation error. Invalid positions do not enlarge that complete-sum allowance.
+Sparse/accessor-backed descriptor arrays, malformed metadata, oversized selections and
+inconsistent totals fail visibly instead of falling back to `words` or silently dropping values.
+The bounded descriptor cannot independently certify global top-K membership or full-source totals.
+
+`part="summary"` reports selected versus full valid word counts, invalid count, and retained versus
+full weight through `wordCloudPreparedSummary`. It remains visible for empty/all-invalid input.
+If placement cannot fit a selected word, the separate existing `limit` reports rendered versus
+selected words; it does not relabel top-K omission or rejected source labels as a layout failure.
+Invalid input uses `part="error"` and `wordCloudPreparedUnavailable`. Numeric values use the
+effective locale; `.strings` overrides apply to visible messages and announcements. Mount,
+reconnect and adoption are quiet; later changed summaries announce politely and invalid-input
+transitions announce assertively through the shared light-DOM sink.
+
+The component captures a bounded immutable snapshot of host-authored metadata. After changing a
+mutable descriptor or its revision, assign `preparedWords` again (the same identity is accepted)
+or call unnamed `requestUpdate()`; a coalesced named update does not suppress that refresh.
+Presentation updates reuse the snapshot. Source storage and preparation remain host-owned; the
+component neither reads an original catalog nor starts or cancels its preparation. Replacing or
+clearing `preparedWords` therefore does not abort a helper call already running in application
+code. Theme, pointer and keyboard interactions use the retained words without a full-source pass.
+
+`prepareLyraWordCloud(input, options?)` from the granular utilities module performs one complete
+chunked catalog scan and retains the global heaviest `maxWords` (default/max 150, minimum 1), with
+equal weights favoring earlier original positions. `input` is a `LyraIndexedInput<LyraWeightedWord>`
+with stable `revision`, safe `count`, and `read(start, count, { signal })` returning exactly that
+range. Preparation reads at most 8,192 positions per chunk (default 2,048), yields between chunks
+and checks revision/cancellation. All valid source weight contributes to `totalWeight`, including
+omitted candidates. Blank/over-256-unit text or IDs and negative/nonfinite weights count as invalid
+observations; the helper does not shorten them. Chosen labels exceeding 16,384 units reject the
+call: lower `maxWords` rather than clipping selected words. Heavy late entries compete before any
+text budget is applied. With bounded memory the helper detects duplicates only among retained
+candidates; global ID uniqueness remains the caller's input contract. Exact frequency aggregation
+of arbitrary raw tokens belongs to the caller's keyed catalog. The result is immutable.
+
 **Methods:** `refreshTheme(): void` — forces a relayout so the `--lr-font` custom property is
 re-read from computed style (font-family affects the canvas text measurement layout depends on).
 The component's theme watcher calls it automatically when inherited theme typography changes; the
 method remains available for a host theme system that needs an explicit synchronous refresh.
 
-**Events:** `lr-word-activate` (frozen readonly `detail: { text, weight, group }`; fires from the
-single SVG pointer surface, or Enter/Space on the current word)
+**Events:** `lr-word-activate` fires from the single SVG pointer surface or Enter/Space on the
+current word. Its frozen readonly detail is typed `{ text: string; weight: number; group?: string;
+id?: string; revision?: LyraSourceRevision }`. With `preparedWords` active, `id` and `revision`
+identify the exact original catalog entry and committed summary; duplicate text never substitutes
+for identity. Actions on the old visible layout retain its revision while a replacement is
+scheduled, and replaced/detached layout objects cannot activate new data. With `preparedWords =
+null`, the existing `{ text, weight, group }` payload is unchanged and has no `id`/`revision` fields.
+`LyraPreparedWordCloud` and `LyraWeightedWord` are type-only exports from the component entry and
+from `@aceshooting/lyra-ui/utilities/data-preparation.js`.
 
 **Slots:** none.
 
@@ -1927,8 +2065,9 @@ single SVG pointer surface, or Enter/Space on the current word)
 cursor's word), `live-region` (visually-hidden, `aria-hidden` mirror of the latest announcement;
 the actual announcement uses the shared light-DOM polite sink),
 `legend`/`legend-item`/`legend-swatch`/`legend-label` (the optional static color key), and `empty`
-(the no-data placeholder), `limit` (localized rendered/received word count), and `legend-limit`
-(localized rendered/received explicit-legend count)
+(the no-data placeholder), `limit` (localized rendered/received word count; rendered/selected in
+prepared mode), `legend-limit` (localized rendered/received explicit-legend count),
+`summary` (prepared full/retained counts and weights), and `error` (invalid prepared-input message)
 
 **Themeable custom properties:** `--lr-word-cloud-color-1`, `--lr-word-cloud-color-2`,
 `--lr-word-cloud-color-3`, `--lr-word-cloud-color-4`, `--lr-word-cloud-color-5`,
@@ -1955,21 +2094,75 @@ through the normal cascade), plus shared tokens (`--lr-font`,
 </script>
 ```
 
+A complete unique weighted catalog can be prepared without constructing a million-element array.
+The helper's one-time full pass is application work; rendering and interaction consume its bounded
+result. Import the helper directly and cancel obsolete preparation before assigning a result:
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-word-cloud.js';
+import {
+  prepareLyraWordCloud,
+  type LyraIndexedInput,
+  type LyraWeightedWord,
+} from '@aceshooting/lyra-ui/utilities/data-preparation.js';
+
+const cloud = document.querySelector('lr-word-cloud')!;
+let pending: AbortController | undefined;
+
+async function showCatalog(input: LyraIndexedInput<LyraWeightedWord>): Promise<void> {
+  pending?.abort();
+  const request = new AbortController();
+  pending = request;
+  try {
+    const prepared = await prepareLyraWordCloud(input, {
+      signal: request.signal, maxWords: 150, batchSize: 8192,
+    });
+    if (pending === request && !request.signal.aborted) cloud.preparedWords = prepared;
+  } catch (error) {
+    if (!request.signal.aborted) throw error;
+  }
+}
+
+await showCatalog({
+  revision: 'catalog-1',
+  count: 1_000_000,
+  read(start, count) {
+    return Array.from({ length: count }, (_, offset) => {
+      const index = start + offset;
+      return {
+        id: `topic-${index}`,
+        text: `Topic ${index}`,
+        weight: index === 999_999 ? 1_000_000 : 1,
+      };
+    });
+  },
+});
+// On view disposal, call pending?.abort().
+```
+
+The final heavy entry participates in selection, and equal-weight entries retain original-position
+ties. A changed catalog/revision needs a new preparation pass; ordinary view interactions do not.
+
 The focusable SVG is the single semantic owner: `role="application"` plus an accessible name. An
 authored host `aria-label` is forwarded to that SVG and wins by attribute presence; when it is
 absent, the SVG uses an auto-computed localized name such as `"Word cloud of 12 words"` / `"Word
 cloud of 1 word"`, counting only words actually rendered. An authored host `role` remains on the
 host and does not replace the SVG's application role. When records are omitted, the SVG references
-the visible localized `[part="limit"]` rendered/received summary.
+the visible localized `[part="limit"]` rendered/received summary. In prepared mode it also
+references the full-catalog `summary`; host-authored description references remain composed with
+these internal descriptions.
 
 **Known gotchas:**
 
 - capped at 150 words (`MAX_WORDS` in `word-cloud-layout.ts`, mirroring `lr-sparkline`'s
   `MAX_POINTS` input-sample guard) — a one-pass bounded top-K scan retains the **heaviest** 150 and
-  counts the rest without cloning/sorting/spreading the full input. A pathological input can exhaust the
-  spiral search's radius bound and get dropped the same way; blank/whitespace-only `text` is dropped
-  during boundary normalization. Omitted diagnostics retain at most 32 records, while a separate
-  complete count drives one deduplicated `console.warn` and the rendered disclosure — nothing throws.
+  counts the rest without cloning/sorting/spreading the full admitted legacy input. The legacy
+  `words` boundary still inspects at most 10,000 positions and applies its text budgets; use
+  `preparedWords` for a complete-catalog summary. A pathological input can exhaust the spiral
+  search's radius bound and be omitted from either route. Legacy blank text is dropped during
+  boundary normalization; malformed prepared input instead shows `error`. Omitted placement
+  diagnostics retain at most 32 records, while a separate complete count drives one deduplicated
+  `console.warn` and the rendered disclosure.
 - each word's spiral search tests at most 4,096 candidate positions. Together with the 150-word and
   512px font-size caps, this bounds placement work even for dense or adversarial layouts; a word
   that exhausts the search budget is reported through the same skipped-word path.
@@ -1977,8 +2170,8 @@ the visible localized `[part="limit"]` rendered/received summary.
   `--lr-font-weight-semibold` and `--lr-font` token values. A consumer-only `::part(word)` font
   override can still desynchronize measurement from the painted glyph.
 - rotation (`word-rotation="mixed"`) is genuinely random per layout (`Math.random()`, not seeded), so
-  which words render rotated changes on every re-layout (any `words`/`minFontSize`/`maxFontSize`/
-  `scale`/`wordRotation` change) — don't rely on rotation being stable across renders.
+  which words render rotated changes on every re-layout (a prepared-input refresh or an effective
+  `words`/`minFontSize`/`maxFontSize`/`scale`/`wordRotation` change) — don't rely on rotation being stable across renders.
 - only one word is ever in the page's tab sequence at a time (the roving cursor on `[part="svg"]`) —
   there's no way to Tab directly to the Nth word; arrow-key/Home/End your way there, or click it.
 
@@ -2039,6 +2232,150 @@ turning the overlay off moves a focused cell button to the canvas application co
 moves a focused canvas to the matching remembered cell, the first interactive cell, or the stable
 base when no cell exists. A newer external focus destination is never reclaimed.
 
+Calendar mode can summarize a complete large event population through host-side daily aggregation.
+Combine repeated events into one `{ date, value }` record per day before assigning
+`data = { kind: 'calendar', days }`: duplicate day records use first-valid identity rather than
+summation. A 365-day contribution view can therefore cover one million events while retaining
+365 daily totals. Keep the full event count and aggregation provenance beside the visualization;
+the heatmap's day count describes day records. A million distinct dates exceed the limits on day
+count and date span below. Query another bounded date window when needed.
+
+**Complete matrix source:** `matrixSource: LyraHeatmapMatrixSource | null = null`
+(attribute: false) opts into provider-owned indexed storage and aggregation. It takes precedence
+over legacy matrix arrays and requires `data.kind === 'matrix'`; a source with calendar data shows
+a localized error. Set `matrixSource = null` to restore the current legacy input. The provider is
+retained by identity. Reassign even the same object, or call a keyless `requestUpdate()`, after
+revision/state changes. Named presentation changes reuse accepted tiles; locale/lifecycle changes
+revoke obsolete effects. Providers should honor abort signals; ignored aborts occupy their physical
+request permits until settlement.
+
+```ts
+import type {
+  LyraHeatmapMatrixSource, LyraHeatmapMatrixViewport, LyraHeatmapMatrixReducer,
+  LyraHeatmapTile, LyraHeatmapMatrixRangeSelectDetail,
+} from "@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js";
+import type { LyraSourceRequest, LyraSourceValue, LyraNumericDomain } from
+  "@aceshooting/lyra-ui/utilities/data-preparation.js";
+```
+
+The source supplies immutable `revision` (a nonempty string or finite number), safe nonnegative integer `rowCount`/`columnCount`
+(with a safe integer product), and `domain: LyraNumericDomain | null`. This domain describes all
+finite source values; `null` means none. A valid explicit `domain` property still overrides the
+paint scale while the summary reports the provider's complete domain. Signed finite values are
+valid; only `null` represents a missing exact value. Methods may return a value or PromiseLike:
+
+- `query(request)` receives `{ signal, rowStart, rowEnd, columnStart, columnEnd, maxCells }` and
+  returns readonly `LyraHeatmapTile[]`. The host must supply an aggregation index, pyramid or server;
+  the component does not scan raw source cells to create tiles.
+- `getCell(row, column, { signal })` returns `{ value: number | null, rowLabel: string,
+  columnLabel: string }` for that exact absolute coordinate. Labels are each at most 1,024 UTF-16
+  units; malformed or oversized replies fail visibly without truncation.
+
+`matrixViewport: LyraHeatmapMatrixViewport | null = null` (attribute: false) is the zero-based,
+half-open rectangle `{ rowStart, rowEnd, columnStart, columnEnd }`; `null` covers the full matrix.
+Explicit axes must be nonempty, ordered safe integers contained in the source. Invalid new
+rectangles fail visibly without clamping or fallback. On source shrink, an unchanged previously
+accepted viewport keeps its span up to the new dimensions and clamps its origin; a newly assigned
+rectangle is validated afresh. Empty dimensions render an empty state without provider reads.
+`matrixReducer: LyraHeatmapMatrixReducer = 'mean'` (`matrix-reducer`) chooses `'mean' | 'min' | 'max'`
+for tile color; unsupported values fail visibly. Reducer changes repaint accepted tiles.
+
+Each tile supplies the viewport fields plus `{ count, validCount, min, max, sum }`. Tiles must
+partition the requested rectangle exactly once, without gaps or overlaps. `count` equals rectangle
+area, `validCount` is a safe integer from zero to `count`, and all statistics are finite and
+consistent with the complete domain. An empty-valid tile has `min: null`, `max: null`, `sum: 0`;
+otherwise extrema are ordered and `sum / validCount` lies within them, allowing a normalized
+`32 * Number.EPSILON` floating tolerance. Admission checks a bounded partition and arithmetic
+consistency; the provider owns the truth of aggregation over unseen records.
+
+The square overview allocates from available inline size, with tile budget
+`T = min(normalized maxCells, max(1, floor(plotWidth) ** 2))`; zero-width layouts defer requests.
+The existing `maxCells` default 10,000 and hard ceiling 100,000 apply to tiles here. The component
+retains bounded current/replacement tiles and O(T) partition-validation storage, without geometry
+or occupancy arrays proportional to logical cell count. One physical tile query and only the
+latest queued replacement are allowed. Exact reads share two physical permits, with current and
+pending windows of at most 400 records each plus at most one separately selected record (801 total,
+at most 1,640,448 retained exact-label units). A pending window replaces the old pane atomically;
+obsolete pending buffers are released. Canvas limits remain 16,384 per side and 16,777,216 pixels.
+
+`revealSourceCell(row: number, col: number): Promise<boolean>` resolves and focuses an exact source
+coordinate without changing controlled selection or emitting activation. Invalid/out-of-range
+coordinates make no provider call; absent, failed, noninteractive or revoked targets resolve
+`false`. Revealing outside an explicit viewport silently pans a same-size clamped rectangle by
+updating `matrixViewport`; a null/full viewport stays full. Focus restoration respects intervening
+user movement. Arrow keys move exact coordinates using physical left/right even under RTL;
+Home/End reach row endpoints, Ctrl+Home/Ctrl+End source endpoints, and PageUp/PageDown move up to
+20 rows. Each action examines at most 32 excluded candidates. With `accessibleCells: true`,
+`source-exact-window` is a separate at-most-20×20 exact grid below the overview, with full logical
+ARIA counts and absolute one-based row/column indices; the overview canvas is hidden from assistive
+technology. Without it, the named canvas owns the exact cursor.
+
+Exact Enter/Space and singleton-tile pointer activation resolve `getCell` and emit the existing
+`lr-cell-activate` `{ row, col, value }` with absolute coordinates; missing `null` maps to `NaN`.
+`cellText`, `cellInteractive` and `cellColor` receive exact values and absolute coordinates, never
+aggregate means. Multi-cell tile pointer activation or Shift+Enter emits noncancelable
+`lr-matrix-range-select` with frozen `LyraHeatmapMatrixRangeSelectDetail`:
+`{ revision, rowStart, rowEnd, columnStart, columnEnd, count, validCount, min, max, sum }`.
+It proposes an aggregate without expanding `selectedCells` or synthesizing exact activation.
+`selectedCell`/bounded `selectedCells` stay controlled and programmatic assignments are silent;
+row/column, drag and Shift-range expansion remain legacy-only. Source geometry is proportional:
+`matrixGeometry` is `undefined` and source paints emit no `lr-matrix-geometry-change`.
+
+Source `exportData('csv')` exports the complete current accepted viewport's aggregate tile snapshot,
+with header `rowStart,rowEnd,columnStart,columnEnd,count,validCount,min,max,sum,reducer,value`.
+Coordinates are half-open and zero-based; numbers are unlocalized and missing extrema/reducer
+values are blank. It performs no provider reads and is not a raw-cell export. Loading, error or
+obsolete snapshots export `''`. PNG follows the current bounded overview and existing canvas
+readiness gates. Additional parts are `source-status`, `source-error`, `source-summary`, and
+`source-exact-window`; existing `base`, `canvas`, `cell`, `tooltip` and legend parts apply where
+rendered. The following dense matrix/calendar limits and geometry descriptions apply with
+`matrixSource` unset.
+
+**Exported matrix-source declarations:**
+
+Inherited viewport/tile fields are repeated to show the complete effective contracts. `HeatmapSourceCell` is the exact `{ value: number | null; rowLabel: string; columnLabel: string }` reply described above.
+
+`LyraHeatmapMatrixViewport {
+  readonly rowStart: number;
+  readonly rowEnd: number;
+  readonly columnStart: number;
+  readonly columnEnd: number;
+}`
+
+`LyraHeatmapTile extends LyraHeatmapMatrixViewport {
+  readonly count: number;
+  readonly validCount: number;
+  readonly min: number | null;
+  readonly max: number | null;
+  readonly sum: number;
+  readonly rowStart: number;
+  readonly rowEnd: number;
+  readonly columnStart: number;
+  readonly columnEnd: number;
+}`
+
+`LyraHeatmapMatrixRangeSelectDetail extends LyraHeatmapTile {
+  readonly revision: LyraSourceRevision;
+  readonly count: number;
+  readonly validCount: number;
+  readonly min: number | null;
+  readonly max: number | null;
+  readonly sum: number;
+  readonly rowStart: number;
+  readonly rowEnd: number;
+  readonly columnStart: number;
+  readonly columnEnd: number;
+}`
+
+`LyraHeatmapMatrixSource {
+  readonly revision: LyraSourceRevision;
+  readonly rowCount: number;
+  readonly columnCount: number;
+  readonly domain: LyraNumericDomain | null;
+  query(request: LyraSourceRequest & LyraHeatmapMatrixViewport & { readonly maxCells: number }): LyraSourceValue<readonly LyraHeatmapTile[]>;
+  getCell(row: number, column: number, request: LyraSourceRequest): LyraSourceValue<HeatmapSourceCell>;
+}`
+
 **Properties:**
 
 - `data: HeatmapData = { kind: 'matrix', rowLabels: [], colLabels: [], values: [] }` (attribute:
@@ -2058,6 +2395,11 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
     pins its width, while `'auto'` measures the widest rendered weekday label without shrinking
     below the built-in `28px` gutter or growing beyond 40% of the host. Unset preserves the original
     `28px` geometry; malformed values are ignored.
+- `maxCells: number = 10000` (attribute `max-cells`) — projection budget, normalized to 1–100,000.
+  Matrix projection keeps a rectangular prefix within that budget. Calendar input retains at most
+  that many days and scales its sparse span proportionally from the default 530 weeks, up to 5,300
+  weeks, with a minimum one-week span. The accessible cell overlay remains windowed to 400 buttons,
+  and canvas backing-store limits still apply.
 - `cellSize: number = 22` (attribute `cell-size` — default `22` in matrix mode, `11` in calendar
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)
@@ -2510,10 +2852,13 @@ is now literal.
 
 **Known gotchas:**
 
-- Matrix projection is capped at 10,000 renderable cells. Calendar input is capped at 10,000
-  records and 530 weeks, and the color-step/legend-stop/annotation projections are each capped at
-  256 entries. `[part="projection-limit"]` and the generated accessible summary disclose every
-  truncation. The semantic grid mounts at most 400 cell buttons while preserving full navigation.
+- Matrix and calendar projections use `maxCells` (10,000 by default); calendar span scales from
+  the default 530 weeks with that budget. Color-step/legend-stop/annotation projections each display
+  at most 256 entries. Their owned snapshots and `selectedCells` retain at most 10,000 entries and
+  50,000 cloned values; deeply nested records can reach the value budget first.
+  `[part="projection-limit"]` and the generated accessible summary disclose visual projection and
+  input loss; changed notices are announced politely. The semantic grid mounts at most 400 cell
+  buttons while preserving full navigation.
 - Calendar duplicates use a first-valid-wins ISO-date identity. Invalid dates are dropped. `data.columnX`
   and `data.rowY` results must be finite, nonnegative, monotonic and non-overlapping; an invalid,
   throwing or hostile result safely falls back to the normal coordinate for that position.
@@ -2599,7 +2944,7 @@ refreshes do not move focus. A queued Arrow/Home/End focus is bound to the curre
 identity and connection generation, so a same-turn replacement or disconnect/reconnect cannot
 focus an unrelated cell that merely inherited the old numeric index.
 
-High-cardinality strips retain at most the first 10,000 assigned items and categories as detached,
+With `source` unset, high-cardinality strips retain at most the first 10,000 assigned items and categories as detached,
 frozen canonical snapshots; reassign either collection after changing it. At most 200 cells are
 rendered. **At or below that cap each cell is one item. Past it the strip becomes a span-preserving
 overview rather than a window:** the retained items are distributed over exactly 200 contiguous
@@ -2614,6 +2959,93 @@ item total and range count, and the same localized text is appended as a trailin
 generated `aria-label` so assistive technology learns the cells are ranges. The optional legend
 likewise mounts at most 200 categories and exposes `[part="legend-limit"]` as a rendered/total
 numeric disclosure.
+
+**Complete indexed source:** `source: LyraSequenceSource<SequenceStripItem> | null = null`
+(attribute: false) takes precedence over `items`, preserving the provider's identity. `null` or
+`undefined` restores the current legacy items; other invalid defined values fail visibly.
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named theme, strings and legend paints reuse accepted data; locale, disconnect/reconnect and
+adoption revoke obsolete requests/effects. Providers should honor abort signals; ignored aborts
+keep physical request permits occupied until settlement.
+
+```ts
+import type { LyraSequenceSource, LyraSequenceRangeSummary, SequenceStripItem } from
+  "@aceshooting/lyra-ui/components/data/sequence-strip/sequence-strip.class.js";
+import type { LyraSourceRequest, LyraSourceValue } from
+  "@aceshooting/lyra-ui/utilities/data-preparation.js";
+```
+
+`LyraSequenceSource<T>` supplies immutable `revision` (a nonempty string or finite number), safe
+nonnegative integer `length`, and
+`getItem(index, { signal }): LyraSourceValue<T | null>`,
+`findIndex(id, { signal }): LyraSourceValue<number | null>`, and
+`summarize({ signal, startIndex, endIndex, maxRanges }): LyraSourceValue<readonly
+LyraSequenceRangeSummary[]>`. The summary request spans `[0, length)` and asks for at most
+`min(length, 200)` ranges; an empty source needs no provider read. Each summary has
+`{ startIndex, endIndex, categoryCounts, markerCount, enabledCount }`: ascending, nonempty,
+half-open ranges must partition the complete logical sequence without gaps or overlap.
+`categoryCounts` is an own-data string-to-positive-safe-integer dictionary whose counts sum to
+the range length; marker/enabled counts are safe integers from zero to that length. The provider
+owns immutable snapshots, indexing and the truth of complete-source totals; admission verifies
+bounded shape and arithmetic consistency.
+
+At most 200 ranges, 200 distinct global category IDs and 40,000 category-count pairs are admitted.
+Summary category IDs are nonblank and at most 1,024 UTF-16 units. Exact `SequenceStripItem` records
+have own-data `id`, `categoryId`, optional `label`, optional boolean `marker`/`disabled`; the aggregate
+length of `id`/`categoryId`/`label` is at most 65,536 UTF-16 units. Malformed, accessor-backed or
+oversized records fail without clipped labels or compacted indices. The component retains bounded
+current/pending summaries and one exact record, with one physical summary request and one physical
+exact request; only the latest queued intent survives. String lookup and its subsequent exact read
+are sequential. There is no raw-item scan or complete source array in the component.
+
+Overview range widths are proportional to their actual lengths. Global category and marker counts
+include every range, and `selectedIndex` highlights its containing range. Source dominant-category
+ties use configured `categories` order, then lexical category ID; the legacy route retains its
+earliest-occurrence rule. A source range is disabled only when `enabledCount === 0`; mixed ranges
+report their enabled count. Overview activation still resolves the range's first exact item and
+emits the unchanged `lr-item-activate` `{ index, id, item }` with its original zero-based index and
+ID; a disabled or unavailable first item emits nothing. Hover and overview focus use the summary,
+including bounds, dominant category, marker count and enabled/total counts, without exact reads.
+`data-range-end` remains inclusive in rendered range attributes; provider bounds are half-open.
+
+`revealSourceItem(target: number | string): Promise<boolean>` resolves an original index or stable
+ID, updates the separate exact inspection cursor and focuses its control while focus ownership is
+still current. ID lookup uses `findIndex` then verifies the returned `getItem` ID. It does not
+change `selectedIndex` or emit activation. Disabled exact items remain inspectable and resolve
+`true`; absent, invalid, unavailable or revoked targets resolve `false`. The `source-exact` native
+button supports RTL-aware Left/Right and Home/End over the complete original index range, including
+missing/disabled positions; it does not scan for enabled items. Enter/Space or click activates only
+the current admitted enabled exact item. Pending/unavailable detail keeps a focusable localized
+inspector fallback. Controlled `selectedIndex` changes resolve exact detail silently. Source-only
+parts are `source-status`, `source-retry` and `source-exact`; `base`, `cell`, `marker`, `tooltip`,
+`bucket-summary`, `empty` and existing legend parts remain applicable. Initial errors are quiet;
+later status transitions use localized light-DOM announcements. No completion event is added.
+
+The following item-array limits and per-item disabled/tie rules apply with `source` unset.
+
+**Exported sequence-source declarations:**
+
+These declarations use the request/value types and granular class import shown above.
+
+`LyraSequenceSource<T> {
+  readonly revision: LyraSourceRevision;
+  readonly length: number;
+  getItem(index: number, request: LyraSourceRequest): LyraSourceValue<T | null>;
+  findIndex(id: string, request: LyraSourceRequest): LyraSourceValue<number | null>;
+  summarize(request: LyraSourceRequest & {
+    readonly startIndex: number;
+    readonly endIndex: number;
+    readonly maxRanges: number;
+  }): LyraSourceValue<readonly LyraSequenceRangeSummary[]>;
+}`
+
+`LyraSequenceRangeSummary {
+  readonly startIndex: number;
+  readonly endIndex: number;
+  readonly categoryCounts: Readonly<Record<string, number>>;
+  readonly markerCount: number;
+  readonly enabledCount: number;
+}`
 
 **Properties:**
 
@@ -2777,7 +3209,55 @@ with `badges: [{ text: String(value) }]`. The former item-controller fields (`ac
 `depth`, `setSize`, `posInSet`) and context setters were never consumer state; they are now private
 owner context maintained by `<lr-tree>`.
 
-**Two child models are accepted, and they never interleave.**
+**Provider hierarchy:** `treeSource: TreeSource | undefined = undefined` (attribute: false) is an
+identity-owned full-source route. `TreeSource` is
+`LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery>` from
+`@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `data` and authored
+items; invalid defined input shows a localized source error instead of restoring legacy rows.
+Setting `undefined` restores the current authored-over-data precedence below. Source descriptors
+are never assigned to `data`, and author-written items are retained without being rendered in
+source mode. Reassign the source, including the same object, or call a keyless `requestUpdate()`
+after revision or provider-state changes. Locale changes and reconnect/adoption refresh the
+projection; unrelated named display updates do not.
+
+The provider's `project(request)` handles `reset`, `toggle`, `reveal` and `select` actions and returns
+an immutable `{ state, total, rows, focusIndex? }` projection. Requests include revision, locale,
+abort signal, previous opaque `state` (initially `null`), and the fixed query
+`{ search: '', hiddenKinds: [] }`. `total` counts all logical nodes, including collapsed nodes;
+`rows.count` counts the complete currently visible preorder. Both are nonnegative safe integers,
+with `rows.count <= total`. The summary reports those logical counts, not mounted rows. A million
+nodes can remain in host-owned storage without a library-wide flattening or ancestor index.
+
+`rows` is a `LyraHierarchyView<LyraHierarchyRow<LyraTreeNodeData>>`: either indexed
+`itemAt`/`keyAt`/`indexOfKey`, or asynchronous `read` plus required `indexOfKey`. There is no scan
+fallback for key lookup. Each row supplies its global unique `key`, matching `value.id`, plus
+`parentKey`, one-based `level`/`position`, exact sibling `setSize`, `childCount`, `expanded`,
+`selected`, and optional
+`disabled`/`selectionState`. Hierarchy metadata owns those states; nested `value.children` is never
+read. Keys must be nonblank strings of at most 65,536 UTF-16 units and are preserved verbatim.
+The opaque state token must be a nonempty string of at most 65,536 units. Display values use own
+data properties, at most 100 badges and 65,536 aggregate display-text units per row; malformed or
+oversized rows fail visibly without compacting logical indices. The provider owns global key
+uniqueness and immutable snapshot consistency; validation covers the bounded admitted window.
+
+The source view mounts at most 301 rows, retaining four 100-row pages plus at most one focused
+ready row (401 total). Range requests contain at most 100 rows, with at most two physically pending
+reads. One projection call runs at a time with only the latest replacement queued. Loading/error
+rows are not selectable records; localized retry preserves their logical position. Empty is a
+separate valid state. Providers should honor abort signals; revoked results cannot commit, but an
+ignored abort does not release a physical request until it settles.
+
+Source keyboard navigation uses the full visible count for Home/End, direct provider lookup for
+parents/reveal, and RTL-aware branch arrows. Disabled-row navigation examines at most 32 candidates
+and keeps current focus if none can be resolved. Logical ARIA depth/sibling positions remain exact
+while visual indentation clamps at 32 levels. A bounded roving row or root entry stop remains
+available as rows scroll; an off-window focused row is retained within the same mount bound.
+The provider owns selection/cascade/partial state: `single` selects an item, `leaf` permits only
+leaves, `multiple` toggles an item or a branch's `subtree`, and `leaf-multiple` toggles leaves only.
+These adapters expose exploration and selection, with no component source search/copy controls.
+`maxNodes` governs the legacy data model, not the source total or its fixed window bounds.
+
+**With `treeSource` undefined, two legacy child models are accepted and never interleave.**
 
 - **Declarative** (mirrors the upstream markup, so a tag rename is the whole migration): write
   nested `<lr-tree-item>` elements as light-DOM children, each carrying its own
@@ -2794,6 +3274,7 @@ owner context maintained by `<lr-tree>`.
 
 A tree containing any author-written `<lr-tree-item>` child is read purely as the declarative model
 and `data` is ignored. The empty state renders only when neither model has any items.
+Author-written light-DOM items have no total-node cap; traversal still stops at 64 descendant levels.
 
 Both child models use the same selection, roving-focus, checkbox-cascade, icon, and lazy-loading
 engine. The upstream lifecycle names are normalized to the library-wide `lr-` prefix;
@@ -2818,10 +3299,10 @@ deeply-nested node's own shadow root still reaches it).
   after changes (rebinding the same array is a no-op). A refresh is diffed by id: a node whose
   fields (including an icon template from the same literal with equal values) and children are
   unchanged keeps its previous object, so its row neither re-renders nor re-seeds element state.
-  Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
+  Normalization accepts at most `maxNodes` valid nodes (default 1,000) and 64 descendant levels, and lazily
   inspects at most 10,000 root/child array positions globally in depth-first order. It never
   invokes caller accessors and exposes `dataTruncated = true` when malformed or over-budget input
-  was omitted or the inspected-position ceiling was reached. When more than 1,000 valid nodes are
+  was omitted or the inspected-position ceiling was reached. When more than `maxNodes` valid nodes are
   supplied, the localized `limit` part reports the retained-node cap; malformed input alone does
   not show that cap notice. Collapsed branches do not instantiate descendants; disclosure projects only normalized
   children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
@@ -2838,6 +3319,9 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
   removed by later object refreshes; removing the author attribute restores the current data name.
   `id` is the event, roving-focus, reconciliation, and reorder identity and must be unique across
   the complete reachable hierarchy; malformed rows, blank IDs and later duplicates are omitted as described above
+- `maxNodes: number = 1000` (attribute `max-nodes`) — the object-data node budget, normalized to
+  `1..10000`; unset or non-finite values restore 1,000. Set it before assigning `data`. Raising it
+  does not recover excluded input automatically: reassign the original source after raising the cap.
 - `selection: 'single'|'multiple'|'leaf'|'leaf-multiple' = 'single'` — self-managed selection for
   both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
   checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
@@ -2852,7 +3336,9 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
 
 **Read-only getters:** `selectedItems: readonly LyraTreeItem[]` returns a new frozen snapshot of
 selected item elements in document order, including derived fully-selected parents in either
-multiple mode. `dataTruncated: boolean` reports bounded/malformed normalization as described above.
+multiple mode. It returns an empty frozen array in source mode; it never enumerates unmounted
+provider selection. `dataTruncated: boolean` reports legacy bounded/malformed normalization as
+described above.
 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous _visible_ node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
@@ -2886,10 +3372,22 @@ roving stop to the next reachable row instead of stranding it, and the state is 
   `selectedItems` and the multiple-mode cascade are unchanged and a modal that inerts the page can
   never silently wipe a tree's selection.
 
-**Methods:** `expandAll(): Promise<void>`, `collapseAll(): Promise<void>` (both iterative, bounded,
-and resolved only after the affected rendered item cascade settles).
+**Methods:** `revealSourceKey(key: string): Promise<boolean>` asks the source to reveal a global
+key and focuses its current visible row; it resolves `false` for absent, invalid, obsolete or
+unset-source requests. Source `reveal` responses need a valid `focusIndex` to resolve successfully.
+`expandAll(): Promise<void>`, `collapseAll(): Promise<void>` (both iterative, bounded
+by hierarchy depth, and resolved only after the affected rendered item cascade settles). Items at
+each depth expand together, preserving their individual lifecycle events, motion durations and lazy
+loading behavior.
 
-**Events:** `lr-selection-change` (`detail: { selection }`, where both the detail and selection
+Both bulk methods are no-ops in source mode, and `reorderable` has no source-mode effect. Expansion
+and selection use provider projection actions rather than legacy item/lazy lifecycle events.
+
+**Events:** source mode emits `lr-source-selection-change` only after a current user selection
+projection commits: frozen readonly `detail: { key: string; selected: boolean;
+scope: 'item' | 'subtree'; state: string }`. It reports the accepted global-key intent and new
+opaque state, without constructing a DOM selection array. The following events are legacy-only:
+`lr-selection-change` (`detail: { selection }`, where both the detail and selection
 snapshot are frozen; fired for user selection and when a `data` refresh removes or re-seeds selected
 rows) and `lr-reorder` (`detail: { nodeId, parentNodeId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
@@ -2913,7 +3411,11 @@ icons; an item-level slot with the same name takes precedence.
 
 **CSS parts:** `base` and `tree` are aliases on the same `role="tree"` root; `empty` is the
 empty-state message shown when neither child model has any items; `limit` is the localized
-retained-node cap notice when more than 1,000 valid nodes are supplied.
+retained-node cap notice when valid object-data nodes exceed `maxNodes`.
+Source mode adds `source-list`, `source-row`, `source-toggle` (branch and retry buttons),
+`source-label`, `source-status`, and `source-error`, retaining the `base`/`tree` aliases. Its tree
+root owns the accessible name, busy state and multiselectability; flat source rows own their
+treeitem metadata. Source rows are not `<lr-tree-item>` instances and do not use its item slots.
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
 `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-text`,
@@ -2925,7 +3427,8 @@ since the host itself is the focusable `role="treeitem"`), plus `--indent-size`,
 
 ### `lr-tree-item`
 
-One row of the tree, in either child model. `role="treeitem"` (plus
+One row of the tree, in either legacy child model; provider source mode renders its own bounded
+flat rows instead. `role="treeitem"` (plus
 `aria-expanded`/`aria-level`/`aria-setsize`/`aria-posinset`/`aria-selected` and the roving
 `tabindex`, driven by `<lr-tree>`) live on the _host_ element itself, not an internal row `<div>` —
 so this node's own nested children (whether rendered in its own shadow root or projected from the
@@ -3102,13 +3605,14 @@ The declarative model — the same shape a renamed `wa-tree`/`sl-tree` subtree l
 - `lr-tree`'s `getUpdateComplete()` cascades through owner-controlled descendants
   `<lr-tree-item>`'s own `updateComplete` (see `update-cascade.ts`) so that code awaiting the
   tree's `updateComplete` does not run before a reachable nested node has finished rendering its
-  roving `tabIndex`. The same 64-level/1,000-node work bounds apply to context, focus, selection,
-  and disclosure walks.
+  roving `tabIndex`. Context, selection and disclosure walks retain the 64-level depth guard;
+  object data also retains its configured node cap. Moving focus patches the previous and next
+  item without rebuilding the hierarchy.
 - row enrichment is intentionally structured rather than an unrestricted renderer: use `icon`,
   `label`, `description`, `badges`, and `accessibleLabel`. This keeps the host as the single
   `role="treeitem"` interaction target and preserves the APG keyboard model.
-- `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `LyraTreeNodeData[]` is derived
-  from `nodes` on every render and keyed by filesystem path, an order it does not own.
+- `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `LyraTreeNodeData[]` is
+  derived from `nodes` and keyed by filesystem path, an order it does not own.
 - in the declarative model, appending a child while the parent is collapsed still registers: a
   `childList` MutationObserver assigns the `children` slot and requests an update, because
   `slotchange` alone cannot see a child added to a slot that is not currently rendered. Editing a
@@ -3123,12 +3627,25 @@ The declarative model — the same shape a renamed `wa-tree`/`sl-tree` subtree l
 
 A pannable/zoomable DAG workflow canvas: positions HTML node cards, draws SVG edges between their
 handles, runs a shared layered auto-layout for unpositioned nodes, and owns all selection/drag/
-connect interaction. It is readonly by default; opt into editor gestures with `nodes-draggable`,
+connect interaction. Editor gestures are opt-in with `nodes-draggable`,
 `connectable`, and `droppable`. The component snapshots model inputs instead of retaining mutable
 caller aliases, and reports edit intent for the host to apply.
 
-Input/output handle IDs are reserved only after their complete handle record is admitted; unreadable
+With `graphSource` unset, node cards and edges outside the visible viewport are culled. Active and selected nodes, active
+and selected edge endpoints, connection targets and their incident edges remain available.
+Keyboard navigation retains the complete model order and pans to reveal its destination. Panning
+queries retained geometry indexes; companion snapshots contain the complete admitted model.
+Viewport culling preserves existing collection-admission limits and controlled model semantics.
+Without a measurable viewport, including during SSR, the complete model is rendered.
+
+For legacy array inputs, input/output handle IDs are reserved only after their complete handle record is admitted; unreadable
 optional labels cannot suppress a later valid handle with the same ID.
+
+Legacy node metadata uses a shared 50,000-position inspection budget per node assignment, at most
+10,000 own keys per record and 16 descendant levels. Cloned JSON references and cycles are shared
+across node data roots and frozen; non-plain leaves remain opaque. The `input-limit` part reports
+node/edge or metadata admission loss separately from `layout-limit`. JavaScript key enumeration
+itself can still scale with an individual object's key count.
 
 Anchored Lyra overlays in a node's slotted content (a node menu, a tooltip) resolve the `fixed`
 strategy by default, because a node is translated inside a scaled, clipped world where an
@@ -3157,6 +3674,121 @@ import type {
   FlowStructureSnapshot,
 } from "@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js";
 ```
+
+**Complete workflow source:** `graphSource: FlowCanvasSource | undefined = undefined`
+(attribute: false) takes precedence over `nodes`/`edges`. Only `undefined` restores the latest
+legacy inputs; invalid defined providers fail visibly without falling back to those arrays.
+Provider identity/revision is caller-owned; the canvas admits bounded records and scenes.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-flow-canvas.js";
+import type { FlowCanvasSource } from
+  "@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js";
+import type { FlowNode, FlowEdge, FlowStructureSnapshot } from
+  "@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js";
+import type { LyraGraphSource, LyraGraphSourceQuery, LyraGraphSourceSummary,
+  LyraGraphOverview, LyraSourceBounds } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`FlowCanvasSource = LyraGraphSource<FlowNode, FlowEdge>`; the exact generic protocols are in
+[shared source contracts](shared/events-and-types.md). It provides `revision`, `records`,
+`scene(request)` and optional `overview(request)`. Source and records revisions must agree and
+be a nonempty string or finite number. `records` supplies `query`, `lookup` and `locate` for the
+complete logical workflow, separately from the bounded positioned scene.
+
+**Global record navigation:** `sourcePage: number = 0` (`source-page`) is zero-based;
+`sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500. Readonly
+`sourceTotal: number | null` is the accepted current record-query total, or null while unavailable
+or without a source. Size/query changes reset page zero; an out-of-range page receives at most
+one corrective last-page request and publishes the accepted corrected page. The navigator offers
+nodes or edges, full-source search, incident-edge scope with in/out/both direction, endpoint
+links, page entry/previous/next and global Home/End/Up/Down record navigation.
+
+The navigator sends `LyraGraphSourceQuery`, initially
+`{ kind: 'nodes', search: '', centerKey: null, direction: 'both', nodeTypes: [] }`.
+Search is bounded to 65,536 UTF-16 units; these controls query the whole source rather than
+filtering a loaded scene/page. `records.query({ revision, locale, signal, page, pageSize, query })`
+returns `{ rows, total, summary: { nodes, edges } }`. Each row is `{ key, order, value }`, where
+`value` is `{ kind: 'node', value: FlowNode }` or `{ kind: 'edge', value: FlowEdge }` and its key is
+exactly `node:<id>` or `edge:<id>` with a nonblank original ID. Safe nonnegative canonical `order`
+and keys are unique within a page; rows exactly fill the requested in-bounds page. The required
+summary gives complete global node/edge counts; unfiltered total equals the matching summary
+count, filtered/incident total cannot exceed it, and accepted scenes must agree with those counts.
+Totals and summary counts are safe nonnegative integers.
+Groups/tags are not accepted on this route. Invalid/duplicate/oversized responses fail atomically,
+without local filtering, sorting or silent trimming. Record pages copy only bounded display fields
+and edge endpoints; they do not materialize complete node metadata.
+
+`revealSourceKey(key: string): Promise<boolean>` accepts canonical `node:<id>`/`edge:<id>`, clears
+search/incident scope for that kind, uses global `locate`, loads the matching page and attempts to
+focus its navigator row. It resolves false for unset/invalid/missing, failed or superseded work. This is
+separate from synchronous `focusNode(id, options)`, which moves camera/focus only for a node
+already known in the current scene and does not fetch globally. Reveal does not promise a camera
+move or a new scene. Reveal, controlled paging/selection and rebind emit no activation or selection
+event; actual row activation retains `lr-node-activate`/`lr-edge-activate` and selection payloads
+with original IDs. Scene absence does not prove global record absence.
+
+**Bounded scene and source geometry:** `scene` receives viewport bounds, at most 32 selected/focus
+reservation keys, `nodeLimit: 500` and `edgeLimit: 1000`. It returns at most those exact node/edge
+entries, global `total`, explicit `coverage: 'complete' | 'neighborhood' | 'aggregate'` and non-null
+`worldBounds`. Requests include revision/locale/signal, `mode: 'viewport'`, `centerKey: null`,
+`bounds` and `includeKeys`. Nodes require finite explicit entry positions inside authoritative world
+bounds; an optional value position must agree. Position/world rectangle endpoints stay within ±1,000,000,
+with nonnegative world dimensions and finite endpoints. Scene edge keys/endpoints must match
+value IDs and resolve to nodes in that scene. Missing positions never trigger local auto-layout.
+The same revision must keep world bounds and global totals consistent. `source-coverage` reports
+shown versus global counts, rather than suggesting every record is drawn.
+
+Source scenes preserve FlowNode type, accessible label, disabled state, input/output handles and
+data, plus FlowEdge handles, label and tone. They read own data descriptors; accessors reject.
+`data` accepts plain records/arrays of strings, finite numbers, booleans and null, with shared
+references/cycles preserved in detached frozen copies. Opaque leaves such as functions or Dates
+reject. Each container/handle collection allows at most 10,000 entries, descendant container depth
+is at most 16, and metadata/handle inspection shares a 50,000-field scene budget. Each admitted
+text/key is at most 65,536 UTF-16 units, with a 2,000,000-unit cumulative text ceiling per scene
+or record-page response. Overflow fails the complete response without clipping. JavaScript's
+eager own-key enumeration can still allocate/work in proportion to one input object's key count
+before that object's entry limit is rejected; these bounds do not make provider work constant.
+
+Provider-derived retained data covers the current record page (at most 500 rows), current scene
+(at most 500 nodes/1,000 edges) and bounded geometry/overview. Controlled selection keeps its existing first-10,000
+candidate-ID bound and preserves offscene IDs instead of pruning them by scene membership;
+scene reservations are at most 32 keys. This route does not materialize the full provider workflow
+or cache historic pages.
+Page/locate work, scene and overview each keep their fixed request lanes, with one physical call
+per lane and only the latest queued intent. Ignored aborts keep physical permits until settlement;
+providers should settle promptly. Paging does not reset the camera or refetch an unchanged scene;
+pan/zoom/resize changes the viewport scene without restarting the record query. Accepted overview
+is reused across viewport changes.
+
+Source mode disables model editing: drag/nudge/connect/drop/delete and full-array layout/model
+mutations, including gestures started before the source was assigned. It does not force public
+`readonly`; pan/zoom/navigation and minimap controls remain usable when unlocked. Public
+`readonly` still locks viewport interaction and makes viewport-mutating methods inert. Source
+mode emits no model-edit/layout event presenting a bounded scene as the complete workflow.
+`fit()` frames accepted global world bounds; legacy `fit()` frames admitted node geometry.
+
+Companion snapshots add optional
+`source: Readonly<{ coverage: 'complete' | 'neighborhood' | 'aggregate'; total: LyraGraphSourceSummary;
+worldBounds: LyraSourceBounds; overview: LyraGraphOverview | null }>` when accepted source bounds
+are available. Their node/edge arrays remain bounded exact scene geometry. `locked` still means
+public `readonly`. Optional `overview({ revision, locale, signal, limit: 1024 })` must describe
+those exact world bounds with at most 1,024 finite contained nonoverlapping bins whose counts sum
+to the global node total. Null/unavailable/rejected overview is distinct from accepted empty
+bins; the minimap never invents a global overview from scene nodes. The frozen accepted overview
+identity is shared across viewport notifications.
+
+Reassign even the same source or call a keyless `requestUpdate()` after revision/state changes.
+Named local presentation paints reuse accepted provider data unless source revision/effective
+locale changed. Replacement, unset, disconnect and adoption revoke old provider callbacks, gestures
+and effects; superseding query/reveal revokes obsolete record controls. Reconnect captures current
+input. Source navigator/status parts are `source-navigator`, `source-controls`, `source-status`, `source-coverage`,
+`source-records` and `source-record`. Loading, successful empty, missing record, record failure
+and scene failure remain distinct localized states with current guarded retry controls.
+
+The following array admission, legacy auto-layout and complete-model snapshot rules apply with
+`graphSource` unset; source behavior is described above.
 
 **Properties:**
 
@@ -3190,13 +3822,13 @@ import type {
 - `readonly: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags. Enabling it during a pan, node drag, pointer/keyboard connection, or palette drop
   cancels the active preview, rolls pan/node geometry back, clears transient state, and retires the
-  window pointer listeners so a later release cannot commit. The one-shot initial framing still
-  applies to a `readonly` canvas, and waits until the canvas has a rendered size (a hidden tab or
+  window pointer listeners so a later release cannot commit. The legacy one-shot initial framing
+  still applies to a `readonly` canvas, and waits until the canvas has a rendered size (a hidden tab or
   closed dialog is framed when it is first shown).
 - `selectedNodeIds: readonly string[] = []`, `selectedEdgeIds: readonly string[] = []` (attribute:
   false) — seed or replace selection. Each assignment snapshots at most the first 10,000 ids,
-  omits blank/later duplicates first-wins, and prunes identities absent from the current canonical
-  node/edge model. Reassign after changes. Activation and clear-selection gestures update frozen
+  omits blank/later duplicates first-wins, and, with `graphSource` unset, prunes identities absent
+  from the current canonical node/edge model. Reassign after changes. Activation and clear-selection gestures update frozen
   arrays before emitting `lr-selection-change`; model shrinkage prunes stale ids without claiming
   a user selection gesture occurred.
 - `minZoom: number = 0.25` (attribute `min-zoom`), `maxZoom: number = 2` (attribute `max-zoom`)
@@ -3214,21 +3846,25 @@ import type {
 - `viewport` (readonly getter) — a frozen `{ x, y, zoom }` snapshot
 
 **Methods:** `setViewport({ x, y, zoom })`, `zoomIn()`, `zoomOut()`, `resetZoom()`,
-`fit(options?: { padding?: number })` (frames every node), `focusNode(id, options?: { zoom? })`
-(pans/zooms to one node and moves roving focus onto it), `toContentPoint(clientX, clientY)` (maps a
+`fit(options?: { padding?: number })` (frames legacy admitted nodes or source global world bounds),
+`focusNode(id, options?: { zoom? })` (pans/zooms to one currently known node and moves roving focus
+onto it), `toContentPoint(clientX, clientY)` (maps a
 pointer position to content coordinates, RTL-aware), `registerCompanion(cb: (snapshot:
 FlowStructureSnapshot) => void): () => void` — the subscription `lr-flow-minimap` uses to read
 live node/edge/viewport geometry without this canvas ever importing the minimap.
+`revealSourceKey(key: string): Promise<boolean>` provides the global record navigation described above.
 All viewport-mutating methods, including `focusNode()`, are inert while `readonly`; coordinate mapping
 and companion subscription remain available because neither mutates viewport or edit state.
 Each companion observer receives its own deeply frozen `FlowStructureSnapshot`: readonly node and
 edge geometry/status arrays (shared between observers and reused, by identity, across
 viewport-only frames until the structure changes), viewport `{ x, y, zoom, width, height, minZoom, maxZoom }`, and the
 effective `readonly` state (as the snapshot's `locked` key), `orientation`, `layerGap`, and `nodeGap`. Zoom bounds are finite, positive, and
-sorted even when public inputs are invalid or reversed.
+sorted even when public inputs are invalid or reversed. Source snapshots additionally carry the
+accepted `source` descriptor above; their scene arrays do not imply full-source coverage.
 
-**Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId, source, target
-}`), `lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
+**Events:** `lr-node-activate` (`detail: { nodeId }`), `lr-edge-activate` (`detail: { edgeId,
+sourceNodeId, targetNodeId, source, target }`, both endpoint-name pairs are supplied),
+`lr-selection-change` (`detail: { selectedNodeIds, selectedEdgeIds }`), `lr-node-move` (`detail: { nodeId,
 position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, targetHandle }`),
 `lr-node-add` (`detail: { type, position }`, from a palette drop), `lr-selection-delete`
 (`detail: { nodeIds, edgeIds }`), `lr-viewport-change` (`detail: { x, y, zoom }`),
@@ -3236,7 +3872,7 @@ position, previous }`), `lr-connect` (`detail: { source, target, sourceHandle, t
 previously unpositioned nodes). Every detail and nested coordinate/array is readonly and frozen.
 
 **Slots:** default (consumer-authored cards matched by `node-id` and assigned to generated
-`node-{id}` slots), `top-start`, `top-end`, `bottom-start`, `bottom-end`. Each node always has a
+`node-{id}` slots), `top-start`, `top-end`, `bottom-start`, `bottom-end`. Each rendered node has a
 declarative shadow-DOM fallback card, so SSR and hydration do not depend on imperative light-DOM
 card creation. An authored card replaces only its matching fallback; unmatched cards are unslotted
 with a warning. Opposite-side companion slots share wrapping rails in narrow allocations.
@@ -3246,7 +3882,8 @@ with a warning. Opposite-side companion slots share wrapping rails in narrow all
 (a dangling-edge stub line), `connection-line` (in-progress connect gesture), `node`, `empty`,
 `node-control` (the native per-node roving/activation control), `live-region`, `edge-list` (a
 visually hidden list only for dangling/unrenderable edges), `layout-limit` (a visible notice whose
-announcement uses the shared light-DOM polite sink), `overlay-rail`, and the
+announcement uses the shared light-DOM polite sink), `input-limit` (node/edge or metadata
+admission notice), `overlay-rail`, and the
 fallback-card parts `node-card`, `node-card-base`, `node-card-surface`, `node-card-header`,
 `node-card-heading`, `node-card-status`, `node-card-progress`, `node-card-body`, `node-card-toolbar`,
 `node-card-handle`, `node-card-handle-input`, and `node-card-handle-output`. A node whose `type`
@@ -3476,6 +4113,32 @@ rectangle, for orientation and fast navigation on canvases larger than the scree
 geometry always comes from the canvas's `registerCompanion()` snapshots, so the two can never
 disagree.
 
+For legacy snapshots, the minimap retains every admitted node. Its node overview and moving viewport use
+separate SVG layers, so panning keeps the overview tree unchanged. Existing `node`, `viewport`
+and `viewport-hit-area` parts remain available.
+
+**Source companion:** when `FlowStructureSnapshot.source` is present, the minimap frames its
+accepted global `worldBounds`, including negative origins and positive fractional extents; it
+never infers source extent from the bounded scene-node array. Every positive axis keeps its exact
+source dimension without legacy padding or a one-unit minimum. Only an exactly zero-width or
+zero-height axis receives a centered one-unit SVG display extent; source coordinates are unchanged.
+
+Only accepted `source.overview.bins` render, under `aggregate-bin`, at most 1,024 rectangles.
+They describe the complete node population within the authoritative world bounds; scene-node
+rectangles are not painted as a substitute global overview. The canvas owns overview validation
+and freezing, and the minimap adds no provider query or second normalization. A missing/rejected
+`overview: null` shows localized `source-unavailable` (default “Workflow overview unavailable”)
+while world framing and unlocked viewport controls remain usable. Accepted empty bins are a
+successful empty overview and do not show the unavailable state.
+
+The immutable overview layer is reused by identity across viewport-only snapshots. Map clicks,
+viewport drag, wheel zoom and physical arrow keys use the same exact source-world inverse
+mapping, including RTL and zero-axis display fallback. A change in world coordinate values
+cancels an active drag; cloned equal bounds do not. Old subscriptions/detached controls cannot
+move a later canvas binding. `locked` continues to reflect public canvas `readonly`; the source
+editing gate alone does not disable minimap navigation. Removing the provider restores the
+legacy node-geometry overview.
+
 **Properties:**
 
 - `for: string = ''` — id of the target `lr-flow-canvas`; when empty, the nearest ancestor canvas
@@ -3493,7 +4156,9 @@ disagree.
 **Slots:** none.
 
 **CSS parts:** `base` (the root wrapper; drops its border, background and corner radius under
-`frame="plain"`), `map` (the scaled SVG), `node` (one rect per node), `viewport` (the
+`frame="plain"`), `map` (the scaled SVG), `node` (one rect per legacy node),
+`aggregate-bin` (one accepted source overview rectangle), `source-unavailable` (missing source
+overview message), `viewport` (the
 exact visible view rectangle), `viewport-hit-area` (the transparent draggable/focusable target),
 `instructions` (visually hidden keyboard help), and `live-region` (the `aria-hidden` mirror of the
 latest viewport-change text).
@@ -3521,8 +4186,8 @@ viewport-to-content ratio. The token inherits from ancestors; set it to `0` to o
 **Known gotchas:**
 
 - Never resolves `nodes`/`edges` on its own — it subscribes to `registerCompanion()` and repaints
-  from whatever snapshot the canvas last pushed, so it can only ever show what the canvas itself
-  currently renders.
+  from the complete admitted legacy geometry or the accepted source overview/world bounds the
+  canvas last pushed. Source scenes remain bounded and never substitute for a global overview.
 - A readonly canvas snapshot makes the hit area unfocusable and inert: no pointer, click, wheel, or keyboard
   shortcut can mutate the canvas.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
@@ -3882,7 +4547,10 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
   milliseconds, or a valid `Date`, then normalizes to the displayed ISO day. Invalid date/title rows
   are omitted; `lr-event-select.detail.event` remains the original admitted object. `color` is
   sanitized before use as the marker background. The former ignored `start`/`end` fields are not
-  part of the contract; use one event per displayed date
+  part of the contract; use one event per displayed date. Input retains the first 10,000 events
+  while preserving event identity. A localized `limit` part discloses omitted input in month and
+  agenda views; provide a smaller date range to include other events. Changed loss notices are
+  announced politely after mount
 - `value: string = ''` — the selected ISO date
 - `viewDate: string` (attribute `view-date`, defaults to the 1st of the current month) — the visible
   month; an unparseable value falls back to the current month
@@ -3907,6 +4575,25 @@ events render as `agenda-event` buttons in agenda view; either ceiling past that
 localized `event-limit`/`agenda-limit` "+N more" notice rather than mounting an unbounded number of
 buttons.
 
+For a large event archive, let the host query the displayed month and replace `events` with a
+bounded result. Listen for `lr-view-change.detail.viewDate` from the previous/next buttons and
+out-of-grid keyboard moves. Assigning `viewDate` programmatically does not emit that event, so the
+host must also call its loader for a programmatic jump. The host owns request cancellation and
+obsolete-result checks: abort superseded month/page fetches and ignore results whose date window
+or request generation is no longer current.
+
+Keep each assigned window within the 10,000-event input bound and treat the four-per-day or
+500-entry agenda as previews when the selected period is dense. Show an explicit host total and
+preview count for server-omitted events; native calendar overflow counts only admitted events.
+For complete dense-event traversal, compose a configured `lr-table` with
+`paginationMode = 'server'`, `pageSize`, `totalItems`, controlled one-based `page`, and the current
+page's `rows`. Set `totalItems` to the full event count for the selected month or date. Handle
+`lr-page-change.detail.page` by querying that page, then assigning `page` and `rows`; use stable
+`rowKey` identities across pages.
+`lr-row-activate.detail.row` identifies an event reached through the table, while
+`lr-event-select.detail.event` identifies a calendar preview action. Complete traversal comes
+from the paged table; the calendar remains a bounded month/day preview.
+
 **Keyboard:** the month grid is a fixed 6×7 matrix (leading/trailing days of adjacent months fill it
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
 Arrows move by 1 day (Left/Right swapped under RTL) or 7, PageUp/PageDown by one month (clamping
@@ -3924,7 +4611,8 @@ month-navigation buttons; `previous-button` and `next-button` identify each dire
 `grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `event-limit`
 (localized "+N more" notice shown in a day cell whose events exceed the 4-event per-cell render
 ceiling), `agenda`, `agenda-event`, `agenda-limit` (localized "+N more" notice shown in agenda
-view when the visible month's events exceed the 500-event render ceiling), and `empty` (the agenda
+view when the visible month's events exceed the 500-event render ceiling), `limit` (input-admission
+notice), and `empty` (the agenda
 view's localized "no events" message).
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)
@@ -3956,6 +4644,11 @@ Items have no keyboard navigation or selection model: a passive record display, 
 item's `title`/`description` routinely hold focusable content, so wrapping the row in `role="button"`
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
+
+Every assigned item remains mounted; the timeline does not window large collections. Flow mode
+leaves untouched items' positioning styles alone. Time mode reuses item geometry between targeted
+resize notifications; allocation, timestamp placement, structural and orientation changes can
+remeasure the complete mounted list.
 
 Horizontal time layouts using `collision="overlap"` or `collision="stack"` allocate their block size
 from the actual item content and lane offsets. The height follows content growth, shrinkage, and
@@ -4068,6 +4761,44 @@ former `--lr-timeline-item-*` plumbing names.
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
+**Provider hierarchy:** `treeSource: FileTreeSource | undefined = undefined` (attribute: false)
+uses `LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>` from
+`@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `nodes`, preserving
+its identity; invalid defined input shows a localized source error. Setting `undefined` restores
+the current legacy `nodes` input. Reassign even the same source, or call a keyless
+`requestUpdate()`, after revision/provider-state changes. Locale, reconnect and adoption refresh
+the source; unrelated named display updates do not.
+
+The provider projects the complete visible preorder using the same `project` actions, fixed empty
+query and required direct key lookup described for `lr-tree` above. `total` includes collapsed
+nodes and `rows.count` counts all visible logical rows. Those counts can describe a million-node
+host hierarchy while at most 301 rows mount and at most 401 rows are retained (four 100-row pages
+and one focused row). Each range read requests at most 100 rows, with at most two physically
+pending reads. No full path/ancestor index or nested subtree copy is built. The provider owns
+storage, global uniqueness, selection/expansion snapshots and cancellation; source replacement
+and obsolete replies cannot commit old rows or focus.
+
+Global row keys must exactly equal `value.path`: nonblank strings of at most 65,536 UTF-16 units,
+preserved verbatim without filesystem resolution. Paths are identities, not permission to read or
+open a file; the host authorizes any resulting operation. Displayed `name`/`mimeType` use at most
+65,536 aggregate text units per row; oversized or accessor-backed fields fail visibly. Source
+events contain only bounded frozen displayed metadata, with no `children`. The provider's
+`childCount` identifies branches even when `kind` is omitted; branches never emit file-open.
+Nested `value.children` is ignored. Logical depth, sibling positions, bounded keyboard navigation,
+localized loading/empty/error states and retry follow the source tree contract above. The legacy
+snapshot limits below remain separate from this route; `maxNodes` does not raise its source window.
+
+**Controlled source selection:** an accepted user selection updates `selectedPath` and emits
+`lr-file-select`. Activating an already-selected leaf file also emits `lr-file-open`, provided the
+same source/projection is still current after the selection listener returns. The provider owns
+the authoritative selected flags. External `selectedPath` changes submit an item selection after
+the initial projection, without synthetic user events or moving focus; clearing it deselects the
+previously controlled key. The default `null` does not request a global clear. A current valid path
+is reconciled again after source replacement, rebind or refresh. Invalid empty/blank/oversized
+controlled paths are not forwarded. This adapter has no source search/copy controls.
+
+With `treeSource` undefined, the following snapshot and lazy-directory route applies.
+
 An unreadable optional field rejects only that file record; it cannot reserve the path against a
 later valid occurrence. Valid siblings retain their source order within the existing depth and
 inspected-position budgets.
@@ -4075,7 +4806,10 @@ inspected-position budgets.
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
 cycle-safe snapshot omitting empty/blank paths and retaining the first successfully admitted occurrence of each path, bounded to
 the first 10,000 inspected source positions across 64 descendant levels; reassign after changes;
-rebinding the same array is a no-op). The composed `<lr-tree>` holds at most 1,000 rows: when the
+rebinding the same array is a no-op). `maxNodes: number = 1000` (attribute `max-nodes`) sets the
+composed tree's row budget, normalized to `1..10000`; unset or non-finite values restore 1,000.
+The source budget remains 10,000 inspected positions. The composed `<lr-tree>` holds at most
+`maxNodes` rows: when the
 whole listing is larger, each collapsed directory is projected as a single lazy row whose children
 load from the snapshot when it expands, so every top-level entry stays reachable;
 `selectedPath: string | null = null` (attribute `selected-path`), and `label?: string` — an
@@ -4084,12 +4818,14 @@ back to the localized default while an explicitly empty string renders as an emp
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
 and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
 including an explicit empty string; removing it restores `label` or the localized fallback.
+Derived rows are reused until their data, locale or limit changes; selecting a different path
+updates only the affected ancestor paths. An explicit `requestUpdate()` refreshes derived content.
 
 **Read-only getters:** `dataTruncated: boolean` — `true` when normalization omitted a malformed,
 duplicate, cyclic, over-depth or over-budget entry, or when the directories currently expanded hold
-more rows than the composed tree's 1,000-row budget.
+more rows than the composed tree's configured row budget.
 When source normalization reaches its 10,000-node cap, the host shows a localized `limit` part;
-the composed tree shows its own 1,000-item notice when its valid-node cap is reached.
+the composed tree shows its own notice when its configured valid-node cap is reached.
 
 **Lazy directories:** a directory with `hasChildren: true` and no `children` uses `<lr-tree>`'s own
 lazy lifecycle: expanding it shows the row's busy spinner (`aria-busy`), emits `lr-load-children`
@@ -4098,16 +4834,27 @@ children; an empty result ends the busy state without expanding. No placeholder 
 
 **Methods:** `setChildren(path, children)` supplies a lazily-loaded directory's children.
 `revealPath(path)` expands every ancestor directory and scrolls the target row into view, resolving
-`true` once found. `expandAll()` and `collapseAll()` forward to the underlying `<lr-tree>`.
+`true` once found in legacy mode. In source mode it delegates to
+`revealSourceKey(key: string): Promise<boolean>`, which requests a provider reveal and focuses its
+current visible row; missing/invalid/obsolete requests resolve `false`. The provider must return a
+valid `focusIndex` for successful reveal. `expandAll()` and `collapseAll()` forward to the underlying
+`<lr-tree>` only in legacy mode and are no-ops in source mode. `setChildren()` updates the legacy
+`nodes` input; it does not mutate the provider. Source branch toggles use `project(toggle)` rather
+than `lr-load-children`.
 
 **Events:** `lr-file-select` (frozen readonly `detail: { filePath, node }`, a row was activated),
 `lr-file-open` (frozen readonly `detail: { filePath, node }`, Enter/click on an already-selected file
 row), and `lr-load-children` (frozen readonly `detail: { filePath }`, a lazy unloaded directory
-expanded). The composed tree's own `lr-expand`, `lr-collapse`, `lr-after-*`, `lr-lazy-*` and
+expanded, legacy mode only). Source select/open keep the same `{ filePath, node }` shape, with
+`node` limited to the displayed record rather than a complete subtree. The composed tree's own
+`lr-expand`, `lr-collapse`, `lr-after-*`, `lr-lazy-*` and
 `lr-selection-change` events stay inside the component.
 
 **CSS parts:** `base` — the root wrapper; `limit` — localized notice when the source listing
 exceeds its 10,000-item snapshot.
+Source mode retains `base` and adds `tree` on the semantic root, plus `source-list`, `source-row`,
+`source-toggle` (branch and retry buttons), `source-label`, `source-status`, and `source-error`.
+The root owns the accessible name/busy state, and each flat source row owns logical treeitem ARIA.
 
 ## `lr-env-list`
 
@@ -4152,6 +4899,13 @@ Controlled searchable and filterable document inventory with versions, tags, own
 sorting, and bulk selection. It composes the table's bounded 100-row default, so a large document
 collection stays reachable through pagination without mounting an unbounded grid.
 
+With `dataSource` unset, the tag facet displays the first 500 locale-sorted distinct tags. A localized `[part="limit"]`
+note reports the omitted count. Search and a controlled `tagFilter` continue to match all admitted
+document tags, including tags outside the facet window. Matching rows, sorting, and folded search
+fields are reused when their inputs are unchanged; loading and selection updates reuse the current
+row projection. A custom `filter` that depends on mutable closure state can be refreshed with a
+keyless `requestUpdate()`. Publish document edits with a new outer array as described below.
+
 Own `tags: undefined` is treated like omitted tags; malformed tag arrays and entries remain invalid.
 Removing `search-term` clears search filtering without rewriting its `null` property readback; an
 explicitly empty query also clears filtering and a later query applies normally.
@@ -4188,6 +4942,53 @@ table. Omitted localizes the table's own `tableLoadFailed` default.
 `errorDescription: string = ''` (`error-description`) — failed-load supporting copy, forwarded to
 the nested table.
 
+The provider query type is `DocumentLibrarySourceQuery { readonly searchTerm: string;
+readonly tagFilter: readonly string[]; readonly sortKey: LibraryDocumentSortKey;
+readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter'] }`.
+
+**Full-source paging:** Set property-only `dataSource: DocumentLibrarySource | undefined`
+(default `undefined`) to browse a host-owned logical collection. `DocumentLibrarySource` is
+`LyraPageSource<LibraryDocument, DocumentLibrarySourceQuery>`; both types are exported by the
+component entry and package root. The query contains `searchTerm`, readonly `tagFilter`,
+`sortKey`, `sortDir`, and the current `filter` callback. The provider applies AND-tag filtering
+and ordering to the complete collection. A custom `filter` replaces the default text predicate;
+they are not applied cumulatively. The query forwards `searchTerm` verbatim (null becomes empty).
+The provider supplies the callback's trimmed, request-locale-folded text argument and owns any
+remote translation of that callback. It must not filter only the returned page. Source-mode
+`tagFilter` accepts at most 500 keys; its legacy 10,000-key allowance applies only without a source.
+
+`sourcePage: number = 0` (`source-page`) is zero-based; `sourcePageSize: number = 100`
+(`source-page-size`) normalizes to 1–500. Readonly `sourceTotal: number | null` is the exact
+accepted query total, or `null` before a current authoritative result. The nested table converts
+to its one-based page convention, shows unknown-total/loading/error states, and delegates sorting
+to the source. Query or page-size changes reset to source page zero. An out-of-range page receives
+one corrective last-page request. No complete array, row index or full-source search corpus is
+built by the component.
+
+The provider implements the shared `query`, global `lookup` and `locate` contract from
+`@aceshooting/lyra-ui/data-sources.js`. Each accepted page must include `tags`, even when its
+catalogue is empty: bounded `{ values, total, unavailableSelected }` facets describe the global
+catalogue and supplied labels. Missing rows on the current page never prove a filter is absent;
+only `unavailableSelected` removes a controlled tag. Facet values are bounded to 500 and source
+rows to 500 tags and 65,536 display-text UTF-16 units each. Source-row tags render as complete text
+lists rather than one chip per tag. Malformed or oversized replies show a localized error.
+
+Bulk selection still contains up to 10,000 global IDs. The provider resolves them in sequential
+batches of at most 500; only authoritative global lookup absence removes an ID. The header
+checkbox selects or clears the loaded page while preserving off-page selections. Selection
+changes wait for lookup to complete; failures expose `selection-status` and `selection-retry`.
+User `lr-selection-change` carries the complete accepted ID list, and programmatic assignments
+remain silent. Page/query changes and page retry reuse the independent selected-record cache.
+`lr-filter-change.matchCount` reports the accepted global query total.
+
+A defined source takes display precedence over `documents`; it never overwrites that legacy
+getter. Invalid defined sources fail visibly. Setting `dataSource = undefined` restores the
+current legacy documents and their existing limits. The source remains host-owned by identity;
+after changing its contents or revision, reassign it (including the same object) or call unnamed
+`requestUpdate()`. Replacement, explicit refresh, locale change, disconnect and adoption revoke
+obsolete work. Named presentation updates reuse accepted data. Both source and legacy routes
+forward instance `strings` to the composed table.
+
 **Events:**
 
 - `lr-filter-change` — non-cancelable; fresh frozen readonly `{ searchTerm, tags, matchCount }`.
@@ -4196,17 +4997,18 @@ the nested table.
 - `lr-selection-change` — non-cancelable; fresh frozen readonly `{ documentIds }`.
 - `lr-open` — non-cancelable; frozen readonly `{ documentId }`.
 - `lr-retry-request` — cancelable, `detail: null`; the nested table's built-in retry button was
-  activated, only rendered while `error` is set. The library contains the child's request, then
+  activated while a host or provider load error is shown. The library contains the child's request, then
   emits its own canonical request. Preventing it leaves both library and table errors set; otherwise
-  the default clears them.
+  the default clears the host error and retries the current provider page when a source is set.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
-button, while `error` is set.
+button, while a host or provider load error is shown.
 
 **CSS parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
 `clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`, `error-row`, `error-cell`,
 `error` (the nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
-`error-description`, `error-actions`, `retry-button`.
+`error-description`, `error-actions`, `retry-button`, `limit` (the count of distinct tags omitted
+from the facet), `selection-status` (source selection loading/error), and `selection-retry`.
 
 `selection-bar` is visible ordinary content, not a shadow live region. `selectedDocumentIds`
 assignments stay silent; each selection change the user makes (row or select-all checkbox, "Clear
@@ -4729,6 +5531,8 @@ These named interfaces and helper signatures are available to typed integrations
     readonly children?: readonly FileTreeNode[];
     readonly hasChildren?: boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/data/file-tree/file-tree.class.js`.
+  `type FileTreeSource = LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>`
 
 - **`components-data-flow-canvas-flow-types-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
@@ -4793,6 +5597,12 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/data/flow-canvas/flow-types.js`.
   `FlowStructureSnapshot {
+    readonly source?: Readonly<{
+      coverage: 'complete' | 'neighborhood' | 'aggregate';
+      total: LyraGraphSourceSummary;
+      worldBounds: LyraSourceBounds;
+      overview: LyraGraphOverview | null;
+    }>;
     readonly nodes: readonly FlowStructureNodeSnapshot[];
     readonly edges: readonly FlowStructureEdgeSnapshot[];
     readonly viewport: FlowViewportSnapshot;
@@ -5038,6 +5848,8 @@ These named interfaces and helper signatures are available to typed integrations
     readonly tone?: LyraVariant;
     readonly label?: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/data/tree/tree.class.js`.
+  `type TreeSource = LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery>`
 
 - **`components-data-word-cloud-word-cloud-layout-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/data/word-cloud/word-cloud.class.js`.

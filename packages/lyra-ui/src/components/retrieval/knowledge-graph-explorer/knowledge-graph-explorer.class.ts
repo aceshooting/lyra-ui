@@ -1,3 +1,9 @@
+import { ref } from 'lit/directives/ref.js';
+import { setGraphSourceComposition, resolveGraphSourceComposition, focusGraphSourceComposition, type GraphSourceCompositionSnapshot } from '../graph/graph-source-composition.js';
+import type { GraphSource } from '../graph/graph.class.js';
+export type KnowledgeGraphExplorerSource = GraphSource;
+const EMPTY_SOURCE_NODES: readonly LyraGraphNode[] = Object.freeze([]);
+const EMPTY_SOURCE_EDGES: readonly LyraGraphEdge[] = Object.freeze([]);
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
@@ -6,7 +12,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
@@ -38,7 +44,7 @@ import {
   isNonBlankIdentity,
 } from '../retrieval-identity.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
-import type { LyraNeighborRow } from '../neighbor-list/neighbor-list.class.js';
+import type { LyraNeighborRow, LyraNeighborList } from '../neighbor-list/neighbor-list.class.js';
 import type { LyraPathElement } from '../path-strip/path-strip.class.js';
 export type { LyraPathElement } from '../path-strip/path-strip.class.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
@@ -46,16 +52,14 @@ import '../graph/graph.class.js';
 import '../graph-legend/graph-legend.class.js';
 import '../entity-card/entity-card.class.js';
 import '../neighbor-list/neighbor-list.class.js';
-import '../path-strip/path-strip.class.js';
 import '../../overlays/overlay/popover.class.js';
 import '../../forms/input/input.class.js';
-import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExplorerAllTypesHidden, LYRA_DEFAULT_graphExplorerClearTypes, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_graphNodeLimit } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_statusError, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Search results rendered at once; the match count still covers every match. */
@@ -246,11 +250,16 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   50 rows sharing one tab stop (ArrowUp/ArrowDown/Home/End); the announced count covers every match.
  * @csspart search-result - One search-match row (`role="listitem"`, wrapping a `<button>`).
  * @csspart search-empty - The "no matches" message, shown when `query` is non-empty but no node matches.
+ * @csspart input-limit - Localized retained/source counts for nodes and links omitted at assignment.
  * @csspart details-limit - Localized shown/total notice when `entityDetails` holds more entries than the shared boundary keeps.
  * @csspart search-limit - Localized shown/total notice when search matches exceed the 50-row list.
  * @csspart pinned - The pinned-nodes row, only rendered while `pinnedNodeIds` is non-empty.
  * @csspart pinned-heading - The pinned-nodes row's leading label.
- * @csspart path - The composed `lr-path-strip`, only rendered while `path` is non-empty.
+ * @csspart path - The composed `lr-path-strip`, or its loading/error status, while `path` is non-empty.
+ *   Path registration loads on first use; `updateComplete` waits for registration and rendering.
+ * @csspart source-status - Source filter error or all-types-hidden status.
+ * @csspart source-clear - Restores unfiltered source navigation.
+ * @csspart detail-neighbors - The details neighborhood, source-bound only while details are open.
  * @csspart graph - The composed `lr-graph`.
  * @csspart detail-popover - The composed `lr-popover` hosting the details overlay.
  * @csspart detail-card - The default-content `lr-entity-card`, only present while `selectedNodeId` resolves to a node.
@@ -269,6 +278,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
+    graphEdgeLimit: LYRA_DEFAULT_graphEdgeLimit,
+    graphExplorerAllTypesHidden: LYRA_DEFAULT_graphExplorerAllTypesHidden,
+    graphExplorerClearTypes: LYRA_DEFAULT_graphExplorerClearTypes,
     graphExplorerFindPath: LYRA_DEFAULT_graphExplorerFindPath,
     graphExplorerLabel: LYRA_DEFAULT_graphExplorerLabel,
     graphExplorerPin: LYRA_DEFAULT_graphExplorerPin,
@@ -279,6 +291,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     graphExplorerSearchResultsLabel: LYRA_DEFAULT_graphExplorerSearchResultsLabel,
     graphExplorerUnpin: LYRA_DEFAULT_graphExplorerUnpin,
     graphExplorerUnpinned: LYRA_DEFAULT_graphExplorerUnpinned,
+    graphNodeLimit: LYRA_DEFAULT_graphNodeLimit,
+    loading: LYRA_DEFAULT_loading,
+    statusError: LYRA_DEFAULT_statusError,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
@@ -302,6 +317,176 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     'lr-pin-change',
     'lr-hidden-types-change',
   ]);
+
+  private _graphSource?: KnowledgeGraphExplorerSource;
+  private sourceEpoch = 0;
+  private sourceSearchVersion = 0;
+  private sourceSearchIntent?: { readonly query: string; readonly version: number; readonly epoch: number };
+  private sourceAssigned = false;
+  private sourceClosing = false;
+  private sourceChildBinding?: readonly unknown[];
+  private sourceChild?: LyraGraph;
+  private sourceInspect?: readonly unknown[];
+  @state() private sourceEntity?: LyraGraphNode;
+  @state() private sourceDetailsOpen = false;
+  @state() private sourcePaint = 0;
+  /** Full graph provider, passed unchanged to the child graph. Same-source assignment and
+   * requestUpdate() refresh it. Unset restores legacy arrays. Controlled source selection is
+   * resolved without moving the page or opening details; user activation opens details.
+   * When hiddenTypes is used, at most500 nodeTypes (2,000,000 total ID units) must declare the provider's complete type catalog.
+   * Unfiltered navigation includes provider types outside that catalog. */
+  @property({ attribute: false, noAccessor: true, hasChanged: () => true })
+  get graphSource(): KnowledgeGraphExplorerSource | undefined { return this._graphSource; }
+  set graphSource(value: KnowledgeGraphExplorerSource | undefined) {
+    const previous = this._graphSource; this._graphSource = value;
+    this.requestUpdate('graphSource', previous);
+  }
+  /** Zero-based page of the sole child-owned global record navigator. */
+  private _sourcePage = 0;
+  @property({ type: Number, attribute: 'source-page', noAccessor: true })
+  get sourcePage(): number { return this._sourcePage; }
+  set sourcePage(value: number) {
+    const old = this._sourcePage; this._sourcePage = value;
+    const size = finiteInteger(this.sourcePageSize, 100, 1, 500), page = finiteInteger(value, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+    if (this.sourceChild && this.sourceChild.sourcePage !== page) this.sourceChild.sourcePage = page;
+    this.requestUpdate('sourcePage', old);
+  }
+  /** Records per page, default100 and normalized1–500 by the child. */
+  private _sourcePageSize = 100;
+  @property({ type: Number, attribute: 'source-page-size', noAccessor: true })
+  get sourcePageSize(): number { return this._sourcePageSize; }
+  set sourcePageSize(value: number) {
+    const old = this._sourcePageSize; this._sourcePageSize = value;
+    if (!Object.is(old, value)) this.sourcePage = 0;
+    const size = finiteInteger(value, 100, 1, 500);
+    if (this.sourceChild && this.sourceChild.sourcePageSize !== size) this.sourceChild.sourcePageSize = size;
+    this.requestUpdate('sourcePageSize', old);
+  }
+  /** Exact active filtered node/edge total, distinct from full-source graph totals. */
+  get sourceTotal(): number | null { return this.graphSource === undefined || this.sourceFilter.invalid ? null : this.sourceFilter.empty ? 0 : this.sourceChild?.graphSource === this.graphSource ? this.sourceChild.sourceTotal : null; }
+  private get sourceFilter(): { readonly nodeTypes: readonly string[]; readonly empty: boolean; readonly invalid: boolean } {
+    const hidden = this.canonicalHiddenTypes;
+    if (!hidden.length) return { nodeTypes: [], empty: false, invalid: false };
+    const catalog = canonicalIdentityList(this.nodeTypes.map(type => type.id));
+    let units = 0;
+    if (catalog.length > 500 || catalog.some(type => type.length > 65_536 || (units += type.length) > 2_000_000)) return { nodeTypes: [], empty: true, invalid: true };
+    const types = catalog.filter(type => !hidden.includes(type));
+    return { nodeTypes: types, empty: types.length === 0, invalid: false };
+  }
+  private sourceCurrent(): () => boolean {
+    const source = this.graphSource, epoch = this.sourceEpoch, generation = this.activationGeneration, owner = this.ownerDocument;
+    let revision: unknown;
+    try { revision = source?.revision; } catch { return () => false; }
+    return () => { try { return source?.revision === revision && this.graphSource === source && this.sourceEpoch === epoch && this.activationGeneration === generation && this.isConnected && this.ownerDocument === owner; } catch { return false; } };
+  }
+  private readonly sourceAccepted = (snapshot: GraphSourceCompositionSnapshot): void => {
+    if (!snapshot.current() || this.graphSource === undefined || this.sourceChild?.graphSource !== this.graphSource) return;
+    if (this.sourcePage !== snapshot.page) this.sourcePage = snapshot.page;
+    this.sourcePaint++;
+    const intent = this.sourceSearchIntent;
+    if (!this.sourceFilter.invalid && intent && intent.epoch === this.sourceEpoch && intent.version === this.sourceSearchVersion && intent.query === this.query && snapshot.query.kind === 'nodes' && snapshot.query.centerKey === null && snapshot.query.search === intent.query && snapshot.total !== null && snapshot.current()) {
+      this.sourceSearchIntent = undefined;
+      const detail = { query: intent.query, matchCount: intent.query.trim() ? snapshot.total : 0, matchCountExact: true, activeIndex: -1 };
+      if (snapshot.current()) this.emit('lr-search-change', detail);
+    }
+    if (snapshot.current()) this.inspectSourceSelection();
+  };
+  private readonly bindSourceChild = (element?: Element): void => {
+    const graph = element as LyraGraph | undefined;
+    if (!graph) {
+      if (this.sourceChild) setGraphSourceComposition(this.sourceChild, undefined);
+      this.sourceChild = undefined; this.sourceChildBinding = undefined; return;
+    }
+    this.sourceChild = graph;
+    const size = finiteInteger(this.sourcePageSize, 100, 1, 500), page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+    if (graph.sourcePageSize !== size) graph.sourcePageSize = size;
+    if (graph.sourcePage !== page) graph.sourcePage = page;
+    if (this.graphSource === undefined) {
+      setGraphSourceComposition(graph, undefined);
+      if (graph.graphSource !== undefined) graph.graphSource = undefined;
+      this.sourceChildBinding = undefined; return;
+    }
+    const filter = this.sourceFilter;
+    setGraphSourceComposition(graph, { search: (this.query ?? '').slice(0, 65_536), nodeTypes: filter.nodeTypes, empty: filter.empty, accepted: this.sourceAccepted });
+    const binding = [graph, this.graphSource, this.sourceEpoch];
+    if (!this.sourceChildBinding || binding.some((value, index) => value !== this.sourceChildBinding![index])) {
+      this.sourceChildBinding = binding; graph.graphSource = this.graphSource;
+    }
+    this.inspectSourceSelection();
+  };
+  private inspectSourceSelection(): void {
+    const graph = this.sourceChild, id = this.selectedNodeId;
+    if (!graph || this.graphSource === undefined || this.sourceFilter.empty || !id) return;
+    const signature = [graph, this.graphSource, this.sourceEpoch, id];
+    if (this.sourceInspect && signature.every((value, index) => value === this.sourceInspect![index])) return;
+    this.sourceInspect = signature;
+    const current = this.sourceCurrent();
+    void resolveGraphSourceComposition(graph, [`node:${id}`]).then(result => {
+      if (!result || !result.current() || !current() || this.selectedNodeId !== id) { if (this.sourceInspect === signature) this.sourceInspect = undefined; return; }
+      const record = result.records.find(row => row.key === `node:${id}`);
+      if (!record || record.value.kind !== 'node') { this.selectedNodeId = null; return; }
+      this.sourceEntity = record.value.value;
+    });
+  }
+  /** Reveals and focuses a global node or edge without activation. Clears toolbar filters. */
+  async revealSourceKey(key: string): Promise<boolean> {
+    if (this.graphSource === undefined) return false;
+    this.query = ''; this.hiddenTypes = [];
+    const current = this.sourceCurrent();
+    await this.updateComplete;
+    if (!current()) return false;
+    const revealed = await this.sourceChild?.revealSourceKey(key);
+    return current() && revealed === true;
+  }
+  private closeSourceDetails(closePopover = true): void {
+    this.sourceDetailsOpen = false;
+    const neighbors = this.renderRoot?.querySelector<LyraNeighborList>('[part="detail-neighbors"]');
+    if (neighbors?.graphSource !== undefined) neighbors.graphSource = undefined;
+    if (closePopover && this.popoverEl?.open) { this.sourceClosing = true; this.popoverEl.open = false; }
+  }
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    const name = args[0];
+    if (this.sourceEpoch !== undefined && (name === 'graphSource' || name === undefined)) {
+      this.sourceEpoch++; this.sourceInspect = undefined; this.sourceEntity = undefined; this.closeSourceDetails(); this.sourceSearchIntent = undefined;
+      this.internalSelectionAssignment = undefined; this.invalidateActivation();
+      if (this.sourceChild?.graphSource !== undefined) this.sourceChild.graphSource = undefined;
+    }
+    if (name === 'query') { this.sourceSearchVersion = (this.sourceSearchVersion ?? 0) + 1; this.sourceSearchIntent = undefined; }
+    if (this.graphSource !== undefined && (name === 'hiddenTypes' || name === 'nodeTypes' || (name === 'selectedNodeId' && !this.sourceAssigned))) {
+      this.invalidateActivation(); this.sourceInspect = undefined; this.closeSourceDetails();
+      if (name === 'selectedNodeId') { this.sourceEntity = undefined; this.internalSelectionAssignment = undefined; }
+    }
+    if (this.graphSource !== undefined && this.sourceChild && ['query', 'hiddenTypes', 'nodeTypes'].includes(String(name))) this.bindSourceChild(this.sourceChild);
+    super.requestUpdate(...args);
+  }
+  private async activateSourceEntity(id: string): Promise<void> {
+    if (!isNonBlankIdentity(id) || id.length + 5 > 65_536 || this.sourceFilter.empty) return;
+    const graph = this.sourceChild; if (!graph) return;
+    const mounted = graph.view === 'list' && [...graph.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')].some(row => row.dataset['sourceKey'] === `node:${id}`);
+    if (graph.view === 'list' && !mounted) {
+      this.query = ''; this.hiddenTypes = [];
+    }
+    this.invalidateActivation(); const current = this.sourceCurrent();
+    await this.updateComplete;
+    if (!current() || this.sourceChild !== graph) return;
+    const result = await resolveGraphSourceComposition(graph, [`node:${id}`]);
+    if (!current() || !result?.current()) return;
+    const record = result.records.find(row => row.key === `node:${id}`);
+    if (!record || record.value.kind !== 'node') return;
+    this.sourceEntity = record.value.value;
+    this.sourceInspect = [graph, this.graphSource, this.sourceEpoch, id];
+    this.setInternalSelectedNodeId(id);
+    if (!current() || this.selectedNodeId !== id) return;
+    const focused = await focusGraphSourceComposition(graph, `node:${id}`);
+    await graph.updateComplete;
+    if (!current() || !focused?.() || this.selectedNodeId !== id) return;
+    const target = graph.view === 'list' ? [...graph.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')].find(row => row.dataset['sourceKey'] === `node:${id}`) : undefined;
+    const position = graph.view !== 'list' ? graph.getNodeScreenPosition(id) : undefined;
+    const bounds = target?.getBoundingClientRect() ?? graph.getBoundingClientRect();
+    if (!current() || !focused() || (graph.view === 'list' ? !target : !position)) return;
+    this.openDetailAt(id, { x: bounds.left + (position?.x ?? bounds.width / 2), y: bounds.top + (position?.y ?? bounds.height / 2), width: 0, height: 0 });
+    if (current() && focused() && this.popoverEl?.open) this.sourceDetailsOpen = true;
+  }
 
   /** Nodes forwarded to the composed graph and search experience. */
   @property({ attribute: false }) nodes: readonly LyraGraphNode[] = [];
@@ -378,6 +563,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  `''` (the default) renders no search-result list at all and applies no search dimming.
    *  Removing the attribute uses this empty-filter behavior while retaining null property
    *  readback. */
+  // Source mode delegates matching to the provider; user search events wait for its exact total.
   @property() query = '';
   @state() private pinLiveText = '';
   /** Currently pointer-hovered node id, set only while `highlight === 'hover'` (see
@@ -422,23 +608,25 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private activationFramePageHide?: () => void;
 
   private get graphModel(): NormalizedGraphModel {
+    const nodes = this.graphSource === undefined ? this.nodes : EMPTY_SOURCE_NODES;
+    const edges = this.graphSource === undefined ? this.edges : EMPTY_SOURCE_EDGES;
     const sources = this.normalizedGraphSources;
     if (
       !sources ||
-      sources[0] !== this.nodes ||
-      sources[1] !== this.edges ||
+      sources[0] !== nodes ||
+      sources[1] !== edges ||
       sources[2] !== this.nodeTypes ||
       sources[3] !== this.communities
     ) {
       this.normalizedGraphSources = [
-        this.nodes,
-        this.edges,
+        nodes,
+        edges,
         this.nodeTypes,
         this.communities,
       ];
       this.normalizedGraphModel = normalizeGraphModel(
-        this.nodes,
-        this.edges,
+        nodes,
+        edges,
         this.nodeTypes,
         this.communities
       );
@@ -454,17 +642,63 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     return canonicalIdentityList(this.hiddenTypes);
   }
 
+  private optionalRequest = false;
+  private optionalGeneration = 0;
+  private optionalPending?: Promise<void>;
+  private pathReady = false;
+  private optionalFailed = false;
+  private async loadOptionalPath(): Promise<void> {
+    await import('../path-strip/path-strip.js');
+  }
+  private ensureOptionalChildren(): void {
+    const path = this.path.length > 0;
+    const request = path;
+    if (request === this.optionalRequest) return;
+    this.optionalRequest = request;
+    const generation = ++this.optionalGeneration;
+    this.optionalPending = undefined;
+    this.optionalFailed = false;
+    if (!path || this.pathReady) return;
+    const pending = this.loadOptionalPath()
+      .then(() => {
+        if (!this.isConnected || generation !== this.optionalGeneration) return;
+        this.pathReady ||= path;
+      }, () => {
+        if (!this.isConnected || generation !== this.optionalGeneration) return;
+        this.optionalFailed = true;
+        this.announcements.announcePolite(this.localize('statusError'));
+      }).then(() => {
+        if (!this.isConnected || generation !== this.optionalGeneration) return;
+        this.optionalPending = undefined;
+        this.requestUpdate();
+      });
+    this.optionalPending = pending;
+  }
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    const pending = this.optionalPending;
+    if (!pending) return complete;
+    await pending;
+    return this.getUpdateComplete();
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated) this.resumePresetActivation();
+    if (this.hasUpdated) { this.resumePresetActivation(); this.requestUpdate(); }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.hasUpdated && (changed.has('nodes') || changed.has('edges'))) {
+      const messages = this.inputLimitMessages((['nodes', 'edges'] as const).filter(property => changed.has(property)));
+      if (messages.length) this.announcements.announcePolite(messages.join(' '));
+    }
+    this.ensureOptionalChildren();
+    if (this.graphSource !== undefined) return;
     if (
       changed.has('nodes') ||
       changed.has('edges') ||
-      changed.has('communities')
+      changed.has('communities') || changed.has('graphSource')
     ) {
       this.rebuildDerivedCollections();
     }
@@ -474,7 +708,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     // dangling selection/popover pointed at nothing. `entityFor()` intentionally still resolves
     // hidden nodes for neighbor/path data, so visibility must be checked separately here.
     if (
-      (changed.has('nodes') || changed.has('hiddenTypes')) &&
+      (changed.has('nodes') || changed.has('hiddenTypes') || changed.has('graphSource')) &&
       this.selectedNodeId &&
       !this.isVisibleNode(this.selectedNodeId)
     ) {
@@ -506,6 +740,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.graphSource !== undefined) { this.bindSourceChild(this.graphEl); return; }
     if (changed.has('camera') && this.view === '3d' && this.graphEl) {
       void this.reanchorAfterCameraUpdate(this.graphEl, this.camera);
     }
@@ -647,6 +882,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   private resumePresetActivation(): void {
+    if (this.graphSource !== undefined) { this.sourceInspect = undefined; return; }
     const id = this.selectedNodeId;
     const graph = this.graphEl;
     if (!id || !graph || !this.isVisibleNode(id)) return;
@@ -657,7 +893,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   private setInternalSelectedNodeId(value: string | null): void {
     if (Object.is(this.selectedNodeId, value)) return;
     this.internalSelectionAssignment = { value };
-    this.selectedNodeId = value;
+    this.sourceAssigned = true; this.selectedNodeId = value; this.sourceAssigned = false;
     this.emit('lr-selection-change', {
       selectedNodeId: value,
       selectedNodeIds: value ? [value] : [],
@@ -666,6 +902,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   override disconnectedCallback(): void {
+    this.sourceEpoch++; this.sourceInspect = undefined; this.sourceDetailsOpen = false; this.sourceSearchIntent = undefined; this.internalSelectionAssignment = undefined;
+    if (this.sourceChild) setGraphSourceComposition(this.sourceChild, undefined);
+    this.sourceChildBinding = undefined;
+    ++this.optionalGeneration;
+    this.optionalRequest = false;
+    this.optionalPending = undefined;
     this.invalidateActivation();
     this.pendingNodeId = undefined;
     this.trackedNodeEl = undefined;
@@ -675,8 +917,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    ++this.optionalGeneration;
+    this.optionalRequest = false;
+    this.optionalPending = undefined;
     this.invalidateActivation();
     this.announcements.adopted();
+    this.sourceEpoch++; this.sourceInspect = undefined; this.sourceDetailsOpen = false; this.sourceChildBinding = undefined;
     if (this.isConnected) this.resumePresetActivation();
   }
 
@@ -719,7 +965,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  `entityFor()`'s own `label` field and the search-result list use, so every derived node name
    *  agrees. */
   private nodeLabel(id: string): string {
-    const node = this.nodeById.get(id);
+    const node = this.graphSource !== undefined ? (this.sourceEntity?.id === id ? this.sourceEntity : undefined) : this.nodeById.get(id);
     return node?.label || node?.accessibleLabel || id;
   }
 
@@ -728,7 +974,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   private entityFor(id: string): LyraEntity | undefined {
-    const node = this.nodeById.get(id);
+    const node = this.graphSource !== undefined ? (this.sourceEntity?.id === id ? this.sourceEntity : undefined) : this.nodeById.get(id);
     if (!node) return undefined;
     const details = this.entityDetails[id];
     return {
@@ -738,7 +984,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       communityId: node.communityId,
       description: details?.description,
       properties: details?.properties,
-      degree: details?.degree ?? this.degreeOf(node.id),
+      degree: details?.degree ?? (this.graphSource === undefined ? this.degreeOf(node.id) : undefined),
     };
   }
 
@@ -781,6 +1027,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   private matchingNodes(): LyraGraphNode[] | undefined {
+    if (this.graphSource !== undefined) return undefined;
     const query = this.query ?? '';
     const locale = this.effectiveLocale;
     const model = this.graphModel;
@@ -834,37 +1081,29 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  nothing is selected); otherwise nothing while `highlight === 'none'`. Wires the search/
    *  selection/hover state this component owns into `lr-graph`'s existing `dimmedNodeIds` contract
    *  instead of introducing a parallel highlighting mechanism. */
-  private get computedDimmedNodeIds(): string[] {
-    if (this.highlight === 'none') return [];
+  private dimmingMemo?: { key: readonly unknown[]; nodes: string[]; links: string[] };
+  private dimmingProjection(): { nodes: string[]; links: string[] } {
+    if (this.graphSource !== undefined) return { nodes: [], links: [] };
+    const model = this.graphModel;
     const matches = this.matchingNodes();
-    if (matches) {
-      const matchIds = new Set(matches.map((n) => n.id));
-      return this.graphModel.nodes
-        .filter((n) => !matchIds.has(n.id))
-        .map((n) => n.id);
+    const focus = matches ? null : this.selectedNodeId ?? (this.highlight === 'hover' ? this.hoveredNodeId : null);
+    const key = [model, this.highlight, matches, focus];
+    if (this.dimmingMemo && key.every((value, index) => value === this.dimmingMemo!.key[index])) return this.dimmingMemo;
+    let nodes: string[] = [];
+    if (this.highlight !== 'none') {
+      const keep = matches ? new Set(matches.map(node => node.id)) : focus ? this.neighborIdsOf(focus) : undefined;
+      if (focus) keep!.add(focus);
+      if (keep) nodes = model.nodes.filter(node => !keep.has(node.id)).map(node => node.id);
     }
-    const focusNodeId =
-      this.selectedNodeId ??
-      (this.highlight === 'hover' ? this.hoveredNodeId : null);
-    if (focusNodeId) {
-      const keep = this.neighborIdsOf(focusNodeId);
-      keep.add(focusNodeId);
-      return this.graphModel.nodes
-        .filter((n) => !keep.has(n.id))
-        .map((n) => n.id);
-    }
-    return [];
+    const dimmed = new Set(nodes);
+    const links = dimmed.size ? model.links
+      .filter(link => dimmed.has(link.source) || dimmed.has(link.target))
+      .map(link => this.linkKey(link)) : [];
+    this.dimmingMemo = { key, nodes, links };
+    return this.dimmingMemo;
   }
-
-  /** The link-side mirror of `computedDimmedNodeIds` -- a link is dimmed whenever either endpoint
-   *  is, so unrelated edges dim along with unrelated nodes with no extra host wiring. */
-  private get computedDimmedLinkIds(): string[] {
-    const dimmedNodes = new Set(this.computedDimmedNodeIds);
-    if (dimmedNodes.size === 0) return [];
-    return this.graphModel.links
-      .filter((l) => dimmedNodes.has(l.source) || dimmedNodes.has(l.target))
-      .map((l) => this.linkKey(l));
-  }
+  private get computedDimmedNodeIds(): string[] { return this.dimmingProjection().nodes; }
+  private get computedDimmedLinkIds(): string[] { return this.dimmingProjection().links; }
 
   private togglePin(id: string): void {
     if (!isNonBlankIdentity(id)) return;
@@ -915,6 +1154,10 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     const value = event.detail.value;
     if (this.query === value) return;
     this.query = value;
+    if (this.graphSource !== undefined) {
+      this.sourceSearchIntent = { query: value, version: this.sourceSearchVersion, epoch: this.sourceEpoch };
+      return;
+    }
     // Same self-toggle-then-emit contract as setInternalSelectedNodeId()/togglePin(): only a
     // component-initiated change announces itself, so a host that assigns the property back in
     // response cannot start a feedback loop. `matchingNodes()` already reads `this.query`,
@@ -953,7 +1196,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  it or opening its details popover. Resolves `false` for an unknown or filtered-out node, or
    *  before the graph has rendered. */
   async focusNode(id: string, options?: { zoom?: number }): Promise<boolean> {
-    if (!this.isVisibleNode(id)) return false;
+    if (this.graphSource === undefined && !this.isVisibleNode(id)) return false;
     return (await this.graphEl?.focusNode(id, options)) ?? false;
   }
 
@@ -963,6 +1206,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  path-strip elements, `lr-entity-card`'s own built-in focus button, and the keyboard-Enter/
    *  Space fallback for a direct graph node activation. */
   private async activateEntity(id: string): Promise<void> {
+    if (this.graphSource !== undefined) return this.activateSourceEntity(id);
     if (!this.canActivateNode(id)) return;
     const generation = this.invalidateActivation();
     this.setInternalSelectedNodeId(id);
@@ -1041,6 +1285,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     event: CustomEvent<{ nodeId: string; x: number; y: number }>
   ): void => {
     const id = event.detail.nodeId;
+    if (this.graphSource !== undefined) { void this.activateSourceEntity(id); return; }
     if (!this.canActivateNode(id)) return;
     const generation = this.invalidateActivation();
     this.setInternalSelectedNodeId(id);
@@ -1131,10 +1376,25 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   };
 
   private onPopoverHide = (): void => {
+    if (this.graphSource !== undefined) this.closeSourceDetails(false);
+    else this.sourceDetailsOpen = false;
+    if (this.sourceClosing) { this.sourceClosing = false; return; }
     this.invalidateActivation();
     this.trackedNodeEl = undefined;
     this.setInternalSelectedNodeId(null);
   };
+
+  private inputLimitMessages(properties: readonly ('nodes' | 'edges')[] = ['nodes', 'edges']): string[] {
+    const messages: string[] = [];
+    const format = getNumberFormat(this.effectiveLocale);
+    for (const property of properties) {
+      const loss = publicCollectionTruncation(this, property);
+      if (loss) messages.push(this.localize(property === 'nodes' ? 'graphNodeLimit' : 'graphEdgeLimit', undefined, {
+        shown: format.format(loss.retained), total: format.format(loss.source),
+      }));
+    }
+    return messages;
+  }
 
   override render(): TemplateResult {
     const groupLabel = retrievalSemanticLabel(
@@ -1147,15 +1407,18 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     const model = this.graphModel;
     const pinnedNodeIds = this.canonicalPinnedNodeIds;
     const hiddenTypes = this.canonicalHiddenTypes;
-    const selectedEntity = this.selectedNodeId
-      ? this.entityFor(this.selectedNodeId) ?? null
-      : null;
+    const selectedEntity = this.graphSource !== undefined ? this.sourceEntity : this.selectedNodeId ? this.nodeById.get(this.selectedNodeId) : undefined;
     const isPinned =
       this.selectedNodeId != null &&
       pinnedNodeIds.includes(this.selectedNodeId);
     // Unchanged inputs re-commit nothing, so the composed children skip their rebuilds.
     const dimmedDeps = [this.highlight, matches, this.selectedNodeId, this.hoveredNodeId, model];
-    const detailDeps = [this.selectedNodeId, model, hiddenTypes, this.entityDetails];
+    const detailDeps = [this.selectedNodeId, model, hiddenTypes, this.entityDetails, this.sourceEntity];
+    const sourceFilter = this.sourceFilter;
+    const sourceCurrent = this.sourceCurrent();
+    const renderedSource = this.graphSource, renderedEpoch = this.sourceEpoch, renderedOwner = this.ownerDocument;
+    const actionCurrent = renderedSource !== undefined ? sourceCurrent : () =>
+      this.graphSource === undefined && this.sourceEpoch === renderedEpoch && this.isConnected && this.ownerDocument === renderedOwner;
     return html`
       <div
         part="base"
@@ -1179,6 +1442,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
             @lr-visibility-change=${this.onVisibilityChange}
           ></lr-graph-legend>
         </div>
+        ${this.graphSource !== undefined && sourceFilter.empty ? html`<p part="source-status">${this.localize(sourceFilter.invalid ? 'statusError' : 'graphExplorerAllTypesHidden')}</p><button type="button" part="source-clear" data-source-clear-types @click=${() => { if (!sourceCurrent()) return; this.hiddenTypes = []; this.emit('lr-hidden-types-change', { hiddenTypes: this.hiddenTypes }); }}>${this.localize('graphExplorerClearTypes')}</button>` : nothing}
+        ${this.inputLimitMessages().map(message => html`<p part="input-limit" role="note">${message}</p>`)}
         ${detailsLimit ? html`<p part="details-limit" role="note">${this.localize('graphDataListLimit', undefined, {
           shown: getNumberFormat(this.effectiveLocale).format(detailsLimit.retained),
           total: getNumberFormat(this.effectiveLocale).format(detailsLimit.source),
@@ -1229,13 +1494,13 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                     removable
                     @lr-remove=${(event: Event) => {
                       event.stopPropagation();
-                      this.togglePin(id);
+                      if (actionCurrent()) this.togglePin(id);
                     }}
                     >${this.nodeLabel(id)}</lr-chip
                   >`
                 )}
                 ${pinnedNodeIds.length === 2
-                  ? html`<lr-button size="s" @click=${() => this.requestPath()}
+                  ? html`<lr-button size="s" @click=${() => { if (actionCurrent()) this.requestPath(); }}
                       >${this.localize('graphExplorerFindPath')}</lr-button
                     >`
                   : nothing}
@@ -1244,11 +1509,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           : nothing}
         <div class="sr-only" aria-hidden="true">${this.pinLiveText}</div>
         ${this.path.length
-          ? html`<lr-path-strip
+          ? this.pathReady ? html`<lr-path-strip
               part="path"
               .path=${this.path}
               @lr-entity-activate=${(event: Event) => event.stopPropagation()}
             ></lr-path-strip>`
+            : html`<p part="path" role="status">${this.localize(this.optionalFailed ? 'statusError' : 'loading')}</p>`
           : nothing}
         <lr-graph
           part="graph"
@@ -1276,6 +1542,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           @lr-viewport-change=${this.onGraphViewportChange}
           @lr-camera-change=${this.onGraphViewportChange}
           @lr-view-change=${(event: CustomEvent<{ view: LyraGraphView }>) => { this.view = event.detail.view; }}
+          ${ref(this.bindSourceChild)}
         ></lr-graph>
         <lr-popover
           part="detail-popover"
@@ -1283,19 +1550,23 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           @lr-hide=${this.onPopoverHide}
         >
           <slot name="details">
-            ${selectedEntity
+            ${selectedEntity && (this.graphSource === undefined || this.sourceDetailsOpen)
               ? html`
                   <lr-entity-card
                     part="detail-card"
-                    .entity=${guard(detailDeps, () => selectedEntity)}
+                    .entity=${guard(detailDeps, () => this.selectedNodeId ? this.entityFor(this.selectedNodeId) ?? null : null)}
                     .types=${model.nodeTypes}
                     community-label=${this.communityLabelFor(
                       selectedEntity.communityId
                     )}
                   >
                     <lr-neighbor-list
+                      part="detail-neighbors"
+                      .graphSource=${this.graphSource}
+                      .centerKey=${this.graphSource !== undefined && this.selectedNodeId ? `node:${this.selectedNodeId}` : null}
+                      .sourceNodeTypes=${sourceFilter.nodeTypes}
                       .rows=${guard(detailDeps, () =>
-                        this.neighborRowsFor(this.selectedNodeId!)
+                        this.graphSource === undefined ? this.neighborRowsFor(this.selectedNodeId!) : []
                       )}
                       .types=${model.nodeTypes}
                       expandable
@@ -1305,7 +1576,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                       slot="actions"
                       size="s"
                       @click=${() =>
-                        this.selectedNodeId &&
+                        (actionCurrent()) && this.selectedNodeId &&
                         this.togglePin(this.selectedNodeId)}
                     >
                       ${this.localize(

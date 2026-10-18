@@ -191,3 +191,23 @@ export const ControlledReplacementDuringArrow: Story = {
     ></lr-sequence-strip>
   `,
 };
+
+const indexedSequence: import('./sequence-strip-source.js').LyraSequenceSource<SequenceStripItem> = {
+  revision: 1,
+  length: 1_000_000,
+  getItem(index) { return { id: `item-${index}`, categoryId: index % 2 ? 'tool' : 'text', label: `Item ${index}`, marker: index === 999_999 }; },
+  findIndex(id) { const index = Number(id.slice(5)); return id === `item-${index}` && Number.isSafeInteger(index) && index >= 0 && index < 1_000_000 ? index : null; },
+  summarize({ maxRanges }) {
+    return Array.from({ length: maxRanges }, (_, index) => {
+      const startIndex = Math.floor(index * 1_000_000 / maxRanges);
+      const endIndex = Math.floor((index + 1) * 1_000_000 / maxRanges);
+      const text = Math.ceil(endIndex / 2) - Math.ceil(startIndex / 2);
+      return { startIndex, endIndex, categoryCounts: { text, tool: endIndex - startIndex - text }, markerCount: endIndex === 1_000_000 ? 1 : 0, enabledCount: endIndex - startIndex };
+    });
+  },
+};
+
+export const CompleteIndexedSequence: Story = {
+  parameters: { docs: { description: { story: 'A lazy one-million-position provider supplies complete category and marker totals. The overview contains at most 200 proportional ranges; activating a range resolves its first item. The exact inspector supports Home/End and arrow keys, or revealSourceItem(indexOrId), without changing selectedIndex. Source ties use category configuration order, then lexical ID; legacy items keep their earliest-occurrence tie rule. Provider storage and aggregation remain host-owned.' } } },
+  render: () => html`<lr-sequence-strip .source=${indexedSequence} .categories=${categories()} marker-label="Marked" with-legend></lr-sequence-strip>`,
+};

@@ -426,10 +426,11 @@ function boundedParse<T>(
   limitsInput: DelimitedParseLimits,
   isRow: (value: unknown) => value is T,
   rowFieldCount: (row: T) => number,
+  prepared?: { dialect: DelimitedDialect; preflight: DelimitedPreflight },
 ): { rows: T[]; fields: string[]; errors: unknown[] } {
   const limits = effectiveLimits(limitsInput);
-  const dialect = detectDialect(text);
-  const preflight = preflightDelimitedText(text, dialect, header, limits);
+  const dialect = prepared?.dialect ?? detectDialect(text);
+  const preflight = prepared?.preflight ?? preflightDelimitedText(text, dialect, header, limits);
   const rows: T[] = [];
   const fields: string[] = [];
   const errors: unknown[] = [...preflight.quoteErrors];
@@ -581,4 +582,63 @@ export function delimitedColumnCount(rows: readonly unknown[][]): number {
 
 export function delimitedCellText(value: unknown): string {
   return value === undefined || value === null ? '' : String(value);
+}
+
+/** Asynchronous viewer path; synchronous exports retain their original contract. */
+export async function parseDelimitedGridYielding(parser: PapaParseApi, text: string, limits: DelimitedParseLimits, yieldTask: () => Promise<void>): Promise<DelimitedGridResult> {
+  const dialect = detectDialect(text);
+  await yieldTask();
+  const preflight = preflightDelimitedText(text, dialect, false, effectiveLimits(limits));
+  await yieldTask();
+  const result = boundedParse<unknown[]>(parser, text, false, limits, Array.isArray, row => row.length, { dialect, preflight });
+  return { data: result.rows, errors: result.errors };
+}
+
+/** Yields between dialect detection, structural admission and record materialization. */
+export async function parseDelimitedRecordsYielding(parser: PapaParseApi, text: string, limits: DelimitedParseLimits, yieldTask: () => Promise<void>): Promise<DelimitedRecordResult> {
+  const dialect = detectDialect(text);
+  await yieldTask();
+  const preflight = preflightDelimitedText(text, dialect, true, effectiveLimits(limits));
+  await yieldTask();
+  const result = boundedParse<Record<string, string>>(parser, text, true, limits,
+    (row): row is Record<string, string> => typeof row === 'object' && row !== null && !Array.isArray(row),
+    recordFieldCount, { dialect, preflight });
+  return { fields: result.fields, rows: result.rows, errors: result.errors };
+}
+
+/** Reads one own data property without invoking consumer accessors. */
+export function ownTableValue(value: unknown, key: PropertyKey): unknown {
+  if (typeof value !== 'object' || value === null) throw new TypeError('Invalid table input.');
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor) return undefined;
+  if (!('value' in descriptor)) throw new TypeError('Table input must use data properties.');
+  return descriptor.value;
+}
+
+/** Owns a bounded grid of scalar cells without walking arbitrary consumer object graphs. */
+export function snapshotViewerRows(input: unknown, maxRows: number, maxColumns: number, maxBytes: number, budget = { cells: 0, bytes: 0 }): unknown[][] {
+  if (!Array.isArray(input)) throw new TypeError('Invalid table rows.');
+  const length = ownTableValue(input, 'length') as number;
+  if (length > maxRows) throw new LyraResourceLimitError();
+  const rows: unknown[][] = [];
+  const encoder = new TextEncoder();
+  for (let r = 0; r < length; r++) {
+    const source = ownTableValue(input, String(r));
+    if (!Array.isArray(source)) throw new TypeError('Invalid table row.');
+    const count = ownTableValue(source, 'length') as number;
+    budget.cells += count;
+    if (count > maxColumns || budget.cells > DEFAULT_MAX_DELIMITED_CELLS) throw new LyraResourceLimitError();
+    const row: unknown[] = [];
+    for (let c = 0; c < count; c++) {
+      const value = ownTableValue(source, String(c));
+      if (value !== null && value !== undefined && !['string', 'number', 'boolean'].includes(typeof value)) throw new TypeError('Table cells must be scalar values.');
+      const text = value == null ? '' : String(value);
+      if (text.length > maxBytes - budget.bytes) throw new LyraResourceLimitError();
+      budget.bytes += encoder.encode(text).byteLength;
+      if (budget.bytes > maxBytes) throw new LyraResourceLimitError();
+      row.push(value);
+    }
+    rows.push(Object.freeze(row) as unknown[]);
+  }
+  return Object.freeze(rows) as unknown[][];
 }

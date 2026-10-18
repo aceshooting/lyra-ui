@@ -35,11 +35,15 @@ function isUnsafeDescriptor(
   return descriptor === UNSAFE_OWN_DATA_DESCRIPTOR;
 }
 
-/** Ceiling on the features one property-diff pass inspects, matching the untileable-property scan:
- *  past it, falling back to a whole-source replace is cheaper than the comparison itself. */
+/** Automatic diff ceiling; larger collections can use an explicit caller-authored source diff. */
 const GEOJSON_DIFF_FEATURE_LIMIT = 10_000;
 /** Maximum values traversed while proving retained GeoJSON geometry unchanged. */
 const GEOJSON_DIFF_VALUE_LIMIT = 50_000;
+const GEOJSON_DIFF_VALUES_PER_FEATURE = 4_096;
+const GEOJSON_DIFF_MAX_VALUES = 10_000_000;
+function geometryWorkLimit(features: number): number {
+  return Math.min(GEOJSON_DIFF_MAX_VALUES, Math.max(GEOJSON_DIFF_VALUE_LIMIT, features * GEOJSON_DIFF_VALUES_PER_FEATURE));
+}
 /** Maximum recursive nesting admitted into the descriptor-safe GeoJSON comparison projection. */
 const GEOJSON_PROJECTION_DEPTH_LIMIT = 100;
 const INVALID_GEOJSON_PROJECTION_VALUE = Symbol('invalid-geojson-projection-value');
@@ -66,6 +70,8 @@ interface CanonicalGeoJsonFeature extends CanonicalGeoJsonDiagnosticFeature {
   readonly feature: Feature;
   readonly geometry: unknown;
   readonly bbox: unknown;
+  readonly geometryIdentity: unknown;
+  readonly bboxIdentity: unknown;
 }
 
 interface CanonicalGeoJsonCollection {
@@ -295,6 +301,8 @@ function projectGeoJsonFeature(
       id,
       index,
       feature: value as Feature,
+      geometryIdentity: geometry,
+      bboxIdentity: bbox,
       geometry: comparableGeometry,
       bbox: comparableBbox,
       properties: projectedProperties,
@@ -303,15 +311,15 @@ function projectGeoJsonFeature(
 }
 
 /**
- * Captures only the bounded descriptor metadata this component subsequently needs. The original
- * GeoJSON value is deliberately absent from the result: callers retain it solely for MapLibre.
+ * Captures bounded descriptor metadata and comparable geometry snapshots. Raw geometry/bbox
+ * identities are retained only for identity checks; caller data is never read through accessors.
  */
-export function projectGeoJson(value: unknown): CanonicalGeoJsonProjection {
+export function projectGeoJson(value: unknown, comparableValues = new WeakMap<object, unknown>()): CanonicalGeoJsonProjection {
   try {
-    if (!isRuntimeRecord(value)) return EMPTY_CANONICAL_GEOJSON_PROJECTION;
+    if (!isRuntimeRecord(value)) return Object.freeze({ ...EMPTY_CANONICAL_GEOJSON_PROJECTION });
     const budget: GeoJsonProjectionBudget = {
       remaining: GEOJSON_DIFF_VALUE_LIMIT,
-      seen: new WeakMap(),
+      seen: comparableValues,
       active: new WeakSet(),
     };
     const type = projectedGeoJsonOwnValue(value, 'type', budget);
@@ -322,7 +330,7 @@ export function projectGeoJson(value: unknown): CanonicalGeoJsonProjection {
       features === MISSING_OWN_DATA_DESCRIPTOR ||
       !isRuntimeArray(features)
     )
-      return EMPTY_CANONICAL_GEOJSON_PROJECTION;
+      return Object.freeze({ ...EMPTY_CANONICAL_GEOJSON_PROJECTION });
     const length = projectedGeoJsonOwnValue(features, 'length', budget);
     if (
       length === INVALID_GEOJSON_PROJECTION_VALUE ||
@@ -332,7 +340,8 @@ export function projectGeoJson(value: unknown): CanonicalGeoJsonProjection {
       length < 0 ||
       length > GEOJSON_DIFF_FEATURE_LIMIT
     )
-      return EMPTY_CANONICAL_GEOJSON_PROJECTION;
+      return Object.freeze({ ...EMPTY_CANONICAL_GEOJSON_PROJECTION });
+    budget.remaining = geometryWorkLimit(length);
     const diagnostics: CanonicalGeoJsonDiagnosticFeature[] = [];
     const ordered: CanonicalGeoJsonFeature[] = [];
     const byId = new Map<string | number, CanonicalGeoJsonFeature>();
@@ -368,7 +377,7 @@ export function projectGeoJson(value: unknown): CanonicalGeoJsonProjection {
           : undefined,
     });
   } catch {
-    return EMPTY_CANONICAL_GEOJSON_PROJECTION;
+    return Object.freeze({ ...EMPTY_CANONICAL_GEOJSON_PROJECTION });
   }
 }
 
@@ -434,10 +443,10 @@ function sameGeoJsonValue(
   return true;
 }
 
-function sameGeoJsonSnapshots(previous: unknown, next: unknown): boolean {
+function sameGeoJsonSnapshots(previous: unknown, next: unknown, featureCount: number): boolean {
   try {
     return sameGeoJsonValue(previous, next, {
-      remaining: GEOJSON_DIFF_VALUE_LIMIT,
+      remaining: geometryWorkLimit(featureCount),
       forward: new WeakMap(),
       reverse: new WeakMap(),
     });
@@ -478,10 +487,15 @@ export function buildProjectedGeoJsonPropertyDiff(
   for (const after of nextCollection.ordered) {
     const before = previousCollection.byId.get(after.id);
     if (!before) continue;
-    previousGeometry.push(before.geometry, before.bbox);
-    nextGeometry.push(after.geometry, after.bbox);
+    // Immutable inputs reuse the same snapshot; explicit mutable refresh creates a new one.
+    if (!Object.is(before.geometry, after.geometry)) {
+      previousGeometry.push(before.geometry); nextGeometry.push(after.geometry);
+    }
+    if (!Object.is(before.bbox, after.bbox)) {
+      previousGeometry.push(before.bbox); nextGeometry.push(after.bbox);
+    }
   }
-  if (!sameGeoJsonSnapshots(previousGeometry, nextGeometry)) return null;
+  if (!sameGeoJsonSnapshots(previousGeometry, nextGeometry, nextCollection.ordered.length)) return null;
 
   const retained = new Set<string | number>();
   let previousIndex = -1;
@@ -526,13 +540,15 @@ export function buildProjectedGeoJsonPropertyDiff(
   };
 }
 
+let admittedComparableValues = new WeakMap<object, unknown>();
 const admittedGeoJson = new WeakMap<object, CanonicalGeoJsonProjection>();
 
-/** Admitted GeoJSON is never inspected again, so one projection per object suffices. */
-export function projectAdmittedGeoJson(value: unknown): CanonicalGeoJsonProjection {
+/** Reuse admitted immutable GeoJSON, or reproject it after an explicit mutable-source refresh. */
+export function projectAdmittedGeoJson(value: unknown, refresh = false): CanonicalGeoJsonProjection {
   if (!isRuntimeRecord(value)) return projectGeoJson(value);
-  let projection = admittedGeoJson.get(value);
-  if (!projection) admittedGeoJson.set(value, (projection = projectGeoJson(value)));
+  if (refresh) admittedComparableValues = new WeakMap();
+  let projection = refresh ? undefined : admittedGeoJson.get(value);
+  if (!projection) admittedGeoJson.set(value, (projection = projectGeoJson(value, admittedComparableValues)));
   return projection;
 }
 
@@ -540,5 +556,6 @@ export function buildGeoJsonPropertyDiff(
   previous: unknown,
   next: unknown,
 ): MapLibreGeoJsonDiff | null {
-  return buildProjectedGeoJsonPropertyDiff(projectGeoJson(previous), projectGeoJson(next));
+  const comparableValues = new WeakMap<object, unknown>();
+  return buildProjectedGeoJsonPropertyDiff(projectGeoJson(previous, comparableValues), projectGeoJson(next, comparableValues));
 }

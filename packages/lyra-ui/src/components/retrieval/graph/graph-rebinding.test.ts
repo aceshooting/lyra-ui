@@ -100,6 +100,7 @@ describe('lr-graph rebinding and rebuilds', () => {
       const rebuilt = liveNode(graph, 'a');
       expect(rebuilt === target, 'rebuild replaced the node').to.equal(false);
       canvas.dispatchEvent(new PointerEvent('pointermove', point(30, 20)));
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
       expect(rebuilt.fx).to.be.closeTo(130, 0.001);
       expect(rebuilt.fy).to.be.closeTo(120, 0.001);
       canvas.dispatchEvent(new PointerEvent('pointerup', point(30, 20)));

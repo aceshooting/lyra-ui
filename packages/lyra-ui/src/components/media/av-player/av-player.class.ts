@@ -1,3 +1,8 @@
+import { AvCueSourceController } from './av-player-cue-source-controller.js';
+import type { LyraAvCueSource } from './av-cue-source.js';
+import type { SourceWindowSlot } from '../../../internal/source-window-controller.js';
+export type { LyraAvCueSource, LyraAvActiveCue, LyraAvCueSearch } from './av-cue-source.js';
+import { AvCueIndex } from './av-cue-index.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
@@ -31,6 +36,9 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './av-player.styles.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
+import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
+import type { LyraPreparedWaveform } from '../../../utilities/data-preparation.js';
+export type { LyraPreparedWaveform } from '../../../utilities/data-preparation.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import {
   EMPTY_LYRA_AV_CUES,
@@ -42,8 +50,8 @@ import {
 } from './av-metadata.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerLabel, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_avPlayerTimeline, LYRA_DEFAULT_avPlayerTranscript, LYRA_DEFAULT_avPlayerTranscriptUnavailable, LYRA_DEFAULT_avPlayerWaveformUnavailable, LYRA_DEFAULT_viewerHighlightLabel } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_loading, LYRA_DEFAULT_sourceSearchUnavailable } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraAvCue, LyraAvTrack } from './av-metadata.js';
@@ -138,6 +146,71 @@ function normalizePeaks(value: unknown): readonly number[] {
   );
 }
 
+/** Read authored descriptors without executing field accessors or inheriting missing positions. */
+function waveformField(value: unknown, name: PropertyKey): unknown {
+  if (!value || typeof value !== 'object') throw new TypeError('Invalid waveform record');
+  const field = Object.getOwnPropertyDescriptor(value, name);
+  if (!field || !('value' in field)) throw new TypeError('Invalid waveform field');
+  return field.value;
+}
+
+function waveformAmplitude(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) throw new RangeError('Invalid waveform amplitude');
+  return value;
+}
+
+function snapshotWaveform(value: unknown): LyraPreparedWaveform {
+  const revision = sourceRevision(waveformField(value, 'revision'));
+  const sampleCount = sourceCount(waveformField(value, 'sampleCount'));
+  const duration = waveformField(value, 'duration');
+  if (typeof duration !== 'number' || !Number.isFinite(duration) || duration < 0) throw new RangeError('Invalid waveform duration');
+  const counts = waveformField(value, 'counts');
+  const source = sourceCount(waveformField(counts, 'sourceCount'));
+  const valid = sourceCount(waveformField(counts, 'validCount'));
+  const invalid = sourceCount(waveformField(counts, 'invalidCount'));
+  if (source !== sampleCount || valid > source || invalid !== source - valid) throw new RangeError('Invalid waveform counts');
+  const input = waveformField(value, 'buckets');
+  if (!Array.isArray(input)) throw new TypeError('Invalid waveform buckets');
+  const length = sourceCount(waveformField(input, 'length'));
+  if (length > MAX_AV_PEAKS) throw new RangeError('Invalid waveform buckets');
+  const buckets: LyraPreparedWaveform['buckets'][number][] = [];
+  let next = 0;
+  for (let index = 0; index < length; index++) {
+    const bucket = waveformField(input, index);
+    const startIndex = sourceCount(waveformField(bucket, 'startIndex'));
+    const endIndex = sourceCount(waveformField(bucket, 'endIndex'));
+    const maxAmplitude = waveformAmplitude(waveformField(bucket, 'maxAmplitude'));
+    if (startIndex !== next || endIndex <= startIndex || endIndex > sampleCount || (!valid && maxAmplitude !== 0)) throw new RangeError('Invalid waveform interval');
+    buckets.push(Object.freeze({ startIndex, endIndex, maxAmplitude }));
+    next = endIndex;
+  }
+  if (next !== sampleCount) throw new RangeError('Incomplete waveform coverage');
+  const first = waveformField(value, 'firstAmplitude'), last = waveformField(value, 'lastAmplitude');
+  const firstAmplitude = first === null ? null : waveformAmplitude(first);
+  const lastAmplitude = last === null ? null : waveformAmplitude(last);
+  if ((!valid && (firstAmplitude !== null || lastAmplitude !== null)) ||
+    (firstAmplitude !== null && firstAmplitude > buckets[0]!.maxAmplitude) ||
+    (lastAmplitude !== null && lastAmplitude > buckets.at(-1)!.maxAmplitude)) throw new RangeError('Invalid waveform endpoints');
+  return Object.freeze({ revision, sampleCount, duration, counts: Object.freeze({ sourceCount: source, validCount: valid, invalidCount: invalid }),
+    buckets: Object.freeze(buckets), firstAmplitude, lastAmplitude });
+}
+
+/** Merge interval maxima onto physical columns in one monotone walk over both partitions. */
+function preparedWaveformPeaks(waveform: LyraPreparedWaveform, maxBars: number): readonly number[] {
+  const barCount = Math.max(1, Math.min(MAX_CANVAS_DIMENSION, Math.floor(finiteNumber(maxBars, 1))));
+  const peaks = new Array<number>(barCount).fill(0);
+  let bucketIndex = 0, bar = 0;
+  while (bucketIndex < waveform.buckets.length && bar < barCount) {
+    const bucket = waveform.buckets[bucketIndex]!;
+    peaks[bar] = Math.max(peaks[bar]!, bucket.maxAmplitude);
+    const bucketEnd = bucket.endIndex / waveform.sampleCount;
+    const barEnd = (bar + 1) / barCount;
+    if (bucketEnd <= barEnd) bucketIndex++;
+    if (barEnd <= bucketEnd) bar++;
+  }
+  return peaks;
+}
+
 interface OwnedAnimationFrame {
   owner: Window;
   handle: number;
@@ -224,7 +297,9 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * advances in both text directions.
  *
  * Waveform canvas painting is visibility-gated: peak, theme, and resize changes while the player
- * is off-screen stay dirty and coalesce into one paint on re-entry. Environments without
+ * is off-screen stay dirty and coalesce into one paint on re-entry. Prepared waveform intervals
+ * cover the whole recording without raw-sample ingestion; legacy peaks must already represent
+ * the complete recording and fit 65,536 entries. Environments without
  * `IntersectionObserver` retain eager painting.
  *
  * @customElement lr-av-player
@@ -250,8 +325,8 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   `detail: { found }`.
  * @event lr-search-change - Fired from `search()`/`searchNext()`/`searchPrevious()`/
  *   `clearSearch()`. `detail: { query, matchCount, matchCountExact, activeIndex }`.
- *   `matchCountExact` is always `true`: `search()` matches over the already-loaded `cues` array
- *   with no additional ceiling.
+ *   `matchCountExact` is always `true`: legacy search covers admitted cues; cueSource search
+ *   uses the provider's exact full-source count. The active index is a match ordinal.
  * @event lr-render-error - Native media failure, unsafe-source rejection, or an internal playback
  *   rejection. `detail: { error }`; native `MediaError` identity is preserved.
  * @event {FocusEvent} focus - Relayed once from the native media element as a bubbling, composed
@@ -277,7 +352,7 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  * @csspart cue-time - A cue's timestamp label.
  * @csspart cue-speaker - A cue's speaker label.
  * @csspart cue-text - A cue's text.
- * @csspart error - Ordinary visible failure text. Fresh post-mount media/source failures append
+ * @csspart error - Visible media, transcript, search, or unavailable-waveform failure text. Fresh post-mount failures append
  *   the localized message to the shared light-DOM assertive announcement sink; an already-unsafe
  *   initial `src` renders visibly without interrupting on mount.
  * @cssprop [--lr-av-player-transcript-height=var(--lr-size-16rem)] - Block size of the
@@ -324,6 +399,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
     avPlayerTimeline: LYRA_DEFAULT_avPlayerTimeline,
     avPlayerTranscript: LYRA_DEFAULT_avPlayerTranscript,
+    avPlayerTranscriptUnavailable: LYRA_DEFAULT_avPlayerTranscriptUnavailable,
+    avPlayerWaveformUnavailable: LYRA_DEFAULT_avPlayerWaveformUnavailable,
+    loading: LYRA_DEFAULT_loading,
+    sourceSearchUnavailable: LYRA_DEFAULT_sourceSearchUnavailable,
     viewerHighlightLabel: LYRA_DEFAULT_viewerHighlightLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -400,37 +479,164 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.requestUpdate('rates', previous);
   }
   private _cues: readonly LyraAvCue[] = EMPTY_CUES;
-  private nextCueStarts = new Map<number, number>();
+  private cueIndex: AvCueIndex | undefined;
+  private indexedCues: readonly LyraAvCue[] | undefined;
+  private indexedCueDuration = -1;
   /** Transcript entries, rendered as a virtualized, `currentTime`-synced list. Valid nonempty
    * `cueId` values are unique; the first occurrence wins. Inputs are bounded, cloned, and frozen.
-   * Omitted ends use indexed next chronological starts; seeks reconcile in linear work. */
+   * Omitted ends use next chronological starts; a bounded interval index reconciles seeks in logarithmic work. */
   @property({ attribute: false })
   get cues(): readonly LyraAvCue[] { return this._cues; }
   set cues(value: readonly LyraAvCue[]) {
     if (value === this.inputs.cues) return;
     this.inputs.cues = value;
     const previous = this._cues;
-    this._cues = snapshotLyraAvCues(value);
-    if (this._cues !== previous) {
-      const starts = [...new Set(this._cues.map((cue) => cue.start))].sort((a, b) => a - b);
-      this.nextCueStarts = new Map();
-      for (let index = 0; index < starts.length; index += 1) {
-        this.nextCueStarts.set(starts[index]!, starts[index + 1] ?? Infinity);
-      }
-    }
+    if (this._cueSource === null) this._cues = snapshotLyraAvCues(value);
     this.requestUpdate('cues', previous);
   }
+  private _cueSource: LyraAvCueSource | null = null;
+  private cueSourceDirty = true;
+  private cueSourceGeneration = 0;
+  private cueSourceContinuationQueued = false;
+  private transcriptFailureAnnounced = false;
+  private searchFailureAnnounced = false;
+  /** Property-only full transcript source. Non-null bypasses legacy cues. Providers own global
+   * unique IDs, interval indexing and exact search. The player caches at most 128 rows, stages
+   * at most 64, and retains at most two selected records; each cue permits 256 ID, 100,000 text,
+   * and 4,096 speaker UTF-16 units. Reassign (including the same reference) or requestUpdate()
+   * to rebind an immutable revision. Unavailable positions retain their original indices. */
+  @property({ attribute: false })
+  get cueSource(): LyraAvCueSource | null { return this._cueSource; }
+  set cueSource(value: LyraAvCueSource | null) {
+    const previous = this._cueSource;
+    this._cueSource = value;
+    this.requestUpdate('cueSource', previous);
+    if (value === previous) this.requestUpdate('cueSourceRebind', null);
+  }
+  private readonly cueSourceController = new AvCueSourceController(this, {
+    locale: () => this.effectiveLocale,
+    changed: () => {
+      this.refreshTranscriptRenderItem();
+      this.requestUpdate('cueSourceState', null);
+    },
+    searchChanged: detail => this.emit('lr-search-change', detail),
+    reveal: (index, current) => this.revealSourceCue(index, this.cueSourceController.epoch, current),
+    activeChanged: (cueId, index) => {
+      const epoch = this.cueSourceController.epoch;
+      this.setActiveCue(cueId, index);
+      if (index >= 0 && this.cueSourceController.isCurrent(epoch)) void this.revealSourceCue(index, epoch);
+    },
+  });
+  private captureCueSource(): void {
+    if (!this.cueSourceDirty) return;
+    this.cueSourceDirty = false;
+    const generation = this.cueSourceGeneration;
+    const input = this._cueSource;
+    if (input !== null) {
+      this.cueSourceController.bind(input, () => generation === this.cueSourceGeneration && input === this._cueSource);
+      if (generation !== this.cueSourceGeneration || input !== this._cueSource) return;
+      this.searchLocale = '';
+      this.cueIndex = undefined;
+      this.indexedCues = undefined;
+      this.cueKeys = [];
+      this.searchMatches = [];
+      this.searchMatchIndices = new Set();
+      this.cueSourceController.updateTime(this.currentTime);
+    } else {
+      this.searchLocale = '';
+      this._cues = snapshotLyraAvCues(this.inputs.cues ?? EMPTY_CUES);
+      this.rebuildCueKeys();
+      if (this.metadataLoaded) this.reconcileActiveCue();
+    }
+    this.refreshTranscriptRenderItem();
+  }
   private _peaks: readonly number[] = EMPTY_PEAKS;
+  private peaksInvalid = false;
   /** Normalized `0..1` waveform amplitude samples. Empty renders a plain seek rail instead of a
-   *  canvas -- this component never decodes audio itself. */
+   *  canvas -- this component never decodes audio itself. At most 65,536 samples representing the
+   *  whole recording; longer arrays are rejected before any entry is read. Inactive when waveform
+   *  is supplied. Use prepareLyraWaveform for a bounded whole-source envelope. */
   @property({ attribute: false })
   get peaks(): readonly number[] { return this._peaks; }
   set peaks(value: readonly number[]) {
     if (value === this.inputs.peaks) return;
     this.inputs.peaks = value;
     const previous = this._peaks;
-    this._peaks = normalizePeaks(value);
+    const previousInvalid = this.peaksInvalid;
+    try { this.peaksInvalid = Array.isArray(value) && sourceCount(waveformField(value, 'length')) > MAX_AV_PEAKS; }
+    catch { this.peaksInvalid = true; }
+    this._peaks = this.peaksInvalid ? EMPTY_PEAKS : normalizePeaks(value);
     this.requestUpdate('peaks', previous);
+    if (previousInvalid !== this.peaksInvalid) this.requestUpdate('waveformValidity', previousInvalid);
+  }
+  private _waveform: LyraPreparedWaveform | null = null;
+  private waveformSnapshot?: LyraPreparedWaveform;
+  private waveformInputDirty = true;
+  private waveformInputGeneration = 0;
+  private waveformContinuationQueued = false;
+  private waveformInputChanged = false;
+  private waveformInvalid = false;
+  private waveformFailureAnnounced = false;
+  /**
+   * Property-only whole-duration envelope, taking precedence over peaks. Own data fields and
+   * contiguous source intervals are validated and copied into at most 65,536 immutable buckets;
+   * painting combines overlapping interval maxima into at most 4,096 physical bars. No decoding
+   * or source reads occur. Invalid data renders a localized error and plain seek rail.
+   * Once media metadata loads, duration must match within 1ms plus representation epsilon.
+   * Reassign (including the same reference) or requestUpdate() after changing an authored input.
+   * The supplied descriptor remains caller-owned; the admitted bounded snapshot is clone-owned.
+   */
+  @property({ attribute: false })
+  get waveform(): LyraPreparedWaveform | null { return this._waveform; }
+  set waveform(value: LyraPreparedWaveform | null) {
+    const old = this._waveform;
+    this._waveform = value;
+    this.requestUpdate('waveform', old);
+    if (value === old) this.requestUpdate();
+  }
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined || args[0] === 'cueSource' || args[0] === 'cueSourceRebind') {
+      this.cueSourceDirty = true;
+      this.cueSourceGeneration = (this.cueSourceGeneration ?? 0) + 1;
+      if (this.cueSourceController) {
+        this.cueSourceController.revoke();
+        if (this._cueSource !== null || (args[0] === 'cueSource' && args[1] !== null)) this.setActiveCue(null, -1);
+      }
+    }
+    if (args[0] === undefined || args[0] === 'waveform') {
+      this.waveformInputDirty = true;
+      this.waveformInputGeneration = (this.waveformInputGeneration ?? 0) + 1;
+    }
+    super.requestUpdate(...args);
+  }
+  private captureWaveform(): void {
+    if (!this.waveformInputDirty) return;
+    this.waveformInputDirty = false;
+    const generation = this.waveformInputGeneration;
+    const input = this._waveform;
+    let snapshot: LyraPreparedWaveform | undefined;
+    let invalid = false;
+    if (input !== null) {
+      try { snapshot = snapshotWaveform(input); }
+      catch { invalid = true; }
+    }
+    // Descriptor proxy traps can replace or refresh the input while it is being captured.
+    // Neither the obsolete result nor its failure may replace the last completed snapshot.
+    if (generation !== this.waveformInputGeneration || input !== this._waveform) return;
+    this.waveformInputChanged = true;
+    this.waveformSnapshot = snapshot;
+    this.waveformInvalid = invalid;
+  }
+  private get waveformUnavailable(): boolean {
+    if (this._waveform === null) return this.peaksInvalid;
+    if (this.waveformInvalid) return true;
+    const waveform = this.waveformSnapshot;
+    if (!waveform || !this.metadataLoaded || !(this.duration > 0)) return false;
+    const tolerance = 0.001 + Number.EPSILON * Math.max(this.duration, waveform.duration) * 4;
+    return Math.abs(this.duration - waveform.duration) > tolerance;
+  }
+  private get hasWaveform(): boolean {
+    return !this.waveformUnavailable && (this._waveform !== null ? (this.waveformSnapshot?.buckets.length ?? 0) > 0 : this.peaks.length > 0);
   }
   private _tracks: readonly LyraAvTrack[] = EMPTY_TRACKS;
   /** Native `<track>` sources (subtitles/captions/descriptions), bounded and snapshotted. */
@@ -497,7 +703,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   constructor() {
     super();
     new ThemeWatcher(this, () => {
-      if (this.peaks.length > 0) this.drawWaveform();
+      if (this.hasWaveform) this.drawWaveform();
     });
   }
 
@@ -551,6 +757,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.captureWaveform();
+    this.captureCueSource();
     if (changed.has('controlsSurface')) {
       this.controlsSurface = CONTROLS_SURFACE.normalizeReflected(this, 'controls-surface', this.controlsSurface);
     }
@@ -564,7 +772,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       this.kind = undefined;
     }
     if (changed.has('preload') && this.preload !== this.effectivePreload) this.preload = this.effectivePreload;
-    if (changed.has('cues')) {
+    if (this._cueSource === null && changed.has('cues')) {
       this.rebuildCueKeys();
       if (this.metadataLoaded) this.reconcileActiveCue();
     }
@@ -597,12 +805,13 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       }
     }
     if (
-      this.searchQuery &&
+      this._cueSource === null && this.searchQuery &&
       (changed.has('cues') || this.searchLocale !== locale)
     ) {
       this.reconcileSearchMatches(changed.get('cues') as readonly LyraAvCue[] | undefined);
       refreshTranscript = true;
     }
+    if (this._cueSource !== null && this.searchQuery && this.searchLocale !== locale) void this.search(this.searchQuery);
     if (refreshTranscript) this.refreshTranscriptRenderItem();
   }
 
@@ -614,12 +823,44 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     }
     if (changed.has('volume')) this.mediaController.volume = this.volume;
     if (changed.has('muted')) this.mediaController.muted = this.muted;
-    if (changed.has('peaks')) {
+    if (this.waveformInputChanged || ['peaks', 'duration', 'metadataLoaded', 'src', 'kind', 'mimeType'].some(key => changed.has(key))) {
       this.syncWaveformVisibilityObserver();
       this.syncWaveformResizeObserver();
       this.drawWaveform();
     }
+    this.waveformInputChanged = false;
+    const unavailable = this.waveformUnavailable;
+    if (unavailable && !this.waveformFailureAnnounced && !this.connectionEventBaselinePending) {
+      this.announcements.announceAssertive(this.localize('avPlayerWaveformUnavailable'));
+    }
+    this.waveformFailureAnnounced = unavailable;
+    const transcriptUnavailable = this._cueSource !== null && this.cueSourceController.unavailable;
+    if (transcriptUnavailable && !this.transcriptFailureAnnounced && !this.connectionEventBaselinePending) {
+      this.announcements.announceAssertive(this.localize('avPlayerTranscriptUnavailable'));
+    }
+    this.transcriptFailureAnnounced = transcriptUnavailable;
+    const searchUnavailable = this._cueSource !== null && this.cueSourceController.searchUnavailable;
+    if (searchUnavailable && !this.searchFailureAnnounced && !this.connectionEventBaselinePending) {
+      this.announcements.announceAssertive(this.localize('sourceSearchUnavailable'));
+    }
+    this.searchFailureAnnounced = searchUnavailable;
+    if (this.cueSourceDirty && this.isConnected && !this.cueSourceContinuationQueued) {
+      this.cueSourceContinuationQueued = true;
+      queueMicrotask(() => {
+        this.cueSourceContinuationQueued = false;
+        if (this.cueSourceDirty && this.isConnected) this.requestUpdate('cueSourceContinuation', null);
+      });
+    }
     if (this.isConnected) this.connectionEventBaselinePending = false;
+    // A write during willUpdate joins that update; schedule one bounded subsequent capture
+    // after completion instead of recapturing synchronously inside a caller's proxy trap.
+    if (this.waveformInputDirty && this.isConnected && !this.waveformContinuationQueued) {
+      this.waveformContinuationQueued = true;
+      queueMicrotask(() => {
+        this.waveformContinuationQueued = false;
+        if (this.waveformInputDirty && this.isConnected) this.requestUpdate('waveformContinuation', null);
+      });
+    }
   }
 
   override connectedCallback(): void {
@@ -641,6 +882,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
 
   override disconnectedCallback(): void {
+    this.cueSourceController.revoke();
+    this.cueSourceDirty = true;
+    this.activeCueId = null;
+    this.activeCueIndex = -1;
     this.connectionEventBaselinePending = true;
     this.mediaController.disconnect();
     this.unbindResizeWindow();
@@ -651,13 +896,16 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     // that reconnect; a new owner realm intentionally keeps its immediate resize behavior.
     this.waveformDetachedObserverWindow = this.waveformObserverWindow;
     this.unbindWaveformVisibilityObserver();
-    this.waveformDirty = this.peaks.length > 0;
+    this.waveformDirty = this.hasWaveform;
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.announcements.adopted();
+    this.cueSourceController.adopted();
+    this.cueSourceDirty = true;
+    this.requestUpdate('cueSourceAdopted', null);
     this.bindResizeWindow();
     this.syncWaveformVisibilityObserver();
     this.syncWaveformResizeObserver();
@@ -683,7 +931,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   /** Binds canvas visibility to the document currently owning this element. */
   private syncWaveformVisibilityObserver(): void {
-    const owner = this.isConnected && this.peaks.length > 0 ? this.ownerDocument.defaultView : null;
+    const owner = this.isConnected && this.hasWaveform ? this.ownerDocument.defaultView : null;
     if (this.waveformIntersectionObserver && this.waveformObserverWindow === owner) return;
 
     // A same-realm reparent can move a previously visible player beneath the viewport between
@@ -732,7 +980,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private onWindowResize = (): void => this.drawWaveform();
 
   private syncWaveformResizeObserver(): void {
-    const target = this.isConnected && this.peaks.length > 0 ? this.canvasEl : undefined;
+    const target = this.isConnected && this.hasWaveform ? this.canvasEl : undefined;
     const owner = target?.ownerDocument.defaultView;
     if (
       target &&
@@ -837,7 +1085,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.currentTime = seconds;
     this.emitTimeChange(true, true);
     this.pendingSeekEmission = this.currentTimeState;
-    this.reconcileActiveCue();
+    this.reconcileActiveCue(true);
   }
 
   protected override async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
@@ -938,21 +1186,21 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.reconcileActiveCue();
   }
 
-  private reconcileActiveCue(): void {
+  private reconcileActiveCue(discontinuity = false): void {
     const time = this.currentTime;
-    let active: LyraAvCue | undefined;
-    let activeIndex = -1;
-    this.cues.forEach((cue, index) => {
-      const start = this.safeCueStart(cue);
-      const end = this.safeCueEnd(cue, start);
-      if (time >= start && time < end) {
-        if (!active || start >= this.safeCueStart(active)) {
-          active = cue;
-          activeIndex = index;
-        }
-      }
-    });
-    const nextId = active?.cueId ?? null;
+    if (this._cueSource !== null) {
+      this.cueSourceController.updateTime(time, discontinuity);
+      return;
+    }
+    const cues = this.cues;
+    const duration = this.duration > 0 ? this.duration : 0;
+    if (!this.cueIndex || this.indexedCues !== cues || this.indexedCueDuration !== duration) {
+      this.cueIndex = new AvCueIndex(cues, duration);
+      this.indexedCues = cues;
+      this.indexedCueDuration = duration;
+    }
+    const activeIndex = this.cueIndex.at(time);
+    const nextId = cues[activeIndex]?.cueId ?? null;
     this.setActiveCue(nextId, activeIndex);
   }
 
@@ -972,12 +1220,20 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       this.currentTimeState = completedTime;
     }
     this.pendingSeekEmission = null;
-    this.reconcileActiveCue();
+    this.reconcileActiveCue(true);
   }
 
   /** Case-insensitive substring match over cue text and speaker. Reveals the active matching
-   *  transcript row without changing media playback, then resolves the match count. */
+   *  transcript row without changing media playback, then resolves the match count. Source mode
+   *  trims the query, passes the effective locale, and queries the complete provider index. A
+   *  canceled or unavailable query resolves zero without emitting a false exact-zero result. */
   async search(query: string): Promise<number> {
+    if (this._cueSource !== null) {
+      this.captureCueSource();
+      this.searchQuery = query.trim();
+      this.searchLocale = this.effectiveLocale;
+      return this.cueSourceController.search(this.searchQuery, this.searchLocale);
+    }
     this.searchQuery = query;
     this.reconcileSearchMatches();
     this.activeSearchIndex = this.searchMatches.length ? 0 : -1;
@@ -1026,6 +1282,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
    *  `LyraTextViewerTarget` search contract declares, so a find-in-page host can drive every
    *  searchable component through one typed surface. */
   async searchNext(): Promise<boolean> {
+    if (this._cueSource !== null) return this.cueSourceController.navigate(1);
     if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % this.searchMatches.length;
     this.refreshTranscriptRenderItem();
@@ -1037,6 +1294,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   /** Moves to the previous match, wrapping to the last before the first and revealing it. Resolves
    *  `true` once the active match moved, `false` when there are no matches. */
   async searchPrevious(): Promise<boolean> {
+    if (this._cueSource !== null) return this.cueSourceController.navigate(-1);
     if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
     this.refreshTranscriptRenderItem();
@@ -1048,6 +1306,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   /** Clears the query, matches, and active index, and emits a zero-match `lr-search-change`. */
   clearSearch(): void {
     this.searchQuery = '';
+    if (this._cueSource !== null) { this.cueSourceController.clearSearch(); return; }
     this.searchMatches = [];
     this.searchMatchIndices = new Set();
     this.activeSearchIndex = -1;
@@ -1066,6 +1325,21 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       matchCountExact: true,
       activeIndex: this.activeSearchIndex,
     });
+  }
+
+  private async revealSourceCue(index: number, epoch: number, authoritative: () => boolean = () => true): Promise<boolean> {
+    const current = () => authoritative() && this.cueSourceController.isCurrent(epoch);
+    if (!current() || !await this.cueSourceController.window.ensure(index)) return false;
+    if (!current()) return false;
+    await this.updateComplete;
+    if (!current()) return false;
+    const list = this.renderRoot.querySelector(tag('virtual-list')) as
+      (HTMLElement & { updateComplete: Promise<boolean>; scrollToIndex(index: number, options: { align: 'auto'; behavior: 'auto' }): void }) | null;
+    if (!list) return false;
+    await list.updateComplete;
+    if (!current()) return false;
+    list.scrollToIndex(index, { align: 'auto', behavior: 'auto' });
+    return current();
   }
 
   private async revealActiveSearchMatch(): Promise<void> {
@@ -1089,7 +1363,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private drawWaveform(): void {
     const canvas = this.canvasEl;
     const ownerWindow = this.ownerDocument.defaultView;
-    if (!this.peaks.length) {
+    if (!this.hasWaveform) {
       this.waveformDirty = false;
       return;
     }
@@ -1105,7 +1379,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   /** Paints once the visibility gate has confirmed that waveform work is useful. */
   private paintWaveform(): void {
     const canvas = this.canvasEl;
-    if (!canvas || !this.peaks.length) return;
+    if (!canvas || !this.hasWaveform) return;
     const ownerWindow = this.ownerDocument.defaultView;
     if (!ownerWindow) return;
     const dpr = positiveFinite(ownerWindow.devicePixelRatio);
@@ -1128,7 +1402,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = resolveCanvasColor(this, 'var(--lr-color-brand)', ownerWindow.getComputedStyle(this).color);
-    const peaks = waveformPaintPeaks(this.peaks, canvas.width);
+    const peaks = this._waveform !== null && this.waveformSnapshot
+      ? preparedWaveformPeaks(this.waveformSnapshot, canvas.width)
+      : waveformPaintPeaks(this.peaks, canvas.width);
     const barWidth = width / peaks.length;
     const physicalPixel = Math.min(barWidth, finiteNumber(1 / scaleX, barWidth));
     const paintedBarWidth = Math.max(physicalPixel, barWidth - physicalPixel);
@@ -1249,17 +1525,6 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     return finiteRange(cue.start, 0, 0, max);
   }
 
-  private safeCueEnd(cue: LyraAvCue, start: number): number {
-    const max = this.duration > 0 ? this.duration : Infinity;
-    if (cue.end == null) {
-      const nextStart = this.nextCueStarts.get(cue.start) ?? Infinity;
-      // A duration cap can collapse several distinct source starts onto one effective start.
-      // Equal starts never end one another, and the final chronological cue remains open-ended.
-      return start >= max || nextStart === Infinity ? Infinity : Math.min(nextStart, max);
-    }
-    return finiteRange(cue.end, start, start, max);
-  }
-
   private rebuildCueKeys(): void {
     this.cueKeys = this.cues.map((cue) => `cue:${cue.cueId.length}:${cue.cueId}`);
   }
@@ -1267,11 +1532,17 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private cueKey = (_cue: unknown, index: number): string => this.cueKeys[index] ?? `index:${index}`;
 
   private renderCue = (cue: unknown, index: number): TemplateResult => {
-    const c = cue as LyraAvCue;
-    const start = this.safeCueStart(c);
+    const sourceMode = this._cueSource !== null;
+    const slot = sourceMode ? cue as SourceWindowSlot<LyraAvCue> : undefined;
+    if (slot && slot.state !== 'ready') return html`<div part="cue" aria-disabled="true">${slot.state === 'loading'
+      ? this.localize('loading') : this.localize('avPlayerTranscriptUnavailable')}</div>`;
+    const c = slot?.state === 'ready' ? slot.value : cue as LyraAvCue;
+    const epoch = this.cueSourceController.epoch;
+    const start = sourceMode ? c.start : this.safeCueStart(c);
     const isActive = this.activeCueIndex === index;
-    const isMatch = this.searchMatchIndices.has(index);
-    const isActiveMatch = index === this.searchMatches[this.activeSearchIndex];
+    const isMatch = sourceMode ? this.cueSourceController.matches(c) : this.searchMatchIndices.has(index);
+    const isActiveMatch = sourceMode ? this.cueSourceController.selected?.index === index && this.cueSourceController.selected.cue.cueId === c.cueId
+      : index === this.searchMatches[this.activeSearchIndex];
     const part = ['cue', isActive ? 'cue-current' : '', isMatch ? 'cue-match' : '', isActiveMatch ? 'cue-active-match' : '']
       .filter(Boolean)
       .join(' ');
@@ -1281,7 +1552,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       aria-current=${isActive ? 'true' : 'false'}
       ?data-match=${isMatch}
       ?data-active-match=${isActiveMatch}
-      @click=${() => this.seek(start)}
+      @click=${() => { if (sourceMode ? this.cueSourceController.isCurrent(epoch) : this._cueSource === null) this.seek(start); }}
     >
       <span part="cue-time">${formatMediaTime(start, this.effectiveLocale)}</span>
       ${c.speaker ? html`<span part="cue-speaker">${c.speaker}</span>` : nothing}
@@ -1364,6 +1635,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       ${this.sourceError || this.playbackError
         ? html`<div part="error">${this.localize('avPlayerFailedToLoad')}</div>`
         : nothing}
+      ${this.waveformUnavailable ? html`<div part="error">${this.localize('avPlayerWaveformUnavailable')}</div>` : nothing}
       <div part="toolbar">
         <span class="rate-select-wrapper">
           <select
@@ -1392,19 +1664,29 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
           @click=${this.onTimelineClick}
           @keydown=${this.onTimelineKeyDown}
         >
-          ${this.peaks.length ? html`<canvas ${ref(this.canvasRef)}></canvas>` : nothing}
+          ${this.hasWaveform ? html`<canvas ${ref(this.canvasRef)}></canvas>` : nothing}
         </div>
         <div class="timeline-markers">${this.renderMarkers()}</div>
       </div>
-      ${this.cues.length
+      ${this._cueSource !== null && this.cueSourceController.unavailable
+        ? html`<div part="error">${this.localize('avPlayerTranscriptUnavailable')}</div>` : nothing}
+      ${this._cueSource !== null && this.cueSourceController.searchUnavailable
+        ? html`<div part="error">${this.localize('sourceSearchUnavailable')}</div>`
+        : this._cueSource !== null && this.cueSourceController.searchLoading
+          ? html`<div>${this.localize('loading')}</div>` : nothing}
+      ${(this._cueSource !== null ? this.cueSourceController.count : this.cues.length)
         ? html`<lr-virtual-list
             part="transcript"
             exportparts="cue:cue, cue-current:cue-current, cue-match:cue-match, cue-active-match:cue-active-match, cue-time:cue-time, cue-speaker:cue-speaker, cue-text:cue-text"
             aria-label=${this.localize('avPlayerTranscript')}
-            .items=${this.cues}
+            .items=${this._cueSource !== null ? EMPTY_CUES : this.cues}
+            .source=${this._cueSource !== null ? this.cueSourceController.window.source : undefined}
+            @lr-visible-range-change=${(event: CustomEvent<{ start: number; end: number }>) => {
+              if (this._cueSource !== null) this.cueSourceController.window.requestRange(event.detail.start, event.detail.end);
+            }}
             .renderItem=${this.transcriptRenderItem}
-            .keyFunction=${this.cueKey}
-            .activeItemId=${this.activeCueIndex >= 0 && this.cues[this.activeCueIndex]
+            .keyFunction=${this._cueSource !== null ? undefined : this.cueKey}
+            .activeItemId=${this._cueSource !== null ? (this.cueSourceController.active?.cue.cueId ?? '') : this.activeCueIndex >= 0 && this.cues[this.activeCueIndex]
               ? this.cueKey(this.cues[this.activeCueIndex], this.activeCueIndex)
               : ''}
           ></lr-virtual-list>`

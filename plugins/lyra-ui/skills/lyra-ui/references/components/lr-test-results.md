@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,6 +21,72 @@ failures auto-expand by default and can host rich slotted detail (e.g. a diff or
 alongside the plain failure message.
 
 Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
+
+**Full-source paging:** `dataSource: TestResultsSource | undefined = undefined` (attribute:
+false) takes display precedence over `suites`; invalid defined providers fail visibly.
+Setting `undefined` restores the current legacy suites. `sourcePage: number = 0` (`source-page`)
+is zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500.
+Readonly `sourceTotal: number | null` is the exact filtered record count after success, and `null`
+while unavailable or without a source. Filter/page-size changes reset page zero; an out-of-range
+page receives at most one corrective last-page request.
+
+```ts
+import type {
+  TestResultsSource, TestResultsSourceQuery, TestResultsSourceRow, TestResultsSourceSummary,
+} from "@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`TestResultsSource` is `LyraPageSource<TestResultsSourceRow, TestResultsSourceQuery,
+TestResultsSourceSummary>`. The provider has immutable `revision` (nonempty string or finite
+number), `query({ revision, locale, signal, page, pageSize, query })`, `lookup(keys, context)` and
+`locate(key, query, context)`. Ordinary paging uses only `query`; it does not lookup or locate
+records. Query contains `{ statuses: readonly TestStatus[] }`, empty for all statuses, and returns
+`{ rows, total, summary }`. Each row is `{ key, order, value: { suiteId, suiteName, test } }`, with
+`key === JSON.stringify([suiteId, test.id])`, nonblank original suite/test IDs and safe canonical
+`order`. Page keys/orders are unique; the response must contain exactly the requested in-bounds
+records. The provider applies filtering to the complete logical result set before paging.
+
+Required `TestResultsSourceSummary` is `{ total, passed, failed, skipped, running }` for the complete
+unfiltered run, regardless of the current page/filter. All counts are safe nonnegative integers
+and status counts sum to summary total. Page `total` equals the selected status counts' sum, or
+summary total for an empty filter. Admitted rows must match the filter and cannot exceed the full
+summary's per-status counts. Pending/error states show unknown counts, never a partial page count
+as a complete summary. Complete-source truth remains provider-owned beyond these consistency checks.
+
+At most 500 source records are admitted and mounted per page, with suite headings following
+provider order even when suites interleave. Closed own-data row fields exclude arbitrary provider
+output/attachments. `suiteId`, `suiteName`, test ID/name/message share a 65,536 UTF-16-unit bound;
+oversized or accessor-backed records reject atomically. Record keys are at most 65,536 units and
+share the page helper's 2,000,000-unit key budget. Source mode retains bounded page/in-progress
+results and current-page expansion rather than flattening the complete run. It does not run the
+legacy projection when filters change. Each page/lookup/locate lane allows one physical provider
+call plus only the latest queued intent; ignored aborts occupy their permit until settlement.
+
+Source name activation and toggle events preserve exact original `{ suiteId, testId }` values;
+the canonical JSON key is navigation identity rather than a replacement event ID. Existing
+suite-scoped detail slots and cancelable toggle-request contracts apply. Source expansion resets
+with the current page binding and remains separate from legacy manual expansion. Explicit
+`runState` completion waits for a current authoritative full summary; resuming the run, changing
+run/source or lifecycle revocation cancels obsolete deferred completion announcements.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named presentation updates reuse accepted data; source/lifecycle/locale changes revoke obsolete
+requests, controls and announcements. Source-only parts are `source-status`, `source-retry` and
+`source-pagination`; existing summary/filter/test/detail parts remain applicable. A failed page
+has a localized retry and light-DOM announcement. The following `suites` behavior describes the
+legacy route.
+
+**Exported test-results source declarations:**
+
+These types use the existing `TestStatus` and `TestCaseResult` declarations.
+
+`TestResultsSourceQuery { readonly statuses: readonly TestStatus[]; }`
+
+`TestResultsSourceRow { readonly suiteId: string; readonly suiteName: string; readonly test: TestCaseResult; }`
+
+`TestResultsSourceSummary { readonly total: number; readonly passed: number; readonly failed: number; readonly skipped: number; readonly running: number; }`
 
 **Properties:** `suites: readonly TestSuiteResult[] = []` (attribute: false) — `TestSuiteResult { id: string;
 name: string; tests: readonly TestCaseResult[] }` and `TestCaseResult { id: string; name: string; status:
@@ -37,7 +103,12 @@ first-wins identity. Foreign runtime statuses normalize
 once to the localized neutral `skipped` state, so every accepted row contributes to one coherent
 summary count and renders a label/glyph.
 
-Summary counts cover the complete normalized input. At most 1,000 rows mount for the active filter;
+Legacy normalization retains the complete canonical input once with O(n) rows/indexes, yielding
+after at most 500 combined suite/test positions. It normalizes status once per corpus; filtering
+may still traverse O(n) records. New input/source entry cancels older staged work, and
+`updateComplete` waits for the current normalization and render. Oversized aggregate row text or
+identity fails visibly with unknown counts in `input-error`; caller arrays and slotted DOM remain
+host-owned. Summary counts cover the complete normalized input. At most 1,000 rows mount for the active filter;
 manually expanded identities reserve positions first, failed rows next, then ordinary input-order
 rows. A localized `[part="limit"]` note exposes truncation without losing the complete counts.
 
@@ -69,7 +140,7 @@ adjacent localized status word carries the meaning. Running rows use the decorat
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
 `data-status`), `test-status`, `test-name`, `test-duration`, `test-expand-toggle`, `failure`
-(hidden while collapsed), `failure-message`, `limit`, and `empty`.
+(hidden while collapsed), `failure-message`, `limit`, `input-error` (rejected legacy snapshot), and `empty`.
 
 **Themeable custom properties:** `--lr-test-results-filter-active-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default

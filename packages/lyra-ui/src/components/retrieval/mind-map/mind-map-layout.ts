@@ -107,17 +107,14 @@ function syntheticHubIdentity(topics: readonly LyraTopic[]): string {
   return identity;
 }
 
-// Normalized topics are fresh objects per layout, so one cached count per object is per layout.
-const leafCounts = new WeakMap<LyraTopic, number>();
-
-function visibleLeafCount(node: LyraTopic, depth: number, opts: MindMapLayoutOptions): number {
+function visibleLeafCount(node: LyraTopic, depth: number, opts: MindMapLayoutOptions, leafCounts: WeakMap<LyraTopic, number>): number {
   let count = leafCounts.get(node);
   if (count === undefined) {
     const children = node.children ?? [];
     count =
       children.length === 0 || !opts.isExpanded(node.id, depth)
         ? 1
-        : Math.max(1, children.reduce((sum, c) => sum + visibleLeafCount(c, depth + 1, opts), 0));
+        : Math.max(1, children.reduce((sum, c) => sum + visibleLeafCount(c, depth + 1, opts, leafCounts), 0));
     leafCounts.set(node, count);
   }
   return count;
@@ -132,6 +129,7 @@ function place(
   cx: number,
   cy: number,
   opts: MindMapLayoutOptions,
+  leafCounts: WeakMap<LyraTopic, number>,
   out: PlacedTopic[],
   links: { fromId: string; toId: string }[],
 ): void {
@@ -146,7 +144,7 @@ function place(
   if (parentId) links.push({ fromId: parentId, toId: node.id });
   if (!hasChildren || !expanded) return;
 
-  const counts = node.children.map((c) => visibleLeafCount(c, depth + 1, opts));
+  const counts = node.children.map((c) => visibleLeafCount(c, depth + 1, opts, leafCounts));
   const total = counts.reduce((a, b) => a + b, 0) || 1;
   const span = angleEnd - angleStart;
   let cursor = angleStart;
@@ -161,6 +159,7 @@ function place(
       cx,
       cy,
       opts,
+      leafCounts,
       out,
       links,
     );
@@ -181,7 +180,17 @@ export function layoutMindMap(
   hubLabel: string,
   opts: MindMapLayoutOptions
 ): MindMapLayoutResult {
+  return createMindMapLayout(topics)(hubLabel, opts);
+}
+
+/** @internal Prepare immutable topic identities once; each geometry pass gets fresh expansion counts. */
+export function createMindMapLayout(topics: readonly LyraTopic[]):
+(hubLabel: string, opts: MindMapLayoutOptions) => MindMapLayoutResult {
   const normalizedTopics = normalizeMindMapTopics(topics);
+  return (hubLabel, opts) => layoutNormalizedMindMap(normalizedTopics, hubLabel, opts);
+}
+
+function layoutNormalizedMindMap(normalizedTopics: readonly LyraTopic[], hubLabel: string, opts: MindMapLayoutOptions): MindMapLayoutResult {
   if (normalizedTopics.length === 0)
     return {
       placed: [],
@@ -207,7 +216,7 @@ export function layoutMindMap(
 
   const placed: PlacedTopic[] = [];
   const links: { fromId: string; toId: string }[] = [];
-  place(root, 0, 0, 2 * Math.PI, null, 0, 0, opts, placed, links);
+  place(root, 0, 0, 2 * Math.PI, null, 0, 0, opts, new WeakMap(), placed, links);
 
   // `placed` always has >= 1 entry here (the `topics.length === 0` guard above already returned,
   // and `place()` unconditionally pushes the root), so `minMax` never returns `null` below. Using

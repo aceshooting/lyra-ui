@@ -1,3 +1,4 @@
+import { positionIndex } from '../../../internal/keyed-index.js';
 import { collectionSupport, snapshotPublicCollection } from '../../../internal/collection-snapshot.js';
 import { boundChartSeriesValues } from './chart-series-bounds.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -71,8 +72,8 @@ import {
 } from './chart-chrome.js';import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
-import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_boxPlot, LYRA_DEFAULT_boxPlotData, LYRA_DEFAULT_boxPlotMax, LYRA_DEFAULT_boxPlotMedian, LYRA_DEFAULT_boxPlotMin, LYRA_DEFAULT_boxPlotMissingLibrary, LYRA_DEFAULT_boxPlotQ1, LYRA_DEFAULT_boxPlotQ3, LYRA_DEFAULT_boxPlotSeriesSummary, LYRA_DEFAULT_boxPlotSummaryEmpty, LYRA_DEFAULT_boxPlotSummaryWithData, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -736,14 +737,18 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    * the channel available here — the peer's element has no border-dash or point-style option to
    * cycle the way a Chart.js line dataset does.
    */
+  private forcedColorPatterns = new Map<string, CanvasPattern | string>();
+  private forcedColorSurface?: string;
+
   private forcedColorFill(index: number, background: string): CanvasPattern | string {
     if (!this.ownerWindow || !forcedColorsActive(this.ownerWindow)) return background;
-    return createForcedColorPattern(
-      this.ownerDocument,
-      index,
-      background,
-      this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG),
-    );
+    const surface = this.forcedColorSurface ??= this.styleColor('--lr-color-surface', FALLBACK_TOOLTIP_BG);
+    const key = `${index % 8}/${background}/${surface}`;
+    const cached = this.forcedColorPatterns.get(key);
+    if (cached !== undefined) return cached;
+    const value = createForcedColorPattern(this.ownerDocument, index, background, surface);
+    this.forcedColorPatterns.set(key, value);
+    return value;
   }
 
   private styleColor(name: string, fallback: string): string {
@@ -794,6 +799,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   };
 
   private buildConfig(): BoxPlotChartConfiguration {
+    this.forcedColorPatterns.clear();
+    this.forcedColorSurface = undefined;
     const theme = this.themeColors();
     const palette = this.canvasTokens.palette();
     const sample = this.dataTableSample();
@@ -1001,7 +1008,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   refreshTheme(): void {
     this.canvasTokens.clear();
     this.drawIfVisible();
-    if (this.withLegend) this.requestUpdate();
+    if (this.withLegend) this.requestUpdate('canvasPresentation', null);
   }
 
   /** A blank/missing `series.label` must never reach an accessible name (legend toggle) or a
@@ -1070,8 +1077,18 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     return [header, ...rows].join('\r\n');
   }
 
+  private descriptionMemo?: { keys: readonly unknown[]; value: string };
+
   private boxPlotDescription(): string {
     if (this.description) return this.description;
+    const keys = [this.datasets, this.labels, this.effectiveLocale, this.strings, this.formatter, this.valueFormatter];
+    if (this.descriptionMemo?.keys.every((key, index) => key === keys[index])) return this.descriptionMemo.value;
+    const value = this.buildBoxPlotDescription();
+    this.descriptionMemo = { keys, value };
+    return value;
+  }
+
+  private buildBoxPlotDescription(): string {
     const sample = this.dataTableSample();
     const summaries = sample.seriesIndexes.map((index) => {
       const series = this.datasets[index]!;
@@ -1145,8 +1162,11 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    * Built from the table's bounded planner rather than a raw scan so the keyboard alternative can
    * never turn a very wide consumer data set into an unbounded pass.
    */
+  private boxDatumsMemo?: { sample: ReturnType<LyraBoxPlot['dataTableSample']>; value: LyraBoxPlotPointDetail[] };
+
   private boxDatums(): LyraBoxPlotPointDetail[] {
     const sample = this.dataTableSample();
+    if (this.boxDatumsMemo?.sample === sample) return this.boxDatumsMemo.value;
     const datums: LyraBoxPlotPointDetail[] = [];
     for (const datasetIndex of sample.seriesIndexes) {
       const series = this.datasets[datasetIndex];
@@ -1162,6 +1182,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
         });
       }
     }
+    this.boxDatumsMemo = { sample, value: datums };
     return datums;
   }
 
@@ -1267,8 +1288,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     if (!this.chart || (!datum && !this.keyboardBoxShown)) return;
     const sample = this.dataTableSample();
     this.keyboardBoxShown = showChartActiveDatum(this.chart, datum && {
-      datasetIndex: sample.seriesIndexes.indexOf(datum.datasetIndex),
-      index: sample.rowIndexes.indexOf(datum.index),
+      datasetIndex: (positionIndex(sample.seriesIndexes).get(datum.datasetIndex) ?? -1),
+      index: (positionIndex(sample.rowIndexes).get(datum.index) ?? -1),
     });
   }
 
@@ -1328,13 +1349,22 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     return this.getAttribute('aria-label') ?? this.label ?? fallback;
   }
 
+  private sampleMemo?: {
+    datasets: readonly LyraBoxPlotSeries[];
+    labels: readonly string[];
+    value: { rowCount: number; seriesCount: number } & ReturnType<typeof sampleChartTableIndexes>;
+  };
+
   private dataTableSample() {
+    if (this.sampleMemo?.datasets === this.datasets && this.sampleMemo.labels === this.labels) return this.sampleMemo.value;
     // Avoid spreading an unbounded consumer-provided list into Math.max(); this
     // table remains the bounded accessible fallback even for very wide data.
     let rowCount = this.labels.length;
     for (const series of this.datasets) rowCount = Math.max(rowCount, series.data.length);
     const indexes = sampleChartTableIndexes(rowCount, this.datasets.length);
-    return { rowCount, seriesCount: this.datasets.length, ...indexes };
+    const value = { rowCount, seriesCount: this.datasets.length, ...indexes };
+    this.sampleMemo = { datasets: this.datasets, labels: this.labels, value };
+    return value;
   }
 
   private generatedDataIsSampled(): boolean {
@@ -1351,9 +1381,10 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   private dataTableRows?: Array<TemplateResult | typeof nothing>;
 
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
-    // The keyboard announcement does not change table contents. Explicit refreshes still
-    // rebuild rows when a formatter captures state outside its arguments.
-    if (args[0] !== 'keyboardDatumAnnouncement') this.dataTableRows = undefined;
+    const key = args[0];
+    if (key === undefined) this.descriptionMemo = undefined;
+    if (key === undefined || ['datasets', 'labels', 'formatter', 'valueFormatter', 'locale', 'strings',
+      'withDataTable', 'dataTableToggle', 'dataTableExpandedOverride'].includes(String(key))) this.dataTableRows = undefined;
     super.requestUpdate(...args);
   }
 
@@ -1439,7 +1470,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.applyDatasetVisibility();
     this.chart.update('none');
     this.appliedLegendVisibility = appliedVisibility;
-    this.requestUpdate();
+    this.requestUpdate('canvasPresentation', null);
     this.emit('lr-legend-visibility-change', legendVisibilityDetail(index, visible, nextHidden));
   }
 

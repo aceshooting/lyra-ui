@@ -118,6 +118,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'העט למטה',
   signaturePadPenUp: 'העט למעלה',
+  localePickerInputLimit: 'רק 512 הרשומות הראשונות של הגדרות השפה והאזור זמינות.',
+  emojiPickerInputLimit: 'חלק מנתוני האימוג׳י הושמטו משום שהקלט הגיע למגבלה.',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

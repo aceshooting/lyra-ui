@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 42 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 45 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,6 +26,16 @@ row actions in that mode. No thread CRUD or persistence — every mutation
 (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the _requested_ new
 state; the host mutates `threads`.
 
+With `dataSource` unset, `threads` retains the first 10,000 identities. Structural group headings do not consume that
+allowance; every admitted thread remains addressable through the internal virtual list.
+Use the full-source provider route below for larger sidebar collections.
+
+A localized `threadListInputLimit` notice in `part="limit"` discloses entries omitted from the
+original assignment. It describes input admission independently of search matches and the visible
+virtual window. Rebinding the retained snapshot preserves the notice; a fresh input below the
+limit clears it. Initial mounting and reconnecting are quiet; later changed input loss is
+politely announced.
+
 A conversation row with `slot=""` belongs to the default slot exactly like a row with no slot
 attribute, including after reconnect. Named slots retain their distinct roles.
 
@@ -35,6 +45,77 @@ the complete item model at a virtual-window edge and mounts the next available r
 focus. Home/End always resolve the first/last thread from that complete model, even when focus
 starts in a middle window; group records, collapsed-group contents, and unavailable endpoint rows
 are skipped rather than becoming false boundaries.
+
+**Full-source paging:** `dataSource: ThreadListSource | undefined = undefined` (attribute:
+false) takes display precedence over `threads` and the default slot. An invalid defined provider
+fails visibly; setting `undefined` restores the current legacy data/slotted precedence.
+`sourcePage: number = 0` (`source-page`) is zero-based, and `sourcePageSize: number = 100`
+(`source-page-size`) normalizes to 1–500. Readonly `sourceTotal: number | null` is the exact global
+current-query record count before group collapse, or `null` before success and without a source.
+Query/page-size changes reset page zero; collapse changes preserve the current record page.
+An out-of-range page receives at most one corrective last-page request.
+
+```ts
+import type { ThreadListSource, ThreadListSourceQuery } from
+  "@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`ThreadListSource` is `LyraPageSource<LyraChatThread, ThreadListSourceQuery>`. The provider has an
+immutable `revision` (nonempty string or finite number), `query({ revision, locale, signal, page,
+pageSize, query })`, `lookup(keys, context)`, and `locate(key, query, context)`. Query returns
+`{ rows, total, groups? }`; records have `{ key, order, value }`, where `key === value.id`, `order`
+is a safe stable canonical source ordinal and `value` is a complete `LyraChatThread`. Counts are
+safe nonnegative integers; page keys/orders must be unique and the response must contain exactly
+the requested in-bounds row count. Lookup returns complete globally present requested records,
+omitting absent keys; locate returns the absolute current-query record index or `null`.
+
+The forwarded `ThreadListSourceQuery` contains `{ search, withArchived, grouping,
+collapsedGroupIds, filter, groupBy, getGroupLabel, groupOrder }`. The provider applies search,
+filtering, ordering and grouping globally before paging. Grouped responses require
+`groups: [{ key, label, startIndex, itemCount }]`: global nonoverlapping intervals covering the
+page, including the header of a group that began on an earlier page. At most 500 records plus
+500 structural headings are modeled. Collapsed rows retain their original record positions and
+actionable heading; collapse does not redefine the global total or page boundaries. Complete-group
+callbacks/adornments are not computed from partial pages. Row rendering hooks continue to receive
+the original provider record identity. Per-record display strings share a 65,536 UTF-16-unit bound;
+keys/group text are each at most 65,536 units and share a 2,000,000-unit admission budget.
+Malformed or oversized pages show a localized failure without clipping records.
+
+`activeConversationId` uses global `locate` once per active/query binding, then scrolls the bounded
+page's matching row into view. Manual paging preserves the controlled active ID without repeatedly
+jumping back; clearing/restoring that ID locates again. Arrow/Home/End navigation addresses the
+current page's virtual item model; global paging and active-ID lookup reach other logical pages.
+Source `lr-filter-change` reports the provider's full matching `total`, not the loaded row count.
+Existing controlled thread-action IDs and group-toggle/veto contracts remain unchanged.
+
+The provider remains host-owned by identity. Reassign even the same object, or call a keyless
+`requestUpdate()`, after revision/state changes. Named presentation changes reuse the accepted
+page. Replacement, refresh, disconnect and adoption revoke obsolete requests/actions/reveals.
+Each page/lookup/locate lane allows one physically unsettled provider call and only the latest
+queued intent; an ignored abort holds its physical permit until settlement. Only bounded current
+and in-progress pages are modeled, without a full-source search corpus or thread index. Provider
+storage/indexing and complete-source consistency remain host obligations.
+
+Loading uses `source-status`; `source-pagination` contains the global pager. Provider errors reuse
+the existing localized `error` surface/slot and cancelable `lr-retry-request`; its default retries
+the current provider page and clears the host error, while `preventDefault()` vetoes it. Existing
+row and group parts remain applicable. The following array admission and local grouping details
+apply with `dataSource` unset; row presentation/actions apply to provider rows as well.
+
+**Exported source query declaration:**
+
+`ThreadListSourceQuery {
+  readonly search: string;
+  readonly withArchived: boolean;
+  readonly grouping: ThreadListGrouping;
+  readonly collapsedGroupIds: readonly string[];
+  readonly filter: LyraThreadList['filter'];
+  readonly groupBy: LyraThreadList['groupBy'];
+  readonly getGroupLabel: LyraThreadList['getGroupLabel'];
+  readonly groupOrder: LyraThreadList['groupOrder'];
+}`
 
 **Exported types:** `LyraChatThread { id: string; title: string; excerpt?: string; timestamp?: Date |
 string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pin' | 'archive' |
@@ -189,6 +270,7 @@ was activated, only rendered while `error` is set; the default action clears `er
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
+`limit` (original thread input-loss notice),
 `error` (the built-in `<lr-empty>` host rendered while `error` is set, with `error-base`/
 `error-icon`/`error-heading`/`error-description`/`error-actions` exported from its own parts, plus
 `retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list

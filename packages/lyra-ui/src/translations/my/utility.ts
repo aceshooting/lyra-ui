@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: 'နောက်ထပ် အကြံပြုချက် {count} ခု',
   },
+  mentionInputLimit: 'ရည်ညွှန်းဖော်ပြရန် ပထမဆုံး အကြံပြုချက် 10,000 ကိုသာ ရနိုင်သည်။',
+  diffViewHighlightLimit: 'ရှည်လျားသော ကုဒ်ကို ကုဒ်ဖွဲ့စည်းပုံအလိုက် အရောင်ခွဲခြားဖော်ပြခြင်းမရှိဘဲ ပြထားသည်။',
 };
 
 registerLyraLocale('my', strings);

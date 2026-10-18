@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Belum ada percakapan',
   agentWorkspaceLabel: 'Ruang kerja agen',
+  agentWorkspaceInputLimit: '{collection}: Hanya {count} dari {total} entri yang disimpan.',
   agentWorkspaceConversation: 'Percakapan',
   agentWorkspaceDetails: 'Detail proses',
   agentWorkspaceRun: 'Proses agen',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Coba lagi bagian ini',
   promptQueueLabel: 'Perintah dalam antrean',
   promptQueueEmpty: 'Tidak ada perintah dalam antrean',
+  promptQueueInputLimit: 'Sebagian prompt dalam antrean atau lampiran dihilangkan karena batas masukan tercapai.',
+  promptQueueAttachmentLimit: 'Menampilkan {shown} dari {total} lampiran yang disimpan.',
   promptQueueSendNow: 'Kirim sekarang',
   selectionToolbarLabel: 'Tindakan pilihan',
   selectionAsk: 'Tanyakan',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '{count} token',
   },
+  threadListInputLimit: 'Sebagian utas percakapan dihilangkan karena batas masukan tercapai.',
+  promptInputInputLimit: 'Sebagian saran atau entri katalog dihilangkan karena batas masukan tercapai.',
+  transcriptFeedInputLimit: 'Hanya {count} entri terbaru dari {total} entri yang disimpan.',
+  codeBlockHighlightLimit: 'Kode panjang ditampilkan tanpa penyorotan sintaks.',
 };
 
 registerLyraLocale('id', strings);

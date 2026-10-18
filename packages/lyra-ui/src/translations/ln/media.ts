@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Elilingi {index} kati na {total}',
   playWithContext: 'Sala {name}',
   pauseWithContext: 'Telemisa {name}',
+  avPlayerWaveformUnavailable: 'Ba données ya forme d’onde ezali te to eyokani te na média oyo.',
+  avPlayerTranscriptUnavailable: 'Ba données ya transcription ezali te.',
   dropzoneReleaseToAdd: 'Tika mpo na kobakisa fichier.',
   dropzoneRejectedType: 'Lolenge ya fichier oyo endimami te.',
   attachmentAdd: 'Bakisa fichier',

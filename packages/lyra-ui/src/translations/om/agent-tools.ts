@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Bu\'aawwan qorannoo jalqabaa {count} qofa agarsiifameera.',
   toolTimelineLimit: 'Waamicha meeshaa {count} caalu hin agarsiifamu.',
   toolSelectLimit: 'Meeshaalee jalqabaa {count} qofa agarsiifameera.',
+  testResultsInputTooLarge: 'Balʼinni buʼaawwan qorannoo daangaa agarsiisaa caala.',
   toolCall: 'Waamicha meeshaa',
   maximize: 'Guddisi',
   promptStudioVariableName: 'Maqaa jijjiiramaa {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Faayilota jalqabaa {count} qofatu agarsiifama.',
   taskListLimit: 'Hojiiwwan jalqabaa {count} qofatu agarsiifama.',
   evalDatasetLimit: 'Fakkeenya jalqabaa {count} qofa agarsiifameera.',
+  activityFeedInputLimit: 'Galmeewwan {total} keessaa haaraan {count} qofa kuufamu.',
+  spanWaterfallLimit: 'Kutaalee hordoffii {total} keessaa {shown} agarsiifamaa jiru.',
+  toolTimelineInputLimit: 'Waamichoota meeshaa {total} keessaa {count} hunda caalaa haaraa ta’an qofa qabamu.',
 };
 
 registerLyraLocale('om', strings);

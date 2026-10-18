@@ -32,6 +32,15 @@ const MAX_SHARE_PRECISION = 20;
  *  bounded list in this library (e.g. `lr-task-list`'s `MAX_RENDERED_TASKS`). */
 const MAX_RENDERED_STAGES = 500;
 
+interface StageScan {
+  readonly source: readonly unknown[];
+  readonly stages: LyraFunnelStage[];
+  readonly length: number;
+  cursor: number;
+  done: boolean;
+  timer?: ReturnType<typeof setTimeout>;
+}
+
 interface ResolvedStage {
   readonly stage: LyraFunnelStage;
   readonly value: number;
@@ -69,7 +78,10 @@ interface ResolvedStage {
  * - A comparison series of a different length pairs by index: extra comparison entries are
  *   ignored, and stages past its end simply get no comparison bar.
  * - Malformed/non-record entries and records without a string `label` are omitted while later
- *   valid neighbors remain in either series; caller-owned arrays are never rewritten.
+ *   valid neighbors remain in either series; caller-owned arrays are never rewritten. Long invalid
+ *   runs are inspected in cancelable chunks. The previous completed view remains aria-busy until
+ *   both new series are ready; disconnecting or explicit refresh revokes unfinished work. Keep
+ *   pending source arrays and records unchanged, or reassign/explicitly refresh to restart them.
  * - At most 500 valid stages render, each as its own bar row; a `stages` array past that length
  *   renders a localized `[part="limit"]` notice after the list rather than mounting an unbounded
  *   number of bars. Every stage's share is still measured against the true first stage regardless
@@ -117,7 +129,8 @@ export class LyraFunnel extends LyraElement {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The ordered stages, first to last. Every share is measured against the first entry. */
+  /** The ordered stages, first to last. Every share is measured against the first entry.
+   * Reassign after changes, or call `requestUpdate()` after mutating the existing array. */
   @property({ attribute: false }) stages: readonly LyraFunnelStage[] = [];
 
   /**
@@ -159,40 +172,86 @@ export class LyraFunnel extends LyraElement {
     }).format(ratio);
   }
 
-  private validStages(value: unknown): readonly LyraFunnelStage[] {
-    if (!Array.isArray(value)) return [];
-    const stages: LyraFunnelStage[] = [];
-    for (let index = 0; index < value.length; index += 1) {
+  private stagesMemo?: { stages: readonly LyraFunnelStage[]; comparison: readonly LyraFunnelStage[]; result: ResolvedStage[] };
+  private readonly stageScans = new Map<unknown, StageScan>();
+  private completedStages: ResolvedStage[] = [];
+
+  private cancelStageScans(): void {
+    for (const scan of this.stageScans?.values() ?? []) clearTimeout(scan.timer);
+    this.stageScans?.clear();
+    this.stagesMemo = undefined;
+  }
+
+  override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: Parameters<LyraElement['requestUpdate']>[2]): void {
+    if (name === undefined || name === 'stages' || name === 'comparison') this.cancelStageScans();
+    super.requestUpdate(name, oldValue, options);
+  }
+
+  override disconnectedCallback(): void {
+    this.cancelStageScans();
+    super.disconnectedCallback();
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    super.requestUpdate();
+  }
+
+  private get scanningStages(): boolean {
+    return [...this.stageScans.values()].some(scan => !scan.done);
+  }
+
+  private continueStageScan(scan: StageScan): void {
+    const end = Math.min(scan.length, scan.cursor + 10_000);
+    for (; scan.cursor < end && scan.stages.length <= MAX_RENDERED_STAGES; scan.cursor++) {
       try {
-        const stage: unknown = value[index];
+        const stage = scan.source[scan.cursor];
         if (!stage || typeof stage !== 'object' || Array.isArray(stage)) continue;
-        const record = stage as {
-          readonly label?: unknown;
-          readonly value?: unknown;
-          readonly color?: unknown;
-        };
+        const record = stage as { readonly label?: unknown; readonly value?: unknown; readonly color?: unknown };
         if (typeof record.label !== 'string') continue;
-        stages.push(
-          Object.freeze({
-            label: record.label,
-            value:
-              typeof record.value === 'number'
-                ? finiteNumber(record.value, 0)
-                : 0,
-            ...(typeof record.color === 'string'
-              ? { color: record.color }
-              : {}),
-          })
-        );
+        scan.stages.push(Object.freeze({
+          label: record.label,
+          value: typeof record.value === 'number' ? finiteNumber(record.value, 0) : 0,
+          ...(typeof record.color === 'string' ? { color: record.color } : {}),
+        }));
       } catch {
-        // Keep later valid stage records when an untyped record/getter fails.
+        // An invalid entry does not hide later valid stages.
       }
     }
-    return stages;
+    scan.done = scan.cursor >= scan.length || scan.stages.length > MAX_RENDERED_STAGES;
+    if (!scan.done && this.isConnected) {
+      scan.timer = setTimeout(() => {
+        scan.timer = undefined;
+        if (!this.isConnected || this.stageScans.get(scan.source) !== scan) return;
+        this.continueStageScan(scan);
+        if (scan.done) super.requestUpdate();
+      }, 0);
+    }
+  }
+
+  private validStages(value: unknown): readonly LyraFunnelStage[] {
+    if (!Array.isArray(value)) return [];
+    let scan = this.stageScans.get(value);
+    if (!scan) {
+      scan = { source: value, stages: [], length: value.length, cursor: 0, done: false };
+      this.stageScans.set(value, scan);
+      this.continueStageScan(scan);
+    }
+    return scan.stages;
   }
 
   /** Resolves every stage's geometry and text inputs in one pass so render stays declarative. */
   private resolveStages(): ResolvedStage[] {
+    const memo = this.stagesMemo;
+    if (memo && memo.stages === this.stages && memo.comparison === this.comparison) return memo.result;
+    const result = this.computeStages();
+    if (this.scanningStages) return this.completedStages;
+    this.completedStages = result;
+    this.stagesMemo = { stages: this.stages, comparison: this.comparison, result };
+    return result;
+  }
+
+  private computeStages(): ResolvedStage[] {
     const stages = this.validStages(this.stages);
     const comparison = this.validStages(this.comparison);
     const values = stages.map((stage) => finiteNumber(stage.value, 0));
@@ -282,14 +341,14 @@ export class LyraFunnel extends LyraElement {
   override render(): TemplateResult {
     const resolved = this.resolveStages();
     if (resolved.length === 0) {
-      return html`<div part="base"><p part="empty">${this.localize('noData')}</p></div>`;
+      return html`<div part="base" aria-busy=${this.scanningStages ? 'true' : 'false'}>${this.scanningStages ? nothing : html`<p part="empty">${this.localize('noData')}</p>`}</div>`;
     }
     const truncated = resolved.length > MAX_RENDERED_STAGES;
     // Every stage's share/change was already resolved against the full, untruncated series above --
     // slicing here only bounds the rendered DOM node count, it never changes what a surviving bar reports.
     const renderedStages = resolved.slice(0, MAX_RENDERED_STAGES);
     const name = hostAriaLabel(this) ?? (this.label || this.localize('chart'));
-    return html`<div part="base">
+    return html`<div part="base" aria-busy=${this.scanningStages ? 'true' : 'false'}>
       <ol part="stages" aria-label=${name}>
         ${renderedStages.map((entry) => this.renderStage(entry))}
       </ol>

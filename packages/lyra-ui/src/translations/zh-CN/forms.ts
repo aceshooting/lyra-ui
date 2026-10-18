@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: '已落笔',
   signaturePadPenUp: '已抬笔',
+  localePickerInputLimit: '仅提供前 512 个语言和地区条目。',
+  emojiPickerInputLimit: '由于达到输入限制，部分表情数据已被省略。',
 };
 
 registerLyraLocale('zh-CN', strings);

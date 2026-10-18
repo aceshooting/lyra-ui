@@ -23,6 +23,31 @@ plus a peer-neutral `map` getter for common imperative operations. Its runtime v
 underlying MapLibre map. The component observes its own map-container allocation and calls the
 peer's `resize()` when that allocation changes.
 
+**Large spatial sources:** a catalog of a million logical geospatial records can stay in a
+host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile
+sources and layers, through `mapStyle`; the selected peer requests and renders tiles for the
+viewport. The host owns durable records, spatial indexing, identity lookup, global bounds and
+total counts. Keep those totals beside the map: a rendered-feature query describes the current
+viewport, not the complete catalog. Tile density, zoom range and service response sizes remain
+application decisions. This route does not require a million-feature inline GeoJSON collection.
+
+Configure the selected engine's worker before constructing the map, as described below. For a
+custom tile protocol, register `addProtocol()` from that same engine package before assigning a
+style that uses its scheme (`@aceshooting/lyra-map` for the default, `maplibre-gl` for explicit
+`engine="maplibre"`). The host protocol handler supplies real tile bytes and owns its transport,
+authorization and cancellation. Remove registrations with `removeProtocol()` when no remaining
+map uses them. A protocol registration is peer setup, not an `lr-map` provider property.
+
+Use bounded `dataLayers` for changing selections or local overlays fetched by identity or spatial
+query. Only the first 100 descriptors are inspected, and `markers` inspects at most 2,000 entries;
+neither is a complete catalog browser. Stable unique feature IDs allow
+`updateSourceData(sourceId, diff)` to update an applied generated GeoJSON source without replacing
+the whole collection. Check its boolean result and retain the host's authoritative state; a later
+controlled `dataLayers` assignment replaces imperative changes. Opaque GeoJSON handoff and
+uncloned diffs avoid a Lyra deep copy, while the peer still parses, indexes, transfers and caches
+data. The tile cache belongs to the peer; bounded wrapper DOM does not establish a bound on worker
+heap or guarantee constant rendering cost as the source grows.
+
 Markers and popups use the physical top-left origin required by MapLibre's projected transforms in
 both LTR and RTL. Their text and surrounding controls retain logical direction-aware layout.
 
@@ -195,7 +220,9 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
 [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
   trimmed and must be nonempty, and the first successfully admitted marker for an explicit ID wins.
-  A malformed earlier row does not reserve that ID. Markers are reconciled
+  Only the first 2,000 authored entries are inspected; `markersTruncated` reports an omitted
+  suffix. Use clustered `dataLayers` for larger point collections. A malformed earlier row does
+  not reserve that ID. Markers are reconciled
   by that explicit ID (falling back
   to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
   when `id` is omitted) so an unchanged marker isn't torn down and recreated on every `markers`
@@ -206,12 +233,14 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   escaped) when the content is plain text. For marker/popup naming, visible text is extracted from
   trusted markup while `script`, `style`, `template`, `[hidden]`, and `aria-hidden="true"` subtrees
   are excluded; an explicitly supplied `label` remains the more predictable accessible name. A
-  marker whose `color` changes for a persisting `id`
+  marker whose authored `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
   gotchas. Entries with non-finite coordinates, latitude outside `[-90, 90]`, or a runtime
   non-string `label` are skipped without aborting valid siblings. `color` is used only when the
   browser accepts it as CSS `color`;
-  declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
+  declaration breaks and `url()` paint servers fall back to the default color. Without an authored
+  color, markers follow `--lr-color-brand` through CSS `currentColor`; rethemes preserve marker and
+  popup identity, including an open popup. Explicit authored color changes still reconstruct markers.
   Every retained marker is a named `role="button"` tab stop, including one without a popup. Click,
   Enter, and Space emit `lr-map-marker-activate`; Space suppresses its page-scroll default while
   preserving MapLibre's popup toggle. A popup-bearing marker additionally exposes
@@ -222,7 +251,8 @@ GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
 'danger' | 'neutral'; color?: string; strokeColor?: string; line?: LyraMapLineOptions;
 point?: LyraMapPointOptions; kind?: LyraMapDataLayerKind;
 heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` is trimmed and must be nonempty; the first layer for a
-  `sourceId` that is successfully admitted wins; blank, malformed, and later duplicate records are
+  `sourceId` that is successfully admitted wins. Only the first 100 entries are inspected; blank,
+  malformed, and later duplicate records are
   ignored without reserving an identity for a valid later sibling. Each retained entry adds one
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
@@ -253,6 +283,12 @@ heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` 
   The component snapshots the configuration it reads. It passes `choropleth.geojson` and
   `dataLayers[].geojson` through to MapLibre; assign a new `choropleth`, `dataLayers`, or `markers`
   value after changing configuration, because mutating an assigned value is not observed.
+  For an in-place change to pass-through GeoJSON, call `requestUpdate()` explicitly to refresh its
+  comparison snapshot. This refresh still applies when coalesced with a named presentation update.
+  Changed geometry or bounding boxes replace the peer source data. For comparable feature
+  collections, unchanged snapshots avoid a redundant write; eligible property-only changes keep
+  the incremental update path. A refreshed standalone feature or over-limit collection uses a
+  full replacement even when its data is unchanged.
 
   `cluster` and `kind` (both new in 12.0.0) opt one entry out of that three-layer geometry split.
   **Both are strictly additive: an entry that sets neither renders exactly what it rendered before,
@@ -436,8 +472,12 @@ features keep semantically unchanged geometry/bbox values, the component emits M
 incremental `updateData()` for property changes, additions, removals, and order changes. The exact
 next order is preserved: an unchanged prefix stays in place and only the invalidated suffix is
 removed and re-added. Lyra snapshots control and projection data while retaining opaque GeoJSON
-identity at the MapLibre boundary; a bounded, accessor-free comparison verifies the JSON geometry
-graph instead. A missing/duplicate ID, changed geometry, exceeded bound, or uncertain
+identity at the MapLibre boundary. Immutable admitted geometry and bbox identities reuse their
+validated comparison projections; replace those identities when their contents change. Otherwise,
+a bounded, accessor-free comparison verifies the JSON geometry graph. Automatic comparison
+supports at most 10,000 features, with a work budget of at least 50,000 values or 4,096 values per
+feature, whichever is larger, capped at 10,000,000 values. A missing/duplicate ID, changed geometry,
+exceeded bound, or uncertain
 comparison falls back to `setData()` with no change in rendered behaviour. Peers without
 `updateData()` always take the old path.
 
@@ -463,7 +503,8 @@ payload beside the map.
 `LyraMapPointRadiusInterpolation`, `LyraMapPointIcon`, `LyraMapPointIconMode`,
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
 `LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapLegendPanelToggleDetail`,
-`LyraMapStyleSpecification`, `LyraMapEngine`, `LyraMapFeatureRequirements`, and `LyraMapInstance`.
+`LyraMapStyleSpecification`, `LyraMapEngine`, `LyraMapFeatureRequirements`, `LyraMapSourceDataDiff`,
+and `LyraMapInstance`.
 
 **Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
 through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and
@@ -472,6 +513,15 @@ that installed the optional peer and needs its full imperative API can explicitl
 value to the selected engine's `Map` type. `LyraMapInstance.prepareFeatures?()` is present on the
 modular engine and absent on canonical MapLibre, so guard it or narrow to the companion `Map`
 before calling. Identity is preserved: `.map` is the engine instance, not a proxy.
+
+After `lr-map-load`, use the narrowed peer's `queryRenderedFeatures(point, { layers: [...] })`
+for identities painted by style-owned vector layers; `point` is a screen position, which can be
+obtained with the peer's `project([longitude, latitude])`. Attach peer interaction listeners when
+the host needs those layers' hits. `lr-map-click` queries only the component-generated choropleth
+and `dataLayers` layers described below; it does not query arbitrary layer IDs from `mapStyle`.
+
+`markersTruncated: boolean` (read-only) is true when authored marker entries exceed the 2,000-entry
+inspection ceiling; it does not count malformed rows skipped within that prefix.
 
 The modular engine automatically prepares initial and replacement style requirements, including
 projection and terrain. `<lr-map>` additionally awaits per-map main-thread and worker readiness
@@ -490,6 +540,15 @@ it does not replace per-map worker readiness. Same-family updates remain synchro
 optional-peer import without constructing a map or allocating a WebGL context. Pass `'maplibre'`
 for an explicitly native element. It resolves to `false` when the selected peer is unavailable,
 allowing an application to choose a fallback before connecting an element.
+
+`updateSourceData(sourceId: string, diff: LyraMapSourceDataDiff): boolean` forwards a caller-authored
+incremental GeoJSON diff to an applied `dataLayers` or choropleth public `sourceId`. It returns
+`false` before the source is ready, after disconnect, for an unknown source, or when the engine
+lacks `updateData()`. Feature IDs must be stable and unique; the caller owns diff validity. The
+diff is forwarded without cloning, and peer exceptions propagate. It does not change the controlled
+properties. Automatic comparison history is invalidated before forwarding, so a later controlled
+GeoJSON reassignment replaces the imperative state in full. Use this route for changes beyond the
+automatic comparison ceiling.
 
 `fitBounds(bounds: LyraMapBounds, options?: LyraMapFitBoundsOptions): boolean` frames a box
 `[[west, south], [east, north]]` in the viewport: the way to show every current marker, or a
@@ -820,7 +879,7 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
 - Ancestor theme-attribute and custom-property changes repaint the already-applied choropleth and
   data-layer colors/opacities in place. This does not recreate MapLibre sources/layers, replace the
   style, or reset the current viewport.
-- a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
+- a marker whose authored `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
   `Marker` has no `setColor()`) rather than mutated in place — this also closes any popup the user
   currently has open on that marker (a fresh, closed `Popup` is built for the new instance); an
   accepted side effect of the reconstruction fallback, not a bug.

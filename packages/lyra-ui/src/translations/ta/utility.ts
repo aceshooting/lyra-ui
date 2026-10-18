@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: 'மேலும் {count} பரிந்துரை',
     other: 'மேலும் {count} பரிந்துரைகள்',
   },
+  mentionInputLimit: 'குறிப்பிடுவதற்கான முதல் 10,000 பரிந்துரைகள் மட்டுமே கிடைக்கின்றன.',
+  diffViewHighlightLimit: 'நீளமான குறியீடு தொடரியல் சிறப்பித்தல் இல்லாமல் காட்டப்படுகிறது.',
 };
 
 registerLyraLocale('ta', strings);

@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} lệnh',
   },
+  commandPaletteInputLimit: 'Một số lệnh đã bị bỏ qua vì đã đạt giới hạn đầu vào.',
 };
 
 registerLyraLocale('vi', strings);

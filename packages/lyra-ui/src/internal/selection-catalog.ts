@@ -18,15 +18,37 @@ export interface SelectionCatalogRow extends SelectionCatalogEntry {
  * model/voice pickers through `normalizeCatalog()` in `catalog-picker.ts`. */
 export const CATALOG_ROW_LIMIT = 1_024;
 
+/** Source positions excluded by the catalog inspection ceiling. Invalid or duplicate rows
+ * inside the inspected prefix do not contribute to omitted. */
+export interface SelectionCatalogTruncation {
+  readonly source: number;
+  readonly retained: number;
+  readonly omitted: number;
+}
+
+const acceptAnyCode = (_code: string) => true;
+const admittedCatalogs = new WeakMap<object, {
+  normalize: (code: string) => string;
+  accepts: (code: string) => boolean;
+  truncation?: SelectionCatalogTruncation;
+}>();
+
+/** Count-only original-input loss retained with an admitted catalog snapshot. */
+export function selectionCatalogTruncation(snapshot: unknown): SelectionCatalogTruncation | undefined {
+  return snapshot !== null && typeof snapshot === 'object' ? admittedCatalogs.get(snapshot)?.truncation : undefined;
+}
+
 /** A bounded catalog boundary that never evaluates caller-owned property getters. */
 export function snapshotSelectionCatalog(
   source: unknown,
   normalize: (code: string) => string,
-  accepts: (code: string) => boolean = () => true,
+  accepts: (code: string) => boolean = acceptAnyCode,
 ): readonly SelectionCatalogEntry[] | undefined {
   if (source == null) return undefined;
   try { if (!Array.isArray(source)) return Object.freeze([]); }
   catch { return Object.freeze([]); }
+  const admitted = admittedCatalogs.get(source as object);
+  if (admitted?.normalize === normalize && admitted.accepts === accepts) return source as readonly SelectionCatalogEntry[];
   const lengthDescriptor = getOwnDataDescriptor(source as object, 'length');
   const length = typeof lengthDescriptor === 'symbol' ? undefined : lengthDescriptor.value;
   if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) return Object.freeze([]);
@@ -65,7 +87,16 @@ export function snapshotSelectionCatalog(
       ...(fields['disabled'] === undefined ? {} : { disabled: fields['disabled'] as boolean }),
     }));
   }
-  return Object.freeze(result);
+  const snapshot = Object.freeze(result);
+  const originalLoss = admitted?.truncation;
+  const omitted = originalLoss?.omitted ?? Math.max(0, length - CATALOG_ROW_LIMIT);
+  const truncation = omitted > 0 ? Object.freeze({
+    source: originalLoss?.source ?? length,
+    retained: snapshot.length,
+    omitted,
+  }) : undefined;
+  admittedCatalogs.set(snapshot, { normalize, accepts, truncation });
+  return snapshot;
 }
 
 export function normalizeSelectionValue(value: unknown): string {

@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'पूरा वितरण में {validCount} मान्य नमूना बा; {belowCount} देखावल अंतराल से नीचे आ {aboveCount} ऊपर बा; {invalidCount} नमूना अमान्य बा।',
+  histogramDistributionRange: 'देखल गइल नमूना के सीमा: {min} से {max}।',
   chartCategory: 'श्रेणी',
   chartTotal: 'कुल',
   chartAxisTotal: '{axis} के कुल',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, त्रिज्या {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'बढ़त',
-  chartTrendDecreasing: 'घटत',
-  chartTrendFlat: 'बराबर',
-  chartSummary: '{label}: {count} मान, {min} से {max} तक दायरा, {trend} रुझान',
   chartSeriesNoData: '{label}: डाटा नइखे',
   chartSummaryWithData: '{type} चार्ट। {summaries}।',
   chartSummaryEmpty: 'बिना डाटा के {type} चार्ट।',
-  chartSummarySeparator: '. ',
   chartData: 'चार्ट के डाटा',
   chartRenderUnavailable: 'चार्ट देखावल उपलब्ध नइखे।',
+  chartPreparedSummaryZoom: 'जूम पहिले से तइयार सारांश देखावेला; सूचकांक के मदद से अउरी बारीक जानकारी उपलब्ध नइखे।',
+  chartSpatialSummary: 'पूरा स्रोत: {count} बिंदु, x {minX} से {maxX}, y {minY} से {maxY}। दृश्य: {matchedCount} बिंदु, x {viewMinX} से {viewMaxX}, y {viewMinY} से {viewMaxY}।',
+  chartSpatialRadiusDomain: 'पूरा स्रोत के त्रिज्या: {min} से {max}।',
+  chartSpatialDensityLegend: 'घनत्व में सभ श्रृंखला शामिल बा; श्रृंखला देखाई देवे भा ना देवे से खाली बिंदु के ऊपरी परत प्रभावित होखेला।',
+  chartSpatialPoint: '{series}: {id}, स्रोत में जगह {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'घनत्व क्षेत्र: {count} बिंदु, x {minX} से {maxX}, y {minY} से {maxY}।',
+  chartSpatialHidden: ' (श्रृंखला लुकावल बा)',
   chartDataSampled: 'चार्ट आ बनावल डाटा तालिका अधिकतम १,००० रिकॉर्ड के नमूना देखावेला। चार्ट के पूरा डाटा पावे खातिर आपन डाटा तालिका दीं।',
   chartPlotSampled: 'चार्ट अधिकतम १,००० रिकॉर्ड के नमूना देखावेला; डाटा तालिका में सब डाटा बा।',
   chartZoomUnavailable: 'जूम उपलब्ध नइखे, बाकिर मूल चार्ट उपलब्ध बा।',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index}/{total})',
   chartMissingLibrary: 'चार्ट देखावे खातिर एह कॉम्पोनेंट में वैकल्पिक "chart.js" पैकेज इंस्टॉल होखे के चाहीं।',
   boxPlotMissingLibrary: 'बॉक्स प्लॉट देखावे खातिर एह कॉम्पोनेंट में वैकल्पिक box-plot chart पैकेज इंस्टॉल होखे के चाहीं।',
+  chartInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से चार्ट के कुछ डेटा छोड़ दिहल गइल बा। छूटल मान देखावे खातिर छोट भा पहिले से समेकित डेटा सेट दीं।',
+  histogramInputLimit: 'खाली सबसे नया 10,000 नमूना रखल जाला। बड़ वितरण देखावे खातिर पहिले से अंतराल में बाँटल गिनती lr-chart के दीं।',
 };
 
 registerLyraLocale('bho', strings);

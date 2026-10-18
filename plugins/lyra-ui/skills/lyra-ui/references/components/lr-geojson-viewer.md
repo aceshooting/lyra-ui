@@ -23,18 +23,34 @@ The root and viewers family barrels still expose the same distinct `LyraGeojsonV
 for compatibility; importing it does not register the removed tag. Prefer the canonical class.
 The document registry renders `lr-geojson-viewer` for `application/geo+json` and `.geojson` filenames.
 
-Validates the parsed JSON is a `Feature`/`FeatureCollection`/bare geometry (one of `Point`,
-`LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`) before
-rendering; anything else renders the localized `geojsonViewInvalid` error. On success, it walks every
+Responses are limited to 4 MiB (4,194,304 bytes) before `JSON.parse`. The parsed JSON must be a
+`Feature`/`FeatureCollection`/bare geometry (one of `Point`,
+`LineString`, `Polygon`, `MultiPoint`, `MultiLineString`, `MultiPolygon`, `GeometryCollection`);
+anything else renders the localized `geojsonViewInvalid` error. On success, it walks every
 value and object key first, rejecting more than 50,000 graph units, nesting beyond 64 levels, more
-than 2 Mi UTF-16 units of aggregate keys/string values, or more than 4 Mi UTF-16 units of formatted
-metadata before serialization or peer handoff. It then walks every coordinate under a separate
+than 2 Mi UTF-16 units of aggregate keys/string values, or more than 4,194,304 UTF-16 units of
+formatted metadata. A size preflight rejects oversized pretty metadata before full serialization
+or peer handoff. It then walks every coordinate under a separate
 10,000-position ceiling to compute a bounding box, seeds `center`/`zoom` from it as a placeholder, and
 frames the data with `<lr-map>.fitBounds()` (size-aware, padded, antimeridian-safe, no animation) once
 the map exists, then hands the parsed value to
-`<lr-map>` as a single `dataLayers` entry (`sourceId: 'lr-geojson'`). When the optional
+`<lr-map>` as a single `dataLayers` entry (`sourceId: 'lr-geojson'`). The nested map explicitly uses
+`engine="maplibre"`, preserving this viewer's native `maplibre-gl` peer contract independently of
+`lr-map`'s modular default. There is no viewer engine-selection property. When the optional
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
-expand-depth="2">` of the raw value instead of the map.
+expand-depth="2">` of the raw value instead of the map. The JSON-viewer fallback is registered
+lazily only when the map peer is unavailable. Loaded documents survive disconnect/reconnect while
+`src` is unchanged; changing `src` reloads the document.
+
+**Large spatial datasets:** `src` remains a bounded GeoJSON document preview; it accepts neither a
+tile manifest nor a catalog provider. For a million-record spatial source, keep records, indexing,
+global counts and identity lookup in a host-owned service and compose a separate
+[`lr-map`](../media.md#lr-map) with a tiled vector style through `mapStyle`. Query style-owned rendered
+features through that map's public `map` getter, then fetch a bounded selected-feature overlay or a
+deliberately sized GeoJSON preview document. Keep the full source total and preview scope visible
+in the host interface. The preview's feature count describes only the admitted file, and its
+metadata search does not traverse the full spatial service. This composition preserves all file,
+geometry and text guards above.
 
 The root owns the named `region` landmark while loading, in fallback/error/idle states, and while a
 lazy map initializes. After `lr-map-load`, landmark ownership transfers to the map canvas so there
@@ -97,9 +113,10 @@ The canonical tag is registered by importing `components/lr-geojson-viewer.js` (
 `components/viewers/geojson-view/geojson-viewer.js`). The former `components/lr-geojson-view.js`,
 `components/viewers/geojson-view/geojson-view.js` and `geojson-view.class.js` routes were removed
 in 23.0.0. Applications using them to register the viewer must use the canonical tag-shaped route.
-Remote
-resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
-message instead of the map. Lyra supports MapLibre v5 and v6; consumers must import its CSS.
+Remote resources are capped at 4 MiB (4,194,304 bytes) before JSON parsing; exceeding that bound
+surfaces the localized `documentPreviewResourceTooLarge` message instead of the map. Lyra supports
+native MapLibre v5 and v6; consumers must import its CSS and configure that peer before connecting
+the viewer. Installing only `@aceshooting/lyra-map` does not satisfy this viewer's native peer contract.
 MapLibre v5's standard build includes its worker, while v6 is ESM-only, requires WebGL2, and needs
 its module-worker URL configured for the bundler before this viewer constructs the nested map. See
 `llms/components/lr-map.md` for the Vite v6 example and the other bundler variants.

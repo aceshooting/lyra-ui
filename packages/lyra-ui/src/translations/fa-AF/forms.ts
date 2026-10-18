@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'قلم پایین است',
   signaturePadPenUp: 'قلم بلند است',
+  localePickerInputLimit: 'تنها ۵۱۲ ورودی نخست تنظیمات زبان و منطقه در دسترس هستند.',
+  emojiPickerInputLimit: 'برخی داده‌های شکلک به‌دلیل رسیدن به حد ورودی حذف شدند.',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

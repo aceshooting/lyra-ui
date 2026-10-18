@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} eșantioane valide în distribuția completă; {belowCount} sub și {aboveCount} peste limitele intervalelor afișate; {invalidCount} eșantioane nevalide.',
+  histogramDistributionRange: 'Intervalul observat al eșantionului: de la {min} la {max}.',
   chartCategory: 'Categorie',
   chartTotal: 'Total',
   chartAxisTotal: 'Total {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, rază {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'crescătoare',
-  chartTrendDecreasing: 'descrescătoare',
-  chartTrendFlat: 'constantă',
-  chartSummary: '{label}: {count} valori, interval de la {min} la {max}, tendință {trend}',
   chartSeriesNoData: '{label}: fără date',
   chartSummaryWithData: 'Grafic de tip {type}. {summaries}.',
   chartSummaryEmpty: 'Grafic de tip {type} fără date.',
-  chartSummarySeparator: '. ',
   chartData: 'Datele graficului',
   chartRenderUnavailable: 'Redarea graficului nu este disponibilă.',
+  chartPreparedSummaryZoom: 'Zoom-ul afișează rezumatul pregătit; detalierea pe baza unui index nu este disponibilă.',
+  chartSpatialSummary: 'Sursa completă: {count} puncte, x de la {minX} la {maxX}, y de la {minY} la {maxY}. Vizualizare: {matchedCount} puncte, x de la {viewMinX} la {viewMaxX}, y de la {viewMinY} la {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Raza în sursa completă: de la {min} la {max}.',
+  chartSpatialDensityLegend: 'Densitatea include toate seriile; vizibilitatea seriilor afectează doar suprapunerile de puncte.',
+  chartSpatialPoint: '{series}: {id}, poziția în sursă {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Regiune de densitate: {count} puncte, x de la {minX} la {maxX}, y de la {minY} la {maxY}.',
+  chartSpatialHidden: ' (serie ascunsă)',
   chartDataSampled: 'Graficul și tabelul de date generat afișează un eșantion de până la 1.000 de înregistrări. Furnizează un tabel de date personalizat pentru a accesa toate datele graficului.',
   chartPlotSampled: 'Graficul afișează un eșantion de până la 1.000 de înregistrări; tabelul de date conține toate datele.',
   chartZoomUnavailable: 'Zoom-ul nu este disponibil, dar graficul de bază rămâne disponibil.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} din {total})',
   chartMissingLibrary: 'Această componentă necesită pachetul opțional „chart.js” instalat pentru a afișa grafice.',
   boxPlotMissingLibrary: 'Această componentă necesită pachetul opțional pentru diagrame box plot instalat pentru a le afișa.',
+  chartInputLimit: 'Unele date ale graficului au fost omise deoarece s-a atins o limită de intrare. Furnizați un set de date mai mic sau agregat în prealabil pentru a reprezenta valorile omise.',
+  histogramInputLimit: 'Sunt păstrate doar cele mai recente 10.000 de eșantioane. Furnizați către lr-chart numărul de observații calculat în prealabil pentru fiecare interval pentru a reprezenta o distribuție mai mare.',
 };
 
 registerLyraLocale('ro', strings);

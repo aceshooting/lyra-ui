@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'ફક્ત પ્રથમ {count} પરીક્ષણ પરિણામો બતાવવામાં આવે છે.',
   toolTimelineLimit: 'વધુમાં વધુ {count} ટૂલ કૉલ બતાવવામાં આવે છે.',
   toolSelectLimit: 'ફક્ત પ્રથમ {count} ટૂલ બતાવવામાં આવે છે.',
+  testResultsInputTooLarge: 'પરીક્ષણ પરિણામોની વિગતો દર્શાવવાની મર્યાદા વટાવે છે.',
   toolCall: 'ટૂલ કૉલ',
   maximize: 'મોટું કરો',
   promptStudioVariableName: 'ચલ {index}નું નામ',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'માત્ર પ્રથમ {count} ફાઇલો જ બતાવવામાં આવી છે.',
   taskListLimit: 'ફક્ત પ્રથમ {count} કાર્યો જ બતાવવામાં આવ્યા છે.',
   evalDatasetLimit: 'ફક્ત પ્રથમ {count} ઉદાહરણો બતાવવામાં આવે છે.',
+  activityFeedInputLimit: 'કુલ {total}માંથી ફક્ત સૌથી નવી {count} એન્ટ્રીઓ જ રાખવામાં આવે છે.',
+  spanWaterfallLimit: 'કુલ {total} સ્પાનમાંથી {shown} બતાવવામાં આવે છે.',
+  toolTimelineInputLimit: 'કુલ {total} ટૂલ કૉલમાંથી ફક્ત સૌથી નવા {count} રાખવામાં આવે છે.',
 };
 
 registerLyraLocale('gu', strings);

@@ -156,7 +156,7 @@ describe('lr-terminal', () => {
     expect(snapshot!.length).to.equal(3);
   });
 
-  it('keeps the terminal virtual-list key callback stable while its per-render item callback stays fresh', async () => {
+  it('keeps terminal virtual-list key and item callbacks stable', async () => {
     const el = await fixture<LyraTerminal>(html`<lr-terminal without-wrap></lr-terminal>`);
     el.write(Array.from({ length: 300 }, (_, index) => `line ${index}`).join('\n'));
     await el.updateComplete;
@@ -170,7 +170,7 @@ describe('lr-terminal', () => {
     await list.updateComplete;
 
     expect(list.keyFunction).to.equal(keyFunction);
-    expect(list.renderItem).not.to.equal(renderItem);
+    expect(list.renderItem).to.equal(renderItem);
   });
 
   it('avoids terminal virtual-list offset rebuilds for unrelated parent updates while new lines reconcile', async () => {
@@ -180,20 +180,20 @@ describe('lr-terminal', () => {
     const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
     await list.updateComplete;
     await settleVirtualList(el);
-    const items = list.items;
+    const items = list.source;
     const rebuilds = recordVirtualListOffsetRebuilds(list);
     try {
       el.withoutCopyButton = true;
       await el.updateComplete;
       await list.updateComplete;
       expect(rebuilds.count(), JSON.stringify(rebuilds.updates())).to.equal(0);
-      expect(list.items).to.equal(items);
+      expect(list.source).to.equal(items);
 
       el.write('\nnew terminal line');
       await el.updateComplete;
       await list.updateComplete;
       expect(rebuilds.count()).to.equal(1);
-      expect(list.items).to.not.equal(items);
+      expect(list.source).to.not.equal(items);
     } finally {
       rebuilds.restore();
     }
@@ -295,8 +295,8 @@ describe('lr-terminal', () => {
     retained.maxScrollback = Number.MAX_VALUE;
     retained.write(`${'x'.repeat(20_001)}\n`.repeat(11));
     const retainedLines = retained.getPlainText().split('\n');
-    expect(retainedLines).to.have.length(11);
-    expect(retainedLines.reduce((count, line) => count + line.length, 0)).to.be.at.most(200_000);
+    expect(retainedLines).to.have.length(12);
+    expect(retainedLines.reduce((count, line) => count + line.length, 0)).to.equal(220_000);
 
     const burst = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
     burst.maxScrollback = Number.MAX_VALUE;

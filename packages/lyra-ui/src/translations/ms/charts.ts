@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} sampel sah dalam keseluruhan taburan; {belowCount} di bawah dan {aboveCount} di atas sela yang dipaparkan; {invalidCount} sampel tidak sah.',
+  histogramDistributionRange: 'Julat sampel yang diperhatikan: {min} hingga {max}.',
   chartCategory: 'Kategori',
   chartTotal: 'Jumlah',
   chartAxisTotal: 'Jumlah {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, jejari {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'meningkat',
-  chartTrendDecreasing: 'menurun',
-  chartTrendFlat: 'mendatar',
-  chartSummary: '{label}: {count} nilai, julat {min} hingga {max}, arah aliran {trend}',
   chartSeriesNoData: '{label}: tiada data',
   chartSummaryWithData: 'Carta {type}. {summaries}.',
   chartSummaryEmpty: 'Carta {type} tanpa data.',
-  chartSummarySeparator: '. ',
   chartData: 'Data carta',
   chartRenderUnavailable: 'Paparan carta tidak tersedia.',
+  chartPreparedSummaryZoom: 'Zum memaparkan ringkasan yang disediakan; perincian lanjut melalui indeks tidak tersedia.',
+  chartSpatialSummary: 'Keseluruhan sumber: {count} titik, x {minX} hingga {maxX}, y {minY} hingga {maxY}. Paparan: {matchedCount} titik, x {viewMinX} hingga {viewMaxX}, y {viewMinY} hingga {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Jejari dalam keseluruhan sumber: {min} hingga {max}.',
+  chartSpatialDensityLegend: 'Kepadatan merangkumi semua siri; keterlihatan siri hanya mempengaruhi lapisan titik.',
+  chartSpatialPoint: '{series}: {id}, kedudukan dalam sumber {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Kawasan kepadatan: {count} titik, x {minX} hingga {maxX}, y {minY} hingga {maxY}.',
+  chartSpatialHidden: ' (siri disembunyikan)',
   chartDataSampled: 'Carta dan jadual data yang dijana memaparkan sampel sehingga 1,000 rekod. Sediakan jadual data tersuai untuk mengakses semua data carta.',
   chartPlotSampled: 'Carta memaparkan sampel sehingga 1,000 rekod; jadual data menyenaraikan semua data.',
   chartZoomUnavailable: 'Zum tidak tersedia, tetapi carta utama masih tersedia.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} daripada {total})',
   chartMissingLibrary: 'Komponen ini memerlukan pakej pilihan "chart.js" dipasang untuk memaparkan carta.',
   boxPlotMissingLibrary: 'Komponen ini memerlukan pakej carta plot kotak pilihan dipasang untuk memaparkan plot kotak.',
+  chartInputLimit: 'Sebahagian data carta telah digugurkan kerana had input dicapai. Berikan set data yang lebih kecil atau yang telah diagregatkan untuk mewakili nilai yang digugurkan.',
+  histogramInputLimit: 'Hanya 10,000 sampel terkini dikekalkan. Berikan bilangan yang telah dikelompokkan mengikut sela kepada lr-chart untuk mewakili taburan yang lebih besar.',
 };
 
 registerLyraLocale('ms', strings);

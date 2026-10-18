@@ -290,7 +290,8 @@ function snapshotDataRecord(
   preserveRecordKeys?: ReadonlySet<PropertyKey>,
   preserveCollectionItemKeys?: ReadonlySet<PropertyKey>
 ): unknown | CollectionSnapshotFailure {
-  const output = budget.realm.Object.create(prototype) as Record<
+  // Fill without inherited setters (including __proto__), then restore the destination realm.
+  const output = budget.realm.Object.create(null) as Record<
     PropertyKey,
     unknown
   >;
@@ -327,16 +328,12 @@ function snapshotDataRecord(
         else budget.truncated = true;
         return entry;
       }
-      Object.defineProperty(output, key, {
-        value: entry,
-        enumerable: true,
-        configurable: false,
-        writable: false,
-      });
+      output[key] = entry;
     }
   } catch {
     return OMIT_COLLECTION_VALUE;
   }
+  Object.setPrototypeOf(output, prototype);
   return Object.freeze(output);
 }
 
@@ -381,6 +378,7 @@ function snapshotCollectionValue(
     // contiguous run from the retained end that fits both the entry limit and the value budget.
     const newest = depth === 0 && allowPrefixTruncation && budget.retention === 'newest';
     const output = new budget.realm.Array() as unknown[];
+    Object.setPrototypeOf(output, null);
     rememberSnapshot(budget, value, output);
     const kept: unknown[] = [];
     // Positions walked (the retained run), and those skipped because their value cannot cross
@@ -424,13 +422,9 @@ function snapshotCollectionValue(
     output.length = walked;
     const offset = newest ? sourceLength - walked : 0;
     for (let index = 0; index < kept.length; index += 2) {
-      Object.defineProperty(output, (kept[index] as number) - offset, {
-        value: kept[index + 1],
-        enumerable: true,
-        configurable: false,
-        writable: false,
-      });
+      output[(kept[index] as number) - offset] = kept[index + 1];
     }
+    Object.setPrototypeOf(output, budget.realm.Array.prototype);
     if (walked - dropped < sourceLength) budget.truncated = true;
     if (allowPrefixTruncation && depth === 0)
       recordRootLoss(budget, newest ? 'newest' : 'oldest', sourceLength, walked - dropped);
@@ -717,10 +711,11 @@ function readonlySetFacade(
 function snapshotIdentityMap(
   entries: IterableIterator<readonly [unknown, unknown]>,
   realm = snapshotRealm(),
-  budget?: CollectionSnapshotBudget
+  budget?: CollectionSnapshotBudget,
+  entryLimit = budget?.entryLimit ?? PUBLIC_COLLECTION_ENTRY_LIMIT
 ): ReadonlyMap<unknown, unknown> | typeof EXHAUSTED_COLLECTION_VALUE {
   const backing = new realm.Map<unknown, unknown>();
-  for (let count = 0; count < (budget?.entryLimit ?? PUBLIC_COLLECTION_ENTRY_LIMIT); count += 1) {
+  for (let count = 0; count < entryLimit; count += 1) {
     const next = entries.next();
     if (next.done) break;
     if (budget && !consumeSnapshotWork(budget))
@@ -734,10 +729,11 @@ function snapshotIdentityMap(
 function snapshotIdentitySet(
   values: IterableIterator<unknown>,
   realm = snapshotRealm(),
-  budget?: CollectionSnapshotBudget
+  budget?: CollectionSnapshotBudget,
+  entryLimit = budget?.entryLimit ?? PUBLIC_COLLECTION_ENTRY_LIMIT
 ): ReadonlySet<unknown> | typeof EXHAUSTED_COLLECTION_VALUE {
   const backing = new realm.Set<unknown>();
-  for (let count = 0; count < (budget?.entryLimit ?? PUBLIC_COLLECTION_ENTRY_LIMIT); count += 1) {
+  for (let count = 0; count < entryLimit; count += 1) {
     const next = values.next();
     if (next.done) break;
     if (budget && !consumeSnapshotWork(budget))
@@ -883,10 +879,11 @@ function snapshotIdentityCollection(
     if (budget && !consumeSnapshotWork(budget))
       return EXHAUSTED_COLLECTION_VALUE;
     const sourceLength = readOwnArrayLength(value) ?? 0;
-    const length = Math.min(sourceLength, PUBLIC_COLLECTION_ENTRY_LIMIT);
+    const length = Math.min(sourceLength, boundedSnapshotLimit(root?.limits?.entries, PUBLIC_COLLECTION_ENTRY_LIMIT));
     const kept: CollectionRetention = root?.retain ?? 'oldest';
     const offset = kept === 'newest' ? sourceLength - length : 0;
     const output = new realm.Array(length) as unknown[];
+    Object.setPrototypeOf(output, null);
     if (budget) rememberSnapshot(budget, value, output);
     for (let index = 0; index < length; index += 1) {
       if (budget && !consumeSnapshotWork(budget))
@@ -897,13 +894,9 @@ function snapshotIdentityCollection(
         descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
       )
         continue;
-      Object.defineProperty(output, index, {
-        value: descriptor.value,
-        enumerable: true,
-        configurable: false,
-        writable: false,
-      });
+      output[index] = descriptor.value;
     }
+    Object.setPrototypeOf(output, realm.Array.prototype);
     if (length < sourceLength)
       root?.onTruncate?.(Object.freeze({ kept, retained: length, source: sourceLength }));
     return Object.freeze(output);
@@ -911,7 +904,7 @@ function snapshotIdentityCollection(
   if (value === null || typeof value !== 'object') return value;
   const mapEntries = nativeMapEntries(value);
   if (mapEntries) {
-    const output = snapshotIdentityMap(mapEntries, realm, budget);
+    const output = snapshotIdentityMap(mapEntries, realm, budget, boundedSnapshotLimit(root?.limits?.entries, budget?.entryLimit ?? PUBLIC_COLLECTION_ENTRY_LIMIT));
     if (output === EXHAUSTED_COLLECTION_VALUE) return output;
     if (budget) rememberSnapshot(budget, value, output);
     reportIdentityCollectionLoss(root, value, 'map', output.size);
@@ -919,7 +912,7 @@ function snapshotIdentityCollection(
   }
   const setValues = nativeSetValues(value);
   if (setValues) {
-    const output = snapshotIdentitySet(setValues, realm, budget);
+    const output = snapshotIdentitySet(setValues, realm, budget, boundedSnapshotLimit(root?.limits?.entries, budget?.entryLimit ?? PUBLIC_COLLECTION_ENTRY_LIMIT));
     if (output === EXHAUSTED_COLLECTION_VALUE) return output;
     if (budget) rememberSnapshot(budget, value, output);
     reportIdentityCollectionLoss(root, value, 'set', output.size);
@@ -940,11 +933,12 @@ function reportIdentityCollectionLoss(
     root.onTruncate(Object.freeze({ kept: 'oldest', retained, source: size }));
 }
 
-function snapshotEventDetail(
+/** @internal Detaches one complete event detail under the shared event snapshot budget. */
+export function snapshotEventDetail(
   value: unknown,
   view: Window | null | undefined,
-  preserveRootKeys: ReadonlySet<PropertyKey>,
-  preserveCollectionItemKeys: ReadonlySet<PropertyKey>
+  preserveRootKeys: ReadonlySet<PropertyKey> = new Set<PropertyKey>(),
+  preserveCollectionItemKeys: ReadonlySet<PropertyKey> = new Set<PropertyKey>()
 ): unknown {
   if (value === undefined || value === null) return value;
   const budget: CollectionSnapshotBudget = {
@@ -986,6 +980,8 @@ function trustedLyraConstructorChain(
 }
 
 interface CollectionPropertyPolicy {
+  /** Nearest declaring class supplies the property's optional lower admission ceilings. */
+  readonly limits?: PublicCollectionSnapshotOptions['limits'];
   readonly owns: boolean;
   readonly preservesItemIdentity: boolean;
   readonly preservesObjectIdentity: boolean;
@@ -1027,6 +1023,7 @@ function collectionPropertyPolicy(
   }
   const cached = policies.get(name);
   if (cached) return cached;
+  let limits: PublicCollectionSnapshotOptions['limits'];
   let owns = false;
   let preservesItemIdentity = false;
   let preservesObjectIdentity = false;
@@ -1038,12 +1035,16 @@ function collectionPropertyPolicy(
     // module-level function rather than a method. The `hasOwnProperty` guard above already limits
     // the cast to a constructor that actually declares its own override of the field.
     const declared = constructor as unknown as {
+      ownedCollectionLimits?: Readonly<Record<PropertyKey, PublicCollectionSnapshotOptions['limits']>>;
       ownedCollectionProperties: readonly PropertyKey[];
       identityCollectionProperties: readonly PropertyKey[];
       identityCollectionObjectProperties: readonly PropertyKey[];
       appendOrderedCollectionProperties: readonly PropertyKey[];
       immutableSourceCollectionProperties: readonly PropertyKey[];
     };
+    if (!limits && Object.hasOwn(constructor, 'ownedCollectionLimits') &&
+      declared.ownedCollectionLimits && Object.hasOwn(declared.ownedCollectionLimits, name))
+      limits = declared.ownedCollectionLimits[name];
     if (
       Object.prototype.hasOwnProperty.call(
         constructor,
@@ -1080,6 +1081,7 @@ function collectionPropertyPolicy(
       retainsNewest = true;
   }
   const policy = Object.freeze({
+    limits,
     owns,
     preservesItemIdentity,
     preservesObjectIdentity,
@@ -1153,6 +1155,7 @@ function samePolicy(
   b: CollectionPropertyPolicy
 ): boolean {
   return (
+    a.limits === b.limits &&
     a.owns === b.owns &&
     a.preservesItemIdentity === b.preservesItemIdentity &&
     a.preservesObjectIdentity === b.preservesObjectIdentity &&
@@ -1205,7 +1208,7 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
     const originalSet = installed?.originalSet ?? inheritedSet;
     const lastAssignments = new WeakMap<
       LyraElement,
-      { readonly source: unknown; readonly retained: unknown }
+      { readonly source: WeakRef<object> | { readonly primitive: unknown }; readonly retained: unknown }
     >();
     const set = function (this: LyraElement, value: unknown): void {
       const previous = lastAssignments.get(this);
@@ -1219,14 +1222,21 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
         declaration.hasChanged === undefined &&
         (!policy.preservesItemIdentity || policy.immutableSource) &&
         !policy.preservesObjectIdentity &&
-        (Object.is(value, previous.source) || Object.is(value, previous.retained))
+        (('primitive' in previous.source
+          ? Object.is(value, previous.source.primitive)
+          : value !== undefined && Object.is(value, previous.source.deref())) ||
+          Object.is(value, previous.retained))
       ) {
         return;
       }
+      const retainedLoss = previous && !policy.preservesObjectIdentity && Object.is(value, previous.retained)
+        ? publicCollectionTruncation(this, name)
+        : undefined;
       const ownerView = (this as unknown as { ownerDocument?: Document })
         .ownerDocument?.defaultView;
       let truncation: CollectionTruncation | undefined;
       const options: PublicCollectionSnapshotOptions = {
+        limits: policy.limits,
         retain: policy.retainsNewest ? 'newest' : 'oldest',
         onTruncate: (report) => {
           truncation = report;
@@ -1241,12 +1251,32 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
           : policy.preservesItemIdentity
           ? snapshotIdentityCollection(value, ownerView, undefined, options)
           : snapshotPublicCollection(value, ownerView, options);
+      if (retainedLoss) {
+        // Refresh live identity rows while retaining the provenance of this exact owned snapshot.
+        // A fresh caller array, including a former mutable source, supplies its own provenance.
+        // Deep snapshots can retain rejected holes, so their length is not a retained-row count.
+        const retained = truncation?.retained ?? (policy.preservesItemIdentity
+          ? isArrayValue(snapshot)
+            ? readOwnArrayLength(snapshot)
+            : snapshot !== null && typeof snapshot === 'object'
+              ? nativeCollectionSize(snapshot, 'map') ?? nativeCollectionSize(snapshot, 'set')
+              : undefined
+          : undefined) ?? retainedLoss.retained;
+        truncation = Object.freeze({
+          kept: truncation?.kept ?? retainedLoss.kept,
+          retained,
+          source: retainedLoss.source,
+        });
+      }
       recordCollectionTruncation(this, name, truncation);
       originalSet.call(this, snapshot);
+      const source = normalizedCollectionWrites.get(this)?.has(name) && previous
+        ? previous.source
+        : ((typeof value === 'object' && value !== null) || typeof value === 'function')
+          ? new WeakRef(value as object)
+          : { primitive: value };
       lastAssignments.set(this, {
-        source: normalizedCollectionWrites.get(this)?.has(name)
-          ? (previous ? previous.source : value)
-          : value,
+        source,
         retained: descriptor.get?.call(this) ?? snapshot,
       });
     };

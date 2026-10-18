@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Kalamu chini',
   signaturePadPenUp: 'Kalamu juu',
+  localePickerInputLimit: 'Ni maingizo ya kwanza 512 ya lugha na eneo pekee yanayopatikana.',
+  emojiPickerInputLimit: 'Baadhi ya data ya emoji imeachwa kwa sababu kikomo cha ingizo kimefikiwa.',
 };
 
 registerLyraLocale('sw', strings);

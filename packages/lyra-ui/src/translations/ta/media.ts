@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{total}-இல் {index}-வது படம்',
   playWithContext: '{name}-ஐ இயக்கு',
   pauseWithContext: '{name}-ஐ இடைநிறுத்து',
+  avPlayerWaveformUnavailable: 'அலைவடிவத் தரவு கிடைக்கவில்லை அல்லது இந்த ஊடகத்துடன் பொருந்தவில்லை.',
+  avPlayerTranscriptUnavailable: 'எழுத்துப் பதிவுத் தரவு கிடைக்கவில்லை.',
   dropzoneReleaseToAdd: 'கோப்பைச் சேர்க்க விடுவிக்கவும்.',
   dropzoneRejectedType: 'இந்தக் கோப்பு வகை ஏற்கப்படாது.',
   attachmentAdd: 'இணைப்பைச் சேர்',

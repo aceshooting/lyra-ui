@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: 'тағы {count} ұсыныс',
     other: 'тағы {count} ұсыныс',
   },
+  mentionInputLimit: 'Атап өтуге арналған алғашқы 10 000 ұсыныс қана қолжетімді.',
+  diffViewHighlightLimit: 'Ұзын код синтаксисті ерекшелеусіз көрсетіледі.',
 };
 
 registerLyraLocale('kk', strings);

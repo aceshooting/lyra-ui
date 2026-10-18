@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Hali suhbatlar yoʻq',
   agentWorkspaceLabel: 'Agent ish maydoni',
+  agentWorkspaceInputLimit: '{collection}: {total} yozuvdan faqat {count} tasi saqlanadi.',
   agentWorkspaceConversation: 'Suhbat',
   agentWorkspaceDetails: 'Ishga tushirish tafsilotlari',
   agentWorkspaceRun: 'Agent ishga tushishi',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Bu qismni qayta urinish',
   promptQueueLabel: 'Navbatdagi promptlar',
   promptQueueEmpty: 'Navbatda prompt yoʻq',
+  promptQueueInputLimit: 'Kiritish chegarasiga yetilgani sababli navbatdagi ayrim promptlar yoki ilovalar tushirib qoldirildi.',
+  promptQueueAttachmentLimit: 'Saqlangan {total} ilovadan {shown} tasi koʻrsatilmoqda.',
   promptQueueSendNow: 'Hozir yuborish',
   selectionToolbarLabel: 'Tanlov amallari',
   selectionAsk: 'Soʻrash',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} token',
     other: '{count} token',
   },
+  threadListInputLimit: 'Kiritish chegarasiga yetilgani sababli ayrim suhbat mavzulari tushirib qoldirildi.',
+  promptInputInputLimit: 'Kiritish chegarasiga yetilgani sababli ayrim takliflar yoki katalog yozuvlari tushirib qoldirildi.',
+  transcriptFeedInputLimit: '{total} ta yozuvdan faqat eng yangi {count} tasi saqlanadi.',
+  codeBlockHighlightLimit: 'Uzun kod sintaksisni ajratib koʻrsatishsiz koʻrsatiladi.',
 };
 
 registerLyraLocale('uz', strings);

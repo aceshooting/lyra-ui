@@ -375,13 +375,13 @@ export const Reorderable: Story = {
       const { parentNodeId, fromIndex, toIndex } = (
         event as CustomEvent<{ parentNodeId: string | null; fromIndex: number; toIndex: number }>
       ).detail;
-      const move = (list: LyraTreeNodeData[]): LyraTreeNodeData[] => {
+      const move = (list: readonly LyraTreeNodeData[]): LyraTreeNodeData[] => {
         const next = [...list];
         const [moved] = next.splice(fromIndex, 1);
-        next.splice(toIndex, 0, moved);
+        if (moved) next.splice(toIndex, 0, moved);
         return next;
       };
-      const apply = (list: LyraTreeNodeData[]): LyraTreeNodeData[] =>
+      const apply = (list: readonly LyraTreeNodeData[]): LyraTreeNodeData[] =>
         list.map((item) =>
           item.id === parentNodeId && item.children
             ? { ...item, children: move(item.children) }
@@ -450,4 +450,34 @@ export const CustomIndentGuides: Story = {
       </lr-tree-item>
     </lr-tree>
   `,
+};
+
+/** Raise the bounded projection budget while retaining the default when max-nodes is omitted. */
+export const RaisedNodeLimit: Story = {
+  render: () => html`<lr-tree label="Larger collection" max-nodes="1200"
+    .data=${Array.from({length:1100},(_,index)=>({id:String(index),label:`Node ${index + 1}`}))}></lr-tree>`,
+};
+
+/** The application owns full storage and lookup; the component retains only its displayed window. */
+export const IndexedSource: Story = {
+  render: () => {
+    let selected: string | undefined;
+    let revision = 0;
+    const source: import('./tree.class.js').TreeSource = { revision: 1, async project(request) {
+      if (request.action.type === 'select') selected = request.action.selected ? request.action.key : undefined;
+      const snapshot = selected;
+      return { state: String(++revision), total: 1_000_000,
+        rows: { count: 1_000_000, keyAt: index => `record-${index}`,
+          indexOfKey: (key: string | number) => Number(String(key).slice(7)),
+          itemAt(index) { const key = `record-${index}`; return { key, value: { id: key, label: `Record ${index + 1}` }, parentKey: null,
+            level: 1, position: index + 1, setSize: 1_000_000, childCount: 0, expanded: false, selected: key === snapshot }; },
+        }, ...(request.action.type === 'reveal' ? { focusIndex: Number(request.action.key.slice(7)) } : {}),
+      };
+    } };
+    return html`<style>
+      lr-tree.source-demo::part(source-list) { border: var(--lr-border-width-thin) solid var(--lr-color-border); }
+      lr-tree.source-demo::part(source-label) { font-weight: var(--lr-font-weight-medium); }
+    </style><p>Use End to reach the millionth record. Selection is an immutable provider projection.</p>
+    <lr-tree class="source-demo" label="Indexed records" .treeSource=${source}></lr-tree>`;
+  },
 };

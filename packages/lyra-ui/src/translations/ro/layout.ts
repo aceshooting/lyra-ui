@@ -61,6 +61,7 @@ const strings: LyraLocaleStrings = {
     few: '{count} comenzi',
     other: '{count} de comenzi',
   },
+  commandPaletteInputLimit: 'Unele comenzi au fost omise deoarece a fost atinsă limita de intrare.',
 };
 
 registerLyraLocale('ro', strings);

@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} pendekezo zaidi',
     other: '{count} mapendekezo zaidi',
   },
+  mentionInputLimit: 'Ni mapendekezo 10,000 ya kwanza ya majina ya kutaja pekee yanayopatikana.',
+  diffViewHighlightLimit: 'Msimbo mrefu unaonyeshwa bila uangaziaji wa sintaksia.',
 };
 
 registerLyraLocale('sw', strings);

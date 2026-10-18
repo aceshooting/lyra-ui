@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pen neer',
   signaturePadPenUp: 'Pen omhoog',
+  localePickerInputLimit: 'Alleen de eerste 512 taal- en regiovermeldingen zijn beschikbaar.',
+  emojiPickerInputLimit: 'Sommige emojigegevens zijn weggelaten omdat een invoerlimiet is bereikt.',
 };
 
 registerLyraLocale('nl', strings);

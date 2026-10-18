@@ -74,6 +74,8 @@ const strings: LyraLocaleStrings = {
     many: 'Ще {count} пропозицій',
     other: 'Ще {count} пропозиції',
   },
+  mentionInputLimit: 'Доступні лише перші 10 000 кандидатів для згадування.',
+  diffViewHighlightLimit: 'Довгий код показується без підсвічування синтаксису.',
 };
 
 registerLyraLocale('uk', strings);

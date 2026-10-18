@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 17 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -28,6 +28,19 @@ types leave it inert; changing `type` or raw `config` to an admitted vertical ca
 configuration enables participation regardless of the tag. Horizontal or continuous-x
 configurations remain outside synchronization.
 
+`preparedData: LyraChartPreparedData | null = null` is inherited as a property-only input. Its
+compatibility follows the effective writable type: ordered series for `line`/`bar`, categories for
+`bar`/`pie`/`doughnut`/`radar`/`polarArea`, and `LyraSpatialChartSource` (`kind: 'spatial'`)
+for `scatter`/`bubble` with linear scales. Changing `type`
+can therefore make a previously admitted descriptor incompatible; it does not convert the
+descriptor. Whole-source counts/domains, aggregate gap/overlay/table admission, explicit exact
+point reveal, bounded displayed CSV export and refresh/unset behavior follow the core contract.
+Series/category zoom stays summary-only; spatial zoom updates and queries its explicit viewport.
+The spatial contract includes complete all-series density, bounded representatives plus independent
+selected/revealed exact overlays, semantic radius/original coordinates, and the spatial event/table/CSV
+routes described above. Scatter/bubble typed class entries re-export spatial source/point/series,
+viewport and immutable spatial event-detail types; import them from their granular class routes.
+
 Everything else is inherited verbatim from `lr-chart`; each name below has the same type, default,
 and behavior there. **See `llms/components/lr-chart.md` for the details, code example, and gotchas
 of every entry in these lists.**
@@ -38,19 +51,29 @@ of every entry in these lists.**
 `stacked`, `stackedAxes`, `withoutAnimation` (`without-animation`),
 `withoutLegend` (`without-legend`), `withoutTooltip` (`without-tooltip`), `xLabel` (`x-label`),
 `yLabel` (`y-label`), plus additive `labels`, `datasets`, `valueFormatter`, `formatter`,
-`tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`, `zoomable`,
+`tooltipTitleFormatter`, `tooltipFooterFormatter`, `area`, `zoomable`, `preparedData`,
+`viewport` (property only, default null), `selectedPointId` (property only, default ''),
 `height`, `y2Label` (`y2-label`), `withoutZeroBaseline` (`without-zero-baseline`), `dataLabels`
 (`data-labels`), `stackTotals` (`stack-totals`), `config`, `withDataTable`
-(`with-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly), and `chart`.
+(`with-data-table`), `dataTableToggle` (`data-table-toggle`), `maxRecords` (`max-records`, default
+`1000`, range 2–1,000), `chartArea` (readonly), and `chart`.
 `type` differs only in its initial value.
 
 **Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `renderChart()`, `resetZoom()`,
-`refreshTheme()`.
+`refreshTheme()`, `revealSourcePoint(ref: LyraSeriesPointRef): Promise<boolean>` and
+`revealSourcePoint(id: string): Promise<boolean>` (spatial only).
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-datum-activate`, `lr-point-activate` (`detail: { datasetIndex,
 index, label, value }`), `lr-legend-visibility-change-request` (cancelable), and
 `lr-legend-visibility-change` (commit; both legend events carry `datasetIndex`, `visible`, and the
 complete `hiddenDatasets` snapshot).
+Prepared activation additionally emits `lr-source-point-select` or `lr-source-category-select`
+with the core chart's immutable original-reference details. Spatial activation uses
+`lr-spatial-point-select`/`lr-spatial-bin-select` with the exact core source semantics;
+existing activation events retain
+plotted indices. The typed component entries re-export `LyraChartPreparedData`,
+`LyraChartSourcePointSelectDetail`, `LyraChartSourceCategorySelectDetail`, `LyraPreparedSeriesData`,
+`LyraPreparedCategoryData` and `LyraSeriesPointRef`.
 Radial category legends additionally emit `lr-datum-visibility-change-request` (cancelable) and
 `lr-datum-visibility-change`, carrying `index`, `visible` and the frozen `hiddenDatums` snapshot.
 
@@ -60,7 +83,7 @@ Radial category legends additionally emit `lr-datum-visibility-change-request` (
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `sync-crosshair` (inherited decorative category line, rendered only for an admitted synchronized
 configuration; the native canvas tooltip has no CSS part),
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink — see
 `llms/components/lr-chart.md`).

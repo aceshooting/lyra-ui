@@ -50,7 +50,7 @@ describe('lite-chart forced-colors encodings', () => {
       expect(el.shadowRoot!.querySelectorAll('pattern')).to.have.length(0);
       active = true;
       listener?.({ matches: true, media: '(forced-colors: active)' } as MediaQueryListEvent);
-      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelectorAll('pattern').length === 1);
       expect(el.shadowRoot!.querySelectorAll('pattern')).to.have.length(1);
       el.remove();
       expect(removals).to.be.greaterThan(0);
@@ -146,4 +146,38 @@ describe('lite-chart forced-colors encodings', () => {
     const swatches = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')];
     expect(swatches.every((swatch) => swatch.dataset['encoding'] === undefined)).to.equal(true);
   });
+});
+
+it('shares one forced-colors subscription across chart instances', async () => {
+  const original = window.matchMedia;
+  let subscriptions = 0;
+  window.matchMedia = ((query: string) => {
+    const media = original.call(window, query);
+    if (query === '(forced-colors: active)') {
+      const add = media.addEventListener.bind(media);
+      media.addEventListener = ((...args: Parameters<typeof media.addEventListener>) => {
+        subscriptions++; add(...args);
+      }) as typeof media.addEventListener;
+    }
+    return media;
+  }) as typeof window.matchMedia;
+  try {
+    const host = await fixture<HTMLElement>(html`<div><lr-lite-chart></lr-lite-chart><lr-lite-chart></lr-lite-chart><lr-lite-chart></lr-lite-chart></div>`);
+    expect(subscriptions).to.equal(1);
+    host.remove();
+  } finally { window.matchMedia = original; }
+});
+
+it('reads forced-colors media once for a chart render', async () => {
+  const el = await mount(html`<lr-lite-chart .labels=${Array.from({length:100},(_,i)=>String(i))}
+    .datasets=${[{label:'S',data:Array.from({length:100},()=>1)}]}></lr-lite-chart>`);
+  const original = window.matchMedia;
+  let reads = 0;
+  window.matchMedia = ((query: string) => {
+    if (query === '(forced-colors: active)') reads++;
+    return original.call(window, query);
+  }) as typeof window.matchMedia;
+  try { el.requestUpdate(); await el.updateComplete; }
+  finally { window.matchMedia = original; }
+  expect(reads).to.be.at.most(1);
 });

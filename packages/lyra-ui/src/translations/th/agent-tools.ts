@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'แสดงเฉพาะผลการทดสอบ {count} รายการแรก',
   toolTimelineLimit: 'แสดงการเรียกใช้เครื่องมือไม่เกิน {count} รายการ',
   toolSelectLimit: 'แสดงเฉพาะเครื่องมือ {count} รายการแรก',
+  testResultsInputTooLarge: 'รายละเอียดผลการทดสอบเกินขีดจำกัดการแสดงผล',
   toolCall: 'การเรียกใช้เครื่องมือ',
   maximize: 'ขยายใหญ่สุด',
   promptStudioVariableName: 'ชื่อตัวแปร {index}',
@@ -292,6 +293,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'แสดงเฉพาะไฟล์ {count} แรกเท่านั้น',
   taskListLimit: 'แสดงเฉพาะงาน {count} แรกเท่านั้น',
   evalDatasetLimit: 'แสดงเฉพาะตัวอย่าง {count} รายการแรก',
+  activityFeedInputLimit: 'เก็บเฉพาะรายการล่าสุด {count} จาก {total} รายการเท่านั้น',
+  spanWaterfallLimit: 'แสดง {shown} จาก {total} สแปน',
+  toolTimelineInputLimit: 'เก็บเฉพาะการเรียกใช้เครื่องมือ {count} รายการล่าสุดจากทั้งหมด {total} รายการ',
 };
 
 registerLyraLocale('th', strings);

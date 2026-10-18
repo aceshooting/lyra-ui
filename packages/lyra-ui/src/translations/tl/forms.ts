@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Nakababa ang panulat',
   signaturePadPenUp: 'Nakataas ang panulat',
+  localePickerInputLimit: 'Ang unang 512 tala ng wika at rehiyon lang ang available.',
+  emojiPickerInputLimit: 'May ilang datos ng emoji na hindi isinama dahil naabot ang limitasyon sa input.',
 };
 
 registerLyraLocale('tl', strings);

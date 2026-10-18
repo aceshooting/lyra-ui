@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ବାର୍ତ୍ତାଳାପ ନାହିଁ',
   agentWorkspaceLabel: 'ଏଜେଣ୍ଟ କାର୍ଯ୍ୟକ୍ଷେତ୍ର',
+  agentWorkspaceInputLimit: '{collection}: {total} ପ୍ରବେଶ ମଧ୍ୟରୁ କେବଳ {count} ରଖାଯାଉଛି।',
   agentWorkspaceConversation: 'ବାର୍ତ୍ତାଳାପ',
   agentWorkspaceDetails: 'ରନ୍ ବିବରଣୀ',
   agentWorkspaceRun: 'ଏଜେଣ୍ଟ ରନ୍',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'ଏହି ଅଂଶ ପାଇଁ ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ',
   promptQueueLabel: 'ଧାଡ଼ିରେ ଥିବା ପ୍ରମ୍ପ୍ଟ',
   promptQueueEmpty: 'ଧାଡ଼ିରେ କୌଣସି ପ୍ରମ୍ପ୍ଟ ନାହିଁ',
+  promptQueueInputLimit: 'ଇନପୁଟ୍ ସୀମା ପୂରଣ ହେବାରୁ ଧାଡ଼ିରେ ଥିବା କିଛି ପ୍ରମ୍ପ୍ଟ୍ କିମ୍ବା ସଂଲଗ୍ନକ ବାଦ ଦିଆଯାଇଛି।',
+  promptQueueAttachmentLimit: 'ରଖାଯାଇଥିବା {total} ସଂଲଗ୍ନକ ମଧ୍ୟରୁ {shown} ଦେଖାଯାଉଛି।',
   promptQueueSendNow: 'ବର୍ତ୍ତମାନ ପଠାନ୍ତୁ',
   selectionToolbarLabel: 'ଚୟନ କାର୍ଯ୍ୟ',
   selectionAsk: 'ପଚାରନ୍ତୁ',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} ଟୋକେନ୍',
     other: '{count} ଟୋକେନ୍',
   },
+  threadListInputLimit: 'ଇନପୁଟ୍ ସୀମା ପୂରଣ ହେବାରୁ କିଛି ଆଲୋଚନା ଥ୍ରେଡ୍ ବାଦ ଦିଆଯାଇଛି।',
+  promptInputInputLimit: 'ଇନପୁଟ୍ ସୀମା ପୂରଣ ହେବାରୁ କିଛି ପରାମର୍ଶ କିମ୍ବା କ୍ୟାଟାଲଗ୍ ପ୍ରବେଶ ବାଦ ଦିଆଯାଇଛି।',
+  transcriptFeedInputLimit: '{total}ଟି ପ୍ରବିଷ୍ଟିରୁ କେବଳ ସବୁଠୁ ନୂଆ {count}ଟି ରଖାଯାଏ।',
+  codeBlockHighlightLimit: 'ଲମ୍ବା କୋଡ୍ ସିଣ୍ଟାକ୍ସ ହାଇଲାଇଟିଂ ବିନା ଦେଖାଯାଏ।',
 };
 
 registerLyraLocale('or', strings);

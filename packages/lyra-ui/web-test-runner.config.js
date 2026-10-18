@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import { reviewedSha256 } from './scripts/generate-shiki-wasm.mjs';
 
 import { availableParallelism } from 'node:os';
@@ -9,6 +10,7 @@ import { defaultReporter } from '@web/test-runner';
 import { sendKeysPlugin } from '@web/test-runner-commands/plugins';
 import { playwrightLauncher } from '@web/test-runner-playwright';
 import { esbuildPlugin } from '@web/dev-server-esbuild';
+import { scaleReporter } from './scripts/wtr-scale-reporter.mjs';
 import { timingReporter } from './scripts/wtr-timing-reporter.mjs';
 import { completeJunitReporter } from './scripts/wtr-junit-reporter.mjs';
 
@@ -113,6 +115,19 @@ const shikiOnigWasmAssetPlugin = {
       context.type = 'application/wasm';
       context.body = binary;
     }
+  },
+};
+
+/** Serve only the installed modular worker graph; no companion build is needed by source tests. */
+const mapWorkerAssetPlugin = {
+  name: 'lyra-map-worker-assets',
+  serve(context) {
+    const match = /^\/__lyra-map-worker__\/(worker\.mjs|modules\/[A-Za-z0-9_][A-Za-z0-9_.-]*\.mjs)$/.exec(context.path);
+    if (!match) return;
+    const workerEntry = require.resolve('@aceshooting/lyra-map/worker');
+    context.status = 200;
+    context.type = 'text/javascript';
+    context.body = readFileSync(join(dirname(workerEntry), match[1]), 'utf8');
   },
 };
 
@@ -378,6 +393,8 @@ export function enforceStrictConsole(launcher) {
   return launcher;
 }
 
+const scaleRun = process.argv.some((arg, index, args) => arg === '--group=scale' || (arg === '--group' && args[index + 1] === 'scale'));
+if (scaleRun && (process.env.WTR_COVERAGE === '1' || browserProduct !== 'chromium')) throw new Error('Scale measurements require non-instrumented Chromium');
 const collectCoverage = process.env.WTR_COVERAGE === '1';
 // Set only by scripts/coverage-shard-runner.mjs, one distinct value per shard sub-run, so each
 // shard's report lands in its own scratch directory instead of overwriting the others. Its
@@ -473,6 +490,7 @@ const testRunnerHtml = (testRunnerImport) => `
 </html>`;
 
 export default {
+  groups: scaleRun ? [{ name: 'scale', files: 'src/**/*-scale.test.ts' }] : [],
   files: ['src/**/*.test.ts', '!src/**/*.native-scrollbar.test.ts'],
   // Parallel aggregate runs assign a port per lane. Without an explicit port, WTR's portfinder
   // probe releases the candidate before the server binds it, so two processes can select the
@@ -514,6 +532,7 @@ export default {
     jszipEsmInteropPlugin,
     echartsProcessInteropPlugin,
     shikiOnigWasmAssetPlugin,
+    mapWorkerAssetPlugin,
     sendKeysPlugin(),
     mouseCommandPlugin,
     mediaCommandPlugin,
@@ -541,9 +560,10 @@ export default {
   // built-in default reporter behavior exactly as today. outputPath follows
   // the same per-shard reportDir as coverageConfig below, so parallel/sequential
   // shard sub-runs never clobber each other's JUnit output.
-  reporters: collectCoverage || timingReportPath
+  reporters: collectCoverage || timingReportPath || scaleRun
     ? [
         defaultReporter(),
+        ...(scaleRun ? [scaleReporter()] : []),
         ...(collectCoverage
           ? [completeJunitReporter({ outputPath: `${coverageReportDir ?? 'coverage'}/junit.xml` })]
           : []),

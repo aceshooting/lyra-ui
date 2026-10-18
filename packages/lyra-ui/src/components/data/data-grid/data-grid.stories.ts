@@ -392,6 +392,7 @@ export const TreeAndDetails: Story = {
 };
 
 export const ServerData: Story = {
+  parameters: { docs: { description: { story: 'Changing the query revokes the prior request immediately, including the search debounce interval. Loaders may use request.signal to stop their own work.' } } },
   render: () => html`
     <lr-data-grid
       label="Server roster"
@@ -552,4 +553,17 @@ export const RowMinimumAndDensity: StoryObj = {
       `)}
     </div>
   `,
+};
+
+/** Raise the bounded client admission before assigning the collection. */
+export const RaisedRowLimit: Story = {
+  render: () => html`<lr-data-grid
+    label="Twenty thousand client rows"
+    row-key="id"
+    max-rows="20000"
+    .columns=${columns}
+    .data=${Array.from({ length: 20_000 }, (_, id) => ({
+      id, name: `Person ${id}`, team: 'Engineering', score: id % 100, joined: '2026-01-01',
+    }))}
+  ></lr-data-grid>`,
 };

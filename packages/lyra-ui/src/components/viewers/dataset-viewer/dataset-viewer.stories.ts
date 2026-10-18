@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './dataset-viewer.js';
+import type { DatasetViewerSource } from './dataset-viewer.js';
 
 const meta: Meta = {
   title: 'DocumentViewer/DatasetViewer',
@@ -67,4 +68,19 @@ export const RetintedHeaderRow: Story = {
     name="People"
     style="--lr-dataset-viewer-header-row-bg: var(--lr-color-success-quiet);"
   ></lr-dataset-viewer>`,
+};
+
+export const InMemory: Story = {
+  parameters: { docs: { description: { story: 'An owned scalar-cell snapshot bypasses fetch and parser loading. Set limits before assigning the input; clearing it restores src. Row, column, and byte limits can be raised to ten times their defaults, while the aggregate cell limit remains 1,000,000.' } } },
+  render: () => html`<lr-dataset-viewer .maxRows=${20000} .maxColumns=${2000} .maxBytes=${52428800} .table=${{ fields: ['name', 'role'], rows: [{ name: 'Ada', role: 'Mathematician' }] }} max-height="20rem"></lr-dataset-viewer>`,
+};
+
+
+const indexedSource: DatasetViewerSource = { revision: 1, rowCount: 1_000_000, columnCount: 3,
+  columnAt: (index: number) => ({ key: String(index), label: ['Record', 'Category', 'Value'][index]! }),
+  cellAt: (row: number, column: number) => column === 0 ? row + 1 : column === 1 ? `Category ${row % 12}` : `Value ${row + 1}`,
+};
+export const MillionRecords: Story = {
+  parameters: { docs: { description: { story: 'The host supplies one million logical body records without constructing a row array. Separate column labels occupy display row one; the last body row is A1000001. Source rows use the live --lr-size-3rem token, with bounded overflowing display. Global search is available only when the source supplies search(). Assign undefined to restore the ordinary input or URL.' } } },
+  render: () => html`<lr-dataset-viewer .dataSource=${indexedSource} .anchor=${{ kind: 'cell-range', range: 'A1000001' } }></lr-dataset-viewer>`,
 };

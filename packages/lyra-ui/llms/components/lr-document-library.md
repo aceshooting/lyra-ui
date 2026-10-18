@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 21 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,6 +19,13 @@
 Controlled searchable and filterable document inventory with versions, tags, owners, freshness,
 sorting, and bulk selection. It composes the table's bounded 100-row default, so a large document
 collection stays reachable through pagination without mounting an unbounded grid.
+
+With `dataSource` unset, the tag facet displays the first 500 locale-sorted distinct tags. A localized `[part="limit"]`
+note reports the omitted count. Search and a controlled `tagFilter` continue to match all admitted
+document tags, including tags outside the facet window. Matching rows, sorting, and folded search
+fields are reused when their inputs are unchanged; loading and selection updates reuse the current
+row projection. A custom `filter` that depends on mutable closure state can be refreshed with a
+keyless `requestUpdate()`. Publish document edits with a new outer array as described below.
 
 Own `tags: undefined` is treated like omitted tags; malformed tag arrays and entries remain invalid.
 Removing `search-term` clears search filtering without rewriting its `null` property readback; an
@@ -56,6 +63,53 @@ table. Omitted localizes the table's own `tableLoadFailed` default.
 `errorDescription: string = ''` (`error-description`) — failed-load supporting copy, forwarded to
 the nested table.
 
+The provider query type is `DocumentLibrarySourceQuery { readonly searchTerm: string;
+readonly tagFilter: readonly string[]; readonly sortKey: LibraryDocumentSortKey;
+readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter'] }`.
+
+**Full-source paging:** Set property-only `dataSource: DocumentLibrarySource | undefined`
+(default `undefined`) to browse a host-owned logical collection. `DocumentLibrarySource` is
+`LyraPageSource<LibraryDocument, DocumentLibrarySourceQuery>`; both types are exported by the
+component entry and package root. The query contains `searchTerm`, readonly `tagFilter`,
+`sortKey`, `sortDir`, and the current `filter` callback. The provider applies AND-tag filtering
+and ordering to the complete collection. A custom `filter` replaces the default text predicate;
+they are not applied cumulatively. The query forwards `searchTerm` verbatim (null becomes empty).
+The provider supplies the callback's trimmed, request-locale-folded text argument and owns any
+remote translation of that callback. It must not filter only the returned page. Source-mode
+`tagFilter` accepts at most 500 keys; its legacy 10,000-key allowance applies only without a source.
+
+`sourcePage: number = 0` (`source-page`) is zero-based; `sourcePageSize: number = 100`
+(`source-page-size`) normalizes to 1–500. Readonly `sourceTotal: number | null` is the exact
+accepted query total, or `null` before a current authoritative result. The nested table converts
+to its one-based page convention, shows unknown-total/loading/error states, and delegates sorting
+to the source. Query or page-size changes reset to source page zero. An out-of-range page receives
+one corrective last-page request. No complete array, row index or full-source search corpus is
+built by the component.
+
+The provider implements the shared `query`, global `lookup` and `locate` contract from
+`@aceshooting/lyra-ui/data-sources.js`. Each accepted page must include `tags`, even when its
+catalogue is empty: bounded `{ values, total, unavailableSelected }` facets describe the global
+catalogue and supplied labels. Missing rows on the current page never prove a filter is absent;
+only `unavailableSelected` removes a controlled tag. Facet values are bounded to 500 and source
+rows to 500 tags and 65,536 display-text UTF-16 units each. Source-row tags render as complete text
+lists rather than one chip per tag. Malformed or oversized replies show a localized error.
+
+Bulk selection still contains up to 10,000 global IDs. The provider resolves them in sequential
+batches of at most 500; only authoritative global lookup absence removes an ID. The header
+checkbox selects or clears the loaded page while preserving off-page selections. Selection
+changes wait for lookup to complete; failures expose `selection-status` and `selection-retry`.
+User `lr-selection-change` carries the complete accepted ID list, and programmatic assignments
+remain silent. Page/query changes and page retry reuse the independent selected-record cache.
+`lr-filter-change.matchCount` reports the accepted global query total.
+
+A defined source takes display precedence over `documents`; it never overwrites that legacy
+getter. Invalid defined sources fail visibly. Setting `dataSource = undefined` restores the
+current legacy documents and their existing limits. The source remains host-owned by identity;
+after changing its contents or revision, reassign it (including the same object) or call unnamed
+`requestUpdate()`. Replacement, explicit refresh, locale change, disconnect and adoption revoke
+obsolete work. Named presentation updates reuse accepted data. Both source and legacy routes
+forward instance `strings` to the composed table.
+
 **Events:**
 
 - `lr-filter-change` — non-cancelable; fresh frozen readonly `{ searchTerm, tags, matchCount }`.
@@ -64,17 +118,18 @@ the nested table.
 - `lr-selection-change` — non-cancelable; fresh frozen readonly `{ documentIds }`.
 - `lr-open` — non-cancelable; frozen readonly `{ documentId }`.
 - `lr-retry-request` — cancelable, `detail: null`; the nested table's built-in retry button was
-  activated, only rendered while `error` is set. The library contains the child's request, then
+  activated while a host or provider load error is shown. The library contains the child's request, then
   emits its own canonical request. Preventing it leaves both library and table errors set; otherwise
-  the default clears them.
+  the default clears the host error and retries the current provider page when a source is set.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
-button, while `error` is set.
+button, while a host or provider load error is shown.
 
 **CSS parts:** `base`, `toolbar`, `search`, `tag-filter`, `selection-bar`, `selection-count`,
 `clear-selection`, `table`, `row`, `cell`, `header-cell`, `document-name`, `error-row`, `error-cell`,
 `error` (the nested table's built-in `lr-empty` host), `error-base`, `error-icon`, `error-heading`,
-`error-description`, `error-actions`, `retry-button`.
+`error-description`, `error-actions`, `retry-button`, `limit` (the count of distinct tags omitted
+from the facet), `selection-status` (source selection loading/error), and `selection-retry`.
 
 `selection-bar` is visible ordinary content, not a shadow live region. `selectedDocumentIds`
 assignments stay silent; each selection change the user makes (row or select-all checkbox, "Clear

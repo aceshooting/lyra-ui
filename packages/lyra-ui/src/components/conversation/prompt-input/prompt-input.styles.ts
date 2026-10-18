@@ -94,4 +94,12 @@ export const styles = css`
       flex-basis: auto;
     }
   }
+
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
 `;

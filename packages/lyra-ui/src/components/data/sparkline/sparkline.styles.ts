@@ -24,6 +24,12 @@ export const styles = css`
     --_lr-sparkline-line-color: var(--lr-color-text-quiet);
     --_lr-sparkline-fill-color: var(--lr-color-surface-raised);
   }
+  [part="status"] {
+    display: block;
+    color: var(--lr-color-text);
+    font: inherit;
+    overflow-wrap: anywhere;
+  }
   svg {
     display: block;
     inline-size: 100%;

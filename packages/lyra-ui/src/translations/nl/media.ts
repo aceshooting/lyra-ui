@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Afbeelding {index} van {total}',
   playWithContext: '{name} afspelen',
   pauseWithContext: '{name} pauzeren',
+  avPlayerWaveformUnavailable: 'Golfvormgegevens zijn niet beschikbaar of komen niet overeen met deze media.',
+  avPlayerTranscriptUnavailable: 'Transcriptiegegevens zijn niet beschikbaar.',
   dropzoneReleaseToAdd: 'Laat los om het bestand toe te voegen.',
   dropzoneRejectedType: 'Dit bestandstype wordt niet geaccepteerd.',
   attachmentAdd: 'Bijlage toevoegen',

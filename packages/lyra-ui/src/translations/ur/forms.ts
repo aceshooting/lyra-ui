@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'قلم نیچے',
   signaturePadPenUp: 'قلم اوپر',
+  localePickerInputLimit: 'زبان اور علاقے کے صرف پہلے 512 اندراجات دستیاب ہیں۔',
+  emojiPickerInputLimit: 'ان پٹ کی حد پوری ہونے کی وجہ سے ایموجی کا کچھ ڈیٹا چھوڑ دیا گیا ہے۔',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

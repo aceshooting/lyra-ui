@@ -100,13 +100,14 @@ function findPropertyOwner(start: object | null, key: PropertyKey): object | und
   return undefined;
 }
 
-function patchMethod(hub: SharedThemeHub, target: object, key: PropertyKey, asyncResult = false): void {
+function patchMethod(hub: SharedThemeHub, target: object, key: PropertyKey, asyncResult = false, ruleDeclaration = false): void {
   const original = Object.getOwnPropertyDescriptor(target, key);
   if (!original || typeof original.value !== 'function') return;
   const originalMethod = original.value as (...args: unknown[]) => unknown;
   const installedValue = function (this: unknown, ...args: unknown[]): unknown {
     const mutationSubject = this;
     const result = Reflect.apply(originalMethod, this, args);
+    if (ruleDeclaration && hub.realm.CSSStyleDeclaration && !(this as CSSStyleDeclaration).parentRule) return result;
     if (asyncResult && result && typeof (result as PromiseLike<unknown>).then === 'function') {
       void Promise.resolve(result).then(
         () => notifyHub(hub, mutationSubject),
@@ -150,7 +151,7 @@ function patchAdoptedStyleSheets(hub: SharedThemeHub, prototype: object | undefi
   }
 }
 
-function patchSetter(hub: SharedThemeHub, prototype: object | undefined, key: PropertyKey): void {
+function patchSetter(hub: SharedThemeHub, prototype: object | undefined, key: PropertyKey, ruleDeclaration = false): void {
   if (!prototype) return;
   const target = findPropertyOwner(prototype, key);
   if (!target) return;
@@ -159,7 +160,7 @@ function patchSetter(hub: SharedThemeHub, prototype: object | undefined, key: Pr
   const originalSetter = original.set;
   const installedSetter = function (this: unknown, value: unknown): void {
     Reflect.apply(originalSetter, this, [value]);
-    notifyHub(hub, this);
+    if (!ruleDeclaration || !hub.realm.CSSStyleDeclaration || (this as CSSStyleDeclaration).parentRule) notifyHub(hub, this);
   };
   try {
     Object.defineProperty(target, key, { ...original, set: installedSetter });
@@ -189,9 +190,9 @@ function installRealmInstrumentation(hub: SharedThemeHub): void {
   }
   const declarationPrototype = hub.realm.CSSStyleDeclaration?.prototype;
   if (declarationPrototype) {
-    patchMethod(hub, declarationPrototype, 'setProperty');
-    patchMethod(hub, declarationPrototype, 'removeProperty');
-    patchSetter(hub, declarationPrototype, 'cssText');
+    patchMethod(hub, declarationPrototype, 'setProperty', false, true);
+    patchMethod(hub, declarationPrototype, 'removeProperty', false, true);
+    patchSetter(hub, declarationPrototype, 'cssText', true);
   }
   const mediaListPrototype = hub.realm.MediaList?.prototype;
   if (mediaListPrototype) {

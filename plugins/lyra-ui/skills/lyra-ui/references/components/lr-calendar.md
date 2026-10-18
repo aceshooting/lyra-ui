@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 19 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,7 +30,10 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
   milliseconds, or a valid `Date`, then normalizes to the displayed ISO day. Invalid date/title rows
   are omitted; `lr-event-select.detail.event` remains the original admitted object. `color` is
   sanitized before use as the marker background. The former ignored `start`/`end` fields are not
-  part of the contract; use one event per displayed date
+  part of the contract; use one event per displayed date. Input retains the first 10,000 events
+  while preserving event identity. A localized `limit` part discloses omitted input in month and
+  agenda views; provide a smaller date range to include other events. Changed loss notices are
+  announced politely after mount
 - `value: string = ''` — the selected ISO date
 - `viewDate: string` (attribute `view-date`, defaults to the 1st of the current month) — the visible
   month; an unparseable value falls back to the current month
@@ -55,6 +58,25 @@ events render as `agenda-event` buttons in agenda view; either ceiling past that
 localized `event-limit`/`agenda-limit` "+N more" notice rather than mounting an unbounded number of
 buttons.
 
+For a large event archive, let the host query the displayed month and replace `events` with a
+bounded result. Listen for `lr-view-change.detail.viewDate` from the previous/next buttons and
+out-of-grid keyboard moves. Assigning `viewDate` programmatically does not emit that event, so the
+host must also call its loader for a programmatic jump. The host owns request cancellation and
+obsolete-result checks: abort superseded month/page fetches and ignore results whose date window
+or request generation is no longer current.
+
+Keep each assigned window within the 10,000-event input bound and treat the four-per-day or
+500-entry agenda as previews when the selected period is dense. Show an explicit host total and
+preview count for server-omitted events; native calendar overflow counts only admitted events.
+For complete dense-event traversal, compose a configured `lr-table` with
+`paginationMode = 'server'`, `pageSize`, `totalItems`, controlled one-based `page`, and the current
+page's `rows`. Set `totalItems` to the full event count for the selected month or date. Handle
+`lr-page-change.detail.page` by querying that page, then assigning `page` and `rows`; use stable
+`rowKey` identities across pages.
+`lr-row-activate.detail.row` identifies an event reached through the table, while
+`lr-event-select.detail.event` identifies a calendar preview action. Complete traversal comes
+from the paged table; the calendar remains a bounded month/day preview.
+
 **Keyboard:** the month grid is a fixed 6×7 matrix (leading/trailing days of adjacent months fill it
 out) with one roving tab stop — `focusedDate`, else `value`, else today, else the first rendered day.
 Arrows move by 1 day (Left/Right swapped under RTL) or 7, PageUp/PageDown by one month (clamping
@@ -72,7 +94,8 @@ month-navigation buttons; `previous-button` and `next-button` identify each dire
 `grid`, `week` (`display: contents`), `day`, `date`, `event` (a month-view marker), `event-limit`
 (localized "+N more" notice shown in a day cell whose events exceed the 4-event per-cell render
 ceiling), `agenda`, `agenda-event`, `agenda-limit` (localized "+N more" notice shown in agenda
-view when the visible month's events exceed the 500-event render ceiling), and `empty` (the agenda
+view when the visible month's events exceed the 500-event render ceiling), `limit` (input-admission
+notice), and `empty` (the agenda
 view's localized "no events" message).
 
 **Themeable custom properties:** `--lr-calendar-day-min-block-size` (default `var(--lr-size-6rem)`)

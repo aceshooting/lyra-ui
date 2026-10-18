@@ -21,6 +21,12 @@ bar whose length is that stage's share of the **first** stage, read top-to-botto
 drop-off. It sits beside `lr-gauge` and `lr-heatmap` as an analytics primitive rather than a general
 chart type.
 
+Supply `stages` and `comparison` as aggregate counts or measures computed across their complete
+cohorts. A few stages can summarize one million underlying observations when each value includes
+every applicable cohort member. The host or server performs the raw-event aggregation; the
+component receives stage totals, and each comparison cohort normalizes to its own first stage.
+The 500-stage rendering ceiling bounds stage cardinality independently of the observation count.
+
 When a positive finite stage value divided by a positive finite baseline overflows to `Infinity`,
 the main or comparison data fill clamps to 100%. Nonfinite input normalization, nonpositive-baseline
 behavior, percentage and drop-off text, and overflow border styling keep their existing rules.
@@ -32,6 +38,14 @@ Reach for `lr-bar-chart`/`lr-lite-chart` when you actually want a value axis and
 The whole chart is plain HTML — stage names, absolute values, shares and drop-off percentages are
 real text inside an `<ol>`, so there is no sighted-only drawing needing a separate transcript. The
 list carries the accessible name; a host `aria-label` overrides `label`.
+Stage and comparison projections reuse their input identities. Reassign after changes, or call
+`requestUpdate()` after mutating the current arrays. The component resolves at most the first 501
+valid stages to detect overflow and renders at most 500.
+Validation inspects at most 10,000 source positions per chunk and continues through malformed
+entries until it reaches that valid-stage boundary or the end. The last completed chart stays
+visible with `aria-busy` while a replacement is inspected. Keep pending source arrays and records
+unchanged, or reassign/explicitly refresh to restart inspection. Replacement and disconnect cancel
+unfinished work; reconnect derives the current input again.
 
 **Properties:**
 

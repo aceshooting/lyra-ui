@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} وڌيڪ تجويز',
     other: '{count} وڌيڪ تجويزون',
   },
+  mentionInputLimit: 'ذڪر لاءِ صرف پهريان 10,000 اميدوار موجود آهن.',
+  diffViewHighlightLimit: 'ڊگهو ڪوڊ سنٽيڪس هاءِ لائٽنگ کان سواءِ ڏيکاريو وڃي ٿو.',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

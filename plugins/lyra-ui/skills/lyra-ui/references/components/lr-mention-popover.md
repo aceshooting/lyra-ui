@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -43,7 +43,9 @@ preserving null readback; an explicitly empty query remains empty.
   plain `<textarea>` or single-line text `<input type="text"|"search">` gets caret-precise
   positioning; any other element anchors the whole popup under that element's own box.
 - `items: readonly Readonly<LyraMentionItem>[] = []` (attribute: false) — the full candidate set,
-  pre-`query`-filtering. Assignment takes a shallow frozen snapshot. Runtime rows without a string
+  pre-`query`-filtering. Assignment admits the first 10,000 array positions into a shallow frozen
+  snapshot; `items` readback exposes that admitted prefix. Additional input is omitted with a
+  localized notice in `part="limit"`. Runtime rows without a string
   `label` remain in that diagnostic snapshot but are omitted from filtering/rendering before the
   built-in or custom predicate runs, so one malformed provider row cannot take down valid siblings.
   An entry's `disabled` marks that row non-actionable: `aria-disabled="true"` replaces its
@@ -55,7 +57,8 @@ preserving null readback; an explicitly empty query remains empty.
   (see `filter`).
 - `open: boolean = false` (reflected)
 - `filter: LyraMentionFilter | null = null` (attribute: false) — overrides the built-in
-  case-insensitive `label`/`description` substring match entirely.
+  case-insensitive `label`/`description` substring match entirely. Replacing `items` refreshes
+  candidate search text; an explicit `requestUpdate()` refreshes a filter whose closure changed.
 - `emptyText?: string` (attribute `empty-text`) — `undefined` uses localized `noMatches`; every
   supplied string, including `''` and `'No matches'`, is caller-owned
 - `label?: string` — accessible name for the `role="listbox"` popup. `undefined` uses localized
@@ -67,7 +70,8 @@ preserving null readback; an explicitly empty query remains empty.
   filtered by `query` via `filter` (or the built-in default). An empty `query` skips the query
   predicate but still omits malformed-label rows. This getter retains every match; the popup
   renders and navigates the first 50, then adds a localized, non-option count of remaining matches
-  as the listbox description.
+  as the listbox description. This visible-match limit is separate from source admission. Closed
+  popups contain no suggestion rows after their exit transition settles.
 - `activeDescendantId: string | null` — read-only getter; the `id` of the currently-highlighted
   internal row, or `null` while closed or when `filteredItems` is empty. Useful for diagnostics and
   same-tree consumers; do not copy it to an external control as a string IDREF.
@@ -115,7 +119,8 @@ renders `open="false"` on first paint)
 
 **CSS parts:** `listbox`, `option`, `option-icon` (when `icon` is set), `option-label`,
 `option-description` (when `description` is set), `empty`, `more-results` (the localized count
-shown when more suggestions match than the list renders).
+shown when more suggestions match than the list renders), and `limit` (localized notice when
+source admission omits candidates).
 
 **Themeable custom properties:** `--lr-mention-popover-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of the hovered or `[data-active]`

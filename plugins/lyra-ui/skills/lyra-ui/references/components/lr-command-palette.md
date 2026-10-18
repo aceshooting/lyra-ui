@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,6 +33,14 @@ is unchanged.
 Valid string keywords still participate in search alongside the command's label, description, and
 group. Unsafe keyword entries are skipped without invoking accessors, and selection returns the
 original command object.
+
+`commands` admits the first 10,000 input positions; invalid or duplicate records inside that prefix
+do not extend the admission window. In the open dialog, `part="limit"` shows the localized
+`commandPaletteInputLimit` notice when the original assignment lost entries. This is independent
+of the search-result count and the virtual result window. Rebinding the retained snapshot
+preserves the notice while refreshing live command records; a fresh input below the limit clears
+it. Initial mounting and reconnecting are quiet. Later changed input loss is politely announced
+while open; changes made while closed remain quiet, and the notice appears on the next opening.
 
 **Properties:**
 
@@ -66,7 +74,11 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
 **Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
 no-op if already open),
 `close()`, `show()`/`hide()` (aliases of `openPalette()`/`close('api')`, the surface every Lyra
-overlay exposes), `registerCommand(command)` — appends to `commands` and returns an unregister function.
+overlay exposes), `registerCommand(command)` — queues an addition to `commands` and returns an
+unregister function. Calls in the same turn are admitted together in a microtask; await
+`updateComplete` after that turn before inspecting rendered commands. The disposer also cancels a
+pending registration. Assign `commands` for an immediate bulk update; replacing it before a queued
+batch flush supersedes that older batch.
 
 **Keyboard:** ArrowUp/ArrowDown move the active option, skipping `disabled` rows and clamping (not
 cycling) at the ends; Home/End jump to the first/last enabled row and PageUp/PageDown by one visible
@@ -99,7 +111,8 @@ replacing the native search-cancel glyph the component resets; rendered only whi
 value), `list` (the `role="listbox"`), `group` (a group
 heading), `command-group` (a labeled ARIA group of commands), `command` (a `role="option"` button),
 `icon` (a command's leading icon glyph; only rendered when the command has one), `label`,
-`description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`.
+`description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`, `limit` (original
+command input-loss notice).
 
 The palette dialog paints with the shared overlay-surface family, like `lr-dialog`:
 `--lr-overlay-surface` (default `var(--lr-color-surface-container-highest)`), `--lr-overlay-border`,

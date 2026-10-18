@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '{count} bongbolongan deui',
   },
+  mentionInputLimit: 'Ngan 10.000 calon pikeun disebat munggaran nu sadia.',
+  diffViewHighlightLimit: 'Kode nu panjang dipintonkeun tanpa panyorot sintaksis.',
 };
 
 registerLyraLocale('su', strings);

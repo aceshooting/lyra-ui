@@ -182,6 +182,7 @@ describe('lr-graph custom properties', () => {
     async function paintCanvas(style: string): Promise<string[]> {
       const el = await fixture<LyraGraph>(html`<lr-graph renderer="canvas" layout="layered"
         style=${style} .nodes=${nodes} .edges=${edges}></lr-graph>`);
+      el.scrollIntoView();
       type CanvasPaint = { canvasScene?: { nodes: { fill: string }[]; links: { color: string }[] } };
       await waitUntil(() => Boolean((el as unknown as CanvasPaint).canvasScene), 'canvas paint never completed', { timeout: TIMEOUT });
       const scene = (el as unknown as CanvasPaint).canvasScene!;

@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{total}માંથી છબી {index}',
   playWithContext: '{name} ચલાવો',
   pauseWithContext: '{name} થોભાવો',
+  avPlayerWaveformUnavailable: 'તરંગરૂપનો ડેટા ઉપલબ્ધ નથી અથવા આ મીડિયા સાથે મેળ ખાતો નથી.',
+  avPlayerTranscriptUnavailable: 'લખિત પ્રતનો ડેટા ઉપલબ્ધ નથી.',
   dropzoneReleaseToAdd: 'ફાઇલ ઉમેરવા માટે તેને છોડો.',
   dropzoneRejectedType: 'આ ફાઇલનો પ્રકાર સ્વીકાર્ય નથી.',
   attachmentAdd: 'જોડાણ ઉમેરો',

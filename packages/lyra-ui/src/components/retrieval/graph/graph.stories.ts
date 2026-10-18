@@ -5,6 +5,7 @@ import type {
   LyraGraphEdge,
   LyraGraphNode,
   LyraGraph,
+  GraphSource,
 } from './graph.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 
@@ -541,4 +542,41 @@ export const VisibleGraphList: Story = {
     .nodes=${Array.from({ length: 205 }, (_, index) => ({ id: `n${index}`, label: `Document ${index + 1}` }))}
     .edges=${[{ source: 'n0', target: 'n204', label: 'References the final document' }]}
   ></lr-graph>`,
+};
+
+/** A host can page a complete catalog while supplying only the current diagram neighborhood. */
+export const SourceNavigator: Story = {
+  render: () => {
+    const count = 10_000;
+    const node = (index: number) => ({ id: String(index), label: `Entity ${index + 1}` });
+    const row = (index: number) => ({ key: `node:${index}`, order: index, value: { kind: 'node' as const, value: node(index) } });
+    const source: GraphSource = {
+      revision: 1,
+      records: {
+        revision: 1,
+        query: async ({ query, page, pageSize }) => {
+          const search = query.search.trim().replace(/^entity\s+/i, '');
+          const target = Number(search) - 1;
+          const filtered = search.length > 0;
+          const total = query.kind === 'edges' ? 0 : filtered ? Number.isInteger(target) && target >= 0 && target < count ? 1 : 0 : count;
+          const start = page * pageSize;
+          const rows = Array.from({ length: Math.max(0, Math.min(pageSize, total - start)) }, (_, offset) => row(filtered ? target : start + offset));
+          return { rows, total, summary: { nodes: count, edges: 0 } };
+        },
+        lookup: async keys => keys.flatMap(key => {
+          const index = Number(key.slice(5));
+          return key === `node:${index}` && index >= 0 && index < count ? [row(index)] : [];
+        }),
+        locate: async key => {
+          const index = Number(key.slice(5));
+          return key === `node:${index}` && index >= 0 && index < count ? index : null;
+        },
+      },
+      scene: async ({ centerKey }) => {
+        const index = centerKey ? Number(centerKey.slice(5)) : 0;
+        return { nodes: [{ key: `node:${index}`, value: node(index) }], edges: [], total: { nodes: count, edges: 0 }, coverage: 'neighborhood', worldBounds: null };
+      },
+    };
+    return html`<lr-graph view="list" style="height: 30rem" .graphSource=${source}></lr-graph>`;
+  },
 };

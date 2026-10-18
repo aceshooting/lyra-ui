@@ -8,6 +8,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   chartMissingLibrary: 'Für diese Komponente muss das optionale Paket «chart.js» installiert sein, um Diagramme darzustellen.',
+  histogramInputLimit: 'Nur die neuesten 10.000 Messwerte werden beibehalten. Übergeben Sie vorab in Klassen zusammengefasste Häufigkeiten an lr-chart, um eine grössere Verteilung darzustellen.',
 };
 
 registerLyraLocaleDelta('de-CH', 'de', strings, { dir: 'ltr' });

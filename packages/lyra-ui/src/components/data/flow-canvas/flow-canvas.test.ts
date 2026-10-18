@@ -467,7 +467,7 @@ it('uses owner CSS escaping and an exact-id fallback for adopted keyboard, drag,
     }));
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement === targetControl).to.be.true;
-    expect(ownerEscapeCalls).to.be.greaterThan(0);
+    expect(targetControl.getAttribute('tabindex')).to.equal('0');
 
     ownerWindow.CSS.escape = () => {
       throw new Error('unusable owner CSS.escape must fall back to an exact scan');
@@ -721,8 +721,9 @@ describe('static rendering', () => {
       el.nodes = [...nodes];
       await el.updateComplete;
 
-      const diagnostic = warnings.join('\n');
-      expect(warnings.length).to.equal(1);
+      const diagnostics = warnings.filter(message => message.includes('node-id'));
+      const diagnostic = diagnostics.join('\n');
+      expect(diagnostics.length).to.equal(1);
       expect(diagnostic).to.contain('lr-flow-canvas');
       expect(diagnostic).to.contain('node-id');
       expect(diagnostic).to.not.contain('caller-secret-a');
@@ -741,6 +742,9 @@ describe('static rendering', () => {
     const originalIssuedWarnings = runtime.litIssuedWarnings;
     const originalWarn = console.warn;
     const warnings: string[] = [];
+    const constructor = customElements.get('lr-flow-canvas') as unknown as { enabledWarnings: string[] };
+    const enabledWarnings = constructor.enabledWarnings;
+    constructor.enabledWarnings = [];
     delete runtime.litIssuedWarnings;
     console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(' '));
     try {
@@ -751,6 +755,7 @@ describe('static rendering', () => {
       await el.updateComplete;
       expect(warnings).to.deep.equal([]);
     } finally {
+      constructor.enabledWarnings = enabledWarnings;
       if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
       else runtime.litIssuedWarnings = originalIssuedWarnings;
       console.warn = originalWarn;
@@ -1839,6 +1844,8 @@ describe('selection & roving focus', () => {
       ];
       await el.updateComplete;
 
+      el.focusNode('middle');
+      await el.updateComplete;
       const middle = nodeControl(el, 'middle');
       await focusByKeyboard(middle);
       const homeKeydowns: KeyboardEvent[] = [];
@@ -1879,8 +1886,8 @@ describe('selection & roving focus', () => {
     el.edges = edges;
     await el.updateComplete;
     const a = nodeControl(el, 'a');
-    const b = nodeControl(el, 'b');
-    const edge = el.shadowRoot!.querySelector<SVGElement>('[data-edge-id="a-b"] [part="edge"]')!;
+    let b: HTMLElement;
+    let edge: SVGElement;
 
     a.focus();
     await el.updateComplete;
@@ -1888,6 +1895,7 @@ describe('selection & roving focus', () => {
     a.dispatchEvent(toNode);
     await el.updateComplete;
     expect(toNode.defaultPrevented).to.be.true;
+    b = nodeControl(el, 'b');
     expect(el.shadowRoot!.activeElement === b).to.be.true;
     expect(b.getAttribute('tabindex')).to.equal('0');
 
@@ -1895,6 +1903,7 @@ describe('selection & roving focus', () => {
     b.dispatchEvent(toEdge);
     await el.updateComplete;
     expect(toEdge.defaultPrevented).to.be.true;
+    edge = el.shadowRoot!.querySelector<SVGElement>('[data-edge-id="a-b"] [part="edge"]')!;
     expect(el.shadowRoot!.activeElement === edge).to.be.true;
     expect(edge.getAttribute('tabindex')).to.equal('0');
 
@@ -2759,27 +2768,27 @@ describe('connect gesture', () => {
     ];
     await el.updateComplete;
     const controlA = nodeControl(el, 'a');
-    const wrapperB = el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="b"]')!;
-    const wrapperC = el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="c"]')!;
+    const wrapperB = () => el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="b"]');
+    const wrapperC = () => el.shadowRoot!.querySelector<HTMLElement>('[data-node-id="c"]');
 
     const start = new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true });
     controlA.dispatchEvent(start);
     await el.updateComplete;
     expect(start.defaultPrevented).to.be.true;
-    expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
+    expect(Boolean(wrapperB()?.hasAttribute('data-connect-target'))).to.be.true;
 
     const forward = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
     controlA.dispatchEvent(forward);
     await el.updateComplete;
     expect(forward.defaultPrevented).to.be.true;
-    expect(wrapperC.hasAttribute('data-connect-target')).to.be.true;
-    expect(wrapperB.hasAttribute('data-connect-target')).to.be.false;
+    expect(Boolean(wrapperC()?.hasAttribute('data-connect-target'))).to.be.true;
+    expect(Boolean(wrapperB()?.hasAttribute('data-connect-target'))).to.be.false;
 
     const backward = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
     controlA.dispatchEvent(backward);
     await el.updateComplete;
     expect(backward.defaultPrevented).to.be.true;
-    expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
+    expect(Boolean(wrapperB()?.hasAttribute('data-connect-target'))).to.be.true;
 
     // A controlled edges update can make every target unavailable while the source remains in
     // keyboard connect mode. The next mirrored arrow and Enter must stay harmless instead of
@@ -3666,6 +3675,8 @@ describe('localized numeric output', () => {
     );
 
     (el as unknown as { announcer: { throttleMs: number } }).announcer.throttleMs = 0;
+    el.focusNode('a');
+    await el.updateComplete;
     const control = nodeControl(el, 'a');
     control.focus();
     await new Promise((resolve) => setTimeout(resolve, 0));

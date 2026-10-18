@@ -1,4 +1,9 @@
-import { collectionSupport, writeNormalizedOwnedCollection } from '../../../internal/collection-snapshot.js';
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
+import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { readOwnDataValue } from '../../../internal/data-descriptors.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
+import { collectionSupport, publicCollectionTruncation, writeNormalizedOwnedCollection, snapshotEventDetail } from '../../../internal/collection-snapshot.js';
+import { projectRetrievalChunk } from './retrieval-results-model.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -8,9 +13,8 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   firstByRetrievalIdentity,
   canonicalIdentityList,
-  isValidRetrievalChunk,
 } from '../retrieval-identity.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteRange, finiteInteger } from '../../../internal/numbers.js';
 import type { DocumentLocator, RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraVirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
@@ -30,8 +34,8 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_retrievalResultsSelectRowOrdinal, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_loadMore, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_retrievalResultsInputLimit, LYRA_DEFAULT_retrievalResultsSelectRowOrdinal, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSelectionFailed, LYRA_DEFAULT_sourceSelectionLoading, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
@@ -64,6 +68,17 @@ export interface LyraRetrievalResultsEventMap {
 
 export type RetrievalResultsGrouping = 'source' | 'custom' | 'none';
 export type RetrievalResultsPresentation = 'compact' | 'expanded';
+
+/** Query semantics apply to the complete provider collection before paging. */
+export interface RetrievalResultsSourceQuery {
+  readonly sort: 'score' | 'none';
+  readonly withoutDedupe: boolean;
+  readonly grouping: RetrievalResultsGrouping;
+  readonly groupBy: LyraRetrievalResults['groupBy'];
+  readonly groupLabel: LyraRetrievalResults['groupLabel'];
+  readonly groupOrder: LyraRetrievalResults['groupOrder'];
+}
+export type RetrievalResultsSource = LyraPageSource<RetrievalChunk, RetrievalResultsSourceQuery>;
 
 /** `RetrievalChunk` -> `lr-chunk-inspector`'s own `LyraChunk` display-row shape, per the mapping
  *  `RetrievalChunk`'s own doc comment (`src/ai/types.ts`) already specifies: `source.id -> sourceId`,
@@ -107,7 +122,7 @@ function safeScore(score: number): number {
  *
  * **Controlled component.** `chunks`/`selectedChunkIds`/`loading`/`errorText`/`hasMore` are all
  * host-owned;
- * this component never fetches, retries, or mutates its own copy of `chunks`. Selecting a row
+ * without a dataSource, this component never fetches, retries, or mutates its own copy of `chunks`. Selecting a row
  * updates `selectedChunkIds` locally *then* emits `lr-selection-change` (the same "update own copy, then
  * emit; reassign to control" convention `<lr-source-picker>` already uses) so a host can either
  * accept the update as-is or override it before the next render.
@@ -129,6 +144,31 @@ function safeScore(score: number): number {
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
+ * Input retains the first 10,000 results; the limit note reports the assigned source count.
+ * Closed display fields are copied after identity admission, so nested records do not consume the
+ * shared 50,000-value deep-copy budget. Replace the collection to publish source-record changes.
+ *
+ * With dataSource, the provider owns global sorting, deduplication, grouping and page totals.
+ * Each page retains at most 500 records; required rendered text is bounded to 65,536 UTF-16 units
+ * per record and locator paths to 500 segments. Oversized records fail visibly without truncating
+ * their full text. Group labels come from globally computed provider metadata, never partial-page
+ * callbacks. sourceTotal is unknown until an accepted response; legacy hasMore is inactive.
+ * withoutDedupe permits distinct occurrence keys while row selection and events retain canonical
+ * value.id. Canonical lookup must return key===value.id and complete records in global order.
+ * Up to 10,000 explicit selected IDs resolve in sequential batches of at most 500; page/query/retry
+ * changes retain their independent cache. Failed selection remains pending user intent until
+ * retried, without partial events. External assignments and reconnect reconciliation are silent.
+ * Active IDs locate once; manual page navigation does not reapply an unchanged active ID.
+ * Same-source assignment or requestUpdate() refreshes; named paints retain pages and selection.
+ * Source selection events freeze the complete record sequence and projected record fields while
+ * retaining opaque metadata identity. Legacy events retain their complete-detail deep snapshot
+ * and its existing failure budget. Removing dataSource restores the legacy chunks route.
+ *
+ * @csspart source-status - Provider loading or failure text.
+ * @csspart source-retry - Failed provider page retry button.
+ * @csspart source-pagination - Provider page navigation.
+ * @csspart source-selection-status - Canonical selected-record loading or failure text.
+ * @csspart source-selection-retry - Failed canonical selection lookup retry button.
  * @customElement lr-retrieval-results
  * @event lr-selection-change - The selected-chunk set changed. `detail: { selectedChunkIds, chunks }` —
  * `selectedChunkIds` is the complete updated selection (not just the toggled id), `chunks` the
@@ -168,6 +208,7 @@ function safeScore(score: number): number {
  * `::part(row-body)[data-selected]` is invalid CSS, and while virtualized `::part()` is the only
  * way in. A state part is a second token in the same `part` attribute, so a `[part~="…"]` (not
  * `[part="…"]`) selector is the one that matches inside a tree.
+ * @csspart limit - Notice that only the first 10,000 input results were retained.
  * @csspart metadata - The `<dl>` of a chunk's `metadata` entries — omitted entirely when a chunk
  * has no `metadata`, or while `presentation="compact"`.
  * @csspart metadata-entry - One metadata key/value pair's wrapper.
@@ -204,13 +245,20 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     chunkInspectorEmpty: LYRA_DEFAULT_chunkInspectorEmpty,
     chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
     loadMore: LYRA_DEFAULT_loadMore,
+    loading: LYRA_DEFAULT_loading,
+    retrievalResultsInputLimit: LYRA_DEFAULT_retrievalResultsInputLimit,
     retrievalResultsSelectRowOrdinal: LYRA_DEFAULT_retrievalResultsSelectRowOrdinal,
+    retry: LYRA_DEFAULT_retry,
+    sourceSelectionFailed: LYRA_DEFAULT_sourceSelectionFailed,
+    sourceSelectionLoading: LYRA_DEFAULT_sourceSelectionLoading,
+    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     untitledSource: LYRA_DEFAULT_untitledSource,
     valueInvalid: LYRA_DEFAULT_valueInvalid,
     valueTruncated: LYRA_DEFAULT_valueTruncated,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
+  protected static override readonly identityCollectionProperties = Object.freeze(['chunks']);
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'chunks',
@@ -225,6 +273,277 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     'lr-chunk-open',
   ]);
 
+  /** Canonical source records are frozen projections with opaque metadata. Legacy details are
+   * detached as one complete snapshot before entering this identity-preserving envelope. */
+  protected static override readonly identityEventDetailCollectionItems = Object.freeze({
+    'lr-selection-change': Object.freeze(['chunks']),
+    'lr-select': Object.freeze(['chunks']),
+  });
+
+  private _dataSource?: RetrievalResultsSource;
+  private sourceEpoch = 0;
+  private sourceVersion = 0;
+  private sourceLifecycle = 0;
+  private sourceSyncing = false;
+  private sourceInputs?: readonly unknown[];
+  private sourceQueryInputs?: readonly unknown[];
+  private sourceResult?: LyraPageResult<RetrievalChunk>;
+  private sourceRows: readonly RetrievalChunk[] = [];
+  private sourceGroups: LyraVirtualListGroup[] = [];
+  private sourceSelectionInputs?: readonly unknown[];
+  private sourceSelectionEvent?: readonly string[];
+  private sourceSelectionFailed = false;
+  private sourceActiveInputs?: readonly unknown[];
+  private sourceReveal?: { id: string; version: number };
+  private sourceAdapter?: { original: RetrievalResultsSource; adapter: RetrievalResultsSource };
+  private readonly sourceRowKeys = new WeakMap<RetrievalChunk, string>();
+  @state() private sourceStateVersion = 0;
+  private readonly sourcePages = new SourcePageController<RetrievalChunk, RetrievalResultsSourceQuery>(this, {
+    normalizeRecord: (record, isCurrent) => this.projectSourceChunk(record, isCurrent),
+    validateMetadata: (result, query) => this.validateSourcePage(result, query),
+    onChange: () => { this.sourceStateVersion++; },
+  });
+
+  /** Full-source provider; a present invalid source fails visibly instead of using chunks.
+   * Reassign the same provider or call requestUpdate() to refresh its revision/cache. */
+  @property({ attribute: false })
+  get dataSource(): RetrievalResultsSource | undefined { return this._dataSource; }
+  set dataSource(value: RetrievalResultsSource | undefined) {
+    const old = this._dataSource; this._dataSource = value; this.sourceEpoch++;
+    this.requestUpdate('dataSource', old);
+  }
+  /** Zero-based provider page. */
+  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  /** Provider records per page, normalized to 1..500; changing size resets page 0. */
+  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  /** Current query total, or null before success/without a source. */
+  get sourceTotal(): number | null { return this.sourceMode ? this.sourcePages.state.result?.total ?? null : null; }
+  private get sourceMode(): boolean { return this.dataSource !== undefined; }
+  private get sourceBlocked(): boolean { return this.sourceMode && (!this.isConnected || !!this.errorText || this.sourcePages.state.pending || !this.sourcePages.state.result); }
+  private get sourceSelectionBlocked(): boolean { return this.sourceBlocked || (this.sourceMode && (this.sourcePages.state.selectionPending || this.sourceSelectionFailed)); }
+
+  private projectSourceChunk(record: LyraSourceRecord<unknown>, isCurrent: () => boolean): LyraSourceRecord<RetrievalChunk> {
+    let units = 0;
+    const read = (input: object, key: string): unknown => {
+      if (!isCurrent()) throw new Error('Obsolete source chunk');
+      const value = readOwnDataValue(input, key);
+      if (!isCurrent()) throw new Error('Obsolete source chunk');
+      return value;
+    };
+    const fields = (input: unknown, keys: readonly string[]): Record<string, unknown> => {
+      if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError('Invalid source chunk');
+      const copy: Record<string, unknown> = {};
+      for (const key of keys) {
+        const value = read(input, key);
+        if (typeof value === 'string') {
+          units += value.length;
+          if (value.length > 65_536 || units > 65_536) throw new RangeError('Source chunk text too large');
+        }
+        if (value !== undefined) copy[key] = value;
+      }
+      return copy;
+    };
+    const raw = fields(record.value, ['id', 'text', 'score', 'metadata', 'rank', 'queryId', 'stage', 'traceId', 'scores']);
+    raw['source'] = fields(read(record.value as object, 'source'), ['id', 'name', 'mimeType', 'uri', 'version']);
+    const locator = read(record.value as object, 'locator');
+    if (locator !== undefined) {
+      const projected = fields(locator, ['kind', 'page', 'quote', 'prefix', 'suffix', 'id', 'start', 'end', 'sheet', 'range', 'cfi']);
+      for (const key of ['kind', 'quote', 'prefix', 'suffix', 'id', 'sheet', 'range', 'cfi']) {
+        if (projected[key] !== undefined && typeof projected[key] !== 'string') throw new TypeError('Invalid source locator text');
+      }
+      for (const key of ['page', 'start', 'end']) {
+        if (projected[key] !== undefined && (typeof projected[key] !== 'number' || !Number.isFinite(projected[key]))) throw new TypeError('Invalid source locator number');
+      }
+      const rect = read(locator as object, 'rect');
+      if (rect !== undefined) {
+        const coordinates = fields(rect, ['x', 'y', 'width', 'height']);
+        for (const key of ['x', 'y', 'width', 'height']) {
+          if (typeof coordinates[key] !== 'number' || !Number.isFinite(coordinates[key])) throw new TypeError('Invalid source locator rectangle');
+        }
+        projected['rect'] = coordinates;
+      }
+      const path = read(locator as object, 'path');
+      if (path !== undefined) {
+        if (!Array.isArray(path)) throw new TypeError('Invalid source locator path');
+        const length = read(path, 'length');
+        if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0 || length > 500) throw new RangeError('Source locator path too large');
+        projected['path'] = Array.from({ length }, (_, index) => {
+          const value = read(path, String(index));
+          if (typeof value !== 'string' && typeof value !== 'number') throw new TypeError('Invalid source locator path');
+          if (typeof value === 'string') { units += value.length; if (units > 65_536) throw new RangeError('Source chunk text too large'); }
+          return value;
+        });
+      }
+      raw['locator'] = projected;
+    }
+    const scores = raw['scores'];
+    if (scores && typeof scores === 'object' && !Array.isArray(scores)) raw['scores'] = fields(scores, ['dense', 'sparse', 'rerank', 'final']);
+    const value = projectRetrievalChunk(raw);
+    if (!isCurrent()) throw new Error('Obsolete source chunk');
+    if (!value) throw new TypeError('Invalid source chunk');
+    this.sourceRowKeys.set(value, record.key);
+    return { key: record.key, order: record.order, value };
+  }
+
+  private validateSourcePage(result: LyraPageResult<RetrievalChunk>, query: RetrievalResultsSourceQuery): void {
+    if (!query.withoutDedupe && result.rows.some(record => record.key !== record.value.id)) throw new TypeError('Invalid canonical source identity');
+    if (query.grouping === 'none') { if (result.groups?.length) throw new TypeError('Unexpected source groups'); return; }
+    if (!result.groups) throw new TypeError('Missing source groups');
+    if (!result.rows.length) return;
+    const size = this.sourcePages.state.pageSize;
+    const start = Math.min(this.sourcePages.state.page, Math.floor((result.total - 1) / size)) * size;
+    const end = start + result.rows.length;
+    let covered = start; let previousEnd = -1;
+    for (const group of result.groups) {
+      if (group.startIndex < previousEnd || Math.max(start, group.startIndex) !== covered) throw new TypeError('Invalid source group coverage');
+      previousEnd = group.startIndex + group.itemCount;
+      covered = Math.min(end, previousEnd);
+    }
+    if (covered !== end) throw new TypeError('Incomplete source groups');
+  }
+
+  private canonicalSourceAdapter(source: RetrievalResultsSource): RetrievalResultsSource {
+    if (this.sourceAdapter?.original === source) return this.sourceAdapter.adapter;
+    if (!source || typeof source.query !== 'function' || typeof source.lookup !== 'function' || typeof source.locate !== 'function') throw new TypeError('Invalid source');
+    const adapter: RetrievalResultsSource = {
+      revision: source.revision,
+      query: request => source.query(request),
+      locate: (key, query, context) => source.locate(key, query, context),
+      lookup: async (keys, context) => {
+        const records = await source.lookup(keys, context);
+        if (!Array.isArray(records) || records.length > 500) throw new TypeError('Invalid canonical lookup');
+        for (let index = 0; index < records.length; index++) {
+          const record = readOwnDataValue(records, String(index));
+          const key = readOwnDataValue(record as object, 'key');
+          const value = readOwnDataValue(record as object, 'value');
+          if (key !== readOwnDataValue(value as object, 'id')) throw new TypeError('Invalid canonical lookup identity');
+        }
+        return records;
+      },
+    };
+    this.sourceAdapter = { original: source, adapter }; return adapter;
+  }
+
+  private syncSource(force = false): void {
+    if (!this.sourcePages || this.sourceSyncing) return;
+    this.sourceSyncing = true;
+    try {
+      if (!this.sourceMode) {
+        if (this.sourceInputs) { this.sourceVersion++; this.focusRestoreGeneration++; this.sourcePages.bind(undefined); this.processedChunksCache = undefined; }
+        this.sourceInputs = undefined; this.sourceQueryInputs = undefined; this.sourceResult = undefined;
+        this.sourceRows = []; this.sourceGroups = []; this.sourceSelectionInputs = undefined; this.sourceSelectionEvent = undefined;
+        this.sourceActiveInputs = undefined; this.sourceReveal = undefined; return;
+      }
+      const source = this.dataSource!;
+      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
+      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const queryInputs = [this.sort, this.withoutDedupe, this.grouping, this.groupBy, this.groupLabel, this.groupOrder, size];
+      if (this.hasUpdated && this.sourceQueryInputs && queryInputs.some((value, index) => value !== this.sourceQueryInputs![index])) { page = 0; this.sourcePage = 0; }
+      this.sourceQueryInputs = queryInputs;
+      const inputs = [source, source.revision, this.sourceEpoch, this.effectiveLocale, ...queryInputs, page];
+      if (!force && this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
+      if (!this.sourceInputs || inputs.slice(0, 3).some((value, index) => value !== this.sourceInputs![index])) {
+        this.sourceSelectionInputs = undefined; this.sourceSelectionEvent = undefined;
+      }
+      this.sourceInputs = inputs; this.sourceVersion++; this.focusRestoreGeneration++;
+      this.sourceRows = []; this.sourceGroups = []; this.sourceResult = undefined; this.sourceReveal = undefined;
+      this.expandedChunkIds = [];
+      this.sourcePages.bind({ source: this.canonicalSourceAdapter(source), revision: source.revision, epoch: this.sourceEpoch, locale: this.effectiveLocale });
+      const query: RetrievalResultsSourceQuery = Object.freeze({ sort: this.sort, withoutDedupe: this.withoutDedupe,
+        grouping: this.grouping, groupBy: this.groupBy, groupLabel: this.groupLabel, groupOrder: this.groupOrder });
+      void this.sourcePages.request(query, page, size);
+    } catch {
+      this.sourcePages.bind(undefined); this.sourceRows = []; this.sourceGroups = []; this.sourceResult = undefined;
+    } finally { this.sourceSyncing = false; }
+  }
+
+  private syncSourceSelection(): void {
+    if (!this.sourceMode || !this.isConnected || !this.sourceAdapter || !this.sourceInputs) return;
+    const ids = this.selectedChunkIds;
+    const source = this.dataSource!;
+    const epoch = this.sourceEpoch; const revision = source.revision;
+    const inputs = [source, revision, epoch, ids];
+    if (this.sourceSelectionInputs && inputs.every((value, index) => value === this.sourceSelectionInputs![index])) return;
+    this.sourceSelectionInputs = inputs; this.sourceSelectionFailed = false;
+    const owner = this.ownerDocument; const lifecycle = this.sourceLifecycle;
+    const canonicalIds = canonicalIdentityList(ids);
+    void this.sourcePages.resolveSelection(canonicalIds).then(records => {
+      const completedRevision = source.revision;
+      if (completedRevision !== revision || lifecycle !== this.sourceLifecycle || !this.isConnected || this.ownerDocument !== owner || this.dataSource !== source || this.sourceEpoch !== epoch || this.selectedChunkIds !== ids) return;
+      if (!records) { this.sourceSelectionFailed = true; this.sourceStateVersion++; return; }
+      const retained = new Set(records.map(record => record.key));
+      const accepted = canonicalIds.filter(id => retained.has(id));
+      const report = this.sourceSelectionEvent === ids;
+      this.sourceSelectionEvent = undefined;
+      if (accepted.length !== ids.length) this.selectedChunkIds = accepted;
+      const committed = this.selectedChunkIds;
+      if (report) {
+        const chunks = records.map(record => record.value);
+        this.emit('lr-selection-change', { selectedChunkIds: [...committed], chunks });
+        const aliasRevision = source.revision;
+        if (aliasRevision === revision && lifecycle === this.sourceLifecycle && this.isConnected && this.ownerDocument === owner && this.dataSource === source && this.sourceEpoch === epoch && this.selectedChunkIds === committed) this.emit('lr-select', { chunkIds: [...committed], chunks });
+      }
+      this.sourceStateVersion++;
+    });
+  }
+
+  private acceptSourcePage(): void {
+    const result = this.sourcePages.state.result;
+    if (!result || result === this.sourceResult) return;
+    this.sourceResult = result; this.sourceRows = result.rows.map(record => record.value);
+    const start = this.sourcePages.state.page * this.sourcePages.state.pageSize;
+    this.sourceGroups = (result.groups ?? []).map(group => ({ key: group.key, label: group.label, startIndex: Math.max(0, group.startIndex - start) }));
+    if (this.sourcePage !== this.sourcePages.state.page) {
+      this.sourceSyncing = true; this.sourcePage = this.sourcePages.state.page; this.sourceSyncing = false;
+      this.sourceInputs = this.sourceInputs ? [...this.sourceInputs.slice(0, -1), this.sourcePages.state.page] : undefined;
+    }
+    const reveal = this.sourceReveal; this.sourceReveal = undefined;
+    if (reveal?.version === this.sourceVersion) this.revealSourceActive(reveal.id, reveal.version);
+  }
+
+  private syncSourceActive(): void {
+    if (!this.activeChunkId) { this.sourceActiveInputs = undefined; return; }
+    if (this.sourceBlocked) return;
+    const source = this.dataSource!; const id = this.activeChunkId;
+    const inputs = [source, source.revision, this.sourceEpoch, this.effectiveLocale, ...(this.sourceQueryInputs ?? []), id];
+    if (this.sourceActiveInputs && inputs.every((value, index) => value === this.sourceActiveInputs![index])) return;
+    this.sourceActiveInputs = inputs;
+    const version = this.sourceVersion; const owner = this.ownerDocument;
+    void this.sourcePages.locate(id).then(index => {
+      if (index === null || !this.isConnected || this.ownerDocument !== owner || !this.sourceMode || this.dataSource !== source || this.sourceVersion !== version || this.activeChunkId !== id) return;
+      const page = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
+      if (page === this.sourcePage) { this.revealSourceActive(id, version); return; }
+      this.sourcePage = page; this.sourceReveal = { id, version: this.sourceVersion };
+    });
+  }
+
+  private revealSourceActive(id: string, version: number): void {
+    const owner = this.ownerDocument;
+    void this.updateComplete.then(async () => {
+      const list = this.renderRoot.querySelector<LyraVirtualList>(tag('virtual-list'));
+      if (!list) return;
+      await list.updateComplete;
+      if (!this.isConnected || this.ownerDocument !== owner || !this.sourceMode || this.sourceBlocked || this.sourceVersion !== version || this.activeChunkId !== id || list !== this.renderRoot.querySelector(tag('virtual-list'))) return;
+      const index = this.sourceRows.findIndex(chunk => chunk.id === id);
+      if (index >= 0) list.scrollToIndex(index, { align: 'auto', behavior: 'auto' });
+    });
+  }
+
+  private currentSourceRow(chunk: RetrievalChunk): boolean {
+    return !(this.sourceMode || this.sourceRowKeys.has(chunk)) || (this.sourceMode && !this.sourceBlocked && this.sourceRows.includes(chunk));
+  }
+
+  private invalidateSourceLifecycle(): void {
+    this.sourceLifecycle++; this.sourceVersion++; this.focusRestoreGeneration++;
+    this.sourceSelectionInputs = undefined; this.sourceSelectionEvent = undefined;
+    this.sourceActiveInputs = undefined; this.sourceReveal = undefined;
+    this.sourceStatusInitialized = false; this.sourceStatus = '';
+  }
+
+  override adoptedCallback(): void {
+    this.invalidateSourceLifecycle(); this.sourcePages.adopted(); super.adoptedCallback();
+  }
+
   /** The raw (not deduplicated/sorted/grouped) result set. Host-owned. */
   @property({ attribute: false }) chunks: readonly RetrievalChunk[] = [];
 
@@ -237,7 +556,8 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   @property({ type: Boolean, attribute: 'without-selection', reflect: true })
   withoutSelection = false;
 
-  /** Retained for compatibility. Identity is always nonblank and first-wins even when set. */
+  /** Legacy chunks remain first-wins. In source mode, permits distinct occurrence keys for rows
+   * sharing a canonical value.id; selection and active IDs still use the canonical ID. */
   @property({ type: Boolean, attribute: 'without-dedupe', reflect: true })
   withoutDedupe = false;
 
@@ -334,7 +654,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private connectionGeneration = 0;
   private errorAnnouncementSink?: AnnouncementSink;
   private emptyAnnouncementSink?: AnnouncementSink;
-  private readonly retrievalChunkKey = (item: unknown): string => (item as RetrievalChunk).id;
+  private readonly retrievalChunkKey = (item: unknown): string => this.sourceRowKeys.get(item as RetrievalChunk) ?? (item as RetrievalChunk).id;
   private wasEmptyPresented = false;
   // Memoizes `computeProcessedChunks()` (identity + sort + group) for the current render cycle.
   // `willUpdate()` refreshes it exactly once whenever an input it actually depends on (`chunks`,
@@ -345,6 +665,38 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     groups: LyraVirtualListGroup[];
   };
   private processedGroupingLocaleSignature = '';
+  private explicitRefresh = false;
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) { this.explicitRefresh = true; this.sourceEpoch = (this.sourceEpoch ?? 0) + 1; }
+    if (args[0] === 'selectedChunkIds') this.sourceSelectionEvent = undefined;
+    if (args[0] === undefined || ['dataSource', 'sourcePage', 'sourcePageSize', 'sort', 'withoutDedupe', 'grouping', 'groupBy', 'groupLabel', 'groupOrder'].includes(String(args[0]))) this.syncSource();
+    super.requestUpdate(...args);
+  }
+
+  private canonicalSource?: readonly RetrievalChunk[];
+  private canonicalCache: RetrievalChunk[] = [];
+  private canonicalById = new Map<string, RetrievalChunk>();
+  private canonicalOrder = new Map<string, number>();
+  private ordinalSource?: readonly RetrievalChunk[];
+  private ordinalById = new Map<string, number>();
+  private limitInitialized = false;
+  private previouslyInputTruncated = false;
+
+  private inputLimitText(): string {
+    if (this.sourceMode) return '';
+    const truncation = publicCollectionTruncation(this, 'chunks');
+    const number = getNumberFormat(this.effectiveLocale);
+    return truncation ? this.localize('retrievalResultsInputLimit', undefined, {
+      count: number.format(truncation.retained), total: number.format(truncation.source),
+    }) : '';
+  }
+
+  private renderInputLimit(): TemplateResult | typeof nothing {
+    const text = this.inputLimitText();
+    return text ? html`<p part="limit" role="note">${text}</p>` : nothing;
+  }
+
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -369,6 +721,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   override disconnectedCallback(): void {
+    this.invalidateSourceLifecycle();
     this.isMounting = true;
     this.connectionGeneration += 1;
     this.errorAnnouncementSink?.release();
@@ -413,6 +766,10 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    this.syncSource();
+    if (this.sourceMode) { this.acceptSourcePage(); this.syncSourceSelection(); this.syncSourceActive(); return; }
+    const refresh = this.explicitRefresh;
+    this.explicitRefresh = false;
     const groupingLocaleSignature =
       this.grouping === 'source'
         ? `${this.effectiveLocale}\u0000${this.localize('untitledSource')}`
@@ -421,6 +778,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     // an unrelated update (e.g. `selectedChunkIds`, `presentation`) leaves the cache as-is.
     if (
       this.processedChunksCache === undefined ||
+      refresh ||
       changed.has('chunks') ||
       changed.has('withoutDedupe') ||
       changed.has('sort') ||
@@ -494,8 +852,24 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     this.pendingFocusTarget = nextChunks[nextIndex]!.id;
   }
 
+  private sourceStatusInitialized = false;
+  private sourceStatus = '';
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    if (this.sourceMode) {
+      const status = this.sourcePages.state.pending ? this.localize('loading') : !this.sourcePages.state.result ? this.localize('tableLoadFailed')
+        : this.sourcePages.state.selectionPending ? this.localize('sourceSelectionLoading') : this.sourceSelectionFailed ? this.localize('sourceSelectionFailed') : '';
+      if (this.sourceStatusInitialized && status && status !== this.sourceStatus) this.emptyAnnouncementSink?.announce(status);
+      this.sourceStatusInitialized = true; this.sourceStatus = status; return;
+    }
+    const inputTruncated = publicCollectionTruncation(this, 'chunks') !== undefined;
+    if (this.limitInitialized && inputTruncated && !this.previouslyInputTruncated) {
+      this.emptyAnnouncementSink?.announce(this.inputLimitText());
+    }
+    this.limitInitialized = true;
+    this.previouslyInputTruncated = inputTruncated;
+
     const wasMounting = this.isMounting;
     this.isMounting = false;
     // Either live branch below retires the still-pending opt-in mount announcement: without the
@@ -540,6 +914,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  `errorText` wins, mirroring the render branch order; a panel still `loading`, or one already
    *  showing chunks, has no announcement to make. */
   private announcePresentedState(): void {
+    if (this.sourceMode) return;
     if (this.errorText !== '') {
       this.errorAnnouncementSink?.announce(this.errorText);
       return;
@@ -597,18 +972,19 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   /** Keeps the first valid occurrence for every nonblank chunk id. */
   private canonicalChunks(): RetrievalChunk[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(this.chunks)
-        ? this.chunks.filter(isValidRetrievalChunk)
-        : [],
-      (chunk) => chunk.id
-    );
+    if (this.canonicalSource !== this.chunks) {
+      this.canonicalSource = this.chunks;
+      this.canonicalCache = firstByRetrievalIdentity(this.chunks.flatMap(value => projectRetrievalChunk(value) ?? []), chunk => chunk.id);
+      this.canonicalById = new Map(this.canonicalCache.map(chunk => [chunk.id, chunk]));
+      this.canonicalOrder = new Map(this.canonicalCache.map((chunk, index) => [chunk.id, index]));
+    }
+    return this.canonicalCache;
   }
 
   private normalizedSelectedChunkIds(): string[] {
-    const validIds = new Set(this.canonicalChunks().map((chunk) => chunk.id));
+    if (this.canonicalSource !== this.chunks) this.canonicalChunks();
     return canonicalIdentityList(this.selectedChunkIds).filter((id) =>
-      validIds.has(id)
+      this.canonicalById.has(id)
     );
   }
 
@@ -620,6 +996,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     chunks: readonly RetrievalChunk[];
     groups: LyraVirtualListGroup[];
   } {
+    if (this.sourceMode) return { chunks: this.sourceRows, groups: this.sourceGroups };
     return (this.processedChunksCache ??= this.computeProcessedChunks());
   }
 
@@ -630,7 +1007,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const canonical = this.canonicalChunks();
     const sorted =
       this.sort === 'score'
-        ? canonical.sort((a, b) => safeScore(b.score) - safeScore(a.score))
+        ? [...canonical].sort((a, b) => safeScore(b.score) - safeScore(a.score))
         : canonical;
     if (this.grouping === 'source') {
       return this.bucketed(
@@ -702,13 +1079,27 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   };
 
   private reportSelection(chunkIds: string[]): void {
-    const selected = new Set(chunkIds);
-    const chunks = this.canonicalChunks().filter((chunk) => selected.has(chunk.id));
-    this.emit('lr-selection-change', { selectedChunkIds: chunkIds, chunks });
-    this.emit('lr-select', { chunkIds, chunks });
+    if (this.canonicalSource !== this.chunks) this.canonicalChunks();
+    const chunks = [...new Set(chunkIds)].flatMap(id => this.canonicalById.get(id) ?? [])
+      .sort((a, b) => this.canonicalOrder.get(a.id)! - this.canonicalOrder.get(b.id)!);
+    // Preserve the legacy whole-detail copy budget, including null on exhaustion. Provider
+    // selection instead supplies its already-projected records through the frozen envelope.
+    this.emit('lr-selection-change', snapshotEventDetail(
+      { selectedChunkIds: chunkIds, chunks }, this.ownerDocument.defaultView
+    ) as { selectedChunkIds: string[]; chunks: RetrievalChunk[] });
+    this.emit('lr-select', snapshotEventDetail(
+      { chunkIds, chunks }, this.ownerDocument.defaultView
+    ) as RetrievalResultsSelectDetail);
   }
 
   private toggleSelect(chunk: RetrievalChunk): void {
+    if (!this.currentSourceRow(chunk) || this.sourceSelectionBlocked) return;
+    if (this.sourceMode) {
+      const next = new Set(this.selectedChunkIds);
+      if (next.has(chunk.id)) next.delete(chunk.id); else if (next.size < 10_000) next.add(chunk.id);
+      this.selectedChunkIds = [...next]; this.sourceSelectionEvent = this.selectedChunkIds;
+      return;
+    }
     const next = new Set(this.normalizedSelectedChunkIds());
     if (next.has(chunk.id)) next.delete(chunk.id);
     else next.add(chunk.id);
@@ -775,6 +1166,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
             part="select"
             data-chunk-id=${chunk.id}
             .checked=${selected}
+            .disabled=${this.sourceSelectionBlocked}
             aria-label=${this.localize('retrievalResultsSelectRowOrdinal', undefined, {
               index: getNumberFormat(this.effectiveLocale).format(index + 1),
               total: getNumberFormat(this.effectiveLocale).format(total),
@@ -816,9 +1208,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
             // defaults) -- without stopping it here it would keep bubbling straight through this
             // component under the same name, right behind the correctly-shaped re-emit below.
             e.stopPropagation();
-            this.emit('lr-chunk-open', e.detail);
+            if (this.currentSourceRow(chunk)) this.emit('lr-chunk-open', e.detail);
           }}
-          @lr-chunk-toggle=${this.onChunkToggle}
+          @lr-chunk-toggle=${(event: CustomEvent<{ chunkId: string; expanded: boolean }>) => { event.stopPropagation(); if (this.currentSourceRow(chunk)) this.onChunkToggle(event); }}
           @lr-toggle=${this.stopRowToggle}
         ></lr-chunk-inspector>
         ${this.presentation === 'expanded'
@@ -827,6 +1219,18 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       </div>
     `;
   };
+
+  private legacyLoadMoreHandler(): (event: Event) => void {
+    const chunks = this.chunks;
+    const version = this.sourceVersion;
+    return event => {
+      event.stopPropagation();
+      if (!this.isConnected || this.sourceMode || this.sourceVersion !== version ||
+          this.chunks !== chunks || !this.hasMore || this.loading || this.errorText ||
+          (event.currentTarget as Node | null)?.getRootNode() !== this.renderRoot) return;
+      this.emit('lr-load-more');
+    };
+  }
 
   private renderLoadMoreFooter(): TemplateResult | typeof nothing {
     if (!this.hasMore) return nothing;
@@ -837,7 +1241,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           : html`<button
               type="button"
               part="load-more"
-              @click=${() => this.emit('lr-load-more')}
+              @click=${this.legacyLoadMoreHandler()}
             >
               ${this.localize('loadMore')}
             </button>`}
@@ -845,10 +1249,42 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     `;
   }
 
+  private renderSource(): TemplateResult {
+    const state = this.sourcePages.state; const source = this.dataSource; const version = this.sourceVersion;
+    const current = () => this.isConnected && this.sourceMode && this.dataSource === source && this.sourcePages.state === state && this.sourceVersion === version;
+    const rows = this.sourceRows;
+    return html`<div part="base" tabindex="-1" role=${retrievalSemanticRole(this, 'group') ?? nothing}
+      aria-label=${retrievalSemanticLabel(this, this.label ?? this.localize('chunkInspectorLabel')) ?? nothing}>
+      ${this.errorText ? html`<div part="error">${this.errorText}</div>` : state.pending ? html`<p part="source-status">${this.localize('loading')}</p>`
+        : !state.result ? html`<p part="source-status">${this.localize('tableLoadFailed')} <button type="button" part="source-retry" @click=${() => {
+          if (current()) { this.syncSource(true); this.sourceStateVersion++; }
+        }}>${this.localize('retry')}</button></p>`
+        : !rows.length ? html`<lr-empty part="empty" heading=${this.localize('chunkInspectorEmpty')}></lr-empty>`
+        : html`<lr-virtual-list
+          exportparts="row:row, group:group-header, select:select, row-body:row-body, row-body-selected:row-body-selected, metadata:metadata, metadata-entry:metadata-entry, metadata-term:metadata-term, metadata-value:metadata-value, chunk:chunk, chunk-current:chunk-current, chunk-score:chunk-score, chunk-score-current:chunk-score-current, chunk-score-bar:chunk-score-bar, chunk-score-fill:chunk-score-fill, chunk-score-fill-success:chunk-score-fill-success, chunk-score-fill-warning:chunk-score-fill-warning, chunk-score-fill-danger:chunk-score-fill-danger, chunk-open-button:chunk-open-button, chunk-title:chunk-title, chunk-text:chunk-text, chunk-text-clamped:chunk-text-clamped, chunk-toggle:chunk-toggle"
+          .items=${guard([rows], () => rows)} .groups=${this.sourceGroups}
+          .keyFunction=${this.retrievalChunkKey}
+          .renderItem=${(item: unknown, index: number) => this.renderRow(item, state.page * state.pageSize + index, state.result!.total)}
+          @lr-load-more=${this.stopOwnedEvent} @lr-virtual-scroll=${this.stopOwnedEvent} @lr-visible-range-change=${this.stopOwnedEvent}
+        ></lr-virtual-list>`}
+      ${state.selectionPending || this.sourceSelectionFailed ? html`<p part="source-selection-status">${this.localize(state.selectionPending ? 'sourceSelectionLoading' : 'sourceSelectionFailed')}
+        ${this.sourceSelectionFailed ? html`<button type="button" part="source-selection-retry" @click=${() => {
+          if (current()) { this.sourceSelectionInputs = undefined; this.syncSourceSelection(); }
+        }}>${this.localize('retry')}</button>` : nothing}</p>` : nothing}
+      <lr-pagination part="source-pagination" format="compact" .strings=${this.strings}
+        .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1} .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)}
+        .total=${this.sourceTotal ?? -1} .disabled=${this.sourceBlocked || this.sourceTotal === null}
+        @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); if (!this.sourceBlocked) this.sourcePage = event.detail.page - 1; }}
+        @lr-before-page-change=${this.stopOwnedEvent} @lr-activate=${this.stopOwnedEvent} @focus=${this.stopOwnedEvent} @blur=${this.stopOwnedEvent}
+      ></lr-pagination>
+    </div>`;
+  }
+
   override render(): TemplateResult {
     if (this.selectedMembership?.source !== this.selectedChunkIds || this.errorText || this.chunks.length <= 1) {
       this.selectedMembership = undefined;
     }
+    if (this.sourceMode) return this.renderSource();
     const label = retrievalSemanticLabel(
       this,
       this.label == null ? this.localize('chunkInspectorLabel') : this.label
@@ -857,6 +1293,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
     if (this.errorText) {
       return html`<div part="base" tabindex="-1">
+        ${this.renderInputLimit()}
         <div part="error">${this.errorText}</div>
       </div>`;
     }
@@ -866,10 +1303,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     if (processed.chunks.length === 0) {
       if (this.loading) {
         return html`<div part="base" tabindex="-1">
+          ${this.renderInputLimit()}
           <lr-spinner part="spinner"></lr-spinner>
         </div>`;
       }
       return html`<div part="base" tabindex="-1">
+        ${this.renderInputLimit()}
         <lr-empty
           part="empty"
           heading=${this.localize('chunkInspectorEmpty')}
@@ -886,7 +1325,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     // `renderRow()` reads controlled selection and presentation state. Keep this wrapper fresh so
     // virtualized visible rows receive those state changes without reassigning the guarded item
     // collection (which would rebuild its offsets).
-    const ordinalById = new Map(processed.chunks.map((chunk, index) => [chunk.id, index]));
+    if (this.ordinalSource !== processed.chunks) {
+      this.ordinalSource = processed.chunks;
+      this.ordinalById = new Map(processed.chunks.map((chunk, index) => [chunk.id, index]));
+    }
+    const ordinalById = this.ordinalById;
     const renderVirtualRow = (item: unknown): TemplateResult =>
       this.renderRow(item, ordinalById.get((item as RetrievalChunk).id) ?? 0, processed.chunks.length);
     return html`
@@ -896,6 +1339,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         tabindex="-1"
         aria-label=${label ?? nothing}
       >
+        ${this.renderInputLimit()}
         ${useVirtualList
           ? html`<lr-virtual-list
               exportparts="row:row, group:group-header, select:select, row-body:row-body, row-body-selected:row-body-selected, metadata:metadata, metadata-entry:metadata-entry, metadata-term:metadata-term, metadata-value:metadata-value, chunk:chunk, chunk-current:chunk-current, chunk-score:chunk-score, chunk-score-current:chunk-score-current, chunk-score-bar:chunk-score-bar, chunk-score-fill:chunk-score-fill, chunk-score-fill-success:chunk-score-fill-success, chunk-score-fill-warning:chunk-score-fill-warning, chunk-score-fill-danger:chunk-score-fill-danger, chunk-open-button:chunk-open-button, chunk-title:chunk-title, chunk-text:chunk-text, chunk-text-clamped:chunk-text-clamped, chunk-toggle:chunk-toggle"
@@ -906,13 +1350,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
               .activeItemId=${this.activeChunkId || ''}
               ?loading=${this.loading}
               ?has-more=${this.hasMore}
-              @lr-load-more=${(e: Event) => {
-                // lr-virtual-list's own lr-load-more bubbles+composes (LyraElement.emit()'s
-                // defaults) -- without stopping it here it would keep bubbling straight through
-                // this component under the same name, right behind the re-emit below.
-                e.stopPropagation();
-                this.emit('lr-load-more');
-              }}
+              @lr-load-more=${this.legacyLoadMoreHandler()}
               @lr-virtual-scroll=${this.stopOwnedEvent}
               @lr-visible-range-change=${this.stopOwnedEvent}
             ></lr-virtual-list>`

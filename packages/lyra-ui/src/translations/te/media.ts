@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{total}లో {index}వ చిత్రం',
   playWithContext: '{name}ను ప్లే చేయండి',
   pauseWithContext: '{name}ను పాజ్ చేయండి',
+  avPlayerWaveformUnavailable: 'తరంగరూప డేటా అందుబాటులో లేదు లేదా ఈ మీడియాతో సరిపోలడం లేదు.',
+  avPlayerTranscriptUnavailable: 'లిప్యంతరీకరణ డేటా అందుబాటులో లేదు.',
   dropzoneReleaseToAdd: 'ఫైల్‌ను జోడించడానికి వదలండి.',
   dropzoneRejectedType: 'ఈ ఫైల్ రకాన్ని అంగీకరించరు.',
   attachmentAdd: 'జోడింపును జోడించండి',

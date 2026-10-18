@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Isithombe {index} kokungu-{total}',
   playWithContext: 'Dlala u-{name}',
   pauseWithContext: 'Misa u-{name} kancane',
+  avPlayerWaveformUnavailable: 'Idatha yesimo segagasi ayitholakali noma ayihambisani nale midiya.',
+  avPlayerTranscriptUnavailable: 'Idatha yombhalo okhulunywayo ayitholakali.',
   dropzoneReleaseToAdd: 'Dedela ukuze wengeze ifayela.',
   dropzoneRejectedType: 'Lolu hlobo lwefayela alwamukelekile.',
   attachmentAdd: 'Engeza okunamathiselwe',

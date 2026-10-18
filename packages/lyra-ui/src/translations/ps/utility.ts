@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} نور وړاندیز',
     other: '{count} نور وړاندیزونه',
   },
+  mentionInputLimit: 'د یادونې لپاره یوازې لومړي 10,000 نوماندان شته.',
+  diffViewHighlightLimit: 'اوږد کوډ د نحوي جوړښت له رنګین ښودلو پرته ښودل کېږي.',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

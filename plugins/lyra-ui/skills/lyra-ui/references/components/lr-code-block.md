@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -38,6 +38,12 @@ an absent language selects plain text, and attribute-based emphasis clears. Remo
 resumes normal rendering. Highlighted gutter labels and locale-formatted line numbers follow live
 `.strings` and inherited or explicit locale changes. Unrelated updates retain the existing
 highlighted markup.
+
+Syntax highlighting accepts source up to 8,192 UTF-16 code units, inclusive. Larger source remains
+fully readable as plain text; when `language` is set, a localized `[part="limit"]` notice explains
+the fallback, and no loading skeleton appears. Changing `highlightLines`, `highlights`, or
+`activeHighlightId` patches the existing line state without tokenizing the source again. Moving
+through an activatable gutter reuses the source lines and updates the previous and next tab stops.
 
 **Properties:**
 
@@ -75,16 +81,21 @@ highlighted markup.
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract.
-- `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — a map of language id to an
-  already-imported shiki grammar module (e.g. `{ bash: bashGrammar }` from a module-scope
-  `import bash from 'shiki/langs/bash.mjs'`). When `language` matches a key here, highlighting is
-  seeded from exactly that pre-supplied grammar via a fine-grained `createHighlighterCore()`
+- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — a map of language
+  id to a resolved shiki grammar (e.g. `{ bash: bashGrammar }` from a module-scope
+  `import bash from 'shiki/langs/bash.mjs'`) or a lazy loader, e.g.
+  `{ bash: () => import('@shikijs/langs/bash') }`. Only a requested loader runs. When `language`
+  matches a key here, highlighting uses that grammar via a fine-grained `createHighlighterCore()`
   highlighter, bypassing the default ~200-language dynamic-import path (`loadShikiHighlighter()`)
   for that language — an additive, opt-in escape hatch for a build scoped to just the languages a
   consumer actually needs. A `language` absent from this map (or `languages` left unset) falls back
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
-  `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/lr-code-block.js'`;
-  the type-only granular import emits no registration side effect.
+  `import type { ShikiLanguageSource, ShikiLanguageLoader } from
+  '@aceshooting/lyra-ui/components/lr-code-block.js'`; `ShikiLanguageSource` is
+  `ShikiLanguageInput | ShikiLanguageLoader`, and a loader returns
+  `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`. `ShikiLanguageInput` remains
+  exported for resolved-grammar annotations. The type-only granular import emits no registration
+  side effect.
   The map key need not be the grammar module's own registered name or one of its declared
   aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
   `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
@@ -125,7 +136,7 @@ control in each appearance), `copy-button-control` (the copy control's own nativ
 `header-actions` (the wrapper around the `header-actions` slot; it carries the `hidden` attribute
 and computes to `display: none` whenever nothing is assigned, so an empty slot contributes no
 header gap — a rule that sets `display` on it must qualify itself with `:not([hidden])`),
-`toggle`, `body`, `pre`,
+`toggle`, `body`, `pre`, `limit` (the syntax-highlighting ceiling notice),
 `code`, `line-highlight` (a line marked by `highlightLines` or a `line-range` entry in `highlights`),
 `line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)

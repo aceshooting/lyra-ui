@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'संपूर्ण वितरणात {validCount} वैध नमुने; दाखवलेल्या वर्गांच्या खाली {belowCount} आणि वर {aboveCount}; {invalidCount} अवैध नमुने.',
+  histogramDistributionRange: 'निरीक्षण केलेल्या नमुन्यांची श्रेणी: {min} ते {max}.',
   chartCategory: 'वर्ग',
   chartTotal: 'एकूण',
   chartAxisTotal: '{axis} एकूण',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, त्रिज्या {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'वाढती',
-  chartTrendDecreasing: 'घटती',
-  chartTrendFlat: 'स्थिर',
-  chartSummary: '{label}: {count} मूल्ये, व्याप्ती {min} ते {max}, {trend} कल',
   chartSeriesNoData: '{label}: डेटा नाही',
   chartSummaryWithData: '{type} आलेख. {summaries}.',
   chartSummaryEmpty: 'डेटा नसलेला {type} आलेख.',
-  chartSummarySeparator: '. ',
   chartData: 'आलेखाचा डेटा',
   chartRenderUnavailable: 'आलेखाचे प्रदर्शन उपलब्ध नाही.',
+  chartPreparedSummaryZoom: 'झूम तयार केलेला सारांश दाखवतो; निर्देशांकाद्वारे अधिक तपशील उपलब्ध नाही.',
+  chartSpatialSummary: 'संपूर्ण स्रोत: {count} बिंदू, x {minX} ते {maxX}, y {minY} ते {maxY}. दृश्य: {matchedCount} बिंदू, x {viewMinX} ते {viewMaxX}, y {viewMinY} ते {viewMaxY}.',
+  chartSpatialRadiusDomain: 'संपूर्ण स्रोतातील त्रिज्या: {min} ते {max}.',
+  chartSpatialDensityLegend: 'घनतेत सर्व मालिका समाविष्ट आहेत; मालिकांच्या दृश्यमानतेचा परिणाम फक्त बिंदूंच्या वरील थरांवर होतो.',
+  chartSpatialPoint: '{series}: {id}, स्रोतातील स्थान {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'घनता प्रदेश: {count} बिंदू, x {minX} ते {maxX}, y {minY} ते {maxY}.',
+  chartSpatialHidden: ' (मालिका लपवलेली आहे)',
   chartDataSampled: 'आलेखात आणि तयार केलेल्या डेटा तक्त्यात जास्तीत जास्त १,००० नोंदींचा नमुना दाखवला आहे. आलेखाचा सर्व डेटा मिळवण्यासाठी सानुकूल डेटा तक्ता द्या.',
   chartPlotSampled: 'आलेखात जास्तीत जास्त १,००० नोंदींचा नमुना दाखवला आहे; डेटा तक्त्यात सर्व डेटा आहे.',
   chartZoomUnavailable: 'झूम उपलब्ध नाही, पण मूळ आलेख वापरता येईल.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index}/{total})',
   chartMissingLibrary: 'आलेख दाखवण्यासाठी या घटकाला पर्यायी "chart.js" पॅकेज स्थापित करणे आवश्यक आहे.',
   boxPlotMissingLibrary: 'बॉक्स प्लॉट दाखवण्यासाठी या घटकाला पर्यायी बॉक्स-प्लॉट आलेख पॅकेज स्थापित करणे आवश्यक आहे.',
+  chartInputLimit: 'इनपुट मर्यादा गाठल्यामुळे आलेखातील काही डेटा वगळला आहे. वगळलेली मूल्ये दर्शवण्यासाठी लहान किंवा आधीच एकत्रित केलेला डेटासेट द्या.',
+  histogramInputLimit: 'फक्त सर्वात नवीन 10,000 नमुने ठेवले जातात. मोठे वितरण दर्शवण्यासाठी आधीच वर्गांमध्ये गटबद्ध केलेल्या संख्या lr-chart ला द्या.',
 };
 
 registerLyraLocale('mr', strings);

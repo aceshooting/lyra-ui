@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Zobrazeno je pouze prvních {count} výsledků testů.',
   toolTimelineLimit: 'Zobrazeno je nejvýše {count} volání nástrojů.',
   toolSelectLimit: 'Zobrazeno je pouze prvních {count} nástrojů.',
+  testResultsInputTooLarge: 'Podrobnosti výsledků testů překračují limit zobrazení.',
   toolCall: 'Volání nástroje',
   maximize: 'Maximalizovat',
   promptStudioVariableName: 'Název proměnné {index}',
@@ -298,6 +299,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Zobrazí se pouze prvních {count} souborů.',
   taskListLimit: 'Je zobrazeno pouze prvních {count} úkolů.',
   evalDatasetLimit: 'Zobrazeno je pouze prvních {count} příkladů.',
+  activityFeedInputLimit: 'Uchovává se pouze nejnovějších {count} z {total} záznamů.',
+  spanWaterfallLimit: 'Zobrazené úseky trasování: {shown} z {total}.',
+  toolTimelineInputLimit: 'Zachována jsou pouze nejnovější volání nástrojů: {count} z {total}.',
 };
 
 registerLyraLocale('cs', strings);

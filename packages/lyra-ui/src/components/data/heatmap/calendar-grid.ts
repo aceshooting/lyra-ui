@@ -1,5 +1,7 @@
+import { finiteCount } from '../../../internal/numbers.js';
+import { getOwnDataDescriptor } from '../../../internal/data-descriptors.js';
 import { minMax } from './heatmap-scale.js';
-import { resolveIntlLocale } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 
 export interface CalendarDay {
   /** ISO `yyyy-mm-dd` date identity. Invalid dates and later duplicate dates are omitted; the
@@ -78,6 +80,7 @@ export function buildCalendarGrid(
   firstDayOfWeek = 0,
   monthLabelText?: (jsMonth: number, year: number) => string | undefined,
   locale?: string,
+  maxCells = MAX_CALENDAR_INPUT_DAYS,
 ): {
   cells: CalendarCell[];
   weekCount: number;
@@ -86,15 +89,27 @@ export function buildCalendarGrid(
   /** True when input cardinality or a sparse span exceeded the bounded projection. */
   truncated: boolean;
 } {
-  const inputWasTruncated = days.length > MAX_CALENDAR_INPUT_DAYS;
+  const limit = Math.max(1, Math.min(100_000, finiteCount(maxCells, MAX_CALENDAR_INPUT_DAYS)));
+  const weekLimit = Math.max(1, Math.floor(MAX_CALENDAR_WEEKS * limit / MAX_CALENDAR_INPUT_DAYS));
+  const own = (value: unknown, key: PropertyKey): unknown => {
+    if (!value || typeof value !== 'object') return undefined;
+    const descriptor = getOwnDataDescriptor(value, key);
+    return typeof descriptor === 'object' ? descriptor.value : undefined;
+  };
+  const rawLength = own(days, 'length');
+  const length = finiteCount(typeof rawLength === 'number' ? rawLength : 0, 0);
+  const inputWasTruncated = length > limit;
   const parsedByDate = new Map<string, CalendarDay & { dateObj: Date }>();
-  days
-    .slice(0, MAX_CALENDAR_INPUT_DAYS)
-    .map((d) => ({ ...d, dateObj: parseIsoDate(d.date) }))
-    .filter((d) => !Number.isNaN(d.dateObj.getTime()) && isCalendarValid(d.date, d.dateObj))
-    .forEach((day) => {
-      if (!parsedByDate.has(day.date)) parsedByDate.set(day.date, day);
-    });
+  for (let index = 0; index < Math.min(length, limit); index++) {
+    const day = own(days, String(index));
+    const date = own(day, 'date');
+    const value = own(day, 'value');
+    if (typeof date !== 'string' || typeof value !== 'number') continue;
+    const dateObj = parseIsoDate(date);
+    if (!Number.isNaN(dateObj.getTime()) && isCalendarValid(date, dateObj) && !parsedByDate.has(date)) {
+      parsedByDate.set(date, { date, value, dateObj });
+    }
+  }
   // Calendar identity is the ISO date. A deterministic first-valid policy is applied before every
   // scale, count, paint, focus, event and annotation path consumes the grid.
   const parsed = [...parsedByDate.values()];
@@ -129,8 +144,8 @@ export function buildCalendarGrid(
     return { date: d.date, value: d.value, week, weekday };
   });
   const naturalWeekCount = minMax(projectedCells.map((c) => c.week))![1] + 1;
-  const spanWasTruncated = naturalWeekCount > MAX_CALENDAR_WEEKS;
-  const weekCount = Math.min(naturalWeekCount, MAX_CALENDAR_WEEKS);
+  const spanWasTruncated = naturalWeekCount > weekLimit;
+  const weekCount = Math.min(naturalWeekCount, weekLimit);
   const cells = projectedCells.filter((cell) => cell.week < weekCount);
 
   // Label every distinct (year, month) present in the data, not just months
@@ -148,7 +163,7 @@ export function buildCalendarGrid(
       week: cell.week,
       label:
         monthLabelText?.(cellDate.getUTCMonth(), cellDate.getUTCFullYear()) ??
-        cellDate.toLocaleString(resolveIntlLocale(locale), { month: 'short', timeZone: 'UTC' }),
+        getDateTimeFormat(locale, { month: 'short', timeZone: 'UTC' }).format(cellDate),
     });
   }
 

@@ -25,7 +25,14 @@ nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old
 
 A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d"` for an
 orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
-list of all graph items. The 3D and list views require no optional peer.
+list of all admitted graph items. The 3D and list views require no optional peer.
+
+Spatial rendering and layered layout load only when selected. After changing `view` to a spatial
+view or selecting `layout="layered"`, await `updateComplete` to include that module's loading;
+the existing asynchronous d3 data-readiness contract is unchanged. Node and edge snapshots retain
+the existing 10,000-entry and 50,000-nested-value safety ceilings, so richer records can reach the
+nested-value ceiling earlier. The visible limit notice reports retained and source counts. Narrow
+or aggregate data before binding when the complete graph exceeds admission.
 
 **Spatial view:** `view: LyraGraphView = '2d'` accepts `'2d' | '3d' | 'list'`. Invalid runtime
 values normalize to `'2d'`. The default retains the existing 2D SVG/canvas behavior and adds no
@@ -41,7 +48,7 @@ placement keyed by node id, with genuine z separation. Inputs are never moved or
 `renderer`, `layout`, `chargeStrength`, `edgeDistance` and `seed` have no effect: there is no force
 solver, settling animation, auto-rotation or inertia. Rendering uses original perspective math
 and a Canvas 2D raster surface, with near-plane clipping, depth-ordered node/edge segments and
-frontmost picking. Fixed edge subdivision approximates crossings; this is not a mesh renderer or
+frontmost picking. Adaptive edge subdivision approximates crossings; this is not a mesh renderer or
 a guarantee of perfect translucent intersections. Use modest graphs, typically low hundreds;
 the 2D canvas capacity claim below does not apply to 3D.
 
@@ -195,8 +202,8 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 - `layout: 'force' | 'layered' = 'force'` — `'force'` runs the `d3-force` simulation described
   throughout this section, unchanged. `'layered'` swaps in a deterministic Sugiyama-lite layered
   layout instead (longest-path layering, barycenter crossing reduction, cycle-safe — back edges are
-  reversed only for layering, never mutating caller data): positions are computed synchronously
-  with no settle animation, sized from each node's own radius and spaced by `edgeDistance` (the
+  reversed only for layering, never mutating caller data): after the layout module loads, positions
+  are computed synchronously with no settle animation, sized from each node's own radius and spaced by `edgeDistance` (the
   layer gap) and a fixed 12px in-layer gap. Node drag is disabled in this mode (dragging would fight
   a computed layout) and `chargeStrength` becomes a documented no-op; pan/zoom, keyboard roving,
   `focusNode()`/`fit()`, hulls, edge labels, and `hiddenTypes` filtering all work identically to
@@ -217,6 +224,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   only, not the visible marks. Every data-driven and token-derived canvas color is resolved through
   the live computed CSS cascade before painting, so CSS-wide keywords such as `inherit`/`unset`,
   custom-property references, and modern color functions reach Canvas as concrete colors.
+  Prefer this renderer for large admitted graphs. Visual painting is culled to the viewport, and
+  force simulation pauses while the graph is offscreen. SVG cursor movement retains the existing
+  item markup; it does not rebuild every node and link template.
 
 **Methods:** `focusNode(id, options?: { zoom? })` and `fit(options?: { padding?: number })` control the
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
@@ -285,8 +295,9 @@ behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
 `--lr-graph-hull-fill` (default `var(--lr-color-brand)`) — community hull fill/stroke color
 (overridden inline per hull from `LyraGraphCommunity.color`).
 `--lr-graph-hull-opacity` (default `0.12`) — hull element opacity (composites fill+stroke as one).
-Under `renderer="canvas"` these five are read from computed style at paint time (there are no
-per-node elements to inherit them), so they must be set on or above the `<lr-graph>` host itself.
+Under `renderer="canvas"` these five are resolved from computed style and cached until relevant
+inputs change (there are no per-node elements to inherit them), so they must be set on or above
+the `<lr-graph>` host itself.
 The canvas repaints when inherited theme inputs change (including ancestor class/data attributes,
 adopted stylesheets, and media-query theme transitions); a host does not need to reassign `nodes`
 to make new token values visible.
@@ -760,6 +771,70 @@ One entity's relationship rows: relation, direction, neighbor, with per-row navi
 expand-in-graph affordances. Never computes neighbors itself (the host derives rows from its own
 graph data) and never mutates a graph.
 
+With `graphSource` unset, the `limit` part reports retained/source relationship-row counts when input admission omits
+rows. Virtualization covers the retained rows; it does not recover omitted source rows.
+
+**Full-source neighborhood:** `graphSource: NeighborListSource | undefined = undefined`
+(attribute: false) takes precedence over `rows`; invalid defined providers fail visibly.
+Setting `undefined` restores the latest legacy rows. `NeighborListSource` aliases the public
+`GraphSource` contract. This adapter queries its `records` only; it never requests a graph scene,
+scans adjacency or copies the complete neighborhood.
+
+```ts
+import type { NeighborListSource, NeighborSourceDirection } from
+  "@aceshooting/lyra-ui/components/retrieval/neighbor-list/neighbor-list.class.js";
+import type { LyraGraphSourceQuery, LyraGraphSourceSummary } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`centerKey: string | null = null` (attribute: false) is a canonical `'node:' + originalId` key;
+null shows a localized choose-center state with no query. Nonblank canonical node keys are at most
+65,536 UTF-16 units. `sourceDirection: NeighborSourceDirection = 'both'` (`source-direction`)
+accepts `'in' | 'out' | 'both'`. Property-only
+`sourceNodeTypes: readonly string[] = []` accepts at most 500 input entries, then deduplicates/sorts
+nonblank type IDs, each at
+most 65,536 UTF-16 units and together at most 2,000,000 units. Invalid scopes fail visibly.
+Scope/page-size changes reset page zero.
+
+`sourcePage: number = 0` (`source-page`) is zero-based;
+`sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500. Readonly
+`sourceTotal: number | null` reports the authoritative matching neighborhood count after success,
+or `null` without a source/center or while unavailable. A total shrink receives at most one
+corrective last-page request. Pager navigation reaches the complete matching domain with at most
+500 current native-button rows, independent of the legacy `virtualizeAt` threshold.
+
+Source and `records` revisions must agree and remain immutable (nonempty string or finite number).
+`records.query({ revision, locale, signal, page, pageSize, query })` receives
+`{ kind: 'nodes', search: '', centerKey, direction: sourceDirection, nodeTypes: sourceNodeTypes }`.
+It returns `{ rows, total, summary: { nodes, edges } }`; all counts are safe nonnegative integers,
+with `total <= summary.nodes`. Each row is `{ key, order, value: { kind: 'node', value: node } }`,
+where `key === 'node:' + node.id`, `order` is a safe canonical source ordinal, and page keys/orders
+are unique. Returned rows exactly fill the requested in-bounds page. Closed own-data node
+snapshots retain only `id`, optional `label`, `accessibleLabel` and `type`; strings are at most
+65,536 units each and the page's projected text shares a 2,000,000-unit bound. Malformed/oversized
+pages fail atomically. Group/facet metadata is not accepted. The provider owns full-source
+indexing, order, neighborhood membership and summary truth beyond bounded consistency checks.
+
+Source mode presents node neighbors without invented relation, per-row direction or group headers;
+`groupByRelation` and legacy relation/direction/type-degree chrome do not apply. `expandable`
+retains the native expand button. Activation emits unchanged `lr-entity-select { entityId }` and
+`lr-node-expand { nodeId }` with original entity IDs, excluding the canonical `'node:'` prefix.
+
+`revealSourceKey(key: string): Promise<boolean>` uses `records.locate(key, query, context)` to
+find a matching global node, loads its page and focuses its exact row. It emits no select/expand
+event. Invalid, absent, failed, superseded or disconnected requests resolve `false`; a same-page
+reveal preserves live row/expand actions without another page query. Global lookup is required by
+the records contract, but ordinary paging/reveal does not enumerate other pages or request scenes.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named presentation updates reuse accepted data. Replacement, scope/page changes, disconnect and
+adoption revoke obsolete controls/reveals. Page/lookup/locate lanes allow one physical provider
+call each and only the latest queued intent; ignored aborts occupy their permits until settlement.
+Bounded current/in-progress pages are retained, with no complete neighbor index. `source-status`,
+`source-retry` and `source-summary` expose localized choose/loading/error/empty and shown/global
+count states. Existing `base`, `row`, `node-label` and `expand-button` parts apply to source rows.
+The following relationship-array rules describe the legacy route.
+
 **Properties:**
 
 - `rows: LyraNeighborRow[] = []` (attribute: false) — `LyraNeighborRow { relation: string; direction:
@@ -786,7 +861,7 @@ name and detail shape as `lr-graph`'s own event, so one host handler serves both
 name), `row` (`role="listitem"`; above `virtualizeAt` this is the internal virtual-list's own row
 wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `relation`,
 `node-label`, `node-meta` (secondary type/degree text, when present), `expand-button` (only when
-`expandable`), `empty` (shown when `rows` is empty). Every part presents identically either side of
+`expandable`), `limit` (input-admission notice), `empty` (shown when `rows` is empty). Every part presents identically either side of
 `virtualizeAt`.
 
 **Themeable custom properties:** shared tokens only.
@@ -1280,25 +1355,101 @@ no force simulation, no communities, no edge labels (that's `lr-graph`). Zero-de
 radial layout is closed-form arithmetic, in its own `mind-map-layout.ts` module, mirroring
 `lr-word-cloud`'s dependency-free precedent.
 
+**Complete source topics:** `treeSource: MindMapSource | undefined = undefined`
+(attribute: false) takes precedence over `topics`. Invalid defined sources fail visibly without
+legacy fallback; only `undefined` restores the current legacy topics and their expansion state.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-mind-map.js";
+import type { MindMapSource, LyraTopic } from
+  "@aceshooting/lyra-ui/components/retrieval/mind-map/mind-map.class.js";
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`MindMapSource = LyraHierarchySource<LyraTopic, LyraHierarchyQuery>`; its exact shared protocols
+are in [shared source contracts](shared/events-and-types.md). The provider implements
+`project({ revision, locale, signal, query, state, action })`, with fixed query
+`{ search: '', hiddenKinds: [] }`. Revision is a nonempty string or finite number. A projection
+supplies a nonempty immutable `state` token of at most 65,536 UTF-16 units, global logical `total`,
+a complete visible-preorder `rows` view and optional `focusIndex`. `rows.count <= total`, and the view is either indexed
+`count`/`itemAt`/`keyAt`/`indexOfKey`, or ranged `count`/`read`/`indexOfKey` with exact in-bounds
+reads and direct key resolution. Provider preorder, parent keys, one-based `level`, `position`
+and `setSize`, `childCount`, `expanded`, `selected`, optional `disabled` and `selectionState`
+remain authoritative. This route never reads nested `value.children`, seeds expansion from
+`expandDepth`, or applies local expansion overrides.
+
+The semantic tree navigator reaches the complete provider-visible preorder, with global
+Home/End, Up/Down, RTL-aware expansion/parent keys and disabled-row handling.
+`revealSourceKey(key: string): Promise<boolean>` asks the provider to reveal any logical key and
+focuses its returned `focusIndex`; false means unset/invalid/absent/disabled, failed focus
+transfer or superseded work. Reveal, refresh and reconnect emit no topic event.
+
+The SVG is a bounded view of one connected represented subtree drawn from ready mounted
+navigator rows, at most 301. Its local root is the first represented row whose parent is absent
+from that mounted set. Only exact represented parent links join the subtree; omitted ancestors
+and other disconnected branches are not fabricated. The local root need not be the global root.
+The navigator keeps full global depth/sibling metadata even when ancestry lies outside the cache.
+The diagram uses provider child counts and expansion flags, so a clipped parent is still a parent.
+A localized `limit` notice reports diagram nodes shown versus the complete visible-preorder
+count, rather than implying the SVG contains the full source. `source-diagram` has a bounded
+`var(--lr-size-20rem)` block size; the global navigator remains available with that view.
+No full-source layout or second provider collection is built.
+
+Only own data fields `id` and `label` are projected; `id` must be nonblank and equal `row.key`,
+nonstring labels normalize to empty text, and accessor-backed/oversized fields fail visibly.
+Each normalized row's key, parent key, id and label share a 65,536 UTF-16-unit budget; retained
+rows, focused reserve and pending admission share a 2,000,000-unit payload ceiling. Four 100-row
+pages retain at most 400 rows plus one focused row; at most 301 navigator rows mount and at most
+two physical range reads run. Projection work permits one physical call plus only the latest
+queued intent. Ignored aborts keep physical permits until settlement; providers should settle
+promptly after cancellation. Diagram rows reference only current normalized mounted rows and
+bounded geometry; provider storage/index construction remains caller-owned.
+
+Accepted current user parent expansion emits the existing `lr-topic-toggle { topicId, expanded }`;
+accepted current leaf selection emits `lr-topic-select { topicId }`, always with the original key.
+Source activations delegate provider actions instead of mutating legacy expansion state. Diagram
+keyboard navigation delegates to the global navigator. Loading, failure and obsolete actions
+cannot emit events against a replacement row, even if it reuses the key. Source parts are
+`source-list`, `source-row`, `source-toggle`, `source-label`, `source-status`, `source-error` and
+`source-diagram`; localized loading, complete visible/logical counts, empty and projection/row
+failure with retry are distinct states.
+
+Reassign even the same source or call a keyless `requestUpdate()` after revision/state changes.
+Named local paints, resize and direction changes reuse admitted rows; effective locale/revision
+changes request a new projection. Replacement, superseding project/reveal, unset, disconnect and
+adoption revoke old diagram rows, navigation callbacks and actions; reconnect requests current
+input. The accepted request's original revision/signal remains authoritative during normalization,
+so a reentrant source change cannot finish an obsolete display record.
+
+The following array admission, initial-depth expansion and 500-node sampling rules apply with
+`treeSource` unset.
+
 **Properties:**
 
-- `topics: LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
-LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub.
-  A tree too large for one collection snapshot (10,000 entries / 50,000 values) keeps its first
-  50,000 topics, shallowest first, as `{ id, label, children }` records
+- `topics: readonly LyraTopic[] = []` (attribute: false) — `LyraTopic { id: string; label: string; children?:
+readonly LyraTopic[] }`; a single root sits at the center, multiple roots hang off an implicit center hub.
+  Assignment copies own data fields without invoking accessors, inspecting at most 50,000 source
+  positions breadth-first and retaining at most 64 descendant levels. Invalid entries consume
+  the inspection allowance. Shared occurrences keep the existing depth-first first-ID layout
+  behavior
 - `label?: string` — accessible name for the SVG group and the implicit hub's text; omission uses
   the localized mind-map label, while an explicit empty string stays empty
 - `expandDepth: number = 1` (attribute `expand-depth`) — initial expansion depth (root + first
   ring); expansion state afterward is component-managed per topic id and survives `topics`
   reassignment
 
-Above 500 currently-visible nodes (per the current expand/collapse state), the SVG and the
+With `treeSource` unset, above 500 currently-visible nodes (per the current expand/collapse state),
+the SVG and the
 parallel sr-only tree both render a deterministic, connectivity-preserving, subtree-size-weighted
 sample instead of every node: a kept node's parent, if any, is always kept too (no floating nodes
 with a dangling connector or a gap in the `role="tree"` walk), and a larger branch keeps
 proportionally more of its own nodes than a small one, sampled evenly across a wide/flat branch's
 own child list rather than dropping its tail outright. A surviving node keeps the position the
 full layout gave it. A localized "showing N of M" notice appears in `[part="limit"]`.
+
+The legacy `input-limit` part reports omitted branches even when collapsed. Unseen descendant
+totals are not counted; the render-decimation notice describes only the retained hierarchy.
 
 **Events:** `lr-topic-select` (`detail: { topicId }`, a _leaf_ topic was activated),
 `lr-topic-toggle` (`detail: { topicId, expanded }`, a parent topic was activated, or auto-expanded by
@@ -1308,8 +1459,9 @@ keyboard descent).
 
 **CSS parts:** `base`, `svg` (the single-tab-stop focus target), `node`, `node-label`, `link`
 (parent-child connector), `focus-ring` (keyboard focus ring), `limit` (the "showing N of M"
-render-cap notice, present only above 500 currently-visible nodes), `live-region` (visually hidden
-announcement region), `empty` (shown when `topics` is empty).
+render-cap notice, present above 500 legacy visible nodes and always in source mode),
+`input-limit` (legacy input-admission notice), `live-region` (visually hidden
+announcement region), `empty` (shown when legacy `topics` is empty).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
 ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
@@ -1340,13 +1492,13 @@ clickable" feedback keyboard users already get from the drawn `focus-ring` part.
 
 **Known gotchas:**
 
-- A user's explicit expand/collapse only ever overrides the `depth < expandDepth` default in the
+- With `treeSource` unset, a user's explicit expand/collapse only ever overrides the `depth < expandDepth` default in the
   direction chosen — reassigning `topics` (even with the same ids) never silently discards that
   override.
 - Node-position transitions use `--lr-transition-base`, which already collapses to near-zero under
   `prefers-reduced-motion: reduce` globally, so expansion snaps rather than tweening for a
   reduced-motion user with no extra branching in this component.
-- Topic ids must be nonblank and unique across the complete hierarchy. Later depth-first duplicates
+- Legacy topic ids must be nonblank and unique across the complete hierarchy. Later depth-first duplicates
   and their subtrees are omitted before layout, navigation, expansion state, rendering, or events.
 
 ---
@@ -1817,6 +1969,18 @@ Nonstring failure details use the localized failed-stage label for row text and 
 announcements. Omitted details stay omitted. Formatting uses the effective locale, and historical
 failures remain silent on mount.
 
+Assignment retains the first 10,000 queue items in a bounded readonly outer snapshot. Admitted
+record identities feed a descriptor-safe copy of the closed row/document display fields rather
+than a deep copy of arbitrary provider data, so nested input does not consume the shared
+50,000-value deep-copy budget. Replace the collection to publish record changes. Normalized rows
+are reused until the admitted items or the resolved localized failure label changes; replacing the
+queue normalizes the new rows once and compares failures with the previous normalized rows.
+
+A localized `[part="limit"]` note reports retained and assigned-source counts when the input
+ceiling is exceeded on the legacy items route. Counts use the effective locale. Initial truncation is silent; a later
+transition into input truncation is announced through the shared polite sink, separately from
+failure announcements.
+
 **Properties:**
 
 - `items: IngestionQueueItem[] = []` (attribute: false) — `IngestionQueueItem { id: string;
@@ -1841,7 +2005,7 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   exactly this many items still render as a plain list. Before 9.0.0 this was spelled
   `virtualizeThreshold`/`virtualize-threshold` _and_ compared inclusively (`>=`), so a migration
   that only renames the attribute shifts the switchover point by one item
-- `announce: boolean = false` (reflected) — opt-in: announce the failures the queue **already
+- `announce: boolean = false` (reflected) — legacy items route opt-in: announce the failures the queue **already
   carries** the first time it mounts, instead of staying silent until a row fails later. The
   mount-time pass reuses the one announcement path a later failure takes — the same shared
   assertive light-DOM region, the same locale-aware conjunction list of the caller-supplied
@@ -1859,6 +2023,44 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
 
 Queue item ids must be nonblank and unique. Malformed rows and later duplicates are omitted
 first-wins before empty state, counts, virtualization, failure announcements, rendering, or actions.
+
+**Provider pages:**
+
+- `dataSource: IngestionQueueSource | undefined = undefined` (attribute: false) —
+  `IngestionQueueSource = LyraPageSource<IngestionQueueItem, IngestionQueueSourceQuery>`, exported
+  by `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
+  `LyraPageSource` is exported by `@aceshooting/lyra-ui/data-sources.js`. The query is one frozen
+  empty object (`readonly [key: string]: never`); the provider owns queue order and exact total.
+  A present source takes precedence over `items`, including invalid sources, which fail visibly.
+  Setting `undefined` restores the existing items route and virtualization defaults.
+- `sourcePage: number = 0` (attribute `source-page`) — zero-based provider page, normalized to a
+  finite nonnegative safe offset for the effective page size.
+- `sourcePageSize: number = 100` (attribute `source-page-size`) — normalized to 1–500; an effective
+  size change resets page zero. Pages above `virtualizeAt` use the existing virtual list.
+- `readonly sourceTotal: number | null` — null without a source, while pending or after failure;
+  otherwise the exact global queue total, including settled zero. The compact child pager uses
+  one-based pages and unknown total `-1`, disables navigation pending/error, and contains its
+  events. A valid stale page corrects once and synchronizes `sourcePage`.
+
+Only the current bounded page is retained; source mode never normalizes the legacy inventory.
+Closed row/document display fields are frozen copies with at most 65,536 aggregate UTF-16 text
+units per row. Required malformed records reject the whole page, rather than silently dropping
+rows; source getters are not invoked and arbitrary nested fields are not traversed. Existing stage,
+fallback text and action semantics apply. Historical failures stay quiet on page changes, refresh
+and reconnect even with `announce`; loading/errors use localized source status announcements.
+
+Same-source assignment or keyless `requestUpdate()` refreshes source/revision. Named paints and
+string overrides reuse the current page; reconnect replays the current bounded request. Changes to
+source, revision, refresh intent or connection revoke obsolete work. Requests receive an abort
+signal and stale results cannot publish; the provider owns callback execution cost and cooperation
+with cancellation. Rapid changes retain bounded active work and latest intent, without page history
+or a complete queue cache.
+
+Only current settled source rows can emit the existing retry/cancel details below. Pending,
+replaced, removed or disconnected source controls cannot act on stale rows. Provider-load failure
+shows `source-status` with a `source-retry` button: it reloads only the current failed page, emits
+no row `lr-retry`, and obsolete load-retry controls are inert. `source-pagination` styles navigation.
+This route adds no public event, table or CSV export.
 
 **Events:**
 
@@ -1880,7 +2082,8 @@ per-item stage label), `item-progress`,
 `chunkCount` and `embeddedChunkCount` are set), `item-attempts` (only once `attempts > 0`),
 `item-error` (only for `stage="failed"` with `error` set), `failure-live` (the visually hidden,
 `aria-hidden` mirror of the last announced batch of fresh failures), `item-actions`,
-`retry-button`, `cancel-button`, `empty`.
+`retry-button`, `cancel-button`, `empty`, `limit` (the input-retention notice),
+`source-status`, `source-retry`, `source-pagination`.
 
 `failure-live` is a styling and inspection surface and carries no live-region role of its own. The
 announcement itself goes to the library's shared **light-DOM** assertive region, appended to the
@@ -1913,9 +2116,113 @@ Controlled source list for a retrieval knowledge base: sync status, indexing hea
 per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-stat`, and a per-row
 `lr-dropdown` containing `lr-menu`. Never syncs or indexes anything itself.
 
+**Full-source inventory:** `dataSource: KnowledgeBaseSource | undefined = undefined`
+(attribute: false) takes precedence over `sources`. Only `undefined` restores the current legacy
+array; invalid defined providers, including untyped null, fail visibly. The provider stays
+caller-owned by identity, with an immutable revision and records for that revision.
+`sourcePage: number = 0` (`source-page`) is zero-based; `sourcePageSize: number = 100`
+(`source-page-size`) normalizes to 1–500. Readonly `sourceTotal: number | null` is the accepted
+global total, or null outside source mode and while the current provider page is pending or failed.
+Page indices truncate/clamp to a safe nonnegative offset; nonfinite page/size inputs use 0/100.
+Page-size and accepted sort changes reset page zero. An out-of-range page receives at most one
+corrective last-page request; controlled page writes and correction emit no user page event.
+The table's compact server pagination navigates global pages; its internal one-based page-change
+event is consumed to update `sourcePage`.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-knowledge-base.js";
+import type { KnowledgeBaseSource, KnowledgeBaseSourceQuery, KnowledgeBaseSourceSummary,
+  KnowledgeSource } from
+  "@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+
+declare const provider: KnowledgeBaseSource;
+const inventory = document.querySelector('lr-knowledge-base')!;
+inventory.dataSource = provider;
+```
+
+**Exported source declarations:**
+
+`KnowledgeBaseSource = LyraPageSource<KnowledgeSource, KnowledgeBaseSourceQuery, KnowledgeBaseSourceSummary>`.
+
+`KnowledgeBaseSourceQuery {
+  readonly sortKey: string | null;
+  readonly sortDir: 'asc' | 'desc';
+}`
+
+`KnowledgeBaseSourceSummary {
+  readonly total: number;
+  readonly synced: number;
+  readonly syncing: number;
+  readonly attention: number;
+}`
+
+`query({ revision, locale, signal, page, pageSize, query })` returns a promise for
+`{ rows, total, summary }`; each row is `{ key, order, value: KnowledgeSource }`.
+The revision is a nonempty string or finite number. Counts/orders are safe nonnegative integers,
+`key === value.id` is nonblank, and keys/orders are unique within a page. Rows must exactly fill
+the requested in-bounds page, including its short final page; rejected or duplicate records fail
+the response rather than being omitted. `order` is stable canonical source order, independent
+of query sorting. The shared page-source contract also requires `lookup(keys, context)` and
+`locate(key, query, context)`; this component uses only `query` and exposes no selection/lookup UI.
+Query ordering describes the complete inventory; the component does not sort or filter an
+accepted page locally.
+
+The required summary describes the complete inventory on every page, even with `withoutSummary`.
+`summary.total` must equal the response `total`; every count is at most total, and
+`synced + syncing <= total`. Attention counts each source with sync status `'error'` or indexing
+health `'degraded'`/`'failed'`, and may overlap synced or syncing. For example, total 10, synced 8,
+syncing 2 and attention 4 is valid. Loaded-page category counts cannot exceed the corresponding
+global counts. Empty total requires all counts zero. Missing, malformed or inconsistent summaries
+fail visibly; page rows never supply a substitute global summary. These checks detect local
+contradictions but cannot verify unseen provider records.
+
+Only the current page, at most 500 projected rows, is retained; historic pages and the complete
+inventory are not cached. There is one physical page request plus the latest queued intent;
+an aborted provider call keeps its permit until it settles, including when it ignores abort.
+Providers should settle promptly after cancellation. The fixed display fields are `id`, `name`,
+`type`, `syncStatus`, `indexingHealth`, `permission`, `documentCount`, `lastSyncedAt` and
+`errorMessage`, read as own data properties without enumerating extra fields. Accessor-backed,
+oversized or invalid required fields fail the page. Their text shares a 65,536 UTF-16-unit budget
+per row; individual page metadata strings are at most 65,536 units and share a 2,000,000-unit
+page metadata budget. Source enums must match the declared unions and optional `documentCount`
+must be a safe nonnegative integer. Blank string names retain the untitled-source presentation;
+invalid string dates retain “never synced”, while valid Date values are copied into owned dates.
+
+The source-only sortable headers are `name`, `sync`, `health` and `permission`; `actions` stays
+unsortable. Query sort state starts at `{ sortKey: null, sortDir: 'asc' }`. The table's original
+cancelable `lr-sort-request { phase: 'request', sortKey, sortDir }` and accepted
+`lr-sort { phase: 'commit', sortKey, sortDir }` bubble once with their frozen readonly detail.
+A veto prevents a query change. Only a current accepted commit updates the global server order
+and resets page zero; synchronous source/page replacement prevents an obsolete commit from
+changing the replacement view. These headers remain unsortable in the legacy route.
+
+Pending and failed pages clear accepted rows/counts and show localized `source-status`, including
+with `withoutSummary`; they do not paint invented zeros, stale stats or successful-empty copy.
+A successful empty result keeps the toolbar and existing empty state. Current page failures use
+the nested table's error/retry surface; `error`, `errorHeading`, `errorDescription` and the `error`
+slot keep their existing precedence. The canonical cancelable `lr-retry-request` is proposed once;
+a veto prevents both refresh and error clearing. An accepted current provider-failure retry clears
+the host error and retries that page; an external-error-only retry just clears the host error.
+Retained old retry controls cannot refresh a replacement source. Initial failure is quiet;
+later page failures have one localized light-DOM announcement owned by the table.
+
+Open row menus belong to the particular admitted row and current page. Page/sort/revision/source
+replacement, refresh, disconnect and adoption close/release them; retained callbacks cannot act
+on a replacement record that happens to reuse the same ID. Existing sync/pause/delete requests
+retain original source IDs and remain host-owned actions. Create remains independent of a loaded
+row and available unless `withoutCreate` is set. Reassign even the same provider,
+or call a keyless `requestUpdate()`, after revision/state changes. Ordinary named presentation
+updates reuse admitted data unless revision or effective locale has changed. Reconnect requests
+the current source anew; obsolete replies and controls cannot publish rows or actions.
+
+The following array normalization and unknown-enum fallback rules apply with `dataSource` unset;
+row presentation, action enablement and host error contracts apply to both routes.
+
 **Properties:**
 
-- `sources: KnowledgeSource[] = []` (attribute: false) — `KnowledgeSource { id: string; name: string;
+- `sources: readonly KnowledgeSource[] = []` (attribute: false) — `KnowledgeSource { id: string; name: string;
 type?: string; syncStatus: KnowledgeSourceSyncStatus; indexingHealth?: KnowledgeSourceIndexingHealth;
 permission?: KnowledgeSourcePermission; documentCount?: number; lastSyncedAt?: Date | string;
 errorMessage?: string }` (all four types exported here), where
@@ -1924,7 +2231,8 @@ errorMessage?: string }` (all four types exported here), where
   as `'unknown'`), and `KnowledgeSourcePermission = 'owner' | 'editor' | 'viewer' | 'restricted'`.
   `type` is a free-form connector kind (`'drive'`, `'notion'`, `'upload'`, `'url'`, …) rendered
   as-is. `lastSyncedAt` follows this library's `Date | string` timestamp convention (a `Date` or an
-  ISO-8601 string); absent/unparseable renders "never synced". A `syncStatus`, `indexingHealth` or
+  ISO-8601 string); absent/unparseable renders "never synced". With `dataSource` unset, a
+  `syncStatus`, `indexingHealth` or
   `permission` outside these unions renders a neutral localized "Unknown" badge, offers no "Sync now",
   and is left out of the synced/syncing/needs-attention counts. `errorMessage` shows only while
   `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
@@ -1946,8 +2254,8 @@ errorMessage?: string }` (all four types exported here), where
 - `errorDescription: string = ''` (attribute `error-description`) — failed-load supporting copy,
   forwarded to the nested table
 
-Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
-before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
+With `dataSource` unset, source ids must be nonblank and unique. Malformed rows and later duplicates
+are omitted first-wins before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
 missing, blank, or nonstring uses the localized “untitled source” label in both the row and its action
 names. Row action triggers stay mounted; their three menu items mount only while the dropdown is
 open and clear after it closes.
@@ -1961,15 +2269,17 @@ re-emitted them under the `lr-source-*` names, so a host listening on the admin 
 change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
 `lr-retry-request` (`detail: null`, cancelable) proposes a retry when the nested table's built-in
 retry button is activated. Preventing it keeps both the parent and table in the error state.
-Without a veto, the default action clears `error`. This component contains the nested table request
-and re-proposes its own canonical request, so hosts receive the parent event once.
+Without a veto, the default action clears `error` and, for a current provider failure, retries its
+page. This component contains the nested table request and re-proposes its own canonical request,
+so hosts receive the parent event once.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
-button, while `error` is set.
+button, while the host error or a current provider failure is shown.
 
 **CSS parts:** `base`, `toolbar` (heading + "Add source" row), `heading` (the heading text),
 `create-button` (omitted while `without-create` is set), `summary` (omitted while `without-summary`
-is set or `sources` is empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
+is set or the accepted current collection is empty; provider pending/failure uses `source-status`),
+`summary-stat`, `source-status` (localized provider loading/failed-summary status), `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
 unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`,
 `document-count` (omitted when unset), `permission-badge` (omitted when `permission` is unset),
 `actions-menu`, `actions-trigger` (the kebab `<button>`), `error-row`, `error-cell`, `error` (the
@@ -2019,6 +2329,10 @@ focus and details flow as other entity activations, emitting one `lr-selection-c
 `lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
 `query`, `matchCount`, `matchCountExact`, and `activeIndex: -1`.
 
+With `graphSource` unset, the `input-limit` part preserves the outer `nodes` and `edges` admission counts before the
+bounded model is passed to the graph. Counts describe retained/source root entries, independently
+of filtering, search limits and child rendering.
+
 `view: LyraGraphView = '2d'` and `camera?: LyraGraphCamera` forward the graph's spatial/list
 options. `nodes[].position` supplies real x/y/z coordinates. The default remains the existing 2D
 view; spatial/list views need no d3 peer. Search, filtering, selection, pinning and neighborhood
@@ -2027,6 +2341,86 @@ controls work with all views. User toolbar changes update the explorer's `view` 
 popovers use `getNodeScreenPosition()` so their viewport anchor follows the projected node after
 orbit, pan, dolly or focus. Spatial node activation includes optional world `z`; it never substitutes
 screen pixels for the existing event's coordinate domain.
+
+**Complete graph provider:** `graphSource: KnowledgeGraphExplorerSource | undefined = undefined`
+(attribute: false) takes precedence over legacy `nodes`/`edges`; invalid defined providers fail
+visibly. Setting `undefined` restores the current legacy model and local search/details behavior.
+`KnowledgeGraphExplorerSource` is exactly the public `GraphSource` alias, forwarded unchanged to
+the existing single `lr-graph` child.
+
+```ts
+import type { KnowledgeGraphExplorerSource } from
+  "@aceshooting/lyra-ui/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js";
+import type { GraphSource } from
+  "@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js";
+import type { LyraGraphSourceQuery, LyraGraphSourceSummary } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+The child owns global record pages, accepted bounded diagram scenes, camera/focus and bounded
+exact selection lookup; the explorer adds no second source controller or loaded graph cache.
+The source has immutable `revision`, same-revision `records` with `query`/`lookup`/`locate`, required
+`scene(request)` and optional `overview(request)`. Record/scene summaries report complete
+`{ nodes, edges }` counts. Global record keys are `'node:' + node.id` and `'edge:' + edge.id`, with
+explicit stable edge IDs; user event payloads keep original entity/edge IDs. Full-source record
+navigation is separate from the bounded accepted canvas scene: a source does not imply every
+record is drawn simultaneously or that a global minimap is available. Source editing remains
+read-only; existing editing/drag mutation controls do not become provider write operations.
+
+`sourcePage: number = 0` (`source-page`) is the child's zero-based global record page;
+`sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500, and size changes reset page
+zero. Readonly `sourceTotal: number | null` is the exact active filtered node/edge record total,
+distinct from the complete graph summary. It is null without an accepted current total, without a
+source, or for an invalid type catalog. The child retains at most 500 page records, diagram scenes
+of at most 500 nodes/1,000 edges, and at most 32 active/focused lookup reservations. Lookup for
+explorer selection shares that child lane rather than enumerating the graph. Source pagination,
+node/edge kind and incident/global navigation remain available in the child.
+
+The explorer toolbar is the sole search input in source mode; its legacy local match list is
+absent. `query` supplies global provider search, with at most 65,536 UTF-16 units forwarded.
+Toolbar query/type changes reset the child to global node scope rather than leaving an unrelated
+edge/incident filter active. `lr-search-change` waits for the latest user query's accepted exact
+source total, not a page-local count. It retains `{ query, matchCount, matchCountExact: true,
+activeIndex: -1 }`; empty query reports zero. Direct controlled query assignments remain silent.
+
+When `hiddenTypes` is nonempty, configured `nodeTypes` must describe the provider's complete type
+catalog, with at most 500 canonical nonblank IDs, each at most 65,536 UTF-16 units and together at
+most 2,000,000. The source query receives the positive complement of those IDs. With no hidden
+types, no positive filter applies and unknown provider types remain navigable. A partial catalog
+cannot represent a correct hidden-type complement. Hiding every configured type intentionally
+suppresses/revokes record, scene and neighbor requests and reports zero scoped matches; it never
+sends an empty positive array as a false claim that the entire graph is empty. The complete source
+summary stays distinct. `source-status` explains all-hidden/invalid catalog state and `source-clear`
+clears hidden types to restore the unfiltered scope. Existing `lr-hidden-types-change` reports
+user commits; controlled assignments remain silent.
+
+Controlled `selectedNodeId` resolves an off-scene original ID through exact lookup without moving
+the record page, opening details or emitting selection. Only a current authoritative global
+absence proof clears it silently. User entity activation resolves the exact original ID, updates
+selection and emits the existing `lr-selection-change` once, then requires an accepted scene and
+real mounted list-row or projected camera anchor before opening the details popover. Reentrant
+selection listeners can revoke that continuation. The details `lr-neighbor-list` binds its source
+only after actual opening and is synchronously unbound on close/source change; hidden closed
+details do not fetch neighbors. Unknown degree is omitted unless `entityDetails` supplies it,
+rather than inferred from the partial scene. Pins and `path` remain bounded host configuration;
+the explorer does not look up every configured ID or compute a full graph traversal.
+
+`revealSourceKey(key: string): Promise<boolean>` clears toolbar query/hidden types and delegates
+global node/edge reveal to the sole child, without selection or detail activation. Keys retain the
+canonical node/edge prefixes above. Missing, invalid, failed, obsolete, disconnected or unset-source
+requests resolve `false`. Off-page list entity activation likewise clears toolbar scope before
+its global focus/details flow. `fit`, `resetView` and `focusNode` retain the child's bounded current
+scene semantics; they do not promise a full-source canvas fit.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named presentation changes reuse accepted data. Source replacement/removal and lifecycle
+transitions revoke obsolete controls, focus/selection continuations and popover/neighbor bindings.
+Changed scope invalidates obsolete child requests and controls. The child's fixed page/scene/lookup scheduling keeps ignored-abort
+physical calls occupied until settlement and coalesces newer intent. Existing original-ID
+activation/expansion/path/pin/camera/view events keep their payloads and ownership; there is no
+new source selection or editing event. `detail-neighbors` identifies the open-details neighborhood;
+existing graph/legend/details parts remain applicable. The following local-array lookup/search
+rules describe the legacy route unless a source qualification is stated.
 
 **Properties:** (host-supplied data, identity-normalized before rendering)
 
@@ -2047,10 +2441,13 @@ screen pixels for the existing event's coordinate domain.
   `{ description?: string; properties?: Record<string, string | number>; degree?: number }`, keyed by
   node id. Merged onto the matching `LyraGraphNode` to build the entity shown in the details popover and
   neighbor rows. A node with no entry still renders: `degree` falls back to a live count derived from
-  `edges`, `description`/`properties` are omitted
+  `edges` in the legacy route; source mode leaves unknown degree omitted.
+  `description`/`properties` are omitted
 - `path: LyraPathElement[] = []` (attribute: false) — host-supplied path-finding _result_, rendered
   via `lr-path-strip` (`{ kind: 'node'; node: LyraEntity } | { kind: 'edge'; relation: string;
-directed?: boolean; reverse?: boolean }`). Empty renders no strip
+directed?: boolean; reverse?: boolean }`). Empty renders no strip. The child registers on the
+  first nonempty path; await `updateComplete` before accessing it. The `path` part shows localized
+  loading or error status while unavailable. Clearing and replacing the path retries a failed load.
 
 (self-managed but presettable/observable — this component toggles its own copy on interaction, the
 same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature works with zero host wiring)
@@ -2058,8 +2455,10 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
 - `hiddenTypes: string[] = []` (attribute: false) — forwarded to both `lr-graph.hiddenTypes` and
   `lr-graph-legend.hiddenTypes`; hidden nodes are also excluded from explorer search results,
   neighbor rows, and activation
-- `selectedNodeId: string | null = null` (attribute `selected-node-id`) — drives the details popover
-  and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
+- `selectedNodeId: string | null = null` (attribute `selected-node-id`) — drives
+  `lr-graph.selectedNodeIds`; legacy selection drives the details popover, while controlled source
+  selection resolves silently and user activation opens it. `null` shows no selection and keeps
+  the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
   path" action
 - `query: string = ''` — the filter applied to the visible node
@@ -2098,7 +2497,7 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `graphExplorerLabel`. A non-empty host `aria-label` makes the host the sole overall owner; an
   explicitly empty host label stays empty on the group
 
-**Methods:** `fit(options?: { padding?: number })` frames every visible node in the composed
+**Methods:** `fit(options?: { padding?: number })` frames every currently visible node in the composed
 graph (forwards to `lr-graph.fit()`); `resetView()` is `fit()` with the default padding, for a
 reset-view action; `focusNode(id, options?: { zoom? }): Promise<boolean>` centers a visible node
 without selecting it or opening the details popover (resolves `false` for an unknown or
@@ -2127,8 +2526,9 @@ filtered-out id). None change `selectedNodeId` or filters.
 - `lr-search-change` (`detail: { query: string; matchCount: number; matchCountExact: boolean }`) —
   the user typed in the toolbar's search box. `query` is the canonical `LyraSearchChangeDetail`
   field name. `matchCount` is the same live node-filter total the result list and its live-region
-  announcement already compute (`0` while the query is empty). `matchCountExact` is always `true` —
-  this component's node filter has no truncating ceiling, unlike a paginated text-search viewer.
+  announcement compute in the legacy route (`0` while the query is empty). In source mode the
+  event waits for the accepted global query total described above. `matchCountExact` is `true`
+  for emitted accepted results.
   `activeIndex` is `-1`: this is a live node filter with no search cursor. The component
   has already applied the query to its own `query` property before emitting, so reassigning
   it back is optional and a direct host assignment stays silent.
@@ -2140,7 +2540,7 @@ filtered-out id). None change `selectedNodeId` or filters.
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
 Receives no data; an overriding consumer reads the selected entity from `selectedNodeId`/`nodes`
-itself. `detail-body` — additive content appended inside the default `lr-entity-card`'s body,
+in the legacy route, or resolves the controlled original ID from its own provider in source mode. `detail-body` — additive content appended inside the default `lr-entity-card`'s body,
 alongside its `lr-neighbor-list`; no effect while `details` is overridden. `detail-actions` —
 additive content appended into the default `lr-entity-card`'s `actions` slot, beside its built-in
 pin toggle; no effect while `details` is overridden.
@@ -2150,7 +2550,8 @@ pin toggle; no effect while `details` is overridden.
 composed `lr-graph-legend`), `search-results` (only while `query` is non-empty; at most 50 rows,
 one tab stop moved with ArrowUp/ArrowDown/Home/End, while the announced count covers every match),
 `search-result` (`role="listitem"` wrapping a `<button>`), `search-empty`, `search-limit` (a localized
-shown/total notice when more than 50 nodes match), `details-limit` (a localized shown/total notice when `entityDetails` is too large to keep), `pinned` (only while
+shown/total notice when more than 50 nodes match), `input-limit` (outer node/edge admission notice),
+`details-limit` (a localized shown/total notice when `entityDetails` is too large to keep), `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
 
@@ -2188,7 +2589,8 @@ the composed graph too. Retheme the composed graph through `lr-graph`'s own cust
 - Selecting a node any _other_ way (search result, neighbor row, path element, keyboard Enter/Space
   on a graph node — which dispatches no native `click`) has no rect to read, so it calls
   `lr-graph.focusNode(id)` and anchors at the graph element's own bounding-box center instead; no
-  continuous tracking applies on that path.
+  continuous tracking applies on that legacy path. Source activation instead waits for the
+  authoritative scene and real row/projected anchor described above.
 
 ---
 
@@ -2299,6 +2701,98 @@ compact/expanded switch. Each row wraps exactly one chunk in an internal `lr-chu
 a single-element array), reusing its score bar, tier coloring, title+page rendering, and expandable
 text verbatim. Large sets window through an internal `lr-virtual-list`.
 
+With `dataSource` unset, assignment retains the first 10,000 chunks in a bounded readonly outer snapshot. Admitted record
+identities feed a descriptor-safe copy of the closed display schema, including source fields and
+score breakdowns; `metadata` remains opaque and a locator receives its own bounded snapshot. This
+avoids applying the shared 50,000-value deep-copy budget to arbitrary nested provider data. Replace
+the collection to publish record changes. Canonical records, id/order indexes, and the sorted/grouped
+projection are reused across selection and presentation changes. Replace a custom grouping callback
+when its behavior changes, or issue a keyless `requestUpdate()` to refresh its projection.
+
+A localized `[part="limit"]` note reports retained and assigned-source counts above the input
+ceiling, using the effective locale. Initial truncation is silent; a later transition into input
+truncation is announced politely. Virtualization continues to window the admitted result set.
+
+**Full-source paging:** `dataSource: RetrievalResultsSource | undefined = undefined`
+(attribute: false) supplies the complete logical collection while retaining only bounded pages.
+A defined source takes display precedence over `chunks`; an invalid defined source fails visibly.
+Setting `undefined` restores the current legacy chunks. `sourcePage: number = 0` (`source-page`)
+is zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500.
+Readonly `sourceTotal: number | null` reports the exact current-query total after success, or
+`null` before success and without a source. Query/page-size changes reset page zero. A total shrink
+receives at most one corrective request for the last valid page.
+
+```ts
+import type { RetrievalResultsSource, RetrievalResultsSourceQuery } from
+  "@aceshooting/lyra-ui/components/retrieval/retrieval-results/retrieval-results.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`RetrievalResultsSource` is `LyraPageSource<RetrievalChunk, RetrievalResultsSourceQuery>`.
+The immutable provider `revision` is a nonempty string or finite number. `query({ revision,
+locale, signal, page, pageSize, query })` returns `{ rows, total, groups? }`, where each row is
+`{ key, order, value }`, `value` is a complete `RetrievalChunk`, and `order` is its stable canonical
+source order. Counts/orders are safe nonnegative integers; page keys/orders are unique and the
+returned row count must exactly fill the requested in-bounds page. `lookup(keys, context)` returns
+canonical records for globally present requested IDs, omitting absent ones;
+`locate(key, query, context)` returns an absolute current-query index or `null`.
+
+The forwarded query is `{ sort, withoutDedupe, grouping, groupBy, groupLabel, groupOrder }`.
+The provider applies sorting, deduplication and grouping to the complete collection before paging;
+local callbacks never compute a global group from a partial page. Grouped responses require
+`groups: [{ key, label, startIndex, itemCount }]` with globally positioned, nonoverlapping intervals
+covering the page. At most 500 records and 500 intersecting groups are admitted. Each record's
+required rendered strings share a 65,536 UTF-16-unit limit; locator paths have at most 500 segments.
+Malformed or oversized pages fail without silently clipping full chunk text. Keys/group text are
+bounded to 65,536 units each and share a 2,000,000-unit admission budget.
+
+With `withoutDedupe: false`, page `key` must equal canonical `value.id`. With `withoutDedupe: true`,
+distinct occurrence keys may show repeated canonical IDs, while selection still uses `value.id`.
+Canonical `lookup` must always return `key === value.id`; page occurrence keys never become selected
+IDs. Provider order is preserved in the visible page.
+
+Up to 10,000 explicit `selectedChunkIds` resolve globally in sequential batches of at most 500;
+blanks/duplicates normalize before lookup. Off-page IDs remain selected while unresolved, and only
+a successful global absence proof removes an ID. Complete canonical records are ordered by
+provider `order`, independently of page/query order. The selected-record cache and pending user
+transaction survive paging, query changes and page retry. Selection failure exposes a separate
+retry without emitting a partial selection. External assignment and reconnect/adoption
+reconciliation are silent. A user toggle emits `lr-selection-change` and its guarded deprecated
+`lr-select` alias only after the current complete selection resolves.
+
+Source selection event arrays and closed projected record fields are frozen; each record's
+`metadata` remains an opaque reference to the provider-owned value. The component neither deeply
+clones nor freezes that metadata graph. Legacy selection events retain their whole-detail detached,
+deeply frozen snapshot and its existing bounded failure behavior, including `null` on exhaustion.
+This source identity policy applies to both selection event names. `lr-chunk-open` retains its
+existing detail. Source mode suppresses `lr-load-more` and ignores legacy `hasMore`.
+
+The source remains host-owned by identity. Reassign even the same provider, or call a keyless
+`requestUpdate()`, to refresh its revision/cache. Named presentation changes reuse accepted data.
+Source replacement, refresh, disconnect and adoption revoke obsolete effects. Each page, selection
+and locate lane allows one physically unsettled provider call and only the latest queued intent;
+ignored aborts retain their permit until settlement. Only the current page/groups, explicit
+selected-record cache and bounded in-progress results are retained, with no full-source corpus.
+`activeChunkId` uses global `locate` once per active/query binding; subsequent manual paging wins
+until that binding changes. Expansion is bounded to the current page. Source-only parts are
+`source-status`, `source-retry`, `source-pagination`, `source-selection-status` and
+`source-selection-retry`, alongside existing row/chunk/metadata parts.
+
+The following array processing and sort/group fallback rules describe the legacy route;
+presentation properties also apply to provider rows.
+
+**Exported source query declaration:**
+
+`RetrievalResultsSourceQuery {
+  readonly sort: 'score' | 'none';
+  readonly withoutDedupe: boolean;
+  readonly grouping: RetrievalResultsGrouping;
+  readonly groupBy: LyraRetrievalResults['groupBy'];
+  readonly groupLabel: LyraRetrievalResults['groupLabel'];
+  readonly groupOrder: LyraRetrievalResults['groupOrder'];
+}`
+
 **Properties:**
 
 - `chunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk`, imported from
@@ -2312,13 +2806,14 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   Nothing is ever guessed from `metadata` — a chunk with no `locator` simply leaves `anchor`/`page`
   unset
 - `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
-  ids, duplicates, and ids absent from the canonical chunk model are pruned. The component updates
+  ids, duplicates, and ids absent from the canonical chunk model are pruned in the legacy route;
+  source mode resolves presence globally as described above. The component updates
   its own copy on toggle _then_ emits `lr-selection-change`; reassign to control
 - `withoutSelection: boolean = false` (attribute `without-selection`, reflected) — omits the per-row
   `lr-checkbox`.
 - `withoutDedupe: boolean = false` (attribute `without-dedupe`, reflected) — retained for
-  compatibility and has no effect; malformed, blank, and later duplicate chunk ids are always omitted
-  first-wins so identity never becomes ambiguous.
+  compatibility in the legacy route, where malformed, blank, and later duplicate chunk ids are
+  always omitted first-wins. Source mode supports distinct occurrence keys as described above.
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
 - `grouping: 'source' | 'custom' | 'none' = 'none'` — `'source'` buckets rows under a header per
   `source.id` (the header text is that source's `name`, or a localized "untitled source" when it has
@@ -2348,7 +2843,8 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   to each row and to the virtual list (which scrolls the matching row into view)
 - `loading: boolean = false` (reflected)
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — while virtualized, forwarded to the
-  virtual list so scroll-near-bottom fires `lr-load-more`; otherwise shows the built-in footer button
+  virtual list so scroll-near-bottom fires `lr-load-more`; otherwise shows the built-in footer button.
+  Inactive with `dataSource` set
 - `errorText: string = ''` (attribute `error-text`; spelled plain `error` before 9.0.0) — non-empty
   replaces the whole result view with a neutral visible message. Caller-supplied text is not
   localized (app/network data, not library copy). A new non-empty value is announced through a
@@ -2408,7 +2904,8 @@ virtualized — `::part(row)` reaches it either way), `group-header` (exported f
 on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none or while
 `presentation="compact"`; at most 32 entries, each value formatted within the same bounds as a
 `lr-retrieval-search` filter value), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
-`metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`.
+`metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`, `limit` (the
+input-retention notice).
 
 The per-row `lr-chunk-inspector`'s own parts are forwarded onward under a `chunk-` prefix —
 `chunk`, `chunk-current`, `chunk-score`, `chunk-score-current`, `chunk-score-bar`,
@@ -2698,6 +3195,76 @@ source list. Either slot renders from its assigned content without requiring the
 Dependency-free accessible 2D embedding projection viewer. Coordinates are projected by the host;
 the component only normalizes them into SVG, colors optional clusters, and emits selection events.
 
+**Complete spatial source:** `source: LyraSpatialPointSource<EmbeddingPoint & LyraSpatialPoint>
+| null = null` (attribute: false) takes precedence over `points` without copying the complete
+population. Setting `null` restores the legacy point-array route. `viewport: LyraSpatialBounds
+| null = null` (attribute: false) uses `{ minX, maxX, minY, maxY }`; `null` shows the complete global
+domain. Source storage, indexing and aggregation remain host-owned.
+
+```ts
+import type { EmbeddingPoint } from
+  "@aceshooting/lyra-ui/components/retrieval/embedding-explorer/embedding-explorer.class.js";
+import type {
+  LyraSpatialBounds, LyraSpatialPoint, LyraSpatialBin, LyraSpatialQuery,
+  LyraSpatialPointSource, LyraSpatialBinSelectDetail,
+} from "@aceshooting/lyra-ui/utilities/data-spatial.js";
+```
+
+The provider has immutable `revision`, safe nonnegative integer `count`, and complete global
+`bounds: LyraSpatialBounds | null`; bounds are null exactly for an empty source. Revision is a
+nonempty string of at most 256 UTF-16 units or a finite number. `query({ signal, bounds, maxPoints,
+maxBins })` returns `{ points, bins, matchedCount }`; `getPoint(id, { signal })` returns the exact
+original point or `null`. Both methods may return values or PromiseLike results. Source metadata,
+methods and payload fields must be own data properties; accessor-backed or sparse replies reject.
+Unknown point fields are excluded from the closed projection.
+
+Each exact/representative point supplies `{ id, sourceIndex, x, y, label?, sourceId?, cluster? }`.
+`sourceIndex` is a safe original zero-based index below `count`, independent of the representative
+array position; coordinates are finite and within global bounds. IDs are globally unique,
+nonblank and at most 256 UTF-16 units; `label` is at most 1,024 units, `sourceId` and string `cluster`
+at most 256 units, and numeric clusters must be finite. Query representatives and exact lookups
+must agree within a revision. Admission detects bounded duplicate/conflicting identities; global
+uniqueness and unseen data truth remain provider obligations.
+
+Each `LyraSpatialBin` has `{ bounds, count }` with positive safe `count`. Bin counts sum exactly
+to `matchedCount <= source.count`, covering every match in the current viewport. Representative
+points overlay that population and never add to its total. Bins may leave spatial holes but cannot
+overlap in their interiors; normal-axis ownership is half-open with inclusive final viewport
+edges. Representatives must belong to a bin and cannot outnumber its population. Collapsed global
+axes stay exactly collapsed and project at the center; a noncollapsed axis requires a positive
+viewport span contained in the global domain. No fabricated domain expansion is applied.
+
+Source mode requires normalized `maxRenderedPoints >= 3`, including for an empty source;
+smaller budgets show an error. The default remains 1,000 and ceiling 10,000. Two slots within that
+budget are reserved for independent controlled-selected and imperative-revealed exact points.
+For `A = maxRenderedPoints - 2`, `maxBins = ceil(A / 2)` and `maxPoints = A - maxBins`: default
+499 bins + 499 representatives + two exact slots. Unused capacity is not borrowed. Exact overlays
+deduplicate against representatives and each other. Each query admits at most 997,000 UTF-16
+metadata units; current/pending queries, exact records and bounded intent/revision strings share
+a 2,000,000-unit envelope. No full point array or all-ID map is retained.
+
+`revealSourcePoint(id: string): Promise<boolean>` resolves an exact original ID, minimally pans an
+explicit viewport while preserving its representable span/clamping to global bounds, waits for
+current query/rendering and focuses that point. A null viewport stays global. It leaves
+`selectedPointId` unchanged and emits no selection. Missing, invalid, obsolete, disconnected or
+unrepresentable-pan requests resolve `false`. Selected and revealed records have independent slots;
+a selected record may remain retained outside the visible viewport. Accessible point ordinals use
+original `sourceIndex + 1`, not representative order.
+
+`lr-point-select` retains `{ point }` for exact original immutable point data, including ID and
+sourceIndex. Activating a density bin emits noncancelable `lr-spatial-bin-select` with frozen
+`LyraSpatialBinSelectDetail { revision, bounds, count }`, never an exact-point event. Source mode
+adds `bin` and `error` parts; `limit` reports the complete global count/domain and current viewport
+count/domain with density and overlay counts distinguished. The cluster legend describes retained
+point overlays rather than certifying all global clusters.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named style/strings updates reuse admitted data. Replacement, refresh, disconnect and adoption
+revoke older controls, reveal promises and visible effects. Query and exact lookup each allow one
+physically unsettled call plus only the latest desired intent; ignored aborts hold that lane until
+settlement. Providers should honor the abort signal. The following sampling and last-completed-view
+activation behavior describes the legacy route with `source` null.
+
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
 y, label?, sourceId?, cluster? }`; `selectedPointId: string = ''` (attribute
 `selected-point-id`); `height: string = '360px'` (any CSS length valid for `block-size`,
@@ -2708,25 +3275,33 @@ including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host 
 attribute or `label`, `accessibleLabel` names the plot. An authored host `aria-label` governs the plot name too (including an
 explicitly empty value), so a competing internal generic label is not exposed. Non-finite
 coordinates are omitted.
+`maxRenderedPoints: number = 1000` (attribute `max-rendered-points`) controls the evenly sampled
+point budget. Finite values clamp to 1–10,000; invalid values use 1,000. A selected point outside
+the sample is additionally retained. Replace `points` to change the owned input.
 Blank point ids and later duplicates are also omitted first-wins before empty state, roving focus,
 selection, rendering, or events.
 Pointer and programmatic focus synchronize the single roving tab stop, and every point keeps at
 least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker. Optional
 cluster membership is exposed as each option's description and in a visible text legend, so the
 grouping never depends on color alone.
-Above 1,000 points, the plot renders a deterministic, evenly spaced sample of the whole array
+Above `maxRenderedPoints` (1,000 by default), the plot renders a deterministic, evenly spaced sample of the whole array
 (spanning the full input, not a leading run) instead of every point, keeping DOM node and listener
-count bounded while the sampled points stay representative of the full plotted distribution; a
-localized "showing N of M" notice appears in `[part="limit"]`. `bounds` and the cluster legend
-still derive from the complete `points` array, so a decimated view keeps the same scale and the
-same complete legend as the full plot. The selected point is always drawn, even when the sample
-skipped it. An assignment too large for one collection snapshot (10,000 entries / 50,000 values) is
-itself sampled evenly across its whole length, and the notice counts the full input.
+count bounded. This index sample does not guarantee spatial extrema or every cluster. A localized
+"showing N of M" notice appears in `[part="limit"]`. Bounds and the cluster legend derive from the
+admitted snapshot; a selected point in that snapshot is drawn even when the render sample skipped
+it. An assignment too large for one collection snapshot (10,000 entries / 50,000 values) first
+selects a bounded set of evenly spaced candidate identities across its whole length, then resolves
+each candidate's first valid occurrence in cancelable chunks. The notice counts the full input,
+but bounds, clusters, and selectable identities remain limited to that admitted snapshot.
+The last completed view stays visible with `aria-busy` until the replacement is ready; activating
+one of its points still emits that displayed point. Keep pending source arrays and records stable,
+or reassign/explicitly call `requestUpdate()` to restart inspection. Replacement and disconnect
+cancel unfinished work, and reconnect resumes from the current source.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space (not on key repeat).
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
-`limit` (the "showing N of M" render-cap notice, present only above 1,000 points), `empty`.
+`limit` (the "showing N of M" sampling notice), `empty`.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`
@@ -2743,9 +3318,65 @@ Plus shared tokens.
 Tabbed operations shell composing `lr-knowledge-base` and `lr-ingestion-queue`. It forwards source
 and ingestion actions under namespaced events; host-owned controls such as chunking, embedding,
 permissions, and connector settings go in the `settings` slot.
+Only the active child view is mounted. With its corresponding provider unset, if the shell's own
+admission truncates the source or ingestion array, an `input-limit` note for the active tab reports
+the original assigned count; it does not infer that count from the already-truncated child input. Initial and reconnect notes
+are quiet, and later changed omissions are politely announced.
 
-**Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
-IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
+**Provider forwarding:** `dataSource: KnowledgeBaseSource | undefined = undefined` and
+`ingestionSource: IngestionQueueSource | undefined = undefined` are property-only inputs
+(attribute: false). `dataSource` supplies the Sources tab's `lr-knowledge-base.dataSource`;
+`ingestionSource` supplies the Ingestion tab's `lr-ingestion-queue.dataSource`. Each takes
+precedence over its matching legacy `sources`/`ingestionItems` array. Set that provider to
+`undefined` to restore the current retained legacy collection and its original admission-loss
+notice. Defined invalid providers keep the child's source-authoritative failure behavior when
+activated; the shell does not replace them with the legacy array.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-knowledge-base-admin.js";
+import type { KnowledgeBaseSource } from
+  "@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js";
+import type { IngestionQueueSource } from
+  "@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js";
+
+declare const inventoryProvider: KnowledgeBaseSource;
+declare const queueProvider: IngestionQueueSource;
+const admin = document.querySelector('lr-knowledge-base-admin')!;
+admin.dataSource = inventoryProvider;
+admin.ingestionSource = queueProvider;
+```
+
+The shell stores provider references by identity without inspecting their revision, methods,
+rows or totals, querying them or cloning them. An inactive assignment only stores the reference;
+it neither reads that provider nor refreshes the active child. Only the mounted active child
+receives its matching provider and owns validation, requests, bounded page data, loading, errors,
+retry and global totals, as described by [knowledge-base](#lr-knowledge-base) and
+[ingestion-queue](#lr-ingestion-queue). The shell adds no `sourcePage`, `sourcePageSize` or
+`sourceTotal` API and keeps no page cache or inactive child instance.
+
+An active provider assignment, including the same reference, synchronously forwards one refresh;
+the following shell render does not repeat that assignment. A keyless `admin.requestUpdate()`
+refreshes only the current child once. Named heading/label/slot paints and re-picking the active
+tab do not refresh providers. To use a repeated `lr-activate` as a refresh intent, explicitly call
+`requestUpdate()` in the host. Locale changes follow the active child's locale-dependent refresh
+contract. Reassign or explicitly refresh after changing provider revision/state.
+
+Switching tabs disconnects the old child and cancels its authority; returning mounts a new child
+at its documented default page zero. Page navigation state does not persist across tab switches.
+If a previous same-provider page call ignores abort, the remounted child's replacement page call
+waits for it to settle instead of overlapping it. Providers should settle promptly after
+cancellation. Different provider identities retain independent request capacity.
+
+A defined provider suppresses only its active collection's legacy `input-limit` notice. The
+inactive provider/collection is not inspected to compute that notice, and both parent-owned
+legacy collections remain intact. Source/ingestion actions are forwarded only from the current
+active child with their existing names, original IDs and bounded immutable detail. Provider
+replacement, refresh, tab change, disconnect and adoption revoke old action callbacks, including
+retained controls that reuse an ID. Ingestion retry/cancel keep their existing namespaced detail
+and non-cancelable notification semantics; the shell never performs the operation itself.
+
+**Properties:** `sources: readonly KnowledgeSource[] = []` (attribute: false); `ingestionItems:
+readonly IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
 `label?: string` (the visible heading and the tablist's distinct accessible name; omission uses the
 localized admin label, while an explicit empty string empties the heading and the tablist keeps the
 localized name; authored host `aria-label` independently names the admin component and is not
@@ -2775,7 +3406,7 @@ that moves an invalid or newly-hidden tab back to Sources is not a user activati
 
 **Slots:** `settings` — host-owned KB configuration controls.
 
-**CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`.
+**CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`, `input-limit`.
 
 **Themeable custom properties:** `--lr-knowledge-base-admin-tab-selected-border` (default
 `var(--lr-color-brand)`) and `--lr-knowledge-base-admin-tab-selected-color` (default
@@ -2855,7 +3486,7 @@ dense/sparse/rerank/final score breakdowns.
 
 **Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
 `RetrievalComparisonSet = { id: string; label: string; chunks: RetrievalChunk[] }`;
-`topK: number = 10` (attribute `top-k`, finite integer with minimum 1);
+`topK: number = 10` (attribute `top-k`, finite integer clamped to 1–100);
 `selectedChunkId: string = ''` (attribute `selected-chunk-id`); `headingLevel: LyraHeadingLevel =
 '3'` (attribute `heading-level`, each set heading; `'none'` keeps the visible text without heading
 semantics); `label?: string` (fallback name for the overall comparison region; a non-empty host `aria-label` makes the host the sole overall
@@ -2874,10 +3505,15 @@ controlled selection, rendering, or events.
 **Events:** `lr-chunk-select` (`{ setId, chunk }`).
 
 **CSS parts:** `base`, `overlap`, `sets`, `set`, `set-heading`, `chunks`, `chunk`,
-`chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`.
+`chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`,
+`input-limit`, `result-limit`, `pagination`, `page-status`, `page-button`.
 
 Chunks are ordered by effective rank, then score, then input order before the top-k slice. Overlap
-is pairwise Jaccard similarity across those visible chunk ids. Selection is controlled. A result
+is pairwise Jaccard similarity across those visible chunk ids on the current page. Internal pages
+contain at most eight sets, so at most 28 overlap pairs are computed. Localized first/previous/next/
+last controls reach every admitted set. `input-limit` discloses input admission loss, while each
+`result-limit` reports visible top-k rows against that set's retained result count. Ranking and
+overlap projections are reused for presentation-only updates. Selection is controlled. A result
 button is named by its rank and source title (a blank name shows the localized "untitled source");
 its text and scores are the button's description.
 **Slots:** none. **Optional peer deps:** none.
@@ -2919,6 +3555,13 @@ history, counts, rendering, or actions.
 At most the 500 most recent of the currently filtered runs (the array end is newest) render as
 `run` buttons and feed the trend chart; a filtered set past that length renders a localized
 `limit` notice after the run history rather than mounting an unbounded number of rows.
+Input admission itself retains the newest bounded run tail and reports any earlier loss in
+`input-limit`. Latest metric cards still consider every admitted filtered run, including a finite
+metric outside the 500-row history window. Slice controls are capped at 500 including All: at most
+499 named slices, reserving the selected slice when it exists. `slices-limit` reports the displayed
+and full admitted slice counts. Run, metric, and slice projections are reused across presentation
+updates; localized formatting remains live. Initial and reconnect omission notes are quiet;
+later changed omissions are politely announced.
 
 **Events:** `lr-metric-change-request` (`{ metricId }`), `lr-slice-change-request` (`{ slice }`) and
 `lr-run-activate` (`{ runId, run }`). All are controlled intents; the component does not mutate the
@@ -2928,7 +3571,7 @@ corresponding selection properties. The deprecated `lr-metric-change`, `lr-slice
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
 `chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice that only the most recent 500
-filtered runs are shown), `empty`.
+filtered runs are shown), `input-limit`, `slices-limit`, `empty`.
 
 **Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default
 `var(--lr-color-brand)`) — border color shared by the controlled active slice and metric.
@@ -3263,6 +3906,10 @@ These named interfaces and helper signatures are available to typed integrations
     embeddedChunkCount?: number;
     attempts?: number;
     error?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
+  `IngestionQueueSourceQuery {
+    readonly [key: string]: never;
   }`
   Import: `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
   `IngestionRetryEventDetail extends RetryEventDetail {

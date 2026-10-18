@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{index}/{total}. kép',
   playWithContext: 'Lejátszás: {name}',
   pauseWithContext: 'Szüneteltetés: {name}',
+  avPlayerWaveformUnavailable: 'A hullámforma adatai nem érhetők el, vagy nem illeszkednek ehhez a médiához.',
+  avPlayerTranscriptUnavailable: 'Az átirat adatai nem érhetők el.',
   dropzoneReleaseToAdd: 'Engedje el a fájl hozzáadásához.',
   dropzoneRejectedType: 'Ez a fájltípus nem engedélyezett.',
   attachmentAdd: 'Melléklet hozzáadása',

@@ -1,3 +1,9 @@
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
+import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { finiteInteger } from '../../../internal/numbers.js';
+import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
+import { createHaystackMemo } from '../../../internal/search-haystack.js';
+import { indexByKey } from '../../../internal/keyed-index.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import '../../forms/input/input.class.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
@@ -19,11 +25,12 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_evalDatasetAddExample, LYRA_DEFAULT_evalDatasetColumnExpectedOutput, LYRA_DEFAULT_evalDatasetColumnInput, LYRA_DEFAULT_evalDatasetColumnTags, LYRA_DEFAULT_evalDatasetEmpty, LYRA_DEFAULT_evalDatasetImportLabel, LYRA_DEFAULT_evalDatasetLabel, LYRA_DEFAULT_evalDatasetLimit, LYRA_DEFAULT_evalDatasetNoMatches, LYRA_DEFAULT_evalDatasetRemoveExample, LYRA_DEFAULT_evalDatasetSearchLabel, LYRA_DEFAULT_evalDatasetTagFilterLabel } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_tagFacetLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
 const MAX_RENDERED_EXAMPLES = 100;
+const MAX_TAG_FACETS = 500;
 
 const rowKey = (row: EvalExample): string => row.id;
 
@@ -43,6 +50,15 @@ export interface EvalExample {
   tags?: readonly string[];
   metadata?: Record<string, unknown>;
 }
+
+/** Full-source example query; tags use OR semantics, combined with text search. */
+export interface EvalDatasetSourceQuery {
+  readonly search: string;
+  readonly tags: readonly string[];
+  readonly sortKey: string | null;
+  readonly sortDir: 'asc' | 'desc';
+}
+export type EvalDatasetSource = LyraPageSource<EvalExample, EvalDatasetSourceQuery>;
 
 export interface LyraEvalDatasetEventMap {
   'lr-example-select': CustomEvent<{ exampleId: string | null }>;
@@ -89,8 +105,24 @@ export interface LyraEvalDatasetEventMap {
  * array -- the same "the host owns the actual data" contract as every other mutation this
  * component surfaces.
  *
- * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
- * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Public collection arrays take bounded readonly snapshots. Example records retain identity so
+ * opaque metadata stays intact; reassign `examples` after editing records. At most 10,000 examples
+ * are admitted, with an existing limit notice when more are supplied. Other owned collections
+ * retain the 10,000-entry and 50,000-node clone limits.
+ *
+ * Tag facets show at most 500 locale-sorted distinct tags, keeping selected tags visible and
+ * filling the remaining places with the earliest tags. A localized note counts omitted tags.
+ * Search and filtering continue to use the complete admitted dataset.
+ *
+ * With dataSource, the provider owns global text filtering, OR-tag filtering and server sorting.
+ * Zero-based sourcePage and sourcePageSize (1..500) address the complete source; sourceTotal is
+ * null until an authoritative page arrives. Provider rows have at most 500 tags and 65,536 total
+ * display-text UTF-16 units; opaque metadata is not traversed or rendered. Catalogue facets are
+ * required, independent of the loaded page, and reserve active tags inside the 500-facet budget.
+ * Only unavailableSelected removes active filters. Page/query transitions clear the private
+ * selected example once, keeping Remove restricted to a visible row. Import/export/add intents
+ * keep their existing host-owned behavior; source mode does not export only the loaded page.
+ * Reassign dataSource or call requestUpdate() to refresh; named paints keep source caches stable.
  *
  * @customElement lr-eval-dataset
  * @event lr-example-select - A row was activated. `detail: { exampleId }` -- `exampleId` is `null` once the
@@ -126,7 +158,7 @@ export interface LyraEvalDatasetEventMap {
  * @csspart tag-filter - The tag-filter chip group's wrapper. Only rendered while `examples`
  *   carries at least one tag.
  * @csspart grid - The internal `<lr-table>`.
- * @csspart limit - Visible notice when the collection boundary retained only the first examples.
+ * @csspart limit - Visible notice for omitted examples or tags beyond the 500-facet ceiling.
  * The search field is a composed `<lr-input>`, so it is themed through the shared `--lr-input-*` and
  * `--lr-form-control-*` tokens.
  *
@@ -151,6 +183,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     evalDatasetSearchLabel: LYRA_DEFAULT_evalDatasetSearchLabel,
     evalDatasetTagFilterLabel: LYRA_DEFAULT_evalDatasetTagFilterLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
+    tagFacetLimit: LYRA_DEFAULT_tagFacetLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -165,9 +198,15 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   private previouslyTruncated = false;
   private examplesTruncated = false;
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.sourceMode && this.selectedId !== null) this.clearSelection();
+  }
+
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.limitAnnouncements.adopted();
+    this.sourcePages.adopted();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -184,6 +223,133 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-import-request',
   ]);
+
+  @state() private sourceStateVersion = 0;
+  private _dataSource?: EvalDatasetSource;
+  private sourceEpoch = 0;
+  private sourceSyncing = false;
+  private sourceInputs?: readonly unknown[];
+  private sourceQueryInputs?: readonly unknown[];
+  private sourceFailure: unknown;
+  private sourceResult?: LyraPageResult<EvalExample>;
+  private sourceRows: EvalExample[] = [];
+  private sourceTags: string[] = [];
+  private sourceFacetLabels = new Map<string, string>();
+  private sourceSortKey: string | null = null;
+  private sourceSortDir: 'asc' | 'desc' = 'asc';
+  private readonly sourcePages = new SourcePageController<EvalExample, EvalDatasetSourceQuery>(this, {
+    normalizeRecord: (record, isCurrent) => this.projectSourceExample(record, isCurrent),
+    validateMetadata: (result, query) => {
+      if (!result.tags || query.tags.length > MAX_TAG_FACETS || result.tags.unavailableSelected.some(key => !query.tags.includes(key))) throw new TypeError('Invalid example source facets');
+      const available = new Set(result.tags.values.map(facet => facet.key));
+      const missing = new Set(result.tags.unavailableSelected);
+      if (query.tags.some(key => !available.has(key) && !missing.has(key))) throw new TypeError('Selected source facet is missing');
+    },
+    onChange: () => { this.sourceStateVersion++; },
+  });
+
+  /** Host-owned full-source pages; wins over examples even when invalid. Reassign the same
+   * provider or call requestUpdate() to refresh. undefined restores the current examples input. */
+  @property({ attribute: false })
+  get dataSource(): EvalDatasetSource | undefined { return this._dataSource; }
+  set dataSource(value: EvalDatasetSource | undefined) {
+    const previous = this._dataSource; this._dataSource = value;
+    this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
+    this.requestUpdate('dataSource', previous);
+  }
+  /** Zero-based provider page; legacy table paging is unchanged. */
+  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  /** Provider rows per page, normalized to 1..500. */
+  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  /** Exact current-query total, or null while pending, invalid or outside provider mode. */
+  get sourceTotal(): number | null { return this.dataSource === undefined ? null : this.sourcePages.state.result?.total ?? null; }
+  private get sourceMode(): boolean { return this.dataSource !== undefined; }
+  private get sourceBlocked(): boolean { return this.sourceMode && (this.sourcePages.state.pending || !!this.sourcePages.state.error || !!this.sourceFailure); }
+
+  private projectSourceExample(record: LyraSourceRecord<unknown>, isCurrent: () => boolean): LyraSourceRecord<EvalExample> {
+    const assertCurrent = (): void => { if (!isCurrent()) throw new TypeError('Obsolete source record'); };
+    const descriptorOf = (target: object, key: PropertyKey) => {
+      assertCurrent();
+      const descriptor = getOwnDataDescriptor(target, key);
+      assertCurrent();
+      return descriptor;
+    };
+    assertCurrent();
+    if (record.value === null || typeof record.value !== 'object') throw new TypeError('Invalid source example');
+    const candidate = record.value;
+    const read = (key: string, optional = false): unknown => {
+      const descriptor = descriptorOf(candidate, key);
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR || (!optional && descriptor === MISSING_OWN_DATA_DESCRIPTOR)) throw new TypeError('Invalid source example');
+      return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+    };
+    const id = read('id'); const input = read('input'); const expectedOutput = read('expectedOutput', true); const rawTags = read('tags', true);
+    if (typeof id !== 'string' || !id.trim() || id !== record.key || typeof input !== 'string' || (expectedOutput !== undefined && typeof expectedOutput !== 'string')) throw new TypeError('Invalid source example');
+    let units = id.length + input.length + (expectedOutput?.length ?? 0);
+    const tags: string[] = [];
+    if (rawTags !== undefined) {
+      if (!Array.isArray(rawTags)) throw new TypeError('Invalid source tags');
+      const length = descriptorOf(rawTags, 'length');
+      if (length === MISSING_OWN_DATA_DESCRIPTOR || length === UNSAFE_OWN_DATA_DESCRIPTOR || typeof length.value !== 'number' || length.value > MAX_TAG_FACETS) throw new RangeError('Invalid source tags');
+      for (let i = 0; i < length.value; i++) {
+        const tag = descriptorOf(rawTags, String(i));
+        if (tag === MISSING_OWN_DATA_DESCRIPTOR || tag === UNSAFE_OWN_DATA_DESCRIPTOR || typeof tag.value !== 'string') throw new TypeError('Invalid source tag');
+        units += tag.value.length; tags.push(tag.value);
+      }
+    }
+    if (units > 65_536) throw new RangeError('Source example too large');
+    return { key: record.key, order: record.order, value: Object.freeze({ id, input, ...(expectedOutput === undefined ? {} : { expectedOutput }), tags: Object.freeze(tags) }) };
+  }
+
+  private syncSource(): void {
+    if (!this.sourcePages || this.sourceSyncing) return;
+    this.sourceSyncing = true;
+    try {
+      if (!this.sourceMode) {
+        if (this.sourceInputs) this.sourcePages.bind(undefined);
+        this.sourceInputs = undefined; this.sourceQueryInputs = undefined;
+        this.sourceResult = undefined; this.sourceRows = []; this.sourceTags = []; this.sourceFailure = undefined;
+        return;
+      }
+      const source = this.dataSource!; const epoch = this.sourceEpoch + this.explicitRefresh;
+      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
+      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const queryInputs = [this.searchText, this.activeTags, this.sourceSortKey, this.sourceSortDir, size];
+      if (this.sourceQueryInputs && queryInputs.some((value, index) => value !== this.sourceQueryInputs![index])) { page = 0; this.sourcePage = 0; }
+      this.sourceQueryInputs = queryInputs;
+      const revision = source.revision;
+      const inputs = [source, revision, epoch, this.effectiveLocale, ...queryInputs, page];
+      if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
+      this.sourceInputs = inputs; this.sourceFailure = undefined; this.sourceRows = []; this.sourceTags = []; this.sourceResult = undefined;
+      if (this.selectedId !== null) this.clearSelection();
+      this.sourcePages.bind({ source, revision, epoch, locale: this.effectiveLocale });
+      const query: EvalDatasetSourceQuery = Object.freeze({ search: this.searchText, tags: Object.freeze([...this.activeTags]), sortKey: this.sourceSortKey, sortDir: this.sourceSortDir });
+      void this.sourcePages.request(query, page, size);
+    } catch (error) {
+      this.sourcePages.bind(undefined); this.sourceRows = []; this.sourceTags = []; this.sourceResult = undefined; this.sourceFailure = error;
+    } finally { this.sourceSyncing = false; }
+  }
+
+  private acceptSourcePage(): void {
+    const result = this.sourcePages.state.result;
+    if (!result || result === this.sourceResult) return;
+    this.sourceResult = result; this.sourceRows = result.rows.map(record => record.value);
+    this.sourceTags = result.tags!.values.map(facet => facet.key);
+    this.sourceFacetLabels = new Map(result.tags!.values.map(facet => [facet.key, facet.label]));
+    const removed = new Set(result.tags!.unavailableSelected);
+    if ([...this.activeTags].some(key => removed.has(key))) { this.activeTags = new Set([...this.activeTags].filter(key => !removed.has(key))); return; }
+    if (this.sourcePage !== this.sourcePages.state.page) {
+      this.sourceSyncing = true; this.sourcePage = this.sourcePages.state.page; this.sourceSyncing = false; this.sourceInputs = this.sourceInputs ? [...this.sourceInputs.slice(0, -1), this.sourcePages.state.page] : undefined;
+    }
+  }
+  private onSourcePage = (event: CustomEvent<{ page: number }>): void => {
+    event.stopPropagation(); if (this.sourceMode && !this.disabled) this.sourcePage = event.detail.page - 1;
+  };
+  private onSourceSort = (event: LyraTableEventMap<EvalExample>['lr-sort']): void => {
+    if (!this.sourceMode || this.disabled) return;
+    this.sourceSortKey = event.detail.sortKey; this.sourceSortDir = event.detail.sortDir;
+    this.syncSource(); this.sourceStateVersion++;
+  };
+  private onSourceRetry = (event: Event): void => { event.stopPropagation(); if (this.sourceMode && !this.disabled) this.requestUpdate(); };
 
   /** Controlled dataset: every example currently known to the host. This component never
    *  mutates its own copy of it -- add/remove/import/export are all *requests*; the host performs
@@ -258,19 +424,39 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     return this.normalizedCache;
   }
 
+  private explicitRefresh = 0;
+  private normalizedRefresh = 0;
+  private filterMemo?: { inputs: unknown[]; rows: EvalExample[] };
+  private readonly searchCorpus = createHaystackMemo<EvalExample>((example, locale) =>
+    [example.input, example.expectedOutput ?? '', ...(example.tags ?? [])].join(' ').toLocaleLowerCase(locale));
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.explicitRefresh = (this.explicitRefresh ?? 0) + 1;
+    if (args[0] === undefined || ['dataSource', 'sourcePage', 'sourcePageSize', 'searchText', 'activeTags'].includes(String(args[0]))) this.syncSource();
+    super.requestUpdate(...args);
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('searchable') && !this.searchable) this.searchText = '';
+    this.syncSource();
+    if (this.sourceMode) { this.acceptSourcePage(); return; }
+    const normalizedChanged = changed.has('dataSource') || this.normalizedFor !== this.examples || this.normalizedRefresh !== this.explicitRefresh;
+    if (this.normalizedRefresh !== this.explicitRefresh) {
+      this.normalizedRefresh = this.explicitRefresh;
+      this.normalizedFor = undefined;
+    }
     if (changed.has('searchable') && !this.searchable) {
       this.searchText = '';
     }
-    if (changed.has('examples')) {
+    if (normalizedChanged) {
       // A host fulfilling `lr-example-remove-request` (or an import that replaces the whole array)
       // can hand back an `examples` array that no longer contains the previously-selected id, or no
       // longer carries every previously-active tag. Re-clamp both here rather than leaving stale
       // state pointing at nothing: an unclamped `selectedId` would leave the Remove button enabled
       // for an id that can't be removed again, and an unclamped tag filter would keep matching zero
       // rows forever with no visible way back to "no filter".
-      if (this.selectedId !== null && !this.normalizedExamples.some((example) => example.id === this.selectedId)) {
+      if (this.selectedId !== null && !indexByKey(this.normalizedExamples, rowKey).has(this.selectedId)) {
         this.clearSelection();
       }
       const available = new Set(this.allTags());
@@ -282,13 +468,14 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     // A row can still exist in the controlled dataset but no longer be visible once a search or
     // tag filter narrows the grid. Clear its selection at that same boundary: leaving it active
     // would make Remove act on an invisible row with no way for the user to verify the target.
-    this.visibleExamples = this.filterExamples();
-    const filtersChanged =
-      changed.has('examples') || changed.has('searchText') || changed.has('activeTags') || changed.has('searchable');
+    const inputs = [this.normalizedExamples, this.searchText, this.activeTags, this.effectiveLocale];
+    const filtersChanged = !this.filterMemo || inputs.some((input, index) => input !== this.filterMemo!.inputs[index]);
+    if (filtersChanged) this.filterMemo = { inputs, rows: this.filterExamples() };
+    this.visibleExamples = this.filterMemo!.rows;
     if (
       filtersChanged &&
       this.selectedId !== null &&
-      !this.visibleExamples.some((example) => example.id === this.selectedId)
+      !indexByKey(this.visibleExamples, rowKey).has(this.selectedId)
     ) {
       this.clearSelection();
     }
@@ -299,12 +486,18 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     this.emit('lr-example-select', { exampleId: null });
   }
 
+  private tagsMemo?: { examples: readonly EvalExample[]; locale: string; tags: string[] };
   private allTags(): string[] {
+    const examples = this.normalizedExamples;
+    const locale = this.effectiveLocale;
+    if (this.tagsMemo?.examples === examples && this.tagsMemo.locale === locale) return this.tagsMemo.tags;
     const tags = new Set<string>();
     for (const example of this.normalizedExamples) {
       for (const tag of example.tags ?? []) tags.add(tag);
     }
-    return [...tags].sort(getCollator(this.effectiveLocale).compare);
+    const sorted = [...tags].sort(getCollator(locale).compare);
+    this.tagsMemo = { examples, locale, tags: sorted };
+    return sorted;
   }
 
   /** `examples` narrowed by the active tag filter (OR across `activeTags`) and the search text
@@ -313,13 +506,11 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   private filterExamples(): EvalExample[] {
     const query = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
-    return this.normalizedExamples.filter((example) => {
+    const corpus = query ? this.searchCorpus(this.normalizedExamples, this.effectiveLocale) : undefined;
+    return this.normalizedExamples.filter((example, index) => {
       if (this.activeTags.size > 0 && !(example.tags ?? []).some((tag) => this.activeTags.has(tag))) return false;
       if (query === '') return true;
-      const haystack = [example.input, example.expectedOutput ?? '', ...(example.tags ?? [])]
-        .join(' ')
-        .toLocaleLowerCase(this.effectiveLocale);
-      return haystack.includes(query);
+      return corpus![index]!.includes(query);
     });
   }
 
@@ -377,13 +568,14 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   };
 
   private onRemoveClick = (): void => {
-    if (this.disabled || this.selectedId === null) return;
+    if (this.disabled || this.sourceBlocked || this.selectedId === null) return;
     this.emit('lr-example-remove-request', { exampleId: this.selectedId });
   };
 
   private onGridRowActivate = (e: CustomEvent<{ row: EvalExample }>): void => {
     e.stopPropagation();
     if (this.disabled) return;
+    if (this.sourceBlocked || (this.sourceMode && !this.sourceRows.includes(e.detail.row))) return;
     const id = e.detail.row.id;
     this.selectedId = id;
     this.emit('lr-example-select', { exampleId: id });
@@ -429,7 +621,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           part="remove-button"
           data-agent-action="neutral"
           type="button"
-          ?disabled=${this.disabled || this.selectedId === null}
+          ?disabled=${this.disabled || this.sourceBlocked || this.selectedId === null}
           @click=${this.onRemoveClick}
         >
           ${this.localize('evalDatasetRemoveExample')}
@@ -514,11 +706,38 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     capture: true,
   };
 
+  private facetMemo?: { tags: string[]; selected: ReadonlySet<string>; visible: string[] };
+  private visibleTagFacets(tags: string[]): string[] {
+    if (this.facetMemo?.tags === tags && this.facetMemo.selected === this.activeTags) return this.facetMemo.visible;
+    const visible: string[] = [];
+    // Active tags originate from this bounded facet list. Reserve them before admitting the
+    // earliest unselected tags, so every active filter keeps its own deselection control.
+    let unselectedBudget = MAX_TAG_FACETS - this.activeTags.size;
+    for (const tag of tags) {
+      if (this.activeTags.has(tag)) visible.push(tag);
+      else if (unselectedBudget > 0) {
+        visible.push(tag);
+        unselectedBudget--;
+      }
+      if (visible.length === MAX_TAG_FACETS) break;
+    }
+    this.facetMemo = { tags, selected: this.activeTags, visible };
+    return visible;
+  }
+
+  private tagTemplateMemo?: { inputs: unknown[]; template: TemplateResult };
   private renderTagFilter(tags: string[]): TemplateResult {
-    return html`
-      <div part="tag-filter" role="group" aria-label=${this.localize('evalDatasetTagFilterLabel')}>
+    const label = this.localize('evalDatasetTagFilterLabel');
+    const omitted = this.sourceMode ? (this.sourceResult?.tags?.total ?? 0) - tags.length : tags.length - MAX_TAG_FACETS;
+    const overflow = omitted > 0 ? this.localize('tagFacetLimit', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(omitted),
+    }) : '';
+    const inputs = [tags, this.activeTags, this.disabled, label, overflow, this.sourceFacetLabels];
+    if (this.tagTemplateMemo && inputs.every((input, index) => input === this.tagTemplateMemo!.inputs[index])) return this.tagTemplateMemo.template;
+    const template = html`
+      <div part="tag-filter" role="group" aria-label=${label}>
         <lr-chip-group>
-          ${tags.map(
+          ${(this.sourceMode ? tags : this.visibleTagFacets(tags)).map(
             (tag) => html`<lr-chip
               toggleable
               .value=${tag}
@@ -526,24 +745,27 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
               .disabled=${this.disabled}
               @lr-chip-toggle-request=${(e: CustomEvent<ChipSelectDetail>) => this.onTagChipToggle(tag, e)}
               @lr-chip-select=${this.stopOwnedEvent}
-              >${tag}</lr-chip
+              >${this.sourceMode ? this.sourceFacetLabels.get(tag) ?? tag : tag}</lr-chip
             >`,
           )}
         </lr-chip-group>
+        ${overflow ? html`<p part="limit" role="note">${overflow}</p>` : nothing}
       </div>
     `;
+    this.tagTemplateMemo = { inputs, template };
+    return template;
   }
 
   override render(): TemplateResult {
     const label = this.label || this.localize('evalDatasetLabel');
-    const tags = this.allTags();
-    const visible = this.visibleExamples;
-    const examples = this.normalizedExamples;
-    const truncation = publicCollectionTruncation(this, 'examples');
+    const tags = this.sourceMode ? this.sourceTags : this.allTags();
+    const visible = this.sourceMode ? this.sourceRows : this.visibleExamples;
+    const examples = this.sourceMode ? this.sourceRows : this.normalizedExamples;
+    const truncation = this.sourceMode ? undefined : publicCollectionTruncation(this, 'examples');
     this.examplesTruncated = truncation !== undefined;
-    const filtered = visible.length !== examples.length;
+    const filtered = this.sourceMode ? !!this.searchText || this.activeTags.size > 0 : visible.length !== examples.length;
     const emptyText =
-      examples.length === 0
+      examples.length === 0 && !filtered
         ? this.localize('evalDatasetEmpty')
         : filtered && visible.length === 0
           ? this.localize('evalDatasetNoMatches')
@@ -557,10 +779,21 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
         <lr-table
           part="grid"
           aria-label=${label}
-          .selectionMode=${this.disabled ? 'none' : 'single'}
+          .strings=${this.strings}
+          .paginationMode=${this.sourceMode ? 'server' : 'client'}
+          .page=${this.sourceMode ? finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER) + 1 : 1}
+          .totalItems=${this.sourceMode ? this.sourceTotal ?? 0 : -1}
+          .unknownTotal=${this.sourceMode && this.sourceTotal === null}
+          .hasNext=${!this.sourceMode || this.sourceTotal !== null}
+          .loading=${this.sourceMode && this.sourcePages.state.pending}
+          .error=${this.sourceMode && !!(this.sourceFailure || this.sourcePages.state.error)}
+          .sortMode=${this.sourceMode ? 'server' : 'client'}
+          .sortKey=${this.sourceMode ? this.sourceSortKey : null}
+          .sortDir=${this.sourceMode ? this.sourceSortDir : 'asc'}
+          .selectionMode=${this.disabled || this.sourceBlocked ? 'none' : 'single'}
           .columns=${this.buildColumns()}
           .rows=${visible}
-          .pageSize=${MAX_RENDERED_EXAMPLES}
+          .pageSize=${this.sourceMode ? finiteInteger(this.sourcePageSize, 100, 1, 500) : MAX_RENDERED_EXAMPLES}
           .rowKey=${rowKey}
           .selectedRowKeys=${this.selectedKeys()}
           .emptyHeading=${emptyText}
@@ -571,12 +804,14 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           @focus=${this.stopOwnedEvent}
           @blur=${this.stopOwnedEvent}
           @lr-sort-request=${this.stopOwnedEvent}
+          @lr-sort=${this.onSourceSort}
+          @lr-retry-request=${this.onSourceRetry}
           @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
           @lr-row-expand-toggle=${this.stopOwnedEvent}
           @lr-load-more=${this.stopOwnedEvent}
           @lr-selection-change=${this.stopOwnedEvent}
           @lr-filter-change=${this.stopOwnedEvent}
-          @lr-page-change=${this.stopOwnedEvent}
+          @lr-page-change=${this.onSourcePage}
           @lr-cell-edit=${this.stopOwnedEvent}
           @lr-column-resize=${this.stopOwnedEvent}
           @lr-row-activate=${this.onGridRowActivate}

@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'ਹਾਲੇ ਕੋਈ ਗੱਲਬਾਤ ਨਹੀਂ',
   agentWorkspaceLabel: 'ਏਜੰਟ ਵਰਕਸਪੇਸ',
+  agentWorkspaceInputLimit: '{collection}: {total} ਐਂਟਰੀਆਂ ਵਿੱਚੋਂ ਸਿਰਫ਼ {count} ਰੱਖੀਆਂ ਜਾਂਦੀਆਂ ਹਨ।',
   agentWorkspaceConversation: 'ਗੱਲਬਾਤ',
   agentWorkspaceDetails: 'ਰਨ ਦੇ ਵੇਰਵੇ',
   agentWorkspaceRun: 'ਏਜੰਟ ਰਨ',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'ਇਸ ਹਿੱਸੇ ਲਈ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ',
   promptQueueLabel: 'ਕਤਾਰ ਵਿੱਚ ਪ੍ਰੌੰਪਟ',
   promptQueueEmpty: 'ਕਤਾਰ ਵਿੱਚ ਕੋਈ ਪ੍ਰੌੰਪਟ ਨਹੀਂ',
+  promptQueueInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਕਤਾਰ ਵਿੱਚ ਪਏ ਕੁਝ ਪ੍ਰੌਂਪਟ ਜਾਂ ਅਟੈਚਮੈਂਟ ਛੱਡ ਦਿੱਤੇ ਗਏ ਹਨ।',
+  promptQueueAttachmentLimit: 'ਰੱਖੇ {total} ਅਟੈਚਮੈਂਟਾਂ ਵਿੱਚੋਂ {shown} ਦਿਖਾਏ ਜਾ ਰਹੇ ਹਨ।',
   promptQueueSendNow: 'ਹੁਣੇ ਭੇਜੋ',
   selectionToolbarLabel: 'ਚੋਣ ਦੀਆਂ ਕਾਰਵਾਈਆਂ',
   selectionAsk: 'ਪੁੱਛੋ',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} ਟੋਕਨ',
     other: '{count} ਟੋਕਨ',
   },
+  threadListInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਕੁਝ ਗੱਲਬਾਤ ਥ੍ਰੈੱਡ ਛੱਡ ਦਿੱਤੇ ਗਏ ਹਨ।',
+  promptInputInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਕੁਝ ਸੁਝਾਅ ਜਾਂ ਕੈਟਾਲਾਗ ਐਂਟਰੀਆਂ ਛੱਡ ਦਿੱਤੀਆਂ ਗਈਆਂ ਹਨ।',
+  transcriptFeedInputLimit: '{total} ਐਂਟਰੀਆਂ ਵਿੱਚੋਂ ਸਿਰਫ਼ ਸਭ ਤੋਂ ਨਵੀਆਂ {count} ਰੱਖੀਆਂ ਜਾਂਦੀਆਂ ਹਨ।',
+  codeBlockHighlightLimit: 'ਲੰਮਾ ਕੋਡ ਸਿੰਟੈਕਸ ਹਾਈਲਾਈਟਿੰਗ ਤੋਂ ਬਿਨਾਂ ਦਿਖਾਇਆ ਜਾਂਦਾ ਹੈ।',
 };
 
 registerLyraLocale('pa', strings);

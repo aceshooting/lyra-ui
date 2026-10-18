@@ -121,6 +121,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Перо опущено',
   signaturePadPenUp: 'Перо поднято',
+  localePickerInputLimit: 'Доступны только первые 512 записей языковых и региональных настроек.',
+  emojiPickerInputLimit: 'Часть данных эмодзи пропущена из-за достижения ограничения на входные данные.',
 };
 
 registerLyraLocale('ru', strings);

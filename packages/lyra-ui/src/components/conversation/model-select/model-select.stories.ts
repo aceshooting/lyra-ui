@@ -351,3 +351,7 @@ export const FormLifecycle: Story = {
     `;
   },
 };
+
+export const InputLimit: Story = {
+  render: () => html`<lr-model-select label="Bounded catalog" .catalog=${Array.from({length:1025}, (_, i) => ({id:`row-${i}`,label:`Row ${i}`}))}></lr-model-select>`,
+};

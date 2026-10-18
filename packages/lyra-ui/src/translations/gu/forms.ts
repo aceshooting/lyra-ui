@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'પેન નીચે',
   signaturePadPenUp: 'પેન ઉપર',
+  localePickerInputLimit: 'ફક્ત પ્રથમ 512 ભાષા અને પ્રદેશ સેટિંગ્સની એન્ટ્રીઓ ઉપલબ્ધ છે.',
+  emojiPickerInputLimit: 'ઇનપુટ મર્યાદા પહોંચી જવાથી ઇમોજીનો કેટલોક ડેટા છોડી દેવાયો છે.',
 };
 
 registerLyraLocale('gu', strings);

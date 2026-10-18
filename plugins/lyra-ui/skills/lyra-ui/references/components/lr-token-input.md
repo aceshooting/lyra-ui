@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -58,6 +58,10 @@ value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
+`maxTokensVisible: number = 0` (attribute `max-tokens-visible`) — zero leaves every token mounted,
+preserving the default. Positive values bound mounted tokens while retaining the focused or editing
+token; `token-overflow` displays a localized count for the rest. Non-finite values restore the
+unlimited default. The value array and form submission still include every token.
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the tokens), `end` (adornment after
 the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-combobox`'s identical
 `start`/`end`.
@@ -85,7 +89,8 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
-glyph), `input`, `start`, `end`, `hint`, `error`. `focus()`, `blur()`, `click()`, and `select()` forward to the
+glyph), `token-overflow` (the localized count of unmounted tokens), `input`, `start`, `end`, `hint`,
+`error`. `focus()`, `blur()`, `click()`, and `select()` forward to the
 internal draft text input. `selectionStart`, `selectionEnd`, and `selectionDirection` are readable/
 writable native-selection passthroughs; `setSelectionRange(start, end, direction?)` and
 `setRangeText(replacement, start?, end?, selectMode?)` expose the matching native methods.

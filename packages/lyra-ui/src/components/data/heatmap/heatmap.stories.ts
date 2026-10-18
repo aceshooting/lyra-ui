@@ -729,3 +729,43 @@ export const IndependentHoverOutline: Story = {
     `)}
   `,
 };
+
+export const RaisedCellBudget: Story = {
+  render: () => html`<lr-heatmap max-cells="20000" fit-to-width .data=${{
+    kind: 'matrix', rowLabels: Array.from({ length: 200 }, (_, i) => `Row ${i + 1}`),
+    colLabels: Array.from({ length: 100 }, (_, i) => `Column ${i + 1}`),
+    values: Array.from({ length: 200 }, (_, row) => Array.from({ length: 100 }, (_, col) => (row + col) % 100)),
+  }}></lr-heatmap>`,
+};
+
+export const IndexedMatrixSource: Story = {
+  parameters: { docs: { description: { story: 'A lazy million-cell matrix with a constant-time aggregate formula. The provider owns its index; no raw matrix is copied. Overview tiles select half-open aggregate ranges. Exact keyboard cells use absolute coordinates; missing null values activate as NaN. CSV contains current tiles only. A controlled viewport can be round-tripped after revealSourceCell silently pans it. Source mode does not expand row, column or drag gestures into dense selectedCells.' } } },
+  render: () => {
+    const source = {
+      revision: 1, rowCount: 1000, columnCount: 1000, domain: { min: 0, max: 999999 },
+      query(bounds: { rowStart: number; rowEnd: number; columnStart: number; columnEnd: number }) {
+        const count = (bounds.rowEnd - bounds.rowStart) * (bounds.columnEnd - bounds.columnStart);
+        const min = bounds.rowStart * 1000 + bounds.columnStart;
+        const max = (bounds.rowEnd - 1) * 1000 + bounds.columnEnd - 1;
+        return [{ ...bounds, count, validCount: count, min, max, sum: count * (min + max) / 2 }];
+      },
+      getCell(row: number, column: number) { return { value: row * 1000 + column, rowLabel: String(row + 1), columnLabel: String(column + 1) }; },
+    };
+    const host = (event: Event) => (event.currentTarget as HTMLElement).parentElement?.parentElement?.querySelector<LyraHeatmap>('[data-matrix-example]');
+    const window = (event: Event, offset: number) => {
+      const element = host(event); if (!element) return;
+      const start = Math.max(0, Math.min(980, (element.matrixViewport?.rowStart ?? 0) + offset));
+      element.matrixViewport = { rowStart: start, rowEnd: start + 20, columnStart: start, columnEnd: start + 20 };
+      void element.revealSourceCell(start, start);
+    };
+    return html`<section>
+      <div>
+        <button @click=${(event: Event) => { const element = host(event); if (element) element.matrixViewport = null; }}>Overview</button>
+        <button @click=${(event: Event) => window(event, 500)}>Middle detail</button>
+        <button @click=${(event: Event) => window(event, -20)}>Previous window</button>
+        <button @click=${(event: Event) => window(event, 20)}>Next window</button>
+      </div>
+      <lr-heatmap data-matrix-example accessible-cells .matrixSource=${source}></lr-heatmap>
+    </section>`;
+  },
+};

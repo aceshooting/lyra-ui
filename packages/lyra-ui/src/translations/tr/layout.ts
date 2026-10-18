@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} komutu',
     other: '{count} komut',
   },
+  commandPaletteInputLimit: 'Girdi sınırına ulaşıldığı için bazı komutlar atlandı.',
 };
 
 registerLyraLocale('tr', strings);

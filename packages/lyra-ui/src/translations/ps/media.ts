@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'له {total} څخه انځور {index}',
   playWithContext: '{name} غږول',
   pauseWithContext: '{name} ځنډول',
+  avPlayerWaveformUnavailable: 'د څپې بڼې معلومات شتون نه لري یا له دې رسنۍ سره سمون نه خوري.',
+  avPlayerTranscriptUnavailable: 'د لیکلي متن معلومات شتون نه لري.',
   dropzoneReleaseToAdd: 'دوتنه ورزیاتولو لپاره یې خوشې کړئ.',
   dropzoneRejectedType: 'د دې دوتنې ډول نه منل کېږي.',
   attachmentAdd: 'ضمیمه ورزیاتول',

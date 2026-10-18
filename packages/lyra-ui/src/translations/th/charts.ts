@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'มีตัวอย่างที่ใช้ได้ {validCount} รายการในการแจกแจงทั้งหมด อยู่ต่ำกว่าและสูงกว่าขอบเขตช่วงที่แสดง {belowCount} และ {aboveCount} รายการตามลำดับ และมีตัวอย่างที่ใช้ไม่ได้ {invalidCount} รายการ',
+  histogramDistributionRange: 'ช่วงตัวอย่างที่สังเกตได้: {min} ถึง {max}',
   chartCategory: 'หมวดหมู่',
   chartTotal: 'ทั้งหมด',
   chartAxisTotal: '{axis} ทั้งหมด',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, รัศมี {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'เพิ่มขึ้น',
-  chartTrendDecreasing: 'ลดลง',
-  chartTrendFlat: 'คงที่',
-  chartSummary: '{label}: {count} ค่า ช่วง {min} ถึง {max} แนวโน้ม {trend}',
   chartSeriesNoData: '{label}: ไม่มีข้อมูล',
   chartSummaryWithData: 'แผนภูมิ {type}: {summaries}',
   chartSummaryEmpty: 'แผนภูมิ {type} ไม่มีข้อมูล',
-  chartSummarySeparator: '. ',
   chartData: 'ข้อมูลแผนภูมิ',
   chartRenderUnavailable: 'ไม่สามารถแสดงแผนภูมิได้',
+  chartPreparedSummaryZoom: 'การซูมแสดงสรุปที่เตรียมไว้ แต่ไม่สามารถใช้ดัชนีเพื่อดูรายละเอียดเพิ่มเติมได้',
+  chartSpatialSummary: 'แหล่งข้อมูลทั้งหมด: {count} จุด, x {minX} ถึง {maxX}, y {minY} ถึง {maxY} มุมมอง: {matchedCount} จุด, x {viewMinX} ถึง {viewMaxX}, y {viewMinY} ถึง {viewMaxY}',
+  chartSpatialRadiusDomain: 'รัศมีในแหล่งข้อมูลทั้งหมด: {min} ถึง {max}',
+  chartSpatialDensityLegend: 'ความหนาแน่นรวมชุดข้อมูลทั้งหมด; การมองเห็นชุดข้อมูลมีผลต่อจุดซ้อนทับเท่านั้น',
+  chartSpatialPoint: '{series}: {id}, ตำแหน่งในแหล่งข้อมูล {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'บริเวณความหนาแน่น: {count} จุด, x {minX} ถึง {maxX}, y {minY} ถึง {maxY}',
+  chartSpatialHidden: ' (ซ่อนชุดข้อมูล)',
   chartDataSampled: 'แผนภูมิและตารางข้อมูลที่สร้างขึ้นแสดงตัวอย่างไม่เกิน 1,000 ระเบียน หากต้องการเข้าถึงข้อมูลแผนภูมิทั้งหมด ให้ระบุตารางข้อมูลที่กำหนดเอง',
   chartPlotSampled: 'แผนภูมิแสดงตัวอย่างไม่เกิน 1,000 ระเบียน ส่วนตารางข้อมูลแสดงข้อมูลทั้งหมด',
   chartZoomUnavailable: 'ซูมไม่ได้ แต่ยังใช้แผนภูมิหลักได้',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} จาก {total})',
   chartMissingLibrary: 'คอมโพเนนต์นี้ต้องติดตั้งแพ็กเกจเสริม "chart.js" เพื่อแสดงแผนภูมิ',
   boxPlotMissingLibrary: 'คอมโพเนนต์นี้ต้องติดตั้งแพ็กเกจแผนภาพกล่องเสริมเพื่อแสดงแผนภาพกล่อง',
+  chartInputLimit: 'ละข้อมูลแผนภูมิบางส่วนไว้เนื่องจากถึงขีดจำกัดข้อมูลนำเข้า โปรดใช้ชุดข้อมูลที่เล็กลงหรือสรุปรวมไว้ล่วงหน้าเพื่อแสดงค่าที่ถูกละไว้',
+  histogramInputLimit: 'เก็บเฉพาะตัวอย่างล่าสุด 10,000 รายการเท่านั้น โปรดส่งจำนวนที่จัดกลุ่มตามช่วงไว้ล่วงหน้าให้ lr-chart เพื่อแสดงการแจกแจงที่ใหญ่ขึ้น',
 };
 
 registerLyraLocale('th', strings);

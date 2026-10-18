@@ -88,6 +88,25 @@ export const styles = css`
     stroke-width: calc(var(--lr-border-width-thick) + var(--lr-border-width-thin));
   }
 
+  [part='bin'] {
+    cursor: pointer;
+    outline: none;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+  }
+  .bin-region { fill: var(--lr-color-brand); }
+  .bin-hit { stroke: transparent; stroke-width: var(--lr-icon-button-size); pointer-events: stroke; }
+  .bin-axis { stroke: var(--lr-color-brand); stroke-width: var(--lr-border-width-medium); }
+  [part='bin']:hover .bin-axis,
+  [part='bin']:focus-visible .bin-axis { stroke: var(--lr-color-text); stroke-width: var(--lr-border-width-thick); }
+  [part='bin']:hover .bin-region,
+  [part='bin']:focus-visible .bin-region {
+    stroke: var(--lr-color-text);
+    stroke-width: var(--lr-border-width-medium);
+  }
+  [part='bin']:active .bin-region { stroke-width: var(--lr-border-width-thick); }
+  [part='error'] { color: var(--lr-color-danger); }
+
   [part='legend'] {
     display: flex;
     flex-wrap: wrap;

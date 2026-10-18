@@ -13,6 +13,7 @@ interface HeaderOptions {
   isEnabled(): boolean;
   contentVersion(): unknown;
   getContentRoot(): ParentNode | null;
+  getChangedRoots?(): readonly ParentNode[];
   localize(key: string, fallback?: string, values?: Record<string, string>): string;
   buildHeader(frame: HTMLElement, language: string): HTMLButtonElement;
   emitCopy(outcome: LyraClipboardWriteSuccess): void;
@@ -82,7 +83,7 @@ function deepActive(document: Document): Element | null {
 /** Instance-owned copy controls with generation-safe clipboard writes and owner-window timers. */
 export class MarkdownCodeHeaderController implements ReactiveController {
   private nonceValue?: string;
-  private records: readonly MarkdownCodeBlockRecord[] = [];
+  private records: MarkdownCodeBlockRecord[] = [];
   private generation = 0;
   private tokens: number[] = [];
   private statuses: Status[] = [];
@@ -111,13 +112,14 @@ export class MarkdownCodeHeaderController implements ReactiveController {
     return this.nonceValue;
   }
 
-  setBlocks(next: readonly MarkdownCodeBlockRecord[]): void {
-    for (let i = 0; i < Math.max(this.records.length, next.length); i++) {
+  setBlocks(next: readonly MarkdownCodeBlockRecord[], start = 0): void {
+    for (let i = start; i < Math.max(this.records.length, next.length); i++) {
       const previous = this.records[i];
       const current = next[i];
       if (previous?.language !== current?.language || previous?.source !== current?.source) this.resetIndex(i);
     }
-    this.records = next.map((record) => ({ ...record }));
+    for (let index = start; index < next.length; index++) this.records[index] = { ...next[index]! };
+    this.records.length = next.length;
   }
 
   private resetIndex(index: number): void {
@@ -161,9 +163,16 @@ export class MarkdownCodeHeaderController implements ReactiveController {
     if (root !== this.contentRoot || version !== this.contentVersion) {
       this.contentRoot = root;
       this.contentVersion = version;
-      this.liveButtons = new Map();
-      this.liveFrames = new Map();
-      const frames = root.querySelectorAll<HTMLElement>(`[data-lr-code-frame^="${this.nonce}:"]`);
+      const roots = this.options.getChangedRoots?.() ?? [root];
+      if (roots.includes(root)) { this.liveButtons.clear(); this.liveFrames.clear(); }
+      else for (const [index, frame] of this.liveFrames) if (!frame.isConnected) {
+        this.liveFrames.delete(index); this.liveButtons.delete(index);
+      }
+      const selector = `[data-lr-code-frame^="${this.nonce}:"]`;
+      const frames = roots.flatMap(candidate => [
+        ...(candidate.nodeType === 1 && (candidate as Element).matches(selector) ? [candidate as HTMLElement] : []),
+        ...candidate.querySelectorAll<HTMLElement>(selector),
+      ]);
       let visited = 0;
       for (const frame of frames) {
         if (visited++ >= this.records.length) break;

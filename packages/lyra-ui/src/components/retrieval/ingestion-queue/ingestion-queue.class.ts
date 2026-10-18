@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import {
   html,
   nothing,
@@ -16,12 +16,17 @@ import {
   isNonBlankIdentity,
   isRecord,
 } from '../retrieval-identity.js';
+import { readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
   acquireAnnouncementSink,
+  AnnouncementSinkController,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
+import { SourcePageController, type SourcePageState } from '../../../internal/source-page-controller.js';
+import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
+import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import {
   getListFormat,
   getNumberFormat,
@@ -43,8 +48,8 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUnknown, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueInputLimit, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUnknown, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -137,6 +142,13 @@ export interface IngestionQueueItem {
   error?: string;
 }
 
+/** Provider query for the unfiltered, provider-ordered ingestion queue. */
+export interface IngestionQueueSourceQuery {
+  readonly [key: string]: never;
+}
+export type IngestionQueueSource = LyraPageSource<IngestionQueueItem, IngestionQueueSourceQuery>;
+const SOURCE_QUERY: IngestionQueueSourceQuery = Object.freeze({});
+
 /** `lr-retry`'s `detail` -- extends the shared `RetryEventDetail` (`src/ai/types.ts`) with the
  *  `itemId` identifying *which* queue item the request is about; `attempt` is the attempt number
  *  about to be made: the displayed nonnegative finite-integer attempt count plus one, matching
@@ -205,6 +217,23 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  * Nonstring failure details use the localized failed-stage label before rendering and fresh
  * failure announcements. Omitted details stay omitted; historical failures remain silent on mount.
  *
+ * Input retains the first 10,000 queue items; the limit note reports the assigned source count.
+ * Closed display fields are copied after identity admission, so nested records do not consume the
+ * shared 50,000-value deep-copy budget. Replace the collection to publish source-record changes.
+ *
+ * With dataSource, sourcePage (zero-based) and sourcePageSize (1..500, default 100) address the
+ * complete provider queue. sourceTotal is null while pending or failed, then the exact global
+ * record total. The source takes precedence over items; removing it restores legacy data.
+ * Source rows copy closed display fields, with at most 65,536 aggregate text UTF-16 units per row;
+ * malformed required records fail visibly rather than silently omit rows. Query callbacks own
+ * their execution cost. Same-source assignment or requestUpdate() refreshes; named paints reuse
+ * the current page. Source/revision/refresh/teardown revokes old work. Historical failed rows do
+ * not announce on source browsing, refresh or reconnect, even with announce. Row retry/cancel
+ * events still request host actions; provider-load retry only reloads the current page.
+ *
+ * @csspart source-status - Provider loading/error text.
+ * @csspart source-retry - Retry the current provider page.
+ * @csspart source-pagination - Provider page navigation.
  * @customElement lr-ingestion-queue
  * @event lr-retry - A row's retry affordance was activated (only rendered for `stage="failed"`
  *   rows). `detail: { itemId, attempt }` -- `attempt` is the attempt number about to be made.
@@ -212,6 +241,7 @@ const DEFAULT_VIRTUALIZE_AT = 100;
  *   row). `detail: { itemId, reason }` -- `reason` is always `undefined` from this component.
  * @csspart base - The one stable root shell across empty, populated, and virtualized states. It is
  *   the named region unless a non-empty host `aria-label` makes the host the sole overall owner.
+ * @csspart limit - Notice that only the first 10,000 queue items were retained.
  * @csspart list - The unnamed row container (`role="list"`), including the composed
  *   `<lr-virtual-list>` host in virtualized mode. Its surrounding `base` region owns the queue name.
  * @csspart empty - The `<lr-empty>` zero-items state.
@@ -259,6 +289,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     ingestionEmbeddedOfTotal: LYRA_DEFAULT_ingestionEmbeddedOfTotal,
     ingestionItemProgressLabel: LYRA_DEFAULT_ingestionItemProgressLabel,
     ingestionQueueEmpty: LYRA_DEFAULT_ingestionQueueEmpty,
+    ingestionQueueInputLimit: LYRA_DEFAULT_ingestionQueueInputLimit,
     ingestionQueueLabel: LYRA_DEFAULT_ingestionQueueLabel,
     ingestionRetryWithContext: LYRA_DEFAULT_ingestionRetryWithContext,
     ingestionStageCancelled: LYRA_DEFAULT_ingestionStageCancelled,
@@ -271,11 +302,14 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     ingestionStageQueued: LYRA_DEFAULT_ingestionStageQueued,
     ingestionStageUnknown: LYRA_DEFAULT_ingestionStageUnknown,
     ingestionStageUploading: LYRA_DEFAULT_ingestionStageUploading,
+    loading: LYRA_DEFAULT_loading,
     retry: LYRA_DEFAULT_retry,
+    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     untitledSource: LYRA_DEFAULT_untitledSource,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
+  protected static override readonly identityCollectionProperties = Object.freeze(['items']);
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'items',
@@ -286,6 +320,136 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   /** The queue to render, in display order. Controlled and never mutated by this component --
    *  pass a new array (e.g. as ingestion progresses) to update it. */
   @property({ attribute: false }) items: readonly IngestionQueueItem[] = [];
+
+  private _dataSource?: IngestionQueueSource;
+  private sourceEpoch = 0;
+  private sourceSyncing = false;
+  private sourceInputs?: readonly unknown[];
+  private sourceSize?: number;
+  private sourceResult?: LyraPageResult<IngestionQueueItem>;
+  private sourceRows: readonly IngestionQueueItem[] = [];
+  private readonly sourceItemIdentities = new WeakSet<IngestionQueueItem>();
+  @state() private sourceStateVersion = 0;
+  private readonly sourcePages = new SourcePageController<IngestionQueueItem, IngestionQueueSourceQuery>(this, {
+    normalizeRecord: (record, isCurrent) => this.projectSourceItem(record, isCurrent),
+    validateMetadata: () => {},
+    onChange: () => { this.sourceStateVersion++; },
+  });
+
+  /** Full queue provider. A present invalid source fails visibly; undefined restores items.
+   * Reassign even the same source or call requestUpdate() to publish a new provider snapshot. */
+  @property({ attribute: false })
+  get dataSource(): IngestionQueueSource | undefined { return this._dataSource; }
+  set dataSource(value: IngestionQueueSource | undefined) {
+    const previous = this._dataSource; this._dataSource = value; this.sourceEpoch++;
+    this.requestUpdate('dataSource', previous);
+  }
+  /** Zero-based provider page; only used with dataSource. */
+  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  /** Provider page size, normalized to 1..500. A size change resets the source page to 0. */
+  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  /** Exact total of the current provider queue, or null before a valid response or without a source. */
+  get sourceTotal(): number | null { return this.sourceMode ? this.sourcePages.state.result?.total ?? null : null; }
+  private get sourceMode(): boolean { return this.dataSource !== undefined; }
+  private get sourceFailed(): boolean {
+    return this.sourceMode && !this.sourcePages.state.pending && !this.sourcePages.state.result;
+  }
+  private get sourceBlocked(): boolean {
+    return this.sourceMode && (!this.isConnected || this.sourcePages.state.pending || this.sourceFailed);
+  }
+
+  private projectSourceItem(record: LyraSourceRecord<unknown>, isCurrent: () => boolean): LyraSourceRecord<IngestionQueueItem> {
+    const assertCurrent = (): void => { if (!isCurrent()) throw new TypeError('Obsolete source record'); };
+    const descriptorOf = (target: object, key: PropertyKey) => {
+      assertCurrent();
+      const descriptor = getOwnDataDescriptor(target, key);
+      assertCurrent();
+      return descriptor;
+    };
+    assertCurrent();
+    const field = (value: unknown, key: string): unknown => {
+      if (!isRecord(value)) throw new TypeError('Invalid source item');
+      const descriptor = descriptorOf(value, key);
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) throw new TypeError('Invalid source field');
+      return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+    };
+    let units = 0;
+    const text = (value: unknown, required = false): string | undefined => {
+      if (value === undefined && !required) return undefined;
+      if (typeof value !== 'string' || value.length > 65_536 || (units += value.length) > 65_536) throw new TypeError('Invalid source text');
+      return value;
+    };
+    const raw = record.value;
+    const id = text(field(raw, 'id'), true)!;
+    const rawDocument = field(raw, 'document');
+    const documentId = text(field(rawDocument, 'id'), true)!;
+    if (id !== record.key || !isNonBlankIdentity(documentId)) throw new TypeError('Invalid source identity');
+    const document = Object.freeze({ id: documentId, name: text(field(rawDocument, 'name'), true)!,
+      mimeType: text(field(rawDocument, 'mimeType')), uri: text(field(rawDocument, 'uri')), version: text(field(rawDocument, 'version')) });
+    const stage = text(field(raw, 'stage'));
+    const errorValue = field(raw, 'error');
+    const error = errorValue == null ? undefined : text(typeof errorValue === 'string' ? errorValue : this.localize('ingestionStageFailed'));
+    const numbers: Record<string, number> = {};
+    for (const key of ['progress', 'chunkCount', 'embeddedChunkCount', 'attempts']) {
+      const value = field(raw, key);
+      if (value !== undefined) { if (typeof value !== 'number') throw new TypeError('Invalid source number'); numbers[key] = value; }
+    }
+    const value = Object.freeze({ id, document, stage, error, ...numbers }) as IngestionQueueItem;
+    assertCurrent();
+    this.sourceItemIdentities.add(value);
+    if (errorValue != null && typeof errorValue !== 'string') this.fallbackFailureItems.add(value);
+    assertCurrent();
+    return { key: record.key, order: record.order, value };
+  }
+
+  private syncSource(): void {
+    if (!this.sourcePages || this.sourceSyncing) return;
+    this.sourceSyncing = true;
+    try {
+      if (!this.sourceMode) {
+        if (this.sourceInputs) this.sourcePages.bind(undefined);
+        this.sourceInputs = undefined; this.sourceSize = undefined; this.sourceResult = undefined;
+        this.sourceRows = []; return;
+      }
+      const source = this.dataSource!;
+      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
+      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      if (this.sourceSize !== undefined && this.sourceSize !== size) { page = 0; this.sourcePage = 0; }
+      this.sourceSize = size;
+      const revision = source.revision;
+      const inputs = [source, revision, this.sourceEpoch, this.effectiveLocale, size, page];
+      if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
+      this.sourceInputs = inputs; this.sourceRows = []; this.sourceResult = undefined;
+      this.sourcePages.bind({ source, revision, epoch: this.sourceEpoch, locale: this.effectiveLocale });
+      void this.sourcePages.request(SOURCE_QUERY, page, size);
+    } catch {
+      this.sourcePages.bind(undefined); this.sourceRows = []; this.sourceResult = undefined;
+    } finally { this.sourceSyncing = false; }
+  }
+
+  private acceptSourcePage(): void {
+    const result = this.sourcePages.state.result;
+    if (!result || result === this.sourceResult) return;
+    this.sourceResult = result; this.sourceRows = result.rows.map(record => record.value);
+    if (this.sourcePage !== this.sourcePages.state.page) {
+      this.sourceSyncing = true; this.sourcePage = this.sourcePages.state.page; this.sourceSyncing = false;
+      this.sourceInputs = this.sourceInputs ? [...this.sourceInputs.slice(0, -1), this.sourcePages.state.page] : undefined;
+    }
+  }
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
+    if (args[0] === undefined || ['dataSource', 'sourcePage', 'sourcePageSize'].includes(String(args[0]))) this.syncSource();
+    super.requestUpdate(...args);
+  }
+
+  private onSourcePage = (event: CustomEvent<{ page: number }>): void => {
+    event.stopPropagation(); if (!this.sourceBlocked) this.sourcePage = event.detail.page - 1;
+  };
+  private onSourceRetry(source: IngestionQueueSource | undefined, state: SourcePageState<IngestionQueueItem>): void {
+    if (!this.isConnected || !this.sourceMode || !this.sourceFailed || this.dataSource !== source || this.sourcePages.state !== state) return;
+    this.sourceInputs = undefined; this.syncSource(); this.sourceStateVersion++;
+  }
 
   /** Accessible name for the stable region when the host has no `aria-label`; defaults to
    *  localized `ingestionQueueLabel`. An explicitly empty host label stays empty, and so does an
@@ -320,6 +484,49 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
    *  region rendered inside this shadow root is not reliably announced (JAWS with Firefox ignores
    *  one outright), so `[part="failure-live"]` is only an `aria-hidden` mirror. */
   private sink?: AnnouncementSink;
+  private readonly limitAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private limitInitialized = false;
+  private previouslyInputTruncated = false;
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.limitAnnouncements.adopted();
+    this.sourcePages.adopted();
+    this.sourceStatusInitialized = false;
+  }
+
+  private inputLimitText(): string {
+    const truncation = publicCollectionTruncation(this, 'items');
+    const number = getNumberFormat(this.effectiveLocale);
+    return truncation ? this.localize('ingestionQueueInputLimit', undefined, {
+      count: number.format(truncation.retained), total: number.format(truncation.source),
+    }) : '';
+  }
+
+  private sourceStatusInitialized = false;
+  private previousSourceStatus = '';
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.sourceMode) {
+      const status = this.sourceFailed ? this.localize('tableLoadFailed')
+        : this.sourcePages.state.pending ? this.localize('loading') : '';
+      if (this.sourceStatusInitialized && status && status !== this.previousSourceStatus) this.limitAnnouncements.announcePolite(status);
+      this.sourceStatusInitialized = true; this.previousSourceStatus = status;
+      return;
+    }
+    this.sourceStatusInitialized = false; this.previousSourceStatus = '';
+    const inputTruncated = publicCollectionTruncation(this, 'items') !== undefined;
+    if (this.limitInitialized && inputTruncated && !this.previouslyInputTruncated) {
+      this.limitAnnouncements.announcePolite(this.inputLimitText());
+    }
+    this.limitInitialized = true;
+    this.previouslyInputTruncated = inputTruncated;
+  }
+
+  private renderInputLimit(): TemplateResult | typeof nothing {
+    const text = this.inputLimitText();
+    return text ? html`<p part="limit" role="note">${text}</p>` : nothing;
+  }
 
   /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
    *  own default) -- a raw `NaN` (e.g. an invalid `virtualize-at` attribute) would otherwise make
@@ -329,26 +536,32 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     return finiteCount(this.virtualizeAt, DEFAULT_VIRTUALIZE_AT);
   }
 
+  private readonly fallbackFailureItems = new WeakSet<IngestionQueueItem>();
+
   private normalizeItems(value: unknown): IngestionQueueItem[] {
-    return firstByRetrievalIdentity(
-      Array.isArray(value)
-        ? value.filter((item): item is IngestionQueueItem => {
-            if (!isRecord(item) || !isNonBlankIdentity(item['id']))
-              return false;
-            const document = item['document'];
-            return (
-              isRecord(document) &&
-              isNonBlankIdentity(document['id']) &&
-              typeof document['name'] === 'string'
-            );
-          })
-        : [],
-      (item) => item.id
-    ).map((item) =>
-      item.error == null || typeof item.error === 'string'
-        ? item
-        : { ...item, error: this.localize('ingestionStageFailed') }
-    );
+    const rows: IngestionQueueItem[] = [];
+    for (const valueItem of Array.isArray(value) ? value : []) {
+      try {
+        if (!isRecord(valueItem)) continue;
+        const id = readOwnDataValue(valueItem, 'id');
+        const source = readOwnDataValue(valueItem, 'document');
+        if (!isNonBlankIdentity(id) || !isRecord(source)) continue;
+        const documentId = readOwnDataValue(source, 'id');
+        const name = readOwnDataValue(source, 'name');
+        if (!isNonBlankIdentity(documentId) || typeof name !== 'string') continue;
+        const document = Object.freeze(Object.fromEntries(['id', 'name', 'mimeType', 'uri', 'version']
+          .map(key => [key, readOwnDataValue(source, key)]).filter(([, field]) => field !== undefined))) as unknown as DocumentRef;
+        const fields = Object.fromEntries(['stage', 'progress', 'chunkCount', 'embeddedChunkCount', 'attempts']
+          .map(key => [key, readOwnDataValue(valueItem, key)]).filter(([, field]) => field !== undefined));
+        const error = readOwnDataValue(valueItem, 'error');
+        const row = Object.freeze({ ...fields, id, document,
+          ...(error === undefined ? {} : { error: error === null || typeof error === 'string' ? error : this.localize('ingestionStageFailed') }),
+        }) as IngestionQueueItem;
+        if (error != null && typeof error !== 'string') this.fallbackFailureItems.add(row);
+        rows.push(row);
+      } catch { continue; }
+    }
+    return firstByRetrievalIdentity(rows, item => item.id);
   }
 
   // Memoizes the normalized view for as long as neither input actually changed.
@@ -359,6 +572,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   private normalizedItemsCache?: {
     source: unknown;
     locale: string;
+    failureText: string;
     result: IngestionQueueItem[];
   };
 
@@ -367,13 +581,15 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     if (
       cached &&
       cached.source === this.items &&
-      cached.locale === this.effectiveLocale
+      cached.locale === this.effectiveLocale &&
+      cached.failureText === this.localize('ingestionStageFailed')
     )
       return cached.result;
     const result = this.normalizeItems(this.items);
     this.normalizedItemsCache = {
       source: this.items,
       locale: this.effectiveLocale,
+      failureText: this.localize('ingestionStageFailed'),
       result,
     };
     return result;
@@ -396,6 +612,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.failureLiveText = '';
+    this.sourceStatusInitialized = false;
+    this.previousSourceStatus = '';
     this.isMounting = true;
     this.sink?.release();
     this.sink = undefined;
@@ -403,6 +621,8 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.syncSource();
+    if (this.sourceMode) { this.acceptSourcePage(); this.failureLiveText = ''; this.isMounting = true; return; }
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (wasMounting) {
@@ -423,15 +643,17 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     }
     if (!changed.has('items')) return;
 
-    const previousItems = this.normalizeItems(changed.get('items'));
+    const previousItems = this.normalizedItemsCache?.result ?? [];
     const previousById = new Map(previousItems.map((item) => [item.id, item]));
     this.announceFailures(
       this.normalizedItems.flatMap((item) => {
         if (item.stage !== 'failed' || !item.error) return [];
         const previous = previousById.get(item.id);
+        const previousError = previous && this.fallbackFailureItems.has(previous)
+          ? this.localize('ingestionStageFailed') : previous?.error;
         return !previous ||
           previous.stage !== 'failed' ||
-          previous.error !== item.error
+          previousError !== item.error
           ? [item.error]
           : [];
       })
@@ -495,6 +717,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   };
 
   private onRetryClick(item: IngestionQueueItem): void {
+    if ((this.sourceMode || this.sourceItemIdentities.has(item)) && (!this.sourceMode || this.sourceBlocked || !this.sourceRows.includes(item))) return;
     this.emit('lr-retry', {
       itemId: item.id,
       attempt: this.normalizedAttempts(item) + 1,
@@ -502,6 +725,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   }
 
   private onCancelClick(item: IngestionQueueItem): void {
+    if ((this.sourceMode || this.sourceItemIdentities.has(item)) && (!this.sourceMode || this.sourceBlocked || !this.sourceRows.includes(item))) return;
     this.emit('lr-cancel', { itemId: item.id });
   }
 
@@ -584,7 +808,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
             </div>`
           : nothing}
         ${stage === 'failed' && item.error
-          ? html`<p part="item-error">${item.error}</p>`
+          ? html`<p part="item-error">${this.fallbackFailureItems.has(item) ? this.localize('ingestionStageFailed') : item.error}</p>`
           : nothing}
         ${canRetry || canCancel
           ? html`<div part="item-actions">
@@ -626,43 +850,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     `;
   };
 
-  override render(): TemplateResult {
-    const items = this.normalizedItems;
-    const ariaLabel = retrievalSemanticLabel(
-      this,
-      this.label == null ? this.localize('ingestionQueueLabel') : this.label
-    );
-    const regionRole = retrievalSemanticRole(this, 'region');
-
-    if (items.length === 0) {
-      return html`<div
-        part="base"
-        role=${regionRole ?? nothing}
-        aria-label=${ariaLabel ?? nothing}
-      >
-        <div part="failure-live" class="sr-only" aria-hidden="true">
-          ${this.failureLiveText}
-        </div>
-        <div part="list">
-          <lr-empty
-            part="empty"
-            heading=${this.localize('ingestionQueueEmpty')}
-          ></lr-empty>
-        </div>
-      </div>`;
-    }
-
+  private renderRows(items: readonly IngestionQueueItem[]): TemplateResult {
     const virtualized = items.length > this.effectiveVirtualizeAt;
-    return html`
-      <div
-        part="base"
-        role=${regionRole ?? nothing}
-        aria-label=${ariaLabel ?? nothing}
-      >
-        <div part="failure-live" class="sr-only" aria-hidden="true">
-          ${this.failureLiveText}
-        </div>
-        ${virtualized
+    return virtualized
           ? html`<lr-virtual-list
               part="list"
               exportparts="item:item, item-header:item-header, item-name:item-name, item-stage:item-stage, item-progress:item-progress, item-meta:item-meta, item-chunk-count:item-chunk-count, item-embedding-status:item-embedding-status, item-attempts:item-attempts, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"
@@ -679,7 +869,65 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                 (item) => item.id,
                 (item) => this.itemTemplate(item, true)
               )}
-            </div>`}
+            </div>`;
+  }
+
+  private renderSource(): TemplateResult {
+    const failed = this.sourceFailed;
+    const retrySource = this.dataSource;
+    const retryState = this.sourcePages.state;
+    const pending = this.sourcePages.state.pending;
+    const label = retrievalSemanticLabel(this, this.label == null ? this.localize('ingestionQueueLabel') : this.label);
+    return html`<div part="base" role=${retrievalSemanticRole(this, 'region') ?? nothing} aria-label=${label ?? nothing} aria-busy=${pending ? 'true' : 'false'}>
+      ${failed || pending ? html`<p part="source-status">${this.localize(failed ? 'tableLoadFailed' : 'loading')}</p>` : nothing}
+      ${failed ? html`<button type="button" part="source-retry" @click=${() => this.onSourceRetry(retrySource, retryState)}>${this.localize('retry')}</button>` : nothing}
+      ${failed || pending ? nothing : this.sourceRows.length ? this.renderRows(this.sourceRows) : html`<div part="list"><lr-empty part="empty" heading=${this.localize('ingestionQueueEmpty')}></lr-empty></div>`}
+      <lr-pagination part="source-pagination" format="compact" .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
+        .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${this.sourceTotal ?? -1} .disabled=${this.sourceBlocked || this.sourceTotal === null}
+        .strings=${this.strings} @lr-page-change=${this.onSourcePage} @lr-before-page-change=${this.stopOwnedEvent} @lr-activate=${this.stopOwnedEvent}
+        @focus=${this.stopOwnedEvent} @blur=${this.stopOwnedEvent}></lr-pagination>
+    </div>`;
+  }
+
+  override render(): TemplateResult {
+    if (this.sourceMode) return this.renderSource();
+    const items = this.normalizedItems;
+    const ariaLabel = retrievalSemanticLabel(
+      this,
+      this.label == null ? this.localize('ingestionQueueLabel') : this.label
+    );
+    const regionRole = retrievalSemanticRole(this, 'region');
+
+    if (items.length === 0) {
+      return html`<div
+        part="base"
+        role=${regionRole ?? nothing}
+        aria-label=${ariaLabel ?? nothing}
+      >
+        ${this.renderInputLimit()}
+        <div part="failure-live" class="sr-only" aria-hidden="true">
+          ${this.failureLiveText}
+        </div>
+        <div part="list">
+          <lr-empty
+            part="empty"
+            heading=${this.localize('ingestionQueueEmpty')}
+          ></lr-empty>
+        </div>
+      </div>`;
+    }
+
+    return html`
+      <div
+        part="base"
+        role=${regionRole ?? nothing}
+        aria-label=${ariaLabel ?? nothing}
+      >
+        ${this.renderInputLimit()}
+        <div part="failure-live" class="sr-only" aria-hidden="true">
+          ${this.failureLiveText}
+        </div>
+        ${this.renderRows(items)}
       </div>
     `;
   }

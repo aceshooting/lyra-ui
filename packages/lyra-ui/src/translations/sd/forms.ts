@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'قلم هيٺ',
   signaturePadPenUp: 'قلم مٿي',
+  localePickerInputLimit: 'ٻولي ۽ علائقي جون صرف پهرين 512 داخلائون موجود آهن.',
+  emojiPickerInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب ايموجي جي ڪجهه ڊيٽا ڇڏي وئي آهي.',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

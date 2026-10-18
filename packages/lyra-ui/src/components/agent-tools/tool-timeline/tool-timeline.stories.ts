@@ -258,3 +258,9 @@ export const Narrow320: Story = {
     `;
   },
 };
+
+export const NewestHistory: Story = {
+  render: () => html`<lr-tool-timeline .entries=${Array.from({ length: 10001 }, (_, index) => ({
+    id: `call-${index}`, name: `Tool call ${index + 1}`, args: {}, status: 'success', startedAt: index,
+  }))}></lr-tool-timeline>`,
+};

@@ -44,6 +44,9 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 
 Exported authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolver`.
 
+Concurrent flags resolving the same country and fidelity share pending resolver work within the
+current resolver generation. Settled or failed requests do not prevent later retries.
+
 **Events:** none.
 
 **Slots:** `fallback` — rendered in place of the flag when `country`/`language` cannot resolve to a
@@ -99,8 +102,8 @@ exported:
 itself (`'fr'` → `français`, `'pt-BR'` → `português (Brasil)`). That is what a language switcher
 should list, so a reader who understands none of the current UI language can still find their own.
 It derives from `Intl.DisplayNames`, so no name table ships with the library and results follow the
-browser's own ICU data; the underlying instance comes from a shared memoized cache, since a picker
-does one lookup per offered locale on every render pass. A tag with no display name resolves to the
+browser's own ICU data. The underlying formatter and resolved native names are cached, so repeated
+catalog renders reuse prior results. A tag with no display name resolves to the
 tag itself, and so does a structurally invalid one — `Intl.DisplayNames` throws a `RangeError` on
 those rather than falling back, and a language picker should degrade to showing the raw tag rather
 than tearing down the render. Pair it with `languageToCountry()` for the flag half of the same row.
@@ -357,6 +360,31 @@ plus a peer-neutral `map` getter for common imperative operations. Its runtime v
 underlying MapLibre map. The component observes its own map-container allocation and calls the
 peer's `resize()` when that allocation changes.
 
+**Large spatial sources:** a catalog of a million logical geospatial records can stay in a
+host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile
+sources and layers, through `mapStyle`; the selected peer requests and renders tiles for the
+viewport. The host owns durable records, spatial indexing, identity lookup, global bounds and
+total counts. Keep those totals beside the map: a rendered-feature query describes the current
+viewport, not the complete catalog. Tile density, zoom range and service response sizes remain
+application decisions. This route does not require a million-feature inline GeoJSON collection.
+
+Configure the selected engine's worker before constructing the map, as described below. For a
+custom tile protocol, register `addProtocol()` from that same engine package before assigning a
+style that uses its scheme (`@aceshooting/lyra-map` for the default, `maplibre-gl` for explicit
+`engine="maplibre"`). The host protocol handler supplies real tile bytes and owns its transport,
+authorization and cancellation. Remove registrations with `removeProtocol()` when no remaining
+map uses them. A protocol registration is peer setup, not an `lr-map` provider property.
+
+Use bounded `dataLayers` for changing selections or local overlays fetched by identity or spatial
+query. Only the first 100 descriptors are inspected, and `markers` inspects at most 2,000 entries;
+neither is a complete catalog browser. Stable unique feature IDs allow
+`updateSourceData(sourceId, diff)` to update an applied generated GeoJSON source without replacing
+the whole collection. Check its boolean result and retain the host's authoritative state; a later
+controlled `dataLayers` assignment replaces imperative changes. Opaque GeoJSON handoff and
+uncloned diffs avoid a Lyra deep copy, while the peer still parses, indexes, transfers and caches
+data. The tile cache belongs to the peer; bounded wrapper DOM does not establish a bound on worker
+heap or guarantee constant rendering cost as the source grows.
+
 Markers and popups use the physical top-left origin required by MapLibre's projected transforms in
 both LTR and RTL. Their text and surrounding controls retain logical direction-aware layout.
 
@@ -529,7 +557,9 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
 [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
   trimmed and must be nonempty, and the first successfully admitted marker for an explicit ID wins.
-  A malformed earlier row does not reserve that ID. Markers are reconciled
+  Only the first 2,000 authored entries are inspected; `markersTruncated` reports an omitted
+  suffix. Use clustered `dataLayers` for larger point collections. A malformed earlier row does
+  not reserve that ID. Markers are reconciled
   by that explicit ID (falling back
   to a `lng,lat` key, disambiguated by occurrence order for duplicate-coordinate id-less markers,
   when `id` is omitted) so an unchanged marker isn't torn down and recreated on every `markers`
@@ -540,12 +570,14 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   escaped) when the content is plain text. For marker/popup naming, visible text is extracted from
   trusted markup while `script`, `style`, `template`, `[hidden]`, and `aria-hidden="true"` subtrees
   are excluded; an explicitly supplied `label` remains the more predictable accessible name. A
-  marker whose `color` changes for a persisting `id`
+  marker whose authored `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
   gotchas. Entries with non-finite coordinates, latitude outside `[-90, 90]`, or a runtime
   non-string `label` are skipped without aborting valid siblings. `color` is used only when the
   browser accepts it as CSS `color`;
-  declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
+  declaration breaks and `url()` paint servers fall back to the default color. Without an authored
+  color, markers follow `--lr-color-brand` through CSS `currentColor`; rethemes preserve marker and
+  popup identity, including an open popup. Explicit authored color changes still reconstruct markers.
   Every retained marker is a named `role="button"` tab stop, including one without a popup. Click,
   Enter, and Space emit `lr-map-marker-activate`; Space suppresses its page-scroll default while
   preserving MapLibre's popup toggle. A popup-bearing marker additionally exposes
@@ -556,7 +588,8 @@ GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
 'danger' | 'neutral'; color?: string; strokeColor?: string; line?: LyraMapLineOptions;
 point?: LyraMapPointOptions; kind?: LyraMapDataLayerKind;
 heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` is trimmed and must be nonempty; the first layer for a
-  `sourceId` that is successfully admitted wins; blank, malformed, and later duplicate records are
+  `sourceId` that is successfully admitted wins. Only the first 100 entries are inspected; blank,
+  malformed, and later duplicate records are
   ignored without reserving an identity for a valid later sibling. Each retained entry adds one
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
@@ -587,6 +620,12 @@ heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` 
   The component snapshots the configuration it reads. It passes `choropleth.geojson` and
   `dataLayers[].geojson` through to MapLibre; assign a new `choropleth`, `dataLayers`, or `markers`
   value after changing configuration, because mutating an assigned value is not observed.
+  For an in-place change to pass-through GeoJSON, call `requestUpdate()` explicitly to refresh its
+  comparison snapshot. This refresh still applies when coalesced with a named presentation update.
+  Changed geometry or bounding boxes replace the peer source data. For comparable feature
+  collections, unchanged snapshots avoid a redundant write; eligible property-only changes keep
+  the incremental update path. A refreshed standalone feature or over-limit collection uses a
+  full replacement even when its data is unchanged.
 
   `cluster` and `kind` (both new in 12.0.0) opt one entry out of that three-layer geometry split.
   **Both are strictly additive: an entry that sets neither renders exactly what it rendered before,
@@ -770,8 +809,12 @@ features keep semantically unchanged geometry/bbox values, the component emits M
 incremental `updateData()` for property changes, additions, removals, and order changes. The exact
 next order is preserved: an unchanged prefix stays in place and only the invalidated suffix is
 removed and re-added. Lyra snapshots control and projection data while retaining opaque GeoJSON
-identity at the MapLibre boundary; a bounded, accessor-free comparison verifies the JSON geometry
-graph instead. A missing/duplicate ID, changed geometry, exceeded bound, or uncertain
+identity at the MapLibre boundary. Immutable admitted geometry and bbox identities reuse their
+validated comparison projections; replace those identities when their contents change. Otherwise,
+a bounded, accessor-free comparison verifies the JSON geometry graph. Automatic comparison
+supports at most 10,000 features, with a work budget of at least 50,000 values or 4,096 values per
+feature, whichever is larger, capped at 10,000,000 values. A missing/duplicate ID, changed geometry,
+exceeded bound, or uncertain
 comparison falls back to `setData()` with no change in rendered behaviour. Peers without
 `updateData()` always take the old path.
 
@@ -797,7 +840,8 @@ payload beside the map.
 `LyraMapPointRadiusInterpolation`, `LyraMapPointIcon`, `LyraMapPointIconMode`,
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
 `LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapLegendPanelToggleDetail`,
-`LyraMapStyleSpecification`, `LyraMapEngine`, `LyraMapFeatureRequirements`, and `LyraMapInstance`.
+`LyraMapStyleSpecification`, `LyraMapEngine`, `LyraMapFeatureRequirements`, `LyraMapSourceDataDiff`,
+and `LyraMapInstance`.
 
 **Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
 through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and
@@ -806,6 +850,15 @@ that installed the optional peer and needs its full imperative API can explicitl
 value to the selected engine's `Map` type. `LyraMapInstance.prepareFeatures?()` is present on the
 modular engine and absent on canonical MapLibre, so guard it or narrow to the companion `Map`
 before calling. Identity is preserved: `.map` is the engine instance, not a proxy.
+
+After `lr-map-load`, use the narrowed peer's `queryRenderedFeatures(point, { layers: [...] })`
+for identities painted by style-owned vector layers; `point` is a screen position, which can be
+obtained with the peer's `project([longitude, latitude])`. Attach peer interaction listeners when
+the host needs those layers' hits. `lr-map-click` queries only the component-generated choropleth
+and `dataLayers` layers described below; it does not query arbitrary layer IDs from `mapStyle`.
+
+`markersTruncated: boolean` (read-only) is true when authored marker entries exceed the 2,000-entry
+inspection ceiling; it does not count malformed rows skipped within that prefix.
 
 The modular engine automatically prepares initial and replacement style requirements, including
 projection and terrain. `<lr-map>` additionally awaits per-map main-thread and worker readiness
@@ -824,6 +877,15 @@ it does not replace per-map worker readiness. Same-family updates remain synchro
 optional-peer import without constructing a map or allocating a WebGL context. Pass `'maplibre'`
 for an explicitly native element. It resolves to `false` when the selected peer is unavailable,
 allowing an application to choose a fallback before connecting an element.
+
+`updateSourceData(sourceId: string, diff: LyraMapSourceDataDiff): boolean` forwards a caller-authored
+incremental GeoJSON diff to an applied `dataLayers` or choropleth public `sourceId`. It returns
+`false` before the source is ready, after disconnect, for an unknown source, or when the engine
+lacks `updateData()`. Feature IDs must be stable and unique; the caller owns diff validity. The
+diff is forwarded without cloning, and peer exceptions propagate. It does not change the controlled
+properties. Automatic comparison history is invalidated before forwarding, so a later controlled
+GeoJSON reassignment replaces the imperative state in full. Use this route for changes beyond the
+automatic comparison ceiling.
 
 `fitBounds(bounds: LyraMapBounds, options?: LyraMapFitBoundsOptions): boolean` frames a box
 `[[west, south], [east, north]]` in the viewport: the way to show every current marker, or a
@@ -1154,7 +1216,7 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
 - Ancestor theme-attribute and custom-property changes repaint the already-applied choropleth and
   data-layer colors/opacities in place. This does not recreate MapLibre sources/layers, replace the
   style, or reset the current viewport.
-- a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
+- a marker whose authored `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
   `Marker` has no `setColor()`) rather than mutated in place — this also closes any popup the user
   currently has open on that marker (a fresh, closed `Popup` is built for the new instance); an
   accepted side effect of the reconstruction fallback, not a bug.
@@ -2790,8 +2852,15 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
   are omitted and updates require a new collection assignment. `src` is passed to the embedded
   frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
+- `imageSource: LyraLightboxSource | undefined = undefined` (attribute: false) — identity-owned
+  access to the complete ordered collection, taking precedence over `images` while defined.
+  Invalid defined sources show a localized error and retry action; they never fall back to the
+  legacy array. Setting `undefined` restores the current `images` input. Reassign the source,
+  including the same object, or call a keyless `requestUpdate()` after changing its revision or
+  mutable provider state. Unrelated named display updates do not refresh the source.
 - `index: number = 0` (reflected) — clamped defensively for rendering and re-synced (emitting
-  `lr-index-change`) when `images` shrinks.
+  `lr-index-change`) when the active collection shrinks. In source mode, it retains the requested
+  logical index while its descriptor and image load.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `withoutCounter: boolean = false` (attribute `without-counter`, **not reflected**) — hides the
@@ -2819,8 +2888,35 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
 without changing state. `goTo()` ignores a non-finite
 index without changing state or emitting `lr-index-change`. A finite fractional index is truncated
 toward zero before clamping or loop wrapping, so `lr-index-change.detail.index` is always the
-actual rendered integer index; `reason` defaults to `'api'` and is forwarded as the close event's
+accepted logical integer index, including while a source image is loading; `reason` defaults to
+`'api'` and is forwarded as the close event's
 detail.
+
+**Full image collections:** `LyraLightboxSource` has `revision` and
+`images: LyraIndexedView<LyraSourceRecord<LyraLightboxImage>>`, using the types from
+`@aceshooting/lyra-ui/data-sources.js`. The host supplies a nonnegative safe-integer `images.count`
+and either synchronous indexed access or asynchronous bounded range reads. Each record supplies
+a stable global `key`, canonical nonnegative safe-integer `order`, and image `value`. Keep the view
+stable within a revision; publish a new revision and refresh when its contents change. Navigation,
+clamping, looping and the localized counter use the full logical count, so first, middle and final
+images remain reachable in a million-image host collection without copying it into `images`.
+Current navigation emits `lr-index-change` for the logical destination before its image finishes
+loading; direct consumer `index` writes stay event-silent. Source mode adds no new event.
+
+Only the current image loads, after resolving its descriptor. The component retains at most three
+descriptors in one-record pages, with one range read physically pending and no neighbour prefetch.
+Supplied record and image fields must be own data properties; accessors are rejected without
+invocation. Each key, `src`, `alt` and `caption` admits at most 65,536 UTF-16 units; oversized or
+malformed values fail visibly instead of being clipped. URLs pass `safeMediaSrc()` before loading.
+The host owns provider storage and response allocations; actual image decode/pixel memory belongs
+to the browser and is not bounded by the descriptor cache.
+
+Source loading clears the old image/caption, marks the stage busy and leaves logical navigation
+available. Descriptor or image-load failure shows localized retry chrome; a valid empty collection
+is a separate state. Replacing a source, navigating, refreshing, disconnecting or changing owner
+document revokes obsolete work, so a late completion cannot display an old image. The same
+pan/zoom frame stays mounted and retains focus. The provider should honor the request's abort
+signal; stale-result protection does not make an abort-ignoring provider settle promptly.
 
 **Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
 conditionally cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`):
@@ -2832,7 +2928,7 @@ object. Use
 `lr-after-hide` follows the closed render. Removal while open cannot be vetoed and reports reason
 `unmount`. `lr-index-change` (`detail: { index }`, fired
 for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
-`goTo()` — and when a shrinking `images` moves the shown image; **not** when a consumer sets
+`goTo()` — and when a shrinking active collection normalizes the index; **not** when a consumer sets
 `index` directly); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
 
@@ -2849,7 +2945,9 @@ including a consumer-driven one, appends the localized position to the document'
 embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
 `previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its
-`id` is the panel's `aria-describedby` target).
+`id` is the panel's `aria-describedby` target), `source-loading`, `source-error`, and `source-retry`
+(the current source image's retry button). `stage` exposes `aria-busy="true"` while source
+descriptor or native image loading is pending.
 
 **Themeable custom properties:** `--lr-lightbox-overlay-color` (default
 `var(--lr-color-overlay-strong)` — the backdrop scrim), `--lr-lightbox-control-bg` (default
@@ -2874,7 +2972,7 @@ photo content.
   measured by the lightbox, so stale load events cannot apply a previous image's size. The fit
   policy covers the painted image only; the lightbox's DOM caption, toolbar, legend-like actions,
   and tooltip content remain outside that image surface.
-- scope for v1: no per-image slotted content (data-driven via `images` only), no dot indicators, no
+- scope for v1: no per-image slotted content (data-driven via `images` or `imageSource`), no dot indicators, no
   visual open/close animation, no click-image-to-navigate, no touch-swipe. Lifecycle phases are
   still observable through the before/after events and methods above.
 
@@ -3074,10 +3172,12 @@ Removing `mime-type` consumes the absent hint safely and restores automatic vide
 `kind` explicitly selects audio. Attribute removal keeps its `null` property readback; an explicit
 empty hint remains empty, and a later audio MIME value restores audio detection.
 
-A cue with no `end` extends to the next strictly chronological applicable start, or remains
+With `cueSource` null, a cue with no `end` extends to the next strictly chronological applicable start, or remains
 open-ended when none exists. Equal starts do not end each other. The player indexes starts on cue
-assignment in at most O(n log n) work and reconciles each seek/time update in O(n) work. Caller
-order, first ID admission, explicit ends and overlap arbitration are retained; a paused seek uses
+assignment/duration changes in O(n log n) work with O(n) retained intervals. Seek/time updates
+resolve the interval in O(log n), or O(1) while the previous answer interval still applies. Overlaps
+choose the greatest effective start, then the later original index. Caller order, first ID
+admission and explicit ends are retained; a paused seek uses
 replacement cues immediately, even before rendering. Duration changes preserve the same
 effective-start rules.
 
@@ -3087,7 +3187,116 @@ seeking retains token-driven pointer feedback.
 The default document-viewer renderer advertises `time-range` anchors but not search: the generic
 document payload has no cue/transcript field, so advertising search there would expose a control
 whose result is always empty. Standalone `<lr-av-player>` search remains available whenever the
-consumer supplies `cues` directly.
+consumer supplies `cues` or a complete `cueSource` directly.
+
+**Complete indexed transcript:** `cueSource: LyraAvCueSource | null = null` (attribute: false)
+takes display precedence over `cues`, bypassing the legacy snapshot, tick index and search scans.
+Invalid non-null providers fail visibly; setting `null` restores the current legacy cue input and
+recomputes its retained search. The legacy `cues` route retains its 10,000-cue cap. Provider storage,
+interval indexing and full-text/speaker search remain host-owned; no complete transcript array,
+all-ID index or match array is retained by the player.
+
+```ts
+import type { LyraAvCueSource, LyraAvActiveCue, LyraAvCueSearch, LyraAvCue } from
+  "@aceshooting/lyra-ui/components/media/av-player/av-player.class.js";
+import type { LyraSourceRequest, LyraSourceValue } from
+  "@aceshooting/lyra-ui/utilities/data-preparation.js";
+```
+
+`LyraAvCueSource` supplies immutable `revision` (a nonempty string or finite number), safe
+nonnegative integer `count`, and four required own-data methods. Methods may return values or
+PromiseLike results; requests include an abort `signal`:
+
+- `getCue(index, request): LyraSourceValue<LyraAvCue | null>` returns the cue at its exact original
+  zero-based source index. An unavailable/null in-range position stays an unavailable,
+  noninteractive row; it never deletes or compacts a logical position.
+- `findCue(cueId, request): LyraSourceValue<{ index, cue } | null>` resolves a globally unique ID
+  directly, without scanning cached rows. Returned identity/index must agree with the request.
+- `activeAt(time, request): LyraSourceValue<LyraAvActiveCue>` resolves the complete source's active
+  cue and its exact validity interval.
+- `search(query, request): LyraSourceValue<LyraAvCueSearch>` searches the complete index; this
+  request additionally includes the effective `locale`.
+
+Provider cue records are closed, cloned and frozen own-data values:
+`{ cueId, start, end?, text, speaker? }`. `cueId` must already be trimmed, nonempty and at most
+256 UTF-16 units; `text` is at most 100,000 units and `speaker` at most 4,096. Start is finite and
+nonnegative; an explicit end is finite and at least start. Malformed, accessor-backed, oversized,
+duplicate or contradictory locally observed records fail without silent coercion/truncation.
+The provider guarantees global ID uniqueness and immutable agreement among row, lookup, active
+and search replies; the player checks only its bounded observable records. Source timestamps are
+absolute media seconds and are never clamped into invented end-of-media active cues. Committed
+row activation seeks that row's original start through the existing media seek contract.
+
+`LyraAvActiveCue` is `{ index: number | null, cue: LyraAvCue | null, validFrom, validUntil }`.
+Index/cue must both be null or both valid; a real index is below source count. The half-open
+`[validFrom, validUntil)` interval must be nonempty and contain the requested time; infinities
+are allowed only as interval bounds. Explicit cue start/end must also contain the requested time.
+The provider resolves omitted ends and overlaps using greatest start, then later original source
+index, including complete no-active intervals. The player retains one completed answer interval;
+ticks inside it make no active request. Seeks invalidate that interval even when they stay within
+its bounds. Out-of-interval ticks coalesce to the latest desired time; returning to a cached answer
+revokes an obsolete pending intent. `lr-cue-change` retains `{ cueId, index }` with the original
+source index, or `null`/`-1`, and emits only on an actual active identity/index transition.
+
+The transcript uses 32-row pages, at most 128 ready cues/four pages, and at most two staged pages
+(64 cues). `getCue` calls are sequential within each page, with at most two physically pending
+calls across pages. At most two additional active/selected-or-transient-match records are retained.
+The resulting 194-record payload ceiling is 20,244,288 UTF-16 units at maximum field sizes,
+separate from object overhead, validation temporaries, query strings and opaque provider storage.
+The list exposes the full logical `count`; cache size does not redefine transcript length.
+
+Existing `search(query): Promise<number>` trims its query and matches locale-aware,
+case-insensitive substrings of complete cue text OR speaker. `LyraAvCueSearch` supplies exact safe
+`count <= source.count` and own-data `getMatch(matchIndex, request)`, returning `{ index, cue }`
+for an original row. Each source index occurs at most once in provider match order. The player
+captures this indexed handle without enumerating hits, reveals the first match before resolving,
+and retains only the count, match ordinal and one selected record. `searchNext()`/`searchPrevious()`
+wrap the complete match ordinal and reveal the original list row without seeking media. Returned
+matches must satisfy the query and agree with subsequently loaded rows before scroll/highlight
+commit. Visible ready-row highlighting checks only bounded cue text/speaker.
+
+`lr-search-change` keeps `{ query, matchCount, matchCountExact: true, activeIndex }`, where
+`activeIndex` is the match ordinal, not the cue's original row index. Only authoritative completed
+matches, exact-zero results and explicit clears emit. Empty queries/`clearSearch()` clear state
+without provider work; canceled/unavailable search resolves `0` and navigation resolves `false`
+without fabricating an exact-zero event. Unavailable text uses the existing localized `error`
+surface and light-DOM failure announcements; loading uses the existing loading label. Locale
+changes restart the current query;
+ordinary playback ticks do not repeat search.
+
+One physical `activeAt`, one `findCue`, one `search` and one `getMatch` may run alongside the two
+`getCue` calls: six fixed physical permits, each with only the latest logical demand. Ignored aborts
+hold permits until actual settlement; cancellation settles obsolete search/navigation promises
+promptly without allowing overlapping replacement calls. Reassign even the same source, or call
+a keyless `requestUpdate()`, after revision/state changes. Named presentation updates reuse admitted
+data. Rebind, replacement, clearing, disconnect and adoption revoke old rows, intervals, search
+handles and effects; reconnect recaptures current input. Existing transcript/cue/state parts and
+time-range anchor methods apply; no new cue-ID anchor kind or cue-selection event is added.
+
+**Exported cue-source declarations:**
+
+These types are exported from the granular AV class entry shown above.
+
+`LyraAvCueSource {
+  readonly revision: LyraSourceRevision;
+  readonly count: number;
+  getCue(index: number, request: LyraSourceRequest): LyraSourceValue<LyraAvCue | null>;
+  findCue(cueId: string, request: LyraSourceRequest): LyraSourceValue<{ readonly index: number; readonly cue: LyraAvCue } | null>;
+  activeAt(time: number, request: LyraSourceRequest): LyraSourceValue<LyraAvActiveCue>;
+  search(query: string, request: LyraSourceRequest & { readonly locale: string }): LyraSourceValue<LyraAvCueSearch>;
+}`
+
+`LyraAvActiveCue {
+  readonly index: number | null;
+  readonly cue: LyraAvCue | null;
+  readonly validFrom: number;
+  readonly validUntil: number;
+}`
+
+`LyraAvCueSearch {
+  readonly count: number;
+  getMatch(matchIndex: number, request: LyraSourceRequest): LyraSourceValue<{ readonly index: number; readonly cue: LyraAvCue }>;
+}`
 
 **Properties:** `src: string = ''`, `name: string = ''`, `kind?: 'audio' | 'video'`
 (attribute-backed auto-detection override), `mimeType: string = ''` (attribute `mime-type`), `poster: string =
@@ -3100,8 +3309,8 @@ gradient scrim, while browser-owned native media controls are unchanged,
 `rates: readonly number[] = [0.75, 1, 1.25, 1.5, 2]` (attribute: false),
 `cues: readonly LyraAvCue[] = []` (attribute: false), `peaks: readonly number[] = []`
 (attribute: false), and `tracks: readonly LyraAvTrack[] = []` (attribute: false). Each collection is
-normalized synchronously on assignment into a bounded, cloned, frozen snapshot; mutate by assigning a
-new collection. The inherited
+normalized synchronously on assignment into a bounded, cloned, frozen snapshot when its legacy
+route is active; mutate by assigning a new collection. The inherited
 anchor-target surface is `highlights: readonly LyraHighlight[] = []` (property only; assign a new
 collection to update), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
@@ -3119,12 +3328,71 @@ renders video) and never appears in `lr-load`'s `detail.kind`.
 `poster` is ignored for audio and is validated with the same safe media-source allowlist as `src`
 before reaching the native video element; an unsafe poster URL is omitted.
 
-Runtime numeric input is normalized before it reaches media, canvas, or `Intl`: cue/highlight times
+Runtime legacy input is normalized before it reaches media, canvas, or `Intl`: cue/highlight times
 and waveform peaks are clamped to their valid ranges; non-finite native duration/current time
 cannot leak into state or events. `rates` keeps only unique finite values in the supported
 `0.0625..16` range, while always including the normalized current `playbackRate`.
 
-**Waveform lifecycle:** with `peaks`, waveform canvas painting is gated by player visibility when
+**Prepared whole-duration waveform:** `waveform: LyraPreparedWaveform | null = null`
+(attribute: false) takes precedence over `peaks` for waveform presence, painting and failure state.
+Set `null` to restore current legacy peaks/validity. The supplied descriptor remains caller-owned
+and retained by identity; the player clones/freezes only its bounded accepted fields/buckets.
+It never decodes media, calls a sample reader or materializes original samples.
+
+```ts
+import { prepareLyraWaveform } from "@aceshooting/lyra-ui/utilities/data-preparation.js";
+import type { LyraPreparedWaveform, LyraIndexedInput } from
+  "@aceshooting/lyra-ui/utilities/data-preparation.js";
+
+player.waveform = await prepareLyraWaveform(samples, {
+  duration: durationSeconds,
+  maxBuckets: 1000,
+});
+```
+
+`prepareLyraWaveform(input: LyraIndexedInput<number>, options: LyraPreparationOptions &
+{ duration: number; maxBuckets?: number }): Promise<LyraPreparedWaveform>` asynchronously scans
+every original position once. Its immutable reader supplies `revision`, safe nonnegative `count`,
+and `read(start, count, { signal })`; each response must be an array of exactly the requested size.
+Preparation yields between chunks, supports `signal`, defaults `batchSize` to 2,048 and clamps it
+to at most 8,192. Budgets must be positive safe integers; `maxBuckets` defaults/clamps to 65,536.
+Finite samples clamp to `[0, 1]`; nonfinite/missing samples preserve their positions and contribute
+no peak. Revision/count changes or reader failures reject. Only bounded chunks and output buckets
+are retained; source storage/index construction remains caller-owned. Hosts may also author a
+complete bounded envelope directly, with responsibility for truthful full-source statistics.
+
+`LyraPreparedWaveform` has `{ revision, counts: { sourceCount, validCount, invalidCount },
+sampleCount, duration, buckets, firstAmplitude, lastAmplitude }`. Counts/sampleCount are safe
+nonnegative integers, `sampleCount === sourceCount`, and valid/invalid counts conserve the source.
+Revision is a nonempty string or finite number; duration is finite nonnegative seconds.
+At most 65,536 own-data buckets `{ startIndex, endIndex, maxAmplitude }` must form ordered,
+contiguous, nonempty half-open intervals partitioning `[0, sampleCount)`. Maxima are finite in
+`[0, 1]`. Endpoint amplitudes describe the original first/last samples, each null when invalid or
+absent, otherwise finite `[0, 1]` and no larger than its covering bucket's maximum. Empty input
+requires zero counts, empty buckets and null endpoints; all-invalid input has zero bucket maxima
+and null endpoints. Accessors, sparse fields, gaps/overlaps and malformed counts/amplitudes reject
+without clipping or legacy fallback.
+
+Painting maps each original index interval across the complete duration; unequal intervals retain
+their actual proportions. A monotone O(bucketCount + barCount) pass merges overlapping interval
+maxima into at most 4,096 physical bars. Final-bucket energy survives even when the final endpoint
+amplitude is quiet. Canvas backing stores stay within 4,096 per dimension and 8,388,608 pixels.
+Once positive native media metadata is authoritative, envelope duration must agree within
+`0.001 + 4 * Number.EPSILON * max(mediaDuration, envelopeDuration)` seconds. Mismatch shows a
+localized `error` and plain seek rail until metadata/envelope agree, without changing native
+duration or seek coordinates. Before metadata the envelope may show proportions, but cannot enable
+native seeking. Source/kind/MIME changes reset old metadata authority; duration changes recheck it.
+
+Malformed/mismatched waveforms use localized `avPlayerWaveformUnavailable` feedback and a fresh
+post-mount assertive light-DOM announcement, without a new waveform event or `lr-render-error`.
+Reassign even the same descriptor, or call a keyless `requestUpdate()`, after changing it; named
+playback/presentation updates reuse the accepted snapshot. Legacy `peaks` must already represent
+the whole recording: arrays over 65,536 entries reject before reading any entry, retaining no
+prefix. Valid bounded peaks keep their existing normalization and endpoint-preserving downsampling.
+Prepared presence hides inactive legacy admission errors; clearing it exposes current legacy
+validity again.
+
+**Waveform lifecycle:** with `peaks` or `waveform`, waveform canvas painting is gated by player visibility when
 `IntersectionObserver` is available. Peak, theme, and resize changes while the player is
 off-screen coalesce into one paint on re-entry; environments without that API retain eager
 painting.
@@ -3147,8 +3415,8 @@ unsupported or unresolved targets report `false` through the return value and `l
 (`detail: { readonly cueId, readonly index }`; `cueId` is `null` and `index` is `-1` when no cue is active),
 `lr-highlight-activate` (`detail: { highlightId }`), `lr-anchor-result` (`detail: {
 found }`), `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`;
-`matchCountExact` is always `true` — `search()` matches over the already-loaded `cues` array with no
-additional ceiling), and
+`matchCountExact` is always `true` for emitted results — legacy search covers the admitted `cues`
+array with no additional ceiling, while source search reports the complete indexed count), and
 `lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
 `play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original
@@ -3371,6 +3639,8 @@ visible but disabled while live children are unavailable; after hydration, each 
 title/poster/duration and native `inert` state become authoritative in a corrective update that
 reuses the server-rendered row nodes. Once live children have been observed, later removal does not
 make stale seed rows reappear.
+Live-child updates no longer scan the superseded seed metadata. Removing every adopted child
+keeps live-child ownership; it does not reactivate the original seed rows.
 
 **Methods:** `goTo(index)` selects a finite integer direct-child index; invalid, fractional, and
 inert-child indexes are no-ops. Calling it for the current index still emits `lr-video-change`, matching
@@ -3664,6 +3934,11 @@ These named interfaces and helper signatures are available to typed integrations
     readonly alt?: string;
     readonly caption?: string;
   }`
+  Import: `@aceshooting/lyra-ui/components/media/lightbox/lightbox.class.js`.
+  `LyraLightboxSource {
+    readonly revision: LyraSourceRevision;
+    readonly images: LyraIndexedView<LyraSourceRecord<LyraLightboxImage>>;
+  }`
 
 - **`components-media-map-map-loader-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
@@ -3686,6 +3961,22 @@ These named interfaces and helper signatures are available to typed integrations
     Popup: new (options?: { offset?: number }) => MapLibrePopupCapability;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
+  `MapLibreSourceDataDiff {
+    readonly removeAll?: boolean;
+    readonly remove?: readonly (string | number)[];
+    readonly add?: readonly Feature[];
+    readonly update?: readonly {
+      readonly id: string | number;
+      readonly newGeometry?: Geometry;
+      readonly removeAllProperties?: boolean;
+      readonly removeProperties?: readonly string[];
+      readonly addOrUpdateProperties?: readonly {
+        readonly key: string;
+        readonly value: unknown;
+      }[];
+    }[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreGeoJsonDiff {
     readonly remove?: readonly (string | number)[];
     readonly add?: readonly Feature[];
@@ -3701,7 +3992,7 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreGeoJsonSource {
     setData(data: unknown): void;
-    updateData?(diff: MapLibreGeoJsonDiff): void;
+    updateData?(diff: MapLibreSourceDataDiff): void;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreMapCapability {
@@ -3781,6 +4072,8 @@ These named interfaces and helper signatures are available to typed integrations
 - **`components-media-map-map-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `buildGeoJsonPropertyDiff(previous: unknown, next: unknown): MapLibreGeoJsonDiff | null`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapSourceDataDiff = MapLibreSourceDataDiff`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapEngine = 'modular' | 'maplibre'`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.

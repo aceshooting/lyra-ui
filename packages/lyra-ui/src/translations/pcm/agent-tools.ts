@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Na only di first {count} test results dem show.',
   toolTimelineLimit: 'Na maximum {count} tool calls dem show.',
   toolSelectLimit: 'Na only di first {count} tools dem show.',
+  testResultsInputTooLarge: 'Di test result details pass di display limit.',
   toolCall: 'Call tool',
   maximize: 'Make am full size',
   promptStudioVariableName: 'Name for variable {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Na only di first {count} files dem show.',
   taskListLimit: 'Na only di first {count} tasks dem show.',
   evalDatasetLimit: 'Na only di first {count} examples dem show.',
+  activityFeedInputLimit: 'Na only di newest {count} out of {total} entries dem dey keep.',
+  spanWaterfallLimit: 'We dey show {shown} out of {total} spans.',
+  toolTimelineInputLimit: 'Na only di newest {count} out of {total} tool calls we dey keep.',
 };
 
 registerLyraLocale('pcm', strings);

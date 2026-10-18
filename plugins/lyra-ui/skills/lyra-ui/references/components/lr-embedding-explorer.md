@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,6 +18,76 @@
 
 Dependency-free accessible 2D embedding projection viewer. Coordinates are projected by the host;
 the component only normalizes them into SVG, colors optional clusters, and emits selection events.
+
+**Complete spatial source:** `source: LyraSpatialPointSource<EmbeddingPoint & LyraSpatialPoint>
+| null = null` (attribute: false) takes precedence over `points` without copying the complete
+population. Setting `null` restores the legacy point-array route. `viewport: LyraSpatialBounds
+| null = null` (attribute: false) uses `{ minX, maxX, minY, maxY }`; `null` shows the complete global
+domain. Source storage, indexing and aggregation remain host-owned.
+
+```ts
+import type { EmbeddingPoint } from
+  "@aceshooting/lyra-ui/components/retrieval/embedding-explorer/embedding-explorer.class.js";
+import type {
+  LyraSpatialBounds, LyraSpatialPoint, LyraSpatialBin, LyraSpatialQuery,
+  LyraSpatialPointSource, LyraSpatialBinSelectDetail,
+} from "@aceshooting/lyra-ui/utilities/data-spatial.js";
+```
+
+The provider has immutable `revision`, safe nonnegative integer `count`, and complete global
+`bounds: LyraSpatialBounds | null`; bounds are null exactly for an empty source. Revision is a
+nonempty string of at most 256 UTF-16 units or a finite number. `query({ signal, bounds, maxPoints,
+maxBins })` returns `{ points, bins, matchedCount }`; `getPoint(id, { signal })` returns the exact
+original point or `null`. Both methods may return values or PromiseLike results. Source metadata,
+methods and payload fields must be own data properties; accessor-backed or sparse replies reject.
+Unknown point fields are excluded from the closed projection.
+
+Each exact/representative point supplies `{ id, sourceIndex, x, y, label?, sourceId?, cluster? }`.
+`sourceIndex` is a safe original zero-based index below `count`, independent of the representative
+array position; coordinates are finite and within global bounds. IDs are globally unique,
+nonblank and at most 256 UTF-16 units; `label` is at most 1,024 units, `sourceId` and string `cluster`
+at most 256 units, and numeric clusters must be finite. Query representatives and exact lookups
+must agree within a revision. Admission detects bounded duplicate/conflicting identities; global
+uniqueness and unseen data truth remain provider obligations.
+
+Each `LyraSpatialBin` has `{ bounds, count }` with positive safe `count`. Bin counts sum exactly
+to `matchedCount <= source.count`, covering every match in the current viewport. Representative
+points overlay that population and never add to its total. Bins may leave spatial holes but cannot
+overlap in their interiors; normal-axis ownership is half-open with inclusive final viewport
+edges. Representatives must belong to a bin and cannot outnumber its population. Collapsed global
+axes stay exactly collapsed and project at the center; a noncollapsed axis requires a positive
+viewport span contained in the global domain. No fabricated domain expansion is applied.
+
+Source mode requires normalized `maxRenderedPoints >= 3`, including for an empty source;
+smaller budgets show an error. The default remains 1,000 and ceiling 10,000. Two slots within that
+budget are reserved for independent controlled-selected and imperative-revealed exact points.
+For `A = maxRenderedPoints - 2`, `maxBins = ceil(A / 2)` and `maxPoints = A - maxBins`: default
+499 bins + 499 representatives + two exact slots. Unused capacity is not borrowed. Exact overlays
+deduplicate against representatives and each other. Each query admits at most 997,000 UTF-16
+metadata units; current/pending queries, exact records and bounded intent/revision strings share
+a 2,000,000-unit envelope. No full point array or all-ID map is retained.
+
+`revealSourcePoint(id: string): Promise<boolean>` resolves an exact original ID, minimally pans an
+explicit viewport while preserving its representable span/clamping to global bounds, waits for
+current query/rendering and focuses that point. A null viewport stays global. It leaves
+`selectedPointId` unchanged and emits no selection. Missing, invalid, obsolete, disconnected or
+unrepresentable-pan requests resolve `false`. Selected and revealed records have independent slots;
+a selected record may remain retained outside the visible viewport. Accessible point ordinals use
+original `sourceIndex + 1`, not representative order.
+
+`lr-point-select` retains `{ point }` for exact original immutable point data, including ID and
+sourceIndex. Activating a density bin emits noncancelable `lr-spatial-bin-select` with frozen
+`LyraSpatialBinSelectDetail { revision, bounds, count }`, never an exact-point event. Source mode
+adds `bin` and `error` parts; `limit` reports the complete global count/domain and current viewport
+count/domain with density and overlay counts distinguished. The cluster legend describes retained
+point overlays rather than certifying all global clusters.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named style/strings updates reuse admitted data. Replacement, refresh, disconnect and adoption
+revoke older controls, reveal promises and visible effects. Query and exact lookup each allow one
+physically unsettled call plus only the latest desired intent; ignored aborts hold that lane until
+settlement. Providers should honor the abort signal. The following sampling and last-completed-view
+activation behavior describes the legacy route with `source` null.
 
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
 y, label?, sourceId?, cluster? }`; `selectedPointId: string = ''` (attribute
@@ -29,25 +99,33 @@ including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host 
 attribute or `label`, `accessibleLabel` names the plot. An authored host `aria-label` governs the plot name too (including an
 explicitly empty value), so a competing internal generic label is not exposed. Non-finite
 coordinates are omitted.
+`maxRenderedPoints: number = 1000` (attribute `max-rendered-points`) controls the evenly sampled
+point budget. Finite values clamp to 1–10,000; invalid values use 1,000. A selected point outside
+the sample is additionally retained. Replace `points` to change the owned input.
 Blank point ids and later duplicates are also omitted first-wins before empty state, roving focus,
 selection, rendering, or events.
 Pointer and programmatic focus synchronize the single roving tab stop, and every point keeps at
 least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker. Optional
 cluster membership is exposed as each option's description and in a visible text legend, so the
 grouping never depends on color alone.
-Above 1,000 points, the plot renders a deterministic, evenly spaced sample of the whole array
+Above `maxRenderedPoints` (1,000 by default), the plot renders a deterministic, evenly spaced sample of the whole array
 (spanning the full input, not a leading run) instead of every point, keeping DOM node and listener
-count bounded while the sampled points stay representative of the full plotted distribution; a
-localized "showing N of M" notice appears in `[part="limit"]`. `bounds` and the cluster legend
-still derive from the complete `points` array, so a decimated view keeps the same scale and the
-same complete legend as the full plot. The selected point is always drawn, even when the sample
-skipped it. An assignment too large for one collection snapshot (10,000 entries / 50,000 values) is
-itself sampled evenly across its whole length, and the notice counts the full input.
+count bounded. This index sample does not guarantee spatial extrema or every cluster. A localized
+"showing N of M" notice appears in `[part="limit"]`. Bounds and the cluster legend derive from the
+admitted snapshot; a selected point in that snapshot is drawn even when the render sample skipped
+it. An assignment too large for one collection snapshot (10,000 entries / 50,000 values) first
+selects a bounded set of evenly spaced candidate identities across its whole length, then resolves
+each candidate's first valid occurrence in cancelable chunks. The notice counts the full input,
+but bounds, clusters, and selectable identities remain limited to that admitted snapshot.
+The last completed view stays visible with `aria-busy` until the replacement is ready; activating
+one of its points still emits that displayed point. Keep pending source arrays and records stable,
+or reassign/explicitly call `requestUpdate()` to restart inspection. Replacement and disconnect
+cancel unfinished work, and reconnect resumes from the current source.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space (not on key repeat).
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
-`limit` (the "showing N of M" render-cap notice, present only above 1,000 points), `empty`.
+`limit` (the "showing N of M" sampling notice), `empty`.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`

@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Sampuli halali {validCount} katika usambazaji mzima; {belowCount} chini na {aboveCount} juu ya mipaka ya vipindi vilivyoonyeshwa; sampuli batili {invalidCount}.',
+  histogramDistributionRange: 'Masafa ya sampuli yaliyoonekana: {min} hadi {max}.',
   chartCategory: 'Kategoria',
   chartTotal: 'Jumla',
   chartAxisTotal: 'Jumla ya {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, radius {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'inaongezeka',
-  chartTrendDecreasing: 'inapungua',
-  chartTrendFlat: 'tambarare',
-  chartSummary: '{label}: thamani {count}, masafa {min} hadi {max}, mwelekeo {trend}',
   chartSeriesNoData: '{label}: hakuna data',
   chartSummaryWithData: 'Chati ya {type}. {summaries}.',
   chartSummaryEmpty: 'Chati ya {type} haina data.',
-  chartSummarySeparator: '; ',
   chartData: 'Data ya chati',
   chartRenderUnavailable: 'Uonyeshaji wa chati haupatikani.',
+  chartPreparedSummaryZoom: 'Kuza huonyesha muhtasari ulioandaliwa; maelezo ya ziada kupitia faharasa hayapatikani.',
+  chartSpatialSummary: 'Chanzo kizima: nukta {count}, x {minX} hadi {maxX}, y {minY} hadi {maxY}. Mwonekano: nukta {matchedCount}, x {viewMinX} hadi {viewMaxX}, y {viewMinY} hadi {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Nusukipenyo katika chanzo kizima: {min} hadi {max}.',
+  chartSpatialDensityLegend: 'Msongamano unajumuisha mifululizo yote; kuonekana kwa mifululizo kunaathiri tabaka za nukta pekee.',
+  chartSpatialPoint: '{series}: {id}, nafasi katika chanzo {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Eneo la msongamano: nukta {count}, x {minX} hadi {maxX}, y {minY} hadi {maxY}.',
+  chartSpatialHidden: ' (mfululizo umefichwa)',
   chartDataSampled: 'Chati na jedwali la data lililotengenezwa vinaonyesha sampuli ya hadi rekodi 1,000. Toa jedwali maalum la data ili kufikia data yote ya chati.',
   chartPlotSampled: 'Chati inaonyesha sampuli ya hadi rekodi 1,000; jedwali la data linaorodhesha data yote.',
   chartZoomUnavailable: 'Kuza hakupatikani, lakini chati kuu bado inapatikana.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} kati ya {total})',
   chartMissingLibrary: 'Kipengele hiki kinahitaji kifurushi cha hiari "chart.js" kisakinishwe ili kuchora chati.',
   boxPlotMissingLibrary: 'Kipengele hiki kinahitaji kifurushi cha hiari cha chati za kisanduku kisakinishwe ili kuchora michoro ya kisanduku.',
+  chartInputLimit: 'Baadhi ya data ya chati imeachwa kwa sababu kikomo cha ingizo kimefikiwa. Toa mkusanyiko mdogo wa data au uliojumlishwa mapema ili kuwakilisha thamani zilizoachwa.',
+  histogramInputLimit: 'Ni sampuli mpya zaidi 10,000 pekee zinazohifadhiwa. Toa kwa lr-chart hesabu zilizowekwa katika makundi ya vipindi mapema ili kuwakilisha usambazaji mkubwa zaidi.',
 };
 
 registerLyraLocale('sw', strings);

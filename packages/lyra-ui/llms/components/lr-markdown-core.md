@@ -18,10 +18,10 @@
 
 A build-lean sibling of `<lr-markdown>` above, for a consumer whose `languages` map already covers
 every language it will ever render — mirrors `<lr-code-block-core>`'s relationship to
-`<lr-code-block>`. Where `<lr-markdown>` unconditionally calls `loadShikiHighlighter()` — the
-default ~200-language dynamic-import table loader, whose bundled lookup table a bundler can't
-statically narrow away —
-this component's own module never imports or calls that function at all; it only ever calls
+`<lr-code-block>`. The full `<lr-markdown>` module references `loadShikiHighlighter()` for languages
+absent from its explicit map. That loader includes the default ~200-language dynamic-import table,
+whose bundled lookup table a bundler cannot statically narrow away.
+This component's own module never imports or calls that function; it only calls
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
@@ -55,7 +55,7 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
 `codeBlockHeader: boolean = false` (attribute `code-block-header`),
 `withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`),
-`languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
+`languages: Readonly<Record<string, ShikiLanguageSource>> = {}` (attribute: false) —
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
 block stays unhighlighted permanently. Each value is either an already-resolved grammar or a lazy
 loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
@@ -70,6 +70,7 @@ The same 1,000,000-code-unit/20,000-node corpus ceiling, 4,096-code-unit quote-f
 4,000,000-code-unit work ceiling, 10,000-record admission ceiling, 1,000-candidate window, and
 100-painted-highlight limit documented for `<lr-markdown>` apply here too, including active-first
 retention from anywhere in the admitted snapshot.
+The same syntax-highlighting admission, source-size and cache bounds documented above also apply.
 
 **Methods:** `renderMarkdown(): void` — immediately reruns the current content through the parse,
 sanitize, highlight, and fallback pipeline after changing this instance's `marked` configuration;

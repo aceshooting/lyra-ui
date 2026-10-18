@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '第{index}張圖片，共{total}張',
   playWithContext: '播放{name}',
   pauseWithContext: '暫停{name}',
+  avPlayerWaveformUnavailable: '波形資料無法使用或與此媒體不符。',
+  avPlayerTranscriptUnavailable: '文字記錄資料無法使用。',
   dropzoneReleaseToAdd: '鬆開即可新增檔案。',
   dropzoneRejectedType: '不接受此檔案型別。',
   attachmentAdd: '新增附件',

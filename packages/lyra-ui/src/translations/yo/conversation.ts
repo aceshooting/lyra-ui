@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Kò tíì sí ìjíròrò',
   agentWorkspaceLabel: 'Ibi iṣẹ́ aṣojú',
+  agentWorkspaceInputLimit: '{collection}: {count} nínú {total} àkọsílẹ̀ nìkan ni a pa mọ́.',
   agentWorkspaceConversation: 'Ìjíròrò',
   agentWorkspaceDetails: 'Àlàyé ìṣiṣẹ́',
   agentWorkspaceRun: 'Ìṣiṣẹ́ aṣojú',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Tún apá yìí gbìyànjú',
   promptQueueLabel: 'Àwọn prompt tó wà ní ìlà',
   promptQueueEmpty: 'Kò sí prompt tó wà ní ìlà',
+  promptQueueInputLimit: 'A yọ àwọn prompt tó wà ní ìlà tàbí àwọn àfikún kan kúrò nítorí a ti dé ààlà ìwọlé.',
+  promptQueueAttachmentLimit: 'A ń fi {shown} nínú {total} àfikún tí a pa mọ́ hàn.',
   promptQueueSendNow: 'Fi ránṣẹ́ nísinsìnyí',
   selectionToolbarLabel: 'Àwọn ìṣe ìyàn',
   selectionAsk: 'Béèrè',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: 'Àwọn àmì {count}',
   },
+  threadListInputLimit: 'A yọ àwọn okùn ìjíròrò kan kúrò nítorí a ti dé ààlà ìwọlé.',
+  promptInputInputLimit: 'A yọ àwọn àbá tàbí àkọsílẹ̀ katalọ́ọ̀gù kan kúrò nítorí a ti dé ààlà ìwọlé.',
+  transcriptFeedInputLimit: 'Àwọn àkọsílẹ̀ {count} tuntun jù lọ nínú {total} nìkan ni a ń pa mọ́.',
+  codeBlockHighlightLimit: 'A ń ṣàfihàn kóòdù gígùn láì lo àwọ̀ láti fi ìlànà ìkọ̀wé kóòdù hàn.',
 };
 
 registerLyraLocale('yo', strings);

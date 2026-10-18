@@ -4,7 +4,7 @@ export const DEFAULT_BUCKET_COUNT = 5;
 
 /** Maximum visually distinct bucket steps on an 8-bit RGB channel. */
 export const MAX_BUCKET_COUNT = 256;
-/** Maximum canonical matrix cells. */
+/** Default canonical matrix cell budget; max-cells can raise it up to tenfold. */
 export const MAX_HEATMAP_CELLS = 10_000;
 /** Maximum caller-supplied legend or annotation entries. */
 export const MAX_HEATMAP_DECORATIONS = 256;

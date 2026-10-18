@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} پیشنهاد بیشتر',
     other: '{count} پیشنهادات بیشتر',
   },
+  mentionInputLimit: 'تنها ۱۰٬۰۰۰ پیشنهاد نخست برای اشاره در دسترس هستند.',
+  diffViewHighlightLimit: 'کد طولانی بدون برجسته‌سازی نحوی نشان داده می‌شود.',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

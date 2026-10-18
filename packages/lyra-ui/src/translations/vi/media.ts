@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Hình ảnh {index} trên {total}',
   playWithContext: 'Phát {name}',
   pauseWithContext: 'Tạm dừng {name}',
+  avPlayerWaveformUnavailable: 'Dữ liệu dạng sóng không khả dụng hoặc không khớp với nội dung đa phương tiện này.',
+  avPlayerTranscriptUnavailable: 'Dữ liệu bản chép lời không khả dụng.',
   dropzoneReleaseToAdd: 'Thả để thêm tệp.',
   dropzoneRejectedType: 'Không chấp nhận loại tệp này.',
   attachmentAdd: 'Thêm tệp đính kèm',

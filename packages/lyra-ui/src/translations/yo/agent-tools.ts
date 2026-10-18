@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Àwọn àbájáde ìdánwò àkọ́kọ́ {count} nìkan ni a fi hàn.',
   toolTimelineLimit: 'Ìpè irinṣẹ́ tó pọ̀ jù {count} ni a fi hàn.',
   toolSelectLimit: 'Àwọn irinṣẹ́ àkọ́kọ́ {count} nìkan ni a fi hàn.',
+  testResultsInputTooLarge: 'Àlàyé àbájáde ìdánwò ti kọjá ààlà ìfihàn.',
   toolCall: 'Ìpè irinṣẹ́',
   maximize: 'Mú tóbi jù',
   promptStudioVariableName: 'Orúkọ oníyípadà {index}',
@@ -292,6 +293,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Awọn faili {count} akọkọ nikan ni o han.',
   taskListLimit: 'Awọn iṣẹ-ṣiṣe {count} akọkọ nikan ni o han.',
   evalDatasetLimit: 'Àwọn àpẹẹrẹ àkọ́kọ́ {count} nìkan ni a fi hàn.',
+  activityFeedInputLimit: 'Àwọn àkọsílẹ̀ {count} tuntun jù lọ nínú {total} nìkan ni a ń pa mọ́.',
+  spanWaterfallLimit: 'A ń ṣàfihàn {shown} nínú {total} apá ìtọpinpin.',
+  toolTimelineInputLimit: 'Àwọn ìpè irinṣẹ́ {count} tuntun jù lọ nínú {total} nìkan ni a ń pa mọ́.',
 };
 
 registerLyraLocale('yo', strings);

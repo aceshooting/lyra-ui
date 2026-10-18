@@ -1,6 +1,8 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { ref } from 'lit/directives/ref.js';
+import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -17,16 +19,26 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { styles } from './json-viewer.styles.js';
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode, LyraSourceSearchResult } from '../../../data-sources.js';
+import { HierarchySourceController, hierarchyField, type HierarchyCapabilityResult } from '../../../internal/hierarchy-source-controller.js';
+import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
+import { hierarchySourceStyles } from '../../../internal/hierarchy-source.styles.js';
+export type JsonViewerTreeSource = LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>;
+const INSPECTION_KINDS = new Set(['object', 'array', 'scalar', 'element', 'attribute', 'text', 'comment', 'processing-instruction']);
+type SourceHits = Extract<HierarchyCapabilityResult<LyraSourceSearchResult<{ readonly key: string }>>, { status: 'ready' }>;
+
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   writeClipboardText,
+  clipboardFailureReason,
+  type LyraClipboardWriteOutcome,
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
 import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCollapseLabel, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonExpandLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLimit } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -60,7 +72,6 @@ const MAX_JSON_NODES = 5000;
 const MAX_JSON_DEPTH = 100;
 // Reflection is independently bounded, but has headroom for opaque/non-enumerable own names so
 // they cannot consume the smaller admitted JSON-node budget.
-const MAX_JSON_SNAPSHOT_INSPECTIONS = MAX_JSON_NODES * 2;
 const OMIT_JSON_SNAPSHOT = Symbol('omit-json-viewer-snapshot');
 
 interface JsonSnapshotBudget {
@@ -110,10 +121,10 @@ function isSnapshotArray(value: JsonSnapshotValue): value is readonly JsonSnapsh
  * or reread a proxy after admission. The projection preserves ordinary holes, aliases, and cycles;
  * unsafe branches and unsupported opaque leaves are omitted instead of coercing them.
  */
-function snapshotJsonData(value: unknown): JsonSnapshot {
+function snapshotJsonData(value: unknown, maxNodes: number): JsonSnapshot {
   const budget: JsonSnapshotBudget = {
-    remainingNodes: MAX_JSON_NODES,
-    remainingInspections: MAX_JSON_SNAPSHOT_INSPECTIONS,
+    remainingNodes: maxNodes,
+    remainingInspections: maxNodes * 2,
     truncated: false,
   };
   const copies = new WeakMap<object, JsonSnapshotContainer>();
@@ -340,6 +351,15 @@ export interface LyraJsonViewerEventMap {
  * initial/reconnect state and changes while the host is accessibility-hidden are silent, and the
  * shadow tree retains only an `aria-hidden` text mirror.
  *
+ * Property-only treeSource displays a complete provider hierarchy without admitting data. Source
+ * rows use own-descriptor closed inspection records (65,536 units per field); the shared cache,
+ * staging, focused row and projection state share a 2,000,000-unit envelope. Over-budget records
+ * fail closed. Source search counts global nodes, not separate key/value occurrences, and retains
+ * at most 10,000 hits regardless of maxNodes. Partial or unavailable search is never exact.
+ * Provider copy returns a complete node/subtree/document within 25 MiB UTF-8; mounted rows are
+ * never serialized as a substitute. maxHeight constrains the source scroller; source expansion is
+ * provider-owned. Removing treeSource restores the current data value.
+ *
  * @customElement lr-json-viewer
  * @event lr-copy - Clipboard writing from the top-level or per-node action fulfilled. The frozen
  *   shared outcome detail is `{ ok: true, text }`.
@@ -359,6 +379,13 @@ export interface LyraJsonViewerEventMap {
  * @csspart bracket - A `{`, `}`, `[`, or `]` delimiter.
  * @csspart toggle - A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes).
  * @csspart copy-button - A copy-to-clipboard button -- the top-level one (in `toolbar`, labelled "Copy JSON to clipboard") or a per-node one (only rendered when `copyable`; labelled with its own key/type, e.g. "Copy age", so assistive tech can tell rows apart).
+ * @csspart source-list - Source-only bounded virtual scroller.
+ * @csspart source-row - Source-only flat tree item with logical hierarchy metadata.
+ * @csspart source-toggle - Source-only expand/collapse or retry action.
+ * @csspart source-label - Source-only inspection content with key/value/copy-button parts.
+ * @csspart source-status - Source-only loading, empty, and full-source count status.
+ * @csspart source-error - Source-only projection or row admission failure.
+ * @csspart search-status - Unavailable or partial global source search status.
  * @csspart limit - Localized notice shown when the depth/node traversal budget truncates rendering or search.
  * @cssprop [--lr-json-viewer-max-height=none] - Cap on `[part="base"]`'s block size, past which the
  *   viewer scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
@@ -383,10 +410,12 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     circularReference: LYRA_DEFAULT_circularReference,
+    collapse: LYRA_DEFAULT_collapse,
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyFailed: LYRA_DEFAULT_copyFailed,
     copyJson: LYRA_DEFAULT_copyJson,
+    expand: LYRA_DEFAULT_expand,
     jsonArray: LYRA_DEFAULT_jsonArray,
     jsonCollapseLabel: LYRA_DEFAULT_jsonCollapseLabel,
     jsonCopyLabel: LYRA_DEFAULT_jsonCopyLabel,
@@ -396,13 +425,229 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     jsonObject: LYRA_DEFAULT_jsonObject,
     jsonValue: LYRA_DEFAULT_jsonValue,
     jsonViewerLimit: LYRA_DEFAULT_jsonViewerLimit,
+    loading: LYRA_DEFAULT_loading,
+    noData: LYRA_DEFAULT_noData,
+    retry: LYRA_DEFAULT_retry,
+    sourceSearchUnavailable: LYRA_DEFAULT_sourceSearchUnavailable,
+    treeSourceError: LYRA_DEFAULT_treeSourceError,
+    treeSourceSummary: LYRA_DEFAULT_treeSourceSummary,
     viewerSearchActiveMatch: LYRA_DEFAULT_viewerSearchActiveMatch,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, hierarchySourceStyles, styles, srOnly];
+  private _treeSource?: JsonViewerTreeSource;
+  private sourceMode = false;
+  private sourceSearchDirty = true;
+  private sourceSearchIntent = 0;
+  private sourceCopyIntent = 0;
+  private sourceNavigationIntent = 0;
+  private sourceSearchTask: Promise<number> = Promise.resolve(0);
+  private sourceHits?: SourceHits;
+  private sourceHitKeys = new Set<string>();
+  private sourceSearchExact = true;
+  private sourceSearchUnavailable = false;
+  private sourceBinding?: { source: JsonViewerTreeSource | undefined; query: string; locale: string };
+  private sourceAnnouncement?: string;
+  private readonly hierarchy = new HierarchySourceController<LyraInspectionNode>(this, {
+    normalize: (value, key) => this.normalizeSourceNode(value, key),
+    onChange: () => this.requestUpdate('sourceState', null), accepted: () => {},
+    payload: { maxUnits: 2_000_000, maxRowUnits: 327_702,
+      unitsOf: node => node.name.length + node.path.length + (node.value?.length ?? 0) + node.kind.length },
+  });
+
+  /** Whole-source inspection provider. Takes display precedence over data; maxNodes and expandDepth
+   * apply only to legacy data. Reassign, including the same identity, or requestUpdate() to refresh.
+   * Source search returns at most 10,000 global node hits, independent of maxNodes.
+   * @default undefined */
+  @property({ attribute: false })
+  get treeSource(): JsonViewerTreeSource | undefined { return this._treeSource; }
+  set treeSource(value: JsonViewerTreeSource | undefined) {
+    const previous = this._treeSource;
+    this._treeSource = value;
+    this.invalidateSourceSearch();
+    this.syncSource(true);
+    this.requestUpdate('treeSource', previous);
+  }
+
+  /** Reveals and focuses an exact provider key; compact keys can address arbitrarily deep nodes.
+   * Resolves false when absent, superseded, or no provider is active. */
+  revealSourceKey(key: string): Promise<boolean> {
+    this.sourceNavigationIntent++;
+    return this.treeSource === undefined ? Promise.resolve(false) : this.hierarchy.reveal(key);
+  }
+  private syncSource(force = false): void {
+    if (!this.hierarchy) return;
+    const source = this.treeSource;
+    const query = this.query ?? '';
+    const locale = this.effectiveLocale;
+    const binding = this.sourceBinding;
+    if (source === undefined && !this.sourceMode && binding?.source === undefined) return;
+    if (!force && binding && binding.source === source && binding.query === query && binding.locale === locale) return;
+    this.invalidateSourceSearch();
+    this.hierarchy.update(source, locale, force, { search: query, hiddenKinds: [] });
+    if (source === this.treeSource && query === (this.query ?? '') && locale === this.effectiveLocale)
+      this.sourceBinding = { source, query, locale };
+  }
+  private normalizeSourceNode(value: unknown, key: string): LyraInspectionNode {
+    const name = hierarchyField(value, 'name');
+    const path = hierarchyField(value, 'path');
+    const kind = hierarchyField(value, 'kind');
+    const text = hierarchyField(value, 'value');
+    if (typeof name !== 'string' || name.length > 65_536 || typeof path !== 'string' || path.length > 65_536 || path !== key ||
+      typeof kind !== 'string' || !INSPECTION_KINDS.has(kind) || (text !== undefined && (typeof text !== 'string' || text.length > 65_536)))
+      throw new TypeError('Invalid inspection node');
+    return Object.freeze({ name, path, kind: kind as LyraInspectionNode['kind'], ...(text === undefined ? {} : { value: text as string }) });
+  }
+  private invalidateSourceSearch(): void {
+    this.sourceSearchIntent = (this.sourceSearchIntent ?? 0) + 1;
+    this.sourceCopyIntent = (this.sourceCopyIntent ?? 0) + 1;
+    this.sourceNavigationIntent = (this.sourceNavigationIntent ?? 0) + 1;
+    this.sourceHits = undefined; this.sourceHitKeys?.clear();
+    this.sourceSearchExact = true; this.sourceSearchUnavailable = false; this.sourceSearchDirty = true;
+    if (this.activeSearchIndex !== undefined && (this._treeSource !== undefined || this.sourceMode)) this.activeSearchIndex = -1;
+    if (this.copyFeedback !== undefined) this.clearCopyFeedback();
+  }
+  private async searchSource(): Promise<number> {
+    this.sourceSearchDirty = false;
+    const intent = this.sourceSearchIntent;
+    const provider = this.treeSource;
+    const query = this.query ?? '';
+    if (!query) {
+      this.hierarchy.cancelSearch();
+      if (this.hasUpdated) this.emitSearchChange();
+      return 0;
+    }
+    const result = await this.hierarchy.search();
+    if (intent !== this.sourceSearchIntent || provider !== this.treeSource || !this.isConnected) return 0;
+    if (result.status === 'stale' || (result.status === 'ready' && !result.isCurrent())) return 0;
+    this.sourceHits = result.status === 'ready' ? result : undefined;
+    this.sourceHitKeys = new Set(this.sourceHits?.value.hits.map(hit => hit.key) ?? []);
+    this.sourceSearchExact = result.status === 'ready' && result.value.exhaustive;
+    this.sourceSearchUnavailable = result.status !== 'ready';
+    this.requestUpdate('sourceSearchResult', null);
+    this.emitSearchChange();
+    await this.updateComplete;
+    return intent === this.sourceSearchIntent ? this.sourceHitKeys.size : 0;
+  }
+  private async stepSourceSearch(direction: 1 | -1): Promise<boolean> {
+    const navigation = ++this.sourceNavigationIntent;
+    const hits = this.sourceHits;
+    if (!hits?.isCurrent() || !hits.value.hits.length) return false;
+    const size = hits.value.hits.length;
+    this.activeSearchIndex = this.activeSearchIndex < 0 ? (direction === 1 ? 0 : size - 1) : (this.activeSearchIndex + direction + size) % size;
+    const found = await this.hierarchy.reveal(hits.value.hits[this.activeSearchIndex]!.key);
+    if (!found || navigation !== this.sourceNavigationIntent || !hits.isCurrent() || this.sourceHits !== hits) return false;
+    this.emitSearchChange();
+    return found;
+  }
+  private sourceSummary(): string {
+    const projection = this.hierarchy.projection;
+    return projection ? this.localize('treeSourceSummary', undefined, {
+      visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count),
+      total: getNumberFormat(this.effectiveLocale).format(projection.total),
+    }) : '';
+  }
+  private hasSourceCopy(): boolean {
+    const source = this.treeSource;
+    try { const available = typeof source?.copy === 'function'; return source === this.treeSource && available; }
+    catch { return false; }
+  }
+  private async copySource(key: string | null, scope: 'node' | 'subtree' | 'document'): Promise<void> {
+    const source = this.treeSource;
+    const epoch = this.hierarchy.epoch;
+    const owner = this.ownerDocument;
+    const intent = ++this.sourceCopyIntent;
+    const current = () => this.treeSource === source && this.hierarchy.epoch === epoch && this.ownerDocument === owner &&
+      this.isConnected && intent === this.sourceCopyIntent;
+    this.clearCopyFeedback();
+    const result = await this.hierarchy.copy(key, scope, 25 * 1024 * 1024);
+    if (!current() || result.status === 'stale') return;
+    const feedback = key ?? 'toolbar';
+    if (result.status !== 'ready') {
+      this.showCopyFeedback(feedback, false);
+      const message = this.localize('copyFailed');
+      if (current()) this.searchAnnouncementSink?.announce(message);
+      return;
+    }
+    const accepted = () => current() && result.isCurrent();
+    if (!accepted()) return;
+    let outcome: LyraClipboardWriteOutcome;
+    try {
+      const clipboard = owner.defaultView?.navigator.clipboard;
+      const write = clipboard?.writeText;
+      if (!accepted()) return;
+      if (typeof write !== 'function') {
+        outcome = Object.freeze({ ok: false, text: result.value, reason: 'unsupported', error: new Error('Clipboard is unavailable') });
+      } else {
+        await write.call(clipboard, result.value);
+        outcome = Object.freeze({ ok: true, text: result.value });
+      }
+    } catch (error) {
+      outcome = Object.freeze({ ok: false, text: result.value, reason: clipboardFailureReason(error), error });
+    }
+    if (!accepted()) return;
+    this.showCopyFeedback(feedback, outcome.ok);
+    if (!outcome.ok) {
+      const message = this.localize('copyFailed');
+      if (!accepted()) return;
+      this.searchAnnouncementSink?.announce(message);
+      if (!accepted()) return;
+      this.emit('lr-error');
+      if (accepted()) this.emit('lr-copy-error', outcome);
+    } else {
+      const message = this.localize('copied');
+      if (!accepted()) return;
+      this.searchAnnouncementSink?.announce(message);
+      if (accepted()) this.emit('lr-copy', outcome);
+    }
+  }
+  private sourceCopyButton(node?: LyraInspectionNode): TemplateResult | typeof nothing {
+    if (!this.copyable || !this.hasSourceCopy()) return nothing;
+    const source = this.treeSource;
+    const epoch = this.hierarchy.epoch;
+    const key = node?.path ?? null;
+    const projection = this.hierarchy.projection;
+    const label = node ? this.localize('jsonCopyLabel', undefined, { label: node.name }) : this.localize('copyJson');
+    return html`<button part="copy-button" type="button" aria-label=${this.copyLabel(key ?? 'toolbar', label)}
+      @keydown=${(event: KeyboardEvent) => event.stopPropagation()}
+      @click=${(event: Event) => {
+        event.stopPropagation();
+        const button = event.currentTarget as HTMLButtonElement;
+        if (button.isConnected && button.getRootNode() === this.renderRoot && !this.hierarchy.loading &&
+          projection === this.hierarchy.projection && source === this.treeSource && epoch === this.hierarchy.epoch)
+          void this.copySource(key, node ? node.kind === 'object' || node.kind === 'array' || node.kind === 'element' ? 'subtree' : 'node' : 'document');
+      }}>${this.copyLabel(key ?? 'toolbar', this.localize('copy'))}</button>`;
+  }
+  private renderSourceNode(node: LyraInspectionNode): TemplateResult {
+    const match = this.sourceHits?.isCurrent() && this.sourceHitKeys.has(node.path);
+    const active = this.sourceHits?.value.hits[this.activeSearchIndex]?.key === node.path;
+    return html`<span part="key" ?data-match=${match} ?data-active=${active}>${node.name}</span><span aria-hidden="true">:</span><span
+      part="value" data-type=${node.kind === 'scalar' ? 'string' : node.kind} ?data-match=${match} ?data-active=${active}>${node.value ?? node.kind}</span>${this.sourceCopyButton(node)}`;
+  }
+  private renderSource(): TemplateResult {
+    const partial = !this.sourceSearchExact && Boolean(this.query);
+    const count = this.sourceHitKeys.size;
+    return html`<div class="source-shell" style=${styleMap({ '--lr-json-viewer-max-height': sanitizeCssLength(this.maxHeight) ?? 'var(--lr-size-20rem)' })}>
+      ${this.copyable && this.hasSourceCopy() ? html`<div part="toolbar">${this.sourceCopyButton()}</div>` : nothing}
+      ${hierarchySourceView(this.hierarchy, {
+        label: hostAriaLabel(this) ?? this.localize('jsonValue'), rtl: this.effectiveDirection === 'rtl', multiple: false,
+        loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
+        retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'), summary: this.sourceSummary(),
+        name: node => node.name, content: node => this.renderSourceNode(node), select: () => {},
+      })}
+      ${partial ? html`<div part="search-status">${this.sourceSearchUnavailable ? this.localize('sourceSearchUnavailable') :
+        this.localize('viewerSearchMatchCount', undefined, { count: `≥${getNumberFormat(this.effectiveLocale).format(count)}`, pluralCount: count })}</div>` : nothing}
+    </div>`;
+  }
+
+  /** Maximum admitted, searched and rendered nodes, from 1 to 50,000; invalid values use 5,000. */
+  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 5000;
+  private get effectiveMaxNodes(): number {
+    return Math.max(1, finiteCount(this.maxNodes, MAX_JSON_NODES, 50000));
+  }
   /** The value to render. Any JSON-serializable value, plus `undefined`. */
   @property({ attribute: false }) data: unknown;
   /** Nodes at or beyond this nesting depth (root = 0) start collapsed, so only the levels above it
@@ -435,6 +680,32 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** Descriptor-safe, frozen data graph admitted on the most recent `data` write. */
   private dataSnapshot: JsonSnapshotValue = undefined;
   private dataSnapshotTruncated = false;
+  private explicitRefresh = 0;
+  private treeMemo?: { deps: unknown[]; tree: TemplateResult; limited: boolean };
+  private readonly matchElements = new Map<string, Element>();
+  private activeMatchElement?: Element;
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.explicitRefresh = (this.explicitRefresh ?? 0) + 1;
+    if (this._treeSource !== undefined && (args[0] === undefined || args[0] === 'query')) {
+      this.invalidateSourceSearch();
+      this.syncSource(args[0] === undefined);
+    }
+    super.requestUpdate(...args);
+  }
+
+  private syncActiveMatch(): void {
+    const match = this.searchState.orderedMatches[this.activeSearchIndex];
+    const next = match ? this.matchElements.get(`${match.kind}:${match.pathKey}`) : undefined;
+    if (this.activeMatchElement !== next) {
+      this.activeMatchElement?.removeAttribute('data-active');
+      this.activeMatchElement?.setAttribute('aria-current', 'false');
+    }
+    next?.setAttribute('data-active', '');
+    next?.setAttribute('aria-current', 'true');
+    this.activeMatchElement = next;
+  }
+
   private searchAnnouncementSink?: AnnouncementSink;
   private searchAnnouncementsArmed = false;
   private searchAnnouncementGeneration = 0;
@@ -443,6 +714,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.sourceBinding = undefined;
+    this.requestUpdate('sourceReconnect', null);
     this.searchAnnouncementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
@@ -459,12 +732,24 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.invalidateSourceSearch();
+    this.sourceBinding = undefined;
     this.clearCopyFeedback();
     this.searchAnnouncementGeneration += 1;
     this.searchAnnouncementSink?.release();
     this.searchAnnouncementSink = undefined;
     this.searchAnnouncementsArmed = false;
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    this.invalidateSourceSearch();
+    this.sourceBinding = undefined;
+    this.hierarchy.adopted();
+    this.searchAnnouncementSink?.release(); this.searchAnnouncementSink = undefined;
+    if (this.isConnected) this.searchAnnouncementSink = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
+    this.sourceAnnouncement = undefined;
+    super.adoptedCallback();
   }
 
   /** `expandDepth`, normalized to a finite non-negative integer when set -- `undefined`
@@ -511,10 +796,10 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.expandedOverrides = next;
   }
 
-  private reportCopyFailure(outcome: LyraClipboardWriteFailure): void {
+  private reportCopyFailure(outcome: LyraClipboardWriteFailure, current: () => boolean = () => true): void {
     this.searchAnnouncementSink?.announce(this.localize('copyFailed'));
-    this.emit('lr-error');
-    this.emit('lr-copy-error', outcome);
+    if (current()) this.emit('lr-error');
+    if (current()) this.emit('lr-copy-error', outcome);
   }
 
   private clearCopyFeedback(): void {
@@ -538,23 +823,27 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   private async copy(value: JsonSnapshotValue, key: string): Promise<void> {
+    if (this.treeSource !== undefined) return;
+    const sourceIntent = this.sourceCopyIntent;
+    const current = () => this.treeSource === undefined && sourceIntent === this.sourceCopyIntent;
     this.clearCopyFeedback();
     let text = '';
     try {
       text = value === undefined ? 'undefined' : this.stringifyForClipboard(value);
     } catch (error) {
-      if (this.isConnected) {
+      if (this.isConnected && current()) {
         this.showCopyFeedback(key, false);
-        this.reportCopyFailure(Object.freeze({ ok: false, text, reason: 'failed', error }));
+        this.reportCopyFailure(Object.freeze({ ok: false, text, reason: 'failed', error }), current);
       }
       return;
     }
+    if (!current()) return;
     const owner = this.isConnected ? this.ownerDocument.defaultView : null;
     const outcome = await writeClipboardText(owner, text);
-    if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
+    if (!current() || !this.isConnected || this.ownerDocument.defaultView !== owner) return;
     this.showCopyFeedback(key, outcome.ok);
     if (!outcome.ok) {
-      this.reportCopyFailure(outcome);
+      this.reportCopyFailure(outcome, current);
       return;
     }
     this.searchAnnouncementSink?.announce(this.localize('copied'));
@@ -639,7 +928,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         ancestors.delete(frame.value);
         continue;
       }
-      if (visited >= MAX_JSON_NODES) {
+      if (visited >= this.effectiveMaxNodes) {
         truncated = true;
         break;
       }
@@ -667,7 +956,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         if (hit) markAncestors(path);
       }
       if ((type === 'object' || type === 'array') && !ancestors.has(value as object)) {
-        const available = Math.max(0, MAX_JSON_NODES - visited);
+        const available = Math.max(0, this.effectiveMaxNodes - visited);
         const { entries, truncated: entriesTruncated } = entriesOf(value, available);
         if (entriesTruncated) truncated = true;
         if (path.length >= MAX_JSON_DEPTH) {
@@ -812,6 +1101,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         ${keyLabel !== undefined
           ? html`<span
                 part="key"
+                ${ref(element => { if (element) this.matchElements.set(`key:${pathKey}`, element); })}
                 ?data-match=${search.keyMatches.has(pathKey)}
                 ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key'}
                 aria-current=${activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key'
@@ -836,6 +1126,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
             `
           : html`<span
               part="value"
+              ${ref(element => { if (element) this.matchElements.set(`value:${pathKey}`, element); })}
               data-type=${type}
               ?data-match=${search.valueMatches.has(pathKey)}
               ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'value'}
@@ -879,16 +1170,28 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated || changed.has('data')) {
-      const snapshot = snapshotJsonData(this.data);
+    const wasSource = this.sourceMode;
+    this.syncSource();
+    if (this.treeSource !== undefined) {
+      if (!this.sourceMode) {
+        this.sourceMode = true; this.dataSnapshot = undefined; this.dataSnapshotTruncated = false;
+        this.searchState = EMPTY_SEARCH; this.treeMemo = undefined; this.matchElements.clear(); this.expandedOverrides.clear();
+      }
+      if (this.sourceSearchDirty) this.sourceSearchTask = this.searchSource();
+      return;
+    }
+    this.sourceMode = false;
+    if (wasSource) { this.sourceAnnouncement = undefined; this.invalidateSourceSearch(); }
+    if (wasSource || !this.hasUpdated || changed.has('data') || changed.has('maxNodes')) {
+      const snapshot = snapshotJsonData(this.data, this.effectiveMaxNodes);
       this.dataSnapshot = snapshot.value;
       this.dataSnapshotTruncated = snapshot.truncated;
     }
     const locale = this.effectiveLocale;
-    if (!this.hasUpdated || changed.has('data') || changed.has('query') || locale !== this.searchLocale) {
+    if (wasSource || !this.hasUpdated || changed.has('data') || changed.has('query') || changed.has('maxNodes') || locale !== this.searchLocale) {
       this.searchLocale = locale;
       const next = this.computeSearch();
-      if (!this.hasUpdated || changed.has('data')) {
+      if (!this.hasUpdated || changed.has('data') || changed.has('maxNodes')) {
         // A path with no entry in `next.paths` no longer exists anywhere in
         // the new tree, so its override has nothing left to apply to --
         // dropping it here (rather than never, as before) is what keeps a
@@ -913,6 +1216,14 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.treeSource !== undefined) {
+      const message = this.hierarchy.error || this.hierarchy.rowError ? this.localize('treeSourceError') :
+        this.hierarchy.loading ? this.localize('loading') : this.sourceSummary();
+      if (this.sourceAnnouncement !== undefined && this.sourceAnnouncement !== message) this.searchAnnouncementSink?.announce(message);
+      this.sourceAnnouncement = message;
+      return;
+    }
+    this.syncActiveMatch();
     if (this.searchAnnouncementsArmed && changed.has('activeSearchIndex')) {
       this.searchAnnouncementSink?.announce(this.activeSearchAnnouncement());
     }
@@ -921,8 +1232,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private emitSearchChange(): void {
     this.emit('lr-search-change', viewerSearchDetail(
       this.query,
-      this.searchState.orderedMatches.length,
-      !this.searchState.truncated,
+      this.treeSource !== undefined ? this.sourceHitKeys.size : this.searchState.orderedMatches.length,
+      this.treeSource !== undefined ? this.sourceSearchExact : !this.searchState.truncated,
       this.activeSearchIndex,
     ));
   }
@@ -940,7 +1251,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     let next: Map<string, boolean> | null = null;
     for (let depth = 0; depth < path.length; depth++) {
       const ancestorKey = JSON.stringify(path.slice(0, depth));
-      if (this.expandedOverrides.get(ancestorKey) === true) continue;
+      if (this.isExpanded(ancestorKey, depth, this.searchState.forceExpand)) continue;
       next ??= new Map(this.expandedOverrides);
       next.set(ancestorKey, true);
     }
@@ -961,10 +1272,21 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    * Sets the declarative `query` property and awaits the recompute -- the resolved count is the
    * number of matches (also `searchState.orderedMatches.length` / rendered `[data-match]` spans).
    *
+   * Source mode accepts at most 4,096 query units and returns the retained global node-hit count,
+   * up to 10,000 independently of maxNodes. Its cursor remains -1 until navigation.
    * The method form awaits the render update and returns the resulting match count; `query` also
    * supports declarative bindings that do not need a return value.
    */
   async runSearch(query: string): Promise<number> {
+    if (this.treeSource !== undefined) {
+      const intent = this.sourceSearchIntent;
+      this.query = query;
+      if (intent === this.sourceSearchIntent) this.invalidateSourceSearch();
+      const currentIntent = this.sourceSearchIntent;
+      this.requestUpdate('sourceSearchIntent', null);
+      await this.updateComplete;
+      return currentIntent === this.sourceSearchIntent ? this.sourceSearchTask : 0;
+    }
     this.query = query;
     await this.updateComplete;
     return this.searchState.orderedMatches.length;
@@ -973,6 +1295,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** Advances the cursor to the next match (wrapping), revealing collapsed ancestors and
    *  scrolling the selected match into view. Resolves `false` with no match to move to. */
   async searchNext(): Promise<boolean> {
+    if (this.treeSource !== undefined) return this.stepSourceSearch(1);
     const total = this.searchState.orderedMatches.length;
     if (total === 0) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % total;
@@ -986,6 +1309,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    *  revealing collapsed ancestors and
    *  scrolling the selected match into view. Resolves `false` with no match to move to. */
   async searchPrevious(): Promise<boolean> {
+    if (this.treeSource !== undefined) return this.stepSourceSearch(-1);
     const total = this.searchState.orderedMatches.length;
     if (total === 0) return false;
     this.activeSearchIndex = this.activeSearchIndex < 0 ? total - 1 : (this.activeSearchIndex - 1 + total) % total;
@@ -997,6 +1321,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   /** Resets `query` to `''`, clearing all matches and the cursor. */
   clearSearch(): void {
+    if (this.treeSource !== undefined) { this.hierarchy.cancelSearch(); this.invalidateSourceSearch(); this.requestUpdate('sourceSearchIntent', null); }
     this.query = '';
   }
 
@@ -1010,12 +1335,19 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   override render(): TemplateResult {
-    const budget: RenderBudget = {
-      remaining: MAX_JSON_NODES,
-      truncated: false,
-    };
-    const tree = this.renderNode(this.dataSnapshot, [], undefined, 0, this.searchState, new WeakSet(), budget);
-    const limited = budget.truncated || this.searchState.truncated || this.dataSnapshotTruncated;
+    if (this.treeSource !== undefined) return this.renderSource();
+    const deps = [this.dataSnapshot, this.searchState, this.expandedOverrides, this.expandDepth,
+      this.copyable, this.copyFeedback, this.strings, this.effectiveLocale,
+      lyraLocaleCatalogVersion(this.effectiveLocale), this.explicitRefresh, this.effectiveMaxNodes];
+    let memo = this.treeMemo;
+    if (!memo || deps.some((value, index) => value !== memo!.deps[index])) {
+      const budget: RenderBudget = { remaining: this.effectiveMaxNodes, truncated: false };
+      this.matchElements.clear();
+      const tree = this.renderNode(this.dataSnapshot, [], undefined, 0, this.searchState, new WeakSet(), budget);
+      memo = { deps, tree, limited: budget.truncated || this.searchState.truncated || this.dataSnapshotTruncated };
+      this.treeMemo = memo;
+    }
+    const { tree, limited } = memo;
     return html`
       <div
         part="base"
@@ -1040,7 +1372,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         <div part="tree" role="list" aria-label=${hostAriaLabel(this) ?? nothing}>${tree}</div>
         ${limited
           ? html`<p part="limit">${this.localize('jsonViewerLimit', undefined, {
-              count: getNumberFormat(this.effectiveLocale).format(MAX_JSON_NODES),
+              count: getNumberFormat(this.effectiveLocale).format(this.effectiveMaxNodes),
               depth: getNumberFormat(this.effectiveLocale).format(MAX_JSON_DEPTH),
             })}</p>`
           : nothing}

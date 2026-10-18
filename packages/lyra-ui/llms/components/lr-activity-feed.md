@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,6 +27,11 @@ the internal `<lr-virtual-list>`'s own follow-up render) has settled. Focus that
 left alone — appending a live entry never steals focus from an unrelated, still-present control.
 Above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
+
+`entries` retains the newest 10,000 identities. The visible `limit` part discloses omitted entries
+through `activityFeedInputLimit`, with `count` and `total` placeholders. The existing follow and
+tail controls reach the newest retained entry. After changing external state read by a stable
+`renderText` or `formatTimestamp` callback, call `requestUpdate()` to refresh rendered rows.
 
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
 text: string; icon?: string; timestamp?: Date | string; variant?: LyraVariant; data?: unknown }`
@@ -73,7 +78,7 @@ outer card goes.
 **Toggle request, follow and threshold:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the header toggles. `follow` reflects like every `true`-defaulting boolean: absent while following, `follow="false"` once released. The body virtualizes when entries exceed (not equal) `virtualize-at`.
 
 **CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`), `label`,
-`summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
+`summary`, `toggle`, `limit` (input-loss notice), `body` (the scrollable region, or the internal virtual-list), `entry` (carries
 `data-variant`), `entry-icon`, `variant-dot` (the dot rendered inside `entry-icon` when the entry
 sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-success`/
 `variant-dot-warning`/`variant-dot-danger` (each also carries `variant-dot`), `entry-text`, and

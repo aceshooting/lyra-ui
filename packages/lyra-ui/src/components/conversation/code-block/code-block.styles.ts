@@ -347,6 +347,11 @@ export const styles = css`
   [part='body'][data-dark-theme='true'] [part='pre'] [data-highlighted] {
     background: var(--lr-code-block-highlighted-line-bg, var(--lr-color-warning-quiet)) !important;
   }
+  [part='limit'] {
+    padding: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
   @media (prefers-reduced-motion: reduce) {
     [part='toggle'] .chevron {
       transition: none !important;

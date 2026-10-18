@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} حڪم',
     other: '{count} حڪم',
   },
+  commandPaletteInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب ڪجهه حڪم ڇڏيا ويا آهن.',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

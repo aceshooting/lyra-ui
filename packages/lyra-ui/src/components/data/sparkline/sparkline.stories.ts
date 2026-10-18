@@ -149,3 +149,22 @@ export const DataRemovalUsesValues: Story = {
     <lr-sparkline label="Trend" data="1 2 3" .values=${[3, 1, 2]}></lr-sparkline>
   </div>`,
 };
+
+export const LateExtrema: Story = {
+  parameters: { docs: { description: { story: 'A bounded endpoint and bucket-extrema sample preserves the late spike while the accessible summary counts the complete finite input.' } } },
+  render: () => html`<lr-sparkline label="Late peak in a long series" .values=${Array.from({ length: 2_000 }, (_, index) => index === 1_998 ? 100 : 0)}></lr-sparkline>`,
+};
+
+/** A prepared overview preserves whole-source counts while rendering bounded original coordinates. */
+export const PreparedOverview: Story = {
+  render: () => {
+    const prepared: import('../../../utilities/data-preparation.js').LyraPreparedSeriesData = {
+      kind: 'series', revision: 'overview', getPoint: ref => ({ x: ref.sourceIndex, y: ref.sourceIndex % 100 }),
+      series: [{ id: 'signal', label: 'Signal', counts: { sourceCount: 1000000, validCount: 1000000, invalidCount: 0 },
+        xDomain: { min: 0, max: 999999 }, yDomain: { min: 0, max: 99 },
+        samples: [0,99,500000,999999].map(sourceIndex => ({ x: sourceIndex, y: sourceIndex % 100, sourceIndex, breakBefore: sourceIndex === 0 })),
+      }],
+    };
+    return html`<lr-sparkline style="width:16rem;height:4rem" .preparedData=${prepared}></lr-sparkline>`;
+  },
+};

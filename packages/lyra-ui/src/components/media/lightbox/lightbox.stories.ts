@@ -181,3 +181,31 @@ export const AboveNativeModal: Story = {
     </div>
   `,
 };
+
+/** The host resolves one logical image at a time; no million-item array is created. */
+export const MillionImageSource: Story = {
+  parameters: { docs: { description: { story: 'Browse one million logical images through a host-owned indexed source. The counter and index cover the complete collection while the lightbox retains at most three descriptors. Replace imageSource, reassign it, or call requestUpdate() after changing the host source; unset it to restore legacy images.' } } },
+  render: () => {
+    const source: import('./lightbox.js').LyraLightboxSource = {
+      revision: 1,
+      images: {
+        count: 1_000_000,
+        itemAt: index => ({ key: String(index), order: index, value: {
+          src: images[index % images.length]!.src,
+          alt: `Illustration ${index + 1}`,
+          caption: `Logical image ${index + 1} of 1000000`,
+        } }),
+      },
+    };
+    return html`
+      <button @click=${(event: Event) => {
+        const lightbox = (event.currentTarget as HTMLElement).nextElementSibling as LyraLightbox;
+        void lightbox.show();
+      }}>Open million-image collection</button>
+      <lr-lightbox .imageSource=${source} loop fit="contain">
+        <button slot="actions" @click=${(event: Event) => ((event.currentTarget as HTMLElement).parentElement as LyraLightbox).goTo(0)}>First</button>
+        <button slot="actions" @click=${(event: Event) => ((event.currentTarget as HTMLElement).parentElement as LyraLightbox).goTo(500_000)}>Middle</button>
+        <button slot="actions" @click=${(event: Event) => ((event.currentTarget as HTMLElement).parentElement as LyraLightbox).goTo(999_999)}>Last</button>
+      </lr-lightbox>`;
+  },
+};

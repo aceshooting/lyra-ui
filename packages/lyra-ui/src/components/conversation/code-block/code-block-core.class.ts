@@ -22,7 +22,7 @@ import type {
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -116,6 +116,7 @@ export interface LyraCodeBlockCoreEventMap extends LyraCodeBlockBaseEventMap {}
  *   `collapsed`.
  * @csspart pre - The rendered `<pre>` — shiki's own in the highlighted path,
  *   this component's own plain one in the fallback path.
+ * @csspart limit - The localized notice when source exceeds the syntax-highlighting ceiling.
  * @csspart code - The rendered `<code>`, same split as `pre` above.
  * @csspart line-highlight - A line marked by `highlight-lines` or a `line-range` entry in
  *   `highlights`.
@@ -154,6 +155,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    codeBlockHighlightLimit: LYRA_DEFAULT_codeBlockHighlightLimit,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
     collapseCode: LYRA_DEFAULT_collapseCode,
@@ -179,7 +181,9 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The raw source text. Removing the attribute renders an empty code block. */
+  /** The raw source text. Removing the attribute renders an empty code block. Source above
+   *  8,192 UTF-16 code units renders in full as plain text with a localized `limit` notice;
+   *  the ceiling is checked before synchronous syntax tokenization. */
   @property() override code = '';
 
   /** A shiki-recognized language id or alias (e.g. `"javascript"`,
@@ -369,7 +373,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
     const generation = this.activateLanguages(languages);
     const token = ++this.highlightToken;
     const lang = normalizeShikiLanguage(this.language ?? '');
-    if (!lang) {
+    if (!lang || this.highlightLimited) {
       this.highlightedHtml = null;
       return;
     }

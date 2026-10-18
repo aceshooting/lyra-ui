@@ -59,9 +59,15 @@ export const styles = css`
     stroke-width: var(--lr-border-width-thick);
     stroke-dasharray: var(--lr-size-4px) var(--lr-size-2px);
   }
+  [part='summary'],
+  [part='error'],
   [part='empty'] {
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
+  }
+  [part='summary'],
+  [part='error'] {
+    overflow-wrap: anywhere;
   }
   [part='legend'] {
     display: flex;

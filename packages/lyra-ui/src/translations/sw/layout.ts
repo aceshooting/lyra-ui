@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} amri',
     other: '{count} amri',
   },
+  commandPaletteInputLimit: 'Baadhi ya amri zimeachwa kwa sababu kikomo cha ingizo kimefikiwa.',
 };
 
 registerLyraLocale('sw', strings);

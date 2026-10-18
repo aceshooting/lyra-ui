@@ -151,6 +151,8 @@ export const CURATED_UTILITY_MODULES = Object.freeze([
   'src/utilities/announcer.ts',
   'src/utilities/catalog.ts',
   'src/utilities/css-length.ts',
+  'src/utilities/data-preparation.ts',
+  'src/utilities/data-spatial.ts',
   'src/utilities/deprecated-aliases.ts',
   'src/utilities/defined.ts',
   'src/utilities/form-associated.ts',

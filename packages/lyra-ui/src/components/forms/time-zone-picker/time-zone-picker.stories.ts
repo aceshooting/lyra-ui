@@ -76,3 +76,13 @@ export const RightToLeft: StoryObj = {
       .timeZones=${['UTC', 'Asia/Beirut', 'Asia/Dubai', 'Europe/Paris']}></lr-time-zone-picker>
   </div>`,
 };
+
+export const LargeCustomCatalog: StoryObj = {
+  parameters: { docs: { description: { story: 'Catalogs admit up to 1,024 entries. Popups show at most 1,000 options with an overflow count; enable searchable to filter to entries beyond that initial window.' } } },
+  render: () => html`<lr-time-zone-picker searchable label="Custom time zones" .timeZones=${Array.from({length:1024}, (_, index) => `Custom/Zone${index}`)}></lr-time-zone-picker>`,
+};
+
+export const InputLimit: StoryObj = {
+  parameters: { docs: { description: { story: 'Catalog input loss is disclosed separately from the popup row window, including when repeated rows consume the inspected prefix.' } } },
+  render: () => html`<lr-time-zone-picker label="Bounded catalog" .timeZones=${Array.from({ length: 1025 }, () => 'UTC')}></lr-time-zone-picker>`,
+};

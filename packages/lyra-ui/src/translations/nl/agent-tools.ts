@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Alleen de eerste {count} testresultaten worden weergegeven.',
   toolTimelineLimit: 'Er worden maximaal {count} toolaanroepen weergegeven.',
   toolSelectLimit: 'Alleen de eerste {count} tools worden weergegeven.',
+  testResultsInputTooLarge: 'De details van de testresultaten overschrijden de weergavelimiet.',
   toolCall: 'Toolaanroep',
   maximize: 'Maximaliseren',
   promptStudioVariableName: 'Naam van variabele {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Alleen de eerste {count} bestanden worden getoond.',
   taskListLimit: 'Alleen de eerste {count} taken worden getoond.',
   evalDatasetLimit: 'Alleen de eerste {count} voorbeelden worden weergegeven.',
+  activityFeedInputLimit: 'Alleen de nieuwste {count} van {total} vermeldingen worden bewaard.',
+  spanWaterfallLimit: '{shown} van {total} spans worden getoond.',
+  toolTimelineInputLimit: 'Alleen de nieuwste {count} van {total} toolaanroepen worden behouden.',
 };
 
 registerLyraLocale('nl', strings);

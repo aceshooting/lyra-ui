@@ -344,6 +344,17 @@ apply to a first publication too. See
 [npm trust prerequisites](https://docs.npmjs.com/cli/v11/commands/npm-trust/#prerequisites) and
 [npm access-token permissions](https://docs.npmjs.com/about-access-tokens/).
 
+**Runtime comparison.** Before preparing a release, run the quick Chromium benchmark on a stable
+workstation with the pinned Node and built package:
+`pnpm benchmark --profile quick --browsers chromium --output benchmarks/results/<version>.json`.
+Validate the result with `node benchmarks/schema.mjs --validate <result.json>`, then use
+`pnpm benchmark:compare <baseline.json> <result.json>` against a reviewed baseline. Both runs must
+use the same harness, fixtures, environment and configuration. If those changed, measure the prior
+released package with the current harness using `--package-dir` before measuring the candidate;
+an incompatible comparison is incomplete evidence. A material regression (more than 15% and 1 ms
+in median or p95) requires an explanation in the changeset before release. Wall-clock measurements
+remain advisory evidence; the deterministic scale counters are the automated regression gate.
+
 1. **Prepare locally.** `pnpm release:prepare` (`scripts/release-prepare.mjs`) requires the exact
    `.nvmrc` Node patch, a clean tree and a HEAD containing `origin/main`. It fetches `origin/main` and
    tags (refusing to overwrite conflicting local tags), runs `pnpm changeset version`, refreshes the
@@ -550,3 +561,20 @@ Six check families (`lint`, `static-checks`, `build-and-coverage`, `packed-consu
 `full-engine.yml` (weekly and manual) and `test-all-browsers.yml` (manual) are the complete-suite
 sweeps. Releases require the push CI, the Chromium/Chrome/Edge Test All Browsers aggregates and every
 full-engine shard (Firefox and WebKit) to succeed on the exact main commit before any tag is created.
+
+### Deterministic scale budgets
+
+Outside `contract-policy`, the Chromium-only `scale-budgets` CI job consumes the built artifacts,
+runs `pnpm --filter @aceshooting/lyra-ui test:scale` without coverage instrumentation, then
+`pnpm --filter @aceshooting/lyra-ui check:scale-budgets`. The completed run is uploaded as
+`coverage/scale-measurements.jsonl`. Missing scenarios, counters, budgets, incomplete runs and
+counter regressions fail closed. Wall time and memory remain advisory.
+The Chromium lane in `scripts/test.sh` runs the same pair. The component quality dashboard marks
+each tag as `measured` or `unmeasured` from its recorded counter budgets; a measured tag has evidence
+for the named scenarios, while the scale gate supplies current pass/fail results.
+
+After a complete run, `pnpm --filter @aceshooting/lyra-ui scale-budgets` writes ceilings at
+`ceil(measured * (1 + margin))` (default margin 10%). Existing ceilings never increase without
+an explicit `--allow-higher` and review of the fixture diff. A ceiling above twice its current
+measurement fails as stale; regenerate it to tighten the gate. Deleting a budgeted scenario requires
+an explicit fixture edit; the writer does not silently remove missing measurements.

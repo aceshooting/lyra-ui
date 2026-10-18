@@ -351,7 +351,11 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   @property({ type: Boolean, attribute: 'code-block-header' })
   override codeBlockHeader = false;
 
-  /** Turns off syntax highlighting of fenced code blocks, keeping plain output even when grammars
+  /** Syntax highlighting admits the first 100 distinct language/code pairs per document and
+   *  blocks of at most 8,192 UTF-16 code units (including their terminal newline). Later or larger
+   *  blocks remain readable plain code. The shared page cache holds at most 100 entries / 2 MiB.
+   *  Output evicted by the byte budget stays plain until the highlighting configuration changes.
+   *  Turns off syntax highlighting of fenced code blocks, keeping plain output even when grammars
    *  are supplied. Unset (the default), fenced blocks are highlighted through the fine-grained Shiki
    *  core loader when `languages` supplies the matching grammar; the empty default language map
    *  means no fenced block is highlighted. Plain streaming defers highlighting until completion; progressive mode highlights settled blocks. */

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Can aya paguneman',
   agentWorkspaceLabel: 'Ruang gawé agén',
+  agentWorkspaceInputLimit: '{collection}: ngan {count} tina {total} éntri anu disimpen.',
   agentWorkspaceConversation: 'Paguneman',
   agentWorkspaceDetails: 'Rincian prosés',
   agentWorkspaceRun: 'Prosés agén',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Coba deui bagian ieu',
   promptQueueLabel: 'Antrian prompt',
   promptQueueEmpty: 'Teu aya prompt dina antrian',
+  promptQueueInputLimit: 'Sababaraha prompt dina antrian atawa lampiran dileungitkeun lantaran wates input geus kahontal.',
+  promptQueueAttachmentLimit: 'Némbongkeun {shown} tina {total} lampiran anu disimpen.',
   promptQueueSendNow: 'Kirim ayeuna',
   selectionToolbarLabel: 'Aksi pilihan',
   selectionAsk: 'Tanya',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '{count} token',
   },
+  threadListInputLimit: 'Sababaraha utas paguneman dileungitkeun lantaran wates input geus kahontal.',
+  promptInputInputLimit: 'Sababaraha saran atawa éntri katalog dileungitkeun lantaran wates input geus kahontal.',
+  transcriptFeedInputLimit: 'Ngan {count} éntri panganyarna tina {total} nu disimpen.',
+  codeBlockHighlightLimit: 'Kode nu panjang dipintonkeun tanpa panyorot sintaksis.',
 };
 
 registerLyraLocale('su', strings);

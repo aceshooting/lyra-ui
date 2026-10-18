@@ -61,6 +61,7 @@ const strings: LyraLocaleStrings = {
     many: '{count} comandi',
     other: '{count} comandi',
   },
+  commandPaletteInputLimit: 'È stato raggiunto un limite di input. Elementi omessi: comandi.',
 };
 
 registerLyraLocale('it', strings);

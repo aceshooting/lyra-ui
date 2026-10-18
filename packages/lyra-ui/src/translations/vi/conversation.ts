@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Chưa có cuộc trò chuyện nào',
   agentWorkspaceLabel: 'Không gian làm việc của tác tử',
+  agentWorkspaceInputLimit: '{collection}: chỉ giữ lại {count} trong số {total} mục.',
   agentWorkspaceConversation: 'Cuộc trò chuyện',
   agentWorkspaceDetails: 'Chi tiết lượt chạy',
   agentWorkspaceRun: 'Lượt chạy tác tử',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Thử lại phần này',
   promptQueueLabel: 'Lời nhắc đang chờ',
   promptQueueEmpty: 'Không có lời nhắc nào đang chờ',
+  promptQueueInputLimit: 'Một số lời nhắc trong hàng đợi hoặc tệp đính kèm đã bị bỏ qua vì đã đạt giới hạn đầu vào.',
+  promptQueueAttachmentLimit: 'Đang hiển thị {shown} trong số {total} tệp đính kèm được giữ lại.',
   promptQueueSendNow: 'Gửi ngay',
   selectionToolbarLabel: 'Thao tác với phần chọn',
   selectionAsk: 'Hỏi',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '{count} token',
   },
+  threadListInputLimit: 'Một số chuỗi hội thoại đã bị bỏ qua vì đã đạt giới hạn đầu vào.',
+  promptInputInputLimit: 'Một số gợi ý hoặc mục danh mục đã bị bỏ qua vì đã đạt giới hạn đầu vào.',
+  transcriptFeedInputLimit: 'Chỉ giữ lại {count} mục mới nhất trong tổng số {total} mục.',
+  codeBlockHighlightLimit: 'Mã dài được hiển thị mà không tô màu cú pháp.',
 };
 
 registerLyraLocale('vi', strings);

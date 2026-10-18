@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'முதல் {count} சோதனை முடிவுகள் மட்டுமே காட்டப்படுகின்றன.',
   toolTimelineLimit: 'அதிகபட்சம் {count} கருவி அழைப்புகள் காட்டப்படுகின்றன.',
   toolSelectLimit: 'முதல் {count} கருவிகள் மட்டுமே காட்டப்படுகின்றன.',
+  testResultsInputTooLarge: 'சோதனை முடிவு விவரங்கள் காட்சி வரம்பை மீறுகின்றன.',
   toolCall: 'கருவி அழைப்பு',
   maximize: 'பெரிதாக்கு',
   promptStudioVariableName: 'மாறி {index} பெயர்',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'முதல் {count} கோப்புகள் மட்டுமே காட்டப்படும்.',
   taskListLimit: 'முதல் {count} பணிகள் மட்டுமே காட்டப்படும்.',
   evalDatasetLimit: 'முதல் {count} எடுத்துக்காட்டுகள் மட்டுமே காட்டப்படுகின்றன.',
+  activityFeedInputLimit: '{total} பதிவுகளில் மிகப் புதிய {count} மட்டுமே தக்கவைக்கப்படுகின்றன.',
+  spanWaterfallLimit: 'மொத்தம் {total} ஸ்பான்களில் {shown} காட்டப்படுகின்றன.',
+  toolTimelineInputLimit: 'மொத்தம் {total} கருவி அழைப்புகளில் மிகச் சமீபத்திய {count} மட்டுமே தக்கவைக்கப்படுகின்றன.',
 };
 
 registerLyraLocale('ta', strings);

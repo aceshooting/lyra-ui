@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,6 +21,32 @@ rectangle, for orientation and fast navigation on canvases larger than the scree
 (nodes only, matching the React Flow/n8n minimap convention) and never reads `nodes` itself —
 geometry always comes from the canvas's `registerCompanion()` snapshots, so the two can never
 disagree.
+
+For legacy snapshots, the minimap retains every admitted node. Its node overview and moving viewport use
+separate SVG layers, so panning keeps the overview tree unchanged. Existing `node`, `viewport`
+and `viewport-hit-area` parts remain available.
+
+**Source companion:** when `FlowStructureSnapshot.source` is present, the minimap frames its
+accepted global `worldBounds`, including negative origins and positive fractional extents; it
+never infers source extent from the bounded scene-node array. Every positive axis keeps its exact
+source dimension without legacy padding or a one-unit minimum. Only an exactly zero-width or
+zero-height axis receives a centered one-unit SVG display extent; source coordinates are unchanged.
+
+Only accepted `source.overview.bins` render, under `aggregate-bin`, at most 1,024 rectangles.
+They describe the complete node population within the authoritative world bounds; scene-node
+rectangles are not painted as a substitute global overview. The canvas owns overview validation
+and freezing, and the minimap adds no provider query or second normalization. A missing/rejected
+`overview: null` shows localized `source-unavailable` (default “Workflow overview unavailable”)
+while world framing and unlocked viewport controls remain usable. Accepted empty bins are a
+successful empty overview and do not show the unavailable state.
+
+The immutable overview layer is reused by identity across viewport-only snapshots. Map clicks,
+viewport drag, wheel zoom and physical arrow keys use the same exact source-world inverse
+mapping, including RTL and zero-axis display fallback. A change in world coordinate values
+cancels an active drag; cloned equal bounds do not. Old subscriptions/detached controls cannot
+move a later canvas binding. `locked` continues to reflect public canvas `readonly`; the source
+editing gate alone does not disable minimap navigation. Removing the provider restores the
+legacy node-geometry overview.
 
 **Properties:**
 
@@ -39,7 +65,9 @@ disagree.
 **Slots:** none.
 
 **CSS parts:** `base` (the root wrapper; drops its border, background and corner radius under
-`frame="plain"`), `map` (the scaled SVG), `node` (one rect per node), `viewport` (the
+`frame="plain"`), `map` (the scaled SVG), `node` (one rect per legacy node),
+`aggregate-bin` (one accepted source overview rectangle), `source-unavailable` (missing source
+overview message), `viewport` (the
 exact visible view rectangle), `viewport-hit-area` (the transparent draggable/focusable target),
 `instructions` (visually hidden keyboard help), and `live-region` (the `aria-hidden` mirror of the
 latest viewport-change text).
@@ -67,8 +95,8 @@ viewport-to-content ratio. The token inherits from ancestors; set it to `0` to o
 **Known gotchas:**
 
 - Never resolves `nodes`/`edges` on its own — it subscribes to `registerCompanion()` and repaints
-  from whatever snapshot the canvas last pushed, so it can only ever show what the canvas itself
-  currently renders.
+  from the complete admitted legacy geometry or the accepted source overview/world bounds the
+  canvas last pushed. Source scenes remain bounded and never substitute for a global overview.
 - A readonly canvas snapshot makes the hit area unfocusable and inert: no pointer, click, wheel, or keyboard
   shortcut can mutate the canvas.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate

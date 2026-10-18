@@ -207,3 +207,10 @@ function wireDemo(containerId: string): void {
     closeMention();
   }) as EventListener);
 }
+
+export const CandidateAdmissionLimit: Story = {
+  parameters: { docs: { description: { story: 'The first 10,000 candidate positions are admitted. A localized notice discloses omitted input; the popup separately shows at most fifty matching suggestions.' } } },
+  render: () => staticDemo('mention-demo-admission', Array.from({ length: 10_001 }, (_, index) => ({
+    suggestionId: `candidate-${index}`, label: `Candidate ${index + 1}`,
+  }))),
+};

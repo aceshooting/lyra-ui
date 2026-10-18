@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: '僅顯示前{count}個測試結果。',
   toolTimelineLimit: '最多顯示{count}次工具呼叫。',
   toolSelectLimit: '僅顯示前{count}個工具。',
+  testResultsInputTooLarge: '測試結果詳細資料超過顯示上限。',
   toolCall: '工具呼叫',
   maximize: '最大化',
   promptStudioVariableName: '第{index}個變數的名稱',
@@ -292,6 +293,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: '僅顯示前 {count} 個檔案。',
   taskListLimit: '僅顯示前 {count} 個任務。',
   evalDatasetLimit: '僅顯示前{count}個樣例。',
+  activityFeedInputLimit: '僅保留最新的 {count} 筆記錄，共 {total} 筆。',
+  spanWaterfallLimit: '正在顯示 {total} 個跨度中的 {shown} 個。',
+  toolTimelineInputLimit: '僅保留 {total} 次工具呼叫中最新的 {count} 次。',
 };
 
 registerLyraLocale('zh-TW', strings);

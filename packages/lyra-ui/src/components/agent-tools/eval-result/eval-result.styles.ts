@@ -21,6 +21,14 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
   }
 
+  [part='selection-status'] {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--lr-space-s);
+    overflow-wrap: anywhere;
+    color: var(--lr-color-text-quiet);
+  }
   [part='grid'],
   [part='review'],
   [part='diff'],

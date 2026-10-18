@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -33,6 +33,18 @@ export const styles = css`
     flex: 1 1 var(--lr-size-12rem);
     min-inline-size: 0;
   }
+  [part='source-clear'] {
+    ${iconHitTarget}
+    font: inherit;
+    color: var(--lr-color-text);
+    background: var(--lr-color-surface-raised);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    cursor: pointer;
+  }
+  [part='source-clear']:hover { background: var(--lr-color-brand-quiet); }
+  [part='source-clear']:focus-visible { ${focusRing} }
+  [part='source-status'] { overflow-wrap: anywhere; margin-block: var(--lr-space-xs); }
   [part='search-results'] {
     display: flex;
     flex-direction: column;
@@ -120,5 +132,10 @@ export const styles = css`
       var(--_lr-knowledge-graph-explorer-detail-clamp),
       var(--lr-size-24rem)
     );
+  }
+  [part='input-limit'] {
+    margin-block: var(--lr-space-xs);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
   }
 `;

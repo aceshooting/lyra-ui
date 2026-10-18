@@ -4426,8 +4426,10 @@ it('rejects url paint servers from marker colors', async function () {
 function stubMarkerConstruction(el: LyraMap): Array<{ color?: string } | undefined> {
   const constructedOptions: Array<{ color?: string } | undefined> = [];
   class FakeMarker {
+    private element = document.createElement('button');
     constructor(options?: { color?: string }) {
       constructedOptions.push(options);
+      this.element.className = 'maplibregl-marker';
     }
 
     setLngLat(): this {
@@ -4443,10 +4445,11 @@ function stubMarkerConstruction(el: LyraMap): Array<{ color?: string } | undefin
     }
 
     getElement(): HTMLElement {
-      return document.createElement('button');
+      return this.element;
     }
 
     addTo(): this {
+      el.shadowRoot!.append(this.element);
       return this;
     }
 
@@ -4468,10 +4471,11 @@ it('defaults an omitted marker color to the themed brand token instead of the un
   await el.updateComplete;
 
   expect(constructedOptions).to.have.lengthOf(1);
-  expect(constructedOptions[0]?.color).to.equal('rgb(9, 8, 7)');
+  expect(constructedOptions[0]?.color).to.equal('currentColor');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('.maplibregl-marker')!).color).to.equal('rgb(9, 8, 7)');
 });
 
-it('rebuilds default-coloured markers when the theme changes the brand token', async () => {
+it('retains default-coloured markers while CSS follows the brand token', async () => {
   const el = (await fixture(
     html`<lr-map engine="maplibre" data-lr-theme-scope style="--lr-color-brand: rgb(9, 8, 7)"></lr-map>`,
   )) as LyraMap;
@@ -4482,14 +4486,15 @@ it('rebuilds default-coloured markers when the theme changes the brand token', a
   ];
   await el.updateComplete;
   expect(constructedOptions.map((options) => options?.color)).to.deep.equal([
-    'rgb(9, 8, 7)',
+    'currentColor',
     'rgb(4, 5, 6)',
   ]);
 
   el.setAttribute('data-lr-theme-scope', '');
   el.style.setProperty('--lr-color-brand', 'rgb(1, 2, 3)');
-  await waitUntil(() => constructedOptions.length === 3, 'the default pin never followed the theme');
-  expect(constructedOptions[2]?.color, 'only the default pin is rebuilt').to.equal('rgb(1, 2, 3)');
+  const marker = el.shadowRoot!.querySelector('.maplibregl-marker')!;
+  await waitUntil(() => getComputedStyle(marker).color === 'rgb(1, 2, 3)');
+  expect(constructedOptions.length).to.equal(2);
 });
 
 it("leaves an explicit invalid marker color to maplibre-gl's own default, unlike an omitted color", async () => {
@@ -5708,7 +5713,7 @@ describe('dataLayers clustering and heatmap', () => {
       expect(colorResolutions, 'a usable authored heatmap ramp skips default tokens').to.equal(0);
 
       expect(paint.heatmapColorExpression(byId('default-ramp')).length).to.be.greaterThan(6);
-      expect(colorResolutions, 'an unusable authored ramp resolves default tokens').to.be.greaterThan(0);
+      expect(colorResolutions, 'the previously resolved default ramp reuses its cached colors').to.equal(0);
     } finally {
       if (originalDescriptor) Object.defineProperty(window, 'getComputedStyle', originalDescriptor);
       else delete (window as unknown as { getComputedStyle?: typeof getComputedStyle }).getComputedStyle;

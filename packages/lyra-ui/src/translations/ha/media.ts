@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Hoto {index} cikin {total}',
   playWithContext: 'Kunna {name}',
   pauseWithContext: 'Dakata da {name}',
+  avPlayerWaveformUnavailable: 'Ba a samun bayanan siffar raƙuman sauti, ko kuma ba su dace da wannan abin sauti ko bidiyo ba.',
+  avPlayerTranscriptUnavailable: 'Ba a samun bayanan rubutaccen abin da aka faɗa.',
   dropzoneReleaseToAdd: 'Saki don ƙara fayil ɗin.',
   dropzoneRejectedType: 'Ba a yarda da irin wannan fayil ba.',
   attachmentAdd: 'Ƙara abin haɗawa',

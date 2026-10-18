@@ -1,3 +1,4 @@
+import { resolvedShikiLanguages, ensureShikiLanguageLoaded, type ShikiLanguageSource } from './shiki-types.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -9,7 +10,6 @@ import {
   normalizeShikiLanguage,
   shikiHasLoadedLanguage,
   type ShikiHighlighter,
-  type ShikiLanguageInput,
 } from './code-loader.js';
 import { styles } from './code-block.styles.js';
 import type { LyraCodeBlockCopyAppearance } from './code-block-shared.js';
@@ -23,7 +23,7 @@ import type {
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -134,6 +134,7 @@ export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
  *   `collapsed`.
  * @csspart pre - The rendered `<pre>` — shiki's own in the highlighted path,
  *   this component's own plain one in the fallback path.
+ * @csspart limit - The localized notice when source exceeds the syntax-highlighting ceiling.
  * @csspart code - The rendered `<code>`, same split as `pre` above.
  * @csspart line-highlight - A line marked by `highlight-lines` or a `line-range` entry in
  *   `highlights`.
@@ -178,6 +179,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    codeBlockHighlightLimit: LYRA_DEFAULT_codeBlockHighlightLimit,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
     collapseCode: LYRA_DEFAULT_collapseCode,
@@ -197,7 +199,9 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** The raw source text. Removing the attribute renders an empty code block. */
+  /** The raw source text. Removing the attribute renders an empty code block. Source above
+   *  8,192 UTF-16 code units renders in full as plain text with a localized `limit` notice;
+   *  the ceiling is checked before synchronous syntax tokenization. */
   @property() override code = '';
 
   /** A shiki-recognized language id or alias (e.g. `"javascript"`,
@@ -272,7 +276,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
   readonly anchorKinds: readonly LyraAnchor['kind'][] = ['line-range'];
 
-  /** A map of language id to an already-imported shiki grammar module's
+  /** A map of language id to a lazy grammar loader or an already-imported shiki grammar module's
    *  default export (e.g. `{ bash: bashGrammar }` where `bashGrammar` came
    *  from a module-scope `import bash from 'shiki/langs/bash.mjs'`). When
    *  `language` matches a key here, highlighting for it is seeded from
@@ -282,13 +286,14 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
    *  `loadLanguage()` import entirely for that language — see the class doc
    *  above for the build-output rationale. A `language` value absent from
    *  this map (or left unset, or when `languages` itself is unset) falls
-   *  back to that default dynamic-import path unchanged. For a TypeScript
-   *  annotation, use `import type { ShikiLanguageInput } from
+   *  back to that default dynamic-import path unchanged. Loader functions are resolved only
+   *  when their language is requested. For an
+   *  annotation, use `import type { ShikiLanguageSource } from
    *  '@aceshooting/lyra-ui/components/lr-code-block.js'`;
    *  this granular type-only import emits no registration side effect. */
   @property({ attribute: false }) languages?: Readonly<Record<
     string,
-    ShikiLanguageInput
+    ShikiLanguageSource
   >>;
   private highlighter?: ShikiHighlighter | null;
 
@@ -327,7 +332,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
   // `willUpdate()`/`updated()`/`render()`/`syncHighlight()` so they all agree
   // on whether this render is taking the fine-grained `languages` path or
   // the default `loadShikiHighlighter()` one.
-  protected override preSuppliedGrammar(): ShikiLanguageInput | undefined {
+  protected override preSuppliedGrammar(): ShikiLanguageSource | undefined {
     return codeBlockPreSuppliedGrammar(this.languages, this.language ?? '');
   }
 
@@ -361,17 +366,18 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
     // and overwrite it with stale tokenization.
     const token = ++this.highlightToken;
     const lang = normalizeShikiLanguage(this.language ?? '');
-    if (!lang) {
+    if (!lang || this.highlightLimited) {
       this.highlightedHtml = null;
       return;
     }
 
     const languages = this.languages;
-    if (languages?.[lang] ?? languages?.[this.language]) {
+    const source = languages?.[lang] ?? languages?.[this.language];
+    if (languages && source) {
       // Fine-grained opt-in path -- entirely separate from `this.highlighter`
       // below, see `loadShikiHighlighterCore()`'s doc comment for why.
       this.highlightedHtml = null;
-      void loadShikiHighlighterCore(languages).then((hl) => {
+      void loadShikiHighlighterCore(resolvedShikiLanguages(languages)).then(async (hl) => {
         if (token !== this.highlightToken) return; // superseded by a newer code/language/languages change
         // Lit's first update cycle (which is what calls syncHighlight() via willUpdate() for an
         // element that had `language`/`languages` set before it ever connected) still runs even if
@@ -380,7 +386,9 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
         // connectedCallback()'s, not just the staleness check above, to avoid mutating @state on a
         // dead instance. Same guard <lr-code-block-core> carries on its own fine-grained load.
         if (!this.isConnected) return;
-        this.highlightedHtml = hl ? this.tokenize(hl, lang) : null;
+        const loaded = hl && await ensureShikiLanguageLoaded(hl, lang, source);
+        if (token !== this.highlightToken || !this.isConnected) return;
+        this.highlightedHtml = loaded && hl ? this.tokenize(hl, lang) : null;
       });
       return;
     }

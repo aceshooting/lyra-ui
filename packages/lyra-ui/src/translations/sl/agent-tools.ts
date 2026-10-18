@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Prikazani so samo prvi rezultati testov (največ {count}).',
   toolTimelineLimit: 'Prikazani so samo prvi klici orodij (največ {count}).',
   toolSelectLimit: 'Prikazana so samo prva orodja (največ {count}).',
+  testResultsInputTooLarge: 'Podrobnosti rezultatov preizkusov presegajo omejitev prikaza.',
   toolCall: 'Klic orodja',
   maximize: 'Maksimiraj',
   promptStudioVariableName: 'Ime spremenljivke {index}',
@@ -298,6 +299,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Prikazanih je samo prvih {count} datotek.',
   taskListLimit: 'Prikazanih je le prvih {count} opravil.',
   evalDatasetLimit: 'Prikazani so samo prvi primeri (največ {count}).',
+  activityFeedInputLimit: 'Ohrani se samo najnovejših {count} od {total} vnosov.',
+  spanWaterfallLimit: 'Prikazani razponi sledenja: {shown} od {total}.',
+  toolTimelineInputLimit: 'Ohranjeni so samo najnovejši klici orodij: {count} od {total}.',
 };
 
 registerLyraLocale('sl', strings);

@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} more suggestion dey',
     other: '{count} more suggestion dem dey',
   },
+  mentionInputLimit: 'Na only di first 10,000 candidates wey you fit mention dey available.',
+  diffViewHighlightLimit: 'Long code dey show without syntax highlighting.',
 };
 
 registerLyraLocale('pcm', strings);

@@ -37,3 +37,28 @@ describe('shared inherited attribute observation', () => {
     }
   });
 });
+
+it('flushes pending records once to live subscribers and keeps unsubscribe silent', () => {
+  const root = document.createElement('div');
+  let first = 0; let second = 0;
+  const a = subscribeInheritedAttributes(root, MutationObserver, { attributes: ['hidden'], changed: () => first++ })!;
+  const b = subscribeInheritedAttributes(root, MutationObserver, { attributes: ['hidden'], changed: () => second++ })!;
+  try {
+    root.hidden = true; a.flush(); a.flush();
+    expect(first).equal(1); expect(second).equal(1);
+    root.hidden = false; a();
+    expect(first).equal(1); expect(second).equal(2);
+    a.flush(); expect(first).equal(1);
+  } finally { a(); b(); }
+});
+it('does not notify a subscriber removed reentrantly during flush', () => {
+  const root = document.createElement('div');
+  let first = 0; let second = 0;
+  let b: (() => void) | undefined;
+  const a = subscribeInheritedAttributes(root, MutationObserver, { attributes: ['hidden'], changed: () => { first++; b?.(); a?.flush(); } })!;
+  b = subscribeInheritedAttributes(root, MutationObserver, { attributes: ['hidden'], changed: () => second++ });
+  try {
+    root.hidden = true; a.flush();
+    expect(first).equal(1); expect(second).equal(0);
+  } finally { a(); b?.(); }
+});

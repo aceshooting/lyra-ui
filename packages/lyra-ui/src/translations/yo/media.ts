@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Àwòrán {index} nínú {total}',
   playWithContext: 'Ṣeré {name}',
   pauseWithContext: 'Dá {name} dúró díẹ̀',
+  avPlayerWaveformUnavailable: 'Dátà ìrísí ìgbì kò sí tàbí kò bá mídíà yìí mu.',
+  avPlayerTranscriptUnavailable: 'Dátà ọ̀rọ̀ tí a kọ láti inú ohun tí a sọ kò sí.',
   dropzoneReleaseToAdd: 'Jẹ́ kí fáìlì náà lọ láti fi kún un.',
   dropzoneRejectedType: 'A kò gba irú fáìlì yìí.',
   attachmentAdd: 'Fi àfikún kún un',

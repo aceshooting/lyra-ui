@@ -11,7 +11,7 @@
 - **Deprecated event** `lr-run-change` since `26.0.0`; use event `@lr-run-activate`; removal not before `28.0.0` — lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major.
 - **Deprecated event** `lr-slice-change` since `26.0.0`; use event `@lr-slice-change-request`; removal not before `28.0.0` — lr-slice-change-request names a request the application decides on; the old event fires right after it for one major.
 - **Optional peers** none
-- **Themeable via** 15 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,6 +45,13 @@ history, counts, rendering, or actions.
 At most the 500 most recent of the currently filtered runs (the array end is newest) render as
 `run` buttons and feed the trend chart; a filtered set past that length renders a localized
 `limit` notice after the run history rather than mounting an unbounded number of rows.
+Input admission itself retains the newest bounded run tail and reports any earlier loss in
+`input-limit`. Latest metric cards still consider every admitted filtered run, including a finite
+metric outside the 500-row history window. Slice controls are capped at 500 including All: at most
+499 named slices, reserving the selected slice when it exists. `slices-limit` reports the displayed
+and full admitted slice counts. Run, metric, and slice projections are reused across presentation
+updates; localized formatting remains live. Initial and reconnect omission notes are quiet;
+later changed omissions are politely announced.
 
 **Events:** `lr-metric-change-request` (`{ metricId }`), `lr-slice-change-request` (`{ slice }`) and
 `lr-run-activate` (`{ runId, run }`). All are controlled intents; the component does not mutate the
@@ -54,7 +61,7 @@ corresponding selection properties. The deprecated `lr-metric-change`, `lr-slice
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),
 `chart`, `runs`, `runs-heading`, `run`, `limit` (localized notice that only the most recent 500
-filtered runs are shown), `empty`.
+filtered runs are shown), `input-limit`, `slices-limit`, `empty`.
 
 **Themeable custom properties:** `--lr-rag-eval-dashboard-selected-border-color` (default
 `var(--lr-color-brand)`) — border color shared by the controlled active slice and metric.

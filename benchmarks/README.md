@@ -1,6 +1,9 @@
 # Synthetic component benchmarks
 
-Run repeatable table, chart and option-control workloads against Lyra UI's built package, save raw samples, and compare later builds. These benchmarks run on demand; they do not change release gates or run automatically in CI.
+Run repeatable table, chart and option-control workloads against Lyra UI's built package, save raw
+samples, and compare later builds. Release qualification includes a quick Chromium comparison on a
+stable workstation; material regressions require an explanation in the changeset. Measurements do
+not run automatically in CI. See [the release procedure](../docs/agents/ci-and-gates.md#release-procedure).
 
 ## Run
 
@@ -103,3 +106,9 @@ pnpm test:benchmarks
 `result.schema.json` is generated from the catalog and schema helper. Regenerate with `node benchmarks/schema.mjs --write` after a schema/catalog change. `schema.mjs --validate` performs additional semantic checks that JSON Schema alone cannot express, such as complete sample counts and required assertions for passing cases.
 
 Runner exits: 0 complete/pass, 1 failed measurement, 2 incomplete/unavailable, 3 setup/options/cleanup failure. Comparison exits: 0 compatible without regression, 1 regression, 2 incomplete/incompatible/explicit override, 3 invalid input. These tools do not replace functional, accessibility, cross-browser or release qualification tests.
+
+The quick and stress profiles include 10,000-record document-library filtering, eval-dataset row
+selection, retrieval checkbox selection, and a 5,000-item ingestion progress tick. See the fixture
+README for compact inputs, public interaction contracts, nested update settlement, and semantic-only
+compatibility checks. These new workloads require a baseline measured with the same fixture bytes;
+older result files with a different harness fingerprint are not directly comparable.

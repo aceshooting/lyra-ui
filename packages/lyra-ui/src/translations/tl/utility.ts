@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} pang mungkahi',
     other: '{count} higit pang mga mungkahi',
   },
+  mentionInputLimit: 'Ang unang 10,000 kandidatong maaaring banggitin lang ang available.',
+  diffViewHighlightLimit: 'Ipinapakita ang mahabang code nang walang pagha-highlight ng sintaks.',
 };
 
 registerLyraLocale('tl', strings);

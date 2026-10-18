@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Nog geen gesprekken',
   agentWorkspaceLabel: 'Werkruimte voor agent',
+  agentWorkspaceInputLimit: '{collection}: slechts {count} van {total} vermeldingen worden bewaard.',
   agentWorkspaceConversation: 'Gesprek',
   agentWorkspaceDetails: 'Uitvoeringsdetails',
   agentWorkspaceRun: 'Agentuitvoering',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Dit onderdeel opnieuw proberen',
   promptQueueLabel: 'Prompts in wachtrij',
   promptQueueEmpty: 'Geen prompts in wachtrij',
+  promptQueueInputLimit: 'Sommige prompts in de wachtrij of bijlagen zijn weggelaten omdat de invoerlimiet is bereikt.',
+  promptQueueAttachmentLimit: 'Toont {shown} van {total} bewaarde bijlagen.',
   promptQueueSendNow: 'Nu verzenden',
   selectionToolbarLabel: 'Selectieacties',
   selectionAsk: 'Vragen',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} token',
     other: '{count} tokens',
   },
+  threadListInputLimit: 'Sommige gespreksdraden zijn weggelaten omdat de invoerlimiet is bereikt.',
+  promptInputInputLimit: 'Sommige suggesties of catalogusvermeldingen zijn weggelaten omdat de invoerlimiet is bereikt.',
+  transcriptFeedInputLimit: 'Alleen de nieuwste {count} van {total} vermeldingen worden bewaard.',
+  codeBlockHighlightLimit: 'Lange code wordt zonder syntaxiskleuring getoond.',
 };
 
 registerLyraLocale('nl', strings);

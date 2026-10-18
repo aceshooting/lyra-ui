@@ -1,5 +1,9 @@
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 
+const nativeNames = new Map<string, string>();
+let nativeNameMethod: typeof Intl.DisplayNames.prototype.of | undefined;
+let nativeNameConstructor: typeof Intl.DisplayNames | undefined;
+
 /**
  * ISO 3166-1 alpha-2 shape: exactly two ASCII letters, case-insensitive.
  * Shared by `flag.ts` (validating `country`) and `languageToCountry` below
@@ -230,7 +234,17 @@ export function languageToCountry(language: string): string | undefined {
  */
 export function localeNativeName(tag: string): string {
   try {
-    return getDisplayNames(tag, { type: 'language' }).of(tag) ?? tag;
+    if (nativeNameMethod !== Intl.DisplayNames.prototype.of || nativeNameConstructor !== Intl.DisplayNames) {
+      nativeNames.clear();
+      nativeNameMethod = Intl.DisplayNames.prototype.of;
+      nativeNameConstructor = Intl.DisplayNames;
+    }
+    const cached = nativeNames.get(tag);
+    if (cached !== undefined) return cached;
+    const name = getDisplayNames(tag, { type: 'language' }).of(tag) ?? tag;
+    if (nativeNames.size >= 1024) nativeNames.delete(nativeNames.keys().next().value!);
+    nativeNames.set(tag, name);
+    return name;
   } catch {
     return tag;
   }

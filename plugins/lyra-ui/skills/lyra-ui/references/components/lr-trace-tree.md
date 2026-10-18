@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,15 +20,92 @@ A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tre
 name, status, an inline duration bar on the shared trace time scale, and optional tokens/cost
 columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 
-Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
+
+**Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined = undefined`
+(attribute: false) takes display precedence over `spans`, including when a defined provider is
+invalid. Invalid input shows a localized source failure; setting `undefined` restores current
+legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts.
+
+```ts
+import type { TraceTreeSource } from
+  "@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.class.js";
+import type { LyraSpan } from
+  "@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js";
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`TraceTreeSource` is exactly
+`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`. Its immutable `revision`
+is a nonempty string or finite number. `project(request)` receives revision, locale, abort signal,
+previous opaque `state` (initially `null`), an action (`reset`, `toggle`, `reveal` or item `select`),
+and `{ search: '', hiddenKinds }`. The provider applies kind filtering to the complete hierarchy;
+the component has no source search or copy controls. Return
+`{ state, total, rows, summary: { startMs, endMs }, focusIndex? }`: `total` counts every logical
+node including collapsed nodes, and `rows.count` is the complete currently visible preorder.
+Counts are safe nonnegative integers with `rows.count <= total`; `state` is a nonempty immutable
+snapshot token of at most 65,536 UTF-16 units.
+
+The required `LyraTraceSourceSummary` describes the entire trace's timing extent, independent of
+loaded rows, collapsed branches and kind filters. Both endpoints are finite nonnegative
+trace-relative milliseconds, `endMs >= startMs`, with finite difference. Equal endpoints remain
+valid and reported unchanged. Missing/invalid summaries fail visibly; the component never derives
+the global extent from the current window or legacy spans. Bars subtract the global start before
+scaling; running spans retain a visible minimum width without rewriting the supplied extent.
+
+`rows` is an immutable `LyraHierarchyView<LyraHierarchyRow<LyraSpan>>`, either indexed
+`itemAt`/`keyAt`/`indexOfKey` or asynchronous `read` plus required `indexOfKey`. Each row has globally
+unique nonblank `key === value.id`, `parentKey`, one-based `level`/`position`, exact sibling
+`setSize`, `childCount`, `expanded`, `selected`, and optional `disabled`/`selectionState`. These
+fields own topology, expansion and provider selection; span `parentId` and nested children never
+rebuild a local hierarchy. Global uniqueness and immutable consistency remain provider obligations
+beyond the bounded admitted window.
+
+Only closed span display fields are copied: `id`, `name`, `detail`, `costText`, normalized
+`kind`/`status`, `startMs`, optional `endMs` and valid `tokensIn`/`tokensOut`. Nonblank IDs preserve
+surrounding whitespace. Source start must be finite/nonnegative; an explicit end must be finite
+and at least start. Unknown kinds become `other`, absent statuses `pending`, explicit unknown
+statuses `unknown`; invalid token metrics are omitted. Oversized display strings/rows fail without
+clipping. Keys/state/display strings are each at most 65,536 UTF-16 units; aggregate normalized
+row text including key/parent accounting is bounded to 65,536 units. Admitted cache/staging,
+focused-row and projection-state payloads share 2,000,000 units. Opaque metadata is not traversed.
+
+Four 100-row pages are retained (400 rows), plus at most one focused ready row. At most 301 rows
+mount, including the focused row; range reads request at most 100 rows with two physically pending
+reads. One projection call runs at a time with only the latest replacement queued. Ignored aborts
+retain physical permits until settlement. No complete source array, ancestor index or count-sized
+key map is built. Flat rows expose exact logical ARIA depth/sibling positions while visual
+indentation remains bounded; source rows own one treeitem/focus target each.
+
+`revealSourceKey(key: string): Promise<boolean>` directly resolves a global provider key, opens its
+ancestors and focuses the returned row. Absent, disabled, invalid, failed, canceled, obsolete and
+unset-source targets resolve `false`; there is no source-wide scan fallback. Source Home/End uses
+the full visible preorder, parent/reveal navigation uses direct lookup and branch arrows are
+RTL-aware. Disabled-row traversal examines at most 32 candidates. `activeSpanId` remains
+caller-controlled: source activation emits `lr-span-select { spanId }` only after the accepted
+item-selection action, without changing it. The active ID paints `aria-current` and reveals once
+per binding/ID; unrelated paints do not repeatedly undo user navigation. Accepted expansion emits
+exactly `lr-span-toggle { spanId, expanded }`. No additional source-selection event is introduced.
+`expandAll()`/`collapseAll()` are no-ops in source mode.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Changing `hiddenKinds` refreshes the provider query; named selection/presentation paints reuse
+accepted data. Locale/lifecycle refresh and source replacement revoke obsolete controls, requests,
+announcements and reveal effects. Loading/error/empty/retry are localized; window movement does
+not announce historical loaded span statuses as fresh changes. Source-only parts are `source-list`,
+`source-row`, `source-label`, `source-toggle`, `source-status` and `source-error`; existing span
+icon/name/detail/status/duration/token/cost/bar parts remain on their content. The following array
+admission and local hierarchy rules apply with `treeSource` unset.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — the same `LyraSpan` shape documented
 under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy comes from
 `parentId`, and a span whose `parentId` is missing or doesn't resolve within the same array renders
 as a root rather than being dropped. Duration bars scale to the whole trace, measured before the
-shared 500-span cap is applied, so a truncated tail never stretches the surviving bars across their
-tracks. `activeSpanId: string | null = null`
+configured span cap is applied, so a truncated tail never stretches the surviving bars across their
+tracks. `maxNodes: number = 500` (attribute `max-nodes`) sets that cap, normalized to `1..5000`;
+unset or non-finite values restore 500. `activeSpanId: string | null = null`
 (attribute `active-span-id`), `label?: string`, `withTokens: boolean = false` (attribute
 `with-tokens`, reflected) — surfaces `tokensIn`/`tokensOut`, `withCost: boolean = false` (attribute
 `with-cost`, reflected) — surfaces `costText`, and `withoutBars: boolean = false` (attribute
@@ -39,24 +116,28 @@ Token counts render only when finite and non-negative; invalid metrics are omitt
 reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
 the same bounded runtime projection: provider records are normalized with deterministic first-wins
-identity, then at most 500 mount. The controlled `activeSpanId` and its resolvable ancestor path
-reserve positions before ordinary input-order spans. Non-object records, empty/blank ids, non-finite
+identity, then at most `maxNodes` mount. The controlled `activeSpanId` and its nearest resolvable
+ancestors reserve positions inside that budget before ordinary input-order spans. Non-object records, empty/blank ids, non-finite
 starts/ends, and later duplicate ids are omitted; negative starts clamp to zero, ends clamp to at
 least their start, unknown kinds become `other`, and explicit unknown statuses become `unknown`;
 an absent status defaults to `pending`. A localized
-`[part="limit"]` note exposes truncation.
+`[part="limit"]` note exposes source or projection truncation. The first 10,000 outer input entries
+are admitted by identity; canonical display fields are copied without traversing opaque provider
+metadata. The active span cannot reserve an entry excluded by source admission. Initial limit
+notices are silent; a later transition into truncation is announced politely.
 
-**Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.
+**Methods:** with `treeSource` unset, `expandAll()` and `collapseAll()` set every row's expanded
+state at once; `revealSourceKey(key)` is the provider navigation method described above.
 
 **Events:** `lr-span-select` (`detail: { spanId: string }`, a row was activated) and `lr-span-toggle`
 (`detail: { spanId: string; expanded: boolean }`, a row was expanded or collapsed).
 
-**Hidden kinds and focus:** `hiddenKinds: readonly LyraSpan['kind'][] = []` (attribute: false) leaves those kinds out of the tree; a span whose parent is hidden becomes a root, and the duration bars and the 500-row limit notice keep following the whole trace (`lr-agent-trace` forwards its own `hiddenKinds` here). `spans` is kept by item identity, so a large trace with opaque provider metadata is never cut by a field budget. The browsed row stays the tab stop across `spans`/collapse changes, and the active row scrolls into view only when `active-span-id` changes.
+**Hidden kinds and focus with `treeSource` unset:** `hiddenKinds: readonly LyraSpan['kind'][] = []` (attribute: false) leaves those kinds out of the tree; a span whose parent is hidden becomes a root, and the duration bars and configured limit notice keep following the whole admitted trace (`lr-agent-trace` forwards its own `hiddenKinds` here). Opaque provider metadata does not consume a deep-field budget. The browsed row stays the tab stop across `spans`/collapse changes, and the active row scrolls into view only when `active-span-id` changes.
 
 **CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
 `with-tokens`/`with-cost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
 `duration`, `tokens-in`, `tokens-out` (when `with-tokens`), `cost` (when `with-cost`), `bar-track`,
-`bar`, `empty` (shown when `spans` is empty), `limit` (the 500-span projection notice), and
+`bar`, `empty` (shown when `spans` is empty), `limit` (source or projection truncation notice), and
 `live-region`.
 
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default

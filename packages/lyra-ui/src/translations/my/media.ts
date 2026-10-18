@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'စုစုပေါင်း {total} ပုံအနက် {index} ပုံမြောက်',
   playWithContext: '{name} ကို ဖွင့်ရန်',
   pauseWithContext: '{name} ကို ခေတ္တရပ်ရန်',
+  avPlayerWaveformUnavailable: 'လှိုင်းပုံစံဒေတာကို မရရှိနိုင်ပါ သို့မဟုတ် ဤမီဒီယာနှင့် ကိုက်ညီမှုမရှိပါ။',
+  avPlayerTranscriptUnavailable: 'အသံမှ စာသားပြောင်းထားချက် ဒေတာကို မရရှိနိုင်ပါ။',
   dropzoneReleaseToAdd: 'ဖိုင်ထည့်ရန် လွှတ်လိုက်ပါ။',
   dropzoneRejectedType: 'ဤဖိုင်အမျိုးအစားကို လက်မခံပါ။',
   attachmentAdd: 'တွဲဖက်ဖိုင် ထည့်ရန်',

@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assembleVisualManifest, readVisualManifestSources } from './visual-manifest-source.mjs';
+import { validateScaleBudgetFixture } from './check-scale-budgets.mjs';
 
 import {
   buildComponentIntegration,
@@ -27,6 +28,7 @@ export const QUALITY_PATHS = Object.freeze({
   inventory: path.join(scriptsDir, 'fixtures', 'component-inventory.json'),
   qualification: path.join(scriptsDir, 'fixtures', 'component-qualification.json'),
   integration: path.join(scriptsDir, 'fixtures', 'component-integration.json'),
+  scaleBudgets: path.join(scriptsDir, 'fixtures', 'scale-budgets.json'),
   exemptions: path.join(scriptsDir, 'qualification-exemptions.json'),
   visual: path.join(packageDir, 'visual-baselines', 'manifest.json'),
   ssr: path.join(packageDir, 'src', 'ssr.ts'),
@@ -54,6 +56,7 @@ function qualificationMetadata(record) {
     reviewer: record?.qualification?.reviewer ?? null,
     reviewedAt: record?.qualification?.reviewedAt ?? null,
     accessibility: record?.dimensions?.accessibility?.status ?? 'not-recorded',
+    scale: record?.dimensions?.scale?.status ?? 'unmeasured',
     ledger: 'scripts/fixtures/component-qualification.json',
   };
 }
@@ -87,14 +90,22 @@ export async function buildQualityArtifacts({
   measureGzip = false,
 } = {}) {
   const inventory = readJson(paths.inventory);
+  if (inventory?.schemaVersion !== 1 || !Array.isArray(inventory.components)) {
+    throw new Error('Component quality requires component inventory schemaVersion 1 with components[].');
+  }
   const exemptions = readJson(paths.exemptions);
   const visualManifest = assembleVisualManifest(readVisualManifestSources({ packageDir: visualSourceRoot, aggregatePath: paths.visual }));
   const packageJson = readJson(paths.packageJson);
   const previousIntegration = readOptionalJson(paths.integration);
-  const ssrSource = fs.readFileSync(paths.ssr, 'utf8');
-  if (inventory?.schemaVersion !== 1 || !Array.isArray(inventory.components)) {
-    throw new Error('Component quality requires component inventory schemaVersion 1 with components[].');
+  const scaleBudgets = paths.scaleBudgets
+    ? readJson(paths.scaleBudgets)
+    : { margin: 0.1, measuredAt: null, budgets: {} };
+  validateScaleBudgetFixture(scaleBudgets, new Set(inventory.components.map(component => component.tag)));
+  if (Object.values(scaleBudgets.budgets).some((scenarios) => Object.keys(scenarios).length > 0) &&
+      (typeof scaleBudgets.measuredAt !== 'string' || Number.isNaN(Date.parse(scaleBudgets.measuredAt)))) {
+    throw new Error('Measured scale budgets require a measurement date.');
   }
+  const ssrSource = fs.readFileSync(paths.ssr, 'utf8');
   if (!visualManifest) throw new Error('Component quality requires visual-baselines/manifest.json.');
   const visualFindings = validateVisualQualificationManifest(visualManifest, inventory);
   if (visualFindings.length > 0) throw new Error(`Visual qualification manifest failed:\n- ${visualFindings.join('\n- ')}`);
@@ -117,6 +128,7 @@ export async function buildQualityArtifacts({
     exemptions,
     visualManifest,
     ssrSource,
+    scaleBudgets,
   });
   const qualificationFindings = validateQualificationLedger(qualification, inventory);
   const integrationFindings = validateComponentIntegration(integration, inventory, graph);

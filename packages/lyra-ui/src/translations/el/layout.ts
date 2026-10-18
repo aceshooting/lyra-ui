@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: 'εντολή {count}',
     other: '{count} εντολές',
   },
+  commandPaletteInputLimit: 'Λόγω ορίου εισόδου παραλείφθηκαν ορισμένα στοιχεία: εντολές.',
 };
 
 registerLyraLocale('el', strings);

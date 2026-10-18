@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './xml-viewer.js';
-import type { LyraXmlViewer } from './xml-viewer.js';
+import type { LyraXmlViewer, XmlViewerTreeSource } from './xml-viewer.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = { title: 'DocumentViewer/XmlViewer', component: 'lr-xml-viewer', tags: ['autodocs'] };
@@ -136,4 +136,77 @@ export const RetintedTagColor: Story = {
       style="--lr-xml-viewer-tag-color: var(--lr-color-success);"
     ></lr-xml-viewer>
   `,
+};
+
+export const ConfiguredLimits: Story = {
+  render: () => html`<lr-xml-viewer max-nodes="100000" max-rows="10000" max-bytes="52428800" expand-depth="1" .xml=${FEED}></lr-xml-viewer>`,
+};
+
+function millionInspectionSource(deep = false): XmlViewerTreeSource {
+  const count = 1_000_000;
+  const indexOf = (key: string | number) => {
+    const text = String(key);
+    if (!/^n\d+$/.test(text)) return -1;
+    const index = Number(text.slice(1));
+    return Number.isSafeInteger(index) && index >= 0 && index < count ? index : -1;
+  };
+  return {
+    revision: 1,
+    async project(request) {
+      const focusIndex = request.action.type === 'reveal' ? indexOf(request.action.key) : -1;
+      let closed = deep && request.state !== null ? Number(request.state) : -1;
+      if (request.action.type === 'reset' || focusIndex >= 0) closed = -1;
+      if (deep && request.action.type === 'toggle') closed = request.action.expanded ? -1 : indexOf(request.action.key);
+      const visible = closed < 0 ? count : closed + 1;
+      return { state: String(closed), total: count, rows: { count: visible,
+        keyAt: (index: number) => `n${index}`, indexOfKey: (key: string | number) => { const index = indexOf(key); return index < visible ? index : -1; },
+        itemAt: (index: number) => ({ key: `n${index}`,
+          value: { name: deep ? 'child' : String(index), path: `n${index}`, kind: 'element' as const,
+            value: String(index) },
+          parentKey: deep && index > 0 ? `n${index - 1}` : null,
+          level: deep ? index + 1 : 1, position: deep ? 1 : index + 1, setSize: deep ? 1 : count,
+          childCount: deep && index < count - 1 ? 1 : 0, expanded: deep && index !== closed, selected: false,
+        }),
+      }, ...(focusIndex >= 0 ? { focusIndex } : {}) };
+    },
+    async search(request) {
+      const index = /^\d+$/.test(request.query) ? Number(request.query) : -1;
+      const hits = Number.isSafeInteger(index) && index >= 0 && index < count ? [{ key: `n${index}` }] : [];
+      return { hits, total: hits.length, exhaustive: true };
+    },
+    async copy(request) {
+      const index = request.key === null ? 0 : indexOf(request.key);
+      if (index < 0) throw new RangeError('Unknown node');
+      let text: string;
+      if (deep) text = '<child>'.repeat(count - index - 1) + String(count - 1) + '</child>'.repeat(count - index - 1);
+      else if (request.scope === 'document') {
+        text = '<root>';
+        for (let current = 0; current < count; current++) text += `<n>${current}</n>`;
+        text += '</root>';
+      } else text = `<n>${index}</n>`;
+      if (text.length > request.maxBytes) throw new RangeError('Complete copy exceeds its budget');
+      return text;
+    },
+  };
+}
+
+export const MillionNodeSource: Story = {
+  parameters: { docs: { description: { story: 'A complete million-node indexed provider. Search a numeric node value globally; Search reveals its first exact compact key. Copy requests complete provider text, never the mounted window.' } } },
+  render: () => {
+    const provider = millionInspectionSource();
+    return html`<div style="max-width: 32rem">
+      <lr-xml-viewer .treeSource=${provider} copyable max-height="20rem" aria-label="Million XML nodes"></lr-xml-viewer>
+      <button @click=${(event: Event) => void (event.currentTarget as HTMLElement).parentElement!.querySelector<LyraXmlViewer>('lr-xml-viewer')!.revealSourceKey('n999999')}>Final node</button>
+      <button @click=${async (event: Event) => {
+        const viewer = (event.currentTarget as HTMLElement).parentElement!.querySelector<LyraXmlViewer>('lr-xml-viewer')!;
+        await viewer.search('999999');
+      }}>Search final node</button>
+    </div>`;
+  },
+};
+
+export const MillionDeepSource: Story = {
+  parameters: { docs: { description: { story: 'One million expanded logical levels use compact n-index keys. Logical aria-level remains exact while visual indentation is bounded; revealSourceKey does not build an ancestor-path array. Legacy node-path anchors apply only to providers using JSON.stringify(path) keys; these compact keys use revealSourceKey instead.' } } },
+  render: () => html`<div style="max-width: 320px"><lr-xml-viewer .treeSource=${millionInspectionSource(true)} max-height="16rem" aria-label="Deep XML hierarchy"></lr-xml-viewer>
+    <button @click=${(event: Event) => void (event.currentTarget as HTMLElement).parentElement!.querySelector<LyraXmlViewer>('lr-xml-viewer')!.revealSourceKey('n999999')}>Deepest node</button></div>`,
 };

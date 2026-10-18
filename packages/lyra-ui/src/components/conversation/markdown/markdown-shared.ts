@@ -1,4 +1,4 @@
-import { streamingTailText } from './markdown-streaming-tail.js';
+import { progressiveMarkdownBlocks, streamingTailText } from './markdown-streaming-tail.js';
 import { MARKDOWN_CODE_HEADER_MAX, sanitizeCodeLanguageLabel, type MarkdownCodeBlockRecord } from './markdown-code-header.js';
 /**
  * Pure parsing, rendering, cache, anchor, and highlight helpers shared by `<lr-markdown>` and
@@ -214,13 +214,9 @@ export interface MarkdownHeadingItem {
   level: number;
 }
 
-/** Upper bound on a per-instance highlight cache's entries. Each entry holds a fully-highlighted
- *  HTML string (potentially large for a long code block), and the cache is content-addressed --
- *  on a long-lived instance whose `content` keeps changing (a chat transcript, live docs), an
- *  unbounded map would retain the highlighted HTML of every code block ever rendered. 100 far
- *  exceeds the fenced-block count of any one document, so eviction only trims blocks that
- *  scrolled out of the content long ago. */
+/** Page-wide LRU entry bound, also the per-document distinct highlight admission ceiling. */
 export const HIGHLIGHT_CACHE_MAX = 100;
+export const MARKDOWN_HIGHLIGHT_SOURCE_MAX = 8192;
 export const HIGHLIGHT_CACHE_MAX_BYTES = 2 * 1024 * 1024;
 export const HIGHLIGHT_CACHE_ENTRY_MAX_BYTES = 512 * 1024;
 export const FAILED_HIGHLIGHT_MAX = 256;
@@ -533,15 +529,20 @@ export function createMarkdownRenderContext(options: ParseMarkdownOptions): Mark
   const pendingHighlightKeys = new Set(options.pendingKeys.map(({ key }) => key));
   const taskItemCheckboxLabels: Array<string | null> = [];
   let hadMathFallback = false;
-  let hasRawHtml = false;
+  let hasRawHtml = (options.markedConfigurations ?? []).some(configuration => Boolean(configuration?.['renderer'] || configuration?.['hooks'] || configuration?.['extensions']));
   let codeInvocations = 0;
+  let codeHasSourceTabs = false;
+  const sourceHasTabs = options.codeBlockHeaderOption === true && options.rawContent !== undefined && /^[\t ]*\t/m.test(options.rawContent);
+  const probeCodeTabs = sourceHasTabs ? rawCodeTabProbe(options.rawContent!, options.content, options.tabSize ?? 4) : undefined;
   const headerEnabled = options.codeBlockHeaderOption === true && Boolean(options.codeFrameNonce && options.codeBlocksOut);
-  const wrapCode = (inner: string, token: { text: string; escaped: boolean }, lang: string): string => {
+  const wrapCode = (inner: string, token: { text: string; escaped: boolean; raw?: string }, lang: string): string => {
     const ordinal = codeInvocations++;
     const source = token.text.replace(/\n$/, '');
+    const hasSourceTabs = probeCodeTabs?.(token.raw) ?? false;
     const records = options.codeBlocksOut;
     if (!headerEnabled || !records || !source || token.escaped || records.length + (options.codeBlockIndexOffset ?? 0) >= MARKDOWN_CODE_HEADER_MAX) return inner;
     const index = records.length + (options.codeBlockIndexOffset ?? 0);
+    if (/^ +/m.test(source) && hasSourceTabs) codeHasSourceTabs = true;
     records.push({ language: sanitizeCodeLanguageLabel(lang), source, ordinal });
     return `<div part='code-block-frame' data-lr-code-frame='${options.codeFrameNonce}:${index}'>${inner.replace(/\n$/, '')}</div>\n`;
   };
@@ -630,7 +631,7 @@ export function createMarkdownRenderContext(options: ParseMarkdownOptions): Mark
         const lang = (token.lang ?? '').trim().split(/\s+/)[0] ?? '';
         const body = `${token.text.replace(/\n$/, '')}\n`;
         const text = token.escaped ? body : escapeHtml(body);
-        if (highlightCodeOption && lang) {
+        if (highlightCodeOption && lang && body.length <= MARKDOWN_HIGHLIGHT_SOURCE_MAX) {
           const key = markdownHighlightKey(lang, body);
           const admitted = activeHighlightKeys.has(key) || activeHighlightKeys.size < HIGHLIGHT_CACHE_MAX;
           if (admitted) {
@@ -756,11 +757,39 @@ export function createMarkdownRenderContext(options: ParseMarkdownOptions): Mark
         html = capable.parser(tokens, defaults);
       } else html = instance.parse(source, { gfm, async: false });
       if (typeof html !== 'string') throw new TypeError('The Markdown parser returned non-string markup.');
-      if (headerEnabled && options.rawContent !== undefined && options.tabSize !== undefined && /^[\t ]*\t/m.test(options.rawContent)) {
+      if (headerEnabled && options.rawContent !== undefined && options.tabSize !== undefined && codeHasSourceTabs) {
         restoreMarkdownCodeTabs(instance, options, codeInvocations);
       }
       return { html, hadMathFallback, hasRawHtml, state };
     },
+  };
+}
+
+/** Pairs ordinary parser code envelopes with original lines without a second document lex. */
+function rawCodeTabProbe(raw: string, normalized: string, tabSize: number): (envelope: string | undefined) => boolean {
+  let cursor = 0;
+  let lines: Array<{ normalized: number; raw: number; end: number }> | undefined;
+  return envelope => {
+    if (!envelope) return true;
+    const start = normalized.indexOf(envelope, cursor);
+    if (start < 0) return true;
+    cursor = start + envelope.length;
+    if (!lines) {
+      lines = []; let offset = 0;
+      for (const match of raw.matchAll(/[^\r\n\u2028\u2029]*(?:\r\n|[\r\n\u2028\u2029]|$)/g)) {
+        if (!match[0]) continue;
+        lines.push({ normalized: offset, raw: match.index, end: match.index + match[0].length });
+        offset += normalizeMarkdownLeadingTabs(match[0], tabSize).length;
+      }
+      if (offset !== normalized.length) return true;
+    }
+    const locate = (offset: number): number => {
+      let low = 0, high = lines!.length;
+      while (low + 1 < high) { const middle = (low + high) >>> 1; if (lines![middle]!.normalized <= offset) low = middle; else high = middle; }
+      return low;
+    };
+    const first = lines[locate(start)], last = lines[locate(Math.max(start, cursor - 1))];
+    return !first || !last || /^[\t ]*\t/m.test(raw.slice(first.raw, last.end));
   };
 }
 
@@ -925,6 +954,7 @@ function encodeMarkdownHighlightStyles(markup: string): string {
  * attribute. Authored markup can imitate these data attributes, but the strict value/property map
  * can produce only color declarations -- never a resource fetch, overlay, or layout mutation. */
 function restoreMarkdownHighlightStyles(markup: string): string {
+  if (!markup.includes('data-lr-shiki-')) return markup;
   return markup.replace(/<[a-z][^<>]*>/gi, (openingTag) => {
     const declarations: string[] = [];
     const cleanTag = openingTag.replace(
@@ -967,6 +997,7 @@ export function tokenizeMarkdownHighlight(
   hl: ShikiHighlighter,
   pending: PendingHighlight,
 ): string | null {
+  if (pending.code.length > MARKDOWN_HIGHLIGHT_SOURCE_MAX) return null;
   try {
     const highlighted = hl.codeToHtml(pending.code, {
       lang: normalizeShikiLanguage(pending.lang),
@@ -1086,7 +1117,7 @@ export interface RenderMarkdownOptions {
     marked: MarkedModule,
     pendingKeys: PendingHighlight[],
     headingTreeOut: MarkdownHeadingItem[],
-  ) => { html: string; hadMathFallback: boolean };
+  ) => { html: string; hadMathFallback: boolean; hasRawHtml?: boolean };
   /** Runs immediately after a successful parse, before sanitization -- where each instance kicks
    *  off its variant's katex load. */
   onParsed: () => void;
@@ -1127,10 +1158,12 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
   const headingTree: MarkdownHeadingItem[] = [];
   let rawHtml: string;
   let hadMathFallback: boolean;
+  let hasRawHtml = true;
   try {
     const parsed = options.parse(deps.marked, pendingKeys, headingTree);
     rawHtml = parsed.html;
     hadMathFallback = parsed.hadMathFallback;
+    hasRawHtml = parsed.hasRawHtml !== false;
   } catch (error) {
     return { status: 'fallback', error, headingTree: null };
   }
@@ -1145,7 +1178,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
     // pass a raw-HTML anchor authored under the `trusted` bypass ever reaches.
     return {
       status: 'rendered',
-      html: enforceMarkdownAnchorRelGuard(restoreMarkdownHighlightStyles(rawHtml)),
+      html: finishMarkdownHtml(deps, null, rawHtml, hasRawHtml),
       headingTree,
       mathFailed,
       pendingKeys,
@@ -1164,7 +1197,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 
   let sanitized: string;
   try {
-    sanitized = finishMarkdownHtml(deps, policy, rawHtml);
+    sanitized = finishMarkdownHtml(deps, policy, rawHtml, hasRawHtml);
   } catch (error) {
     warnMarkdownSanitizerUnavailable();
     return { status: 'fallback', error, headingTree };
@@ -1180,7 +1213,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 
 /** The `lr-render-error` payload for a permanently-missing `katex` peer while `math` is set. */
 /** Applies the same sanitizer, Shiki palette restoration, and link guard to every render path. */
-export function finishMarkdownHtml(deps: MarkdownDeps, policy: Record<string, unknown> | null, rawHtml: string): string {
+export function finishMarkdownHtml(deps: MarkdownDeps, policy: Record<string, unknown> | null, rawHtml: string, hasRawHtml = true): string {
   if (typeof rawHtml !== 'string') throw new TypeError('The Markdown parser returned non-string markup.');
   let result = rawHtml;
   if (policy !== null) {
@@ -1189,7 +1222,8 @@ export function finishMarkdownHtml(deps: MarkdownDeps, policy: Record<string, un
     if (typeof sanitized !== 'string') throw new TypeError('The HTML sanitizer returned non-string markup.');
     result = sanitized;
   }
-  return enforceMarkdownAnchorRelGuard(restoreMarkdownHighlightStyles(result));
+  const styled = restoreMarkdownHighlightStyles(result);
+  return hasRawHtml ? enforceMarkdownAnchorRelGuard(styled) : styled;
 }
 
 export function markdownMathPeerError(tag: 'lr-markdown' | 'lr-markdown-core'): Error {
@@ -1448,13 +1482,14 @@ const MARKDOWN_TABLE_WRAPPER_SELECTOR = '[part="table-wrapper"][role="group"]';
 
 /** Whether `root` holds at least one wrapper {@link labelMarkdownTableWrappers} would name. */
 export function markdownHasTableWrappers(root: ParentNode | null): boolean {
-  return root?.querySelector(MARKDOWN_TABLE_WRAPPER_SELECTOR) != null;
+  return root?.nodeType === 1 && (root as Element).matches(MARKDOWN_TABLE_WRAPPER_SELECTOR) || root?.querySelector(MARKDOWN_TABLE_WRAPPER_SELECTOR) != null;
 }
 
 /** Names only the exact styled wrapper whose group role allows an accessible name. */
 export function labelMarkdownTableWrappers(root: ParentNode | null, label: string): void {
   if (!root) return;
-  for (const wrapper of root.querySelectorAll<HTMLElement>(MARKDOWN_TABLE_WRAPPER_SELECTOR)) {
+  const wrappers = [...(root?.nodeType === 1 && (root as Element).matches(MARKDOWN_TABLE_WRAPPER_SELECTOR) ? [root as Element] : []), ...root.querySelectorAll<HTMLElement>(MARKDOWN_TABLE_WRAPPER_SELECTOR)];
+  for (const wrapper of wrappers) {
     if (wrapper.getAttribute('aria-label') !== label) wrapper.setAttribute('aria-label', label);
   }
 }
@@ -1473,6 +1508,8 @@ export interface MarkdownContentOptions {
   /** Independently sanitized settled groups and one append-only text tail. */
   progressive?: {
     blocks: readonly { html: string }[];
+    revision?: number;
+    changedFrom?: number;
     tail: { kind: 'text' | 'open-fence'; text: string } | null;
   } | null;
   /** The host's own `aria-label`, forwarded to the element that actually owns `role="document"` --
@@ -1524,12 +1561,12 @@ export function renderMarkdownContent(options: MarkdownContentOptions): Template
           : nothing}
         @click=${options.onClick}
       >${options.progressive
-        ? html`${options.progressive.blocks.map((block) => unsafeHTML(block.html))}${!tail ? nothing
+        ? html`${progressiveMarkdownBlocks(options.progressive.blocks, options.progressive.revision ?? 0, options.progressive.changedFrom ?? 0)}${!tail ? nothing
             : tail.kind === 'open-fence' ? html`<pre part="code-block" tabindex="0"><code>${streamingTailText(tail.text)}</code></pre>`
             : html`<div part="streaming-tail">${streamingTailText(tail.text)}</div>`}`
-        : isFallback ? options.fallbackSegments?.map((segment) => segment.kind === 'prose' ? segment.text
-          : segment.kind === 'block' ? html`<span class="fallback-code">${segment.text}</span>`
-          : html`<span class="fallback-inline-code">${segment.text}</span>`) ?? options.content : unsafeHTML(options.renderedHtml)}</div>${options.liveRegion}`;
+        : isFallback ? options.fallbackSegments?.map((segment) => segment.kind === 'prose' ? streamingTailText(segment.text)
+          : segment.kind === 'block' ? html`<span class="fallback-code">${streamingTailText(segment.text)}</span>`
+          : html`<span class="fallback-inline-code">${streamingTailText(segment.text)}</span>`) ?? streamingTailText(options.content) : unsafeHTML(options.renderedHtml)}</div>${options.liveRegion}`;
 }
 
 /**

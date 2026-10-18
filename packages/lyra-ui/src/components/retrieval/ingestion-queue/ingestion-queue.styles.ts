@@ -104,6 +104,7 @@ export const styles = css`
     flex-wrap: wrap;
     gap: var(--lr-space-s);
   }
+  [part="source-retry"],
   [part="retry-button"],
   lr-virtual-list::part(retry-button),
   [part="cancel-button"],
@@ -124,6 +125,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast),
       border-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
+  [part="source-retry"]:hover,
   [part="retry-button"]:hover,
   lr-virtual-list::part(retry-button):hover {
     border-color: var(--lr-color-brand);
@@ -131,6 +133,7 @@ export const styles = css`
   }
   /* Pressed keeps the hover's retinted border and label and adds the fill the hover has none of --
      the button's own --lr-color-surface base mixed toward --lr-color-mix-partner. */
+  [part="source-retry"]:active,
   [part="retry-button"]:active,
   lr-virtual-list::part(retry-button):active {
     border-color: var(--lr-color-brand);
@@ -156,6 +159,7 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
+  [part="source-retry"]:focus-visible,
   [part="retry-button"]:focus-visible,
   lr-virtual-list::part(retry-button):focus-visible,
   [part="cancel-button"]:focus-visible,
@@ -163,11 +167,24 @@ export const styles = css`
     ${focusRing}
   }
   @media (prefers-reduced-motion: reduce) {
-    [part="retry-button"],
+    [part="source-retry"],
+  [part="retry-button"],
     lr-virtual-list::part(retry-button),
     [part="cancel-button"],
     lr-virtual-list::part(cancel-button) {
       transition: none !important;
     }
+  }
+  [part='source-pagination'] {
+    display: block;
+    margin-block-start: var(--lr-space-s);
+  }
+  [part='source-status'],
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
   }
 `;

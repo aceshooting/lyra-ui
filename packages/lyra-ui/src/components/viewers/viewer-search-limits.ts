@@ -57,8 +57,18 @@ export class ViewerSearchWorkBudget {
     return this.remaining > 0 && Math.max(1, value.length) <= this.remaining;
   }
 
+  /** Prepares one field under the same source/output budget as a search. Reuse the result only
+   * for an unchanged source and locale; undefined means folding could not fit the budget. */
+  prepare(value: string, locale: string): string | undefined {
+    return this.foldJoined([value], locale);
+  }
+
   /** Searches logical concatenation without first joining an attacker-sized string collection. */
   includesJoined(values: Iterable<string>, needle: string, locale: string): boolean {
+    return this.foldJoined(values, locale)?.includes(needle) ?? false;
+  }
+
+  private foldJoined(values: Iterable<string>, locale: string): string | undefined {
     const chunks: string[] = [];
     const availableWork = this.remaining;
     let retainedCodeUnits = 0;
@@ -98,16 +108,16 @@ export class ViewerSearchWorkBudget {
     if (retainedCodeUnits + maximumFoldedCodeUnits > availableWork) {
       this.remaining = 0;
       this.complete = false;
-      return false;
+      return undefined;
     }
     const folded = chunks.join('').toLocaleLowerCase(resolveIntlLocale(locale));
     if (folded.length > this.remaining) {
       this.remaining = 0;
       this.complete = false;
-      return false;
+      return undefined;
     }
     this.remaining -= folded.length;
-    return folded.includes(needle);
+    return folded;
   }
 
   get exhausted(): boolean {

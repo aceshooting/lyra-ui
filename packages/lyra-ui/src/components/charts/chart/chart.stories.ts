@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import { seriesPalette, type LyraChartAnnotation, type LyraChartSeries } from './chart.js';
+import { tag } from '../../../internal/prefix.js';
+import { seriesPalette, type LyraChart, type LyraChartAnnotation, type LyraChartSeries } from './chart.js';
 
 const meta: Meta = {
   title: 'Charts/Chart',
@@ -589,4 +590,36 @@ export const SynchronizedCategories: Story = {
       ></lr-chart>
     </div>
   `,
+};
+
+export const BoundedExtrema: Story = {
+  parameters: {
+    docs: { description: { story: 'max-records lowers the 1,000-record ceiling. The plot also adapts its sample to the allocated width, keeping endpoints and bucket extremes. The summary and CSV export retain every admitted input; inputs above 10,000 entries show a separate limit notice.' } },
+  },
+  render: () => html`<lr-chart type="line" max-records="120" without-animation
+    style="inline-size:100%;max-inline-size:40rem"
+    .labels=${Array.from({ length: 10_000 }, (_, index) => String(index))}
+    .datasets=${[{ label: 'Signal', data: Array.from({ length: 10_000 }, (_, index) => index === 123 ? 200 : Math.sin(index / 30)) }]}
+  ></lr-chart>`,
+};
+
+/** The host supplies a bounded overview with complete source counts/domain and exact lookup. */
+export const PreparedOverview: Story = {
+  parameters: { docs: { description: { story: 'This bounded overview represents one million source positions. Its table and CSV are summaries; original indices remain attached to source-selection events. Click Reveal to read one original position without allocating the source array.' } } },
+  render: () => {
+    const prepared: import('../../../utilities/data-preparation.js').LyraPreparedSeriesData = {
+      kind: 'series', revision: 'example',
+      series: [{ id: 'signal', label: 'Signal', counts: { sourceCount: 1000000, validCount: 1000000, invalidCount: 0 },
+        xDomain: { min: 0, max: 999999 }, yDomain: { min: 0, max: 99 },
+        samples: [0, 99, 500000, 999999].map((sourceIndex, index) => ({ x: sourceIndex, y: sourceIndex % 100, sourceIndex, breakBefore: index === 0 })) }],
+      getPoint: ref => ({ x: ref.sourceIndex, y: ref.sourceIndex % 100 }),
+    };
+    return html`<div>
+      <lr-chart type="line" with-data-table without-animation .preparedData=${prepared}></lr-chart>
+      <button @click=${(event: Event) => {
+        const chart = (event.currentTarget as HTMLElement).parentElement?.querySelector<LyraChart>(tag('chart'));
+        void chart?.revealSourcePoint({ seriesId: 'signal', sourceIndex: 765432 });
+      }}>Reveal source position 765432</button>
+    </div>`;
+  },
 };

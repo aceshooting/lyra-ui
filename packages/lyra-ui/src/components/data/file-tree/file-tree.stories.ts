@@ -65,7 +65,7 @@ export const Narrow320: Story = {
 export const LazyLoading: Story = {
   render: () => {
     const el = document.createElement('lr-file-tree') as HTMLElement & {
-      nodes: FileTreeNode[];
+      nodes: readonly FileTreeNode[];
       setChildren: (path: string, children: FileTreeNode[]) => void;
     };
     el.style.maxWidth = '20rem';
@@ -79,5 +79,35 @@ export const LazyLoading: Story = {
       }, 500);
     }) as EventListener);
     return el;
+  },
+};
+
+/** Raise the bounded projection budget while retaining the default when max-nodes is omitted. */
+export const RaisedNodeLimit: Story = {
+  render: () => html`<lr-file-tree label="Larger collection" max-nodes="1200"
+    .nodes=${Array.from({length:1100},(_,index)=>({path:`file-${index + 1}.ts`}))}></lr-file-tree>`,
+};
+
+/** The application owns full storage and lookup; the component retains only its displayed window. */
+export const IndexedSource: Story = {
+  render: () => {
+    let selected: string | undefined;
+    let revision = 0;
+    const source: import('./file-tree.class.js').FileTreeSource = { revision: 1, async project(request) {
+      if (request.action.type === 'select') selected = request.action.selected ? request.action.key : undefined;
+      const snapshot = selected;
+      return { state: String(++revision), total: 1_000_000,
+        rows: { count: 1_000_000, keyAt: index => `record-${index}`,
+          indexOfKey: (key: string | number) => Number(String(key).slice(7)),
+          itemAt(index) { const key = `record-${index}`; return { key, value: { path: key, name: `Document ${index + 1}.txt`, kind: 'file' }, parentKey: null,
+            level: 1, position: index + 1, setSize: 1_000_000, childCount: 0, expanded: false, selected: key === snapshot }; },
+        }, ...(request.action.type === 'reveal' ? { focusIndex: Number(request.action.key.slice(7)) } : {}),
+      };
+    } };
+    return html`<style>
+      lr-file-tree.source-demo::part(source-list) { border: var(--lr-border-width-thin) solid var(--lr-color-border); }
+      lr-file-tree.source-demo::part(source-label) { font-weight: var(--lr-font-weight-medium); }
+    </style><p>Use End to reach the millionth record. Selection is an immutable provider projection.</p>
+    <lr-file-tree class="source-demo" label="Indexed records" .treeSource=${source}></lr-file-tree>`;
   },
 };

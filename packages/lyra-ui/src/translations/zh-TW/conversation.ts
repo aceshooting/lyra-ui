@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: '暫無對話',
   agentWorkspaceLabel: '智慧體工作區',
+  agentWorkspaceInputLimit: '{collection}：僅保留 {total} 個項目中的 {count} 個。',
   agentWorkspaceConversation: '對話',
   agentWorkspaceDetails: '執行詳情',
   agentWorkspaceRun: '智慧體執行',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: '重試此部分',
   promptQueueLabel: '排隊的提示詞',
   promptQueueEmpty: '沒有排隊的提示詞',
+  promptQueueInputLimit: '由於達到輸入限制，部分排入佇列的提示詞或附件已被省略。',
+  promptQueueAttachmentLimit: '顯示已保留的 {total} 個附件中的 {shown} 個。',
   promptQueueSendNow: '立即傳送',
   selectionToolbarLabel: '選區操作',
   selectionAsk: '提問',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '{count} token',
   },
+  threadListInputLimit: '由於達到輸入限制，部分對話串已被省略。',
+  promptInputInputLimit: '由於達到輸入限制，部分建議或目錄項目已被省略。',
+  transcriptFeedInputLimit: '僅保留最新的 {count} 筆記錄，共 {total} 筆。',
+  codeBlockHighlightLimit: '較長的程式碼會以不含語法醒目提示的方式顯示。',
 };
 
 registerLyraLocale('zh-TW', strings);

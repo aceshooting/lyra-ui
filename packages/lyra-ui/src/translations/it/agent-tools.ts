@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Vengono mostrati solo i primi {count} risultati dei test.',
   toolTimelineLimit: 'Vengono mostrate al massimo {count} chiamate agli strumenti.',
   toolSelectLimit: 'Vengono mostrati solo i primi {count} strumenti.',
+  testResultsInputTooLarge: 'I dettagli dei risultati dei test superano il limite di visualizzazione.',
   toolCall: 'Chiamata allo strumento',
   maximize: 'Espandi al massimo',
   promptStudioVariableName: 'Nome della variabile {index}',
@@ -296,6 +297,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Vengono visualizzati solo i primi {count} file.',
   taskListLimit: 'Vengono visualizzate solo le prime {count} attività.',
   evalDatasetLimit: 'Vengono mostrati solo i primi {count} esempi.',
+  activityFeedInputLimit: 'Vengono conservate solo le {count} voci più recenti su {total}.',
+  spanWaterfallLimit: 'Sono mostrati {shown} span su {total}.',
+  toolTimelineInputLimit: 'Vengono conservate solo le {count} chiamate agli strumenti più recenti su {total}.',
 };
 
 registerLyraLocale('it', strings);

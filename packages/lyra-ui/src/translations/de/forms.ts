@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Stift unten',
   signaturePadPenUp: 'Stift oben',
+  localePickerInputLimit: 'Nur die ersten 512 Einträge für Sprach- und Regionseinstellungen sind verfügbar.',
+  emojiPickerInputLimit: 'Einige Emoji-Daten wurden ausgelassen, weil eine Eingabegrenze erreicht wurde.',
 };
 
 registerLyraLocale('de', strings);

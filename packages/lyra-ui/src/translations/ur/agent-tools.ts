@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'صرف پہلے {count} ٹیسٹ کے نتائج دکھائے گئے ہیں۔',
   toolTimelineLimit: 'زیادہ سے زیادہ {count} ٹول کالز دکھائی گئی ہیں۔',
   toolSelectLimit: 'صرف پہلے {count} ٹولز دکھائے گئے ہیں۔',
+  testResultsInputTooLarge: 'ٹیسٹ کے نتائج کی تفصیلات نمائش کی حد سے زیادہ ہیں۔',
   toolCall: 'ٹول کال',
   maximize: 'زیادہ سے زیادہ کریں',
   promptStudioVariableName: 'متغیر {index} کا نام',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'صرف پہلی {count} فائلیں دکھائی گئی ہیں۔',
   taskListLimit: 'صرف پہلے {count} کام دکھائے گئے ہیں۔',
   evalDatasetLimit: 'صرف پہلی {count} مثالیں دکھائی گئی ہیں۔',
+  activityFeedInputLimit: '{total} اندراجات میں سے صرف تازہ ترین {count} محفوظ رکھے جاتے ہیں۔',
+  spanWaterfallLimit: '{total} اسپین میں سے {shown} دکھائے جا رہے ہیں۔',
+  toolTimelineInputLimit: '{total} ٹول کالوں میں سے صرف تازہ ترین {count} رکھی جاتی ہیں۔',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

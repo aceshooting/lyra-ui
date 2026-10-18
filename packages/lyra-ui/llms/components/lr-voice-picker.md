@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -64,6 +64,11 @@ voice list; omit (or leave empty) to fall back to plain free-text entry; replaci
 internal preview before the rendered candidate changes. Ids use the shared unique, nonempty,
 first-wins catalog rule documented under `lr-model-select`, including preview lookup. Assignments
 become bounded clone-owned frozen snapshots; create and reassign a new array after row changes.
+Admission retains the first 1,024 source rows within the shared 50,000-value deep snapshot budget;
+normalization examines that admitted prefix. The localized `limit` part reports omitted input
+through `catalogPickerInputLimit`. A synthetic row for a committed value outside the catalog can
+still be appended. Closed listboxes contain no option rows after their exit transition; trigger
+labels and free-text behavior remain available.
 `allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`.
 `withoutPreview: boolean = false` (attribute `without-preview`, reflected) — renders no preview
@@ -141,7 +146,7 @@ constraint validation (own `disabled` or `readonly`, or an ancestor `<fieldset d
 reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`.
 
-**CSS parts:** `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
+**CSS parts:** `limit` (input-loss notice), `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
 (free-text mode), `provider-badge`, `listbox`, `option`, `option-icon` (an object-shaped catalog
 row's optional decorative leading icon), `option-label`, `option-meta` (the quiet
 `language · description` second line), `option-badge` (the "not in catalog" badge on a synthetic

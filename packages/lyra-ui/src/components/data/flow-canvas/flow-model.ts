@@ -43,54 +43,87 @@ function snapshotFlowPosition(value: unknown): Readonly<{ x: number; y: number }
   return Object.freeze({ x, y });
 }
 
-/** Clones and freezes the JSON-shaped portion of consumer node metadata without invoking getters.
- * Cycles and shared references retain their topology. Non-plain leaf objects remain opaque values;
- * the public `data` contract only promises a record, while arrays/plain nested records are the
- * structured state the canvas can safely own. */
-function snapshotFlowData(value: Record<string, unknown>): Readonly<Record<string, unknown>> {
+interface FlowDataBudget {
+  remaining: number;
+  truncated: boolean;
+  readonly seen: WeakMap<object, Record<string, unknown> | unknown[]>;
+  readonly onTruncate?: () => void;
+}
+
+/** Clone JSON-shaped metadata without evaluating getters. One assignment shares both its
+ * work budget and identity map across all node data roots; opaque non-plain leaves stay opaque. */
+function snapshotFlowData(value: Record<string, unknown>, budget: FlowDataBudget): Readonly<Record<string, unknown>> {
+  const previous = budget.seen.get(value);
+  if (previous) return previous as Record<string, unknown>;
   const root: Record<string, unknown> = {};
-  const seen = new WeakMap<object, Record<string, unknown> | unknown[]>();
   const work: Array<{
     source: Record<string, unknown> | unknown[];
     target: Record<string, unknown> | unknown[];
     depth: number;
   }> = [{ source: value, target: root, depth: 0 }];
   const owned: Array<Record<string, unknown> | unknown[]> = [root];
-  seen.set(value, root);
-  let remaining = MAX_FLOW_COLLECTION_NODES;
-
-  while (work.length > 0 && remaining > 0) {
-    const { source, target, depth } = work.pop()!;
-    let descriptors: PropertyDescriptorMap;
-    try {
-      descriptors = Object.getOwnPropertyDescriptors(source as object);
-    } catch {
-      continue;
-    }
-    let retainedEntries = 0;
-    for (const [key, descriptor] of Object.entries(descriptors)) {
-      if (!descriptor.enumerable || !('value' in descriptor)) continue;
-      if (retainedEntries >= MAX_FLOW_COLLECTION_ENTRIES || remaining <= 0) break;
-      retainedEntries += 1;
-      remaining -= 1;
-      const item = descriptor.value as unknown;
-      if (Array.isArray(item) || isPlainRecord(item)) {
-        if (depth >= MAX_FLOW_COLLECTION_DEPTH) continue;
-        let clone = seen.get(item);
-        if (!clone) {
-          clone = Array.isArray(item) ? [] : {};
-          seen.set(item, clone);
-          owned.push(clone);
-          work.push({ source: item, target: clone, depth: depth + 1 });
+  budget.seen.set(value, root);
+  const truncate = (): void => {
+    if (budget.truncated) return;
+    budget.truncated = true;
+    budget.onTruncate?.();
+  };
+  try {
+    while (work.length > 0) {
+      // Once omission is known, an exhausted budget never enumerates another source merely
+      // to rediscover it. Before that point, empty queued/root containers require no fields.
+      if (budget.remaining <= 0 && budget.truncated) break;
+      const { source, target, depth } = work.pop()!;
+      let keys: (string | symbol)[];
+      let sourceIsArray: boolean;
+      try {
+        // JavaScript key enumeration is eager, but descriptors and copied values are bounded.
+        keys = Reflect.ownKeys(source);
+        sourceIsArray = Array.isArray(source);
+      } catch { continue; }
+      let inspected = 0;
+      for (const key of keys) {
+        // Array length is intrinsic container state, not an enumerable JSON field. In
+        // particular, an empty array must remain empty without consuming a field budget.
+        if (sourceIsArray && key === 'length') continue;
+        if (inspected >= MAX_FLOW_COLLECTION_ENTRIES || budget.remaining <= 0) {
+          truncate();
+          break;
         }
-        (target as Record<string, unknown>)[key] = clone;
-      } else {
-        (target as Record<string, unknown>)[key] = item;
+        inspected++;
+        budget.remaining--;
+        if (typeof key !== 'string') continue;
+        let descriptor: PropertyDescriptor | undefined;
+        try { descriptor = Object.getOwnPropertyDescriptor(source, key); } catch { continue; }
+        if (!descriptor?.enumerable || !('value' in descriptor)) continue;
+        const item: unknown = descriptor.value;
+        let clone: unknown = item;
+        let itemIsArray: boolean;
+        let structured: boolean;
+        try {
+          itemIsArray = Array.isArray(item);
+          structured = itemIsArray || isPlainRecord(item);
+        } catch { continue; }
+        if (structured) {
+          const sourceItem = item as Record<string, unknown> | unknown[];
+          clone = budget.seen.get(sourceItem);
+          if (!clone) {
+            if (depth >= MAX_FLOW_COLLECTION_DEPTH) { truncate(); continue; }
+            const child: Record<string, unknown> | unknown[] = itemIsArray ? [] : {};
+            clone = child;
+            budget.seen.set(sourceItem, child);
+            owned.push(child);
+            work.push({ source: sourceItem, target: child, depth: depth + 1 });
+          }
+        }
+        Object.defineProperty(target, key, { value: clone, enumerable: true, configurable: true, writable: true });
       }
     }
+  } finally {
+    // Shared entries become visible to later node roots even if a hostile value interrupts
+    // this traversal. Never leave provisional root or child objects mutable in that cache.
+    for (let index = owned.length - 1; index >= 0; index--) Object.freeze(owned[index]);
   }
-
-  for (let index = owned.length - 1; index >= 0; index--) Object.freeze(owned[index]);
   return root;
 }
 
@@ -131,15 +164,17 @@ export function snapshotFlowHandles(
   return Object.freeze(result);
 }
 
-export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode[] {
+export function snapshotFlowNodes(value: readonly FlowNode[], onTruncate?: () => void): readonly FlowNode[] {
   if (!Array.isArray(value)) return Object.freeze([]);
+  if (value.length > MAX_FLOW_COLLECTION_ENTRIES) onTruncate?.();
+  const budget: FlowDataBudget = { remaining: MAX_FLOW_COLLECTION_NODES, truncated: false, seen: new WeakMap(), onTruncate };
   const nodes: FlowNode[] = [];
   const seen = new Set<string>();
   for (const node of value.slice(0, MAX_FLOW_COLLECTION_ENTRIES)) {
     try {
       const id = node?.id;
       if (typeof id !== 'string' || id.trim().length === 0 || seen.has(id)) continue;
-      const data = isPlainRecord(node?.data) ? snapshotFlowData(node.data) : undefined;
+      const data = isPlainRecord(node?.data) ? snapshotFlowData(node.data, budget) : undefined;
       const position = snapshotFlowPosition(node?.position);
       const inputs = snapshotFlowHandles(node?.inputs);
       const outputs = snapshotFlowHandles(node?.outputs);
@@ -164,8 +199,9 @@ export function snapshotFlowNodes(value: readonly FlowNode[]): readonly FlowNode
   return Object.freeze(nodes);
 }
 
-export function snapshotFlowEdges(value: readonly FlowEdge[]): readonly FlowEdge[] {
+export function snapshotFlowEdges(value: readonly FlowEdge[], onTruncate?: () => void): readonly FlowEdge[] {
   if (!Array.isArray(value)) return Object.freeze([]);
+  if (value.length > MAX_FLOW_COLLECTION_ENTRIES) onTruncate?.();
   const edges: FlowEdge[] = [];
   const seen = new Set<string>();
   for (const edge of value.slice(0, MAX_FLOW_COLLECTION_ENTRIES)) {
@@ -194,20 +230,21 @@ export function snapshotFlowEdges(value: readonly FlowEdge[]): readonly FlowEdge
 export function snapshotFlowDecorations(value: unknown): FlowRunDecorations {
   if (!isPlainRecord(value)) return Object.freeze({});
   const entries: [string, Readonly<FlowRunDecoration>][] = [];
-  let keys: string[];
+  let keys: (string | symbol)[];
   try {
-    keys = Object.keys(value).slice(0, MAX_FLOW_COLLECTION_ENTRIES);
+    keys = Reflect.ownKeys(value).slice(0, MAX_FLOW_COLLECTION_ENTRIES);
   } catch {
     return Object.freeze({});
   }
   for (const id of keys) {
+    if (typeof id !== 'string') continue;
     let descriptor: PropertyDescriptor | undefined;
     try {
       descriptor = Object.getOwnPropertyDescriptor(value, id);
     } catch {
       continue;
     }
-    if (!descriptor || !('value' in descriptor)) continue;
+    if (!descriptor?.enumerable || !('value' in descriptor)) continue;
     const candidate: unknown = descriptor.value;
     try {
       if (!isPlainRecord(candidate)) continue;

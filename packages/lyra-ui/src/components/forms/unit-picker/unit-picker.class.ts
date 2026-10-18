@@ -7,7 +7,7 @@ import { styles } from './unit-picker.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_unitPickerLabel } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -34,10 +34,12 @@ const defaultEntries = Object.freeze(UNIT_CODES.map((code) => Object.freeze({ co
  * @csspart select-trigger - The visible trigger or filter frame.
  * @csspart select-display-input - The committed name or optional filter input.
  * @csspart select-listbox - The offered measurement units.
+ * @csspart select-option-overflow - Count of rows outside the 1,000-option popup ceiling; searchable mode can filter to them.
  * @csspart select-option - A measurement-unit option.
  * @csspart select-option-sub - The unit identifier and symbol.
  * @csspart select-group-label - A caller-provided group heading.
  * @csspart select-clear-button - The optional clear action.
+ * @csspart limit - Catalog input-loss notice, separate from the popup render-window overflow.
  * @csspart hint - Field guidance.
  * @csspart error - Validation guidance.
  * @event {Event} input - User selection changed the committed value and form state.
@@ -55,6 +57,7 @@ export class LyraUnitPicker extends LyraCatalogPickerBase {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    catalogPickerInputLimit: LYRA_DEFAULT_catalogPickerInputLimit,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
     select: LYRA_DEFAULT_select,

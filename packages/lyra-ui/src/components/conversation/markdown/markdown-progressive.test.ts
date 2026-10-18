@@ -256,3 +256,28 @@ describe('progressive Markdown differential corpus', () => {
     }
   }
 });
+
+it('retains settled groups after editing only a long document tail', () => {
+  const value = session();
+  const prefix = Array.from({ length: 1000 }, (_, index) => `# Heading ${index}\n\n`).join('');
+  value.update(prefix + 'unfinished tail'); drain(value);
+  const first = value.blocks[0]; const renders = value.stats.groupRenders;
+  value.update(prefix + 'replacement tail'); drain(value);
+  expect(value.blocks[0] === first).equal(true);
+  expect(value.stats.groupRenders - renders).to.be.at.most(1);
+});
+it('discards duplicated raw markup from committed progressive groups', () => {
+  const value = session(); value.update('# Settled\n\nTail'); drain(value);
+  expect(value.blocks.length).greaterThan(0);
+  expect(Object.hasOwn(value.blocks[0]!, 'rawHtml')).equal(false);
+});
+it('releases transient normalized input after EOF while preserving resume identity', () => {
+  const value = session(); const source = '# Stable\n\n' + 'tail '.repeat(1000);
+  value.update(source); drain(value); const first = value.blocks[0]; value.step(true, true);
+  const seam = value as unknown as { suspend(): void; normalized: { text: string } };
+  expect(typeof seam.suspend).equal('function'); seam.suspend();
+  expect(seam.normalized.text.length).equal(0);
+  value.resume(); value.update(source + '\n\n# Next\n'); drain(value); value.step(true, true);
+  expect(value.blocks[0] === first).equal(true);
+  expect(value.blocks.map(block => block.html).join('')).equal(parseMarkdownDocument(options(source + '\n\n# Next\n')).html);
+});

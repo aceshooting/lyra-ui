@@ -435,3 +435,12 @@ export const CopyControl: Story = {
     </div>
   `,
 };
+
+/** Large source stays readable while synchronous tokenization is bounded. */
+export const HighlightLimit: Story = {
+  render: () => html`<lr-code-block language="json" .code=${'// long readable source\n'.repeat(400)} max-height="12rem"></lr-code-block>`,
+};
+
+export const LazyGrammar: Story = {
+  render: () => html`<lr-code-block language="json" .languages=${{ json: () => import('shiki/langs/json.mjs') }} .code=${'{"lazy":true}'}></lr-code-block>`,
+};

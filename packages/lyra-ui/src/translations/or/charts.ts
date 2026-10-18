@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'ସମ୍ପୂର୍ଣ୍ଣ ବିତରଣରେ {validCount}ଟି ବୈଧ ନମୁନା; ଦେଖାଯାଇଥିବା ଅନ୍ତରାଳଗୁଡ଼ିକର ସୀମା ତଳେ {belowCount}ଟି ଓ ଉପରେ {aboveCount}ଟି; {invalidCount}ଟି ଅବୈଧ ନମୁନା।',
+  histogramDistributionRange: 'ପର୍ଯ୍ୟବେକ୍ଷିତ ନମୁନା ପରିସର: {min}ରୁ {max}।',
   chartCategory: 'ଶ୍ରେଣୀ',
   chartTotal: 'ମୋଟ',
   chartAxisTotal: '{axis} ମୋଟ',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ବ୍ୟାସାର୍ଦ୍ଧ {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'ବୃଦ୍ଧିଶୀଳ',
-  chartTrendDecreasing: 'ହ୍ରାସଶୀଳ',
-  chartTrendFlat: 'ସମତଳ',
-  chartSummary: '{label}: {count} ମୂଲ୍ୟ, {min}ରୁ {max} ପର୍ଯ୍ୟନ୍ତ ସୀମା, {trend} ଧାରା',
   chartSeriesNoData: '{label}: କୌଣସି ତଥ୍ୟ ନାହିଁ',
   chartSummaryWithData: '{type} ଚାର୍ଟ। {summaries}।',
   chartSummaryEmpty: 'କୌଣସି ତଥ୍ୟ ନଥିବା {type} ଚାର୍ଟ।',
-  chartSummarySeparator: '. ',
   chartData: 'ଚାର୍ଟ ତଥ୍ୟ',
   chartRenderUnavailable: 'ଚାର୍ଟ ପ୍ରଦର୍ଶନ ଉପଲବ୍ଧ ନାହିଁ।',
+  chartPreparedSummaryZoom: 'ଜୁମ୍ ପ୍ରସ୍ତୁତ ସାରାଂଶକୁ ଦେଖାଏ; ସୂଚକାଙ୍କ ମାଧ୍ୟମରେ ଅଧିକ ବିବରଣୀ ଉପଲବ୍ଧ ନାହିଁ।',
+  chartSpatialSummary: 'ସମ୍ପୂର୍ଣ୍ଣ ଉତ୍ସ: {count}ଟି ବିନ୍ଦୁ, x {minX}ରୁ {maxX}, y {minY}ରୁ {maxY}। ଦୃଶ୍ୟ: {matchedCount}ଟି ବିନ୍ଦୁ, x {viewMinX}ରୁ {viewMaxX}, y {viewMinY}ରୁ {viewMaxY}।',
+  chartSpatialRadiusDomain: 'ସମ୍ପୂର୍ଣ୍ଣ ଉତ୍ସର ବ୍ୟାସାର୍ଦ୍ଧ: {min}ରୁ {max}।',
+  chartSpatialDensityLegend: 'ଘନତାରେ ସମସ୍ତ ଶ୍ରେଣୀ ଅନ୍ତର୍ଭୁକ୍ତ; ଶ୍ରେଣୀର ଦୃଶ୍ୟମାନତା କେବଳ ବିନ୍ଦୁ ଓଭରଲେଗୁଡ଼ିକୁ ପ୍ରଭାବିତ କରେ।',
+  chartSpatialPoint: '{series}: {id}, ଉତ୍ସ ସ୍ଥାନ {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'ଘନତା ଅଞ୍ଚଳ: {count}ଟି ବିନ୍ଦୁ, x {minX}ରୁ {maxX}, y {minY}ରୁ {maxY}।',
+  chartSpatialHidden: ' (ଶ୍ରେଣୀ ଲୁକ୍କାୟିତ)',
   chartDataSampled: 'ଚାର୍ଟ ଏବଂ ତିଆରି ହୋଇଥିବା ତଥ୍ୟ ସାରଣୀରେ ସର୍ବାଧିକ 1,000ଟି ରେକର୍ଡର ନମୁନା ଦେଖାଯାଏ। ସମସ୍ତ ଚାର୍ଟ ତଥ୍ୟ ପାଇବାକୁ କଷ୍ଟମ୍ ତଥ୍ୟ ସାରଣୀ ଦିଅନ୍ତୁ।',
   chartPlotSampled: 'ଚାର୍ଟରେ ସର୍ବାଧିକ 1,000ଟି ରେକର୍ଡର ନମୁନା ଦେଖାଯାଏ; ତଥ୍ୟ ସାରଣୀରେ ସମସ୍ତ ତଥ୍ୟ ଅଛି।',
   chartZoomUnavailable: 'ଜୁମ୍ ଉପଲବ୍ଧ ନାହିଁ, କିନ୍ତୁ ମୂଳ ଚାର୍ଟ ଉପଲବ୍ଧ ଅଛି।',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total}ରୁ {index})',
   chartMissingLibrary: 'ଚାର୍ଟ ଦେଖାଇବାକୁ ବୈକଳ୍ପିକ "chart.js" ପ୍ୟାକେଜ୍ ଇନ୍‌ଷ୍ଟଲ୍ କରିବା ଆବଶ୍ୟକ।',
   boxPlotMissingLibrary: 'ବକ୍ସ ପ୍ଲଟ୍ ଦେଖାଇବାକୁ ବୈକଳ୍ପିକ ବକ୍ସ-ପ୍ଲଟ୍ ଚାର୍ଟ ପ୍ୟାକେଜ୍ ଇନ୍‌ଷ୍ଟଲ୍ କରିବା ଆବଶ୍ୟକ।',
+  chartInputLimit: 'ଇନପୁଟ୍ ସୀମାରେ ପହଞ୍ଚିଥିବାରୁ କିଛି ଚାର୍ଟ ତଥ୍ୟ ବାଦ ଦିଆଯାଇଛି। ବାଦ ପଡ଼ିଥିବା ମୂଲ୍ୟଗୁଡ଼ିକୁ ଦର୍ଶାଇବାକୁ ଏକ ଛୋଟ କିମ୍ବା ଆଗରୁ ଏକତ୍ରିତ ତଥ୍ୟସମୂହ ଦିଅନ୍ତୁ।',
+  histogramInputLimit: 'କେବଳ ସବୁଠୁ ନୂଆ 10,000ଟି ନମୁନା ରଖାଯାଏ। ଏକ ବଡ଼ ବିତରଣ ଦର୍ଶାଇବାକୁ ଆଗରୁ ଅନ୍ତରାଳ ଅନୁସାରେ ଗୋଷ୍ଠୀବଦ୍ଧ ଗଣନାଗୁଡ଼ିକ lr-chartକୁ ଦିଅନ୍ତୁ।',
 };
 
 registerLyraLocale('or', strings);

@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Đã hạ bút',
   signaturePadPenUp: 'Đã nhấc bút',
+  localePickerInputLimit: 'Chỉ có 512 mục ngôn ngữ và khu vực đầu tiên.',
+  emojiPickerInputLimit: 'Một số dữ liệu biểu tượng cảm xúc đã bị bỏ qua vì đạt giới hạn đầu vào.',
 };
 
 registerLyraLocale('vi', strings);

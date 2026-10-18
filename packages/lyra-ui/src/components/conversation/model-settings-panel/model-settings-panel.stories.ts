@@ -149,3 +149,8 @@ export const WidthHook: Story = {
     </div>
   `,
 };
+
+export const InputLimit: StoryObj = {
+  parameters: { docs: { description: { story: 'The wrapper reports original catalog loss even when its deep-input budget is reached before the child picker row ceiling.' } } },
+  render: () => html`<lr-model-settings-panel .catalog=${Array.from({ length: 1000 }, (_, index) => ({ id: `model${index}`, label: `Model ${index}`, metadata: Array.from({ length: 100 }, () => 'detail') }))}></lr-model-settings-panel>`,
+};

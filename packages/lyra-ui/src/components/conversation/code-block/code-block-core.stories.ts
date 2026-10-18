@@ -281,3 +281,7 @@ export const RightToLeft: Story = {
     </div>
   `,
 };
+
+export const HighlightLimit: Story = {
+  render: () => html`<lr-code-block-core language="json" .code=${'// long readable source\n'.repeat(400)} max-height="12rem"></lr-code-block-core>`,
+};

@@ -133,3 +133,7 @@ export const AboveNativeModal: Story = {
     </div>
   `,
 };
+
+export const InputLimit: StoryObj = {
+  render: () => html`<button @click=${(event: Event) => ((event.currentTarget as HTMLElement).nextElementSibling as LyraCommandPalette).openPalette()}>Inspect bounded commands</button><lr-command-palette .commands=${Array.from({ length: 10001 }, (_, index) => ({ commandId: `command${index}`, label: `Command ${index}` }))}></lr-command-palette>`,
+};

@@ -1854,7 +1854,7 @@ it("normalizes an explicitly empty value attribute to the canonical absent defau
 
 it("dispatches one native Event input/change pair even from a detached/adopted document", async () => {
   const el = (await fixture(
-    html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`
+    html`<lr-model-select open .catalog=${CATALOG}></lr-model-select>`
   )) as LyraModelSelect;
   const detachedDoc = document.implementation.createHTMLDocument("detached");
   detachedDoc.adoptNode(el);

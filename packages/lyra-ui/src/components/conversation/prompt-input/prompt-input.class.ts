@@ -1,5 +1,6 @@
 import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { collectionSupport, publicCollectionTruncation, type CollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -68,7 +69,7 @@ export type { LyraVoiceCatalogEntry } from '../voice-picker/voice-picker.class.j
 import { styles } from './prompt-input.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptInputControls, LYRA_DEFAULT_promptInputLabel, LYRA_DEFAULT_promptInputSources } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptInputControls, LYRA_DEFAULT_promptInputInputLimit, LYRA_DEFAULT_promptInputLabel, LYRA_DEFAULT_promptInputSources } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -178,6 +179,7 @@ type LyraPromptInputCustomEventName = Exclude<
  * @event lr-attachment-preview-request - Cancelable preview request.
  *   `detail: { attachmentId, name, mimeType, src }`.
  * @csspart base - The prompt surface.
+ * @csspart limit - Suggestions or catalog loss at this wrapper's input boundary.
  * @csspart controls - Model, voice, and source controls.
  * @csspart sources - The collapsible source-picker region.
  * @csspart sources-summary - The source-picker disclosure.
@@ -200,6 +202,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     promptInputAttachments: LYRA_DEFAULT_promptInputAttachments,
     promptInputControls: LYRA_DEFAULT_promptInputControls,
+    promptInputInputLimit: LYRA_DEFAULT_promptInputInputLimit,
     promptInputLabel: LYRA_DEFAULT_promptInputLabel,
     promptInputSources: LYRA_DEFAULT_promptInputSources,
   };
@@ -233,6 +236,16 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   protected static override readonly identityEventDetailCollectionItems = Object.freeze({
     'lr-queue-change': Object.freeze(['items']),
   });
+  private readonly inputLimitAnnouncements = new AnnouncementSinkController(this);
+  private get inputLosses(): readonly (CollectionTruncation | undefined)[] {
+    return ['modelCatalog', 'voiceCatalog', 'mentionItems', 'commandItems'].map((name) => publicCollectionTruncation(this, name));
+  }
+  private get inputLimitMessage(): string {
+    return this.inputLosses.some(Boolean) ? this.localize('promptInputInputLimit') : '';
+  }
+  private syncInputLimitAnnouncement(): void {
+    this.inputLimitAnnouncements.transition('input-limit', this.inputLosses.map((loss) => loss ? `${loss.source}:${loss.retained}:${loss.kept}` : '').join('|'), this.inputLimitMessage, 'polite');
+  }
   private suggestionCaretGeneration = 0;
   private _value = '';
   @property()
@@ -444,10 +457,18 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     }
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.inputLimitAnnouncements.adopted();
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('keydown', this.onCompositeKeyDown, true);
-    if (this.hasUpdated) this.syncDescription();
+    if (this.hasUpdated) {
+      this.syncInputLimitAnnouncement();
+      this.syncDescription();
+    }
   }
 
   override disconnectedCallback(): void {
@@ -473,6 +494,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   protected override updated(_changed: PropertyValues): void {
     super.updated(_changed);
+    this.syncInputLimitAnnouncement();
     const popover = this.suggestionPopover;
     if (popover && this.suggestionAnchor) {
       popover.anchor = this.suggestionAnchor;
@@ -906,6 +928,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
           ></lr-prompt-queue>`
         : nothing}
       <slot name="controls">${this.renderControls()}</slot>
+      ${this.inputLimitMessage ? html`<p part="limit">${this.inputLimitMessage}</p>` : nothing}
       <lr-chat-composer
         part="composer"
         .spellcheck=${this.spellcheck}

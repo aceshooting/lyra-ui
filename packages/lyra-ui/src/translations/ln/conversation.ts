@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Conversation ezali naino te',
   agentWorkspaceLabel: 'Esika ya mosala ya agent',
+  agentWorkspaceInputLimit: '{collection}: Kaka makomi {count} kati na {total} nde ebatelami.',
   agentWorkspaceConversation: 'Lisolo',
   agentWorkspaceDetails: 'Ba détail ya exécution',
   agentWorkspaceRun: 'Exécution ya agent',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Meka eteni oyo lisusu',
   promptQueueLabel: 'Ba prompt na molongo',
   promptQueueEmpty: 'Prompt ezali na molongo te',
+  promptQueueInputLimit: 'Balongoli ndambo ya ba prompt na molongo ya kozela to ba fisyé ekangami mpo motango ya kokɔtisa ekómi na ndelo.',
+  promptQueueAttachmentLimit: 'Bazali kolakisa {shown} kati na ba fisyé {total} oyo ekangami mpe ebatelami.',
   promptQueueSendNow: 'Tinda sikoyo',
   selectionToolbarLabel: 'Ba action ya poná',
   selectionAsk: 'Tuna',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: 'Token {count}',
     other: 'Ba token {count}',
   },
+  threadListInputLimit: 'Balongoli ndambo ya masolo ya molongo mpo motango ya kokɔtisa ekómi na ndelo.',
+  promptInputInputLimit: 'Balongoli ndambo ya makanisi to makomi ya catalogue mpo motango ya kokɔtisa ekómi na ndelo.',
+  transcriptFeedInputLimit: 'Kaka makomi {count} ya sika koleka kati na {total} nde ebatelami.',
+  codeBlockHighlightLimit: 'Code ya molai emonisami kozanga kokesenisa syntaxe na balangi.',
 };
 
 registerLyraLocale('ln', strings);

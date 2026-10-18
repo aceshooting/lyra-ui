@@ -174,10 +174,20 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   lasting effect; it is recomputed on the next render or resize. The toggle remains available while
   a narrow table is revealed, even though this property truthfully reports false
 - `rows: readonly T[] = []` (attribute: false; clone-owned frozen collection bounded to the first
-  10,000 rows; reassign a new array to update — rebinding the array `rows`, `columns`,
+  `maxRows` rows, 10,000 by default; reassign a new array to update — rebinding the array `rows`, `columns`,
   `selectedRowKeys` or `expandedRowKeys` last received is a no-op). Records are retained
   here; one canonical `rowKey` projection omits blank and later-duplicate identities first-wins
   before filtering, counts, pagination, focus, actions, and events
+- `maxRows: number = 10000` (attribute `max-rows`) — row and controlled-key admission limit,
+  normalized to 1–100,000; non-finite values use the default. Configure it before assigning `rows`.
+  After changing it, assign a new row collection to deterministically supply rows excluded by the
+  previous cap. A cap change can also reread the original collection while the caller retains it;
+  recovery does not depend on keeping that source alive. Column inspection remains bounded to
+  10,000 source positions. Pagination still renders 100 rows by default and at most 500 per page.
+  Lowering the cap also trims retained selected and expanded key sets without emitting selection
+  or expansion events. Reassign controlled key collections after raising it to restore excluded keys.
+  At the key cap, existing keys retain priority over a newly toggled key; selection and expansion
+  events report the actual retained state.
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
   column shares the available width evenly and long cell content is clipped/wrapped instead of
@@ -211,13 +221,14 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   (client-mode) sorting, ignoring pagination — the same set `columns[].footer(rows)`/
   `grandTotal(rows)`/the heat-tint domain already compute over. Read this instead of
   re-implementing filtering/sorting in a consumer that needs "what the grid currently shows" (e.g.
-  to export it). A fresh, frozen array on every read: mutating the result cannot reach or corrupt
-  the table's own internal state
+  to export it). The frozen projection retains its identity until row, sort or filter inputs change.
+  Row objects retain their existing identity contract
 - `pageRows: readonly T[]` (readonly; computed, no attribute) — `viewRows` sliced to the page
-  currently rendered in `<tbody>`. Same defensive-copy guarantee as `viewRows`
-- `rowsTruncated: boolean` (readonly) — `true` when the assigned `rows` held more than the 10,000
-  rows the snapshot keeps; the rest are not shown, counted, paged or exported. The localized
-  `row-limit` part makes this visible alongside the table.
+  currently rendered in `<tbody>`. This frozen projection retains its identity until its row,
+  sort, filter or page inputs change
+- `rowsTruncated: boolean` (readonly) — `true` when the assigned rows exceed admission capacity;
+  excluded rows are not shown, counted, paged or exported. The localized `row-limit` part reports
+  the number actually retained, and post-mount truncation changes are announced politely.
 - `rowKey?: (row: T) => K` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
@@ -228,7 +239,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
 - `selectionMode: 'none'|'single'|'multiple' = 'none'` (attribute `selection-mode`, reflected) —
   opt-in self-managed row selection; the default remains presentational
 - `selectedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false) — the single selection
-  store in every mode, bounded to 10,000 keys. Single mode enforces at most one key; multiple mode
+  store in every mode, bounded to `maxRows` keys. Single mode enforces at most one key; multiple mode
   toggles membership. Malformed and whitespace-only string keys are omitted, while valid
   unmatched/off-page keys remain controlled state for server pagination. Reads return immutable detached `ReadonlySet`
   facades; reassign a new set to update
@@ -238,7 +249,10 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   attribute clears the effective filter safely while retaining native removal readback; a later
   supplied value filters normally.
 - `filter?: (row: T, text: string) => boolean` (attribute: false) — typed predicate used by the
-  filter field; when omitted, rows are matched against their JSON representation
+  filter field; when omitted, rows are matched against their JSON representation. Default search
+  reuses locale-folded text for primitive and frozen scalar records. Mutable rows, nested containers,
+  accessors and custom `toJSON` retain per-query reads; reassign collections after data changes to
+  invalidate sorted and aggregate projections
 - `filterLabel?: string` (attribute `filter-label`) and `filterPlaceholder?: string`
   (attribute `filter-placeholder`) — omission localizes `tableFilterLabel`/
   `tableFilterPlaceholder`; any supplied string, including the built-in English text or `''`, is
@@ -329,7 +343,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   for the detail to carry and is reported through `expandedRowKeys` alone. An unrecognized attribute
   value falls back to the controlled behaviour rather than self-managing
 - `expandedRowKeys: ReadonlySet<string | number> = new Set()` (attribute: false; `ReadonlySet<K>` on a
-  parameterized element) — expanded state bounded to 10,000 keys. Who writes it depends on
+  parameterized element) — expanded state bounded to `maxRows` keys. Who writes it depends on
   `expansionMode`: under the default `'none'` the table never mutates it and consumers reassign it
   after `lr-row-expand-toggle`; under `'single'`/`'multiple'` the table writes it on each accepted
   activation, and a `preventDefault()` on `lr-row-expand-request` hands that one change back.
@@ -500,7 +514,7 @@ button, while `error` is set. Left unfilled, the built-in `[part='error']` `<lr-
 this slot's fallback content.
 
 **CSS parts:** `base`, `table`, `caption`, `head`, `header-cell`, `row`, `row-limit` (localized
-notice when the assigned row collection exceeds 10,000 entries), `cell`, `more-button`, `sort-icon`
+notice when the assigned row collection exceeds admission capacity), `cell`, `more-button`, `sort-icon`
 (each sort indicator), `sort-icon-active` (the active chevron, rotated per `sortDir`),
 `sort-icon-inactive` (the muted bidirectional indicator under `sort-indicators="all"`), `reveal-columns-button`
 (shown when priority columns are hidden or when a narrow allocation is currently force-visible),

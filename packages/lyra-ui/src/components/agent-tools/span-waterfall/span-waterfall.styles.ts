@@ -3,6 +3,23 @@ import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
+  .source-waterfall { min-inline-size: 0; }
+  [part~="source-row"] {
+    display: grid; padding-inline: 0;
+    grid-template-columns: var(--lr-icon-button-size)
+      max(0px, calc(var(--lr-span-waterfall-name-width, var(--_lr-span-waterfall-name-width)) - var(--lr-icon-button-size) - var(--lr-space-xs))) 1fr;
+  }
+  [part~="source-label"], .source-span { display: contents; }
+  .source-span [part="name"] { grid-column: 2; padding-inline-start: min(calc(var(--source-depth) * var(--lr-space-m)), var(--lr-size-3rem)); }
+  .source-span [part="bar-track"] { grid-column: 3; min-inline-size: 0; }
+  .source-span [part="meta"] { grid-column: 2 / -1; }
+  [part~="source-row"]:where([data-active]) {
+    --_source-row-fill: var(--lr-span-waterfall-row-active-bg, var(--lr-color-brand-quiet));
+  }
+  [part~="source-row"]:where([data-active]) :is([part="status-text"], [part="duration"]) {
+    color: var(--lr-span-waterfall-row-active-color, var(--lr-color-text));
+  }
+
   :host {
     display: block;
     container-type: inline-size;
@@ -213,6 +230,8 @@ export const styles = css`
   }
 
   @container ${mediumContainerQuery} {
+    [part~="source-row"] { grid-template-columns: var(--lr-icon-button-size) minmax(0, 1fr); }
+    .source-span [part="bar-track"], .source-span [part="meta"] { grid-column: 1 / -1; }
     [part="axis"] {
       margin-inline-start: 0;
     }

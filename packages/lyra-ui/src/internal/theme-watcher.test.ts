@@ -1548,3 +1548,27 @@ describe('ThemeWatcher inline root writes', () => {
     }
   });
 });
+
+it('skips hub dispatch for inline declarations while retaining rule dispatch', async () => {
+  const { host, connect } = await makeHost();
+  new ThemeWatcher(host, () => {});
+  connect();
+  const hub = hubForRealm(window) as TestableThemeHub & { subscribers: Set<(subject?: unknown) => void> };
+  let calls = 0;
+  const subscriber = () => { calls++; };
+  hub.subscribers.add(subscriber);
+  const style = document.createElement('style');
+  try {
+    host.style.setProperty('--test', 'red');
+    host.style.removeProperty('--test');
+    host.style.cssText = '--test: blue';
+    expect(calls).to.equal(0);
+    style.textContent = ':root { --test: red; }';
+    document.head.append(style);
+    (style.sheet!.cssRules[0] as CSSStyleRule).style.setProperty('--test', 'blue');
+    expect(calls).to.equal(1);
+  } finally {
+    hub.subscribers.delete(subscriber);
+    style.remove();
+  }
+});

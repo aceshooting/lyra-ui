@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} további javaslat',
     other: '{count} további javaslat',
   },
+  mentionInputLimit: 'Csak az első 10 000 említési javaslat érhető el.',
+  diffViewHighlightLimit: 'A hosszú kód szintaxiskiemelés nélkül jelenik meg.',
 };
 
 registerLyraLocale('hu', strings);

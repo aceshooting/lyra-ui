@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} கட்டளை',
     other: '{count} கட்டளைகள்',
   },
+  commandPaletteInputLimit: 'உள்ளீட்டு வரம்பை அடைந்ததால் சில கட்டளைகள் விடப்பட்டன.',
 };
 
 registerLyraLocale('ta', strings);

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,6 +19,44 @@
 A file-explorer preset over `<lr-tree>` + `<lr-file-icon>`: path-keyed nodes with
 git-status/diff-count badges, lazy directory loading, and select/open events.
 
+**Provider hierarchy:** `treeSource: FileTreeSource | undefined = undefined` (attribute: false)
+uses `LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>` from
+`@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `nodes`, preserving
+its identity; invalid defined input shows a localized source error. Setting `undefined` restores
+the current legacy `nodes` input. Reassign even the same source, or call a keyless
+`requestUpdate()`, after revision/provider-state changes. Locale, reconnect and adoption refresh
+the source; unrelated named display updates do not.
+
+The provider projects the complete visible preorder using the same `project` actions, fixed empty
+query and required direct key lookup described for `lr-tree` above. `total` includes collapsed
+nodes and `rows.count` counts all visible logical rows. Those counts can describe a million-node
+host hierarchy while at most 301 rows mount and at most 401 rows are retained (four 100-row pages
+and one focused row). Each range read requests at most 100 rows, with at most two physically
+pending reads. No full path/ancestor index or nested subtree copy is built. The provider owns
+storage, global uniqueness, selection/expansion snapshots and cancellation; source replacement
+and obsolete replies cannot commit old rows or focus.
+
+Global row keys must exactly equal `value.path`: nonblank strings of at most 65,536 UTF-16 units,
+preserved verbatim without filesystem resolution. Paths are identities, not permission to read or
+open a file; the host authorizes any resulting operation. Displayed `name`/`mimeType` use at most
+65,536 aggregate text units per row; oversized or accessor-backed fields fail visibly. Source
+events contain only bounded frozen displayed metadata, with no `children`. The provider's
+`childCount` identifies branches even when `kind` is omitted; branches never emit file-open.
+Nested `value.children` is ignored. Logical depth, sibling positions, bounded keyboard navigation,
+localized loading/empty/error states and retry follow the source tree contract above. The legacy
+snapshot limits below remain separate from this route; `maxNodes` does not raise its source window.
+
+**Controlled source selection:** an accepted user selection updates `selectedPath` and emits
+`lr-file-select`. Activating an already-selected leaf file also emits `lr-file-open`, provided the
+same source/projection is still current after the selection listener returns. The provider owns
+the authoritative selected flags. External `selectedPath` changes submit an item selection after
+the initial projection, without synthetic user events or moving focus; clearing it deselects the
+previously controlled key. The default `null` does not request a global clear. A current valid path
+is reconciled again after source replacement, rebind or refresh. Invalid empty/blank/oversized
+controlled paths are not forwarded. This adapter has no source search/copy controls.
+
+With `treeSource` undefined, the following snapshot and lazy-directory route applies.
+
 An unreadable optional field rejects only that file record; it cannot reserve the path against a
 later valid occurrence. Valid siblings retain their source order within the existing depth and
 inspected-position budgets.
@@ -26,7 +64,10 @@ inspected-position budgets.
 **Properties:** `nodes: readonly FileTreeNode[] = []` (attribute: false; clone-owned/frozen,
 cycle-safe snapshot omitting empty/blank paths and retaining the first successfully admitted occurrence of each path, bounded to
 the first 10,000 inspected source positions across 64 descendant levels; reassign after changes;
-rebinding the same array is a no-op). The composed `<lr-tree>` holds at most 1,000 rows: when the
+rebinding the same array is a no-op). `maxNodes: number = 1000` (attribute `max-nodes`) sets the
+composed tree's row budget, normalized to `1..10000`; unset or non-finite values restore 1,000.
+The source budget remains 10,000 inspected positions. The composed `<lr-tree>` holds at most
+`maxNodes` rows: when the
 whole listing is larger, each collapsed directory is projected as a single lazy row whose children
 load from the snapshot when it expands, so every top-level entry stays reachable;
 `selectedPath: string | null = null` (attribute `selected-path`), and `label?: string` — an
@@ -35,12 +76,14 @@ back to the localized default while an explicitly empty string renders as an emp
 `additions`/`deletions` are normalized once to finite nonnegative integers before localized visible
 and accessible diff summaries. A host `aria-label` wins by presence when naming the internal tree,
 including an explicit empty string; removing it restores `label` or the localized fallback.
+Derived rows are reused until their data, locale or limit changes; selecting a different path
+updates only the affected ancestor paths. An explicit `requestUpdate()` refreshes derived content.
 
 **Read-only getters:** `dataTruncated: boolean` — `true` when normalization omitted a malformed,
 duplicate, cyclic, over-depth or over-budget entry, or when the directories currently expanded hold
-more rows than the composed tree's 1,000-row budget.
+more rows than the composed tree's configured row budget.
 When source normalization reaches its 10,000-node cap, the host shows a localized `limit` part;
-the composed tree shows its own 1,000-item notice when its valid-node cap is reached.
+the composed tree shows its own notice when its configured valid-node cap is reached.
 
 **Lazy directories:** a directory with `hasChildren: true` and no `children` uses `<lr-tree>`'s own
 lazy lifecycle: expanding it shows the row's busy spinner (`aria-busy`), emits `lr-load-children`
@@ -49,13 +92,24 @@ children; an empty result ends the busy state without expanding. No placeholder 
 
 **Methods:** `setChildren(path, children)` supplies a lazily-loaded directory's children.
 `revealPath(path)` expands every ancestor directory and scrolls the target row into view, resolving
-`true` once found. `expandAll()` and `collapseAll()` forward to the underlying `<lr-tree>`.
+`true` once found in legacy mode. In source mode it delegates to
+`revealSourceKey(key: string): Promise<boolean>`, which requests a provider reveal and focuses its
+current visible row; missing/invalid/obsolete requests resolve `false`. The provider must return a
+valid `focusIndex` for successful reveal. `expandAll()` and `collapseAll()` forward to the underlying
+`<lr-tree>` only in legacy mode and are no-ops in source mode. `setChildren()` updates the legacy
+`nodes` input; it does not mutate the provider. Source branch toggles use `project(toggle)` rather
+than `lr-load-children`.
 
 **Events:** `lr-file-select` (frozen readonly `detail: { filePath, node }`, a row was activated),
 `lr-file-open` (frozen readonly `detail: { filePath, node }`, Enter/click on an already-selected file
 row), and `lr-load-children` (frozen readonly `detail: { filePath }`, a lazy unloaded directory
-expanded). The composed tree's own `lr-expand`, `lr-collapse`, `lr-after-*`, `lr-lazy-*` and
+expanded, legacy mode only). Source select/open keep the same `{ filePath, node }` shape, with
+`node` limited to the displayed record rather than a complete subtree. The composed tree's own
+`lr-expand`, `lr-collapse`, `lr-after-*`, `lr-lazy-*` and
 `lr-selection-change` events stay inside the component.
 
 **CSS parts:** `base` — the root wrapper; `limit` — localized notice when the source listing
 exceeds its 10,000-item snapshot.
+Source mode retains `base` and adds `tree` on the semantic root, plus `source-list`, `source-row`,
+`source-toggle` (branch and retry buttons), `source-label`, `source-status`, and `source-error`.
+The root owns the accessible name/busy state, and each flat source row owns logical treeitem ARIA.

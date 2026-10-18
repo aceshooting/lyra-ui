@@ -48,15 +48,19 @@ over each rendered line's own text, one match per line ordered by that same op i
   has a matching entry in `languages` — there is deliberately no default full-table
   `lr-code-block`-style fallback, so this component never reaches shiki's ~200-language
   dynamic-import table.
-- `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — grammar definitions this
-  instance can highlight, same shape as `lr-code-block-core`'s own `languages`.
+- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — resolved grammar
+  definitions or lazy loader functions, same shape as `lr-code-block-core`'s own `languages`.
+  Only the requested loader runs; unused loader entries stay unresolved.
 - `contextLines: number | undefined` (attribute: `context-lines`) — keeps this many unchanged
   lines around each change and collapses longer unchanged runs into a localized fold marker. The
   default `undefined` shows every line; negative and non-finite values also disable folding.
 - `maxLines: number = 5000` (attribute `max-lines`) — maximum logical lines accepted on either
   side. Larger input renders the localized `diffViewTooLarge` fallback without computing or
   highlighting the diff. `Infinity` relaxes this line-count ceiling, but the fixed aggregate
-  character and comparison-work ceilings remain in force.
+  character and comparison-work ceilings remain in force. Every value, including `Infinity`,
+  also enforces a hard 10,000-diff-operation render ceiling: at most 10,000 unified lines or
+  20,000 split cells, including empty cells. Larger diffs show the localized `limit` fallback.
+  Offscreen rows use `content-visibility: auto` to defer paint.
 - `anchorKinds: readonly LyraAnchorKind[] = ['line-range']` (this viewer's supported
   `LyraAnchor.kind` values for the shared anchor-target contract).
 
@@ -65,6 +69,12 @@ unreadable field, non-enumerable field, or malformed proxy branch is skipped wit
 later valid grammar from being used; grammar values themselves remain opaque to the component.
 Non-enumerable names do not consume language slots, but every inspected name counts toward the
 20,000 structural ceiling.
+
+Syntax highlighting accepts up to 8,192 UTF-16 code units on each input, inclusive. If either side
+exceeds that ceiling, both sides use plain text with a localized `[part="limit"]` notice when
+`language` is set. This highlighting fallback preserves admitted source text; the separate input,
+comparison, and diff-operation limits still apply. The fine-grained highlighter path does not
+import the default full-language-table loader.
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
 each rendered line's own text, ordered by `line-range` op index (empty/whitespace query behaves like
@@ -106,8 +116,8 @@ marker — plus `data-match`/`data-active-match` while a search result covers it
 technology exposes the change), `line-highlight-action` (the focusable button a resolved
 `highlights` entry adds to the line it first covers; emits `lr-highlight-activate`), `copy-button`
 (the copy affordance, only rendered while `copyable`; it stays pinned at the top while the view
-scrolls), `limit` (the localized over-`maxLines`
-fallback), `side` (one column in `layout="split"`, `data-side="old"|"new"`), `anchor-live-region`
+scrolls), `limit` (the localized input/render-limit fallback or syntax-highlighting ceiling
+notice), `side` (one column in `layout="split"`, `data-side="old"|"new"`), `anchor-live-region`
 (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is
 appended to the shared document-level polite sink only while the viewer and its composed ancestors
 are exposed to the accessibility tree).

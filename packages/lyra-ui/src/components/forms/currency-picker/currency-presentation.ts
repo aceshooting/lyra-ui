@@ -16,21 +16,34 @@ function resolveSymbol(code: string, locale: string, currencyDisplay: 'symbol' |
   }
 }
 
+const presentations = new Map<string, readonly [string, string, string]>();
+let nameImplementation = Intl.DisplayNames?.prototype?.of;
+let partsImplementation = Intl.NumberFormat?.prototype?.formatToParts;
+function presentationFor(code: string, locale: string): readonly [string, string, string] {
+  if (nameImplementation !== Intl.DisplayNames?.prototype?.of || partsImplementation !== Intl.NumberFormat?.prototype?.formatToParts) {
+    presentations.clear();
+    nameImplementation = Intl.DisplayNames?.prototype?.of;
+    partsImplementation = Intl.NumberFormat?.prototype?.formatToParts;
+  }
+  const key = `${locale}\u0000${code}`;
+  const cached = presentations.get(key);
+  if (cached) return cached;
+  let name = code;
+  try { name = getDisplayNames(locale, { type: 'currency', fallback: 'code' }).of(code)?.trim() || code; }
+  catch { /* Custom codes retain their identifier. */ }
+  const result = [name, resolveSymbol(code, locale, 'symbol'), resolveSymbol(code, locale, 'narrowSymbol')] as const;
+  if (presentations.size >= 1024) presentations.delete(presentations.keys().next().value!);
+  presentations.set(key, result);
+  return result;
+}
+
 /** Resolve display-only names and symbols without changing currency identity. */
 export function resolveCurrencyPresentation(
   entries: readonly LyraCurrencyEntry[],
   locale: string,
 ): readonly ResolvedCurrencyEntry[] {
   const rows = entries.map((entry): ResolvedCurrencyEntry => {
-    let localizedName: string;
-    try {
-      const name = getDisplayNames(locale, { type: 'currency', fallback: 'code' }).of(entry.code);
-      localizedName = name?.trim() ? name : entry.code;
-    } catch {
-      localizedName = entry.code;
-    }
-    const regularSymbol = resolveSymbol(entry.code, locale, 'symbol');
-    const narrowSymbol = resolveSymbol(entry.code, locale, 'narrowSymbol');
+    const [localizedName, regularSymbol, narrowSymbol] = presentationFor(entry.code, locale);
     const label = entry.label ?? localizedName;
     const symbol = entry.symbol ?? regularSymbol;
     const searchText = [...new Set([entry.code, label, localizedName, symbol, regularSymbol, narrowSymbol])].join(' ');

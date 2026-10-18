@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'सिर्फ पहिला {count} टेस्ट नतीजा देखावल गइल बा।',
   toolTimelineLimit: 'अधिकतम {count} टूल कॉल देखावल गइल बा।',
   toolSelectLimit: 'सिर्फ पहिला {count} टूल देखावल गइल बा।',
+  testResultsInputTooLarge: 'परीक्षण नतीजा के विवरण देखावे के सीमा से बेसी बा।',
   toolCall: 'टूल कॉल',
   maximize: 'बड़ करीं',
   promptStudioVariableName: 'चर {index} के नाँव',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'खाली पहिला {count} फाइल देखावल गइल बा।',
   taskListLimit: 'खाली पहिला {count} काम देखावल गइल बा।',
   evalDatasetLimit: 'सिर्फ पहिला {count} उदाहरण देखावल गइल बा।',
+  activityFeedInputLimit: '{total} में से खाली सबसे नया {count} गो प्रविष्टि रखल जाला।',
+  spanWaterfallLimit: 'कुल {total} स्पैन में से {shown} देखावल जात बा।',
+  toolTimelineInputLimit: 'कुल {total} टूल कॉल में से खाली सबसे नया {count} गो रखल जात बा।',
 };
 
 registerLyraLocale('bho', strings);

@@ -36,10 +36,12 @@ Removing `mime-type` consumes the absent hint safely and restores automatic vide
 `kind` explicitly selects audio. Attribute removal keeps its `null` property readback; an explicit
 empty hint remains empty, and a later audio MIME value restores audio detection.
 
-A cue with no `end` extends to the next strictly chronological applicable start, or remains
+With `cueSource` null, a cue with no `end` extends to the next strictly chronological applicable start, or remains
 open-ended when none exists. Equal starts do not end each other. The player indexes starts on cue
-assignment in at most O(n log n) work and reconciles each seek/time update in O(n) work. Caller
-order, first ID admission, explicit ends and overlap arbitration are retained; a paused seek uses
+assignment/duration changes in O(n log n) work with O(n) retained intervals. Seek/time updates
+resolve the interval in O(log n), or O(1) while the previous answer interval still applies. Overlaps
+choose the greatest effective start, then the later original index. Caller order, first ID
+admission and explicit ends are retained; a paused seek uses
 replacement cues immediately, even before rendering. Duration changes preserve the same
 effective-start rules.
 
@@ -49,7 +51,116 @@ seeking retains token-driven pointer feedback.
 The default document-viewer renderer advertises `time-range` anchors but not search: the generic
 document payload has no cue/transcript field, so advertising search there would expose a control
 whose result is always empty. Standalone `<lr-av-player>` search remains available whenever the
-consumer supplies `cues` directly.
+consumer supplies `cues` or a complete `cueSource` directly.
+
+**Complete indexed transcript:** `cueSource: LyraAvCueSource | null = null` (attribute: false)
+takes display precedence over `cues`, bypassing the legacy snapshot, tick index and search scans.
+Invalid non-null providers fail visibly; setting `null` restores the current legacy cue input and
+recomputes its retained search. The legacy `cues` route retains its 10,000-cue cap. Provider storage,
+interval indexing and full-text/speaker search remain host-owned; no complete transcript array,
+all-ID index or match array is retained by the player.
+
+```ts
+import type { LyraAvCueSource, LyraAvActiveCue, LyraAvCueSearch, LyraAvCue } from
+  "@aceshooting/lyra-ui/components/media/av-player/av-player.class.js";
+import type { LyraSourceRequest, LyraSourceValue } from
+  "@aceshooting/lyra-ui/utilities/data-preparation.js";
+```
+
+`LyraAvCueSource` supplies immutable `revision` (a nonempty string or finite number), safe
+nonnegative integer `count`, and four required own-data methods. Methods may return values or
+PromiseLike results; requests include an abort `signal`:
+
+- `getCue(index, request): LyraSourceValue<LyraAvCue | null>` returns the cue at its exact original
+  zero-based source index. An unavailable/null in-range position stays an unavailable,
+  noninteractive row; it never deletes or compacts a logical position.
+- `findCue(cueId, request): LyraSourceValue<{ index, cue } | null>` resolves a globally unique ID
+  directly, without scanning cached rows. Returned identity/index must agree with the request.
+- `activeAt(time, request): LyraSourceValue<LyraAvActiveCue>` resolves the complete source's active
+  cue and its exact validity interval.
+- `search(query, request): LyraSourceValue<LyraAvCueSearch>` searches the complete index; this
+  request additionally includes the effective `locale`.
+
+Provider cue records are closed, cloned and frozen own-data values:
+`{ cueId, start, end?, text, speaker? }`. `cueId` must already be trimmed, nonempty and at most
+256 UTF-16 units; `text` is at most 100,000 units and `speaker` at most 4,096. Start is finite and
+nonnegative; an explicit end is finite and at least start. Malformed, accessor-backed, oversized,
+duplicate or contradictory locally observed records fail without silent coercion/truncation.
+The provider guarantees global ID uniqueness and immutable agreement among row, lookup, active
+and search replies; the player checks only its bounded observable records. Source timestamps are
+absolute media seconds and are never clamped into invented end-of-media active cues. Committed
+row activation seeks that row's original start through the existing media seek contract.
+
+`LyraAvActiveCue` is `{ index: number | null, cue: LyraAvCue | null, validFrom, validUntil }`.
+Index/cue must both be null or both valid; a real index is below source count. The half-open
+`[validFrom, validUntil)` interval must be nonempty and contain the requested time; infinities
+are allowed only as interval bounds. Explicit cue start/end must also contain the requested time.
+The provider resolves omitted ends and overlaps using greatest start, then later original source
+index, including complete no-active intervals. The player retains one completed answer interval;
+ticks inside it make no active request. Seeks invalidate that interval even when they stay within
+its bounds. Out-of-interval ticks coalesce to the latest desired time; returning to a cached answer
+revokes an obsolete pending intent. `lr-cue-change` retains `{ cueId, index }` with the original
+source index, or `null`/`-1`, and emits only on an actual active identity/index transition.
+
+The transcript uses 32-row pages, at most 128 ready cues/four pages, and at most two staged pages
+(64 cues). `getCue` calls are sequential within each page, with at most two physically pending
+calls across pages. At most two additional active/selected-or-transient-match records are retained.
+The resulting 194-record payload ceiling is 20,244,288 UTF-16 units at maximum field sizes,
+separate from object overhead, validation temporaries, query strings and opaque provider storage.
+The list exposes the full logical `count`; cache size does not redefine transcript length.
+
+Existing `search(query): Promise<number>` trims its query and matches locale-aware,
+case-insensitive substrings of complete cue text OR speaker. `LyraAvCueSearch` supplies exact safe
+`count <= source.count` and own-data `getMatch(matchIndex, request)`, returning `{ index, cue }`
+for an original row. Each source index occurs at most once in provider match order. The player
+captures this indexed handle without enumerating hits, reveals the first match before resolving,
+and retains only the count, match ordinal and one selected record. `searchNext()`/`searchPrevious()`
+wrap the complete match ordinal and reveal the original list row without seeking media. Returned
+matches must satisfy the query and agree with subsequently loaded rows before scroll/highlight
+commit. Visible ready-row highlighting checks only bounded cue text/speaker.
+
+`lr-search-change` keeps `{ query, matchCount, matchCountExact: true, activeIndex }`, where
+`activeIndex` is the match ordinal, not the cue's original row index. Only authoritative completed
+matches, exact-zero results and explicit clears emit. Empty queries/`clearSearch()` clear state
+without provider work; canceled/unavailable search resolves `0` and navigation resolves `false`
+without fabricating an exact-zero event. Unavailable text uses the existing localized `error`
+surface and light-DOM failure announcements; loading uses the existing loading label. Locale
+changes restart the current query;
+ordinary playback ticks do not repeat search.
+
+One physical `activeAt`, one `findCue`, one `search` and one `getMatch` may run alongside the two
+`getCue` calls: six fixed physical permits, each with only the latest logical demand. Ignored aborts
+hold permits until actual settlement; cancellation settles obsolete search/navigation promises
+promptly without allowing overlapping replacement calls. Reassign even the same source, or call
+a keyless `requestUpdate()`, after revision/state changes. Named presentation updates reuse admitted
+data. Rebind, replacement, clearing, disconnect and adoption revoke old rows, intervals, search
+handles and effects; reconnect recaptures current input. Existing transcript/cue/state parts and
+time-range anchor methods apply; no new cue-ID anchor kind or cue-selection event is added.
+
+**Exported cue-source declarations:**
+
+These types are exported from the granular AV class entry shown above.
+
+`LyraAvCueSource {
+  readonly revision: LyraSourceRevision;
+  readonly count: number;
+  getCue(index: number, request: LyraSourceRequest): LyraSourceValue<LyraAvCue | null>;
+  findCue(cueId: string, request: LyraSourceRequest): LyraSourceValue<{ readonly index: number; readonly cue: LyraAvCue } | null>;
+  activeAt(time: number, request: LyraSourceRequest): LyraSourceValue<LyraAvActiveCue>;
+  search(query: string, request: LyraSourceRequest & { readonly locale: string }): LyraSourceValue<LyraAvCueSearch>;
+}`
+
+`LyraAvActiveCue {
+  readonly index: number | null;
+  readonly cue: LyraAvCue | null;
+  readonly validFrom: number;
+  readonly validUntil: number;
+}`
+
+`LyraAvCueSearch {
+  readonly count: number;
+  getMatch(matchIndex: number, request: LyraSourceRequest): LyraSourceValue<{ readonly index: number; readonly cue: LyraAvCue }>;
+}`
 
 **Properties:** `src: string = ''`, `name: string = ''`, `kind?: 'audio' | 'video'`
 (attribute-backed auto-detection override), `mimeType: string = ''` (attribute `mime-type`), `poster: string =
@@ -62,8 +173,8 @@ gradient scrim, while browser-owned native media controls are unchanged,
 `rates: readonly number[] = [0.75, 1, 1.25, 1.5, 2]` (attribute: false),
 `cues: readonly LyraAvCue[] = []` (attribute: false), `peaks: readonly number[] = []`
 (attribute: false), and `tracks: readonly LyraAvTrack[] = []` (attribute: false). Each collection is
-normalized synchronously on assignment into a bounded, cloned, frozen snapshot; mutate by assigning a
-new collection. The inherited
+normalized synchronously on assignment into a bounded, cloned, frozen snapshot when its legacy
+route is active; mutate by assigning a new collection. The inherited
 anchor-target surface is `highlights: readonly LyraHighlight[] = []` (property only; assign a new
 collection to update), `activeHighlightId: string | null = null` (attribute `active-highlight-id`),
 `anchor: LyraAnchor | string | null = null` (property only), and readonly
@@ -81,12 +192,71 @@ renders video) and never appears in `lr-load`'s `detail.kind`.
 `poster` is ignored for audio and is validated with the same safe media-source allowlist as `src`
 before reaching the native video element; an unsafe poster URL is omitted.
 
-Runtime numeric input is normalized before it reaches media, canvas, or `Intl`: cue/highlight times
+Runtime legacy input is normalized before it reaches media, canvas, or `Intl`: cue/highlight times
 and waveform peaks are clamped to their valid ranges; non-finite native duration/current time
 cannot leak into state or events. `rates` keeps only unique finite values in the supported
 `0.0625..16` range, while always including the normalized current `playbackRate`.
 
-**Waveform lifecycle:** with `peaks`, waveform canvas painting is gated by player visibility when
+**Prepared whole-duration waveform:** `waveform: LyraPreparedWaveform | null = null`
+(attribute: false) takes precedence over `peaks` for waveform presence, painting and failure state.
+Set `null` to restore current legacy peaks/validity. The supplied descriptor remains caller-owned
+and retained by identity; the player clones/freezes only its bounded accepted fields/buckets.
+It never decodes media, calls a sample reader or materializes original samples.
+
+```ts
+import { prepareLyraWaveform } from "@aceshooting/lyra-ui/utilities/data-preparation.js";
+import type { LyraPreparedWaveform, LyraIndexedInput } from
+  "@aceshooting/lyra-ui/utilities/data-preparation.js";
+
+player.waveform = await prepareLyraWaveform(samples, {
+  duration: durationSeconds,
+  maxBuckets: 1000,
+});
+```
+
+`prepareLyraWaveform(input: LyraIndexedInput<number>, options: LyraPreparationOptions &
+{ duration: number; maxBuckets?: number }): Promise<LyraPreparedWaveform>` asynchronously scans
+every original position once. Its immutable reader supplies `revision`, safe nonnegative `count`,
+and `read(start, count, { signal })`; each response must be an array of exactly the requested size.
+Preparation yields between chunks, supports `signal`, defaults `batchSize` to 2,048 and clamps it
+to at most 8,192. Budgets must be positive safe integers; `maxBuckets` defaults/clamps to 65,536.
+Finite samples clamp to `[0, 1]`; nonfinite/missing samples preserve their positions and contribute
+no peak. Revision/count changes or reader failures reject. Only bounded chunks and output buckets
+are retained; source storage/index construction remains caller-owned. Hosts may also author a
+complete bounded envelope directly, with responsibility for truthful full-source statistics.
+
+`LyraPreparedWaveform` has `{ revision, counts: { sourceCount, validCount, invalidCount },
+sampleCount, duration, buckets, firstAmplitude, lastAmplitude }`. Counts/sampleCount are safe
+nonnegative integers, `sampleCount === sourceCount`, and valid/invalid counts conserve the source.
+Revision is a nonempty string or finite number; duration is finite nonnegative seconds.
+At most 65,536 own-data buckets `{ startIndex, endIndex, maxAmplitude }` must form ordered,
+contiguous, nonempty half-open intervals partitioning `[0, sampleCount)`. Maxima are finite in
+`[0, 1]`. Endpoint amplitudes describe the original first/last samples, each null when invalid or
+absent, otherwise finite `[0, 1]` and no larger than its covering bucket's maximum. Empty input
+requires zero counts, empty buckets and null endpoints; all-invalid input has zero bucket maxima
+and null endpoints. Accessors, sparse fields, gaps/overlaps and malformed counts/amplitudes reject
+without clipping or legacy fallback.
+
+Painting maps each original index interval across the complete duration; unequal intervals retain
+their actual proportions. A monotone O(bucketCount + barCount) pass merges overlapping interval
+maxima into at most 4,096 physical bars. Final-bucket energy survives even when the final endpoint
+amplitude is quiet. Canvas backing stores stay within 4,096 per dimension and 8,388,608 pixels.
+Once positive native media metadata is authoritative, envelope duration must agree within
+`0.001 + 4 * Number.EPSILON * max(mediaDuration, envelopeDuration)` seconds. Mismatch shows a
+localized `error` and plain seek rail until metadata/envelope agree, without changing native
+duration or seek coordinates. Before metadata the envelope may show proportions, but cannot enable
+native seeking. Source/kind/MIME changes reset old metadata authority; duration changes recheck it.
+
+Malformed/mismatched waveforms use localized `avPlayerWaveformUnavailable` feedback and a fresh
+post-mount assertive light-DOM announcement, without a new waveform event or `lr-render-error`.
+Reassign even the same descriptor, or call a keyless `requestUpdate()`, after changing it; named
+playback/presentation updates reuse the accepted snapshot. Legacy `peaks` must already represent
+the whole recording: arrays over 65,536 entries reject before reading any entry, retaining no
+prefix. Valid bounded peaks keep their existing normalization and endpoint-preserving downsampling.
+Prepared presence hides inactive legacy admission errors; clearing it exposes current legacy
+validity again.
+
+**Waveform lifecycle:** with `peaks` or `waveform`, waveform canvas painting is gated by player visibility when
 `IntersectionObserver` is available. Peak, theme, and resize changes while the player is
 off-screen coalesce into one paint on re-entry; environments without that API retain eager
 painting.
@@ -109,8 +279,8 @@ unsupported or unresolved targets report `false` through the return value and `l
 (`detail: { readonly cueId, readonly index }`; `cueId` is `null` and `index` is `-1` when no cue is active),
 `lr-highlight-activate` (`detail: { highlightId }`), `lr-anchor-result` (`detail: {
 found }`), `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`;
-`matchCountExact` is always `true` — `search()` matches over the already-loaded `cues` array with no
-additional ceiling), and
+`matchCountExact` is always `true` for emitted results — legacy search covers the admitted `cues`
+array with no additional ceiling, while source search reports the complete indexed count), and
 `lr-render-error` (`detail: { error }`). The native `ended`, `error`, `loadedmetadata`, `pause`,
 `play`, `timeupdate`, and `volumechange`
 events are also relayed exactly once from the host as native `Event` instances. Like the original

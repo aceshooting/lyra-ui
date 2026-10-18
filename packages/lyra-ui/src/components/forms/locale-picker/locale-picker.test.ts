@@ -67,7 +67,7 @@ function requiredItem<T>(items: ArrayLike<T>, index: number, description: string
 }
 
 it('keeps the default flag-label trigger and exposes independent trigger label styling', async () => {
-  const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`);
+  const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker open value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`);
   expect(el.triggerDisplay).to.equal('flag-label');
   const label = () => el.shadowRoot!.querySelector<HTMLElement>('[part="trigger-label"]')!;
   expect(label()?.textContent).to.equal(localeNativeName('fr'));
@@ -235,7 +235,7 @@ it('inherits the theme-wide form-control radius at a compact size tier', async (
 it('uses the scoped selected-option font weight inherited from an ancestor', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="--lr-locale-picker-option-selected-font-weight: 350">
-      <lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>
+      <lr-locale-picker open value="fr" .locales=${['en', 'fr']}></lr-locale-picker>
     </div>
   `);
   const el = wrapper.querySelector('lr-locale-picker') as LyraLocalePicker;
@@ -548,7 +548,7 @@ it('a plain string[] locales catalog never emits a country attribute', async () 
 
 it("shows the current value's flag in the trigger, not just in the open listbox", async () => {
   const el = (await fixture(
-    html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
+    html`<lr-locale-picker open value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
   const flag = trigger(el).querySelector('lr-flag') as HTMLElement;
   expect(flag != null).to.equal(true);
@@ -566,7 +566,7 @@ it("trigger flag honors a locales entry's country override, same as the row does
 
 it('withoutFlags omits the trigger flag too, not just the row flags', async () => {
   const el = (await fixture(
-    html`<lr-locale-picker value="fr" .locales=${['fr']} without-flags></lr-locale-picker>`,
+    html`<lr-locale-picker open value="fr" .locales=${['fr']} without-flags></lr-locale-picker>`,
   )) as LyraLocalePicker;
   expect(trigger(el).querySelectorAll('lr-flag').length).to.equal(0);
 });
@@ -575,7 +575,7 @@ it('withoutFlags omits the trigger flag too, not just the row flags', async () =
 it('selecting a row updates value, fires lr-change with {value, previousValue}, and calls setLyraLocale', async () => {
   setLyraLocale('en');
   const el = (await fixture(
-    html`<lr-locale-picker value="fr" .locales=${['fr', 'de']}></lr-locale-picker>`,
+    html`<lr-locale-picker open value="fr" .locales=${['fr', 'de']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
   el.open = true;
   await el.updateComplete;
@@ -835,7 +835,7 @@ it('type-ahead by native-name first letter jumps the active row to the match whi
 
 it('Escape closes the listbox without changing value', async () => {
   const el = (await fixture(
-    html`<lr-locale-picker value="fr" .locales=${['fr', 'de']}></lr-locale-picker>`,
+    html`<lr-locale-picker open value="fr" .locales=${['fr', 'de']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
   el.open = true;
   await el.updateComplete;
@@ -1189,7 +1189,7 @@ it('show()/hide() are no-ops in already-settled states (open, disabled, or alrea
 
 it('the trigger-click handler no-ops while disabled even when invoked directly', async () => {
   const el = (await fixture(
-    html`<lr-locale-picker disabled .locales=${['fr', 'de']}></lr-locale-picker>`,
+    html`<lr-locale-picker open .locales=${['fr', 'de']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
   (el as unknown as { onTriggerClick(): void }).onTriggerClick();
   await el.updateComplete;
@@ -1210,8 +1210,9 @@ it('contains a synthetic trigger focus delivered during same-task disablement', 
 
 it('ignores listbox row clicks while disabled', async () => {
   const el = (await fixture(
-    html`<lr-locale-picker disabled .locales=${['fr', 'de']}></lr-locale-picker>`,
+    html`<lr-locale-picker open .locales=${['fr', 'de']}></lr-locale-picker>`,
   )) as LyraLocalePicker;
+  el.disabled = true;
   requiredItem(rows(el), 0, 'French locale').click();
   await el.updateComplete;
   expect(el.value).to.equal('');
@@ -1921,7 +1922,7 @@ function resolvedInShadow(el: LyraLocalePicker, declaration: string, property: s
 describe('trigger/option hover-active paint transition', () => {
   it('declares a non-zero transition on background-color so the paint eases like lr-button', async () => {
     const el = await fixture<LyraLocalePicker>(
-      html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
+      html`<lr-locale-picker open value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
     );
     el.open = true;
     await el.updateComplete;
@@ -1935,7 +1936,7 @@ describe('trigger/option hover-active paint transition', () => {
 
   it('leaves the resting trigger and option backgrounds unchanged (unset-regression)', async () => {
     const el = await fixture<LyraLocalePicker>(
-      html`<lr-locale-picker value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
+      html`<lr-locale-picker open value="fr" .locales=${['en', 'fr']}></lr-locale-picker>`,
     );
     el.open = true;
     await el.updateComplete;

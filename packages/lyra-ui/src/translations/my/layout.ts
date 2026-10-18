@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} အမိန့်များ',
   },
+  commandPaletteInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် အမိန့်များ အချို့ကို ချန်လှပ်ထားသည်။',
 };
 
 registerLyraLocale('my', strings);

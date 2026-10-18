@@ -149,3 +149,7 @@ export const Narrow320: Story = {
     </div>
   `,
 };
+
+export const RetainedTail: Story = {
+  render: () => html`<lr-transcript-feed .entries=${Array.from({length:10001}, (_, i) => ({id:`caption-${i}`, text:`Caption ${i + 1}`}))}></lr-transcript-feed>`,
+};

@@ -1,5 +1,10 @@
+import { SequenceStripSourceController } from './sequence-strip-source-controller.js';
+import type { LyraSequenceSource, LyraSequenceRangeSummary } from './sequence-strip-source.js';
+export type { LyraSequenceSource, LyraSequenceRangeSummary } from './sequence-strip-source.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
@@ -12,7 +17,8 @@ import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripSourceError, LYRA_DEFAULT_sequenceStripSourceItemLabel, LYRA_DEFAULT_sequenceStripSourceItemUnavailable, LYRA_DEFAULT_sequenceStripSourceKeyboardHelp, LYRA_DEFAULT_sequenceStripSourceRangeDetails, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_loading, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface SequenceStripItem {
@@ -169,6 +175,18 @@ export interface LyraSequenceStripEventMap {
  * follows its own activated item, the range's first (see `lr-item-activate` above). Omitted or
  * `false` renders the item exactly as before this field existed.
  *
+ * A non-null source supplies complete indexed access instead of the bounded items snapshot.
+ * Source summaries partition the full logical sequence into at most 200 proportional ranges,
+ * with at most 200 distinct categories and 40,000 count pairs. Providers own indexing and
+ * aggregation. Source dominant-category ties use category configuration order, then lexical ID;
+ * legacy ties still use earliest occurrence. Mixed ranges report their enabled count; activation
+ * resolves the first exact item and emits nothing if it is disabled or unavailable.
+ * revealSourceItem(indexOrId) and the exact inspector address arbitrary original positions.
+ * Arrow keys, Home and End inspect exact positions; Enter activates the admitted enabled item.
+ * Inspection does not change selectedIndex. Exact item text is limited to 65,536 aggregate UTF-16
+ * units and summary category IDs to 1,024 units. Loading/errors revoke previous actions. Null or
+ * undefined restores legacy inputs; other invalid source values fail visibly.
+ *
  * @customElement lr-sequence-strip
  * @event lr-item-activate - Fired when a cell is clicked, or activated with Enter/Space on the
  *   roving-tabindex focus. `detail: { index, id, item }` identifies the picked item — the range's
@@ -203,6 +221,9 @@ export interface LyraSequenceStripEventMap {
  * @cssprop [--lr-sequence-strip-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a cell whose activated item sets `disabled`.
  * @cssprop [--lr-sequence-strip-selected-color=var(--lr-color-text)] - Colour of the persistent selection ring on a cell whose index is in `selectedIndex`.
  * @cssprop [--lr-sequence-strip-selected-focus-color=var(--lr-focus-ring-color)] - Colour of that same selection ring while the cell also has keyboard focus.
+ * @csspart source-status - Complete-source loading and failure message.
+ * @csspart source-retry - Retry the current source failure.
+ * @csspart source-exact - Exact item inspection and activation control.
  * @status stable
  * @since 4.0.0
  */
@@ -211,15 +232,111 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    loading: LYRA_DEFAULT_loading,
+    retry: LYRA_DEFAULT_retry,
     sequenceStripBucketLabel: LYRA_DEFAULT_sequenceStripBucketLabel,
     sequenceStripBucketSummary: LYRA_DEFAULT_sequenceStripBucketSummary,
     sequenceStripCategoryCount: LYRA_DEFAULT_sequenceStripCategoryCount,
     sequenceStripEmpty: LYRA_DEFAULT_sequenceStripEmpty,
+    sequenceStripSourceError: LYRA_DEFAULT_sequenceStripSourceError,
+    sequenceStripSourceItemLabel: LYRA_DEFAULT_sequenceStripSourceItemLabel,
+    sequenceStripSourceItemUnavailable: LYRA_DEFAULT_sequenceStripSourceItemUnavailable,
+    sequenceStripSourceKeyboardHelp: LYRA_DEFAULT_sequenceStripSourceKeyboardHelp,
+    sequenceStripSourceRangeDetails: LYRA_DEFAULT_sequenceStripSourceRangeDetails,
     sequenceStripUnnamedCategory: LYRA_DEFAULT_sequenceStripUnnamedCategory,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles];
+
+  private _source: LyraSequenceSource<SequenceStripItem> | null = null;
+  private sourceInputs?: readonly unknown[];
+  private sourceEpoch = 0;
+  private sourceMetadataFailed = false;
+  private sourceSelection?: readonly unknown[];
+  private sourceCursor?: number;
+  private sourceFocusIntent = 0;
+  @state() private sourceVersion = 0;
+  private readonly sourceController = new SequenceStripSourceController(this, () => { this.sourceVersion++; }, () => this.effectiveLocale);
+  private readonly sourceAnnouncements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private sourceStatusInitialized = false;
+  private previousSourceStatus = '';
+
+  /** Complete indexed sequence. Null or undefined restores items; invalid defined sources fail visibly.
+   * Same-source assignment or a keyless requestUpdate refreshes the immutable provider revision. */
+  @property({ attribute: false })
+  get source(): LyraSequenceSource<SequenceStripItem> | null { return this._source; }
+  set source(value: LyraSequenceSource<SequenceStripItem> | null) {
+    const previous = this._source; this._source = value;
+    this.invalidateSource(); this.sourceVersion = (this.sourceVersion ?? 0) + 1; this.requestUpdate('source', previous);
+  }
+  private get sourceMode(): boolean { return this.source != null; }
+  private invalidateSource(): void {
+    this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
+    this.sourceFocusIntent = (this.sourceFocusIntent ?? 0) + 1;
+    this.sourceMetadataFailed = false;
+    this.sourceInputs = undefined; this.sourceSelection = undefined; this.sourceCursor = undefined;
+    this.sourceController?.detach();
+    this.hoverIndex = null; this.keyboardIndex = null;
+  }
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined && this.sourceController) this.invalidateSource();
+    super.requestUpdate(...args);
+  }
+  private syncSource(): void {
+    if (!this.sourceMode || !this.isConnected) return;
+    const source = this.source!;
+    const epoch = this.sourceEpoch;
+    if (this.sourceMetadataFailed && this.sourceInputs?.[0] === source && this.sourceInputs[1] === this.effectiveLocale) return;
+    try {
+      const revision = source.revision;
+      if (source !== this.source || epoch !== this.sourceEpoch) return;
+      const inputs = [source, revision, this.effectiveLocale];
+      if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
+      this.sourceInputs = inputs; this.sourceSelection = undefined; this.sourceFocusIntent++;
+      this.sourceCursor = undefined; this.hoverIndex = null; this.keyboardIndex = null;
+      this.sourceController.configure(source);
+    } catch {
+      if (source === this.source && epoch === this.sourceEpoch) {
+        this.sourceMetadataFailed = true; this.sourceInputs = [source, this.effectiveLocale]; this.sourceController.fail();
+      }
+    }
+  }
+
+  /** Inspect an exact source index or stable ID and focus its control. Does not change selection
+   * or emit activation. Disabled items remain inspectable. Unavailable or revoked requests return false. */
+  async revealSourceItem(target: number | string): Promise<boolean> {
+    return this.inspectSourceItem(target, true, false);
+  }
+  private async inspectSourceItem(target: number | string, focus: boolean, activate: boolean): Promise<boolean> {
+    if (!this.sourceMode) return false;
+    // An explicit inspection supersedes selection writes already present in this turn.
+    // A subsequent selection write still differs when the pending update runs.
+    if (this.sourceController.snapshot) this.sourceSelection = [this.sourceController.snapshot, this.selectedIndex];
+    const intent = ++this.sourceFocusIntent;
+    const source = this.source;
+    const epoch = this.sourceController.requests.epoch;
+    const owner = this.ownerDocument;
+    const focused = shadowFocusTarget(this);
+    const outside = owner.activeElement;
+    const current = () => this.isConnected && this.ownerDocument === owner && this.source === source
+      && this.sourceFocusIntent === intent && this.sourceController.requests.epoch === epoch;
+    if (typeof target === 'number' && Number.isSafeInteger(target) && target >= 0 && target < this.sourceController.length) this.sourceCursor = target;
+    const record = await this.sourceController.resolve(target);
+    if (!current() || !record) return false;
+    this.sourceCursor = record.index;
+    if (activate && !record.item.disabled) {
+      this.emit('lr-item-activate', { index: record.index, id: record.item.id, item: record.item });
+      if (!current()) return false;
+    }
+    if (focus) {
+      await this.updateComplete;
+      if (!current()) return false;
+      const stillOwned = focused ? shadowFocusTarget(this) === focused : owner.activeElement === outside;
+      if (stillOwned) this.shadowRoot?.querySelector<HTMLElement>('[part="source-exact"]')?.focus();
+    }
+    return current();
+  }
 
   private _items: readonly SequenceStripItem[] = [];
   private _categories: readonly SequenceStripCategory[] = [];
@@ -405,6 +522,18 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.sourceMode) {
+      this.syncSource();
+      const snapshot = this.sourceController.snapshot;
+      const selection = [snapshot, this.selectedIndex];
+      if (snapshot && (!this.sourceSelection || selection.some((value, index) => value !== this.sourceSelection![index]))) {
+        this.sourceSelection = selection;
+        if (Number.isSafeInteger(this.selectedIndex) && this.selectedIndex >= 0 && this.selectedIndex < this.sourceController.length) {
+          void this.inspectSourceItem(this.selectedIndex, false, false);
+        }
+      }
+      return;
+    }
     if (changed.has('items')) {
       this.focusRestoreGeneration++;
       this.hoverIndex = null;
@@ -437,6 +566,13 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.sourceMode) {
+      const status = this.sourceController.pending ? this.localize('loading') : this.sourceController.error ? this.localize('sequenceStripSourceError')
+        : this.sourceController.exactUnavailable ? this.localize('sequenceStripSourceItemUnavailable') : '';
+      if (this.sourceStatusInitialized && status && status !== this.previousSourceStatus) this.sourceAnnouncements.announcePolite(status);
+      this.sourceStatusInitialized = true; this.previousSourceStatus = status;
+      return;
+    }
     const pending = this.pendingFocusTarget;
     if (pending === undefined) return;
     this.pendingFocusTarget = undefined;
@@ -455,7 +591,18 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     }, 'sequence-strip-focus');
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.sourceMode) this.requestUpdate('source');
+  }
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.sourceController.requests.adopted(); this.sourceAnnouncements.adopted();
+    this.invalidateSource(); this.requestUpdate('source');
+  }
   override disconnectedCallback(): void {
+    this.invalidateSource(); this.sourceStatusInitialized = false; this.previousSourceStatus = '';
+
     this.focusRestoreGeneration++;
     this.pendingFocusTarget = undefined;
     this.restoringOwnedFocus = false;
@@ -474,7 +621,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   }
 
   private viewKey: readonly unknown[] = [];
-  private view?: { labels: readonly string[]; colors: readonly string[]; summary: string };
+  private view?: { labels: readonly string[]; colors: readonly string[]; summary: string; overview: string | undefined };
 
   /** Cell names, cell colours and the generated summary, rebuilt only when one of their inputs changes. */
   private cellView(cells: readonly SequenceStripCell[]): NonNullable<LyraSequenceStrip['view']> {
@@ -483,17 +630,21 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     if (!this.view || key.some((part, index) => part !== this.viewKey[index])) {
       const categories = this.categoryMap();
       this.viewKey = key;
+      const overview = this.bucketSummary();
       this.view = {
         labels: cells.map((cell) => this.cellLabel(cell, categories)),
         colors: cells.map((cell) => this.categoryColor(cell.categoryId, categories)),
-        summary: this.autoSummary(),
+        summary: this.autoSummary(overview),
+        overview,
       };
     }
     return this.view;
   }
 
+  private categoryMemo?: { source: readonly SequenceStripCategory[]; map: ReadonlyMap<string, SequenceStripCategory> };
   private categoryMap(): ReadonlyMap<string, SequenceStripCategory> {
-    return new Map(this.categories.map((category) => [category.id, category]));
+    if (this.categoryMemo?.source !== this.categories) this.categoryMemo = { source: this.categories, map: new Map(this.categories.map(category => [category.id, category])) };
+    return this.categoryMemo.map;
   }
 
   private categoryColor(categoryId: string, categories: ReadonlyMap<string, SequenceStripCategory>): string {
@@ -510,7 +661,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
       : this.localize('sequenceStripUnnamedCategory');
   }
 
-  private autoSummary(): string {
+  private autoSummary(overview: string | undefined): string {
     const counts = new Map<string, number>();
     const categories = this.categoryMap();
     for (const item of this.items) counts.set(item.categoryId, (counts.get(item.categoryId) ?? 0) + 1);
@@ -540,7 +691,6 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     // the label is the only place a screen-reader user can learn that each position is a range.
     // It is a clause of the same summary rather than a second live region: `[part="bucket-summary"]`
     // repeats it visually and is `aria-hidden` for exactly that reason.
-    const overview = this.bucketSummary();
     if (overview !== undefined) clauses.push(overview);
     return getListFormat(this.effectiveLocale, { style: 'long', type: 'unit' }).format(clauses);
   }
@@ -677,7 +827,105 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     `;
   }
 
+  private sourceCategory(range: LyraSequenceRangeSummary, rank: ReadonlyMap<string, number>): string {
+    let winner = ''; let maximum = -1;
+    for (const [id, count] of Object.entries(range.categoryCounts)) {
+      const position = rank.get(id) ?? Number.MAX_SAFE_INTEGER;
+      const previous = rank.get(winner) ?? Number.MAX_SAFE_INTEGER;
+      if (count > maximum || (count === maximum && (position < previous || (position === previous && id < winner)))) { winner = id; maximum = count; }
+    }
+    return winner;
+  }
+  private sourceExactKey(event: KeyboardEvent): void {
+    const current = this.sourceController.exact;
+    const length = this.sourceController.length;
+    if (!length) return;
+    let next: number;
+    if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = length - 1;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      const forward = (event.key === 'ArrowRight') !== (this.effectiveDirection === 'rtl');
+      next = Math.max(0, Math.min(length - 1, (current?.index ?? this.sourceCursor ?? 0) + (forward ? 1 : -1)));
+    } else return;
+    event.preventDefault(); void this.inspectSourceItem(next, true, false);
+  }
+  private renderSource(): TemplateResult {
+    const controller = this.sourceController;
+    const snapshot = controller.snapshot;
+    const source = this.source;
+    const epoch = controller.requests.epoch;
+    const owner = this.ownerDocument;
+    const current = () => this.isConnected && this.ownerDocument === owner && this.source === source && controller.requests.epoch === epoch && controller.snapshot === snapshot;
+    const categories = this.categoryMap();
+    const number = getNumberFormat(this.effectiveLocale);
+    const ranges = snapshot?.ranges ?? [];
+    const categoryRanks = new Map(this.categories.map((category, index) => [category.id, index]));
+    const clauses = snapshot ? [...snapshot.counts].map(([id, count]) => this.localize('sequenceStripCategoryCount', undefined, {
+      label: this.categoryLabel(id, categories), count: number.format(count), pluralCount: count,
+    })) : [];
+    if (snapshot && this.markerLabel && snapshot.markerCount) clauses.push(this.localize('sequenceStripCategoryCount', undefined, {
+      label: this.markerLabel, count: number.format(snapshot.markerCount), pluralCount: snapshot.markerCount,
+    }));
+    const overview = snapshot && controller.length ? this.localize('sequenceStripBucketSummary', undefined, {
+      items: number.format(controller.length), ranges: number.format(ranges.length), pluralCount: controller.length,
+    }) : undefined;
+    if (overview) clauses.push(overview);
+    const summary = snapshot ? clauses.length ? getListFormat(this.effectiveLocale, { style: 'long', type: 'unit' }).format(clauses) : this.localize('sequenceStripEmpty') : this.localize(controller.error ? 'sequenceStripSourceError' : 'loading');
+    const exact = controller.exact;
+    const unavailableLabel = this.localize(controller.exactPending ? 'loading' : 'sequenceStripSourceItemUnavailable');
+    const inspectedIndex = exact?.index ?? this.sourceCursor;
+    const exactLabel = inspectedIndex !== undefined ? this.localize('sequenceStripSourceItemLabel', undefined, {
+      label: exact ? this.itemLabel(exact.item, categories) : unavailableLabel, index: number.format(inspectedIndex + 1), total: number.format(controller.length),
+    }) : unavailableLabel;
+    const active = this.hoverIndex ?? (this.keyboardTooltip ? this.keyboardIndex : null);
+    const selected = ranges.findIndex(range => Number.isSafeInteger(this.selectedIndex) && this.selectedIndex >= range.startIndex && this.selectedIndex < range.endIndex);
+    const requestedEntry = this.keyboardIndex ?? (selected >= 0 ? selected : 0);
+    let entry = requestedEntry;
+    if (!ranges[entry]?.enabledCount) {
+      const forward = ranges.findIndex((range, index) => index >= requestedEntry && range.enabledCount > 0);
+      entry = forward >= 0 ? forward : ranges.findIndex(range => range.enabledCount > 0);
+      if (entry < 0) entry = requestedEntry;
+    }
+    return html`
+      ${!snapshot ? html`<div part="source-status" aria-busy=${controller.pending ? 'true' : 'false'}>${summary}</div>
+        ${controller.error ? html`<button part="source-retry" type="button" @click=${() => { if (current()) { this.invalidateSource(); this.requestUpdate('source'); } }}>${this.localize('retry')}</button>` : nothing}` : nothing}
+      <div part="base" role="list" aria-label=${this.hostAccessibleLabel ?? summary} tabindex=${ranges.length ? '-1' : '0'} @focusout=${this.onStripFocusOut} ?data-dense=${ranges.length >= MAX_RENDERED_CELLS}>
+        ${ranges.map((range, index) => {
+          const category = this.sourceCategory(range, categoryRanks);
+          const label = this.localize('sequenceStripSourceRangeDetails', undefined, {
+            label: this.categoryLabel(category, categories), start: number.format(range.startIndex + 1), end: number.format(range.endIndex),
+            enabled: number.format(range.enabledCount), total: number.format(range.endIndex - range.startIndex), markers: number.format(range.markerCount),
+          });
+          const activate = () => { if (current() && range.enabledCount) void this.inspectSourceItem(range.startIndex, false, true); };
+          return html`<span part="cell" role="listitem" data-index=${index} data-range-start=${range.startIndex} data-range-end=${range.endIndex - 1}
+            aria-posinset=${index + 1} aria-setsize=${ranges.length} aria-label=${label} aria-disabled=${range.enabledCount ? 'false' : 'true'}
+            aria-current=${selected === index ? 'true' : 'false'} ?data-selected=${selected === index} tabindex=${entry === index ? '0' : '-1'}
+            style=${styleMap({ backgroundColor: this.categoryColor(category, categories), flexGrow: String((range.endIndex - range.startIndex) / controller.length) })}
+            @click=${activate} @pointerenter=${() => { if (current()) this.onCellEnter(index); }} @pointerleave=${() => { if (current()) this.onCellLeave(); }}
+            @focus=${(event: FocusEvent) => { if (current()) this.onCellFocus(index, event); }}
+            @keydown=${(event: KeyboardEvent) => {
+              if (!current()) return;
+              if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') { event.preventDefault(); activate(); return; }
+              const next = resolveListMove(event, { count: ranges.length, current: index, orientation: 'horizontal', direction: this.effectiveDirection, wrap: false, isAvailable: target => ranges[target]!.enabledCount > 0 });
+              if (next !== null && next !== undefined) {
+                event.preventDefault(); this.keyboardIndex = next; this.keyboardTooltip = true;
+                void this.updateComplete.then(() => { if (current()) this.shadowRoot?.querySelector<HTMLElement>(`[part="cell"][data-index="${next}"]`)?.focus(); });
+              }
+            }}>${range.markerCount ? html`<span part="marker"></span>` : nothing}
+            ${active === index ? html`<span part="tooltip">${label}</span>` : nothing}</span>`;
+        })}
+      </div>
+      ${snapshot && !controller.length ? html`<span part="empty">${this.localize('sequenceStripEmpty')}</span>` : nothing}
+      ${overview ? html`<div part="bucket-summary" aria-hidden="true">${overview}</div>` : nothing}
+      ${snapshot && controller.length ? html`<button part="source-exact" type="button" aria-disabled=${!exact || exact.item.disabled ? 'true' : 'false'}
+        title=${this.localize('sequenceStripSourceKeyboardHelp')} aria-busy=${controller.exactPending ? 'true' : 'false'} @keydown=${(event: KeyboardEvent) => { if (current() && controller.exact === exact) this.sourceExactKey(event); }}
+        @click=${() => { if (current() && exact && controller.exact === exact && !exact.item.disabled) this.emit('lr-item-activate', { index: exact.index, id: exact.item.id, item: exact.item }); }}>${exactLabel}</button>` : nothing}
+      ${this.withLegend ? this.renderLegend() : nothing}
+    `;
+  }
+
   override render(): TemplateResult {
+    if (this.sourceMode) return this.renderSource();
     const cells = this.cells();
     const view = this.cellView(cells);
     const ariaLabel = this.hostAccessibleLabel ?? view.summary;
@@ -691,7 +939,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     const nearestEnabledTabStop = this.nearestEnabledCellIndex(cells, requestedTabStop);
     const tabStop = nearestEnabledTabStop >= 0 ? nearestEnabledTabStop : requestedTabStop;
     const tooltipIndex = activeIndex ?? tabStop;
-    const overview = this.bucketSummary();
+    const overview = view.overview;
     return html`
       <div
         part="base"
@@ -742,7 +990,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
       ${overview === undefined
         ? nothing
         : html`<div part="bucket-summary" aria-hidden="true">${overview}</div>`}
-      ${this.withLegend ? this.renderLegend() : nothing}
+      ${this.withLegend ? guard([this.categories, this.markerLabel, this.effectiveLocale, this.strings, lyraLocaleCatalogVersion(this.effectiveLocale)], () => this.renderLegend()) : nothing}
     `;
   }
 }

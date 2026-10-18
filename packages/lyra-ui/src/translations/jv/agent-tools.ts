@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Mung asil tes {count} kapisan sing ditampilake.',
   toolTimelineLimit: 'Paling akeh {count} panggilan piranti sing ditampilake.',
   toolSelectLimit: 'Mung {count} piranti kapisan sing ditampilake.',
+  testResultsInputTooLarge: 'Rincian asil tes ngluwihi wates tampilan.',
   toolCall: 'Panggilan piranti',
   maximize: 'Maksimalake',
   promptStudioVariableName: 'Jeneng variabel {index}',
@@ -292,6 +293,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Mung {count} file pisanan sing ditampilake.',
   taskListLimit: 'Mung {count} tugas pisanan sing ditampilake.',
   evalDatasetLimit: 'Mung {count} tuladha kapisan sing ditampilake.',
+  activityFeedInputLimit: 'Mung {count} entri paling anyar saka {total} sing disimpen.',
+  spanWaterfallLimit: 'Nampilake {shown} saka {total} span.',
+  toolTimelineInputLimit: 'Mung {count} panggilan piranti paling anyar saka {total} sing disimpen.',
 };
 
 registerLyraLocale('jv', strings);

@@ -66,6 +66,18 @@ export const styles = css`
   [part='clear-selection']:focus-visible {
     ${focusRing}
   }
+  [part='selection-status'] { margin: 0; color: var(--lr-color-text-quiet); }
+  [part='selection-retry'] {
+    min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size);
+    border: 0; background: transparent; color: var(--lr-color-brand); font: inherit; cursor: pointer;
+  }
+  [part='selection-retry']:hover { text-decoration: underline; }
+  [part='selection-retry']:focus-visible { ${focusRing} }
+  [part='limit'] {
+    margin: 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
   [part='table'] {
     min-inline-size: 0;
   }

@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: 'yana {count} ta taklif',
     other: 'yana {count} ta taklif',
   },
+  mentionInputLimit: 'Faqat tilga olish uchun dastlabki 10 000 ta nomzod mavjud.',
+  diffViewHighlightLimit: 'Uzun kod sintaksisni ajratib koʻrsatishsiz koʻrsatiladi.',
 };
 
 registerLyraLocale('uz', strings);

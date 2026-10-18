@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'یوازې لومړۍ {count} د ازموینې پایلې ښودل کېږي.',
   toolTimelineLimit: 'تر ټولو ډېرې {count} د وسیلې غوښتنې ښودل کېږي.',
   toolSelectLimit: 'یوازې لومړۍ {count} وسیلې ښودل کېږي.',
+  testResultsInputTooLarge: 'د ازموینې د پایلو تفصیل د ښودلو له حده زیات دی.',
   toolCall: 'د وسیلې غوښتنه',
   maximize: 'لویول',
   promptStudioVariableName: 'د متغیر {index} نوم',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'یوازې لومړی {count} فایلونه ښودل شوي.',
   taskListLimit: 'یوازې لومړنۍ {count} دندې ښودل شوي.',
   evalDatasetLimit: 'یوازې لومړۍ {count} بېلګې ښودل کېږي.',
+  activityFeedInputLimit: 'له {total} ننوتنو څخه یوازې تر ټولو نوې {count} ساتل کېږي.',
+  spanWaterfallLimit: 'د څارنې له {total} برخو څخه {shown} ښودل کېږي.',
+  toolTimelineInputLimit: 'د وسیلې له {total} غوښتنو څخه یوازې تر ټولو نوې {count} ساتل کېږي.',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

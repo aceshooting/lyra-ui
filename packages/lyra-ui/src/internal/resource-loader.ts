@@ -152,3 +152,13 @@ export async function readResponseArrayBuffer(response: Response, maxBytes = DEF
 export async function readResponseText(response: Response, maxBytes = DEFAULT_MAX_RESOURCE_BYTES): Promise<string> {
   return new TextDecoder().decode(await readResponseArrayBuffer(response, maxBytes));
 }
+
+/** Gives rendering and input a turn between bounded parser passes. */
+export async function yieldViewerTask(view: Window | null, isCurrent: () => boolean): Promise<void> {
+  const scheduler = (view as (Window & { scheduler?: { yield(): Promise<void> } }) | null)?.scheduler;
+  if (scheduler?.yield) await scheduler.yield();
+  else if (view && 'requestIdleCallback' in view) {
+    await new Promise<void>(resolve => view.requestIdleCallback(() => resolve(), { timeout: 50 }));
+  } else await new Promise<void>(resolve => (view ?? globalThis).setTimeout(resolve, 0));
+  if (!isCurrent()) throw new DOMException('The viewer source changed.', 'AbortError');
+}

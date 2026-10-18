@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,11 +41,13 @@ metadata?: Record<string, unknown> }`. Each entry renders as an `lr-chat-message
   `role`/`status`/`timestamp` come straight across. A nonempty `parts` array renders in order through
   `lr-message-parts` and takes precedence over the legacy `text` shortcut; otherwise `text` renders
   as sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
-  richer bodies. Empty ids and later duplicates are omitted first-wins before the latest 500 valid
-  identities are chosen, so malformed tail rows cannot evict earlier valid messages. Host owns
-  ordering, updates, and persistence
+  richer bodies. Within the admitted input tail, empty ids and later duplicates are omitted
+  first-wins before the latest 500 valid identities are chosen. Host owns ordering, updates, and
+  persistence
 - `follow: boolean = true` (reflected) — forwarded to the internal `lr-chat-viewport`
-- `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — forwarded to the viewport
+- `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — an index in the
+  original assigned message array, translated into the retained rendered message window while
+  preserving positions occupied by invalid or duplicate records
 
 **Properties (details pane):**
 
@@ -157,12 +159,17 @@ directly, or exactly one `lr-virtual-list` when the slot itself owns virtualizat
 built-in run/tool/retrieval/grounding/context details pane while keeping the responsive shell),
 `composer` (replaces the built-in plain-frame `lr-chat-composer`; supplied content keeps its own
 frame), `header-actions` (model selection, settings, export controls).
+Supplying `messages` or `details` suppresses evaluation and mounting of that region's built-in
+fallback; removing the slot content restores it. Messages and tool calls retain a bounded newest
+tail, while retrieval, context, and citation inputs retain a bounded prefix. Localized
+`input-limit` notes disclose the original collection count when admission drops entries. Initial
+and reconnect notices are quiet; a later changed omission is politely announced.
 
 **CSS parts:** `base`, `header`, `heading`, `header-actions`, `body`, `conversation`, `viewport` (the
 composed `lr-chat-viewport`), `messages`, `messages-empty`, `details`, `details-content`, `section`
-(one run/tools/retrieval/grounding/context section), `section-heading`, `composer`, `composer-input`,
-`message`
-(the composed `lr-chat-composer`).
+(one run/tools/retrieval/grounding/context section), `section-heading`, `composer`,
+`composer-input` (the composed `lr-chat-composer`), `message`, `input-limit` (original collection
+admission-loss notes).
 
 **Themeable custom properties:** shared tokens only.
 

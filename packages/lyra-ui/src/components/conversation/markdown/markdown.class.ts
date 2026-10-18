@@ -14,8 +14,8 @@ import {
   normalizeShikiLanguage,
   type ShikiHighlighter,
   type ShikiHighlighterCore,
-  type ShikiLanguageInput,
 } from '../code-block/code-loader.js';
+import { ensureShikiLanguageLoaded, resolvedShikiLanguages, type ShikiLanguageSource } from '../code-block/shiki-types.js';
 import {
   createMarkdownKatexState,
   tokenizeMarkdownHighlight,
@@ -357,8 +357,12 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   @property({ type: Boolean, attribute: 'code-block-header' })
   override codeBlockHeader = false;
 
-  /** Turns off syntax highlighting of fenced code blocks, keeping plain output even when `shiki`
-   *  is installed. Unset (the default), every fenced block is upgraded from plain `<pre><code>`
+  /** Syntax highlighting admits the first 100 distinct language/code pairs per document and
+   *  blocks of at most 8,192 UTF-16 code units (including their terminal newline). Later or larger
+   *  blocks remain readable plain code. The shared page cache holds at most 100 entries / 2 MiB.
+   *  Output evicted by the byte budget stays plain until the highlighting configuration changes.
+   *  Turns off syntax highlighting of fenced code blocks, keeping plain output even when `shiki`
+   *  is installed. Unset (the default), eligible fenced blocks are upgraded from plain `<pre><code>`
    *  via the same optional `shiki` peer `<lr-code-block>` uses once the peer is available -- a pure
    *  upgrade, not a behavior change gated on opt-in, since it's itself gated transparently by
    *  whether `shiki` is installed at all (an app that never installs it sees byte-identical output
@@ -366,13 +370,12 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
   @property({ type: Boolean, attribute: 'without-syntax-highlighting' })
   override withoutSyntaxHighlighting = false;
 
-  /** Same shape and purpose as `<lr-code-block>`'s own `languages` -- a fine-grained, explicit
-   *  language-grammar bundle scoping shiki's build output to just those grammars instead of its
-   *  full ~200-language bundle. Forwarded verbatim to `loadShikiHighlighterCore()`. Unset uses the
-   *  default full-bundle loader, unchanged from how `<lr-code-block>` itself defaults. */
+  /** Explicit grammars may be resolved values or lazy loaders; only a fenced block's matching
+   *  loader is invoked. Languages absent from the map, or an unset map, use the full loader's
+   *  built-in fallback. Replace the map identity when changing its grammars. */
   @property({ attribute: false }) override languages?: Readonly<Record<
     string,
-    ShikiLanguageInput
+    ShikiLanguageSource
   >>;
 
   /** Stamps a computed slug as `id` on every rendered heading. `getHeadingTree()` computes the
@@ -425,13 +428,18 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
 
   protected override async tokenizePendingHighlight(
     pending: PendingHighlight,
-    languages: Readonly<Record<string, ShikiLanguageInput>> | undefined,
+    languages: Readonly<Record<string, ShikiLanguageSource>> | undefined,
     isCurrent: () => boolean
   ): Promise<MarkdownHighlightAttempt> {
     const normalizedLang = normalizeShikiLanguage(pending.lang);
     let highlighter: ShikiHighlighter | ShikiHighlighterCore | null;
     if (languages && (languages[normalizedLang] ?? languages[pending.lang])) {
-      highlighter = await loadShikiHighlighterCore(languages);
+      highlighter = await loadShikiHighlighterCore(resolvedShikiLanguages(languages));
+      if (!isCurrent()) return undefined;
+      if (!highlighter) return null;
+      const loaded = await ensureShikiLanguageLoaded(highlighter, normalizedLang, languages[normalizedLang] ?? languages[pending.lang]!);
+      if (!isCurrent()) return undefined;
+      if (!loaded) return null;
     } else {
       const base = await loadShikiHighlighter();
       if (!isCurrent()) return undefined;

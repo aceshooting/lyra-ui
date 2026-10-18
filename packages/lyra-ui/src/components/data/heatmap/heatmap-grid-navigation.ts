@@ -125,17 +125,17 @@ export function hitTestCalendar(
 ): CalendarGridPosition | null {
   if (weekCount === 0) return null;
   const resolvedCellSize = cellSize();
-  let week: number | null = null;
-  for (let index = 0; index < weekCount; index++) {
-    const start = columnPositions[index]!;
-    if (x >= start && x < start + resolvedCellSize) {
-      week = index;
-      break;
-    }
+  let low = 0;
+  let high = weekCount;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (columnPositions[middle]! <= x) low = middle + 1;
+    else high = middle;
   }
-  if (week === null) return null;
+  const week = low - 1;
+  if (week < 0 || x >= columnPositions[week]! + resolvedCellSize) return null;
   const resolvedRows = rowPositions();
-  const resolvedRowCellSize = cellSize();
+  const resolvedRowCellSize = resolvedCellSize;
   let weekday: number | null = null;
   for (let index = 0; index < 7; index++) {
     const start = resolvedRows[index]!;

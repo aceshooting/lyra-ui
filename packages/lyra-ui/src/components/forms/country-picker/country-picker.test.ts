@@ -16,6 +16,8 @@ describe('<lr-country-picker>', () => {
 
   it('offers the pinned countries, names and decorative flags without a search field by default', async () => {
     const el = await fixture<LyraCountryPicker>(html`<lr-country-picker label="Country" value="LU"></lr-country-picker>`);
+    el.click();
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('lr-option').length === 249);
     expect(COUNTRY_CODES.length).to.equal(249);
     expect(new Set(COUNTRY_CODES).size).to.equal(249);
     expect(COUNTRY_CODES.includes('LB')).to.equal(true);
@@ -112,6 +114,8 @@ describe('<lr-country-picker>', () => {
     const child = el.shadowRoot!.querySelector('lr-select')!;
     await child.updateComplete;
     expect(child.getAttribute('aria-label')).to.equal('Pays');
+    child.open = true;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('lr-option').length === 2);
     expect(el.shadowRoot!.querySelectorAll('lr-option').length).to.equal(2);
     expect(el.scrollWidth <= el.clientWidth).to.equal(true);
     child.open = true;

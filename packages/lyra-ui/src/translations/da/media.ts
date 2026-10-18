@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Billede {index} af {total}',
   playWithContext: 'Afspil {name}',
   pauseWithContext: 'Sæt {name} på pause',
+  avPlayerWaveformUnavailable: 'Bølgeformsdata er ikke tilgængelige eller svarer ikke til dette medie.',
+  avPlayerTranscriptUnavailable: 'Transskriptionsdata er ikke tilgængelige.',
   dropzoneReleaseToAdd: 'Slip for at tilføje filen.',
   dropzoneRejectedType: 'Denne filtype accepteres ikke.',
   attachmentAdd: 'Tilføj vedhæftet fil',

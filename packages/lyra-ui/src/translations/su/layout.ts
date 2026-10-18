@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} paréntah',
   },
+  commandPaletteInputLimit: 'Sababaraha paréntah dileungitkeun lantaran wates input geus kahontal.',
 };
 
 registerLyraLocale('su', strings);

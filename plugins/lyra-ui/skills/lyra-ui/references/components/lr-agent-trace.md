@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,8 +19,42 @@
 Provider-neutral agent/LLM trace view combining span-kind filters, handoff quick-jumps, and a
 hierarchical trace tree from one shared `spans` array.
 
-Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
+
+**Complete provider trace:** `treeSource: TraceTreeSource | undefined = undefined` (attribute:
+false) forwards the exact trace-tree provider contract above to the existing single child. It takes
+precedence over `spans`; invalid defined input fails visibly without restoring legacy content.
+Setting `undefined` restores current legacy spans, kind inventory and handoff quick-jumps.
+
+```ts
+import type { TraceTreeSource } from
+  "@aceshooting/lyra-ui/components/agent-tools/agent-trace/agent-trace.class.js";
+```
+
+The child owns the complete preorder, authoritative topology, required global trace extent,
+provider actions and bounded 400-row cache plus focused row/301 mounted rows/two range-read
+permits. The wrapper creates no second provider controller, loaded-span collection, topology index
+or window-derived summary. It never scans source rows to discover kinds or handoffs. Provider mode
+shows the fixed six public choices, in order: `agent`, `llm`, `tool`, `retriever`, `embedding`,
+`other`. Existing `hiddenKinds` is forwarded globally to the child. Handoff quick-jumps and the
+outer legacy admission notice are absent; provider rows and key reveal provide global navigation.
+
+`revealSourceKey(key: string): Promise<boolean>` waits for the current child binding and delegates
+to that child once, resolving `false` for missing, invalid, disabled, failed, obsolete, disconnected
+or unset-source targets. It does not activate or change selection. Same-identity assignment and
+keyless `requestUpdate()` forward a single refresh; named presentation/active-ID paints reuse the
+child. Source replacement/removal and lifecycle changes revoke obsolete child and wrapper controls.
+`label`, `withTokens`, `withCost`, `withoutBars`, `activeSpanId` and strings forward to the child;
+locale and direction inherit normally.
+
+The child remains caller-controlled when used alone. This wrapper preserves its two-way active
+binding: an accepted child's `lr-span-select` updates wrapper `activeSpanId` before that original
+event bubbles to external listeners, without re-emission. `lr-span-toggle` also bubbles once.
+Kind filtering keeps the existing veto/containment behavior and emits only the domain
+`lr-span-visibility-change { hiddenKinds }` after a current accepted change. No second source event
+or provider summary/filter API is added. The following span-array projection/handoff details apply
+with `treeSource` unset.
 
 **Properties:**
 
@@ -28,9 +62,11 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
   `lr-trace-tree.spans` (see `lr-span-waterfall` above for the `LyraSpan` shape). Controlled and
   never mutated
 - `activeSpanId: string | null = null` (attribute `active-span-id`) — controlled selection forwarded
-  into the composed `lr-trace-tree`; also updated locally (and re-emitted as `lr-span-select`) when a
-  span is activated from either the tree or the handoff quick-jump list, so it works as a two-way
-  binding
+  into the composed `lr-trace-tree`; tree activation updates it before the original
+  `lr-span-select` bubbles, while a legacy handoff quick-jump updates it and emits that event.
+  Both routes support two-way binding
+- `maxNodes: number = 500` (attribute `max-nodes`) — projected span budget forwarded to the tree,
+  normalized to `1..5000`; unset or non-finite values restore 500
 - `hiddenKinds: LyraSpan['kind'][] = []` (attribute: false) — span kinds hidden from the tree
   (`'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other'`). Empty shows every kind;
   pre-settable (e.g. to hide `retriever`/`embedding` by default) and readable back after
@@ -47,15 +83,19 @@ expanded: boolean }`), and `lr-span-visibility-change` (`detail: { hiddenKinds:
 LyraSpan['kind'][] }`). The internal graph legend's generic `lr-visibility-change` event is
 contained; consumers receive this trace-domain event instead.
 
-`spans` is normalized through the same at-most-500-record projection as `<lr-trace-tree>` before
+With `treeSource` unset, `spans` is normalized through the same bounded projection as `<lr-trace-tree>` before
 filtering, handoff lookup, and tree rendering. The controlled active span and its ancestor path
 reserve positions, and malformed records plus later duplicate ids are omitted, so the composed
-surfaces cannot disagree.
+surfaces cannot disagree. The first 10,000 outer entries are admitted without traversing opaque
+provider metadata; active reservation stays inside admitted data and `maxNodes`. A visible limit
+notice discloses source or projection loss without duplicating the composed tree's notice. It is
+silent on initial mount; a later transition into truncation is announced politely.
 
 **CSS parts:** `base`, `filter` (the composed `lr-graph-legend` filter row, only rendered while
-`spans` is non-empty), `handoffs` (the quick-jump list wrapper, only rendered while at least one
+legacy `spans` is non-empty, or while a provider is defined), `handoffs` (the quick-jump list wrapper, only rendered while at least one
 visible span has `kind: 'agent'`), `handoff` (one entry — a `<button>` wrapping an
-`lr-handoff-divider`, carrying `data-active`), `tree` (the composed `lr-trace-tree`).
+`lr-handoff-divider`, carrying `data-active`), `tree` (the composed `lr-trace-tree`), and `limit`
+(source truncation notice when the tree does not already show its own notice).
 
 **Themeable custom properties:** `--lr-agent-trace-handoff-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) handoff quick-jump

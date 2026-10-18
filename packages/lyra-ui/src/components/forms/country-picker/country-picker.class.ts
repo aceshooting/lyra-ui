@@ -1,15 +1,15 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { snapshotSelectionCatalog, type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
+import { type SelectionCatalogRow } from '../../../internal/selection-catalog.js';
 import { LyraCatalogPickerBase, type LyraCatalogPickerChangeDetail, type LyraCatalogPickerEventMap } from '../catalog-picker-base.js';
-import { COUNTRY_CODES, resolveCountryNames, type LyraCountryCatalog, type LyraCountryEntry } from '../../../countries.js';
+import { COUNTRY_CODES, resolveCountryNames, snapshotCountryCatalog, type LyraCountryCatalog, type LyraCountryEntry } from '../../../countries.js';
 import { styles } from './country-picker.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_countryPickerLabel } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -39,11 +39,13 @@ function normalizeCountry(value: unknown): string {
  * @csspart select-trigger - The visible trigger or filter frame.
  * @csspart select-display-input - The committed name or optional filter input.
  * @csspart select-listbox - The offered countries.
+ * @csspart select-option-overflow - Count of rows outside the 1,000-option popup ceiling; searchable mode can filter to them.
  * @csspart select-option - A country option.
  * @csspart select-option-sub - The country identifier.
  * @csspart select-group-label - A caller-provided group heading.
  * @csspart select-clear-button - The optional clear action.
  * @csspart flag - Decorative country flag emoji.
+ * @csspart limit - Catalog input-loss notice, separate from the popup render-window overflow.
  * @csspart hint - Field guidance.
  * @csspart error - Validation guidance.
  * @event {Event} input - User selection changed the committed value and form state.
@@ -61,6 +63,7 @@ export class LyraCountryPicker extends LyraCatalogPickerBase {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    catalogPickerInputLimit: LYRA_DEFAULT_catalogPickerInputLimit,
     countryPickerLabel: LYRA_DEFAULT_countryPickerLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
@@ -77,7 +80,7 @@ export class LyraCountryPicker extends LyraCatalogPickerBase {
   get countries(): LyraCountryCatalog | undefined { return this._countries; }
   set countries(value: LyraCountryCatalog | null | undefined) {
     const previous = this._countries;
-    this._countries = snapshotSelectionCatalog(value, normalizeCountry, (code) => /^[A-Z]{2}$/.test(code));
+    this._countries = snapshotCountryCatalog(value);
     this.updateValidity();
     this.requestUpdate('countries', previous);
   }

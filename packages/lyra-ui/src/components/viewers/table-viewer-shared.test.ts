@@ -28,6 +28,7 @@ describe('TableViewerScrollController', () => {
     for (let col = 0; col < 2; col++) {
       const cell = document.createElement('div');
       cell.setAttribute('part', 'cell');
+      cell.setAttribute('aria-colindex', String(col + 1));
       cell.scrollIntoView = () => { scrolled = col + 1; };
       row.append(cell);
     }
@@ -46,6 +47,7 @@ describe('TableViewerScrollController', () => {
     row.setAttribute('aria-current', 'true');
     const cell = document.createElement('div');
     cell.setAttribute('part', 'cell');
+    cell.setAttribute('aria-colindex', '1');
     let scrolled = false;
     cell.scrollIntoView = () => { scrolled = true; };
     row.append(cell);
@@ -70,6 +72,7 @@ describe('TableViewerScrollController', () => {
     row.setAttribute('aria-current', 'true');
     const cell = document.createElement('div');
     cell.setAttribute('part', 'cell');
+    cell.setAttribute('aria-colindex', '1');
     cell.scrollIntoView = () => { scrolled = true; };
     row.append(cell);
     list.attachShadow({ mode: 'open' }).append(row);
@@ -95,6 +98,7 @@ describe('TableViewerScrollController', () => {
     row.setAttribute('aria-current', 'true');
     const cell = document.createElement('div');
     cell.setAttribute('part', 'cell');
+    cell.setAttribute('aria-colindex', '1');
     let scrolled = 0;
     cell.scrollIntoView = () => { scrolled++; };
     row.append(cell);
@@ -144,6 +148,7 @@ describe('TableViewerController', () => {
     let loads = 0;
     let locale = 'en';
     const table = new TableViewerController<Match>(host as never, {
+      repaint: () => {},
       emitSearch: (detail) => events.push(detail),
       emitActivate: (id) => events.push(id),
       localize: (key) => key,

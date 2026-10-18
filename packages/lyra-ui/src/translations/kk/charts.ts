@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Толық үлестірімде {validCount} жарамды үлгі бар; көрсетілген аралықтардан төмен {belowCount}, жоғары {aboveCount}; жарамсыз үлгілер: {invalidCount}.',
+  histogramDistributionRange: 'Бақыланған үлгілер ауқымы: {min}–{max}.',
   chartCategory: 'Санат',
   chartTotal: 'Барлығы',
   chartAxisTotal: '{axis}: барлығы',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, радиус {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'өсу',
-  chartTrendDecreasing: 'төмендеу',
-  chartTrendFlat: 'тұрақты',
-  chartSummary: '{label}: мәндер саны {count}, ауқымы {min} – {max}, үрдіс: {trend}',
   chartSeriesNoData: '{label}: деректер жоқ',
   chartSummaryWithData: 'Диаграмма түрі: {type}. {summaries}.',
   chartSummaryEmpty: 'Деректері жоқ диаграмма, түрі: {type}.',
-  chartSummarySeparator: '. ',
   chartData: 'Диаграмма деректері',
   chartRenderUnavailable: 'Диаграмманы көрсету қолжетімсіз.',
+  chartPreparedSummaryZoom: 'Масштабтау дайындалған жиынтықты көрсетеді; индекс арқылы толығырақ көрсету қолжетімсіз.',
+  chartSpatialSummary: 'Толық дереккөз: {count} нүкте, x {minX}–{maxX}, y {minY}–{maxY}. Көрініс: {matchedCount} нүкте, x {viewMinX}–{viewMaxX}, y {viewMinY}–{viewMaxY}.',
+  chartSpatialRadiusDomain: 'Толық дереккөздегі радиус: {min}–{max}.',
+  chartSpatialDensityLegend: 'Тығыздық барлық қатарларды қамтиды; қатарлардың көрінуі тек үстінен көрсетілген нүктелерге әсер етеді.',
+  chartSpatialPoint: '{series}: {id}, дереккөздегі орны {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Тығыздық аймағы: {count} нүкте, x {minX}–{maxX}, y {minY}–{maxY}.',
+  chartSpatialHidden: ' (қатар жасырылған)',
   chartDataSampled: 'Диаграмма мен жасалған деректер кестесі 1 000 жазбаға дейінгі үлгіні көрсетеді. Диаграмманың барлық деректеріне қол жеткізу үшін өз деректер кестеңізді беріңіз.',
   chartPlotSampled: 'Диаграмма 1 000 жазбаға дейінгі үлгіні көрсетеді; деректер кестесінде барлық деректер бар.',
   chartZoomUnavailable: 'Масштабтау қолжетімсіз, бірақ негізгі диаграмма қолжетімді.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index}, барлығы {total})',
   chartMissingLibrary: 'Диаграммаларды көрсету үшін бұл компонентке қосымша «chart.js» бумасын орнату қажет.',
   boxPlotMissingLibrary: 'Қорапты диаграммаларды көрсету үшін бұл компонентке қосымша box-plot диаграмма бумасын орнату қажет.',
+  chartInputLimit: 'Енгізу шегіне жеткендіктен, диаграмма деректерінің бір бөлігі алынып тасталды. Алынып тасталған мәндерді көрсету үшін кішірек немесе алдын ала біріктірілген деректер жиынын беріңіз.',
+  histogramInputLimit: 'Ең жаңа 10 000 үлгі ғана сақталады. Үлкенірек үлестірімді көрсету үшін lr-chart компонентіне аралықтарға алдын ала топтастырылған санақтарды беріңіз.',
 };
 
 registerLyraLocale('kk', strings);

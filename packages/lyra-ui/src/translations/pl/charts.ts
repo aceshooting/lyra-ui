@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Prawidłowe próbki w całym rozkładzie: {validCount}; poniżej wyświetlanych przedziałów: {belowCount}, powyżej: {aboveCount}; nieprawidłowe próbki: {invalidCount}.',
+  histogramDistributionRange: 'Zaobserwowany zakres próby: od {min} do {max}.',
   chartCategory: 'Kategoria',
   chartTotal: 'Suma',
   chartAxisTotal: 'Suma: {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'współrzędne x: {x}, y: {y}',
   chartBubblePointCoordinates: 'współrzędne x: {x}, y: {y}, promień: {radius}',
   chartLabeledPoint: '{label}: współrzędne {coordinates}',
-  chartTrendIncreasing: 'rosnący',
-  chartTrendDecreasing: 'malejący',
-  chartTrendFlat: 'płaski',
-  chartSummary: '{label}: {count} wartości, zakres od {min} do {max}, trend {trend}',
   chartSeriesNoData: '{label}: brak danych',
   chartSummaryWithData: 'Wykres {type}. {summaries}.',
   chartSummaryEmpty: 'Wykres {type} bez danych.',
-  chartSummarySeparator: '. ',
   chartData: 'Dane wykresu',
   chartRenderUnavailable: 'Wyświetlanie wykresu jest niedostępne.',
+  chartPreparedSummaryZoom: 'Powiększanie pokazuje przygotowane podsumowanie; uszczegółowienie na podstawie indeksu jest niedostępne.',
+  chartSpatialSummary: 'Pełne źródło: {count} punktów, x od {minX} do {maxX}, y od {minY} do {maxY}. Widok: {matchedCount} punktów, x od {viewMinX} do {viewMaxX}, y od {viewMinY} do {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Promień w pełnym źródle: od {min} do {max}.',
+  chartSpatialDensityLegend: 'Gęstość obejmuje wszystkie serie; widoczność serii wpływa tylko na nakładki punktów.',
+  chartSpatialPoint: '{series}: {id}, pozycja w źródle {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Obszar gęstości: {count} punktów, x od {minX} do {maxX}, y od {minY} do {maxY}.',
+  chartSpatialHidden: ' (seria ukryta)',
   chartDataSampled: 'Wykres i wygenerowana tabela danych pokazują próbkę do 1000 rekordów. Podaj własną tabelę danych, aby uzyskać dostęp do wszystkich danych wykresu.',
   chartPlotSampled: 'Wykres pokazuje próbkę do 1000 rekordów; tabela danych zawiera wszystkie dane.',
   chartZoomUnavailable: 'Powiększanie jest niedostępne, ale podstawowy wykres nadal działa.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} z {total})',
   chartMissingLibrary: 'Aby wyświetlać wykresy, zainstaluj opcjonalny pakiet "chart.js".',
   boxPlotMissingLibrary: 'Aby wyświetlać wykresy pudełkowe, zainstaluj opcjonalny pakiet wykresów pudełkowych.',
+  chartInputLimit: 'Część danych wykresu pominięto z powodu osiągnięcia limitu danych wejściowych. Podaj mniejszy lub wstępnie zagregowany zbiór danych, aby uwzględnić pominięte wartości.',
+  histogramInputLimit: 'Zachowywanych jest tylko 10 000 najnowszych próbek. Przekaż do lr-chart liczebności pogrupowane wcześniej w przedziały, aby przedstawić większy rozkład.',
 };
 
 registerLyraLocale('pl', strings);

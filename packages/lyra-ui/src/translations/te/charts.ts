@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'మొత్తం పంపిణీలో {validCount} చెల్లుబాటు అయ్యే నమూనాలు; చూపిన అంతరాల హద్దులకు దిగువన {belowCount}, ఎగువన {aboveCount}; {invalidCount} చెల్లని నమూనాలు.',
+  histogramDistributionRange: 'గమనించిన నమూనా పరిధి: {min} నుండి {max} వరకు.',
   chartCategory: 'వర్గం',
   chartTotal: 'మొత్తం',
   chartAxisTotal: '{axis} మొత్తం',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, వ్యాసార్థం {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'పెరుగుతోంది',
-  chartTrendDecreasing: 'తగ్గుతోంది',
-  chartTrendFlat: 'స్థిరంగా ఉంది',
-  chartSummary: '{label}: {count} విలువలు, పరిధి {min} నుంచి {max} వరకు, {trend} ధోరణి',
   chartSeriesNoData: '{label}: డేటా లేదు',
   chartSummaryWithData: '{type} చార్ట్. {summaries}.',
   chartSummaryEmpty: 'డేటా లేని {type} చార్ట్.',
-  chartSummarySeparator: '. ',
   chartData: 'చార్ట్ డేటా',
   chartRenderUnavailable: 'చార్ట్ ప్రదర్శన అందుబాటులో లేదు.',
+  chartPreparedSummaryZoom: 'జూమ్ సిద్ధం చేసిన సారాంశాన్ని చూపుతుంది; సూచిక ద్వారా మరిన్ని వివరాలు అందుబాటులో లేవు.',
+  chartSpatialSummary: 'పూర్తి మూలం: {count} బిందువులు, x {minX} నుండి {maxX}, y {minY} నుండి {maxY}. వీక్షణ: {matchedCount} బిందువులు, x {viewMinX} నుండి {viewMaxX}, y {viewMinY} నుండి {viewMaxY}.',
+  chartSpatialRadiusDomain: 'పూర్తి మూలంలో వ్యాసార్థం: {min} నుండి {max}.',
+  chartSpatialDensityLegend: 'సాంద్రతలో అన్ని శ్రేణులు ఉంటాయి; శ్రేణుల దృశ్యమానత బిందువుల ఓవర్‌లేలను మాత్రమే ప్రభావితం చేస్తుంది.',
+  chartSpatialPoint: '{series}: {id}, మూలంలో స్థానం {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'సాంద్రత ప్రాంతం: {count} బిందువులు, x {minX} నుండి {maxX}, y {minY} నుండి {maxY}.',
+  chartSpatialHidden: ' (శ్రేణి దాచబడింది)',
   chartDataSampled: 'చార్ట్‌లో మరియు సృష్టించిన డేటా పట్టికలో గరిష్ఠంగా 1,000 రికార్డుల నమూనా మాత్రమే ఉంది. చార్ట్ డేటా మొత్తాన్ని పొందడానికి మీ స్వంత డేటా పట్టికను అందించండి.',
   chartPlotSampled: 'చార్ట్‌లో గరిష్ఠంగా 1,000 రికార్డుల నమూనా మాత్రమే ఉంది; డేటా పట్టికలో మొత్తం డేటా ఉంది.',
   chartZoomUnavailable: 'జూమ్ అందుబాటులో లేదు; అయితే ప్రాథమిక చార్ట్ అందుబాటులోనే ఉంది.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total}లో {index})',
   chartMissingLibrary: 'చార్ట్‌లను చూపించడానికి ఈ కాంపోనెంట్‌కు ఐచ్ఛిక "chart.js" ప్యాకేజీని ఇన్‌స్టాల్ చేయాలి.',
   boxPlotMissingLibrary: 'బాక్స్ ప్లాట్‌లను చూపించడానికి ఈ కాంపోనెంట్‌కు ఐచ్ఛిక బాక్స్ ప్లాట్ చార్ట్ ప్యాకేజీని ఇన్‌స్టాల్ చేయాలి.',
+  chartInputLimit: 'ఇన్‌పుట్ పరిమితిని చేరుకున్నందున కొంత చార్ట్ డేటా వదిలివేయబడింది. వదిలివేసిన విలువలను సూచించడానికి చిన్న లేదా ముందుగానే సమీకరించిన డేటాసెట్‌ను అందించండి.',
+  histogramInputLimit: 'అత్యంత కొత్త 10,000 నమూనాలు మాత్రమే ఉంచబడతాయి. పెద్ద పంపిణీని సూచించడానికి ప్రతి అంతరానికి ముందుగానే లెక్కించిన నమూనాల సంఖ్యలను lr-chartకు అందించండి.',
 };
 
 registerLyraLocale('te', strings);

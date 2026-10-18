@@ -23,3 +23,30 @@ class StreamingTailText extends Directive {
 }
 
 export const streamingTailText = directive(StreamingTailText);
+
+
+import { insertPart, removePart, setChildPartValue, setCommittedValue } from 'lit/directive-helpers.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+
+/** Stable committed groups update only from the session's first changed block. */
+class ProgressiveMarkdownBlocks extends Directive {
+  private parts: ChildPart[] = [];
+  private revision?: number;
+  private blocks?: readonly { html: string }[];
+  render(blocks: readonly { html: string }[], _revision: number, _start: number): unknown {
+    return blocks.map(block => unsafeHTML(block.html));
+  }
+  override update(part: ChildPart, [blocks, revision, start]: [readonly { html: string }[], number, number]): typeof noChange {
+    if (this.blocks === blocks && this.revision === revision) return noChange;
+    const from = this.blocks === blocks ? start : 0;
+    this.blocks = blocks; this.revision = revision;
+    while (this.parts.length > blocks.length) removePart(this.parts.pop()!);
+    for (let index = from; index < blocks.length; index++) {
+      const child = this.parts[index] ??= insertPart(part);
+      setChildPartValue(child, unsafeHTML(blocks[index]!.html));
+    }
+    setCommittedValue(part, this.parts);
+    return noChange;
+  }
+}
+export const progressiveMarkdownBlocks = directive(ProgressiveMarkdownBlocks);

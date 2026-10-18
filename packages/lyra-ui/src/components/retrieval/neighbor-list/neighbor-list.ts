@@ -3,4 +3,5 @@ export * from './neighbor-list.class.js';
 import { LyraNeighborList } from './neighbor-list.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import '../../overlays/empty/empty.js';
+import '../../data/pagination/pagination.js';
 defineElement('neighbor-list', LyraNeighborList);

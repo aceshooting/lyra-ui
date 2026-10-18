@@ -8,6 +8,8 @@ import type { LyraTreeNodeData, TreeIdentityContext, TreeSelection } from './tre
  */
 export interface TreeItemOwnerContext {
   readonly activeId: string | null;
+  /** Stable owner lookup keeps roving state outside per-item snapshots. */
+  readonly activeNodeId?: () => string | null;
   readonly ancestry: readonly LyraTreeNodeData[];
   readonly depth: number;
   readonly setSize: number;
@@ -93,6 +95,7 @@ export function configureTreeItemOwner(
   });
   if (
     previous.activeId === normalized.activeId &&
+    previous.activeNodeId === normalized.activeNodeId &&
     sameAncestry(previous.ancestry, normalized.ancestry) &&
     previous.depth === normalized.depth &&
     previous.setSize === normalized.setSize &&
@@ -156,4 +159,17 @@ export function fromInteractiveDescendant(
     }
   }
   return false;
+}
+
+const bulkMotionPreferences = new WeakMap<HTMLElement, boolean>();
+
+/** Supplies the batch's realm preference while retaining each item's local override. @internal */
+export function withTreeItemMotionPreference(owner: HTMLElement, reduced: boolean, expand: () => void): void {
+  bulkMotionPreferences.set(owner, reduced);
+  try { expand(); } finally { bulkMotionPreferences.delete(owner); }
+}
+
+/** @internal */
+export function treeItemMotionPreference(owner: HTMLElement): boolean | undefined {
+  return bulkMotionPreferences.get(owner);
 }

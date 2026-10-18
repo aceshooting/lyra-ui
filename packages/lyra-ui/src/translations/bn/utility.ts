@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: 'আরও {count}টি পরামর্শ',
     other: 'আরও {count}টি পরামর্শ',
   },
+  mentionInputLimit: 'মেনশনের জন্য শুধু প্রথম 10,000টি প্রস্তাবনা পাওয়া যায়।',
+  diffViewHighlightLimit: 'দীর্ঘ কোড সিনট্যাক্স হাইলাইটিং ছাড়াই দেখানো হয়।',
 };
 
 registerLyraLocale('bn', strings);

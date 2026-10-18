@@ -16,6 +16,12 @@ export const styles = css`
     box-sizing: border-box;
   }
 
+  [part='limit'] {
+    margin: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+  }
+
   [part='filter'] {
     max-inline-size: 100%;
   }

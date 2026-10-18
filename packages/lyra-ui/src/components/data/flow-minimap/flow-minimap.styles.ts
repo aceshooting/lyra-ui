@@ -10,6 +10,7 @@ export const styles = css`
     block-size: var(--lr-flow-minimap-block-size, var(--lr-size-8rem));
   }
   [part='base'] {
+    position: relative;
     inline-size: 100%;
     block-size: 100%;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -26,6 +27,17 @@ export const styles = css`
     border-radius: 0;
     background: transparent;
   }
+  [part='map'],
+  .viewport-layer {
+    transform: translateZ(0);
+  }
+  .viewport-layer {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    pointer-events: none;
+  }
   [part='map'] {
     display: block;
     inline-size: 100%;
@@ -38,24 +50,43 @@ export const styles = css`
   /* Mouse-hover cue matching the cursor: pointer affordance above -- the reveal-button/copy-button/
      sources-summary brand-quiet tint the library uses for a clickable surface with no dedicated
      icon of its own. */
-  [part='map']:hover {
+  [part='map']:hover,
+  [part='base']:hover [part='map'] {
     background: var(--lr-color-brand-quiet);
   }
   /* Clicking the map recenters the canvas viewport, and that jump is the only confirmation -- the
      pressed fill says the click landed on the map rather than on the viewport rect drawn over it.
      */
-  [part='map']:active {
+  [part='map']:active,
+  [part='base']:active [part='map'] {
     background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
   }
   [part='base'][data-locked] [part='map'] {
     cursor: default;
   }
   [part='base'][data-locked] [part='map']:hover,
-  [part='base'][data-locked] [part='map']:active {
+  [part='base'][data-locked] [part='map']:active,
+  [part='base'][data-locked]:hover [part='map'],
+  [part='base'][data-locked]:active [part='map'] {
     background: transparent;
   }
   [part='node'] {
     fill: var(--_lr-flow-status-paint, var(--lr-flow-status-color, var(--lr-color-border-strong)));
+  }
+  [part='aggregate-bin'] {
+    fill: var(--lr-color-brand-quiet);
+    stroke: var(--lr-color-border-strong);
+    vector-effect: non-scaling-stroke;
+  }
+  [part='source-unavailable'] {
+    position: absolute;
+    inset-inline: var(--lr-space-s);
+    inset-block-end: var(--lr-space-s);
+    color: var(--lr-color-text);
+    background: var(--lr-color-surface);
+    font-size: var(--lr-font-size-xs);
+    overflow-wrap: anywhere;
+    pointer-events: none;
   }
   [part='viewport'] {
     --_lr-flow-minimap-viewport: var(--lr-flow-minimap-viewport-color, var(--lr-color-brand));

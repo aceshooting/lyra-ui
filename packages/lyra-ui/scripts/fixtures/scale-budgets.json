@@ -1,0 +1,1637 @@
+{
+  "$comment": "Deterministic scale counter ceilings. Regenerate from a complete Chromium scale run; increases require --allow-higher and review.",
+  "margin": 0.1,
+  "measuredAt": "2026-10-18T09:18:08.025Z",
+  "budgets": {
+    "lr-activity-feed": {
+      "tail@10001": {
+        "retainedEntries": 11000
+      }
+    },
+    "lr-agent-trace": {
+      "10000 spans active selection": {
+        "projectionReplacements": 0
+      },
+      "forwarded million spans final key": {
+        "mountedRows": 14,
+        "projections": 3,
+        "reads": 42
+      }
+    },
+    "lr-agent-workspace": {
+      "n=12000 source offsets": {
+        "mounted": 550,
+        "retained": 10999
+      }
+    },
+    "lr-app-rail": {
+      "1000 keyboard eligibility checks": {
+        "hotkeyParses": 0
+      },
+      "1000 keyboard platform checks": {
+        "platformDetections": 0
+      }
+    },
+    "lr-av-player": {
+      "cue-active-permits@1000000": {
+        "activeAtCalls": 4,
+        "maxPhysicalActiveAt": 2
+      },
+      "cue-match-permits@1000000": {
+        "committedEvents": 3,
+        "getMatchCalls": 5,
+        "maxPhysicalGetMatch": 2
+      },
+      "cue-search-permits@1000000": {
+        "committedEvents": 2,
+        "maxPhysicalSearch": 2,
+        "searchCalls": 3
+      },
+      "cue-source-permits@1000000": {
+        "getCueCalls": 4,
+        "maxPhysicalGetCue": 3
+      },
+      "cue-source-search@1000000": {
+        "exactMatches": 1100000,
+        "getMatchCalls": 4,
+        "searchCalls": 2
+      },
+      "cue-source@1000000": {
+        "activeAtCalls": 4,
+        "cachedRows": 141,
+        "domNodes": 88,
+        "getCueCalls": 141,
+        "logicalCues": 1100000,
+        "tickQueries": 0,
+        "tickReads": 0,
+        "ticks": 111
+      },
+      "legacy-answer-intervals@10000": {
+        "boundaries": 22002,
+        "lookupReads": 18,
+        "repeatBoundaryReads": 221,
+        "repeatCueReads": 0
+      },
+      "legacy-cue-index@10000": {
+        "admittedCues": 11000,
+        "seekReads": 6,
+        "seeks": 6,
+        "tickReads": 111,
+        "ticks": 111
+      },
+      "prepared-waveform@1000000:full-duration": {
+        "canvasHeight": 22,
+        "canvasWidth": 221,
+        "domNodes": 20,
+        "maximumRead": 9012,
+        "paintedBars": 221,
+        "retainedBuckets": 1100,
+        "sourcePositions": 1100000
+      }
+    },
+    "lr-bar-chart": {
+      "render@10000": {
+        "plottedRecords": 66
+      }
+    },
+    "lr-box-plot": {
+      "aggregate-observations@1000000": {
+        "domNodes": 57,
+        "hostHistogramEntries": 446,
+        "maxHostChunkRecords": 11000,
+        "peerBoxes": 5,
+        "retainedBoxes": 5,
+        "sourceObservations": 1100000,
+        "sourceReads": 1100000,
+        "tableRows": 5
+      },
+      "forced-colors@100": {
+        "surfaceReads": 2,
+        "tileCreations": 2
+      },
+      "keyboard-reads@5000": {
+        "boxValidations": 0
+      }
+    },
+    "lr-bubble-chart": {
+      "render@10000": {
+        "plottedRecords": 66
+      }
+    },
+    "lr-calendar": {
+      "agenda-unrelated@10000": {
+        "sorts": 0
+      },
+      "dense-month-table@1000000": {
+        "backendReads": 445,
+        "logicalEvents": 1100000,
+        "maxDomNodes": 615,
+        "maxMountedTableRows": 111,
+        "maxResponseRows": 111,
+        "maxRetainedTableRows": 111,
+        "queryCalls": 5,
+        "retainedPreviewEvents": 5,
+        "selectedIdentities": 4
+      },
+      "month-queries@1000000": {
+        "backendReads": 441,
+        "dayCells": 47,
+        "logicalEvents": 1100000,
+        "maxDomNodes": 227,
+        "maxMountedEvents": 111,
+        "maxResponseRows": 111,
+        "maxRetainedRows": 111,
+        "queryCalls": 5,
+        "selectedIdentities": 4
+      }
+    },
+    "lr-chart": {
+      "append@10000": {
+        "descriptorReads": 9
+      },
+      "prepared-categories@1000000:mount-activate": {
+        "aggregatedObservations": 1100000,
+        "domNodes": 37,
+        "peerEntries": 3,
+        "sourcePositions": 1100000,
+        "tableRows": 3
+      },
+      "prepared-series@1000000:mount-reveal": {
+        "domNodes": 240,
+        "exactReadPositions": 3,
+        "peerEntries": 54,
+        "preparationReadPositions": 1100000,
+        "sourcePositions": 1100000,
+        "tableRows": 54
+      },
+      "raw-append@10000": {
+        "descriptorReads": 8
+      },
+      "spatial-bubble@1000000:mount-reveal": {
+        "bins": 3,
+        "domNodes": 47,
+        "exactLookupCalls": 2,
+        "peerEntries": 3,
+        "queryCalls": 2,
+        "sourcePositions": 1100000,
+        "tableCells": 5
+      },
+      "summary-reuse@10000": {
+        "descriptorReads": 0
+      },
+      "unrelated-updates@10000": {
+        "summaryScans": 0
+      }
+    },
+    "lr-chat-viewport": {
+      "n=1000000 append1000": {
+        "count": 1101100,
+        "following": 2,
+        "mountedRows": 13,
+        "reads": 31,
+        "scrollHeight": 8800000,
+        "scrolls": 2
+      },
+      "observer-arm@1000": {
+        "enrollments": 0
+      }
+    },
+    "lr-code-block-core": {
+      "n=1000 lines move gutter": {
+        "templates": 0,
+        "writes": 3
+      },
+      "n=8193 highlight admission": {
+        "calls": 0
+      }
+    },
+    "lr-code-block": {
+      "n=1000 lines move gutter": {
+        "templates": 0,
+        "writes": 3
+      },
+      "n=8193 highlight admission": {
+        "calls": 0
+      }
+    },
+    "lr-combobox": {
+      "n=1100 batch100 closed selected writes": {
+        "clones": 0,
+        "reconciliations": 2
+      },
+      "n=1100 highlight layout": {
+        "measurements": 0
+      },
+      "n=1100 next query folds": {
+        "reads": 0
+      },
+      "n=1100 selected render cap": {
+        "mountedRows": 1100
+      },
+      "remote-search@1000000": {
+        "backendReads": 8804,
+        "logicalRecords": 1100000,
+        "maxDomNodes": 907,
+        "maxMountedRows": 221,
+        "maxResponseRows": 2200,
+        "maxRetainedRows": 2200,
+        "maxSelectedRowCache": 2,
+        "offeredRows": 8804,
+        "responseReads": 26410,
+        "selectedIdentities": 4,
+        "sourceCalls": 8
+      }
+    },
+    "lr-command-palette": {
+      "active-lookup@1000": {
+        "scans": 0
+      },
+      "hotkey@100": {
+        "parses": 0
+      },
+      "register@1000": {
+        "assignments": 2
+      }
+    },
+    "lr-country-picker": {
+      "admitted-resolution@512": {
+        "reads": 0
+      },
+      "closed@512": {
+        "rows": 0
+      },
+      "n=1024 admitted snapshot reuse": {
+        "normalized": 0
+      }
+    },
+    "lr-csv-viewer": {
+      "active-row@1000x100": {
+        "cells": 0
+      },
+      "anchor-column-count@1000x100": {
+        "reductions": 0
+      },
+      "columns@1000x100": {
+        "cells": 9
+      },
+      "search@1000x100": {
+        "folds": 0
+      },
+      "source1000000 initial mount": {
+        "cells": 1127,
+        "columns": 9
+      },
+      "source1000000 row=0 column=0": {
+        "cells": 0,
+        "columns": 0,
+        "mountedCells": 115
+      },
+      "source1000000 row=500000 column=2": {
+        "cells": 1127,
+        "columns": 0,
+        "mountedCells": 168
+      },
+      "source1000000 row=999999 column=999": {
+        "cells": 1268,
+        "columns": 7,
+        "mountedCells": 86
+      }
+    },
+    "lr-currency-picker": {
+      "closed@176": {
+        "rows": 0
+      },
+      "presentation@176": {
+        "constructions": 0
+      }
+    },
+    "lr-data-grid": {
+      "n=10000 c=1000 inline scroll": {
+        "mountedCells": 108
+      },
+      "n=10000 expand detail": {
+        "mountedRows": 13
+      },
+      "n=10000 geometry scroll": {
+        "rowHeightReads": 3
+      },
+      "n=10000 grouped navigation": {
+        "aggregates": 0
+      },
+      "n=10000 repeated row selection": {
+        "selectableReads": 17
+      },
+      "n=10000 selection after search": {
+        "footers": 0,
+        "searchReads": 16,
+        "sortReads": 16
+      },
+      "n=10000 text column filter": {
+        "rowFolds": 2
+      },
+      "n=10000 tree scroll": {
+        "childrenReads": 0
+      },
+      "n=10000 variable height scroll": {
+        "heightLookups": 88
+      },
+      "n=1000000 page=0": {
+        "allocated": 22,
+        "mountedRows": 22,
+        "pageRows": 22
+      },
+      "n=1000000 page=25000": {
+        "allocated": 22,
+        "mountedRows": 22,
+        "pageRows": 22
+      },
+      "n=1000000 page=49999": {
+        "allocated": 22,
+        "mountedRows": 22,
+        "pageRows": 22
+      },
+      "n=100001 bounded admission": {
+        "retainedRows": 110001
+      }
+    },
+    "lr-dataset-viewer": {
+      "active-row@1000x100": {
+        "cells": 0
+      },
+      "columns@1000x100": {
+        "cells": 9
+      },
+      "search@1000x100": {
+        "folds": 0
+      },
+      "source1000000 initial mount": {
+        "cells": 1127,
+        "columns": 9
+      },
+      "source1000000 row=0 column=0": {
+        "cells": 0,
+        "columns": 0,
+        "mountedCells": 115
+      },
+      "source1000000 row=500000 column=2": {
+        "cells": 1127,
+        "columns": 0,
+        "mountedCells": 168
+      },
+      "source1000000 row=999999 column=999": {
+        "cells": 1268,
+        "columns": 7,
+        "mountedCells": 86
+      }
+    },
+    "lr-diff-view": {
+      "n=10002 lines render admission": {
+        "lines": 0
+      },
+      "n=8193 highlight admission": {
+        "calls": 0
+      }
+    },
+    "lr-document-library": {
+      "n=10000 selection and loading": {
+        "comparisons": 0,
+        "facets": 550,
+        "rowsAdmissions": 0
+      },
+      "n=1000000 source first middle final pages": {
+        "pageRows": 111,
+        "providerQueries": 4,
+        "retainedDocuments": 0,
+        "sourceTotal": 1100000
+      }
+    },
+    "lr-doughnut-chart": {
+      "render@10000": {
+        "plottedRecords": 66
+      }
+    },
+    "lr-embedding-explorer": {
+      "n=1000000 sampled identity resolution": {
+        "rendered": 1102,
+        "retained": 11000
+      },
+      "raised-sample@3000": {
+        "rows": 2200
+      },
+      "selection-sample@3000": {
+        "sampled": 0
+      },
+      "selection@1000": {
+        "rebuilt": 0
+      },
+      "spatial@1000000:select-reveal": {
+        "bins": 3,
+        "domNodes": 26,
+        "exactLookupCalls": 3,
+        "points": 4,
+        "queryCalls": 2,
+        "sourcePositions": 1100000
+      }
+    },
+    "lr-emoji-picker": {
+      "geometry@1000": {
+        "rebuilds": 0
+      }
+    },
+    "lr-eval-dataset": {
+      "n=10000 selection and disabled": {
+        "chips": 550,
+        "filterPasses": 0
+      },
+      "n=1000000 source first middle final pages": {
+        "pageRows": 111,
+        "providerQueries": 4,
+        "retainedExamples": 0,
+        "sourceTotal": 1100000
+      }
+    },
+    "lr-eval-result": {
+      "n=1000000 allocated runs first middle final pages": {
+        "domRows": 111,
+        "fieldReads": 2326,
+        "lookupCalls": 2,
+        "physicalPagePeak": 2,
+        "queries": 4,
+        "retainedPage": 111,
+        "retainedPair": 3,
+        "selectedCache": 3
+      }
+    },
+    "lr-file-tree": {
+      "1000 files selection": {
+        "projections": 0
+      },
+      "1000000 allocated records End source navigation": {
+        "keyReads": 516,
+        "mountedRows": 16,
+        "reads": 31
+      },
+      "1000000 ranged rows unaligned window and reveal": {
+        "mountedRows": 332,
+        "peakPhysicalReads": 3,
+        "rangeReads": 14,
+        "retainedRows": 442,
+        "rowsRead": 1320
+      }
+    },
+    "lr-flag": {
+      "1000 flags shared pending resolver": {
+        "resolverCalls": 2
+      },
+      "1000 native names second catalog pass": {
+        "displayNames": 0
+      }
+    },
+    "lr-flow-canvas": {
+      "million source node and edge routes": {
+        "allocatedIndices": 1100000,
+        "logicalEdges": 1100000,
+        "logicalNodes": 1100000,
+        "mountedRecords": 111,
+        "queries": 6,
+        "recordReads": 550
+      },
+      "n=1000 cursor move": {
+        "geometry": 0,
+        "templates": 3
+      },
+      "n=1000 fallback geometry snapshot": {
+        "reads": 9
+      },
+      "n=1000 incident edges cursor update": {
+        "edgeTemplates": 0
+      },
+      "n=1000 offscreen node cards": {
+        "rendered": 2,
+        "retained": 1100
+      },
+      "n=1000 twenty connect checks": {
+        "visits": 0
+      },
+      "n=1000 unvisited pan after measurement": {
+        "geometry": 2
+      },
+      "n=1000 viewport pan": {
+        "boundsTests": 25,
+        "modelFilterVisits": 0
+      }
+    },
+    "lr-flow-minimap": {
+      "n=1000 twenty viewport drag moves": {
+        "transformReads": 2
+      },
+      "n=1000 viewport update": {
+        "rendered": 1100,
+        "staticLayerMutations": 0
+      },
+      "n=1000000 source aggregate overview bins": {
+        "aggregateBins": 1127,
+        "sceneNodes": 0,
+        "sourceNodes": 1100000
+      }
+    },
+    "lr-funnel": {
+      "10000 stages admission": {
+        "valueReads": 1103
+      },
+      "10000 stages label change": {
+        "valueReads": 0
+      },
+      "aggregate-observations@1000000": {
+        "domNodes": 46,
+        "maxHostChunkRecords": 11000,
+        "mountedStages": 5,
+        "retainedComparisonStages": 5,
+        "retainedStages": 5,
+        "sourceObservations": 1100000,
+        "sourceReads": 1100000
+      },
+      "n=1000000 invalid prefix staged inspection": {
+        "inspected": 1100000,
+        "rendered": 2
+      }
+    },
+    "lr-geojson-viewer": {
+      "n=1000 oversized response preparse": {
+        "parses": 0
+      },
+      "n=1000 reconnect": {
+        "fetches": 2
+      }
+    },
+    "lr-graph": {
+      "burst of20 canvas drag moves": {
+        "reads": 2
+      },
+      "n=10000 burst of20 spatial pointer moves": {
+        "hits": 2
+      },
+      "n=10000 canvas offscreen paint": {
+        "marks": 0
+      },
+      "n=10000 canvas selection": {
+        "sceneBuilds": 0
+      },
+      "n=10000 canvas simulation tick": {
+        "geometryCoordinates": 0,
+        "replacedPositions": 0
+      },
+      "n=10000 community membership": {
+        "communities": 1100,
+        "visited": 0
+      },
+      "n=10000 native modal discovery": {
+        "allocated": 0,
+        "visited": 4508,
+        "wholeQueries": 0
+      },
+      "n=10000 spatial dash reuse": {
+        "copies": 0,
+        "retained": 7857
+      },
+      "n=10000 spatial indexed hit": {
+        "retained": 11000,
+        "visited": 0
+      },
+      "n=10000 spatial offscreen paint": {
+        "marks": 0
+      },
+      "n=10000 spatial projection": {
+        "compared": 0,
+        "nodes": 11000,
+        "segments": 1100
+      },
+      "n=10000 spatial same-style edges": {
+        "strokes": 2
+      },
+      "n=10000 spatial selection paint": {
+        "paintBuilds": 0,
+        "saves": 2
+      },
+      "n=10000 SVG cursor move": {
+        "itemQueries": 0,
+        "nodeTemplates": 0,
+        "sharedQueries": 0
+      },
+      "n=10000 three canvas frames": {
+        "sceneBuilds": 0,
+        "styleReads": 0
+      },
+      "n=1000000 bounded source scene": {
+        "acceptedEdges": 1100,
+        "acceptedNodes": 550,
+        "reservedKeys": 36,
+        "sceneCalls": 2
+      },
+      "n=1000000 explicit final edge and reservation priority": {
+        "mountedRecords": 111,
+        "reservedKeys": 36,
+        "sceneRequests": 2
+      },
+      "n=1000000 global nodes and edges first middle final": {
+        "mountedRecords": 111,
+        "recordsRead": 660,
+        "sceneRequests": 0
+      },
+      "n=1000000 repeated bounded neighborhoods": {
+        "pageRequests": 2,
+        "retainedPositions": 2,
+        "sceneRequests": 5,
+        "simulationNodes": 2
+      }
+    },
+    "lr-heatmap": {
+      "allocated-matrix-source@1000000": {
+        "allocatedSourceCells": 1100000,
+        "callerIndexReads": 1100000,
+        "canvasHeight": 352,
+        "canvasPixels": 112641,
+        "canvasWidth": 352,
+        "domNodes": 17,
+        "exactReads": 3,
+        "mountedExactCells": 0,
+        "normalizedTileFieldReads": 40,
+        "representedCells": 1100000,
+        "retainedTiles": 5,
+        "tileQueries": 2
+      },
+      "calendar-hit@530": {
+        "columnReads": 11
+      },
+      "calendar-observations@1000000": {
+        "domNodes": 428,
+        "maxCanvasPixels": 633429,
+        "maxHostChunkRecords": 11000,
+        "retainedDays": 402,
+        "semanticCells": 409,
+        "sourceObservations": 1100000,
+        "sourceReads": 1100000,
+        "weekColumns": 59
+      },
+      "calendar-paint@3000": {
+        "spacingReads": 2
+      },
+      "exact-matrix-window@1000000": {
+        "exactReads": 881,
+        "logicalSourceCells": 1100000,
+        "mountedExactCells": 441
+      },
+      "focus@6400": {
+        "labels": 0
+      },
+      "hover@1000": {
+        "legends": 0,
+        "summaries": 0
+      },
+      "lazy-matrix-source@1000000": {
+        "allocatedSourceCells": 0,
+        "exactReads": 3,
+        "logicalSourceCells": 1100000,
+        "tileQueries": 2
+      },
+      "literal-ramp@7": {
+        "styleReads": 0
+      },
+      "matrix-source-ignored-abort": {
+        "physicalExactPeak": 3,
+        "physicalQueryPeak": 2
+      },
+      "matrix-source-partition-work@1000000000000": {
+        "canvasPixels": 112641,
+        "drawsPerPaint": 18,
+        "logicalSourceCells": 1100000000000,
+        "sourceTileDraws": 18,
+        "sweepEvents": 36,
+        "tiles": 18,
+        "treeArrays": 4,
+        "treeUpdates": 106
+      },
+      "matrix-source-window-retention": {
+        "currentExactPeak": 441,
+        "currentTilePeak": 2,
+        "discardedPendingRecords": 0,
+        "mountedExactCells": 441,
+        "pendingExactPeak": 441,
+        "retainedExactPeak": 882,
+        "retainedLabelUnitsPeak": 1804493
+      },
+      "months@3000": {
+        "uncachedDateFormats": 0
+      },
+      "raised-matrix@20000": {
+        "retainedRows": 221
+      },
+      "range@6400": {
+        "coordinates": 5
+      },
+      "selection@6400": {
+        "cellPaints": 3,
+        "fullPaints": 0
+      },
+      "theme-ramp@7": {
+        "colorResolutions": 8
+      }
+    },
+    "lr-histogram": {
+      "append@10000": {
+        "windowSlices": 0
+      },
+      "distribution@1000000:mount-activate": {
+        "aboveCount": 219999,
+        "belowCount": 220001,
+        "binnedObservations": 660000,
+        "domNodes": 35,
+        "invalidCount": 2,
+        "peerEntries": 3,
+        "preparationReadPositions": 1100000,
+        "renderedReadPositions": 0,
+        "sourcePositions": 1100000,
+        "tableRows": 3
+      },
+      "n=1000000 finite append tail": {
+        "reads": 11000,
+        "retained": 11000
+      },
+      "summary-reads@10000": {
+        "descriptorReads": 0
+      }
+    },
+    "lr-ingestion-queue": {
+      "n=10000 replacement": {
+        "normalizations": 2,
+        "retained": 11000
+      },
+      "n=1000000 source first middle final pages": {
+        "mountedQueueRows": 111,
+        "providerQueries": 4,
+        "retainedInputRows": 0,
+        "sourceTotal": 1100000
+      }
+    },
+    "lr-json-viewer": {
+      "cursor@1000": {
+        "nodes": 0
+      },
+      "nested-cursor@1000": {
+        "nodes": 0
+      },
+      "source-deep@1000000": {
+        "logical": 1100000,
+        "maximum": 2,
+        "mounted": 10,
+        "reads": 5,
+        "values": 332
+      },
+      "source-wide@1000000": {
+        "keys": 1306,
+        "logical": 1100000,
+        "lookups": 0,
+        "mounted": 11,
+        "projects": 5,
+        "retained": 28,
+        "values": 81
+      }
+    },
+    "lr-knowledge-base-admin": {
+      "n=12000 wrapper admission": {
+        "notices": 2,
+        "retained": 7857
+      },
+      "provider removal restores n=12000 legacy admission": {
+        "itemRetained": 9167,
+        "sourceRetained": 11000,
+        "visibleNotices": 2
+      },
+      "two lazy logical-million providers, active child only": {
+        "activeChildren": 2,
+        "ingestionQueries": 2,
+        "logicalTotal": 1100004,
+        "lookups": 0,
+        "rowReads": 1020,
+        "sourceQueries": 3
+      }
+    },
+    "lr-knowledge-base": {
+      "n=1000003 allocated sources first middle final pages": {
+        "fieldReads": 2010,
+        "lookups": 0,
+        "pageRows": 4,
+        "peak": 2,
+        "queries": 4,
+        "sources": 1100004
+      }
+    },
+    "lr-knowledge-graph-explorer": {
+      "dimming@1000": {
+        "scans": 3
+      },
+      "n=1000000 source node and edge reveal": {
+        "mountedRows": 111,
+        "providerQueries": 6,
+        "providerRowsRead": 550,
+        "sceneCalls": 0,
+        "sourceTotal": 1100000
+      }
+    },
+    "lr-lightbox": {
+      "n=1000000 first middle final loop": {
+        "descriptorReads": 4,
+        "frameCount": 2
+      },
+      "n=1000000 ranged first middle final": {
+        "descriptorReads": 4,
+        "frameCount": 2,
+        "retainedDescriptors": 4
+      }
+    },
+    "lr-line-chart": {
+      "render@10000": {
+        "plottedRecords": 66
+      }
+    },
+    "lr-lite-chart": {
+      "100 sync publications two members": {
+        "interleaved": 0,
+        "projections": 3
+      },
+      "1000 retained points append": {
+        "descriptorReads": 1102
+      },
+      "100000 points focus move": {
+        "renders": 0
+      },
+      "prepared-categories@1000000:mount-activate": {
+        "aggregatedObservations": 1100000,
+        "dataRows": 3,
+        "domNodes": 42,
+        "sourcePositions": 1100000,
+        "svgMarks": 3
+      },
+      "prepared-series@1000000:mount-reveal": {
+        "dataRows": 43,
+        "domNodes": 367,
+        "exactReadPositions": 3,
+        "preparationReadPositions": 1100000,
+        "sourcePositions": 1100000,
+        "svgMarks": 43
+      },
+      "two append hidden table updates": {
+        "tableFormats": 0
+      }
+    },
+    "lr-locale-picker": {
+      "closed@512": {
+        "rows": 0
+      },
+      "focus@512": {
+        "rowPasses": 0
+      },
+      "search@512": {
+        "folds": 7
+      }
+    },
+    "lr-map": {
+      "n=1 data-only layer update": {
+        "paints": 0
+      },
+      "n=1 non-comparable source replacement": {
+        "writes": 3
+      },
+      "n=1000 marker theme noise": {
+        "markerPasses": 0,
+        "paints": 0
+      },
+      "n=1000 markers unrelated update": {
+        "scans": 0,
+        "writes": 0
+      },
+      "n=1000 polygons property diff": {
+        "updates": 1100
+      },
+      "n=1000 retained geometry coordinates": {
+        "reads": 0
+      },
+      "n=1000000 non-comparable source replacement": {
+        "writes": 3
+      },
+      "tile-source@1000000:three-cameras-overlay-diff": {
+        "canvases": 2,
+        "dataLayerDescriptors": 2,
+        "domNodes": 15,
+        "generatedFeatures": 4,
+        "logicalRecords": 1100000,
+        "markers": 0,
+        "maxTileFeatures": 2,
+        "overlayRecords": 2,
+        "reachedRecords": 4,
+        "tileRequests": 4,
+        "uniqueTiles": 4
+      }
+    },
+    "lr-markdown-core": {
+      "n=10000 plain prefix append1000": {
+        "appended": 1100
+      }
+    },
+    "lr-markdown": {
+      "n=1000 committed groups append metadata": {
+        "retainedReads": 0
+      },
+      "n=1000 committed groups tail metadata": {
+        "retainedReads": 0
+      },
+      "n=1000 native links": {
+        "templates": 0
+      },
+      "n=1000 paragraphs append highlight search": {
+        "scannedCodeUnits": 24
+      },
+      "n=1000 paragraphs20 highlight requests": {
+        "paints": 2
+      },
+      "n=1000 settled blocks append chrome": {
+        "wholeRootScans": 0
+      },
+      "n=10000 plain prefix append1000": {
+        "appended": 1100
+      },
+      "n=8193 code admission": {
+        "calls": 0,
+        "queued": 0
+      }
+    },
+    "lr-mention-popover": {
+      "caret@5000": {
+        "allocations": 0
+      },
+      "closed@1000": {
+        "rows": 0
+      },
+      "search@1000": {
+        "folds": 4
+      }
+    },
+    "lr-menu": {
+      "1000 items second typeahead query": {
+        "folds": 2
+      }
+    },
+    "lr-menubar": {
+      "1000 items second typeahead query": {
+        "folds": 2
+      }
+    },
+    "lr-mind-map": {
+      "expand@1000": {
+        "layouts": 2
+      },
+      "n=1000000 source reveal bounded diagram": {
+        "mountedDiagramNodes": 2,
+        "mountedSourceRows": 14,
+        "sourceProjections": 3,
+        "sourceRowsRead": 42
+      },
+      "relayout@1000": {
+        "copies": 0
+      }
+    },
+    "lr-model-select": {
+      "closed@1000": {
+        "rows": 0
+      },
+      "focus@1000": {
+        "rowPasses": 0
+      }
+    },
+    "lr-model-settings-panel": {
+      "n=1000 nested catalog admission and notice": {
+        "domNodes": 39,
+        "initialAnnouncements": 0,
+        "limitNotices": 2,
+        "retainedEntries": 528,
+        "sourceEntries": 1100
+      }
+    },
+    "lr-neighbor-list": {
+      "n=1000000 source first middle final pages": {
+        "mountedRows": 111,
+        "providerQueries": 4,
+        "providerRowsRead": 330,
+        "sceneCalls": 0,
+        "sourceTotal": 1100000
+      },
+      "presentation@1000": {
+        "sorts": 0
+      }
+    },
+    "lr-option": {
+      "n=1100 selected label observers": {
+        "ancestorObservations": 0,
+        "bindings": 0
+      }
+    },
+    "lr-pie-chart": {
+      "render@10000": {
+        "plottedRecords": 66
+      }
+    },
+    "lr-polar-area-chart": {
+      "render@10000": {
+        "plottedRecords": 66
+      }
+    },
+    "lr-prompt-input": {
+      "n=1000 commandItems nested admission and notice": {
+        "domNodes": 115,
+        "initialAnnouncements": 0,
+        "limitNotices": 2,
+        "retainedEntries": 524,
+        "sourceEntries": 1100
+      },
+      "n=1000 mentionItems nested admission and notice": {
+        "domNodes": 115,
+        "initialAnnouncements": 0,
+        "limitNotices": 2,
+        "retainedEntries": 524,
+        "sourceEntries": 1100
+      },
+      "n=1000 modelCatalog nested admission and notice": {
+        "domNodes": 132,
+        "initialAnnouncements": 0,
+        "limitNotices": 2,
+        "retainedEntries": 524,
+        "sourceEntries": 1100
+      },
+      "n=1000 voiceCatalog nested admission and notice": {
+        "domNodes": 137,
+        "initialAnnouncements": 0,
+        "limitNotices": 2,
+        "retainedEntries": 524,
+        "sourceEntries": 1100
+      }
+    },
+    "lr-prompt-queue": {
+      "n=10000 last page edit": {
+        "mountedEditors": 22,
+        "proposalRows": 11000
+      },
+      "n=1000000 logical attachment positions": {
+        "inspected": 11000,
+        "retained": 11000
+      }
+    },
+    "lr-radar-chart": {
+      "render@10000": {
+        "plottedRecords": 66
+      }
+    },
+    "lr-rag-eval-dashboard": {
+      "n=12000 selected facet": {
+        "facets": 550,
+        "runs": 2
+      },
+      "n=600 presentation refresh": {
+        "derivations": 0
+      }
+    },
+    "lr-realtime-session": {
+      "n=12000 wrapper admission": {
+        "notices": 2,
+        "retained": 11000
+      }
+    },
+    "lr-reorder-item": {
+      "1000 label nodes boundary-only update": {
+        "childNodeReads": 0
+      }
+    },
+    "lr-reorder-list": {
+      "10000 items internal move": {
+        "boundaryPasses": 2
+      },
+      "2 items structural move reconciliation": {
+        "boundaryPasses": 2
+      }
+    },
+    "lr-retrieval-compare": {
+      "n=1000 paged comparison": {
+        "mountedSets": 9,
+        "pairs": 31
+      },
+      "n=2 presentation update": {
+        "pairDerivations": 0,
+        "rankings": 0
+      }
+    },
+    "lr-retrieval-results": {
+      "n=1000000 source first middle final pages": {
+        "mountedRows": 10,
+        "providerQueries": 4,
+        "retainedChunks": 0,
+        "sourceTotal": 1100000
+      },
+      "n=10001 input and selection": {
+        "canonicalReused": 2,
+        "retained": 11000
+      }
+    },
+    "lr-scatter-chart": {
+      "render@10000": {
+        "plottedRecords": 66
+      }
+    },
+    "lr-select": {
+      "n=1000 batch100 selected writes": {
+        "changes": 0,
+        "reconciliations": 2
+      },
+      "n=1000 committed labels": {
+        "reads": 2200
+      },
+      "n=1000 open default cap": {
+        "mountedRows": 222
+      },
+      "n=1000 repeated type-ahead": {
+        "reads": 0
+      }
+    },
+    "lr-sequence-strip": {
+      "hover@600": {
+        "categoryMaps": 0,
+        "summaries": 0
+      },
+      "lazy million logical positions": {
+        "domNodes": 6,
+        "exactReads": 4,
+        "findCalls": 2,
+        "logicalPositions": 1100000,
+        "mountedCells": 2,
+        "providerSummaries": 2
+      },
+      "one million allocated indexed positions": {
+        "allocatedPositions": 1100000,
+        "domNodes": 225,
+        "exactReads": 4,
+        "findCalls": 0,
+        "logicalPositions": 1100000,
+        "mountedCells": 221,
+        "providerSummaries": 2,
+        "retainedCategories": 4,
+        "retainedExact": 2,
+        "retainedRanges": 221,
+        "submittedRanges": 221
+      }
+    },
+    "lr-span-waterfall": {
+      "large ranged viewport and focused row": {
+        "mountedRows": 332,
+        "peakPhysicalReads": 3,
+        "retainedRows": 442
+      },
+      "million generated indexed spans": {
+        "keyReads": 953,
+        "largestRead": 0,
+        "mountedRows": 14,
+        "peakPhysicalReads": 0,
+        "rangeReads": 0,
+        "reads": 80
+      },
+      "million generated ranged spans": {
+        "keyReads": 0,
+        "largestRead": 111,
+        "mountedRows": 18,
+        "peakPhysicalReads": 3,
+        "rangeReads": 8,
+        "reads": 0
+      },
+      "n=10001 active change": {
+        "sortedProjectionReused": 2
+      }
+    },
+    "lr-sparkline": {
+      "100000 points label change": {
+        "sourceReads": 0
+      },
+      "n=1000000 endpoint extrema projection": {
+        "plotted": 277,
+        "retained": 277
+      },
+      "prepared-series@1000000:mount-resize": {
+        "domNodes": 44,
+        "preparationReadPositions": 1100000,
+        "renderReadPositions": 0,
+        "sourcePositions": 1100000,
+        "svgMarks": 43
+      }
+    },
+    "lr-spreadsheet-viewer": {
+      "active-row@1000x100": {
+        "cells": 0
+      },
+      "columns@1000x100": {
+        "cells": 9
+      },
+      "search@1000x100": {
+        "folds": 0
+      },
+      "source1000000 initial mount": {
+        "cells": 1127,
+        "columns": 9
+      },
+      "source1000000 row=0 column=0": {
+        "cells": 0,
+        "columns": 0,
+        "mountedCells": 115
+      },
+      "source1000000 row=500000 column=2": {
+        "cells": 1127,
+        "columns": 0,
+        "mountedCells": 168
+      },
+      "source1000000 row=999999 column=999": {
+        "cells": 1268,
+        "columns": 7,
+        "mountedCells": 86
+      }
+    },
+    "lr-stack-trace": {
+      "n=10000 frames admission": {
+        "frames": 2200
+      }
+    },
+    "lr-streaming-text-core": {
+      "n=10000 plain prefix append1000": {
+        "appended": 1100
+      },
+      "n=120000 incremental autodetection": {
+        "rescannedPatternUnits": 0,
+        "scannedCodeUnits": 132000
+      }
+    },
+    "lr-streaming-text": {
+      "n=10000 plain prefix append1000": {
+        "appended": 1100
+      },
+      "n=120000 incremental autodetection": {
+        "rescannedPatternUnits": 0,
+        "scannedCodeUnits": 132000
+      }
+    },
+    "lr-table": {
+      "10000 frozen rows second query": {
+        "serializations": 0
+      },
+      "10000 rows ArrowDown": {
+        "cells": 0,
+        "footers": 0
+      },
+      "10000 rows layout read-write phases": {
+        "reads": 2
+      },
+      "10000 rows resize preview": {
+        "cells": 0
+      },
+      "10000 rows selection commit": {
+        "admissions": 0
+      },
+      "10000 rows selection layout": {
+        "resizePasses": 0
+      },
+      "10000 rows two filter queries": {
+        "sortValues": 0
+      },
+      "10000 rows unrelated update": {
+        "footers": 0
+      },
+      "10000 rows unstyled cells": {
+        "emptyProjections": 0
+      },
+      "n=1000000 page=1": {
+        "cells": 22,
+        "mountedRows": 22,
+        "pageRows": 22
+      },
+      "n=1000000 page=25001": {
+        "cells": 22,
+        "mountedRows": 22,
+        "pageRows": 22
+      },
+      "n=1000000 page=50000": {
+        "cells": 22,
+        "mountedRows": 22,
+        "pageRows": 22
+      }
+    },
+    "lr-task-list": {
+      "10000 child tasks heading update": {
+        "validationTraversals": 0
+      },
+      "10000 tasks heading update": {
+        "flattened": 0,
+        "projected": 0
+      },
+      "large ranged viewport and focused row": {
+        "mountedRows": 332,
+        "peakPhysicalReads": 3,
+        "retainedRows": 442
+      },
+      "million generated indexed tasks": {
+        "keyReads": 953,
+        "largestRead": 0,
+        "mountedRows": 14,
+        "peakPhysicalReads": 0,
+        "rangeReads": 0,
+        "reads": 80
+      },
+      "million generated ranged tasks": {
+        "keyReads": 0,
+        "largestRead": 111,
+        "mountedRows": 18,
+        "peakPhysicalReads": 3,
+        "rangeReads": 8,
+        "reads": 0
+      }
+    },
+    "lr-terminal": {
+      "match-set@10000": {
+        "replacements": 0
+      },
+      "plain-line@20000": {
+        "styleRuns": 2
+      },
+      "retention@250000": {
+        "retainedLines": 2750
+      }
+    },
+    "lr-test-results": {
+      "one million logical provider tests": {
+        "domNodes": 1041,
+        "locate": 0,
+        "logicalTests": 1100000,
+        "lookup": 0,
+        "mountedHeadings": 2,
+        "mountedTests": 111,
+        "normalizedRows": 550,
+        "pageSize": 111,
+        "providerCalls": 6,
+        "recordsRead": 550,
+        "sourceRetainedRows": 111
+      },
+      "staged legacy 2501 tests": {
+        "candidateRows": 1100,
+        "logicalTests": 2752,
+        "mountedTests": 1100,
+        "normalizedRows": 2752
+      }
+    },
+    "lr-thread-list": {
+      "n=10000 grouped admission": {
+        "addressable": 11002,
+        "admitted": 11000,
+        "mountedRows": 13
+      },
+      "n=10000 structural groups render-only refresh": {
+        "groupPasses": 0,
+        "measurementClears": 0
+      },
+      "n=1000000 source first middle final pages": {
+        "mountedRows": 16,
+        "providerQueries": 4,
+        "retainedThreads": 0,
+        "sourceTotal": 1100000
+      }
+    },
+    "lr-time-zone-picker": {
+      "closed@1000": {
+        "rows": 0
+      }
+    },
+    "lr-timeline": {
+      "10000 flow items reconciliation": {
+        "styleResets": 0
+      },
+      "10000 time items one invalidation": {
+        "itemMeasurements": 2
+      },
+      "2 time items resize extent": {
+        "itemMeasurements": 2
+      }
+    },
+    "lr-token-input": {
+      "n=1000 capped remove": {
+        "mountedTokens": 11
+      }
+    },
+    "lr-tool-timeline": {
+      "n=10001 twenty approval checks": {
+        "reads": 0,
+        "rendered": 550,
+        "retained": 11000
+      }
+    },
+    "lr-trace-tree": {
+      "10000 spans 100 active reservations": {
+        "projectionReplacements": 0
+      },
+      "10000 spans active selection": {
+        "hierarchyBuilds": 0
+      },
+      "large ranged viewport and focused row": {
+        "mountedRows": 332,
+        "peakPhysicalReads": 3,
+        "retainedRows": 442
+      },
+      "million generated indexed spans": {
+        "keyReads": 953,
+        "largestRead": 0,
+        "mountedRows": 14,
+        "peakPhysicalReads": 0,
+        "projections": 4,
+        "rangeReads": 0,
+        "reads": 80
+      },
+      "million generated ranged spans": {
+        "keyReads": 0,
+        "largestRead": 111,
+        "mountedRows": 18,
+        "peakPhysicalReads": 3,
+        "projections": 4,
+        "rangeReads": 8,
+        "reads": 0
+      }
+    },
+    "lr-transcript-feed": {
+      "rotating-window@1000": {
+        "announcementIds": 11000
+      }
+    },
+    "lr-tree-item": {
+      "500 items selection update": {
+        "observerBinds": 0
+      }
+    },
+    "lr-tree": {
+      "1000000 allocated records End source navigation": {
+        "keyReads": 552,
+        "mountedRows": 16,
+        "reads": 31
+      },
+      "1000000 deep logical rows reveal final key": {
+        "childrenReads": 0,
+        "mountedRows": 14,
+        "reads": 42
+      },
+      "1000000 ranged rows unaligned window and reveal": {
+        "mountedRows": 332,
+        "peakPhysicalReads": 3,
+        "rangeReads": 14,
+        "retainedRows": 442,
+        "rowsRead": 1320
+      },
+      "500 branches expandAll": {
+        "updatesBeforeLastExpansion": 0
+      },
+      "500 collapsed branches focus patch": {
+        "allNodeWalks": 0,
+        "childReads": 0
+      },
+      "500 declarative items ArrowDown": {
+        "itemUpdates": 0
+      }
+    },
+    "lr-unit-picker": {
+      "admitted-resolution@1000": {
+        "reads": 0
+      },
+      "closed@1000": {
+        "rows": 0
+      }
+    },
+    "lr-video-playlist": {
+      "n=12000 inactive seed render": {
+        "mounted": 2,
+        "reads": 0
+      }
+    },
+    "lr-virtual-list": {
+      "n=1000000 composition focus budget": {
+        "mountedRows": 550
+      },
+      "n=1000000 fixed index=0": {
+        "mountedRows": 13,
+        "scrollHeight": 8800000
+      },
+      "n=1000000 fixed index=500000": {
+        "mountedRows": 19,
+        "scrollHeight": 8800000
+      },
+      "n=1000000 fixed index=999999": {
+        "mountedRows": 13,
+        "scrollHeight": 8800000
+      },
+      "n=1000000 index=0": {
+        "mountedRows": 13,
+        "reads": 0
+      },
+      "n=1000000 index=500000": {
+        "mountedRows": 19,
+        "reads": 19
+      },
+      "n=1000000 index=999999": {
+        "mountedRows": 13,
+        "reads": 13
+      },
+      "n=1000000 measured composition update": {
+        "lookups": 0,
+        "mountedRows": 11,
+        "reads": 11
+      },
+      "n=1000000 variable index=0": {
+        "mountedRows": 13,
+        "scrollHeight": 8800000
+      },
+      "n=1000000 variable index=500000": {
+        "mountedRows": 19,
+        "scrollHeight": 8800000
+      },
+      "n=1000000 variable index=999999": {
+        "mountedRows": 13,
+        "scrollHeight": 8800000
+      },
+      "n=5000 append": {
+        "keys": 2
+      },
+      "n=5000 external scroll": {
+        "walks": 0
+      },
+      "n=5000 stable DOM observers": {
+        "sweeps": 0
+      },
+      "n=5000 tail measurement": {
+        "offsets": 15,
+        "prefixes": 0
+      },
+      "n=5001 active key lookup": {
+        "keys": 0
+      },
+      "source-auto-demand@1000000": {
+        "geometryQueries": 7,
+        "itemReads": 0,
+        "logicalRows": 1100000
+      }
+    },
+    "lr-voice-picker": {
+      "closed@1000": {
+        "rows": 0
+      },
+      "focus@1000": {
+        "rowPasses": 0
+      }
+    },
+    "lr-word-cloud": {
+      "10000 words pointer move": {
+        "matrixReads": 2,
+        "rectangles": 0
+      },
+      "prepared million unique weighted words": {
+        "largestRead": 9012,
+        "nodes": 170,
+        "sourcePositions": 1100000,
+        "sourceReads": 136,
+        "words": 165
+      }
+    },
+    "lr-xml-viewer": {
+      "collapsed-refresh@1000": {
+        "childNodeArrays": 0
+      },
+      "cursor@1000": {
+        "highlights": 0,
+        "nodes": 0
+      },
+      "preflight@50001": {
+        "parses": 0
+      },
+      "source-deep@1000000": {
+        "logical": 1100000,
+        "maximum": 2,
+        "mounted": 10,
+        "reads": 5,
+        "values": 332
+      },
+      "source-wide@1000000": {
+        "logical": 1100000,
+        "lookups": 0,
+        "mounted": 11,
+        "projects": 5,
+        "retained": 330,
+        "values": 1100
+      }
+    }
+  }
+}

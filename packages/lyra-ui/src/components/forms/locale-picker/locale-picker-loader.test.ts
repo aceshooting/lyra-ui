@@ -17,7 +17,7 @@ const pending = () => {
 const pick = (el: Picker, tag: string) => el.shadowRoot!
   .querySelector<HTMLElement>(`[part="option"][data-value="${tag}"]`)!.click();
 const trigger = (el: Picker) => el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
-const create = () => fixture<Picker>(html`<lr-locale-picker locale="en" value="en" without-flags .locales=${['en', 'fr', 'de']} .strings=${{ loading: 'Please wait', statusError: 'Cannot load', retry: 'Try again' }}></lr-locale-picker>`);
+const create = () => fixture<Picker>(html`<lr-locale-picker open locale="en" value="en" without-flags .locales=${['en', 'fr', 'de']} .strings=${{ loading: 'Please wait', statusError: 'Cannot load', retry: 'Try again' }}></lr-locale-picker>`);
 let previousLocale: string;
 beforeEach(() => { previousLocale = getLyraLocale(); setLyraLocale('en'); });
 afterEach(() => { setLyraLocale(previousLocale); });
@@ -33,7 +33,7 @@ it('keeps unset loading synchronous and commits a notification after the value',
 });
 
 it('waits for an optional loader before selecting and exposes localized busy status', async () => {
-  const el = await fixture<Picker>(html`<lr-locale-picker locale="en" value="en" without-flags .locales=${['en', 'fr', 'de']}></lr-locale-picker>`);
+  const el = await fixture<Picker>(html`<lr-locale-picker open locale="en" value="en" without-flags .locales=${['en', 'fr', 'de']}></lr-locale-picker>`);
   el.strings = { loading: 'Please wait' };
   const load = pending();
   el.localeLoader = () => load.promise;
@@ -199,6 +199,7 @@ it('prevents nested selection during the request callback from starting a second
 
 it('keeps keyboard selection pending and makes loading and failure states accessible', async () => {
   const el = await create();
+  el.open = false; await el.updateComplete;
   const load = pending();
   el.localeLoader = () => load.promise;
   await focusByKeyboard(trigger(el));

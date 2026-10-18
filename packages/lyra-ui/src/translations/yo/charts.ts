@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Àwọn àpẹẹrẹ tó bófin mu {validCount} wà nínú gbogbo ìpínkiri; {belowCount} wà ní ìsàlẹ̀ àti {aboveCount} ní òkè ààlà àwọn àárín tí a fi hàn; àwọn àpẹẹrẹ tí kò bófin mu {invalidCount}.',
+  histogramDistributionRange: 'Ààlà àpẹẹrẹ tí a ṣàkíyèsí: {min} sí {max}.',
   chartCategory: 'Ẹ̀ka',
   chartTotal: 'Àpapọ̀',
   chartAxisTotal: 'Àpapọ̀ {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ìwọ̀n radius {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'Ń pọ̀ sí i',
-  chartTrendDecreasing: 'Ń dín kù',
-  chartTrendFlat: 'Kò yí padà',
-  chartSummary: '{label}: iye {count}, ààlà {min} sí {max}, àṣà {trend}',
   chartSeriesNoData: '{label}: kò sí dátà',
   chartSummaryWithData: 'Àwòrán {type}. {summaries}.',
   chartSummaryEmpty: 'Àwòrán {type} láìsí dátà.',
-  chartSummarySeparator: '. ',
   chartData: 'Dátà àwòrán',
   chartRenderUnavailable: 'Ìfihàn àwòrán ìṣirò kò sí.',
+  chartPreparedSummaryZoom: 'Sísúnmọ́ ń fi àkótán tí a ti pèsè hàn; àlàyé síwájú nípasẹ̀ atọ́ka kò sí.',
+  chartSpatialSummary: 'Gbogbo orísun: kókó {count}, x {minX} sí {maxX}, y {minY} sí {maxY}. Ìwòye: kókó {matchedCount}, x {viewMinX} sí {viewMaxX}, y {viewMinY} sí {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Ìwọ̀n radius nínú gbogbo orísun: {min} sí {max}.',
+  chartSpatialDensityLegend: 'Ìṣúpọ̀ ní gbogbo ọ̀wọ̀n nínú; bí ọ̀wọ̀n ṣe hàn kan àwọn kókó ìpele àfikún nìkan.',
+  chartSpatialPoint: '{series}: {id}, ipò nínú orísun {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Agbègbè ìṣúpọ̀: kókó {count}, x {minX} sí {maxX}, y {minY} sí {maxY}.',
+  chartSpatialHidden: ' (ọ̀wọ̀n farapamọ́)',
   chartDataSampled: 'Àwòrán náà àti tábìlì dátà tí a ṣẹ̀dá fi àpẹẹrẹ tó tó àkọsílẹ̀ 1,000 hàn. Pèsè tábìlì dátà àdáni láti wọ gbogbo dátà àwòrán.',
   chartPlotSampled: 'Àwòrán náà fi àpẹẹrẹ tó tó àkọsílẹ̀ 1,000 hàn; tábìlì dátà ṣe àkójọ gbogbo dátà.',
   chartZoomUnavailable: 'Ìfẹ̀ kò sí, ṣùgbọ́n àwòrán pàtàkì ṣì wà.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} nínú {total})',
   chartMissingLibrary: 'Ẹ̀yà yìí nílò àpò "chart.js" àṣàyàn láti fi àwọn àwòrán hàn.',
   boxPlotMissingLibrary: 'Ẹ̀yà yìí nílò àpò àwòrán apótí àṣàyàn láti fi àwọn àwòrán àpótí hàn.',
+  chartInputLimit: 'A fi díẹ̀ lára dátà àwòrán sílẹ̀ nítorí pé a ti dé ààlà ìwọlé. Pèsè àkójọpọ̀ dátà tó kéré sí i tàbí èyí tí a ti ṣàkópọ̀ tẹ́lẹ̀ láti ṣojú àwọn iye tí a fi sílẹ̀.',
+  histogramInputLimit: 'Àwọn àpẹẹrẹ 10,000 tuntun jù lọ nìkan ni a ń pa mọ́. Pèsè àwọn iye tí a ti pín sí ẹgbẹ́ gẹ́gẹ́ bí àárín tẹ́lẹ̀ fún lr-chart láti ṣojú ìpínkiri tó tóbi sí i.',
 };
 
 registerLyraLocale('yo', strings);

@@ -9,7 +9,7 @@ import type { LyraCurrencyCatalog, LyraCurrencyEntry } from './currency-types.js
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_currencyPickerLabel } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraCurrencyCatalog, LyraCurrencyEntry } from './currency-types.js';
@@ -44,10 +44,12 @@ export interface LyraCurrencyPickerEventMap extends LyraCatalogPickerEventMap {}
  * @csspart select-trigger - The select trigger or searchable input container.
  * @csspart select-display-input - The selected code or editable filter input.
  * @csspart select-listbox - The currency listbox.
+ * @csspart select-option-overflow - Count of rows outside the 1,000-option popup ceiling; searchable mode can filter to them.
  * @csspart select-option - A currency option.
  * @csspart select-option-sub - The option descriptive subtext.
  * @csspart select-group-label - A caller-supplied contiguous group heading.
  * @csspart select-clear-button - The optional clear action.
+ * @csspart limit - Catalog input-loss notice, separate from the popup render-window overflow.
  * @csspart hint - Field guidance.
  * @csspart error - Validation guidance.
  * @event {Event} input - Fired after a user selection updates the committed value and form state.
@@ -65,6 +67,7 @@ export class LyraCurrencyPicker extends LyraCatalogPickerBase {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    catalogPickerInputLimit: LYRA_DEFAULT_catalogPickerInputLimit,
     currencyPickerLabel: LYRA_DEFAULT_currencyPickerLabel,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     notInCatalog: LYRA_DEFAULT_notInCatalog,

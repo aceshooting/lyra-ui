@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: 'คำสั่ง {count}',
   },
+  commandPaletteInputLimit: 'คำสั่งบางส่วนถูกละไว้เนื่องจากถึงขีดจำกัดข้อมูลขาเข้า',
 };
 
 registerLyraLocale('th', strings);

@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Image {index} out of {total}',
   playWithContext: 'Play {name}',
   pauseWithContext: 'Pause {name}',
+  avPlayerWaveformUnavailable: 'Waveform data no dey available or e no match dis media.',
+  avPlayerTranscriptUnavailable: 'Transcript data no dey available.',
   dropzoneReleaseToAdd: 'Release am to add di file.',
   dropzoneRejectedType: 'We no dey accept dis kind file.',
   attachmentAdd: 'Add am as attachment',

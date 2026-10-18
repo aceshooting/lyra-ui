@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'تر اوسه خبرې اترې نشته',
   agentWorkspaceLabel: 'د ایجنټ کاري ځای',
+  agentWorkspaceInputLimit: '{collection}: له {total} ثبتونو څخه یوازې {count} ساتل کېږي.',
   agentWorkspaceConversation: 'خبرې اترې',
   agentWorkspaceDetails: 'د بهیر جزئیات',
   agentWorkspaceRun: 'د ایجنټ بهیر',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'دا برخه بیا هڅول',
   promptQueueLabel: 'په کتار کې غوښتنې',
   promptQueueEmpty: 'په کتار کې هېڅ غوښتنه نشته',
+  promptQueueInputLimit: 'د ننوتلو حد ته د رسېدو له امله په کتار کې ځینې غوښتنې یا ضمیمې پرېښودل شوې دي.',
+  promptQueueAttachmentLimit: 'له ساتل شویو {total} ضمیمو څخه {shown} ښودل کېږي.',
   promptQueueSendNow: 'اوس لېږل',
   selectionToolbarLabel: 'د ټاکنې کړنې',
   selectionAsk: 'پوښتنه کول',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} ټوکن',
     other: '{count} ټوکنونه',
   },
+  threadListInputLimit: 'د ننوتلو حد ته د رسېدو له امله د خبرو ځینې لړۍ پرېښودل شوې دي.',
+  promptInputInputLimit: 'د ننوتلو حد ته د رسېدو له امله ځینې وړاندیزونه یا د کتلاګ ثبتونه پرېښودل شوي دي.',
+  transcriptFeedInputLimit: 'له {total} ننوتنو څخه یوازې تر ټولو نوې {count} ساتل کېږي.',
+  codeBlockHighlightLimit: 'اوږد کوډ د نحوي جوړښت له رنګین ښودلو پرته ښودل کېږي.',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

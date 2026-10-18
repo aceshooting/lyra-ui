@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -65,6 +65,13 @@ Every array-valued property above is a clone-owned, bounded, frozen readonly sna
 nested source children and queued attachments. Mutating a previously assigned collection has no
 effect; create and reassign a new array after changes.
 
+The outer snapshot can omit `modelCatalog`, `voiceCatalog`, `mentionItems`, or `commandItems`
+before the corresponding child reaches its own input ceiling. The prompt's `part="limit"` uses
+`promptInputInputLimit` to disclose that original assignment loss, including when no valid child
+catalog remains to render. Rebinding a retained snapshot preserves the notice; a fresh input below
+the limit clears it. Initial mounting and reconnecting are quiet; later changed input loss is
+politely announced.
+
 `LyraPromptSuggestion` extends `LyraMentionItem { suggestionId, label, description?, icon?, disabled? }`
 with optional `insertText` (defaults to `label`). The selected occurrence's original, pre-filter `index`
 is preserved in the event detail. `LyraPromptInputAttachment` replaces `DocumentRef.id` with
@@ -102,7 +109,7 @@ host can play its own TTS preview (call `preventDefault()`) for catalog entries 
 replaces the built-in composer action.
 
 **CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
-`composer`, `start`, `chips`, `footer`.
+`composer`, `start`, `chips`, `footer`, `limit` (outer suggestion or catalog input-loss notice).
 
 **Themeable custom properties:** `--lr-prompt-input-control-width` (default `--lr-size-12rem`) is
 the preferred width of each generated model, voice, and source control before wrapping.

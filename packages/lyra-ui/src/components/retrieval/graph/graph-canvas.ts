@@ -230,11 +230,28 @@ function drawKeyboardFocusCue(
  * top via `ctx.transform()`, scoped to a `save()`/`restore()` pair so it never leaks into the
  * caller's own transform state.
  */
+const labelWidths = new WeakMap<object, { text: string; font: string; width: number }>();
+function measuredLabelWidth(ctx: CanvasRenderingContext2D, label: { text: string }, font: string): number {
+  const cached = labelWidths.get(label);
+  if (cached?.text === label.text && cached.font === font) return cached.width;
+  const width = ctx.measureText(label.text).width;
+  labelWidths.set(label, { text: label.text, font, width });
+  return width;
+}
+
 export function drawGraphScene(
   ctx: CanvasRenderingContext2D,
   camera: CanvasCamera,
-  scene: CanvasScene
+  scene: CanvasScene,
+  viewport?: { width: number; height: number }
 ): void {
+  const outside = (x1: number, y1: number, x2: number, y2: number, padding = 0): boolean => {
+    if (!viewport) return false;
+    const left = Math.min(x1, x2) - padding, right = Math.max(x1, x2) + padding;
+    const top = Math.min(y1, y2) - padding, bottom = Math.max(y1, y2) + padding;
+    return right * camera.k + camera.x < 0 || bottom * camera.k + camera.y < 0 ||
+      left * camera.k + camera.x > viewport.width || top * camera.k + camera.y > viewport.height;
+  };
   ctx.save();
   ctx.transform(camera.k, 0, 0, camera.k, camera.x, camera.y);
 
@@ -264,7 +281,7 @@ export function drawGraphScene(
   let style = '';
   ctx.beginPath();
   for (const link of scene.links) {
-    if (link.width <= 0) continue;
+    if (link.width <= 0 || outside(link.x1, link.y1, link.x2, link.y2, Math.max(thick, link.width) * 3)) continue;
     const linkStyle = [link.selected || link.color, link.selected || link.width, link.dash, link.dimmed].join('|');
     if (linkStyle !== style) {
       ctx.stroke();
@@ -277,7 +294,7 @@ export function drawGraphScene(
   }
   ctx.stroke();
   for (const link of scene.links) {
-    if (link.width <= 0 || !link.directed) continue;
+    if (link.width <= 0 || !link.directed || outside(link.x1, link.y1, link.x2, link.y2, Math.max(6, link.width * 3))) continue;
     styleLink(link);
     drawArrowhead(ctx, link);
   }
@@ -290,6 +307,8 @@ export function drawGraphScene(
     ctx.textBaseline = 'middle';
     ctx.lineWidth = thick;
     for (const label of scene.edgeLabels) {
+      const width = measuredLabelWidth(ctx, label, scene.font);
+      if (outside(label.x - width / 2, label.y, label.x + width / 2, label.y, Math.max(16, parseFloat(scene.font) || 16) + thick)) continue;
       ctx.strokeStyle = scene.labelHaloColor;
       ctx.strokeText(label.text, label.x, label.y);
       ctx.fillStyle = scene.labelColor;
@@ -298,6 +317,7 @@ export function drawGraphScene(
   }
 
   for (const node of scene.nodes) {
+    if (outside(node.x, node.y, node.x, node.y, node.r * Math.SQRT2 + medium)) continue;
     ctx.globalAlpha = node.dimmed ? dimmedOpacity : 1;
     ctx.fillStyle = node.fill;
     ctx.beginPath();
@@ -319,8 +339,11 @@ export function drawGraphScene(
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = scene.labelColor;
-    for (const label of scene.nodeLabels)
-      ctx.fillText(label.text, label.x, label.y);
+    for (const label of scene.nodeLabels) {
+      const width = measuredLabelWidth(ctx, label, scene.font);
+      if (!outside(label.x, label.y, label.x + width, label.y, Math.max(16, parseFloat(scene.font) || 16)))
+        ctx.fillText(label.text, label.x, label.y);
+    }
   }
 
   const expandIndicators = scene.expandIndicators ?? [];
@@ -329,6 +352,7 @@ export function drawGraphScene(
     for (const indicator of expandIndicators) {
       const bx = indicator.x + indicator.r * EXPAND_BADGE_OFFSET;
       const by = indicator.y - indicator.r * EXPAND_BADGE_OFFSET;
+      if (outside(bx, by, bx, by, EXPAND_BADGE_R + thin)) continue;
       const path = new Path2D();
       path.arc(bx, by, EXPAND_BADGE_R, 0, Math.PI * 2);
       ctx.fillStyle = scene.expandBadgeFill ?? '';

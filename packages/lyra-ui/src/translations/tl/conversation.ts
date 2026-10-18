@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Wala pang pag-uusap',
   agentWorkspaceLabel: 'Workspace ng agent',
+  agentWorkspaceInputLimit: '{collection}: {count} lang sa {total} tala ang pinananatili.',
   agentWorkspaceConversation: 'Pag-uusap',
   agentWorkspaceDetails: 'Mga detalye ng run',
   agentWorkspaceRun: 'Run ng agent',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Subukang muli ang bahaging ito',
   promptQueueLabel: 'Mga nakapilang prompt',
   promptQueueEmpty: 'Walang nakapilang prompt',
+  promptQueueInputLimit: 'May ilang prompt sa pila o attachment na hindi isinama dahil naabot ang limitasyon sa input.',
+  promptQueueAttachmentLimit: 'Ipinapakita ang {shown} sa {total} pinanatiling attachment.',
   promptQueueSendNow: 'Ipadala ngayon',
   selectionToolbarLabel: 'Mga aksyon sa pinili',
   selectionAsk: 'Magtanong',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} token',
     other: '{count} token',
   },
+  threadListInputLimit: 'May ilang thread ng pag-uusap na hindi isinama dahil naabot ang limitasyon sa input.',
+  promptInputInputLimit: 'May ilang mungkahi o tala sa katalogo na hindi isinama dahil naabot ang limitasyon sa input.',
+  transcriptFeedInputLimit: 'Ang pinakabagong {count} sa {total} tala lang ang pinananatili.',
+  codeBlockHighlightLimit: 'Ipinapakita ang mahabang code nang walang pagha-highlight ng sintaks.',
 };
 
 registerLyraLocale('tl', strings);

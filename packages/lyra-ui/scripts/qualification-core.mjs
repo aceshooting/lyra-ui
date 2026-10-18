@@ -14,6 +14,7 @@ export const QUALIFICATION_DIMENSIONS = Object.freeze([
   'security',
   'forcedColors',
   'assistiveTechnology',
+  'scale',
 ]);
 
 export const AXE_ASSERTION = /\baxe\b|toBeAccessible|isAccessible|(?<!\bnot\.)be\.accessible\s*\(/;

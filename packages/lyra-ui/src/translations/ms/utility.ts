@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '{count} lagi cadangan',
   },
+  mentionInputLimit: 'Hanya 10,000 cadangan sebutan pertama tersedia.',
+  diffViewHighlightLimit: 'Kod panjang dipaparkan tanpa penyerlahan sintaks.',
 };
 
 registerLyraLocale('ms', strings);

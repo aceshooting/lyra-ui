@@ -1,3 +1,4 @@
+import type { LyraGraphSourceSummary, LyraSourceBounds, LyraGraphOverview } from '../../../data-sources.js';
 import type { LyraOrientation, LyraToolStatus } from '../../../internal/shared-unions.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 
@@ -89,6 +90,13 @@ export interface FlowViewportSnapshot {
 
 /** Detached, deeply frozen state delivered to each companion observer. */
 export interface FlowStructureSnapshot {
+  /** Accepted source-wide extent and optional complete overview; scene arrays remain bounded. */
+  readonly source?: Readonly<{
+    coverage: 'complete' | 'neighborhood' | 'aggregate';
+    total: LyraGraphSourceSummary;
+    worldBounds: LyraSourceBounds;
+    overview: LyraGraphOverview | null;
+  }>;
   readonly nodes: readonly FlowStructureNodeSnapshot[];
   readonly edges: readonly FlowStructureEdgeSnapshot[];
   readonly viewport: FlowViewportSnapshot;

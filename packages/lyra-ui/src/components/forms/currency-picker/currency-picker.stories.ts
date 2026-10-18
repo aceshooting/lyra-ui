@@ -89,3 +89,8 @@ export const RightToLeft: StoryObj = {
       .currencies=${['AED', 'SAR', 'EUR', 'USD']}></lr-currency-picker>
   </div>`,
 };
+
+export const InputLimit: StoryObj = {
+  parameters: { docs: { description: { story: 'Catalog input loss is disclosed separately from the popup row window, including when repeated rows consume the inspected prefix.' } } },
+  render: () => html`<lr-currency-picker label="Bounded catalog" .currencies=${Array.from({ length: 1025 }, () => 'USD')}></lr-currency-picker>`,
+};

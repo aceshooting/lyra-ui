@@ -74,6 +74,8 @@ const strings: LyraLocaleStrings = {
     few: 'Še {count} predlogi',
     other: 'Še {count} predlogov',
   },
+  mentionInputLimit: 'Na voljo je samo prvih 10.000 kandidatov za omembo.',
+  diffViewHighlightLimit: 'Dolga koda je prikazana brez označevanja skladnje.',
 };
 
 registerLyraLocale('sl', strings);

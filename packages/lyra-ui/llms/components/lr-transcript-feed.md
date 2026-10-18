@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,6 +20,12 @@ Live captions for an in-progress voice session: speaker-grouped entries, interim
 with in-place upgrades keyed by `id`, and a stick-to-bottom auto-scroll with release, the same
 `follow`/`lr-follow-change` contract `<lr-terminal>` uses. Live captions only — recorded-media
 transcript sync is a separate concern.
+
+`entries` retains the newest 10,000 records within the shared 50,000-value deep snapshot budget.
+The visible `limit` part discloses omitted input through `transcriptFeedInputLimit`, with `count`
+and `total` placeholders. Final-caption replay suppression keeps up to 10,000 recent IDs, always
+preserving currently retained captions. An ID evicted from that history may be announced if later
+reintroduced.
 
 Activating the focused jump action resumes follow and transfers focus to the scroll base when the
 action disappears, unless a newer outside focus move takes precedence.
@@ -63,4 +69,5 @@ state or the built-in jump action re-engages it. Direct `follow` assignments and
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
 (`dir="auto"`), `timestamp` (only while `with-timestamps`), `interim` (present alongside `entry` on
 an interim row), `interim-area` (the wrapper holding interim rows, rendered only while at least one
-interim entry exists), `jump-button` (shown only while `follow` is `false`), and `empty`.
+interim entry exists), `jump-button` (shown only while `follow` is `false`), `empty`, and `limit`
+(input-loss notice).

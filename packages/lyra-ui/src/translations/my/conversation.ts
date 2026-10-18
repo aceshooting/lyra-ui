@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'စကားဝိုင်း မရှိသေးပါ',
   agentWorkspaceLabel: 'အေးဂျင့်လုပ်ငန်းခွင်',
+  agentWorkspaceInputLimit: '{collection} - မှတ်တမ်း {total} ခုအနက် {count} ခုကိုသာ ထိန်းသိမ်းထားသည်။',
   agentWorkspaceConversation: 'စကားဝိုင်း',
   agentWorkspaceDetails: 'လုပ်ဆောင်မှု အသေးစိတ်',
   agentWorkspaceRun: 'အေးဂျင့်လုပ်ဆောင်မှု',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'ဤအပိုင်းကို ထပ်ကြိုးစားရန်',
   promptQueueLabel: 'တန်းစီထားသော prompt များ',
   promptQueueEmpty: 'တန်းစီထားသော prompt မရှိပါ',
+  promptQueueInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် တန်းစီထားသော မေးမြန်းချက်များ သို့မဟုတ် ပူးတွဲဖိုင်များ အချို့ကို ချန်လှပ်ထားသည်။',
+  promptQueueAttachmentLimit: 'ထိန်းသိမ်းထားသော ပူးတွဲဖိုင် {total} ခုအနက် {shown} ခုကို ပြသနေသည်။',
   promptQueueSendNow: 'ယခုပို့ရန်',
   selectionToolbarLabel: 'ရွေးချယ်ထားသည့်အရာ လုပ်ဆောင်ချက်များ',
   selectionAsk: 'မေးရန်',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: 'တိုကင် {count} ခု',
   },
+  threadListInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် စကားဝိုင်းအစီအရီများ အချို့ကို ချန်လှပ်ထားသည်။',
+  promptInputInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် အကြံပြုချက်များ သို့မဟုတ် ကတ်တလောက်စာရင်းများ အချို့ကို ချန်လှပ်ထားသည်။',
+  transcriptFeedInputLimit: 'မှတ်တမ်း {total} ခုအနက် နောက်ဆုံး {count} ခုကိုသာ ထိန်းသိမ်းထားသည်။',
+  codeBlockHighlightLimit: 'ရှည်လျားသော ကုဒ်ကို ကုဒ်ဖွဲ့စည်းပုံအလိုက် အရောင်ခွဲခြားဖော်ပြခြင်းမရှိဘဲ ပြထားသည်။',
 };
 
 registerLyraLocale('my', strings);

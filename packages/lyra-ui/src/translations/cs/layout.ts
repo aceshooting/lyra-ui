@@ -62,6 +62,7 @@ const strings: LyraLocaleStrings = {
     many: '{count} příkazu',
     other: '{count} příkazů',
   },
+  commandPaletteInputLimit: 'Kvůli dosažení limitu vstupu byly vynechány některé položky: příkazy.',
 };
 
 registerLyraLocale('cs', strings);

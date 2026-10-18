@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} 命令',
   },
+  commandPaletteInputLimit: '由于达到输入限制，部分命令已被省略。',
 };
 
 registerLyraLocale('zh-CN', strings);

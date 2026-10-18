@@ -55,3 +55,18 @@ export const Narrow: Story = {
     </div>
   `,
 };
+
+/** Pages bound editor work while proposals continue to contain the complete admitted queue. */
+export const PagedQueue: Story = {
+  render: () => html`<lr-prompt-queue .items=${Array.from({ length: 60 }, (_, index) => ({
+    id: `q${index}`, value: `Follow-up ${index + 1}`,
+    attachments: index === 0 ? Array.from({ length: 100 }, (_, document) => ({ id: `d${document}`, name: `Document ${document + 1}` })) : [],
+  }))}></lr-prompt-queue>`,
+};
+
+export const InputLimit: Story = {
+  render: () => html`<lr-prompt-queue .items=${[{
+    id: 'draft', value: 'Review the retained documents',
+    attachments: Array.from({ length: 10_001 }, (_, index) => ({ id: `d${index}`, name: `Document ${index + 1}` })),
+  }]}></lr-prompt-queue>`,
+};

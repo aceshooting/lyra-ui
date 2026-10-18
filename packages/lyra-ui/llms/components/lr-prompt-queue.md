@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,6 +18,10 @@
 
 Controlled editable queue of follow-up turns. Reordering, editing, and removal emit a complete
 proposed queue; send-now emits the complete selected item.
+Admission inspects at most 10,000 item positions and 10,000 attachment positions across one
+assignment, including invalid positions. Internal pages contain at most 20 rows, with localized
+first/previous/next/last controls reaching every admitted item. Each row previews at most 50
+retained attachment names. Separate notices distinguish input loss from the attachment preview.
 
 When a focused row action requests removal and the host applies the proposed queue, focus moves to
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
@@ -44,14 +48,18 @@ Supported item and attachment fields are read once when `items` is assigned; cre
 new collection after changes, because changing an assigned record or reassigning the same mutated
 array does not update the view. Rows or attachments without valid direct data are ignored. Duplicate IDs are resolved
 after validation, so the first valid item wins. `metadata` is opaque and retains identity in
-proposed queue/send-now payloads, while emitted items are new frozen snapshots.
+proposed queue/send-now payloads. Proposals contain the complete admitted queue in a frozen array;
+unchanged frozen exported rows and attachment arrays are reused, including after the host accepts
+a proposal. Send-now includes all retained attachments. Draft text survives page navigation.
 
 **Events:** `lr-queue-change` (`PromptQueueChangeDetail = { items, reason, itemId }`, with
 `reason: 'edit' | 'remove' | 'reorder'`), `lr-send-now` (`{ item }`). The queue is controlled:
 these events propose complete next values without mutating `items`.
 
 **CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `attachments`, `attachment`,
-`actions`, `action`, `empty`.
+`actions`, `action`, `empty`, `input-limit`, `attachment-limit`, `pagination`, `page-status`,
+`page-button`. Initial input-limit notes are quiet; later changed omissions and user page changes
+are politely announced.
 
 **Slots:** none. **Optional peer deps:** none.
 

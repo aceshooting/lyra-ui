@@ -7,7 +7,7 @@ export const METRICS = Object.freeze(Object.fromEntries(
 export const COUNT_KEYS = Object.freeze([
   'sourceCount', 'retainedCount', 'renderedRowCount', 'plottedRecordCount', 'tableCellCount',
   'formatterTableCalls', 'noopFormatterTableCalls', 'checkedLabels', 'shadowElementCount',
-  'page', 'totalItems', 'viewRowCount',
+  'page', 'totalItems', 'viewRowCount', 'selectedCount', 'progressValue',
 ]);
 
 export const ERROR_CODES = Object.freeze([
@@ -21,6 +21,7 @@ export const CHECK_IDS = Object.freeze([
   'chart-peer-ready', 'chart-retained-count', 'chart-plot-bound', 'chart-table-bound',
   'chart-sample-endpoints', 'chart-plot-values', 'chart-table-values', 'chart-accessible-label',
   'option-catalog-count', 'option-labels-current', 'option-selected-label', 'option-stays-closed',
+  'list-retained-count', 'list-render-bound', 'list-visible-values', 'list-selection-event', 'list-selection-state', 'list-progress-value',
 ]);
 
 const both = ['quick', 'stress'];
@@ -30,6 +31,14 @@ const chartChecks = ['chart-peer-ready', 'chart-retained-count', 'chart-plot-bou
 const optionChecks = ['option-catalog-count', 'option-labels-current', 'option-selected-label', 'option-stays-closed'];
 
 export const SCENARIOS = Object.freeze([
+  ...[
+    ['document-library-filter-10000', 10000, ['list-retained-count', 'list-render-bound', 'list-visible-values']],
+    ['eval-dataset-select-10000', 10000, ['list-retained-count', 'list-render-bound', 'list-selection-event', 'list-selection-state']],
+    ['retrieval-results-select-10000', 10000, ['list-retained-count', 'list-render-bound', 'list-selection-event', 'list-selection-state']],
+    ['ingestion-queue-progress-5000', 5000, ['list-retained-count', 'list-render-bound', 'list-visible-values', 'list-progress-value']],
+  ].map(([id, size, assertionIds]) => ({ id, family: 'list', size, profiles: both,
+    parameters: { inputCount: size, renderBound: id.startsWith('document') || id.startsWith('eval') ? 100 : 40,
+      ...(id.startsWith('retrieval') ? { retainedMin: 9999, retainedMax: 10000 } : {}) }, assertionIds })),
   { id: 'noop-control', family: 'control', size: 0, profiles: both,
     parameters: { inputCount: 0 }, assertionIds: ['control-connected'] },
   ...[1000, 10000].map((size) => ({ id: `table-assign-${size}`, family: 'table', size, profiles: both,

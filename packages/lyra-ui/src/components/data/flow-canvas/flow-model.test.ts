@@ -420,18 +420,11 @@ describe('snapshotFlowDecorations', () => {
   });
 
   it('skips a key whose own descriptor lookup throws instead of aborting the whole collection', () => {
-    // The first getOwnPropertyDescriptor call per key comes from the initial `Object.keys(value)`
-    // enumerability check (must succeed, or the whole thing fails closed to {}); only the second,
-    // explicit lookup for 'poisoned' should throw, proving the per-key try/catch is reachable.
-    const callCounts = new Map<string, number>();
     const hostile = new Proxy(
       { poisoned: { status: 'running' }, safe: { status: 'error' } },
       {
         getOwnPropertyDescriptor(target, prop) {
-          const key = String(prop);
-          const count = (callCounts.get(key) ?? 0) + 1;
-          callCounts.set(key, count);
-          if (key === 'poisoned' && count > 1) throw new Error('boom');
+          if (prop === 'poisoned') throw new Error('boom');
           return Reflect.getOwnPropertyDescriptor(target, prop);
         },
       },

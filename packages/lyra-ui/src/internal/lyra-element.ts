@@ -221,6 +221,10 @@ const DIRECTION_HOST_ATTRIBUTES = ['class', 'style', 'slot'] as const;
 /** A change to one of these on the host can make it a theme scope inside an application root. */
 const SCOPE_HOST_ATTRIBUTES: readonly string[] = [...DOCUMENT_TOKEN_SCOPE_ATTRIBUTES, 'class'];
 
+// Constructed sheets belong to a document. Share replacement sheets only within that document;
+// weak keys let discarded iframe documents and component classes be collected.
+const adoptedComponentSheets = new WeakMap<Document, WeakMap<object, CSSStyleSheet>>();
+
 /** The `adoptedStyleSheets` setter rejects a sheet constructed in another document. The exception
  *  is raised in the shadow root's own realm, so it is matched by name rather than by prototype. */
 function isCrossDocumentStyleSheetRejection(error: unknown): boolean {
@@ -419,6 +423,9 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return internals;
   }
 
+  private componentStylesAreInline = false;
+  private installedComponentSheets?: readonly CSSStyleSheet[];
+
   /**
    * Lit caches one constructed `CSSStyleSheet` per class, built in this realm's global document.
    * A shadow root created in another document (an element adopted into an iframe, or a child an
@@ -444,8 +451,43 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
             : style.cssText;
         renderRoot.appendChild(element);
       }
+      this.componentStylesAreInline = true;
       this.renderOptions.renderBefore ??= renderRoot.firstChild;
       return renderRoot;
+    }
+  }
+
+  private restoreAdoptedComponentStyles(): void {
+    const root = this.renderRoot as ShadowRoot | undefined;
+    const owner = this.ownerDocument;
+    // Inline fallbacks move with their root. Inert/SSR documents have no rendering realm;
+    // a later adoption into a live document restores constructed sheets there.
+    const Sheet = (owner?.defaultView as (Window & typeof globalThis) | null)?.CSSStyleSheet;
+    if (!root || this.componentStylesAreInline || !Sheet || !('adoptedStyleSheets' in root)) return;
+    const styles = (this.constructor as typeof LyraElement).elementStyles;
+    const originals = styles.map((style) => 'cssRules' in style ? style : style.styleSheet);
+    if (originals.some((sheet) => !sheet)) return;
+    const componentSheets = originals as CSSStyleSheet[];
+    const retained = root.adoptedStyleSheets.filter((sheet) =>
+      !componentSheets.includes(sheet) && !this.installedComponentSheets?.includes(sheet));
+    try {
+      root.adoptedStyleSheets = [...componentSheets, ...retained];
+      this.installedComponentSheets = componentSheets;
+    } catch (error) {
+      if (!isCrossDocumentStyleSheetRejection(error)) throw error;
+      let cache = adoptedComponentSheets.get(owner);
+      if (!cache) adoptedComponentSheets.set(owner, cache = new WeakMap());
+      const replacements = componentSheets.map((original) => {
+        let sheet = cache.get(original);
+        if (!sheet) {
+          sheet = new Sheet({ disabled: original.disabled, media: original.media.mediaText });
+          sheet.replaceSync(Array.from(original.cssRules, (rule) => rule.cssText).join('\n'));
+          cache.set(original, sheet);
+        }
+        return sheet;
+      });
+      root.adoptedStyleSheets = [...replacements, ...retained];
+      this.installedComponentSheets = replacements;
     }
   }
 
@@ -509,6 +551,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * surviving until an unrelated update.
    */
   adoptedCallback(): void {
+    this.restoreAdoptedComponentStyles();
     this.stopLocaleSubscription?.();
     this.stopLocaleSubscription = undefined;
     invalidateLyraLocaleCache(this);

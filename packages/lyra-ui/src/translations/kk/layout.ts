@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} пәрмені',
     other: '{count} пәрмендер',
   },
+  commandPaletteInputLimit: 'Енгізу шегіне жеткендіктен, кейбір пәрмендер алынып тасталды.',
 };
 
 registerLyraLocale('kk', strings);

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,6 +18,10 @@
 
 Provider-neutral realtime voice shell composing connection state, `lr-audio-visualizer`,
 `lr-push-to-talk`, and `lr-transcript-feed`. Transport/authentication/playback remain host-owned.
+When the shell's own admission drops older entries, its `input-limit` note reports the original
+assigned count and retained count. The child transcript's smaller rendered window remains a
+separate limit. Initial and reconnect notes are quiet; later changed omissions are politely
+announced.
 
 **Properties:** `state: RealtimeConnectionState = 'disconnected'` (reflected), where the closed set
 is `'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error'`; `voiceState:
@@ -50,7 +54,7 @@ The composed transcript's internal `lr-follow-change` event is contained and is 
 session shell's public event surface.
 
 **CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
-`interrupt`, `capture`, `transcript`, `error`.
+`interrupt`, `capture`, `transcript`, `error`, `input-limit`.
 
 Visible status and error text remain ordinary, non-live content. After the initial baseline,
 non-error `state` transitions are appended to the shared polite light-DOM announcement sink and a

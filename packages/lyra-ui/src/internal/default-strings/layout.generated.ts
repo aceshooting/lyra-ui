@@ -18,6 +18,7 @@ export const LYRA_DEFAULT_carouselSlideAnnouncementSeparator: LyraMessage = '. '
 export const LYRA_DEFAULT_carouselSlidePosition: LyraMessage = 'Slide {index} of {total}';
 export const LYRA_DEFAULT_closeNavigation: LyraMessage = 'Close navigation';
 export const LYRA_DEFAULT_commandPaletteEmpty: LyraMessage = 'No matching commands.';
+export const LYRA_DEFAULT_commandPaletteInputLimit: LyraMessage = 'Some commands were omitted because an input limit was reached.';
 export const LYRA_DEFAULT_commandPaletteLabel: LyraMessage = 'Command palette';
 export const LYRA_DEFAULT_commandPalettePlaceholder: LyraMessage = 'Search commands…';
 export const LYRA_DEFAULT_commandPaletteResultCount: LyraMessage = { one: '{count} command', other: '{count} commands' };

@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Изображение {index} из {total}',
   playWithContext: 'Воспроизвести {name}',
   pauseWithContext: 'Приостановить {name}',
+  avPlayerWaveformUnavailable: 'Данные волновой формы недоступны или не соответствуют этому медиафайлу.',
+  avPlayerTranscriptUnavailable: 'Данные расшифровки недоступны.',
   dropzoneReleaseToAdd: 'Отпустите, чтобы добавить файл.',
   dropzoneRejectedType: 'Файлы этого типа не принимаются.',
   attachmentAdd: 'Добавить вложение',

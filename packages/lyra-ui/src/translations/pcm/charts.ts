@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} valid samples for di full distribution; {belowCount} below and {aboveCount} above di ranges wey dey show; {invalidCount} samples no valid.',
+  histogramDistributionRange: 'Sample range wey dem observe: {min} to {max}.',
   chartCategory: 'Kind',
   chartTotal: 'All together',
   chartAxisTotal: '{axis}: all together',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, radius {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'e dey increase',
-  chartTrendDecreasing: 'e dey decrease',
-  chartTrendFlat: 'e dey flat',
-  chartSummary: '{label}: {count} values, from {min} to {max}, e dey {trend}',
   chartSeriesNoData: '{label}: no data dey',
   chartSummaryWithData: 'Na {type} chart. {summaries}.',
   chartSummaryEmpty: '{type} chart wey no get data.',
-  chartSummarySeparator: '. ',
   chartData: 'Data for chart',
   chartRenderUnavailable: 'Chart no fit show.',
+  chartPreparedSummaryZoom: 'Zoom dey show di prepared summary; more detail through index no dey available.',
+  chartSpatialSummary: 'Di full source get {count} points, x {minX} to {maxX}, y {minY} to {maxY}. Di view get {matchedCount} points, x {viewMinX} to {viewMaxX}, y {viewMinY} to {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Radius for di full source: {min} to {max}.',
+  chartSpatialDensityLegend: 'Density dey include all series; whether series dey show na only point overlays e dey affect.',
+  chartSpatialPoint: '{series}: {id}, position for source {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: '{count} points dey for di density region, x {minX} to {maxX}, y {minY} to {maxY}.',
+  chartSpatialHidden: ' (dem hide di series)',
   chartDataSampled: 'Di chart and di data table wey dem generate show sample reach 1,000 records. Put your own data table make you fit see all di chart data.',
   chartPlotSampled: 'Di chart show sample reach 1,000 records; di data table get all di data.',
   chartZoomUnavailable: 'Zoom no dey available, but di main chart still dey available.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} out of {total})',
   chartMissingLibrary: 'Dis component need make you install di optional "chart.js" package before e fit show charts.',
   boxPlotMissingLibrary: 'Dis component need make you install di optional box-plot chart package before e fit show box plots.',
+  chartInputLimit: 'Some chart data no enter because di input don reach im limit. Give smaller data set or data wey dem don summarize before, make e fit represent di values wey no enter.',
+  histogramInputLimit: 'Na only di newest 10,000 samples dem dey keep. Give lr-chart counts wey dem don group into ranges, make e fit represent bigger distribution.',
 };
 
 registerLyraLocale('pcm', strings);

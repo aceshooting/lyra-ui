@@ -26,6 +26,110 @@ type MixedConstructor<Base extends PublicConstructor<object>, Added> = Base & (
   new (...args: ConstructorParameters<Base>) => InstanceType<Base> & Added
 );
 
+interface SelectionDispatcher {
+  subscribers: Set<() => void>;
+  roots: Map<Element, () => void>;
+  shadows: Map<ShadowRoot, number>;
+  shadowList?: ShadowRoot[];
+  cleanup(): void;
+}
+const selectionDispatchers = new WeakMap<Document, SelectionDispatcher>();
+
+/** One document event stream and animation frame, released with the last selection root. */
+function subscribeSelectionEnd(document: Document, root: Element, shadows: readonly ShadowRoot[], notify: () => void): () => void {
+  let dispatcher = selectionDispatchers.get(document);
+  if (!dispatcher) {
+    const subscribers = new Set<() => void>();
+    const view = document.defaultView;
+    let selecting = false;
+    let frame: number | undefined;
+    let previous = new Set<() => void>();
+    const roots = new Map<Element, () => void>();
+    const shadowCounts = new Map<ShadowRoot, number>();
+    const deliver = (): void => {
+      const current = new Set<() => void>();
+      const selection = view?.getSelection() as (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] }) | null | undefined;
+      let node: Node | null = null;
+      if (selection?.getComposedRanges && shadowCounts.size) {
+        const owner = selectionDispatchers.get(document)!;
+        owner.shadowList ??= [...shadowCounts.keys()];
+        const composed = selection.getComposedRanges({ shadowRoots: owner.shadowList })[0];
+        if (composed && !(composed.startContainer === composed.endContainer && composed.startOffset === composed.endOffset)) {
+          const range = document.createRange(); range.setStart(composed.startContainer, composed.startOffset); range.setEnd(composed.endContainer, composed.endOffset);
+          node = range.commonAncestorContainer;
+        }
+      } else if (selection && selection.rangeCount && !selection.isCollapsed) node = selection.getRangeAt(0).commonAncestorContainer;
+      while (node) {
+        const callback = roots.get(node as Element);
+        if (callback) current.add(callback);
+        node = node.nodeType === 11 && 'host' in node ? (node as ShadowRoot).host : node.parentNode;
+      }
+      if (!selection?.getComposedRanges && current.size === 0) {
+        // Older engines expose shadow selections only through each ShadowRoot. Keep that
+        // compatibility fallback while composed-range engines route directly to the active root.
+        for (const shadow of shadowCounts.keys()) {
+          const local = (shadow as ShadowRoot & { getSelection?: () => Selection | null }).getSelection?.();
+          if (!local || !local.rangeCount || local.isCollapsed) continue;
+          let selected: Node | null = local.getRangeAt(0).commonAncestorContainer;
+          while (selected) {
+            const callback = roots.get(selected as Element); if (callback) current.add(callback);
+            selected = selected.nodeType === 11 && 'host' in selected ? (selected as ShadowRoot).host : selected.parentNode;
+          }
+        }
+      }
+      const pending = new Set([...previous, ...current]); previous = current;
+      for (const callback of pending) if (subscribers.has(callback)) callback();
+    };
+    const change = (): void => {
+      if (selecting) return;
+      if (!view) { deliver(); return; }
+      if (frame !== undefined) return;
+      frame = view.requestAnimationFrame(() => { frame = undefined; deliver(); });
+    };
+    const down = (event: PointerEvent): void => {
+      if (event.isPrimary && event.button === 0) {
+        selecting = true;
+        if (frame !== undefined) { view?.cancelAnimationFrame(frame); frame = undefined; }
+      }
+    };
+    const release = (): void => {
+      if (!selecting) return;
+      selecting = false;
+      deliver();
+    };
+    document.addEventListener('selectionchange', change);
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('pointerup', release, true);
+    document.addEventListener('pointercancel', release, true);
+    dispatcher = { subscribers, roots, shadows: shadowCounts, cleanup() {
+      document.removeEventListener('selectionchange', change);
+      document.removeEventListener('pointerdown', down, true);
+      document.removeEventListener('pointerup', release, true);
+      document.removeEventListener('pointercancel', release, true);
+      if (frame !== undefined) view?.cancelAnimationFrame(frame);
+    } };
+    selectionDispatchers.set(document, dispatcher);
+  }
+  dispatcher.subscribers.add(notify);
+  dispatcher.roots.set(root, notify);
+  for (const shadow of shadows) dispatcher.shadows.set(shadow, (dispatcher.shadows.get(shadow) ?? 0) + 1);
+  dispatcher.shadowList = undefined;
+  const owned = dispatcher;
+  return () => {
+    if (!owned.subscribers.delete(notify)) return;
+    owned.roots.delete(root);
+    for (const shadow of shadows) {
+      const remaining = (owned.shadows.get(shadow) ?? 1) - 1;
+      if (remaining === 0) owned.shadows.delete(shadow); else owned.shadows.set(shadow, remaining);
+    }
+    owned.shadowList = undefined;
+    if (owned.subscribers.size === 0 && selectionDispatchers.get(document) === owned) {
+      selectionDispatchers.delete(document);
+      owned.cleanup();
+    }
+  };
+}
+
 const ANCHOR_RETRY_INTERVAL_MS = 250;
 const ANCHOR_TIMEOUT_MS = 5000;
 export {
@@ -53,6 +157,8 @@ export interface LyraAnchorTarget {
 
 /** Protected extension points implemented by the anchor-target mixin. */
 declare class DocumentAnchorTargetHooks {
+  /** @internal Cancels a retry when the underlying document authority changes. */
+  protected cancelPendingAnchor(): void;
   protected anchorRetryIntervalMs: number;
   protected anchorTimeoutMs: number;
   protected applyAnchor(anchor: LyraAnchor): Promise<boolean>;
@@ -233,12 +339,17 @@ export function DocumentAnchorTarget(
       // Bump the generation first so an in-flight retry loop's post-cancel generation check (see
       // `resolveWithRetry`) reliably observes staleness and stops instead of scheduling another
       // retry against a detached element.
-      this.anchorGeneration++;
-      this.cancelAnchorRetry();
+      this.cancelPendingAnchor();
       this.unbindTextSelection();
       this.anchorAnnouncementSink?.release();
       this.anchorAnnouncementSink = undefined;
       super.disconnectedCallback();
+    }
+
+    /** @internal Cancels pending document navigation before a source replacement or refresh. */
+    protected cancelPendingAnchor(): void {
+      this.anchorGeneration++;
+      this.cancelAnchorRetry();
     }
 
     /** Per-viewer hook: attempts to resolve+scroll to one raw anchor, returning whether it
@@ -423,11 +534,9 @@ export function DocumentAnchorTarget(
     protected bindTextSelection(contentRoot: Element): void {
       this.unbindTextSelection();
       const document = contentRoot.ownerDocument;
-      const view = document.defaultView;
       // A drag fires `selectionchange` continuously, and its release is followed by a pointerup and
       // possibly a trailing `selectionchange`; a keyup such as Ctrl+C changes nothing. Ignore changes
       // while the primary pointer is down, and report a range only when it differs from the last one.
-      let pointerSelecting = false;
       let reported: readonly [Node, number, Node, number] | undefined;
 
       const onSelectionEnd = (): void => {
@@ -449,44 +558,14 @@ export function DocumentAnchorTarget(
         this.emit('lr-text-select', { text, anchor, rects });
       };
 
-      let debounceHandle: number | undefined;
-      const onSelectionChange = (): void => {
-        if (pointerSelecting) return;
-        if (!view) {
-          onSelectionEnd();
-          return;
-        }
-        if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
-        debounceHandle = view.requestAnimationFrame(() => {
-          debounceHandle = undefined;
-          onSelectionEnd();
-        });
-      };
-      const onPointerDown = (event: PointerEvent): void => {
-        if (event.isPrimary && event.button === 0) pointerSelecting = true;
-      };
-      // Document-level, so a drag released outside the content root still ends its selection.
-      const onPointerRelease = (): void => {
-        if (!pointerSelecting) return;
-        pointerSelecting = false;
-        onSelectionEnd();
-      };
-
       contentRoot.addEventListener('pointerup', onSelectionEnd);
       contentRoot.addEventListener('keyup', onSelectionEnd);
-      document.addEventListener('selectionchange', onSelectionChange);
-      document.addEventListener('pointerdown', onPointerDown, true);
-      document.addEventListener('pointerup', onPointerRelease, true);
-      document.addEventListener('pointercancel', onPointerRelease, true);
+      const unsubscribe = subscribeSelectionEnd(document, contentRoot, this.selectionShadowRoots(contentRoot), onSelectionEnd);
 
       this.selectionCleanup = () => {
         contentRoot.removeEventListener('pointerup', onSelectionEnd);
         contentRoot.removeEventListener('keyup', onSelectionEnd);
-        document.removeEventListener('selectionchange', onSelectionChange);
-        document.removeEventListener('pointerdown', onPointerDown, true);
-        document.removeEventListener('pointerup', onPointerRelease, true);
-        document.removeEventListener('pointercancel', onPointerRelease, true);
-        if (debounceHandle !== undefined) view?.cancelAnimationFrame(debounceHandle);
+        unsubscribe();
       };
     }
 

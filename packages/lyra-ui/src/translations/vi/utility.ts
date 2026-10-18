@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '{count} đề xuất khác',
   },
+  mentionInputLimit: 'Chỉ có 10.000 đối tượng đầu tiên trong danh sách gợi ý nhắc đến.',
+  diffViewHighlightLimit: 'Mã dài được hiển thị mà không tô màu cú pháp.',
 };
 
 registerLyraLocale('vi', strings);

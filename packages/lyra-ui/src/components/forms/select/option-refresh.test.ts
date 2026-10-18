@@ -54,7 +54,8 @@ for (const kind of ['select', 'combobox'] as const) {
       }
       const last = options[options.length - 1]!;
       last.selected = true;
-      expect(control.value, 'selected writes still commit synchronously').to.equal(last.value);
+      await Promise.resolve();
+      expect(control.value, 'selected writes commit after their microtask batch').to.equal(last.value);
       expect(escaped, 'child refresh signals stay inside the picker').to.equal(0);
       control.open = true;
       await settle();

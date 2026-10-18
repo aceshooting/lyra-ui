@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Babu tattaunawa tukuna',
   agentWorkspaceLabel: 'Mahallin aikin wakili',
+  agentWorkspaceInputLimit: '{collection}: {count} daga cikin {total} shigarwa kawai ake riƙewa.',
   agentWorkspaceConversation: 'Tattaunawa',
   agentWorkspaceDetails: 'Cikakkun bayanan gudanarwa',
   agentWorkspaceRun: 'Gudanar da wakili',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Sake gwada wannan ɓangaren',
   promptQueueLabel: 'Umarni masu jiran aiki',
   promptQueueEmpty: 'Babu umarni da ke jiran aiki',
+  promptQueueInputLimit: 'An tsallake wasu saƙonnin umarni a jerin jira ko haɗe-haɗe saboda an kai iyakar shigarwa.',
+  promptQueueAttachmentLimit: 'Ana nuna {shown} daga cikin {total} haɗe-haɗen da aka riƙe.',
   promptQueueSendNow: 'Aika yanzu',
   selectionToolbarLabel: 'Ayyukan zaɓi',
   selectionAsk: 'Tambaya',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: 'Token {count}',
     other: 'Token {count}',
   },
+  threadListInputLimit: 'An tsallake wasu zaren tattaunawa saboda an kai iyakar shigarwa.',
+  promptInputInputLimit: 'An tsallake wasu shawarwari ko shigarwar kundin zaɓuɓɓuka saboda an kai iyakar shigarwa.',
+  transcriptFeedInputLimit: 'Sabbin shigarwa {count} daga cikin {total} kawai ake riƙewa.',
+  codeBlockHighlightLimit: 'Ana nuna doguwar lambar tushe ba tare da bambanta sassan tsarinta da launi ba.',
 };
 
 registerLyraLocale('ha', strings);

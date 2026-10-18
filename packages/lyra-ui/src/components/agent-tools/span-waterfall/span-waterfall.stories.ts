@@ -135,3 +135,28 @@ export const RetintedStatuses: Story = {
     ></lr-span-waterfall>
   `,
 };
+
+export const InputLimit: Story = {
+  render: () => html`<lr-span-waterfall .spans=${Array.from({ length: 10001 }, (_, index) => ({
+    id: `span-${index}`, name: `Span ${index + 1}`, kind: 'tool', status: 'success', startMs: index, endMs: index + 1,
+  }))}></lr-span-waterfall>`,
+};
+
+export const MillionSource: Story = {
+  render: () => {
+    const count = 1_000_000;
+    const source: import('./span-waterfall.class.js').TraceTreeSource = {
+      revision: 1,
+      async project(request) {
+        return { state: 'all-spans', total: count, summary: { startMs: 0, endMs: count },
+          rows: { count, keyAt: index => `span${index}`, indexOfKey: (key: string | number) => Number(String(key).slice(4)),
+            itemAt: index => ({ key: `span${index}`, value: { id: `span${index}`, name: `Span ${index + 1}`,
+              kind: 'tool', status: 'success', startMs: index, endMs: index + 1 },
+              parentKey: null, level: 1, position: index + 1, setSize: count, childCount: 0, expanded: false, selected: false }),
+          }, ...(request.action.type === 'reveal' ? { focusIndex: Number(request.action.key.slice(4)) } : {}),
+        };
+      },
+    };
+    return html`<lr-span-waterfall label="Million-span timeline" .treeSource=${source}></lr-span-waterfall>`;
+  },
+};

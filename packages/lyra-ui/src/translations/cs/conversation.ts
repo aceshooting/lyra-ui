@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Zatím žádné konverzace',
   agentWorkspaceLabel: 'Pracovní prostor agenta',
+  agentWorkspaceInputLimit: '{collection}: Uchovává se pouze {count} z {total} záznamů.',
   agentWorkspaceConversation: 'Konverzace',
   agentWorkspaceDetails: 'Podrobnosti běhu',
   agentWorkspaceRun: 'Běh agenta',
@@ -102,6 +103,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Zkusit tuto část znovu',
   promptQueueLabel: 'Prompty ve frontě',
   promptQueueEmpty: 'Ve frontě nejsou žádné prompty',
+  promptQueueInputLimit: 'Kvůli dosažení limitu vstupu byly vynechány některé položky: položky ve frontě výzev nebo přílohy.',
+  promptQueueAttachmentLimit: 'Zobrazuje se {shown} z {total} uchovaných příloh.',
   promptQueueSendNow: 'Odeslat nyní',
   selectionToolbarLabel: 'Akce s výběrem',
   selectionAsk: 'Zeptat se',
@@ -169,6 +172,10 @@ const strings: LyraLocaleStrings = {
     many: '{count} tokenu',
     other: '{count} tokenů',
   },
+  threadListInputLimit: 'Kvůli dosažení limitu vstupu byly vynechány některé položky: konverzační vlákna.',
+  promptInputInputLimit: 'Kvůli dosažení limitu vstupu byly vynechány některé položky: návrhy nebo položky katalogu.',
+  transcriptFeedInputLimit: 'Uchovává se pouze nejnovějších {count} z {total} záznamů.',
+  codeBlockHighlightLimit: 'Dlouhý kód se zobrazuje bez zvýraznění syntaxe.',
 };
 
 registerLyraLocale('cs', strings);

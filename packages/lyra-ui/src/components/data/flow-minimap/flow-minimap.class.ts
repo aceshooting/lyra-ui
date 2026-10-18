@@ -13,7 +13,7 @@ import { FlowCanvasCompanionController } from '../flow-canvas/flow-companion-con
 import { styles } from './flow-minimap.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_flowMinimapInstructions, LYRA_DEFAULT_flowMinimapLabel, LYRA_DEFAULT_flowMinimapViewport, LYRA_DEFAULT_flowMinimapViewportChanged } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_flowMinimapInstructions, LYRA_DEFAULT_flowMinimapLabel, LYRA_DEFAULT_flowMinimapSourceUnavailable, LYRA_DEFAULT_flowMinimapViewport, LYRA_DEFAULT_flowMinimapViewportChanged } from '../../../internal/default-strings/data.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -33,6 +33,12 @@ interface FlowCanvasLike extends HTMLElement {
   readonly readonly: boolean;
 }
 
+interface CanvasInteraction {
+  readonly canvas: FlowCanvasLike;
+  readonly snapshot: FlowStructureSnapshot;
+  readonly current: () => boolean;
+}
+
 function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
   const candidate = element as Partial<FlowCanvasLike>;
   return (
@@ -45,6 +51,12 @@ function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
   );
 }
 
+function sameSourceBounds(left: FlowStructureSnapshot | null | undefined, right: FlowStructureSnapshot | null | undefined): boolean {
+  const a = left?.source?.worldBounds;
+  const b = right?.source?.worldBounds;
+  return a === b || (!!a && !!b && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height);
+}
+
 /** Lyra's fallback interaction floor when the live shared hit-area token cannot be resolved. */
 const DEFAULT_VIEWPORT_MIN_SIZE_PX = 40;
 
@@ -53,19 +65,25 @@ const DEFAULT_VIEWPORT_MIN_SIZE_PX = 40;
  * a draggable viewport rectangle, for orientation and fast navigation on canvases larger than the
  * screen. Draws no edges (nodes only, matching the React Flow/n8n minimap convention) and never
  * reads `nodes` itself — geometry always comes from the canvas's `registerCompanion()` snapshots, so
- * the two can never disagree. The initial companion snapshot is silent; keyboard, map-click, and
+ * the two can never disagree. The complete node overview and moving viewport use separate SVG
+ * layers, so viewport-only updates retain the node layer. The initial companion snapshot is silent; keyboard, map-click, and
  * wheel viewport changes append their next rAF-coalesced snapshot to the document's shared
  * light-DOM polite sink, while a completed viewport drag appends its final position once.
  * Identical repeats remain distinct additions and `[part="live-region"]` stays an aria-hidden
  * mirror. A completed viewport drag consumes the browser-synthesized click that follows its
  * `pointerup`; canceled or lost-capture drags stay silent and leave the next genuine map click
  * available for click-to-center navigation.
+ * Source snapshots use exact global world bounds and bounded aggregate bins; scene nodes never
+ * stand in for the global overview. Missing overview data has a separate localized message.
+ * A zero-length world axis receives a centered one-unit display extent without changing its data.
  *
  * @customElement lr-flow-minimap
  * @csspart base - The root wrapper. Drops its floating-surface chrome (border, background,
  *   radius) under `frame="plain"`.
  * @csspart map - The scaled SVG.
- * @csspart node - One rect per node.
+ * @csspart node - One rect per node in array mode.
+ * @csspart aggregate-bin - One provider aggregate rectangle in source mode.
+ * @csspart source-unavailable - Message when the source overview is unavailable.
  * @csspart viewport - The exact visible canvas-view rectangle.
  * @csspart viewport-hit-area - The transparent, draggable/focusable interaction rectangle, floored
  *   to the shared hit-area size without changing the visible viewport geometry.
@@ -100,6 +118,7 @@ export class LyraFlowMinimap extends LyraElement {
     ...super.defaultStrings,
     flowMinimapInstructions: LYRA_DEFAULT_flowMinimapInstructions,
     flowMinimapLabel: LYRA_DEFAULT_flowMinimapLabel,
+    flowMinimapSourceUnavailable: LYRA_DEFAULT_flowMinimapSourceUnavailable,
     flowMinimapViewport: LYRA_DEFAULT_flowMinimapViewport,
     flowMinimapViewportChanged: LYRA_DEFAULT_flowMinimapViewportChanged,
   };
@@ -125,16 +144,26 @@ export class LyraFlowMinimap extends LyraElement {
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
+  private companionGeneration = 0;
   private dragState?: {
+    canvas: FlowCanvasLike;
+    generation: number;
     pointerId: number;
     startClientX: number;
     startClientY: number;
     startViewport: { x: number; y: number; zoom: number };
     latestViewport?: { x: number; y: number; zoom: number };
     moved: boolean;
+    inverse: DOMMatrix;
+    svg: SVGSVGElement;
+    geometryDirty: boolean;
   };
   /** Window that owns the active viewport drag's global pointer listeners. */
   private dragEventWindow?: Window;
+  private geometryObserver?: ResizeObserver;
+  private invalidateDragGeometry = (): void => {
+    if (this.dragState) this.dragState.geometryDirty = true;
+  };
   /** Set once an in-progress viewport drag actually moves. A completed pointer drag makes the
    *  browser synthesize a `click` on the captured element afterward, which bubbles up into the
    *  map's own `@click` (click-to-center) handler -- without this, releasing the viewport rect
@@ -158,6 +187,9 @@ export class LyraFlowMinimap extends LyraElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.companionController.connect();
+    const Observer = this.ownerDocument.defaultView?.ResizeObserver;
+    this.geometryObserver = Observer ? new Observer(this.invalidateDragGeometry) : undefined;
+    this.geometryObserver?.observe(this);
   }
 
   /** Re-reads the live token values the viewport-rect floor depends on. */
@@ -196,6 +228,8 @@ export class LyraFlowMinimap extends LyraElement {
     this.announceNextSnapshot = false;
     this.liveText = '';
     this.companionController.disconnect();
+    this.geometryObserver?.disconnect();
+    this.geometryObserver = undefined;
   }
 
   override adoptedCallback(): void {
@@ -233,7 +267,11 @@ export class LyraFlowMinimap extends LyraElement {
     // consumer set on any ancestor, and a root font-size change all have to reach the floor.
     // A viewport-only frame (same structure) skips the style read.
     const previous = changed.get('snapshot') as FlowStructureSnapshot | null | undefined;
-    if (changed.size !== 1 || previous?.nodes !== this.snapshot?.nodes) this.refreshViewportMetrics();
+    if (changed.size !== 1 || previous?.nodes !== this.snapshot?.nodes ||
+      !sameSourceBounds(previous, this.snapshot)) {
+      this.refreshViewportMetrics();
+      this.invalidateDragGeometry();
+    }
     if (this.hasUpdated && changed.has('for')) {
       this.companionController.targetIdChanged();
     }
@@ -249,6 +287,7 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   private attachCanvas(canvas: FlowCanvasLike | null): void {
+    const generation = ++this.companionGeneration;
     this.cancelViewportDrag();
     this.unsubscribe?.();
     this.unsubscribe = undefined;
@@ -256,7 +295,8 @@ export class LyraFlowMinimap extends LyraElement {
     this.canvasEl = canvas ?? undefined;
     if (!canvas) return;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
-      if (!this.isConnected || this.canvasEl !== canvas) return;
+      if (!this.isConnected || this.canvasEl !== canvas || generation !== this.companionGeneration) return;
+      if (!sameSourceBounds(this.snapshot, snapshot)) this.cancelViewportDrag();
       this.snapshot = snapshot;
       if (snapshot.locked) this.cancelViewportDrag();
       if (this.announceNextSnapshot) {
@@ -273,9 +313,16 @@ export class LyraFlowMinimap extends LyraElement {
     this.detachViewportDragListeners();
   }
 
+  private boundsNodes?: FlowStructureSnapshot['nodes'];
+  private cachedBounds?: { minX: number; minY: number; maxX: number; maxY: number };
+
   private contentBounds(): { minX: number; minY: number; maxX: number; maxY: number } {
+    const world = this.snapshot?.source?.worldBounds;
+    if (world) return { minX: world.x, minY: world.y, maxX: world.x + world.width, maxY: world.y + world.height };
     const nodes = this.snapshot?.nodes ?? [];
-    if (nodes.length === 0) return { minX: 0, minY: 0, maxX: 1, maxY: 1 };
+    if (this.boundsNodes === nodes && this.cachedBounds) return this.cachedBounds;
+    this.boundsNodes = nodes;
+    if (nodes.length === 0) return this.cachedBounds = { minX: 0, minY: 0, maxX: 1, maxY: 1 };
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -286,7 +333,7 @@ export class LyraFlowMinimap extends LyraElement {
       maxX = Math.max(maxX, n.x + n.width);
       maxY = Math.max(maxY, n.y + n.height);
     }
-    return { minX, minY, maxX, maxY };
+    return this.cachedBounds = { minX, minY, maxX, maxY };
   }
 
   /** Physical size of the rendered map surface, in CSS px. `[part='map']` fills `[part='base']`'s
@@ -354,41 +401,91 @@ export class LyraFlowMinimap extends LyraElement {
     return { x: transformed.x, y: transformed.y };
   }
 
+  private ownsEvent(event: Event): boolean {
+    const target = event.currentTarget as Node | null;
+    return this.isConnected && !!target && this.renderRoot.contains(target);
+  }
+
+  private captureInteraction(event?: Event): CanvasInteraction | undefined {
+    const canvas = this.canvasEl;
+    const snapshot = this.snapshot;
+    const generation = this.companionGeneration;
+    if (!canvas || !snapshot) return undefined;
+    const current = () => this.isConnected && this.canvasEl === canvas &&
+      this.companionGeneration === generation && this.snapshot === snapshot && (!event || this.ownsEvent(event));
+    if (!current()) return undefined;
+    const locked = canvas.readonly;
+    if (!current() || locked || snapshot.locked) return undefined;
+    return { canvas, snapshot, current };
+  }
+
+  private invokeCanvas(
+    action: CanvasInteraction,
+    method: 'setViewport' | 'zoomIn' | 'zoomOut' | 'fit',
+    args: [] | [{ x: number; y: number; zoom: number }] = [],
+    announce = true,
+  ): void {
+    if (!action.current()) return;
+    const callback = action.canvas[method];
+    if (!action.current() || typeof callback !== 'function') return;
+    if (announce) this.announceNextSnapshot = true;
+    Reflect.apply(callback, action.canvas, args);
+  }
+
   private onMapClick = (e: MouseEvent): void => {
+    if (!this.ownsEvent(e)) return;
     if (this.justDraggedViewport) {
       this.justDraggedViewport = false;
       return;
     }
-    if (!this.canvasEl || !this.snapshot || this.canvasEl.readonly) return;
+    const action = this.captureInteraction(e);
+    if (!action) return;
     const point = this.clientToContentPoint(e.currentTarget as SVGSVGElement, e.clientX, e.clientY);
-    const { zoom, width, height } = this.snapshot.viewport;
-    this.announceNextSnapshot = true;
-    this.canvasEl.setViewport({ x: width / 2 - point.x * zoom, y: height / 2 - point.y * zoom, zoom });
+    if (!action.current()) return;
+    const { zoom, width, height } = action.snapshot.viewport;
+    this.invokeCanvas(action, 'setViewport', [{ x: width / 2 - point.x * zoom, y: height / 2 - point.y * zoom, zoom }]);
   };
 
   private onMapWheel = (e: WheelEvent): void => {
-    if (!this.canvasEl || this.canvasEl.readonly) return;
+    const action = this.captureInteraction(e);
+    if (!action) return;
     e.preventDefault();
-    this.announceNextSnapshot = true;
-    if (e.deltaY < 0) this.canvasEl.zoomIn();
-    else this.canvasEl.zoomOut();
+    this.invokeCanvas(action, e.deltaY < 0 ? 'zoomIn' : 'zoomOut');
   };
 
   private onViewportPointerDown = (e: PointerEvent): void => {
+    const action = this.captureInteraction(e);
+    if (!action) return;
     const dragEventWindow = this.ownerDocument.defaultView;
-    if (!this.canvasEl || !this.snapshot || !dragEventWindow || this.canvasEl.readonly) return;
+    if (!dragEventWindow) return;
+    const svgEl = (e.currentTarget as SVGElement | null)?.ownerSVGElement ??
+      this.renderRoot.querySelector<SVGSVGElement>('[part="map"]');
+    const ctm = svgEl?.getScreenCTM();
+    if (!ctm || !svgEl || !action.current()) return;
+    const inverse = ctm.inverse();
+    if (!action.current()) return;
+    const captureTarget = e.target as SVGElement;
+    const capture = captureTarget.setPointerCapture;
+    if (!action.current()) return;
+    if (capture) Reflect.apply(capture, captureTarget, [e.pointerId]);
+    if (!action.current()) return;
     e.stopPropagation();
     this.detachViewportDragListeners();
     this.justDraggedViewport = false;
     this.dragState = {
+      canvas: action.canvas,
+      generation: this.companionGeneration,
       pointerId: e.pointerId,
       startClientX: e.clientX,
       startClientY: e.clientY,
-      startViewport: { ...this.snapshot.viewport },
+      startViewport: { ...action.snapshot.viewport },
       moved: false,
+      inverse,
+      svg: svgEl,
+      geometryDirty: false,
     };
-    (e.target as SVGElement).setPointerCapture?.(e.pointerId);
     this.dragEventWindow = dragEventWindow;
+    dragEventWindow.addEventListener('resize', this.invalidateDragGeometry);
     dragEventWindow.addEventListener('pointermove', this.onViewportPointerMove);
     dragEventWindow.addEventListener('pointerup', this.onViewportPointerUp);
     // A touch scroll takeover can fire `pointercancel` (never `pointerup`), and losing capture
@@ -401,16 +498,22 @@ export class LyraFlowMinimap extends LyraElement {
   private onViewportPointerMove = (e: PointerEvent): void => {
     const drag = this.dragState;
     if (!drag || e.pointerId !== drag.pointerId) return;
-    if (!this.canvasEl || this.canvasEl.readonly) {
-      this.cancelViewportDrag();
+    const action = this.captureInteraction();
+    if (!action || this.dragState !== drag || action.canvas !== drag.canvas || this.companionGeneration !== drag.generation) {
+      if (this.dragState === drag) this.cancelViewportDrag();
       return;
     }
-    const svgEl = this.renderRoot.querySelector('[part="map"]') as SVGSVGElement | null;
-    const ctm = svgEl?.getScreenCTM();
-    if (!ctm) return;
-    const scale = ctm.a || 1; // uniform scale (no skew with preserveAspectRatio="xMidYMid meet")
-    const dxContent = (e.clientX - drag.startClientX) / scale;
-    const dyContent = (e.clientY - drag.startClientY) / scale;
+    if (drag.geometryDirty) {
+      const ctm = drag.svg.getScreenCTM();
+      if (!ctm || !action.current() || this.dragState !== drag) return;
+      const inverse = ctm.inverse();
+      if (!action.current() || this.dragState !== drag) return;
+      drag.inverse = inverse;
+      drag.geometryDirty = false;
+    }
+    const dx = e.clientX - drag.startClientX, dy = e.clientY - drag.startClientY;
+    const dxContent = drag.inverse.a * dx + drag.inverse.c * dy;
+    const dyContent = drag.inverse.b * dx + drag.inverse.d * dy;
     if (dxContent === 0 && dyContent === 0) return;
     drag.moved = true;
     drag.latestViewport = {
@@ -418,14 +521,19 @@ export class LyraFlowMinimap extends LyraElement {
       y: drag.startViewport.y - dyContent * drag.startViewport.zoom,
       zoom: drag.startViewport.zoom,
     };
-    this.canvasEl.setViewport(drag.latestViewport);
+    this.invokeCanvas(action, 'setViewport', [drag.latestViewport], false);
   };
 
   private onViewportPointerUp = (e: PointerEvent): void => {
     const drag = this.dragState;
     if (!drag || e.pointerId !== drag.pointerId) return;
+    const action = this.captureInteraction();
+    if (!action || this.dragState !== drag || action.canvas !== drag.canvas || this.companionGeneration !== drag.generation) {
+      if (this.dragState === drag) this.cancelViewportDrag();
+      return;
+    }
     this.justDraggedViewport = e.type === 'pointerup' && drag.moved;
-    if (this.justDraggedViewport && drag.latestViewport && !this.canvasEl?.readonly) {
+    if (this.justDraggedViewport && drag.latestViewport && action.current()) {
       this.announceViewport(drag.latestViewport);
     }
     this.dragState = undefined;
@@ -435,6 +543,7 @@ export class LyraFlowMinimap extends LyraElement {
   private detachViewportDragListeners(): void {
     const dragEventWindow = this.dragEventWindow;
     if (!dragEventWindow) return;
+    dragEventWindow.removeEventListener('resize', this.invalidateDragGeometry);
     dragEventWindow.removeEventListener('pointermove', this.onViewportPointerMove);
     dragEventWindow.removeEventListener('pointerup', this.onViewportPointerUp);
     dragEventWindow.removeEventListener('pointercancel', this.onViewportPointerUp);
@@ -443,50 +552,48 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   private onViewportKeyDown = (e: KeyboardEvent): void => {
-    if (!this.canvasEl || !this.snapshot || this.canvasEl.readonly) return;
+    const action = this.captureInteraction(e);
+    if (!action) return;
     if (e.key === '+' || e.key === '=') {
       e.preventDefault();
-      this.announceNextSnapshot = true;
-      this.canvasEl.zoomIn();
+      this.invokeCanvas(action, 'zoomIn');
       return;
     }
     if (e.key === '-' || e.key === '_') {
       e.preventDefault();
-      this.announceNextSnapshot = true;
-      this.canvasEl.zoomOut();
+      this.invokeCanvas(action, 'zoomOut');
       return;
     }
     if (e.key === 'Enter' || e.key === 'Home') {
       e.preventDefault();
-      this.announceNextSnapshot = true;
-      this.canvasEl.fit();
+      this.invokeCanvas(action, 'fit');
       return;
     }
-    const { x, y, zoom, width, height } = this.snapshot.viewport;
+    const { x, y, zoom, width, height } = action.snapshot.viewport;
     const stepX = width * 0.1;
     const stepY = height * 0.1;
     // policy-allow(rtl-arrow-keys): pans a 2-D spatial viewport in canvas coordinates; x always
     // increases toward the physical right regardless of text direction, so the arrows stay physical.
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      this.announceNextSnapshot = true;
-      this.canvasEl.setViewport({ x: x - stepX, y, zoom });
+      this.invokeCanvas(action, 'setViewport', [{ x: x - stepX, y, zoom }]);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      this.announceNextSnapshot = true;
-      this.canvasEl.setViewport({ x: x + stepX, y, zoom });
+      this.invokeCanvas(action, 'setViewport', [{ x: x + stepX, y, zoom }]);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      this.announceNextSnapshot = true;
-      this.canvasEl.setViewport({ x, y: y - stepY, zoom });
+      this.invokeCanvas(action, 'setViewport', [{ x, y: y - stepY, zoom }]);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      this.announceNextSnapshot = true;
-      this.canvasEl.setViewport({ x, y: y + stepY, zoom });
+      this.invokeCanvas(action, 'setViewport', [{ x, y: y + stepY, zoom }]);
     }
   };
 
   private renderNodes(): SVGTemplateResult {
+    const source = this.snapshot?.source;
+    if (source) return svg`${(source.overview?.bins ?? []).map(
+      (bin) => svg`<rect part="aggregate-bin" x=${bin.bounds.x} y=${bin.bounds.y} width=${bin.bounds.width} height=${bin.bounds.height}></rect>`,
+    )}`;
     return svg`${(this.snapshot?.nodes ?? []).map(
       (n) => svg`<rect part="node" data-status=${n.status ?? nothing} x=${n.x} y=${n.y} width=${n.width} height=${n.height} rx="2"></rect>`,
     )}`;
@@ -498,11 +605,12 @@ export class LyraFlowMinimap extends LyraElement {
       return html`<div part="base" aria-hidden="true"></div>`;
     }
     const bounds = this.contentBounds();
-    const padding = 20;
-    const vbX = bounds.minX - padding;
-    const vbY = bounds.minY - padding;
-    const vbW = Math.max(1, bounds.maxX - bounds.minX + padding * 2);
-    const vbH = Math.max(1, bounds.maxY - bounds.minY + padding * 2);
+    const source = this.snapshot.source;
+    const padding = source ? 0 : 20;
+    const vbX = bounds.minX - padding - (source && source.worldBounds.width === 0 ? 0.5 : 0);
+    const vbY = bounds.minY - padding - (source && source.worldBounds.height === 0 ? 0.5 : 0);
+    const vbW = source ? source.worldBounds.width || 1 : Math.max(1, bounds.maxX - bounds.minX + padding * 2);
+    const vbH = source ? source.worldBounds.height || 1 : Math.max(1, bounds.maxY - bounds.minY + padding * 2);
     const viewportRect = this.viewportRectContent(vbW, vbH, 0);
     const viewportHitRect = this.viewportRectContent(vbW, vbH);
     const locked = this.snapshot.locked || this.canvasEl.readonly;
@@ -520,7 +628,15 @@ export class LyraFlowMinimap extends LyraElement {
         @click=${this.onMapClick}
         @wheel=${this.onMapWheel}
       >
-        ${guard([this.snapshot.nodes], () => this.renderNodes())}
+        ${guard([source ? source.overview : this.snapshot.nodes, !!source], () => this.renderNodes())}
+      </svg>
+      <svg
+        class="viewport-layer"
+        viewBox="${vbX} ${vbY} ${vbW} ${vbH}"
+        preserveAspectRatio="xMidYMid meet"
+        @click=${this.onMapClick}
+        @wheel=${this.onMapWheel}
+      >
         <g data-viewport-control>
           <rect
             part="viewport"
@@ -549,6 +665,7 @@ export class LyraFlowMinimap extends LyraElement {
           ></rect>
         </g>
       </svg>
+      ${source && !source.overview ? html`<div part="source-unavailable">${this.localize('flowMinimapSourceUnavailable')}</div>` : nothing}
       <div part="instructions" class="sr-only" id=${this.instructionsId}>
         ${this.localize('flowMinimapInstructions')}
       </div>

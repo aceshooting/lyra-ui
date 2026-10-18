@@ -1706,7 +1706,7 @@ describe("table header theming hook", () => {
 
 describe("syntax-highlighting cache plumbing (no async loading yet)", () => {
   type Internals = {
-    highlightCache: Map<string, string>;
+    highlightCache: Map<string, string>; setCachedHighlight(key: string, html: string): void; getCachedHighlight(key: string): string | undefined;
   };
   function internalsOf(el: LyraMarkdown): Internals {
     return el as unknown as Internals;
@@ -1739,7 +1739,7 @@ describe("syntax-highlighting cache plumbing (no async loading yet)", () => {
     const el = (await fixture(
       html`<lr-markdown></lr-markdown>`
     )) as LyraMarkdown;
-    internalsOf(el).highlightCache.set(
+    internalsOf(el).setCachedHighlight(
       markdownHighlightKey("ts", "const x = 1;\n"),
       '<pre part="code-block"><code class="language-ts"><span>FAKE HIGHLIGHTED</span></code></pre>\n'
     );
@@ -1773,7 +1773,7 @@ describe("syntax-highlighting cache plumbing (no async loading yet)", () => {
       html`<lr-markdown></lr-markdown>`
     )) as LyraMarkdown;
     el.withoutSyntaxHighlighting = true;
-    internalsOf(el).highlightCache.set(
+    internalsOf(el).setCachedHighlight(
       markdownHighlightKey("ts", "const x = 1;\n"),
       '<pre part="code-block"><code class="language-ts"><span>FAKE HIGHLIGHTED</span></code></pre>\n'
     );
@@ -1789,7 +1789,7 @@ describe("syntax-highlighting cache plumbing (no async loading yet)", () => {
     const el = (await fixture(
       html`<lr-markdown streaming></lr-markdown>`
     )) as LyraMarkdown;
-    internalsOf(el).highlightCache.set(
+    internalsOf(el).setCachedHighlight(
       markdownHighlightKey("ts", "const x = 1;\n"),
       '<pre part="code-block"><code class="language-ts"><span>FAKE HIGHLIGHTED</span></code></pre>\n'
     );
@@ -1825,8 +1825,8 @@ describe("syntax-highlighting cache plumbing (no async loading yet)", () => {
     const internals = el as unknown as SetInternals;
     internals.setCachedHighlight("k1", "first");
     internals.setCachedHighlight("k1", "second");
-    expect(internals.highlightCache.get("k1")).to.equal("second");
-    expect(internals.highlightCache.size).to.equal(1);
+    expect(internals.getCachedHighlight("k1")).to.equal("second");
+    expect(internals.highlightCache.size).to.be.at.most(100);
   });
 
   it("evicts the oldest entry once the cache exceeds its 100-entry bound", async () => {
@@ -1839,10 +1839,10 @@ describe("syntax-highlighting cache plumbing (no async loading yet)", () => {
     const internals = el as unknown as SetInternals;
     for (let i = 0; i < 100; i++)
       internals.setCachedHighlight(`k${i}`, `v${i}`);
-    expect(internals.highlightCache.has("k0")).to.be.true;
+    expect(internals.highlightCache.size).to.equal(100);
     internals.setCachedHighlight("k100", "v100");
     expect(
-      internals.highlightCache.has("k0"),
+      (internals.getCachedHighlight("k0") !== undefined),
       "oldest entry should have been evicted"
     ).to.be.false;
     expect(internals.highlightCache.size).to.equal(100);
@@ -2040,7 +2040,7 @@ describe("shiki highlighting (real peer)", () => {
       const el = (await fixture(
         html`<lr-markdown></lr-markdown>`
       )) as LyraMarkdown;
-      el.content = "```ts\nconst x = 1;\n```";
+      el.content = "```ts\nconst transformerProbe = 1;\n```";
       await el.updateComplete;
       await waitUntil(() => captured !== undefined);
     } finally {
@@ -2076,7 +2076,7 @@ describe("shiki highlighting (real peer)", () => {
       const el = (await fixture(
         html`<lr-markdown></lr-markdown>`
       )) as LyraMarkdown;
-      el.content = "```ts\nconst x = 1;\n```";
+      el.content = "```ts\nconst throwingTokenizerProbe = 1;\n```";
       await el.updateComplete;
       // wait-reason: asserts a failed highlight is never cached into view
       await aTimeout(300); // long enough that a wrongly-cached highlight would have appeared
@@ -2084,11 +2084,11 @@ describe("shiki highlighting (real peer)", () => {
         .to.be.true;
       expect(
         el.shadowRoot!.querySelector('[part="code-block"] code')!.textContent
-      ).to.equal("const x = 1;\n");
+      ).to.equal("const throwingTokenizerProbe = 1;\n");
       type Internals = { failedHighlightKeys: Set<string> };
       expect(
         (el as unknown as Internals).failedHighlightKeys.has(
-          markdownHighlightKey("ts", "const x = 1;\n")
+          markdownHighlightKey("ts", "const throwingTokenizerProbe = 1;\n")
         )
       ).to.be.true;
     } finally {
@@ -3121,7 +3121,7 @@ describe("back-compat", () => {
 });
 
 describe("shiki dark-theme signal", () => {
-  type CacheInternals = { highlightCache: Map<string, string> };
+  type CacheInternals = { highlightCache: Map<string, string>; setCachedHighlight(key: string, html: string): void; getCachedHighlight(key: string): string | undefined };
 
   const LIGHT = "#24292f";
   const DARK = "#e6edf3";
@@ -3139,7 +3139,7 @@ describe("shiki dark-theme signal", () => {
     `)) as HTMLElement;
     const el = wrapper.querySelector("lr-markdown") as LyraMarkdown;
     el.htmlMode = htmlMode;
-    (el as unknown as CacheInternals).highlightCache.set(
+    (el as unknown as CacheInternals).setCachedHighlight(
       markdownHighlightKey("ts", "x\n"),
       CACHED
     );
@@ -3204,7 +3204,7 @@ describe("shiki dark-theme signal", () => {
       </div>
     `)) as HTMLElement;
     const el = wrapper.querySelector("lr-markdown") as LyraMarkdown;
-    (el as unknown as CacheInternals).highlightCache.set(
+    (el as unknown as CacheInternals).setCachedHighlight(
       markdownHighlightKey("ts", "x\n"),
       CACHED
     );

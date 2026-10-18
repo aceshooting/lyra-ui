@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Durung ana pacelathon',
   agentWorkspaceLabel: 'Ruang kerja agen',
+  agentWorkspaceInputLimit: '{collection}: Mung {count} entri saka {total} sing disimpen.',
   agentWorkspaceConversation: 'Pacelathon',
   agentWorkspaceDetails: 'Rincian proses',
   agentWorkspaceRun: 'Proses agen',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Coba perangan iki maneh',
   promptQueueLabel: 'Pituduh ing antrian',
   promptQueueEmpty: 'Ora ana pituduh ing antrian',
+  promptQueueInputLimit: 'Sawetara prompt ing antrian utawa lampiran ora dilebokake amarga wates input wis tekan.',
+  promptQueueAttachmentLimit: 'Nampilake {shown} saka {total} lampiran sing disimpen.',
   promptQueueSendNow: 'Kirim saiki',
   selectionToolbarLabel: 'Tumindak pilihan',
   selectionAsk: 'Takon',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '{count} token',
   },
+  threadListInputLimit: 'Sawetara utas pacelathon ora dilebokake amarga wates input wis tekan.',
+  promptInputInputLimit: 'Sawetara saran utawa entri katalog ora dilebokake amarga wates input wis tekan.',
+  transcriptFeedInputLimit: 'Mung {count} entri paling anyar saka {total} sing disimpen.',
+  codeBlockHighlightLimit: 'Kode dawa ditampilake tanpa panyorotan sintaks.',
 };
 
 registerLyraLocale('jv', strings);

@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} muuta ehdotusta',
     other: '{count} muuta ehdotusta',
   },
+  mentionInputLimit: 'Vain ensimmäiset 10 000 mainintaehdotusta ovat käytettävissä.',
+  diffViewHighlightLimit: 'Pitkä koodi näytetään ilman syntaksin korostusta.',
 };
 
 registerLyraLocale('fi', strings);

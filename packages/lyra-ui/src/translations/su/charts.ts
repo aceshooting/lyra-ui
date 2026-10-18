@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} sampel sah dina sakabéh sebaran; {belowCount} di handap jeung {aboveCount} di luhur wates interval anu ditémbongkeun; {invalidCount} sampel teu sah.',
+  histogramDistributionRange: 'Rentang sampel anu katalungtik: {min} nepi ka {max}.',
   chartCategory: 'Kategori',
   chartTotal: 'Jumlah',
   chartAxisTotal: 'Jumlah {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, jari-jari {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'ningkat',
-  chartTrendDecreasing: 'nurun',
-  chartTrendFlat: 'datar',
-  chartSummary: '{label}: {count} nilai, rentang {min} nepi ka {max}, tren {trend}',
   chartSeriesNoData: '{label}: teu aya data',
   chartSummaryWithData: 'Bagan {type}. {summaries}.',
   chartSummaryEmpty: 'Bagan {type} tanpa data.',
-  chartSummarySeparator: '. ',
   chartData: 'Data bagan',
   chartRenderUnavailable: 'Tampilan bagan teu sayogi.',
+  chartPreparedSummaryZoom: 'Zum némbongkeun ringkesan anu geus disiapkeun; rincian leuwih jero ngaliwatan indéks teu sayogi.',
+  chartSpatialSummary: 'Sakabéh sumber: {count} titik, x {minX} nepi ka {maxX}, y {minY} nepi ka {maxY}. Témbong: {matchedCount} titik, x {viewMinX} nepi ka {viewMaxX}, y {viewMinY} nepi ka {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Jari-jari dina sakabéh sumber: {min} nepi ka {max}.',
+  chartSpatialDensityLegend: 'Kapadetan ngawengku sakabéh runtuyan; katémbongna runtuyan ngan mangaruhan lapisan titik.',
+  chartSpatialPoint: '{series}: {id}, posisi dina sumber {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Wewengkon kapadetan: {count} titik, x {minX} nepi ka {maxX}, y {minY} nepi ka {maxY}.',
+  chartSpatialHidden: ' (runtuyan disumputkeun)',
   chartDataSampled: 'Bagan jeung tabél data nu dijieun mintonkeun sampel nepi ka 1.000 rékaman. Pasihan tabél data sorangan pikeun ngaksés sakabéh data bagan.',
   chartPlotSampled: 'Bagan mintonkeun sampel nepi ka 1.000 rékaman; tabél data ngandung sakabéh data.',
   chartZoomUnavailable: 'Zum teu sadia, tapi bagan utama tetep sadia.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} tina {total})',
   chartMissingLibrary: 'Komponén ieu merlukeun paket opsional "chart.js" pikeun dipasang supaya bagan bisa dipintonkeun.',
   boxPlotMissingLibrary: 'Komponén ieu merlukeun paket bagan box-plot opsional pikeun dipasang supaya bagan kotak bisa dipintonkeun.',
+  chartInputLimit: 'Sababaraha data grafik teu diasupkeun lantaran wates input geus kahontal. Pasihkeun kumpulan data nu leuwih leutik atawa geus diringkes saméméhna pikeun ngagambarkeun nilai nu teu diasupkeun.',
+  histogramInputLimit: 'Ngan 10.000 sampel panganyarna nu disimpen. Pasihkeun cacah nu geus dikelompokkeun dumasar interval ka lr-chart pikeun ngagambarkeun sebaran nu leuwih gedé.',
 };
 
 registerLyraLocale('su', strings);

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,11 +22,69 @@ an item and reassign the same source array to publish that change. Unrelated pro
 reuse the current projection where possible.
 
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
-axis, one row per span in start order, status-toned bars (Langfuse timeline / Temporal
+axis, one row per legacy span in start order, status-toned bars (Langfuse timeline / Temporal
 event-history style).
 
-Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
+
+**Complete provider timeline:** `treeSource: TraceTreeSource | undefined = undefined`
+(attribute: false) takes precedence over `spans`; invalid defined providers show a localized failure.
+Setting `undefined` restores current legacy spans. The exact alias is shared with `lr-trace-tree`:
+`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`.
+
+```ts
+import type { TraceTreeSource, LyraSpan } from
+  "@aceshooting/lyra-ui/components/agent-tools/span-waterfall/span-waterfall.class.js";
+import type { LyraTraceSourceSummary } from "@aceshooting/lyra-ui/data-sources.js";
+```
+
+The immutable provider revision is a nonempty string or finite number. Its `project` receives
+revision/locale/abort signal, prior opaque state, provider reset/toggle/reveal/item-select actions,
+and `{ search: '', hiddenKinds: [] }`. Return `{ state, total, rows, summary, focusIndex? }` as in
+the trace-tree contract. `total` counts all logical nodes including collapsed ones; `rows.count`
+is the complete visible preorder. Counts are safe nonnegative integers with `rows.count <= total`.
+Rows use indexed `itemAt`/`keyAt`/`indexOfKey`, or ranged `read` with required direct `indexOfKey`.
+Provider preorder is displayed as supplied, without local start-time sorting or a full topology
+scan. Each row's `key === value.id`, parent/depth/sibling/child metadata, expanded, selected and
+disabled states are authoritative; span `parentId` does not rebuild source topology.
+
+Required `summary: LyraTraceSourceSummary { startMs, endMs }` describes the complete trace,
+independently of the loaded window. Endpoints are finite nonnegative trace-relative milliseconds,
+end is at least start and their difference is finite. Missing/invalid summaries fail visibly;
+current rows and stale legacy extents never substitute. Equal global endpoints remain valid.
+Default axis/bar extent uses that global start/end, so an offscreen tail does not stretch visible
+bars. `viewStartMs`/`viewEndMs` override the display window without reloading the provider: null
+uses the corresponding global endpoint, nonfinite input falls back, finite explicit start/end
+clamp to `0..Number.MAX_SAFE_INTEGER - 1` / `0..Number.MAX_SAFE_INTEGER`, and an end at/before start
+uses `start + 1` for drawing. Source summary values remain unchanged by display overrides.
+
+Closed source display records retain id/name/kind/status/start/end; start is finite/nonnegative
+and an explicit end finite and at least start. Existing kind/status normalization applies.
+Oversized strings/rows fail without clipping: keys/state/display strings are at most 65,536 UTF-16
+units each, row text including key/parent accounting at most 65,536, and cache/staging/focused-row
+plus projection state share 2,000,000 payload units. Four 100-row pages (400 rows) plus one focused
+ready row are retained; at most 301 rows mount. Range reads request at most 100 rows with two
+physical reads pending; projection calls serialize with only the latest intent queued. Global
+uniqueness, immutable consistency and full trace summary truth remain provider obligations.
+
+`revealSourceKey(key: string): Promise<boolean>` directly resolves a full-source key, opens its
+ancestors and focuses its row. It returns false for missing, disabled, invalid, failed, revoked or
+unset-source targets. Home/End reaches full visible-preorder endpoints; branch navigation is
+RTL-aware and disabled-row traversal is bounded to 32 candidates. Controlled `activeSpanId` paints
+current state and reveals once per binding/ID without changing on activation. Accepted item
+activation emits only existing `lr-span-select { spanId }`. Expansion uses provider actions;
+there is no new public toggle event. `source-row` owns the single treeitem/focus/activation target,
+while its duration bar is decorative, unlike the legacy interactive bar below.
+
+Reassign even the same provider, or call a keyless `requestUpdate()`, after revision/state changes.
+Named display/selection/view-window paints reuse accepted data. Locale/lifecycle/source changes
+revoke obsolete requests, controls, reveal effects and announcements; ignored aborts keep physical
+permits until settlement. Localized loading/error/empty/retry and source counts do not turn newly
+loaded historical spans into status-change announcements. Source-only parts are `source-list`,
+`source-row`, `source-label`, `source-toggle`, `source-status` and `source-error`; existing axis,
+name/bar/meta/status/duration parts remain applicable. The following array admission/sorting and
+interactive-bar descriptions apply with `treeSource` unset.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — `LyraSpan { id: string; parentId?:
 string; name: string; kind: 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
@@ -38,12 +96,19 @@ by the host (e.g. `"$0.0012"`) and rendered verbatim, never parsed or summed. On
 both this component (timeline projection via `startMs`/`endMs`) and `lr-trace-tree` (hierarchy
 projection via `parentId`) — never two shapes. Foreign runtime `kind` values render as `'other'`;
 explicitly unrecognized `status` values render the localized neutral `'unknown'` state, while an
-absent status renders `'pending'`. Raw provider status text is never shown. At most 500 unique valid
+absent status renders `'pending'`. Raw provider status text is never shown. Assignment retains the
+first 10,000 source entries in a bounded readonly outer snapshot; admitted row identities feed a
+descriptor-safe copy of the closed span display schema, so opaque provider fields do not consume
+the shared deep-copy budget. Reassign the collection after record changes. At most 500 unique valid
 spans mount; when `activeSpanId` resolves beyond
 the ordinary input-order budget, that span and its ancestor path reserve positions so the
-controlled active state remains visible. A localized `[part="limit"]` note exposes truncation. The
-time axis always scales to the whole trace, measured before that 500-span cap is applied, so a
-truncated tail can never shrink the axis and stretch the surviving bars across the track.
+controlled active state remains visible. A localized `[part="limit"]` note reports the actual
+number shown and the assigned source count when either ceiling omits entries. Counts use the
+effective locale; initial truncation stays silent and a later transition into truncation is
+announced politely. The time axis scales to the full admitted trace, measured before the 500-span
+cap is applied, so spans omitted only by that render cap cannot shrink the axis and stretch the
+surviving bars across the track. Active changes within the ordinary window reuse the existing
+projection and sort; reserving an outside active path can change the projection.
 `activeSpanId: string | null = null`
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
@@ -64,7 +129,7 @@ Space).
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `without-axis` is set), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
-when `spans` is empty), `limit` (the 500-span projection notice), and `live-region`.
+when `spans` is empty), `limit` (the actual shown/source count for projection or input truncation).
 The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
 paint width would otherwise be only a few pixels.
 

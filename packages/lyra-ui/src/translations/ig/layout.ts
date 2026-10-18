@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} nyere iwu',
   },
+  commandPaletteInputLimit: 'A hapụrụ ụfọdụ iwu n\'ihi na e ruru oke ntinye.',
 };
 
 registerLyraLocale('ig', strings);

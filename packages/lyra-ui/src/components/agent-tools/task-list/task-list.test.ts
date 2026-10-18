@@ -975,7 +975,7 @@ it('drops an immutable platform row whose identity getter throws and retains the
   const el = await fixture<LyraTaskList>(html`
     <lr-task-list .items=${[malformed, { id: 'safe-task', label: 'Safe task', status: 'pending' }]}></lr-task-list>
   `);
-  expect(reads).to.be.greaterThan(0);
+  expect(reads).to.equal(0);
   expect([...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')].map((row) => row.dataset['id'])).to.deep.equal(['safe-task']);
   expect(el.shadowRoot!.querySelector('[part="summary"]')?.textContent?.trim()).to.equal('0 of 1 completed');
 });

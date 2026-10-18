@@ -85,7 +85,7 @@ it('honors calendar week and weekday gaps and excludes the final geometry edge',
   expect(hitTest(31, 115)).to.equal(null);
 });
 
-it('keeps calendar geometry getters lazy and in their existing order during hit tests', () => {
+it('keeps calendar geometry lazy and resolves cell size once during hit tests', () => {
   const calls: string[] = [];
   const cellSize = () => (calls.push('cell-size'), 10);
   const rowPositions = () => (calls.push('row-positions'), [17, 27, 37, 47, 57, 67, 77]);
@@ -101,7 +101,7 @@ it('keeps calendar geometry getters lazy and in their existing order during hit 
     weekday: 0,
     date: '2026-01-01',
   });
-  expect(calls).to.deep.equal(['cell-size', 'row-positions', 'cell-size', 'position', 'interactive']);
+  expect(calls).to.deep.equal(['cell-size', 'row-positions', 'position', 'interactive']);
   calls.length = 0;
   expect(hitTestCalendar(31, 17, 0, [], cellSize, rowPositions, positionAt, isInteractive)).to.equal(null);
   expect(calls).to.deep.equal([]);

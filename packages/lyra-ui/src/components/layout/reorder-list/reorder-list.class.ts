@@ -159,7 +159,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   private pendingFocusTarget: ReorderFocusTarget | null = null;
 
   private focusRestoreGeneration = 0;
-  private itemObserver?: MutationObserver;
+  private boundarySnapshot: readonly (readonly [LyraReorderItem, string])[] = [];
   private stateItems = new Set<LyraReorderItem>();
   private moveToken = 0;
 
@@ -226,6 +226,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       });
     });
     this.stateItems = nextStateItems;
+    this.boundarySnapshot = directItems.map(item => [item, item.value] as const);
     this.requestUpdate();
   }
 
@@ -233,7 +234,9 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     if (this.pendingMove && this.pendingMove.phase === 'held' && !this.pendingMembershipIsCurrent())
       this.revertPendingMove();
     if (this.pendingReconciliation) this.tryCompleteControlledReconciliation();
-    this.syncBoundaryState();
+    const current = this.directItemElements;
+    if (current.length !== this.boundarySnapshot.length || current.some((item, index) =>
+      item !== this.boundarySnapshot[index]?.[0] || item.value !== this.boundarySnapshot[index]?.[1])) this.syncBoundaryState();
   };
 
   /** Checks whether the current light-DOM order now matches a controlled move's expected value
@@ -265,7 +268,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   // state at once, so N notifications inside one microtask checkpoint collapse into exactly one
   // pass here -- mirroring the coalesced select/combobox option-metadata pattern. A structural
   // slot change (a row added/removed/moved) still runs `onSlotChange()` immediately through its
-  // own `slotchange`/MutationObserver listeners, untouched by this guard.
+  // own `slotchange` listener, with already-reconciled moves skipped.
   private identityChangeReconciliationPending = false;
 
   /** @internal Reconciles only a directly owned item's live identity edit. */
@@ -277,14 +280,6 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       this.identityChangeReconciliationPending = false;
       this.onSlotChange();
     });
-  }
-
-  private refreshItemObserver(): void {
-    this.itemObserver?.disconnect();
-    const Observer = this.ownerDocument.defaultView?.MutationObserver;
-    if (!Observer || !this.isConnected) return;
-    this.itemObserver = new Observer(() => this.onSlotChange());
-    this.itemObserver.observe(this, { childList: true });
   }
 
   private pendingMembershipIsCurrent(): boolean {
@@ -306,7 +301,6 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.refreshItemObserver();
     this.syncBoundaryState();
   }
 
@@ -323,8 +317,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.itemObserver?.disconnect();
-    this.itemObserver = undefined;
+    this.boundarySnapshot = [];
     this.pendingFocusTarget = null;
     this.focusRestoreGeneration += 1;
     this.pendingMove = null;
@@ -517,7 +510,6 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     }
 
     this.pendingMove = null;
-    this.syncBoundaryState();
     this.commitMove(item, direction, fromIndex, toIndex, expectedValues);
   }
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,6 +30,11 @@ symbols. Selection edits no amount and performs no unit conversion. Catalog type
 resolution are documented in the
 [catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
+The shared `part="limit"` notice uses `catalogPickerInputLimit` for original input omitted beyond
+the 1,024-position catalog ceiling. It remains separate from popup row overflow. Snapshot rebinds,
+fresh replacement/default clearing, quiet mounting/reconnection, and later polite announcements
+follow the shared field contract.
+
 **Field API:** `label`, `hint`, `errorText` (`error-text`), `placeholder`, `accessibleLabel`
 (`aria-label`), `name`, `form`, `value`, `defaultValue`, `required`, `disabled`, `customError`
 (`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
@@ -42,8 +47,8 @@ Defaults and form/editing methods follow the
 
 **Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
 **Slots:** `label`, `hint`, `error`.
-**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `select-trigger`,
-`select-display-input`, `select-listbox`, `select-option`, `select-option-sub`, `select-group-label`,
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit`, `select-trigger`,
+`select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`,
 `select-clear-button`.
 
 ```html

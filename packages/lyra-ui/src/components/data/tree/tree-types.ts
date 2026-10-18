@@ -7,7 +7,7 @@ import type { LyraVariant } from '../../../internal/variants.js';
 /** Maximum rendered data-tree depth, shared with owner-side identity analysis. @internal */
 export const TREE_MAX_RENDER_DEPTH = 64;
 
-/** Maximum normalized/projected nodes owned by one tree instance. @internal */
+/** Default normalized/projected node budget owned by one tree instance. @internal */
 export const TREE_MAX_RENDER_NODES = 1_000;
 
 /** Selection behavior shared by the declarative and data-driven tree models. */

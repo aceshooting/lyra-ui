@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 27 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -36,11 +36,84 @@ that deferred too can instead import
 same registration lazily and exports `XML_VIEWER_TAG` (`'lr-xml-viewer'`) as a stable reference to
 the tag it eventually registers.
 
+**Complete provider hierarchy:** `treeSource: XmlViewerTreeSource | undefined = undefined`
+(attribute: false) takes display precedence over `xml`/`src`. Invalid defined providers fail visibly;
+setting `undefined` restores the current inline XML or normal URL loading. The readonly `source`
+property remains the legacy text-source snapshot described below; it is not the provider input.
+Assigning `xml` still performs synchronous bounded parsing while provider display is active.
+Provider records themselves never enter `DOMParser` or `XMLSerializer`, and provider mode skips
+`src` fetching. Legacy `maxNodes`, `maxRows` and `expandDepth` do not cap the provider's logical
+domain or control its expansion. `maxHeight` constrains the source scroller, whose unset ceiling
+is `var(--lr-size-20rem)`.
+
+```ts
+import type { XmlViewerTreeSource } from
+  "@aceshooting/lyra-ui/components/viewers/xml-viewer/xml-viewer.class.js";
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`XmlViewerTreeSource` is `LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>`.
+Its immutable `revision` is a nonempty string or finite number. `project(request)` receives
+revision, locale, abort signal, previous opaque `state` (initially `null`),
+`{ search: searchQuery, hiddenKinds: [] }` and reset/toggle/reveal actions. It returns
+`{ state, total, rows, focusIndex? }`, where `total` includes collapsed nodes and `rows.count`
+is the complete visible preorder; both are safe nonnegative integers with `rows.count <= total`.
+The nonempty state token is at most 65,536 UTF-16 units. Rows support indexed
+`itemAt`/`keyAt`/`indexOfKey`, or asynchronous `read` with required `indexOfKey`; no key lookup scans
+the logical hierarchy. Each row supplies unique `key`, `parentKey`, one-based `level`/`position`,
+exact sibling `setSize`, `childCount`, `expanded`, `selected`, and optional
+`disabled`/`selectionState`.
+
+The closed own-data inspection value has string `name`, string `path` equal to the row key,
+optional string `value`, and `kind` from `'object' | 'array' | 'scalar' | 'element' | 'attribute' |
+'text' | 'comment' | 'processing-instruction'`. Keys are nonblank and keys/display fields are each
+at most 65,536 UTF-16 units. Current/staged normalized rows, the retained focused row and projection
+state share 2,000,000 payload units; oversized rows/pages fail without clipping. At most 301 rows
+mount; four 100-row pages plus at most one focused row are cached. Range reads request at most
+100 rows with two physical reads pending; projection calls serialize with only the latest intent
+queued. The provider owns global key uniqueness, immutable snapshots and expansion. Logical ARIA
+depth/sibling counts remain exact while visual indentation clamps at 32 levels.
+
+`revealSourceKey(key: string): Promise<boolean>` opens provider ancestors and focuses the exact
+returned key, resolving `false` for absent, invalid, failed, obsolete or unset-source requests.
+Compact arbitrary keys avoid depth-sized ancestor paths. For shared `node-path` anchors, providers
+must instead expose canonical `JSON.stringify(path)` keys: at most 256 total segments, consisting
+of safe nonnegative numeric segments and an optional terminal nonempty `'@attribute'`, with total key length
+at most 65,536 units. Attribute anchors resolve their exact attribute key. Source highlights paint
+only exact admitted matching keys and preserve bounded highlight/action admission; no global
+highlight scan or fallback to a parent is performed.
+
+Source `search(query)` delegates to optional global `search({ revision, locale, signal, query,
+limit })`, returning `{ hits: [{ key }], total, exhaustive }`. It counts nodes across the complete
+hierarchy, retains at most 10,000 hits/2,000,000 key units, and accepts queries up to 4,096 units.
+`total` is a known global total or `null`; `exhaustive` means every global hit was returned.
+XML search reveals its first returned hit; next/previous reveal retained keys without repeating
+global search. `lr-search-change` retains `{ query, matchCount, matchCountExact, activeIndex }`;
+unavailable, partial, invalid and over-budget results never claim exactness. `search-status`
+discloses unavailable/partial results.
+
+Copy controls require `copyable` and callable provider `copy`. Requests include revision, locale,
+signal, `maxBytes`, and `key`/`scope`: document uses `null`/`'document'`, containers `'subtree'`,
+leaves `'node'`. Complete text must fit normalized `maxBytes` in UTF-8; loaded rows are never
+serialized as a substitute. Provider/byte rejection gives localized feedback without clipboard
+error events; current platform writes retain `lr-copy`, `lr-copy-error` and clipboard-only
+`lr-error` outcomes. Source failures also use the guarded `lr-render-error` contract.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Locale, reconnect and adoption refresh provider authority; replacement, query changes and lifecycle
+cancellation revoke older search, reveal, highlight and copy effects. Named presentation updates
+reuse admitted data. Ignored aborts retain physical request permits until settlement. Source-only
+parts are `source-list`, `source-row`, `source-toggle`, `source-label`, `source-status`,
+`source-error` and `search-status`; `tag`, `attribute`, `attribute-name`, `attribute-value`, `text`,
+`comment`, `pi`, `copy-button` and `highlight-action` remain aliases on source content where applicable.
+The following parsed-document/search limits describe the legacy `xml`/`src` route.
+
 **Properties:** `src: string = ''` — URL to fetch and parse; ignored once `xml` is set. `xml?:
 string` (property only) — raw XML text to parse and render; wins over `src`, and setting it parses
 synchronously. Assigning `undefined` relinquishes inline authority and immediately resumes an
 already configured `src`, or exposes idle when none exists. `source: LyraXmlViewerSource` is the
-readonly discriminated effective authority (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or
+readonly discriminated legacy text authority (`{ kind: 'inline', value }`, `{ kind: 'url', url }`, or
 `null`). `name: string = ''` — accessible label. `expandDepth?: number` (attribute
 `expand-depth`) — elements at or beyond this nesting depth (root = 0) start collapsed, so only the
 levels above it start expanded; unset, nothing auto-collapses. `copyable:
@@ -51,7 +124,23 @@ contract) — each numeric path segment is the 0-based index within the parent's
 and an optional trailing string segment `'@attrName'` addresses one existing, nonempty-named
 attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 
-**Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
+Configurable limits:
+
+- `maxNodes: number = 50000` (attribute `max-nodes`) — parsed document nodes;
+  effective range 1–500,000.
+- `maxRows: number = 5000` (attribute `max-rows`) — displayed tree rows;
+  effective range 1–50,000.
+- `maxBytes: number = 26214400` (attribute `max-bytes`) — UTF-8 XML input bytes, default 25 MiB;
+  effective range 1–262,144,000 bytes (250 MiB).
+
+Limits truncate finite fractions and clamp to their effective ranges; non-finite inputs use the
+stated defaults. Inline and fetched XML pass byte/node/depth preflight before `DOMParser`, then
+parsed-document node/depth validation. The depth ceiling remains 256. Changing `maxNodes` or
+`maxBytes` revalidates the effective source; changing `maxRows` changes the rendered window.
+An inline `xml` assignment parses synchronously. Fetched XML yields between preflight and parsing,
+with source-generation checks after the yield; the parse itself remains synchronous.
+
+**Legacy search methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
 `clearSearch()`), accepting at most 4,096 query code units and scanning at most 4,000,000 code
 units while retaining 10,000 matches; `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping);
@@ -154,9 +243,11 @@ viewer.copyable = true;
 await viewer.search(query);
 ```
 
-Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the
-tree. A collapsed element's child count includes element, text, comment, CDATA, and processing-
-instruction children rather than only element descendants. Expanded rendering stops after 5,000
-rows and shows a localized `limit` notice; collapse state and the parsed document remain intact.
-Search still counts the complete parsed document, while a `node-path` outside the rendered window
-reports `found: false` until it can be rendered.
+By default, the node cap is 50,000 and expanded rendering stops after 5,000 rows; configure these
+with `maxNodes` and `maxRows`. Node/byte/depth rejection displays a localized error and emits
+`lr-render-error` instead of rendering the tree. A collapsed element's child count includes element,
+text, comment, CDATA, and processing-instruction children rather than only element descendants.
+Reaching the rendered-row budget shows the existing localized `limit` notice; collapse state and
+the parsed document remain intact. Search still visits the complete admitted document within its
+separate search budgets, while a `node-path` outside the rendered window reports `found: false`
+until it can be rendered.

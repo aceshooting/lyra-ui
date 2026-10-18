@@ -1186,7 +1186,7 @@ it("exposes a complete keyboard-adjustable separator and normalizes inverted wid
   expect(handle.getAttribute("aria-valuemax")).to.equal("200");
   expect(handle.getAttribute("aria-valuenow")).to.equal("200");
   expect(
-    element.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!.style
+    element.shadowRoot!.querySelector<HTMLElement>('[part="table"]')!.style
       .getPropertyValue("--data-grid-columns")
   ).to.contain("minmax(200px, 200px)");
 

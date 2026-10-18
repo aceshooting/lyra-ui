@@ -10,6 +10,7 @@ export default meta;
 type Story = StoryObj;
 
 export const Default: Story = {
+  parameters: { docs: { description: { story: 'appendSamples keeps the newest finite samples in its bounded rolling window. Invalid-heavy batches finish in chunks and queued calls retain append order; assigning values or disconnecting cancels unfinished work.' } } },
   render: () => html`
     <lr-histogram
       bins="6"
@@ -33,5 +34,15 @@ export const NarrowLongContent: Story = {
         .values=${[2, 4, 4, 5, 6, 6, 6, 7, 8, 9, 9, 10, 11, 12, 12, 13, 15]}
       ></lr-histogram>
     </div>
+  `,
+};
+
+/** A host can prepare these exact counts in chunks with prepareLyraHistogram. */
+export const PreparedDistribution: Story = {
+  parameters: { docs: { description: { story: 'A whole-source distribution retains exact bin counts while reporting below/above-range and invalid observations separately. The plot, accessible table and CSV contain only the displayed bins. Clearing distribution restores the raw values route.' } } },
+  render: () => html`
+    <lr-histogram with-data-table height="16rem" series-label="Observations"
+      .distribution=${{ revision: 'overview', counts: { sourceCount: 1000000, validCount: 999999, invalidCount: 1 }, domain: { min: 0, max: 9 }, edges: [2,5,7], binCounts: [300000,300000], belowCount: 200000, aboveCount: 199999 }}
+    ></lr-histogram>
   `,
 };

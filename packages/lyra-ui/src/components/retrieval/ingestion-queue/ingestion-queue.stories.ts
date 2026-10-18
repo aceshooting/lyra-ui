@@ -183,3 +183,40 @@ export const AnnounceMountedFailures: Story = {
     </div>
   `,
 };
+
+export const InputLimit: Story = {
+  render: () => html`<lr-ingestion-queue .items=${Array.from({ length: 10001 }, (_, index) => ({
+    id: `item-${index}`, document: { id: `document-${index}`, name: `Document ${index + 1}` }, stage: 'queued',
+  }))}></lr-ingestion-queue>`,
+};
+
+const millionQueueSource: import('./ingestion-queue.class.js').IngestionQueueSource = {
+  revision: 1,
+  async query({ page, pageSize, signal }) {
+    await new Promise(resolve => setTimeout(resolve, 40));
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    return { total: 1_000_000, rows: Array.from({ length: Math.min(pageSize, Math.max(0, 1_000_000 - page * pageSize)) }, (_, offset) => {
+      const order = page * pageSize + offset;
+      const value: IngestionQueueItem = { id: `queue-${order}`, document: { id: `document-${order}`, name: `Document ${order}` },
+        stage: order % 3 === 0 ? 'failed' : order % 3 === 1 ? 'embedding' : 'done',
+        ...(order % 3 === 0 ? { error: 'An earlier ingestion attempt failed', attempts: 1 } : { progress: 60 }) };
+      return { key: value.id, order, value };
+    }) };
+  },
+  async lookup(keys) {
+    return keys.flatMap(key => {
+      const order = /^queue-\d+$/.test(key) ? Number(key.slice(6)) : -1;
+      return Number.isSafeInteger(order) && order >= 0 && order < 1_000_000
+        ? [{ key, order, value: { id: key, document: { id: `document-${order}`, name: `Document ${order}` }, stage: 'done' as const } }] : [];
+    });
+  },
+  async locate(key) {
+    const order = /^queue-\d+$/.test(key) ? Number(key.slice(6)) : -1;
+    return Number.isSafeInteger(order) && order >= 0 && order < 1_000_000 ? order : null;
+  },
+};
+
+/** Paging historical failures does not replay their live failure announcements. */
+export const MillionSource: Story = {
+  render: () => html`<p>Browse one million generated queue records. Retry and cancel remain requests for the host to handle.</p><lr-ingestion-queue .dataSource=${millionQueueSource}></lr-ingestion-queue>`,
+};

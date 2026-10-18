@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'ペンを下ろしました',
   signaturePadPenUp: 'ペンを上げました',
+  localePickerInputLimit: '最初の512件のロケール項目のみが利用できます。',
+  emojiPickerInputLimit: '入力上限に達したため、絵文字データの一部が省略されました。',
 };
 
 registerLyraLocale('ja', strings);

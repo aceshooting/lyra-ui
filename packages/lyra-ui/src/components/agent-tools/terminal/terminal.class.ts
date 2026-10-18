@@ -2,7 +2,6 @@ import { eventCollectionSupport } from '../../../internal/collection-snapshot.js
 import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
@@ -12,7 +11,7 @@ import {
   acquireAnnouncementSink,
   type AnnouncementSink,
 } from '../../../internal/announcer.js';
-import { createAnsiParser, type AnsiSegment, type AnsiStyles } from '../../../internal/ansi.js';
+import { createAnsiParser, type AnsiStyles } from '../../../internal/ansi.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -52,16 +51,21 @@ import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_terminalDownload, L
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_jumpToLatest, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-interface TerminalCell {
-  char: string;
-  styles: AnsiStyles;
+interface TerminalRun { start: number; end: number; styles: AnsiStyles }
+interface TerminalLine {
+  /** Absolute line identity, retained across scrollback trimming. */
+  number: number;
+  text: string;
+  runs: TerminalRun[];
+  /** Unicode scalar columns; run offsets and retained-character accounting use UTF-16. */
+  columns: number;
 }
 
-interface TerminalLine {
-  /** Absolute (1-based) line number since the last `clear()`/`content` assignment. Survives
-   *  scrollback trimming as a stable identity even though the line itself may later be trimmed. */
-  number: number;
-  cells: TerminalCell[];
+export interface LyraTerminalOverflowDetail {
+  truncated: true;
+  inputCharactersDropped: number;
+  lineCharactersDropped: number;
+  linesDropped: number;
 }
 
 const EMPTY_CELL_STYLES: AnsiStyles = {
@@ -85,7 +89,7 @@ const MAX_SEARCH_MATCHES = 10_000;
  * contains only tabs/newlines, or supplies an arbitrarily large finite `maxScrollback`. */
 const MAX_INPUT_CHARACTERS = 1_000_000;
 const MAX_CELLS_PER_LINE = 20_000;
-const MAX_RETAINED_CELLS = 200_000;
+const MAX_RETAINED_CELLS = 2_000_000;
 const MAX_SCROLLBACK_LINES = 10_000;
 const SCROLLBACK_PRUNE_BATCH = 256;
 
@@ -106,23 +110,37 @@ const TONE_BACKGROUND_VAR: Record<LyraHighlightTone, string> = {
   neutral: 'var(--lr-terminal-highlight-neutral-bg, var(--lr-color-surface))',
 };
 
-function plainTextOfLine(line: TerminalLine): string {
-  return line.cells.map((c) => c.char).join('');
+function plainTextOfLine(line: TerminalLine): string { return line.text; }
+
+/** Resolves a scalar column without allocating a character array. */
+function columnOffset(text: string, column: number): number {
+  let offset = 0;
+  for (let index = 0; index < column && offset < text.length; index++) offset += text.codePointAt(offset)! > 0xffff ? 2 : 1;
+  return offset;
 }
 
-/** Merges consecutive same-style cells into render-friendly segments -- avoids one <span> per
- *  character while keeping styling accurate. */
-function groupCells(cells: TerminalCell[]): AnsiSegment[] {
-  const segments: AnsiSegment[] = [];
-  for (const cell of cells) {
-    const last = segments[segments.length - 1];
-    if (last && stylesEqual(last.styles, cell.styles)) {
-      last.text += cell.char;
-    } else {
-      segments.push({ text: cell.char, styles: cell.styles });
-    }
+/** Replaces a text range and clips/shifts only the affected style runs. */
+function replaceLineText(line: TerminalLine, start: number, end: number, text: string, styles: AnsiStyles): void {
+  if (start === line.text.length && end === start) {
+    const previous = line.runs.at(-1);
+    if (text && previous && stylesEqual(previous.styles, styles)) previous.end += text.length;
+    else if (text) line.runs.push({ start, end: start + text.length, styles });
+    line.text += text;
+    return;
   }
-  return segments;
+  const delta = text.length - (end - start);
+  const next: TerminalRun[] = [];
+  const append = (run: TerminalRun) => {
+    if (run.start >= run.end) return;
+    const previous = next.at(-1);
+    if (previous && previous.end === run.start && stylesEqual(previous.styles, run.styles)) previous.end = run.end;
+    else next.push(run);
+  };
+  for (const run of line.runs) if (run.start < start) append({ start: run.start, end: Math.min(start, run.end), styles: run.styles });
+  append({ start, end: start + text.length, styles });
+  for (const run of line.runs) if (run.end > end) append({ start: Math.max(end, run.start) + delta, end: run.end + delta, styles: run.styles });
+  line.text = line.text.slice(0, start) + text + line.text.slice(end);
+  line.runs = next;
 }
 
 function stylesEqual(a: AnsiStyles, b: AnsiStyles): boolean {
@@ -144,6 +162,7 @@ interface SearchMatch {
 type SearchState = LyraSearchChangeDetail;
 
 export interface LyraTerminalEventMap {
+  'lr-overflow': CustomEvent<LyraTerminalOverflowDetail>;
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
@@ -177,6 +196,7 @@ export interface LyraTerminalEventMap {
  * page direction. By default (lines soft-wrap), the scrollport follows the page direction.
  *
  * @customElement lr-terminal
+ * @event lr-overflow - `detail: { truncated: true, inputCharactersDropped, lineCharactersDropped, linesDropped }` — a write/content commit exceeded an input, line, or retained-history limit. Character counts use UTF-16 units; dropped lines include max-scrollback pruning.
  * @event lr-copy - `detail: { ok: true, text }` — the plain-text clipboard write completed.
  * @event lr-error - The clipboard write failed; generic no-detail notification.
  * @event lr-copy-error - `detail: { ok: false, text, reason, error }` — typed clipboard failure.
@@ -294,7 +314,9 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   @property() content = '';
   /** Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) normalize to a
-   *  1..10,000 range; total retained cells and cells per line have independent hard ceilings. */
+   *  1..10,000 range. Retained text is additionally limited to 2,000,000 UTF-16 units, each line
+   *  to 20,000 scalar columns, and each write/content commit to 1,000,000 input UTF-16 units.
+   *  lr-overflow reports loss; effective retained lines also depend on their lengths. */
   @property({ type: Number, attribute: 'max-scrollback' }) maxScrollback = 5000;
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   /** Keeps each line on one row (horizontally scrollable) instead of soft-wrapping it. */
@@ -460,7 +482,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   private appendLine(): void {
-    this.buffer.push({ number: ++this.lineSeq, cells: [] });
+    this.buffer.push({ number: ++this.lineSeq, text: '', runs: [], columns: 0 });
     const max = this.effectiveMaxScrollback();
     if (this.buffer.length - max >= SCROLLBACK_PRUNE_BATCH) this.trimScrollback(false, false);
     this.column = 0;
@@ -476,13 +498,14 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     const max = this.effectiveMaxScrollback();
     const removeCount = Math.max(0, this.buffer.length - max);
     const removed = removeCount > 0 ? this.buffer.splice(0, removeCount) : [];
-    for (const line of removed) this.retainedCellCount -= line.cells.length;
-    let resourceTrimmed = false;
+    for (const line of removed) this.retainedCellCount -= line.text.length;
+    let resourceTrimmed = 0;
     while (this.retainedCellCount > MAX_RETAINED_CELLS && this.buffer.length > 1) {
       const line = this.buffer.shift();
-      if (line) this.retainedCellCount -= line.cells.length;
-      resourceTrimmed = true;
+      if (line) this.retainedCellCount -= line.text.length;
+      resourceTrimmed++;
     }
+    if (this.pendingOverflow) this.pendingOverflow.linesDropped += removed.length + resourceTrimmed;
     const trimmed = removed.length > 0 || resourceTrimmed;
     if (!trimmed) return;
     if (refresh) {
@@ -491,56 +514,75 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     }
     if (
       this.scrollTargetLineNumber !== null &&
-      !this.buffer.some((line) => line.number === this.scrollTargetLineNumber)
+      (this.scrollTargetLineNumber < (this.buffer[0]?.number ?? Infinity) || this.scrollTargetLineNumber > (this.buffer.at(-1)?.number ?? -Infinity))
     ) {
       this.scrollTargetLineNumber = this.buffer[0]?.number ?? null;
     }
     if (notifySearch) this.emitSearchChangeIfChanged(previousSearch);
   }
 
-  private putChar(ch: string, styles: AnsiStyles): void {
+  private pendingOverflow?: LyraTerminalOverflowDetail;
+
+  private putText(text: string, styles: AnsiStyles): void {
+    if (!text) return;
     if (this.buffer.length === 0) this.appendLine();
-    const line = this.buffer[this.buffer.length - 1]!; // safe: appendLine() above guarantees ≥1 line
-    if (this.column >= MAX_CELLS_PER_LINE) return;
-    if (this.column < line.cells.length) {
-      line.cells[this.column] = { char: ch, styles };
-    } else {
-      const before = line.cells.length;
-      while (line.cells.length < this.column && line.cells.length < MAX_CELLS_PER_LINE) {
-        line.cells.push({ char: ' ', styles: EMPTY_CELL_STYLES });
-      }
-      line.cells.push({ char: ch, styles });
-      this.retainedCellCount += line.cells.length - before;
+    const line = this.buffer.at(-1)!;
+    let accepted = 0;
+    let offset = 0;
+    while (offset < text.length && this.column + accepted < MAX_CELLS_PER_LINE) {
+      offset += text.codePointAt(offset)! > 0xffff ? 2 : 1;
+      accepted++;
     }
-    this.column = Math.min(MAX_CELLS_PER_LINE, this.column + 1);
+    if (offset < text.length && this.pendingOverflow) this.pendingOverflow.lineCharactersDropped += text.length - offset;
+    if (!accepted) return;
+    const before = line.text.length;
+    if (this.column > line.columns) {
+      const padding = ' '.repeat(this.column - line.columns);
+      replaceLineText(line, line.text.length, line.text.length, padding, EMPTY_CELL_STYLES);
+      line.columns = this.column;
+    }
+    const start = this.column === line.columns ? line.text.length : columnOffset(line.text, this.column);
+    const end = this.column + accepted >= line.columns ? line.text.length : columnOffset(line.text, this.column + accepted);
+    replaceLineText(line, start, end, text.slice(0, offset), styles);
+    line.columns = Math.max(line.columns, this.column + accepted);
+    this.retainedCellCount += line.text.length - before;
+    this.column += accepted;
   }
 
   private applyChunk(text: string, styles: AnsiStyles): void {
-    for (const ch of text) {
+    const controls = /[\n\r\b\t]/g;
+    let start = 0;
+    for (const match of text.matchAll(controls)) {
+      this.putText(text.slice(start, match.index), styles);
+      const ch = match[0];
       if (ch === '\n') this.appendLine();
       else if (ch === '\r') this.column = 0;
       else if (ch === '\b') this.column = Math.max(0, this.column - 1);
-      else if (ch === '\t') this.column = Math.min(MAX_CELLS_PER_LINE, (Math.floor(this.column / 8) + 1) * 8);
-      else this.putChar(ch, styles);
+      else this.column = Math.min(MAX_CELLS_PER_LINE, (Math.floor(this.column / 8) + 1) * 8);
+      start = match.index + 1;
     }
+    this.putText(text.slice(start), styles);
   }
 
   private eraseLine(mode: 0 | 1 | 2): void {
-    const line = this.buffer[this.buffer.length - 1];
+    const line = this.buffer.at(-1);
     if (!line) return;
+    const before = line.text.length;
     if (mode === 1) {
-      const end = Math.min(this.column + 1, line.cells.length);
-      for (let index = 0; index < end; index++) line.cells[index] = { char: ' ', styles: EMPTY_CELL_STYLES };
-      return;
+      const columns = Math.min(this.column + 1, line.columns);
+      replaceLineText(line, 0, columnOffset(line.text, columns), ' '.repeat(columns), EMPTY_CELL_STYLES);
+    } else {
+      const columns = mode === 2 ? 0 : Math.min(this.column, line.columns);
+      replaceLineText(line, columnOffset(line.text, columns), line.text.length, '', EMPTY_CELL_STYLES);
+      line.columns = columns;
     }
-    const start = mode === 2 ? 0 : Math.min(this.column, line.cells.length);
-    const removed = line.cells.length - start;
-    line.cells.length = start;
-    this.retainedCellCount -= removed;
+    this.retainedCellCount += line.text.length - before;
   }
 
   private writeInternal(raw: string, notifySearch = true): void {
     const previousSearch = this.searchState();
+    const overflow: LyraTerminalOverflowDetail = { truncated: true, inputCharactersDropped: Math.max(0, raw.length - MAX_INPUT_CHARACTERS), lineCharactersDropped: 0, linesDropped: 0 };
+    this.pendingOverflow = overflow;
     // A write only edits the cursor line and appends after it; earlier lines stay as they were.
     const startLine = this.buffer[this.buffer.length - 1];
     const startNumber = startLine ? startLine.number : this.lineSeq + 1;
@@ -571,12 +613,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       this.pendingAnnounceText += (this.pendingAnnounceText ? '\n' : '') + visibleAnnouncement;
       this.announcer.announce(this.pendingAnnounceText);
     }
+    this.pendingOverflow = undefined;
+    if (overflow.inputCharactersDropped || overflow.lineCharactersDropped || overflow.linesDropped) this.emit('lr-overflow', overflow);
     if (notifySearch) this.emitSearchChangeIfChanged(previousSearch);
   }
 
   /** Append streamed output. Escape sequences may split across chunks -- the shared parser buffers
    *  partial sequences internally up to its 4,096-character ceiling, then drops an unterminated
-   *  sequence and resumes from a clean boundary on the next write. */
+   *  sequence and resumes from a clean boundary on the next write. Input above 1,000,000 UTF-16
+   *  units and text above 20,000 scalar columns per line are omitted; lr-overflow reports loss. */
   write(chunk: string): void {
     this.commitPendingContent();
     this.writeInternal(typeof chunk === 'string' ? chunk : String(chunk));
@@ -819,7 +864,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       start = target.start;
     }
     if (start === undefined) return false;
-    const found = this.buffer.some((line) => line.number === start);
+    const found = start >= (this.buffer[0]?.number ?? Infinity) && start <= (this.buffer.at(-1)?.number ?? -Infinity);
     if (!found) return false;
     if (this.follow) {
       this.follow = false;
@@ -1070,8 +1115,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         aria-current=${highlightOwner ? (highlightOwner.id === this.activeHighlightId ? 'true' : 'false') : nothing}
         @click=${highlightOwner ? () => this.activateHighlight(highlightOwner) : nothing}
         @keydown=${highlightOwner ? (e: KeyboardEvent) => this.onLineKeyDown(e, highlightOwner) : nothing}
-      >${groupCells(line.cells).map(
-        (seg) => html`<span style=${styleMap(this.segmentStyle(seg.styles))}>${seg.text}</span>`,
+      >${line.runs.map(
+        (run) => html`<span style=${styleMap(this.segmentStyle(run.styles))}>${line.text.slice(run.start, run.end)}</span>`,
       )}</div>
     `;
   };
@@ -1090,14 +1135,47 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     };
   }
 
+  private matchSetMemo?: { source: SearchMatch[]; size: number; value: Set<number> };
+  private matchedLineNumbers(): Set<number> {
+    if (this.matchSetMemo?.source !== this.searchMatches || this.matchSetMemo.size !== this.searchMatches.length) {
+      this.matchSetMemo = { source: this.searchMatches, size: this.searchMatches.length, value: new Set(this.searchMatches.map(match => match.lineNumber)) };
+    }
+    return this.matchSetMemo.value;
+  }
+  private sourceMemo?: { lines: TerminalLine[]; source: { count: number; itemAt(index: number): TerminalLine; keyAt(index: number): number; indexOfKey(key: string | number): number } };
+  private lineSource(): NonNullable<LyraTerminal['sourceMemo']>['source'] {
+    const lines = this.lines;
+    if (this.sourceMemo?.lines !== lines) this.sourceMemo = { lines, source: { count: lines.length, itemAt: index => lines[index]!, keyAt: index => lines[index]!.number, indexOfKey: key => typeof key === 'number' ? key - (lines[0]?.number ?? 1) : -1 } };
+    return this.sourceMemo.source;
+  }
+  private rowRenderState?: { highlightByLine: Map<number, LyraHighlight>; highlightOwnerLines: Map<LyraHighlight, number>; matchedLineNumbers: Set<number>; activeMatchLineNumber: number | null };
+  private readonly renderTerminalLine = (item: unknown): TemplateResult => {
+    const state = this.rowRenderState!;
+    return this.renderLine(item as TerminalLine, state.highlightByLine, state.highlightOwnerLines, state.matchedLineNumbers, state.activeMatchLineNumber);
+  };
+  private explicitRowRefresh = false;
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.explicitRowRefresh = true;
+    super.requestUpdate(...args);
+  }
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const explicitRefresh = this.explicitRowRefresh;
+    this.explicitRowRefresh = false;
+    if (explicitRefresh || ['highlights', 'activeHighlightId', 'locale', 'strings', 'scrollTargetLineNumber'].some(key => changed.has(key))) {
+      this.renderRoot.querySelector<HTMLElement & { requestUpdate(): void }>('lr-virtual-list')?.requestUpdate();
+    }
+  }
+
   override render(): TemplateResult {
     const hasToolbar = !this.withoutCopyButton || this.downloadable;
     const ariaLabel = this.accessibleLabel || this.localize('terminalLabel');
     // Computed once per render, then consumed with O(1) lookups inside renderLine() for every
     // visible row -- rather than each row independently re-scanning `highlights`/`searchMatches`.
     const { perLine: highlightByLine, owners: highlightOwnerLines } = this.resolvedHighlightLines();
-    const matchedLineNumbers = new Set(this.searchMatches.map((m) => m.lineNumber));
+    const matchedLineNumbers = this.matchedLineNumbers();
     const activeMatchLineNumber = this.searchMatches[this.searchActiveIndex]?.lineNumber ?? null;
+    this.rowRenderState = { highlightByLine, highlightOwnerLines, matchedLineNumbers, activeMatchLineNumber };
     return html`
       <div part="base">
         <div part="announcer" class="sr-only" aria-hidden="true"></div>
@@ -1131,15 +1209,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         >
           <lr-virtual-list
             exportparts="line:line, line-interactive:line-interactive, line-highlight-accent:line-highlight-accent, line-highlight-success:line-highlight-success, line-highlight-warning:line-highlight-warning, line-highlight-danger:line-highlight-danger, line-highlight-neutral:line-highlight-neutral, line-match:line-match, line-active-match:line-active-match"
-            .items=${guard([this.lines], () => this.lines)}
-            .renderItem=${(item: unknown) =>
-              this.renderLine(
-                item as TerminalLine,
-                highlightByLine,
-                highlightOwnerLines,
-                matchedLineNumbers,
-                activeMatchLineNumber,
-              )}
+            .source=${this.lineSource()}
+            .renderItem=${this.renderTerminalLine}
             .keyFunction=${this.terminalLineKey}
             .activeItemId=${this.scrollTargetLineNumber ?? ''}
             row-height=${this.withoutWrap ? '24' : 'auto'}

@@ -96,7 +96,7 @@ export const ControlledGroupReplacement: Story = {
         @pointerdown=${(event: PointerEvent) => event.preventDefault()}
         @click=${(event: Event) => {
           const picker = (event.currentTarget as HTMLElement).parentElement?.querySelector('lr-emoji-picker');
-          if (picker) picker.groups = [{ key: 'smileys', label: 'Smileys & Emotion', emojis: [groups[0].emojis[0]] }];
+          if (picker) picker.groups = [{ key: 'smileys', label: 'Smileys & Emotion', emojis: [groups[0]!.emojis[0]!] }];
         }}
       >Keep only the first emoji</button>
       <lr-emoji-picker .groups=${groups}></lr-emoji-picker>
@@ -131,7 +131,7 @@ const largeGroups: EmojiPickerGroup[] = [
     key: 'all',
     label: 'A large set',
     emojis: Array.from({ length: 400 }, (_, index) => ({
-      emoji: pool[index % pool.length],
+      emoji: pool[index % pool.length]!,
       name: `sample emoji ${index + 1}`,
     })),
   },
@@ -209,4 +209,8 @@ export const CrossAxisContainment: Story = {
       <lr-emoji-picker .groups=${groups}></lr-emoji-picker>
     </div>
   `,
+};
+
+export const InputLimit: Story = {
+  render: () => html`<lr-emoji-picker label="Bounded catalog" .groups=${Array.from({length:65}, (_, i) => ({key:`group-${i}`,label:`Group ${i}`,emojis:[{emoji:'😀',name:'Smile'}]}))}></lr-emoji-picker>`,
 };

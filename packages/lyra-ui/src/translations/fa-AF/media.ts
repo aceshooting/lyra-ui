@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'تصویر {index} از {total}',
   playWithContext: 'پخش {name}',
   pauseWithContext: 'مکث {name}',
+  avPlayerWaveformUnavailable: 'معلومات شکل موج در دسترس نیست یا با این رسانه مطابقت ندارد.',
+  avPlayerTranscriptUnavailable: 'معلومات متن پیاده‌شده در دسترس نیست.',
   dropzoneReleaseToAdd: 'برای افزودن پرونده، آن را رها کنید.',
   dropzoneRejectedType: 'این نوع پرونده پذیرفته نمی‌شود.',
   attachmentAdd: 'افزودن پیوست',

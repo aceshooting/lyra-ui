@@ -62,6 +62,7 @@ const strings: LyraLocaleStrings = {
     many: '{count} команд',
     other: '{count} команды',
   },
+  commandPaletteInputLimit: 'Некоторые команды были опущены из-за достижения ограничения на входные данные.',
 };
 
 registerLyraLocale('ru', strings);

@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -27,7 +27,7 @@ import {
 } from '../tool-redaction.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_toolTimelineDetailsFor, LYRA_DEFAULT_toolTimelineInputLimit, LYRA_DEFAULT_toolTimelineLimit } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -226,8 +226,14 @@ function entrySourceKey(entry: CanonicalToolTimelineEntry): string | undefined {
   return entry.sourceKey?.trim() ? entry.sourceKey : undefined;
 }
 
+const entryIdentities = new WeakMap<CanonicalToolTimelineEntry, string>();
 function entryIdentity(entry: CanonicalToolTimelineEntry): string {
-  return JSON.stringify([entrySourceKey(entry) ?? null, entry.id]);
+  let key = entryIdentities.get(entry);
+  if (key === undefined) {
+    key = JSON.stringify([entrySourceKey(entry) ?? null, entry.id]);
+    entryIdentities.set(entry, key);
+  }
+  return key;
 }
 
 function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActivateDetail {
@@ -252,7 +258,7 @@ function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActiva
  * every timed entry, keeping its position relative to any other untimed entries stable (input
  * order is preserved among ties) — a still-pending call with no timestamp yet naturally lands at
  * the end without needing to be pre-sorted by the host.
- * Rendering is bounded to 500 unique source entries before sorting. Duplicate `(sourceKey,id)`
+ * The newest 10,000 source entries are admitted; rendering keeps the newest 500 unique entries before sorting, reserving open and reviewed entries. Duplicate `(sourceKey,id)`
  * identities use a deterministic first-wins policy. Entries already open or under approval
  * review are reserved inside that budget when new history would otherwise push them past the
  * ceiling, and a localized notice exposes truncation instead of silently hiding it. Foreign
@@ -360,6 +366,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     noData: LYRA_DEFAULT_noData,
     retry: LYRA_DEFAULT_retry,
     toolTimelineDetailsFor: LYRA_DEFAULT_toolTimelineDetailsFor,
+    toolTimelineInputLimit: LYRA_DEFAULT_toolTimelineInputLimit,
     toolTimelineLimit: LYRA_DEFAULT_toolTimelineLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -374,10 +381,14 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   /** Provider tool payloads can be opaque objects. Preserve row identity at the array boundary,
    * then admit only one descriptor-safe canonical record for every rendering path. */
   protected static override readonly identityCollectionProperties = Object.freeze(['entries']);
+  protected static readonly appendOrderedCollectionProperties = Object.freeze(['entries']);
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
-  /** The calls to render, in any order — see the class doc's ordering note. Entries with empty
+  /** The newest 10,000 calls are retained by identity, avoiding the shared 50,000-value deep-copy
+   * budget for opaque arguments/results. The newest 500 unique calls render, with open/review
+   * reservations. Replace the collection to publish source-record changes.
+   * The calls to render, in any order — see the class doc's ordering note. Entries with empty
    *  invocation ids are omitted; duplicate `(sourceKey, id)` identities normalize first-wins. */
   @property({ attribute: false }) entries: readonly ToolTimelineEntry[] = [];
 
@@ -396,6 +407,35 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   private projectedEntriesCache: CanonicalToolTimelineEntry[] = [];
   private sortedEntriesCache: CanonicalToolTimelineEntry[] = [];
   private projectionTruncated = false;
+  private canonicalSource?: readonly ToolTimelineEntry[];
+  private readonly canonicalModels = new WeakMap<readonly ToolTimelineEntry[], Map<string, CanonicalToolTimelineEntry>>();
+  private canonicalByKey = new Map<string, CanonicalToolTimelineEntry>();
+  private inputPreviouslyTruncated = false;
+
+  private canonicalEntries(): Map<string, CanonicalToolTimelineEntry> {
+    if (this.canonicalSource !== this.entries) {
+      this.canonicalSource = this.entries;
+      const cached = this.canonicalModels.get(this.entries);
+      if (cached) return (this.canonicalByKey = cached);
+      this.canonicalByKey = new Map();
+      for (const value of this.entries) {
+        const entry = projectToolTimelineEntry(value);
+        if (!entry) continue;
+        const key = entryIdentity(entry);
+        if (!this.canonicalByKey.has(key)) this.canonicalByKey.set(key, entry);
+      }
+      this.canonicalModels.set(this.entries, this.canonicalByKey);
+    }
+    return this.canonicalByKey;
+  }
+
+  private inputLimitText(): string {
+    const truncation = publicCollectionTruncation(this, 'entries');
+    const number = getNumberFormat(this.effectiveLocale);
+    return truncation ? this.localize('toolTimelineInputLimit', undefined, {
+      count: number.format(truncation.retained), total: number.format(truncation.source),
+    }) : '';
+  }
   private redactionCache = new WeakMap<CanonicalToolTimelineEntry, RedactedToolDetail>();
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
@@ -453,42 +493,38 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
         count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_ENTRIES),
       }));
     }
+    const inputTruncated = publicCollectionTruncation(this, 'entries') !== undefined;
+    if (this.limitAnnouncementInitialized && inputTruncated && !this.inputPreviouslyTruncated) {
+      this.announcements.announcePolite(this.inputLimitText());
+    }
+    this.inputPreviouslyTruncated = inputTruncated;
     this.limitAnnouncementInitialized = true;
     this.previouslyTruncated = this.projectionTruncated;
   }
 
   private rebuildProjection(): void {
-    const entries = Array.isArray(this.entries) ? this.entries : [];
-    const projected: CanonicalToolTimelineEntry[] = [];
-    const projectedIndex = new Map<string, number>();
+    const canonical = this.canonicalEntries();
+    const entries = [...canonical.values()];
+    const projected = entries.slice(-MAX_RENDERED_ENTRIES);
+    const projectedIndex = new Map(projected.map((entry, index) => [entryIdentity(entry), index]));
     const reservedKeys = new Set(this.openedEntryIds);
     if (this.reviewingEntryKey !== undefined) reservedKeys.add(this.reviewingEntryKey);
     const displacedReserved = new Map<string, CanonicalToolTimelineEntry>();
-    const seen = new Set<string>();
-    for (const sourceEntry of entries) {
-      const entry = projectToolTimelineEntry(sourceEntry);
-      if (!entry) continue;
-      const key = entryIdentity(entry);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      if (projected.length < MAX_RENDERED_ENTRIES) {
-        projectedIndex.set(key, projected.length);
-        projected.push(entry);
-      } else if (reservedKeys.has(key)) {
-        displacedReserved.set(key, entry);
-      }
+    for (const key of reservedKeys) {
+      const entry = canonical.get(key);
+      if (entry && !projectedIndex.has(key)) displacedReserved.set(key, entry);
     }
     for (const [key, entry] of displacedReserved) {
       if (projectedIndex.has(key)) continue;
-      let replacement = projected.length - 1;
-      while (replacement >= 0 && reservedKeys.has(entryIdentity(projected[replacement]!))) replacement--;
-      if (replacement < 0) break;
+      let replacement = 0;
+      while (replacement < projected.length && reservedKeys.has(entryIdentity(projected[replacement]!))) replacement++;
+      if (replacement === projected.length) break;
       projectedIndex.delete(entryIdentity(projected[replacement]!));
       projected[replacement] = entry;
       projectedIndex.set(key, replacement);
     }
     this.projectedEntriesCache = projected;
-    this.projectionTruncated = seen.size > projected.length;
+    this.projectionTruncated = canonical.size > projected.length;
     this.sortedEntriesCache = projected
       .map((entry, index) => ({ entry, index }))
       .sort((a, b) => {
@@ -537,14 +573,8 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
    *  time control returns, and `this.projectedEntriesCache` is not rebuilt until the next `willUpdate`
    *  pass, so it cannot be trusted here either. */
   private entryStillNeedsApproval(key: string): boolean {
-    const entries = Array.isArray(this.entries) ? this.entries : [];
-    for (const sourceEntry of entries) {
-      const projected = projectToolTimelineEntry(sourceEntry);
-      if (projected !== undefined && entryIdentity(projected) === key) {
-        return projected.needsApproval === true && projected.approved === undefined;
-      }
-    }
-    return false;
+    const entry = this.canonicalEntries().get(key);
+    return entry?.needsApproval === true && entry.approved === undefined;
   }
 
   private decisionDispatching = false;
@@ -749,6 +779,8 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
         : html`<ol part="base" role="list" aria-label=${overallSemanticLabel(this) ?? nothing}>
             ${repeat(entries, entryIdentity, (entry) => this.entryTemplate(entry, placeholder))}
           </ol>`}
+      ${publicCollectionTruncation(this, 'entries')
+        ? html`<p part="limit" role="note">${this.inputLimitText()}</p>` : nothing}
       ${this.projectionTruncated
         ? html`<p part="limit" role="note">${this.localize('toolTimelineLimit', undefined, {
             count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_ENTRIES),

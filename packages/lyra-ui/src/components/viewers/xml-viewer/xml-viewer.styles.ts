@@ -2,6 +2,10 @@ import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
+  .source-shell { min-inline-size: 0; }
+  .source-shell .source-tree { block-size: var(--lr-xml-viewer-max-height, var(--lr-size-20rem)); max-block-size: var(--lr-xml-viewer-max-height, var(--lr-size-20rem)); }
+  .source-shell [part~='source-list'] { block-size: 100%; }
+
   :host {
     display: block;
     min-inline-size: 0;

@@ -25,10 +25,11 @@ import { cascadeUpdateComplete } from './update-cascade.js';
 import { styles } from './tree-item.styles.js';
 import {
   fromInteractiveDescendant,
+  treeItemMotionPreference,
   treeItemOwnerContext,
   type TreeItemOwnerContext,
 } from './tree-owner-controller.js';
-import { TREE_MAX_RENDER_DEPTH, TREE_MAX_RENDER_NODES, type LyraTreeNodeData } from './tree-types.js';
+import { TREE_MAX_RENDER_DEPTH, type LyraTreeNodeData } from './tree-types.js';
 /** Internal slot nested `<lr-tree-item>` children are moved into, so the default slot can stay the
  *  label the way `wa-tree-item`/`sl-tree-item` markup expects. Assigned by this component. */
 const CHILDREN_SLOT = 'children';
@@ -574,6 +575,9 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.hasUpdated && changed.size > 0 && [...changed.keys()].every(key =>
+      key === 'selected' || key === 'expanded' || key === 'disabled' || key === '_loading' || key === '_collapsing',
+    )) this.labelTextObserver.preserveBindingForNextUpdate();
     // Runs before render so a nested child is never briefly painted inside [part="label"].
     this.assignChildSlots();
     if (this.hasUpdated) this.sampleLightDomState();
@@ -618,7 +622,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     this.setAttribute('aria-disabled', String(this.isDisabled));
     if (this._loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
-    this.tabIndex = !this.isDisabled && this.nodeId === context.activeId ? 0 : -1;
+    this.tabIndex = !this.isDisabled && this.nodeId === (context.activeNodeId ? context.activeNodeId() : context.activeId) ? 0 : -1;
     setCustomState(this.itemInternals, 'disabled', this.isDisabled);
     setCustomState(this.itemInternals, 'expanded', this.expanded);
     setCustomState(this.itemInternals, 'indeterminate', context.indeterminate);
@@ -680,6 +684,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
   private scheduleAfterEvent(expanded: boolean, generation: number): void {
     const owner = this.ownerDocument.defaultView;
     if (!owner) return;
+    const reducedMotion = treeItemMotionPreference(this);
     void this.updateComplete.then(() => {
       if (
         generation !== this.lifecycleGeneration ||
@@ -690,7 +695,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
         return;
       }
       const animationNode = this.renderRoot.querySelector<HTMLElement>('[part="children"]');
-      const duration = this.motionDuration(expanded, owner);
+      const duration = this.motionDuration(expanded, owner, reducedMotion);
       const finish = (): void => {
         this.cancelLifecycleTimer();
         if (
@@ -719,7 +724,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
         this.emit('lr-after-expand', { item: this });
       };
 
-      const computedAnimation = animationNode ? owner.getComputedStyle(animationNode).animationName : 'none';
+      const computedAnimation = animationNode && duration > 0 ? owner.getComputedStyle(animationNode).animationName : 'none';
       if (!animationNode || duration === 0 || computedAnimation === 'none') {
         finish();
         return;
@@ -748,8 +753,8 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     timer.owner.clearTimeout(timer.handle);
   }
 
-  private motionDuration(expanded: boolean, owner: Window): number {
-    if (prefersReducedMotion(this)) return 0;
+  private motionDuration(expanded: boolean, owner: Window, reduced = prefersReducedMotion(this)): number {
+    if (reduced) return 0;
     const property = expanded ? '--show-duration' : '--hide-duration';
     const ownStyle = owner.getComputedStyle(this);
     const raw = ownStyle.getPropertyValue(property).trim() || ownStyle.getPropertyValue('--lr-duration-base').trim();
@@ -791,7 +796,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
     const result = await super.getUpdateComplete();
     const context = this.ownerContext;
     if (context.ownsSelection && context.depth < TREE_MAX_RENDER_DEPTH) {
-      await cascadeUpdateComplete(this.childItems().slice(0, TREE_MAX_RENDER_NODES));
+      await cascadeUpdateComplete(this.childItems());
     }
     return result;
   }

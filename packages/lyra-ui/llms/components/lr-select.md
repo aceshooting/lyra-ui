@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 34 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,7 +33,8 @@ value/form/validity path as a programmatic value write and does not emit `input`
 **Selecting options in browser tests.** The light-DOM `<lr-option>` children supply option data;
 the clickable rows are rendered inside `<lr-select>`'s shadow-root listbox as
 `[part="option"][role="option"]`, each with a `data-value` matching its represented value. Rows
-mount the first time the listbox opens, so a closed select has none. Opening makes the committed
+mount when the listbox opens and are removed after it closes, so a settled closed select has none.
+Opening makes the committed
 option (the first committed one in `multiple`) the active row and scrolls it into view; with
 nothing committed no row is active until an arrow key.
 Click the trigger to open the listbox, then target a rendered row. For example, in Playwright:
@@ -56,17 +57,19 @@ Playwright's locators enter the open shadow root. A light-DOM `lr-option[value="
 clickable box in this picker. If multiple options share a value, `data-value` matches every
 occurrence; narrow by accessible name or assert their order before choosing an occurrence.
 
-Mounted `option.selected` assignments update the picker value and form submission immediately,
-including deselection and equal-value writes. Duplicate-valued options retain their individual
-occurrence identities. These programmatic writes emit no user input/change event.
+Mounted `option.selected` assignments update the option immediately, including deselection and
+equal-value writes. The owning select reconciles its value and form submission once in the next
+microtask; await one microtask before reading settled parent state. Duplicate-valued options retain
+their individual occurrence identities. These writes emit no user input/change event. Assign the
+parent value array for a bulk replacement.
 
 Host `aria-describedby` resolves external guidance onto the trigger before internal value, error,
 and hint guidance. References track missing targets, replacement, removal/reinsertion, reconnect,
 and adoption. Removing `label`, `hint`, `help-text`, or `error-text` safely omits the content
 without changing native `null` property readback; explicit empty strings remain empty.
 
-There is no typing-to-filter and no `filter`/`source`/`empty-text`/`max-render` surface — reach for
-`<lr-combobox>` instead whenever any of those apply. Everything else a closed list needs is here:
+There is no typing-to-filter and no `filter`/`source`/`empty-text` surface — reach for
+`<lr-combobox>` whenever those apply. The popup has a bounded `max-render` surface. Other closed-list features include
 `multiple`, `max-options-visible`, `with-clear`, `getTag`, `placement`, `appearance`, and `pill`.
 
 The trigger and its overlaid multi-select tag row accept constrained allocation. Long selected
@@ -208,6 +211,12 @@ the normal combobox trigger continues to expose `aria-required`.
   `multiple` mode before the rest collapse behind a localized "+N" chip. `0` removes the cap
   entirely. Sanitized to a finite, non-negative integer: a fractional value truncates, a negative
   one clamps to `0` (i.e. uncapped), and a non-finite one falls back to `3`
+- `maxRender: number = 200` (attribute `max-render`) — ordinary popup prefix size, retaining
+  selected and active options within an absolute 1,000-row ceiling. The active option has priority;
+  oversized selections remain committed even when every selected row cannot mount. Zero omits
+  the ordinary prefix while retaining selected/active rows; non-finite values use 200. Rows keep
+  source order. `option-overflow` reports omitted rows, which cannot be reached by scrolling;
+  use a filterable combobox or async source for larger searchable catalogs
 - `withClear: boolean = false` (attribute `with-clear`, reflected) — renders a clear button while
   anything is selected (and nothing at all while the selection is empty). It sits in the trigger's
   inline-end band as a **sibling** of the trigger rather than a child of it — same nesting reason as
@@ -360,7 +369,8 @@ following option rows; options with an empty `group` get no heading or group wra
 `lr-combobox`'s identical parts), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set),
 `option-badge` (the localized "not in catalog" badge on a synthetic unmatched-value row, rendered
-only while `with-unknown-option` is set), `expand-icon`, `error`, and
+only while `with-unknown-option` is set), `option-overflow` (the localized count of omitted popup
+rows), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
 **TypeScript:** `LyraSelect<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the

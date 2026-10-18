@@ -3,6 +3,9 @@ import { css } from 'lit';
 import { dataStateRetryStyles } from '../../../internal/data-state-renderer.styles.js';
 
 export const styles = css`
+  [part='source-pagination'] { display: block; margin-block-start: var(--lr-space-s); }
+  [part='source-status'] { margin: 0; padding: var(--lr-space-s); color: var(--lr-color-text-quiet); }
+
   :host {
     display: flex;
     flex-direction: column;
@@ -303,4 +306,12 @@ export const styles = css`
     font-size: var(--lr-font-size-2xs);
   }
   ${dataStateRetryStyles}
+
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
 `;

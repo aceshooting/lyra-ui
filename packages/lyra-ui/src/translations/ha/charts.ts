@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Ingantattun samfurori {validCount} a dukkan rarrabawar; {belowCount} suna ƙasa da iyakar ƙasa ta rukunan tazara da aka nuna, kuma {aboveCount} suna sama da iyakar sama; samfurori marasa inganci {invalidCount}.',
+  histogramDistributionRange: 'Zangon samfurorin da aka lura: {min} zuwa {max}.',
   chartCategory: 'Rukuni',
   chartTotal: 'Jimla',
   chartAxisTotal: 'Jimlar {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, zangon da’ira {radius}',
   chartLabeledPoint: 'Alama {label}: {coordinates}',
-  chartTrendIncreasing: 'ƙaruwa',
-  chartTrendDecreasing: 'raguwa',
-  chartTrendFlat: 'tsayawa cak',
-  chartSummary: '{label}: ƙimomi {count}, daga {min} zuwa {max}, yanayin {trend}',
   chartSeriesNoData: '{label}: babu bayanai',
   chartSummaryWithData: 'Jadawalin {type}. {summaries}.',
   chartSummaryEmpty: 'Jadawalin {type} marar bayanai.',
-  chartSummarySeparator: '. ',
   chartData: 'Bayanan jadawali',
   chartRenderUnavailable: 'Ba a samun damar nuna jadawali.',
+  chartPreparedSummaryZoom: 'Zuƙowa yana nuna taƙaitaccen bayanin da aka shirya; ba a samun ƙarin dalla-dalla ta amfani da fihirisa.',
+  chartSpatialSummary: 'Cikakken tushe: ɗigo {count}, x {minX} zuwa {maxX}, y {minY} zuwa {maxY}. Kallo: ɗigo {matchedCount}, x {viewMinX} zuwa {viewMaxX}, y {viewMinY} zuwa {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Radius a cikakken tushe: {min} zuwa {max}.',
+  chartSpatialDensityLegend: 'Yawa ya haɗa da dukkan jerin; bayyanar jerin tana shafar ɗigon da aka nuna a sama kawai.',
+  chartSpatialPoint: '{series}: {id}, matsayi a tushe {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Yankin yawa: ɗigo {count}, x {minX} zuwa {maxX}, y {minY} zuwa {maxY}.',
+  chartSpatialHidden: ' (an ɓoye jerin)',
   chartDataSampled: 'Jadawalin da teburin bayanan da aka samar suna nuna samfurin bayanai har zuwa 1,000. Samar da teburin bayananka don samun duk bayanan jadawalin.',
   chartPlotSampled: 'Jadawalin yana nuna samfurin bayanai har zuwa 1,000; teburin bayanai yana lissafa duk bayanan.',
   chartZoomUnavailable: 'Ba a samun zuƙowa, amma har yanzu ana iya amfani da babban jadawalin.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} cikin {total})',
   chartMissingLibrary: 'Wannan ɓangaren yana buƙatar a girka fakitin zaɓi na "chart.js" don nuna jadawalai.',
   boxPlotMissingLibrary: 'Wannan ɓangaren yana buƙatar a girka fakitin zaɓin jadawalin akwatin don nuna jadawalin akwatin.',
+  chartInputLimit: 'An bar wasu bayanan zane saboda an kai iyakar shigarwa. Bayar da ƙaramin rukunin bayanai ko wanda aka taƙaita tun farko don nuna ƙimomin da aka bari.',
+  histogramInputLimit: 'Sabbin samfurori 10,000 kawai ake riƙewa. Bayar da adadin da aka riga aka haɗa zuwa rukunan tazara ga lr-chart don nuna rarrabawa mafi girma.',
 };
 
 registerLyraLocale('ha', strings);

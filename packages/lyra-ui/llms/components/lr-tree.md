@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-tree-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -39,7 +39,55 @@ with `badges: [{ text: String(value) }]`. The former item-controller fields (`ac
 `depth`, `setSize`, `posInSet`) and context setters were never consumer state; they are now private
 owner context maintained by `<lr-tree>`.
 
-**Two child models are accepted, and they never interleave.**
+**Provider hierarchy:** `treeSource: TreeSource | undefined = undefined` (attribute: false) is an
+identity-owned full-source route. `TreeSource` is
+`LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery>` from
+`@aceshooting/lyra-ui/data-sources.js`. A defined source takes precedence over `data` and authored
+items; invalid defined input shows a localized source error instead of restoring legacy rows.
+Setting `undefined` restores the current authored-over-data precedence below. Source descriptors
+are never assigned to `data`, and author-written items are retained without being rendered in
+source mode. Reassign the source, including the same object, or call a keyless `requestUpdate()`
+after revision or provider-state changes. Locale changes and reconnect/adoption refresh the
+projection; unrelated named display updates do not.
+
+The provider's `project(request)` handles `reset`, `toggle`, `reveal` and `select` actions and returns
+an immutable `{ state, total, rows, focusIndex? }` projection. Requests include revision, locale,
+abort signal, previous opaque `state` (initially `null`), and the fixed query
+`{ search: '', hiddenKinds: [] }`. `total` counts all logical nodes, including collapsed nodes;
+`rows.count` counts the complete currently visible preorder. Both are nonnegative safe integers,
+with `rows.count <= total`. The summary reports those logical counts, not mounted rows. A million
+nodes can remain in host-owned storage without a library-wide flattening or ancestor index.
+
+`rows` is a `LyraHierarchyView<LyraHierarchyRow<LyraTreeNodeData>>`: either indexed
+`itemAt`/`keyAt`/`indexOfKey`, or asynchronous `read` plus required `indexOfKey`. There is no scan
+fallback for key lookup. Each row supplies its global unique `key`, matching `value.id`, plus
+`parentKey`, one-based `level`/`position`, exact sibling `setSize`, `childCount`, `expanded`,
+`selected`, and optional
+`disabled`/`selectionState`. Hierarchy metadata owns those states; nested `value.children` is never
+read. Keys must be nonblank strings of at most 65,536 UTF-16 units and are preserved verbatim.
+The opaque state token must be a nonempty string of at most 65,536 units. Display values use own
+data properties, at most 100 badges and 65,536 aggregate display-text units per row; malformed or
+oversized rows fail visibly without compacting logical indices. The provider owns global key
+uniqueness and immutable snapshot consistency; validation covers the bounded admitted window.
+
+The source view mounts at most 301 rows, retaining four 100-row pages plus at most one focused
+ready row (401 total). Range requests contain at most 100 rows, with at most two physically pending
+reads. One projection call runs at a time with only the latest replacement queued. Loading/error
+rows are not selectable records; localized retry preserves their logical position. Empty is a
+separate valid state. Providers should honor abort signals; revoked results cannot commit, but an
+ignored abort does not release a physical request until it settles.
+
+Source keyboard navigation uses the full visible count for Home/End, direct provider lookup for
+parents/reveal, and RTL-aware branch arrows. Disabled-row navigation examines at most 32 candidates
+and keeps current focus if none can be resolved. Logical ARIA depth/sibling positions remain exact
+while visual indentation clamps at 32 levels. A bounded roving row or root entry stop remains
+available as rows scroll; an off-window focused row is retained within the same mount bound.
+The provider owns selection/cascade/partial state: `single` selects an item, `leaf` permits only
+leaves, `multiple` toggles an item or a branch's `subtree`, and `leaf-multiple` toggles leaves only.
+These adapters expose exploration and selection, with no component source search/copy controls.
+`maxNodes` governs the legacy data model, not the source total or its fixed window bounds.
+
+**With `treeSource` undefined, two legacy child models are accepted and never interleave.**
 
 - **Declarative** (mirrors the upstream markup, so a tag rename is the whole migration): write
   nested `<lr-tree-item>` elements as light-DOM children, each carrying its own
@@ -56,6 +104,7 @@ owner context maintained by `<lr-tree>`.
 
 A tree containing any author-written `<lr-tree-item>` child is read purely as the declarative model
 and `data` is ignored. The empty state renders only when neither model has any items.
+Author-written light-DOM items have no total-node cap; traversal still stops at 64 descendant levels.
 
 Both child models use the same selection, roving-focus, checkbox-cascade, icon, and lazy-loading
 engine. The upstream lifecycle names are normalized to the library-wide `lr-` prefix;
@@ -80,10 +129,10 @@ deeply-nested node's own shadow root still reaches it).
   after changes (rebinding the same array is a no-op). A refresh is diffed by id: a node whose
   fields (including an icon template from the same literal with equal values) and children are
   unchanged keeps its previous object, so its row neither re-renders nor re-seeds element state.
-  Normalization accepts at most 1,000 valid nodes and 64 descendant levels, and lazily
+  Normalization accepts at most `maxNodes` valid nodes (default 1,000) and 64 descendant levels, and lazily
   inspects at most 10,000 root/child array positions globally in depth-first order. It never
   invokes caller accessors and exposes `dataTruncated = true` when malformed or over-budget input
-  was omitted or the inspected-position ceiling was reached. When more than 1,000 valid nodes are
+  was omitted or the inspected-position ceiling was reached. When more than `maxNodes` valid nodes are
   supplied, the localized `limit` part reports the retained-node cap; malformed input alone does
   not show that cap notice. Collapsed branches do not instantiate descendants; disclosure projects only normalized
   children while `aria-setsize` preserves the declared sibling count. `LyraTreeNodeData` is
@@ -100,6 +149,9 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
   removed by later object refreshes; removing the author attribute restores the current data name.
   `id` is the event, roving-focus, reconciliation, and reorder identity and must be unique across
   the complete reachable hierarchy; malformed rows, blank IDs and later duplicates are omitted as described above
+- `maxNodes: number = 1000` (attribute `max-nodes`) — the object-data node budget, normalized to
+  `1..10000`; unset or non-finite values restore 1,000. Set it before assigning `data`. Raising it
+  does not recover excluded input automatically: reassign the original source after raising the cap.
 - `selection: 'single'|'multiple'|'leaf'|'leaf-multiple' = 'single'` — self-managed selection for
   both child models. `single` selects one item; `leaf` selects one loaded leaf; `multiple` displays
   checkboxes and cascades through enabled descendants; `leaf-multiple` applies that cascade only
@@ -114,7 +166,9 @@ LyraVariant; readonly label?: string }`. `badges` renders tone-mapped chips in o
 
 **Read-only getters:** `selectedItems: readonly LyraTreeItem[]` returns a new frozen snapshot of
 selected item elements in document order, including derived fully-selected parents in either
-multiple mode. `dataTruncated: boolean` reports bounded/malformed normalization as described above.
+multiple mode. It returns an empty frozen array in source mode; it never enumerates unmounted
+provider selection. `dataTruncated: boolean` reports legacy bounded/malformed normalization as
+described above.
 
 **Keyboard:** ArrowDown/ArrowUp move the roving focus to the next/previous _visible_ node.
 ArrowRight expands a collapsed node (focus stays put; a second ArrowRight then steps into the first
@@ -148,10 +202,22 @@ roving stop to the next reachable row instead of stranding it, and the state is 
   `selectedItems` and the multiple-mode cascade are unchanged and a modal that inerts the page can
   never silently wipe a tree's selection.
 
-**Methods:** `expandAll(): Promise<void>`, `collapseAll(): Promise<void>` (both iterative, bounded,
-and resolved only after the affected rendered item cascade settles).
+**Methods:** `revealSourceKey(key: string): Promise<boolean>` asks the source to reveal a global
+key and focuses its current visible row; it resolves `false` for absent, invalid, obsolete or
+unset-source requests. Source `reveal` responses need a valid `focusIndex` to resolve successfully.
+`expandAll(): Promise<void>`, `collapseAll(): Promise<void>` (both iterative, bounded
+by hierarchy depth, and resolved only after the affected rendered item cascade settles). Items at
+each depth expand together, preserving their individual lifecycle events, motion durations and lazy
+loading behavior.
 
-**Events:** `lr-selection-change` (`detail: { selection }`, where both the detail and selection
+Both bulk methods are no-ops in source mode, and `reorderable` has no source-mode effect. Expansion
+and selection use provider projection actions rather than legacy item/lazy lifecycle events.
+
+**Events:** source mode emits `lr-source-selection-change` only after a current user selection
+projection commits: frozen readonly `detail: { key: string; selected: boolean;
+scope: 'item' | 'subtree'; state: string }`. It reports the accepted global-key intent and new
+opaque state, without constructing a DOM selection array. The following events are legacy-only:
+`lr-selection-change` (`detail: { selection }`, where both the detail and selection
 snapshot are frozen; fired for user selection and when a `data` refresh removes or re-seeds selected
 rows) and `lr-reorder` (`detail: { nodeId, parentNodeId, fromIndex, toIndex }`, only while `reorderable`).
 Like every other event here it is a **request**: `data` is host-owned and is never mutated by this
@@ -175,7 +241,11 @@ icons; an item-level slot with the same name takes precedence.
 
 **CSS parts:** `base` and `tree` are aliases on the same `role="tree"` root; `empty` is the
 empty-state message shown when neither child model has any items; `limit` is the localized
-retained-node cap notice when more than 1,000 valid nodes are supplied.
+retained-node cap notice when valid object-data nodes exceed `maxNodes`.
+Source mode adds `source-list`, `source-row`, `source-toggle` (branch and retry buttons),
+`source-label`, `source-status`, and `source-error`, retaining the `base`/`tree` aliases. Its tree
+root owns the accessible name, busy state and multiselectability; flat source rows own their
+treeitem metadata. Source rows are not `<lr-tree-item>` instances and do not use its item slots.
 
 **Themeable custom properties:** shared tokens `--lr-space-xs`/`-s`, `--lr-color-brand-quiet`,
 `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-text`,
@@ -187,7 +257,8 @@ since the host itself is the focusable `role="treeitem"`), plus `--indent-size`,
 
 ### `lr-tree-item`
 
-One row of the tree, in either child model. `role="treeitem"` (plus
+One row of the tree, in either legacy child model; provider source mode renders its own bounded
+flat rows instead. `role="treeitem"` (plus
 `aria-expanded`/`aria-level`/`aria-setsize`/`aria-posinset`/`aria-selected` and the roving
 `tabindex`, driven by `<lr-tree>`) live on the _host_ element itself, not an internal row `<div>` —
 so this node's own nested children (whether rendered in its own shadow root or projected from the
@@ -364,13 +435,14 @@ The declarative model — the same shape a renamed `wa-tree`/`sl-tree` subtree l
 - `lr-tree`'s `getUpdateComplete()` cascades through owner-controlled descendants
   `<lr-tree-item>`'s own `updateComplete` (see `update-cascade.ts`) so that code awaiting the
   tree's `updateComplete` does not run before a reachable nested node has finished rendering its
-  roving `tabIndex`. The same 64-level/1,000-node work bounds apply to context, focus, selection,
-  and disclosure walks.
+  roving `tabIndex`. Context, selection and disclosure walks retain the 64-level depth guard;
+  object data also retains its configured node cap. Moving focus patches the previous and next
+  item without rebuilding the hierarchy.
 - row enrichment is intentionally structured rather than an unrestricted renderer: use `icon`,
   `label`, `description`, `badges`, and `accessibleLabel`. This keeps the host as the single
   `role="treeitem"` interaction target and preserves the APG keyboard model.
-- `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `LyraTreeNodeData[]` is derived
-  from `nodes` on every render and keyed by filesystem path, an order it does not own.
+- `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `LyraTreeNodeData[]` is
+  derived from `nodes` and keyed by filesystem path, an order it does not own.
 - in the declarative model, appending a child while the parent is collapsed still registers: a
   `childList` MutationObserver assigns the `children` slot and requests an update, because
   `slotchange` alone cannot see a child added to a slot that is not currently rendered. Editing a

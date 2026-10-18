@@ -75,6 +75,7 @@ const PALETTE_CLUSTER_COUNT = 8;
  * whole array (spanning the full input, not just its first 1,000 entries) and shows a localized
  * "showing N of M" notice via `[part="limit"]`. */
 export const AboveRenderCap: Story = {
+  parameters: { docs: { description: { story: 'Index sampling spans source order and does not guarantee spatial extrema or every cluster. Inputs above the snapshot limit resolve the first valid occurrence of each sampled ID in cancelable chunks before replacing the completed view.' } } },
   name: 'Above render cap (1,500 points)',
   render: () =>
     html`<lr-embedding-explorer
@@ -86,4 +87,26 @@ export const AboveRenderCap: Story = {
         cluster: index % PALETTE_CLUSTER_COUNT,
       }))}
     ></lr-embedding-explorer>`,
+};
+
+export const RaisedRenderSample: Story = {
+  parameters: { docs: { description: { story: 'max-rendered-points raises the evenly sampled SVG point budget from 1,000 to at most 10,000. The selected point remains available even when outside the sample; the notice discloses sampling.' } } },
+  render: () => html`<lr-embedding-explorer label="Larger embedding sample" max-rendered-points="2000" .points=${Array.from({length:3000}, (_, index) => ({id:`point-${index}`,x:Math.sin(index)*index,y:Math.cos(index)*index}))}></lr-embedding-explorer>`,
+};
+
+/** A host index supplies complete density bins without allocating the logical point population. */
+export const SpatialSource: Story = {
+  render: () => html`<lr-embedding-explorer selected-point-id="999999" .source=${{
+    revision: 'example', count: 1000000,
+    bounds: { minX: 0, maxX: 999999, minY: 0, maxY: 1 },
+    query: () => ({ matchedCount: 1000000,
+      bins: [{ bounds: { minX: 0, maxX: 999999, minY: 0, maxY: 1 }, count: 1000000 }],
+      points: [{ id: '0', sourceIndex: 0, x: 0, y: 0, label: 'First observation' }],
+    }),
+    getPoint: (id: string) => {
+      const index = Number(id);
+      return Number.isSafeInteger(index) && index >= 0 && index < 1000000
+        ? { id, sourceIndex: index, x: index, y: index % 2, label: `Observation ${index}` } : null;
+    },
+  }}></lr-embedding-explorer>`,
 };

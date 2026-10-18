@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
-- **Themeable via** 28 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,7 +18,14 @@
 
 A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d"` for an
 orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
-list of all graph items. The 3D and list views require no optional peer.
+list of all admitted graph items. The 3D and list views require no optional peer.
+
+Spatial rendering and layered layout load only when selected. After changing `view` to a spatial
+view or selecting `layout="layered"`, await `updateComplete` to include that module's loading;
+the existing asynchronous d3 data-readiness contract is unchanged. Node and edge snapshots retain
+the existing 10,000-entry and 50,000-nested-value safety ceilings, so richer records can reach the
+nested-value ceiling earlier. The visible limit notice reports retained and source counts. Narrow
+or aggregate data before binding when the complete graph exceeds admission.
 
 **Spatial view:** `view: LyraGraphView = '2d'` accepts `'2d' | '3d' | 'list'`. Invalid runtime
 values normalize to `'2d'`. The default retains the existing 2D SVG/canvas behavior and adds no
@@ -34,7 +41,7 @@ placement keyed by node id, with genuine z separation. Inputs are never moved or
 `renderer`, `layout`, `chargeStrength`, `edgeDistance` and `seed` have no effect: there is no force
 solver, settling animation, auto-rotation or inertia. Rendering uses original perspective math
 and a Canvas 2D raster surface, with near-plane clipping, depth-ordered node/edge segments and
-frontmost picking. Fixed edge subdivision approximates crossings; this is not a mesh renderer or
+frontmost picking. Adaptive edge subdivision approximates crossings; this is not a mesh renderer or
 a guarantee of perfect translucent intersections. Use modest graphs, typically low hundreds;
 the 2D canvas capacity claim below does not apply to 3D.
 
@@ -188,8 +195,8 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
 - `layout: 'force' | 'layered' = 'force'` — `'force'` runs the `d3-force` simulation described
   throughout this section, unchanged. `'layered'` swaps in a deterministic Sugiyama-lite layered
   layout instead (longest-path layering, barycenter crossing reduction, cycle-safe — back edges are
-  reversed only for layering, never mutating caller data): positions are computed synchronously
-  with no settle animation, sized from each node's own radius and spaced by `edgeDistance` (the
+  reversed only for layering, never mutating caller data): after the layout module loads, positions
+  are computed synchronously with no settle animation, sized from each node's own radius and spaced by `edgeDistance` (the
   layer gap) and a fixed 12px in-layer gap. Node drag is disabled in this mode (dragging would fight
   a computed layout) and `chargeStrength` becomes a documented no-op; pan/zoom, keyboard roving,
   `focusNode()`/`fit()`, hulls, edge labels, and `hiddenTypes` filtering all work identically to
@@ -210,6 +217,9 @@ boolean; color?: string; dash?: number[] }` (source/target are node ids). `direc
   only, not the visible marks. Every data-driven and token-derived canvas color is resolved through
   the live computed CSS cascade before painting, so CSS-wide keywords such as `inherit`/`unset`,
   custom-property references, and modern color functions reach Canvas as concrete colors.
+  Prefer this renderer for large admitted graphs. Visual painting is culled to the viewport, and
+  force simulation pauses while the graph is offscreen. SVG cursor movement retains the existing
+  item markup; it does not rebuild every node and link template.
 
 **Methods:** `focusNode(id, options?: { zoom? })` and `fit(options?: { padding?: number })` control the
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
@@ -278,8 +288,9 @@ behind a drawn `[part="link-label"]` (via `paint-order: stroke`).
 `--lr-graph-hull-fill` (default `var(--lr-color-brand)`) — community hull fill/stroke color
 (overridden inline per hull from `LyraGraphCommunity.color`).
 `--lr-graph-hull-opacity` (default `0.12`) — hull element opacity (composites fill+stroke as one).
-Under `renderer="canvas"` these five are read from computed style at paint time (there are no
-per-node elements to inherit them), so they must be set on or above the `<lr-graph>` host itself.
+Under `renderer="canvas"` these five are resolved from computed style and cached until relevant
+inputs change (there are no per-node elements to inherit them), so they must be set on or above
+the `<lr-graph>` host itself.
 The canvas repaints when inherited theme inputs change (including ancestor class/data attributes,
 adopted stylesheets, and media-query theme transitions); a host does not need to reassign `nodes`
 to make new token values visible.

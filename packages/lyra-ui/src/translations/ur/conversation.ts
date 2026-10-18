@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'ابھی کوئی گفتگو نہیں',
   agentWorkspaceLabel: 'ایجنٹ ورک اسپیس',
+  agentWorkspaceInputLimit: '{collection}: {total} اندراجات میں سے صرف {count} محفوظ کیے جاتے ہیں۔',
   agentWorkspaceConversation: 'گفتگو',
   agentWorkspaceDetails: 'اجرا کی تفصیلات',
   agentWorkspaceRun: 'ایجنٹ کا اجرا',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'یہ حصہ دوبارہ آزمائیں',
   promptQueueLabel: 'قطار میں پرومپٹس',
   promptQueueEmpty: 'قطار میں کوئی پرومپٹ نہیں',
+  promptQueueInputLimit: 'ان پٹ کی حد تک پہنچنے کی وجہ سے قطار میں موجود کچھ پرامپٹس یا منسلکات چھوڑ دیے گئے ہیں۔',
+  promptQueueAttachmentLimit: 'محفوظ کیے گئے {total} منسلکات میں سے {shown} دکھائے جا رہے ہیں۔',
   promptQueueSendNow: 'ابھی بھیجیں',
   selectionToolbarLabel: 'انتخاب کے اعمال',
   selectionAsk: 'پوچھیں',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} ٹوکن',
     other: '{count} ٹوکن',
   },
+  threadListInputLimit: 'ان پٹ کی حد تک پہنچنے کی وجہ سے گفتگو کے کچھ سلسلے چھوڑ دیے گئے ہیں۔',
+  promptInputInputLimit: 'ان پٹ کی حد تک پہنچنے کی وجہ سے کچھ تجاویز یا کیٹلاگ اندراجات چھوڑ دیے گئے ہیں۔',
+  transcriptFeedInputLimit: '{total} اندراجات میں سے صرف تازہ ترین {count} محفوظ رکھے جاتے ہیں۔',
+  codeBlockHighlightLimit: 'طویل کوڈ سنٹیکس ہائی لائٹنگ کے بغیر دکھایا جاتا ہے۔',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

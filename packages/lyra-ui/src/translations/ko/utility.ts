@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '{count}개 추가 제안',
   },
+  mentionInputLimit: '처음 10,000개의 멘션 후보만 사용할 수 있습니다.',
+  diffViewHighlightLimit: '긴 코드는 구문 강조 없이 표시됩니다.',
 };
 
 registerLyraLocale('ko', strings);

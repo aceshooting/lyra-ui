@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'ಇನ್ನೂ ಸಂಭಾಷಣೆಗಳಿಲ್ಲ',
   agentWorkspaceLabel: 'ಏಜೆಂಟ್ ಕಾರ್ಯಸ್ಥಳ',
+  agentWorkspaceInputLimit: '{collection}: {total} ನಮೂದುಗಳಲ್ಲಿ {count} ಮಾತ್ರ ಉಳಿಸಿಕೊಳ್ಳಲಾಗುತ್ತದೆ.',
   agentWorkspaceConversation: 'ಸಂಭಾಷಣೆ',
   agentWorkspaceDetails: 'ರನ್ ವಿವರಗಳು',
   agentWorkspaceRun: 'ಏಜೆಂಟ್ ರನ್',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'ಈ ಭಾಗವನ್ನು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ',
   promptQueueLabel: 'ಸರದಿಯಲ್ಲಿರುವ ಪ್ರಾಂಪ್ಟ್‌ಗಳು',
   promptQueueEmpty: 'ಯಾವುದೇ ಪ್ರಾಂಪ್ಟ್‌ಗಳು ಸರದಿಯಲ್ಲಿಲ್ಲ',
+  promptQueueInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಕೆಲವು ಅಂಶಗಳನ್ನು ಬಿಡಲಾಗಿದೆ: ಸರದಿಯಲ್ಲಿರುವ ಪ್ರಾಂಪ್ಟ್‌ಗಳು ಅಥವಾ ಲಗತ್ತುಗಳು.',
+  promptQueueAttachmentLimit: 'ಉಳಿಸಿಕೊಂಡ {total} ಲಗತ್ತುಗಳಲ್ಲಿ {shown} ತೋರಿಸಲಾಗುತ್ತಿದೆ.',
   promptQueueSendNow: 'ಈಗ ಕಳುಹಿಸಿ',
   selectionToolbarLabel: 'ಆಯ್ಕೆ ಕ್ರಿಯೆಗಳು',
   selectionAsk: 'ಕೇಳಿ',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} ಟೋಕನ್',
     other: '{count} ಟೋಕನ್‌ಗಳು',
   },
+  threadListInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಕೆಲವು ಅಂಶಗಳನ್ನು ಬಿಡಲಾಗಿದೆ: ಸಂಭಾಷಣೆ ಥ್ರೆಡ್‌ಗಳು.',
+  promptInputInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಕೆಲವು ಅಂಶಗಳನ್ನು ಬಿಡಲಾಗಿದೆ: ಸಲಹೆಗಳು ಅಥವಾ ಕ್ಯಾಟಲಾಗ್ ನಮೂದುಗಳು.',
+  transcriptFeedInputLimit: '{total} ನಮೂದುಗಳಲ್ಲಿ ಅತ್ಯಂತ ಹೊಸ {count} ನಮೂದುಗಳನ್ನು ಮಾತ್ರ ಉಳಿಸಿಕೊಳ್ಳಲಾಗುತ್ತದೆ.',
+  codeBlockHighlightLimit: 'ಉದ್ದವಾದ ಕೋಡ್ ಅನ್ನು ಸಿಂಟ್ಯಾಕ್ಸ್ ಹೈಲೈಟಿಂಗ್ ಇಲ್ಲದೆ ತೋರಿಸಲಾಗುತ್ತದೆ.',
 };
 
 registerLyraLocale('kn', strings);

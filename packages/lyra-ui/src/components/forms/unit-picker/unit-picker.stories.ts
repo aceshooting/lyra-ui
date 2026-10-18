@@ -83,3 +83,8 @@ export const RightToLeft: StoryObj = {
       .units=${['meter', 'kilometer', 'foot', 'mile']}></lr-unit-picker>
   </div>`,
 };
+
+export const InputLimit: StoryObj = {
+  parameters: { docs: { description: { story: 'Catalog input loss is disclosed separately from the popup row window, including when repeated rows consume the inspected prefix.' } } },
+  render: () => html`<lr-unit-picker label="Bounded catalog" .units=${Array.from({ length: 1025 }, () => 'meter')}></lr-unit-picker>`,
+};

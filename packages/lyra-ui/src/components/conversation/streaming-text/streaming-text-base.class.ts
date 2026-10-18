@@ -4,10 +4,11 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { finiteDuration } from '../../../internal/numbers.js';
-import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
+import type { ShikiLanguageSource } from '../code-block/shiki-types.js';
 import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
+import { streamingTailText } from '../markdown/markdown-streaming-tail.js';
 import { styles } from './streaming-text.styles.js';
-import { APPEND_MONOTONIC_MARKDOWN_PATTERNS, BOUNDARY_SENSITIVE_MARKDOWN_PATTERNS } from './markdown-detection.js';
+import { IncrementalMarkdownDetector } from './markdown-detection.js';
 export { looksLikeMarkdown } from './markdown-detection.js';
 
 const DEFAULT_COALESCE_MS = 50;
@@ -65,7 +66,7 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
    *  explicit language-grammar bundle scoping shiki's build output to just those grammars. Unset
    *  leaves the composed element's own default untouched: the full variant falls back to its
    *  ~200-language dynamic-import table, the core variant renders unmatched fences as plain text. */
-  @property({ attribute: false }) languages?: Readonly<Record<string, ShikiLanguageInput>>;
+  @property({ attribute: false }) languages?: Readonly<Record<string, ShikiLanguageSource>>;
 
   /** Forwarded verbatim to the composed Markdown element's own `tabSize` -- the tab-stop width
    *  used to expand tabs in leading indentation before parsing. `4` (the default) matches the
@@ -135,7 +136,7 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   // result that can't possibly have changed since the last scan.
   private lastScannedContent?: string;
   private lastScannedResult = false;
-  private lastMonotonicResult = false;
+  private readonly markdownDetector = new IncrementalMarkdownDetector();
 
   private readonly coalescer: Announcer;
 
@@ -200,20 +201,8 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
       this.coalescer.announce(this.content, { force: true });
     }
     if (changed.has('displayedContent') && this.displayedContent !== this.lastScannedContent) {
-      const previous = this.lastScannedContent;
       this.lastScannedContent = this.displayedContent;
-      const appended = previous !== undefined && this.displayedContent.startsWith(previous);
-      // Only matches whose truth cannot be invalidated by appended text may
-      // short-circuit an append. Boundary-sensitive signals are rescanned;
-      // for example `_x_` is Markdown but `_x_a` is ordinary text.
-      if (!(appended && this.lastMonotonicResult)) {
-        this.lastMonotonicResult = APPEND_MONOTONIC_MARKDOWN_PATTERNS.some((pattern) =>
-          pattern.test(this.displayedContent),
-        );
-        this.lastScannedResult =
-          this.lastMonotonicResult ||
-          BOUNDARY_SENSITIVE_MARKDOWN_PATTERNS.some((pattern) => pattern.test(this.displayedContent));
-      }
+      this.lastScannedResult = this.markdownDetector.update(this.displayedContent);
     }
   }
 
@@ -270,7 +259,7 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
     return html`<div part="base"
       >${this.effectiveMarkdown
         ? html`${this.renderMarkdown()}${cursor}`
-        : html`<span class="plain">${this.displayedContent}</span> ${cursor}`}</div
+        : html`<span class="plain">${streamingTailText(this.displayedContent)}</span> ${cursor}`}</div
     >`;
   }
 }

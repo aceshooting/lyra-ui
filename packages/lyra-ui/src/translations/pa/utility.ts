@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} ਹੋਰ ਸੁਝਾਅ',
     other: '{count} ਹੋਰ ਸੁਝਾਅ',
   },
+  mentionInputLimit: 'ਜ਼ਿਕਰ ਲਈ ਸਿਰਫ਼ ਪਹਿਲੇ 10,000 ਉਮੀਦਵਾਰ ਉਪਲਬਧ ਹਨ।',
+  diffViewHighlightLimit: 'ਲੰਮਾ ਕੋਡ ਸਿੰਟੈਕਸ ਹਾਈਲਾਈਟਿੰਗ ਤੋਂ ਬਿਨਾਂ ਦਿਖਾਇਆ ਜਾਂਦਾ ਹੈ।',
 };
 
 registerLyraLocale('pa', strings);

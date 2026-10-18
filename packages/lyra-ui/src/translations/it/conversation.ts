@@ -83,6 +83,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Ancora nessuna conversazione',
   agentWorkspaceLabel: 'Area di lavoro dell’agente',
+  agentWorkspaceInputLimit: '{collection}: Vengono conservate solo {count} voci su {total}.',
   agentWorkspaceConversation: 'Conversazione',
   agentWorkspaceDetails: 'Dettagli esecuzione',
   agentWorkspaceRun: 'Esecuzione agente',
@@ -100,6 +101,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Riprova questa parte',
   promptQueueLabel: 'Prompt in coda',
   promptQueueEmpty: 'Nessun prompt in coda',
+  promptQueueInputLimit: 'È stato raggiunto un limite di input. Elementi omessi: prompt in coda o allegati.',
+  promptQueueAttachmentLimit: 'Sono visualizzati {shown} dei {total} allegati conservati.',
   promptQueueSendNow: 'Invia ora',
   selectionToolbarLabel: 'Azioni sulla selezione',
   selectionAsk: 'Chiedi',
@@ -166,6 +169,10 @@ const strings: LyraLocaleStrings = {
     many: '{count} token',
     other: '{count} token',
   },
+  threadListInputLimit: 'È stato raggiunto un limite di input. Elementi omessi: thread di conversazione.',
+  promptInputInputLimit: 'È stato raggiunto un limite di input. Elementi omessi: suggerimenti o voci del catalogo.',
+  transcriptFeedInputLimit: 'Vengono conservate solo le {count} voci più recenti su {total}.',
+  codeBlockHighlightLimit: 'Il codice lungo viene mostrato senza evidenziazione della sintassi.',
 };
 
 registerLyraLocale('it', strings);

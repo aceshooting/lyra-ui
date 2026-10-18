@@ -492,22 +492,96 @@ Removing `query` clears matches while retaining null property readback. Before a
 `searchPrevious()` selects the final match; later next/previous navigation wraps. Navigation may
 reopen the selected match’s ancestors while unrelated manual collapse remains intact.
 
+**Complete provider hierarchy:** `treeSource: JsonViewerTreeSource | undefined = undefined`
+(attribute: false) supplies a complete logical hierarchy without flattening it or copying it into
+`data`. A defined provider takes display precedence; invalid defined input shows a localized source
+error. Setting `undefined` restores the current `data`. `maxNodes` and `expandDepth` govern only
+the legacy `data` route; `maxHeight` also constrains the source scroller.
+
+```ts
+import type { JsonViewerTreeSource } from
+  "@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js";
+import type {
+  LyraHierarchyProjection, LyraHierarchyRow, LyraInspectionNode,
+  LyraSourceSearchRequest, LyraSourceSearchResult,
+} from "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`JsonViewerTreeSource` is `LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>`.
+Its immutable `revision` is a nonempty string or finite number identifying provider state. `project(request)` receives revision, locale,
+abort signal, previous opaque `state` (initially `null`), `{ search: query, hiddenKinds: [] }`, and
+an action such as `reset`, `toggle` or `reveal`. It returns `{ state, total, rows, focusIndex? }`:
+`total` counts every logical node, including collapsed nodes; `rows.count` is the complete visible
+preorder, with `rows.count <= total`. Counts are safe nonnegative integers. The nonempty opaque
+state token is at most 65,536 UTF-16 units. `rows` supports indexed `itemAt`/`keyAt`/`indexOfKey`,
+or asynchronous `read` with required `indexOfKey`; there is no full-tree lookup scan.
+
+Each `LyraHierarchyRow<LyraInspectionNode>` supplies a globally unique nonblank `key`, `parentKey`,
+one-based logical `level`/`position`, exact sibling `setSize`, `childCount`, `expanded`, `selected`,
+and optional `disabled`/`selectionState`. Its closed own-data `value` supplies string `name`,
+string `path` equal to the row key, optional string `value`, and a `kind` from
+`'object' | 'array' | 'scalar' | 'element' | 'attribute' | 'text' | 'comment' | 'processing-instruction'`.
+Keys and each inspection string are at most 65,536 UTF-16 units. The admitted row cache, staging,
+one separately retained focused row and opaque state share a 2,000,000-unit payload budget;
+oversized rows/pages fail visibly instead of clipping a result. The source view mounts at most
+301 rows and caches four 100-row pages, plus at most one focused row. Range reads request at most
+100 rows with at most two physical reads pending; projection calls serialize with only the latest
+replacement queued. Global key uniqueness and immutable snapshot consistency remain provider-owned.
+
+`revealSourceKey(key: string): Promise<boolean>` asks the provider to open ancestors and focus its
+exact returned row. It resolves `false` for absent, failed, canceled or obsolete targets. Compact
+keys support deeply nested sources without allocating a full ancestor path; logical ARIA depth
+and sibling positions remain exact while visual indentation clamps at 32 levels. Provider
+projections own expansion. Reassign even the same source object, or call a keyless
+`requestUpdate()`, after changing its revision/state. Locale changes, reconnect and adoption refresh
+the projection; named presentation updates reuse accepted data. Replacement, refresh, query changes
+and lifecycle cancellation revoke older search, reveal and copy effects. Providers should honor
+abort signals; ignored aborts retain their physical request permits until settlement.
+
+Source `query`/`runSearch()` uses optional provider `search({ revision, locale, signal, query,
+limit })`, which returns `{ hits: [{ key }], total, exhaustive }`. Search covers the complete
+logical hierarchy, counts matching nodes rather than separate key/value occurrences, and retains
+at most 10,000 hits regardless of `maxNodes`; query length is at most 4,096 UTF-16 units. Search-hit
+keys share a separate 2,000,000-unit budget. `exhaustive` means every global hit was returned;
+`total` is the known global total or `null`. `lr-search-change` retains
+`{ query, matchCount, matchCountExact, activeIndex }`; unavailable, partial, invalid and over-budget
+results never claim exactness. The initial cursor is `-1`. `searchNext()`/`searchPrevious()` reveal
+retained hit keys without rerunning global search. `search-status` discloses unavailable/partial
+search, and clearing the query clears its hits and cursor.
+
+Source copy controls require both `copyable` and a callable provider `copy`. The request includes
+revision, locale, abort signal, `key`, `scope` and `maxBytes`: scalar rows use `'node'`, containers
+`'subtree'`, and the toolbar uses `'document'` with `key: null`. The provider must return complete
+text within 25 MiB UTF-8; the component never serializes loaded rows as a substitute. Provider or
+byte-budget failures show localized copy failure without clipboard events. A current platform
+write retains the frozen `lr-copy`/`lr-copy-error` outcome and clipboard-only `lr-error` contract.
+Source-only parts are `source-list`, `source-row`, `source-toggle`, `source-label`, `source-status`,
+`source-error`, and `search-status`; `base`, `tree`, `toolbar`, `key`, `value`, and `copy-button`
+also apply. The flat source rows own logical treeitem semantics.
+
 **Properties:**
 
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
+- `maxNodes: number = 5000` (attribute `max-nodes`) — the shared admission, search and render
+  node budget for `data`; effective range 1–50,000. Finite fractions truncate and values clamp to that range;
+  non-finite inputs use 5,000. Changing it re-admits the retained original `data`, so raising the
+  budget does not require reassigning `data`. The depth ceiling remains 100, and the existing
+  localized `limit` part discloses traversal truncation.
 - `expandDepth?: number` (attribute `expand-depth`) — nodes at or beyond this nesting depth
   (root = `0`) start collapsed, so only the levels above it start expanded; omitted/`undefined`
   means nothing auto-collapses
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
-  viewer scrolls internally past this height instead of growing the page. Values that do not parse
+  viewer scrolls internally past this height instead of growing the page. Source mode otherwise
+  uses a `var(--lr-size-20rem)` height ceiling. Values that do not parse
   as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   `--lr-json-viewer-max-height` in control
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
-- `query: string = ''` — case-insensitive substring match against keys/values; matches are
-  highlighted and their ancestors auto-expanded
+- `query: string = ''` — with `treeSource` unset, case-insensitive substring match against
+  keys/values; matches are highlighted and their ancestors auto-expanded. Source matching is
+  provider-owned as described above
 
-**Methods:** `runSearch(query)` sets the declarative `query` property and awaits the recompute,
+**Search methods:** `runSearch(query)` sets the declarative `query` property and awaits the recompute,
 resolving the match count. `searchNext()`/`searchPrevious()`
 advance/step back a match cursor
 (wrapping), reveal that selected match even when one of its ancestors was explicitly collapsed,
@@ -515,7 +589,7 @@ mark it as the active `aria-current` result, announce its position, and scroll i
 they resolve `false` when there are no matches. `clearSearch()` resets `query` to `''`, clearing all
 matches and the cursor.
 
-**Events:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
+**Events with `treeSource` unset:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
 the top-level copy button or a per-node one only after the owning browsing context's clipboard write
 fulfills. `lr-error` (no detail) and `lr-copy-error` (`detail: LyraClipboardWriteFailure`) fire when
 serialization or clipboard writing fails; the detailed frozen outcome carries `ok: false`, the
@@ -530,7 +604,7 @@ fired whenever the search query, match count, or active-match cursor changes, fr
 property write. `matchCountExact` is `false` when the bounded traversal only proves a lower bound;
 the rendered count uses an “at least” prefix in the same case.
 
-**Slots:** none — the tree is rendered entirely from `data`.
+**Slots:** none — the tree is rendered from `data` or `treeSource`.
 
 **CSS parts:** `base` (root scroll container, respects `max-height`), `toolbar` (wrapper around the
 top-level copy button, only rendered when `copyable`), `tree` (wrapper around the rendered node
@@ -917,7 +991,9 @@ preserving null readback; an explicitly empty query remains empty.
   plain `<textarea>` or single-line text `<input type="text"|"search">` gets caret-precise
   positioning; any other element anchors the whole popup under that element's own box.
 - `items: readonly Readonly<LyraMentionItem>[] = []` (attribute: false) — the full candidate set,
-  pre-`query`-filtering. Assignment takes a shallow frozen snapshot. Runtime rows without a string
+  pre-`query`-filtering. Assignment admits the first 10,000 array positions into a shallow frozen
+  snapshot; `items` readback exposes that admitted prefix. Additional input is omitted with a
+  localized notice in `part="limit"`. Runtime rows without a string
   `label` remain in that diagnostic snapshot but are omitted from filtering/rendering before the
   built-in or custom predicate runs, so one malformed provider row cannot take down valid siblings.
   An entry's `disabled` marks that row non-actionable: `aria-disabled="true"` replaces its
@@ -929,7 +1005,8 @@ preserving null readback; an explicitly empty query remains empty.
   (see `filter`).
 - `open: boolean = false` (reflected)
 - `filter: LyraMentionFilter | null = null` (attribute: false) — overrides the built-in
-  case-insensitive `label`/`description` substring match entirely.
+  case-insensitive `label`/`description` substring match entirely. Replacing `items` refreshes
+  candidate search text; an explicit `requestUpdate()` refreshes a filter whose closure changed.
 - `emptyText?: string` (attribute `empty-text`) — `undefined` uses localized `noMatches`; every
   supplied string, including `''` and `'No matches'`, is caller-owned
 - `label?: string` — accessible name for the `role="listbox"` popup. `undefined` uses localized
@@ -941,7 +1018,8 @@ preserving null readback; an explicitly empty query remains empty.
   filtered by `query` via `filter` (or the built-in default). An empty `query` skips the query
   predicate but still omits malformed-label rows. This getter retains every match; the popup
   renders and navigates the first 50, then adds a localized, non-option count of remaining matches
-  as the listbox description.
+  as the listbox description. This visible-match limit is separate from source admission. Closed
+  popups contain no suggestion rows after their exit transition settles.
 - `activeDescendantId: string | null` — read-only getter; the `id` of the currently-highlighted
   internal row, or `null` while closed or when `filteredItems` is empty. Useful for diagnostics and
   same-tree consumers; do not copy it to an external control as a string IDREF.
@@ -989,7 +1067,8 @@ renders `open="false"` on first paint)
 
 **CSS parts:** `listbox`, `option`, `option-icon` (when `icon` is set), `option-label`,
 `option-description` (when `description` is set), `empty`, `more-results` (the localized count
-shown when more suggestions match than the list renders).
+shown when more suggestions match than the list renders), and `limit` (localized notice when
+source admission omits candidates).
 
 **Themeable custom properties:** `--lr-mention-popover-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of the hovered or `[data-active]`
@@ -1169,15 +1248,19 @@ over each rendered line's own text, one match per line ordered by that same op i
   has a matching entry in `languages` — there is deliberately no default full-table
   `lr-code-block`-style fallback, so this component never reaches shiki's ~200-language
   dynamic-import table.
-- `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — grammar definitions this
-  instance can highlight, same shape as `lr-code-block-core`'s own `languages`.
+- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — resolved grammar
+  definitions or lazy loader functions, same shape as `lr-code-block-core`'s own `languages`.
+  Only the requested loader runs; unused loader entries stay unresolved.
 - `contextLines: number | undefined` (attribute: `context-lines`) — keeps this many unchanged
   lines around each change and collapses longer unchanged runs into a localized fold marker. The
   default `undefined` shows every line; negative and non-finite values also disable folding.
 - `maxLines: number = 5000` (attribute `max-lines`) — maximum logical lines accepted on either
   side. Larger input renders the localized `diffViewTooLarge` fallback without computing or
   highlighting the diff. `Infinity` relaxes this line-count ceiling, but the fixed aggregate
-  character and comparison-work ceilings remain in force.
+  character and comparison-work ceilings remain in force. Every value, including `Infinity`,
+  also enforces a hard 10,000-diff-operation render ceiling: at most 10,000 unified lines or
+  20,000 split cells, including empty cells. Larger diffs show the localized `limit` fallback.
+  Offscreen rows use `content-visibility: auto` to defer paint.
 - `anchorKinds: readonly LyraAnchorKind[] = ['line-range']` (this viewer's supported
   `LyraAnchor.kind` values for the shared anchor-target contract).
 
@@ -1186,6 +1269,12 @@ unreadable field, non-enumerable field, or malformed proxy branch is skipped wit
 later valid grammar from being used; grammar values themselves remain opaque to the component.
 Non-enumerable names do not consume language slots, but every inspected name counts toward the
 20,000 structural ceiling.
+
+Syntax highlighting accepts up to 8,192 UTF-16 code units on each input, inclusive. If either side
+exceeds that ceiling, both sides use plain text with a localized `[part="limit"]` notice when
+`language` is set. This highlighting fallback preserves admitted source text; the separate input,
+comparison, and diff-operation limits still apply. The fine-grained highlighter path does not
+import the default full-language-table loader.
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
 each rendered line's own text, ordered by `line-range` op index (empty/whitespace query behaves like
@@ -1227,8 +1316,8 @@ marker — plus `data-match`/`data-active-match` while a search result covers it
 technology exposes the change), `line-highlight-action` (the focusable button a resolved
 `highlights` entry adds to the line it first covers; emits `lr-highlight-activate`), `copy-button`
 (the copy affordance, only rendered while `copyable`; it stays pinned at the top while the view
-scrolls), `limit` (the localized over-`maxLines`
-fallback), `side` (one column in `layout="split"`, `data-side="old"|"new"`), `anchor-live-region`
+scrolls), `limit` (the localized input/render-limit fallback or syntax-highlighting ceiling
+notice), `side` (one column in `layout="split"`, `data-side="old"|"new"`), `anchor-live-region`
 (an aria-hidden, non-live shadow mirror of the latest anchor-jump message; the spoken copy is
 appended to the shared document-level polite sink only while the viewer and its composed ancestors
 are exposed to the accessibility tree).

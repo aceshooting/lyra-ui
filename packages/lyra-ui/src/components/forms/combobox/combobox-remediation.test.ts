@@ -31,7 +31,7 @@ for (const tag of ['lr-combobox', 'lr-select'] as const) {
   };
 
   for (const multiple of [false, true]) {
-    it(`${tag} immediately consumes mounted ${multiple ? 'multiple' : 'single'} selected writes silently and keeps reset defaults`, async () => {
+    it(`${tag} microtask-batches mounted ${multiple ? 'multiple' : 'single'} selected writes silently and keeps reset defaults`, async () => {
       const { form, el, a, b } = await mount(multiple);
       const events: string[] = [];
       for (const name of ['input', 'change', 'lr-input', 'lr-change', 'lr-option-change']) {
@@ -43,6 +43,7 @@ for (const tag of ['lr-combobox', 'lr-select'] as const) {
         expect(event.detail).to.equal(null);
       });
       b.selected = true;
+      await Promise.resolve();
       expect(childChanges).to.equal(1);
       expect(el.value).to.deep.equal(multiple ? ['a', 'b'] : 'b');
       expect(new FormData(form).getAll('pick')).to.deep.equal(multiple ? ['a', 'b'] : ['b']);
@@ -54,9 +55,11 @@ for (const tag of ['lr-combobox', 'lr-select'] as const) {
       await settle(el);
       expect(el.value).to.deep.equal(multiple ? ['a', 'b'] : 'b');
       b.selected = false;
+      await Promise.resolve();
       expect(el.value).to.deep.equal(multiple ? ['a'] : '');
       expect(new FormData(form).getAll('pick')).to.deep.equal(multiple ? ['a'] : ['']);
       a.selected = false;
+      await Promise.resolve();
       expect(el.value).to.deep.equal(multiple ? [] : '');
       await settle(el);
       expect(events).to.deep.equal([]);
@@ -69,6 +72,7 @@ for (const tag of ['lr-combobox', 'lr-select'] as const) {
     it(`${tag} treats an equal mounted selected write as a live edit in ${multiple ? 'multiple' : 'single'} mode`, async () => {
       const { el, a, b, form } = await mount(multiple);
       a.selected = true;
+      await Promise.resolve();
       b.defaultSelected = true;
       await settle(el);
       expect(el.value).to.deep.equal(multiple ? ['a'] : 'a');
@@ -83,6 +87,7 @@ for (const tag of ['lr-combobox', 'lr-select'] as const) {
     a.defaultSelected = false;
     await settle(el);
     b.selected = true;
+    await Promise.resolve();
     expect(el.value).to.equal('b');
     form.reset();
     await settle(el);
@@ -178,14 +183,18 @@ it('select keeps exact duplicate occurrences for mounted selected writes', async
   const [a, b] = Array.from(el.querySelectorAll<LyraOption>('lr-option'));
   if (!a || !b) throw new Error('Expected duplicate options');
   b.selected = true;
+  await Promise.resolve();
   expect(el.value).to.deep.equal(['same', 'same']);
   expect(new FormData(form).getAll('pick')).to.deep.equal(['same', 'same']);
   a.selected = false;
+  await Promise.resolve();
   expect(el.selectedOptions.map((option) => option.label)).to.deep.equal(['Second']);
   el.multiple = false;
   a.selected = true;
+  await Promise.resolve();
   expect(el.selectedOptions.map((option) => option.label)).to.deep.equal(['First']);
   b.selected = false;
+  await Promise.resolve();
   expect(el.value).to.equal('same');
 });
 
@@ -265,6 +274,7 @@ it('combobox refreshes inert availability and skips unavailable source proxies',
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   expect(el.value).to.equal('b');
+  await el.show();
   a.inert = false;
   await waitUntil(() => row().getAttribute('aria-disabled') === 'false');
   a.inert = true;
@@ -318,12 +328,15 @@ it('combobox exposes the exact mounted duplicate occurrence in single mode', asy
   const [a, b] = Array.from(el.querySelectorAll<LyraOption>('lr-option'));
   if (!a || !b) throw new Error('Expected duplicate source options');
   b.selected = true;
+  await Promise.resolve();
   await el.show();
   expect([a.selected, b.selected]).to.deep.equal([false, true]);
   expect(Array.from(el.shadowRoot!.querySelectorAll('[part="option"]')).map((row) => row.getAttribute('aria-selected'))).to.deep.equal(['false', 'true']);
   a.selected = false;
+  await Promise.resolve();
   expect(el.value).to.equal('same');
   b.selected = false;
+  await Promise.resolve();
   expect(el.value).to.equal('');
 });
 
@@ -378,11 +391,14 @@ for (const tag of ['lr-combobox', 'lr-select']) {
       el.value = multiple ? ['custom', 'a'] : 'custom';
       const b = el.querySelectorAll<LyraOption>('lr-option')[1]!;
       b.selected = false;
+      await Promise.resolve();
       expect(el.value).to.deep.equal(multiple ? ['custom', 'a'] : 'custom');
       expect(new FormData(form).getAll('pick')).to.deep.equal(multiple ? ['custom', 'a'] : ['custom']);
       b.selected = true;
+      await Promise.resolve();
       expect(el.value).to.deep.equal(multiple ? ['custom', 'a', 'b'] : 'b');
       b.selected = false;
+      await Promise.resolve();
       expect(el.value).to.deep.equal(multiple ? ['custom', 'a'] : '');
       expect(new FormData(form).getAll('pick')).to.deep.equal(multiple ? ['custom', 'a'] : ['']);
       await settle(el);
@@ -400,15 +416,19 @@ it('select retains unmatched values and exact duplicate occurrences while editin
   const [a, b] = Array.from(el.querySelectorAll<LyraOption>('lr-option'));
   if (!a || !b) throw new Error('Expected duplicate source options');
   b.selected = true;
+  await Promise.resolve();
   expect(el.value).to.deep.equal(['custom', 'same', 'same']);
   expect(el.selectedOptions.map((option) => option.label)).to.deep.equal(['First', 'Second']);
   a.selected = false;
+  await Promise.resolve();
   expect(el.value).to.deep.equal(['custom', 'same']);
   expect(el.selectedOptions.map((option) => option.label)).to.deep.equal(['Second']);
   b.selected = true;
+  await Promise.resolve();
   expect(el.value).to.deep.equal(['custom', 'same']);
   expect(el.selectedOptions.map((option) => option.label)).to.deep.equal(['Second']);
   b.selected = false;
+  await Promise.resolve();
   expect(el.value).to.deep.equal(['custom']);
 });
 
@@ -428,6 +448,7 @@ for (const multiple of [false, true]) {
       }
       first.value = 'renamed';
       first.selected = selected;
+      await Promise.resolve();
       const expected = multiple
         ? selected ? ['custom', 'renamed', 'b'] : ['custom', 'b']
         : selected ? 'renamed' : '';

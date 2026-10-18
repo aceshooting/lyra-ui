@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,6 +41,10 @@ remain nonnegative; placement budgets, font-size limits, and the omitted-word po
 
 **Properties:**
 
+- `preparedWords: LyraPreparedWordCloud | null = null` (property only) — whole-catalog weighted
+  summary, taking precedence over `words`. Invalid non-null input shows a localized `error`;
+  setting it to `null` restores the current legacy word snapshot without changing the `words`
+  getter. See the prepared-catalog contract below.
 - `words: readonly WordCloudWord[] = []` (attribute: false) — readonly `{ text: string, weight:
 number, color?: string, group?: string }` snapshots; malformed/hostile records are skipped while
   later valid records survive. `weight` is normalized once to a finite nonnegative value used by
@@ -84,13 +88,70 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection.
 
+**Prepared weighted catalogs:** `LyraPreparedWordCloud` supplies `revision`, `counts`
+(`sourceCount`, `validCount`, `invalidCount`), `totalWeight`, `retainedWeight`, and readonly
+`words: readonly LyraWeightedWord[]`. Each `LyraWeightedWord` has readonly `id: string`,
+`text: string` and `weight: number`. IDs represent already aggregated catalog entries and must be
+globally unique; distinct IDs may have the same display text. This input is a weighted catalog,
+not a sequence of raw tokens whose frequencies the component computes.
+
+The component admits at most 150 selected words, with nonblank IDs/text limited to 256 UTF-16
+units each and selected text totaling at most 16,384 units. Labels and IDs remain exact; they are
+not clipped or admitted through the legacy prefix budget. Retained IDs must be unique. Counts
+must be safe nonnegative integers conserving the complete source (`validCount + invalidCount =
+sourceCount`); selected length cannot exceed `validCount`, and a nonempty valid catalog requires
+a selection. Weights and their totals must be finite and nonnegative; `retainedWeight` must equal
+the sum of selected weights in descriptor order. The full total must include each selected
+weight; when every valid word is selected, full and retained totals must agree within bounded
+floating-point accumulation error. Invalid positions do not enlarge that complete-sum allowance.
+Sparse/accessor-backed descriptor arrays, malformed metadata, oversized selections and
+inconsistent totals fail visibly instead of falling back to `words` or silently dropping values.
+The bounded descriptor cannot independently certify global top-K membership or full-source totals.
+
+`part="summary"` reports selected versus full valid word counts, invalid count, and retained versus
+full weight through `wordCloudPreparedSummary`. It remains visible for empty/all-invalid input.
+If placement cannot fit a selected word, the separate existing `limit` reports rendered versus
+selected words; it does not relabel top-K omission or rejected source labels as a layout failure.
+Invalid input uses `part="error"` and `wordCloudPreparedUnavailable`. Numeric values use the
+effective locale; `.strings` overrides apply to visible messages and announcements. Mount,
+reconnect and adoption are quiet; later changed summaries announce politely and invalid-input
+transitions announce assertively through the shared light-DOM sink.
+
+The component captures a bounded immutable snapshot of host-authored metadata. After changing a
+mutable descriptor or its revision, assign `preparedWords` again (the same identity is accepted)
+or call unnamed `requestUpdate()`; a coalesced named update does not suppress that refresh.
+Presentation updates reuse the snapshot. Source storage and preparation remain host-owned; the
+component neither reads an original catalog nor starts or cancels its preparation. Replacing or
+clearing `preparedWords` therefore does not abort a helper call already running in application
+code. Theme, pointer and keyboard interactions use the retained words without a full-source pass.
+
+`prepareLyraWordCloud(input, options?)` from the granular utilities module performs one complete
+chunked catalog scan and retains the global heaviest `maxWords` (default/max 150, minimum 1), with
+equal weights favoring earlier original positions. `input` is a `LyraIndexedInput<LyraWeightedWord>`
+with stable `revision`, safe `count`, and `read(start, count, { signal })` returning exactly that
+range. Preparation reads at most 8,192 positions per chunk (default 2,048), yields between chunks
+and checks revision/cancellation. All valid source weight contributes to `totalWeight`, including
+omitted candidates. Blank/over-256-unit text or IDs and negative/nonfinite weights count as invalid
+observations; the helper does not shorten them. Chosen labels exceeding 16,384 units reject the
+call: lower `maxWords` rather than clipping selected words. Heavy late entries compete before any
+text budget is applied. With bounded memory the helper detects duplicates only among retained
+candidates; global ID uniqueness remains the caller's input contract. Exact frequency aggregation
+of arbitrary raw tokens belongs to the caller's keyed catalog. The result is immutable.
+
 **Methods:** `refreshTheme(): void` — forces a relayout so the `--lr-font` custom property is
 re-read from computed style (font-family affects the canvas text measurement layout depends on).
 The component's theme watcher calls it automatically when inherited theme typography changes; the
 method remains available for a host theme system that needs an explicit synchronous refresh.
 
-**Events:** `lr-word-activate` (frozen readonly `detail: { text, weight, group }`; fires from the
-single SVG pointer surface, or Enter/Space on the current word)
+**Events:** `lr-word-activate` fires from the single SVG pointer surface or Enter/Space on the
+current word. Its frozen readonly detail is typed `{ text: string; weight: number; group?: string;
+id?: string; revision?: LyraSourceRevision }`. With `preparedWords` active, `id` and `revision`
+identify the exact original catalog entry and committed summary; duplicate text never substitutes
+for identity. Actions on the old visible layout retain its revision while a replacement is
+scheduled, and replaced/detached layout objects cannot activate new data. With `preparedWords =
+null`, the existing `{ text, weight, group }` payload is unchanged and has no `id`/`revision` fields.
+`LyraPreparedWordCloud` and `LyraWeightedWord` are type-only exports from the component entry and
+from `@aceshooting/lyra-ui/utilities/data-preparation.js`.
 
 **Slots:** none.
 
@@ -98,8 +159,9 @@ single SVG pointer surface, or Enter/Space on the current word)
 cursor's word), `live-region` (visually-hidden, `aria-hidden` mirror of the latest announcement;
 the actual announcement uses the shared light-DOM polite sink),
 `legend`/`legend-item`/`legend-swatch`/`legend-label` (the optional static color key), and `empty`
-(the no-data placeholder), `limit` (localized rendered/received word count), and `legend-limit`
-(localized rendered/received explicit-legend count)
+(the no-data placeholder), `limit` (localized rendered/received word count; rendered/selected in
+prepared mode), `legend-limit` (localized rendered/received explicit-legend count),
+`summary` (prepared full/retained counts and weights), and `error` (invalid prepared-input message)
 
 **Themeable custom properties:** `--lr-word-cloud-color-1`, `--lr-word-cloud-color-2`,
 `--lr-word-cloud-color-3`, `--lr-word-cloud-color-4`, `--lr-word-cloud-color-5`,
@@ -126,21 +188,75 @@ through the normal cascade), plus shared tokens (`--lr-font`,
 </script>
 ```
 
+A complete unique weighted catalog can be prepared without constructing a million-element array.
+The helper's one-time full pass is application work; rendering and interaction consume its bounded
+result. Import the helper directly and cancel obsolete preparation before assigning a result:
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-word-cloud.js';
+import {
+  prepareLyraWordCloud,
+  type LyraIndexedInput,
+  type LyraWeightedWord,
+} from '@aceshooting/lyra-ui/utilities/data-preparation.js';
+
+const cloud = document.querySelector('lr-word-cloud')!;
+let pending: AbortController | undefined;
+
+async function showCatalog(input: LyraIndexedInput<LyraWeightedWord>): Promise<void> {
+  pending?.abort();
+  const request = new AbortController();
+  pending = request;
+  try {
+    const prepared = await prepareLyraWordCloud(input, {
+      signal: request.signal, maxWords: 150, batchSize: 8192,
+    });
+    if (pending === request && !request.signal.aborted) cloud.preparedWords = prepared;
+  } catch (error) {
+    if (!request.signal.aborted) throw error;
+  }
+}
+
+await showCatalog({
+  revision: 'catalog-1',
+  count: 1_000_000,
+  read(start, count) {
+    return Array.from({ length: count }, (_, offset) => {
+      const index = start + offset;
+      return {
+        id: `topic-${index}`,
+        text: `Topic ${index}`,
+        weight: index === 999_999 ? 1_000_000 : 1,
+      };
+    });
+  },
+});
+// On view disposal, call pending?.abort().
+```
+
+The final heavy entry participates in selection, and equal-weight entries retain original-position
+ties. A changed catalog/revision needs a new preparation pass; ordinary view interactions do not.
+
 The focusable SVG is the single semantic owner: `role="application"` plus an accessible name. An
 authored host `aria-label` is forwarded to that SVG and wins by attribute presence; when it is
 absent, the SVG uses an auto-computed localized name such as `"Word cloud of 12 words"` / `"Word
 cloud of 1 word"`, counting only words actually rendered. An authored host `role` remains on the
 host and does not replace the SVG's application role. When records are omitted, the SVG references
-the visible localized `[part="limit"]` rendered/received summary.
+the visible localized `[part="limit"]` rendered/received summary. In prepared mode it also
+references the full-catalog `summary`; host-authored description references remain composed with
+these internal descriptions.
 
 **Known gotchas:**
 
 - capped at 150 words (`MAX_WORDS` in `word-cloud-layout.ts`, mirroring `lr-sparkline`'s
   `MAX_POINTS` input-sample guard) — a one-pass bounded top-K scan retains the **heaviest** 150 and
-  counts the rest without cloning/sorting/spreading the full input. A pathological input can exhaust the
-  spiral search's radius bound and get dropped the same way; blank/whitespace-only `text` is dropped
-  during boundary normalization. Omitted diagnostics retain at most 32 records, while a separate
-  complete count drives one deduplicated `console.warn` and the rendered disclosure — nothing throws.
+  counts the rest without cloning/sorting/spreading the full admitted legacy input. The legacy
+  `words` boundary still inspects at most 10,000 positions and applies its text budgets; use
+  `preparedWords` for a complete-catalog summary. A pathological input can exhaust the spiral
+  search's radius bound and be omitted from either route. Legacy blank text is dropped during
+  boundary normalization; malformed prepared input instead shows `error`. Omitted placement
+  diagnostics retain at most 32 records, while a separate complete count drives one deduplicated
+  `console.warn` and the rendered disclosure.
 - each word's spiral search tests at most 4,096 candidate positions. Together with the 150-word and
   512px font-size caps, this bounds placement work even for dense or adversarial layouts; a word
   that exhausts the search budget is reported through the same skipped-word path.
@@ -148,8 +264,8 @@ the visible localized `[part="limit"]` rendered/received summary.
   `--lr-font-weight-semibold` and `--lr-font` token values. A consumer-only `::part(word)` font
   override can still desynchronize measurement from the painted glyph.
 - rotation (`word-rotation="mixed"`) is genuinely random per layout (`Math.random()`, not seeded), so
-  which words render rotated changes on every re-layout (any `words`/`minFontSize`/`maxFontSize`/
-  `scale`/`wordRotation` change) — don't rely on rotation being stable across renders.
+  which words render rotated changes on every re-layout (a prepared-input refresh or an effective
+  `words`/`minFontSize`/`maxFontSize`/`scale`/`wordRotation` change) — don't rely on rotation being stable across renders.
 - only one word is ever in the page's tab sequence at a time (the roving cursor on `[part="svg"]`) —
   there's no way to Tab directly to the Nth word; arrow-key/Home/End your way there, or click it.
 

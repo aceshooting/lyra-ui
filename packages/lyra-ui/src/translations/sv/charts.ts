@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} giltiga mätvärden i hela fördelningen; {belowCount} under och {aboveCount} över de visade intervallen; {invalidCount} ogiltiga mätvärden.',
+  histogramDistributionRange: 'Observerat stickprovsintervall: {min} till {max}.',
   chartCategory: 'Kategori',
   chartTotal: 'Totalt',
   chartAxisTotal: '{axis} totalt',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, radie {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'stigande',
-  chartTrendDecreasing: 'fallande',
-  chartTrendFlat: 'oförändrad',
-  chartSummary: '{label}: {count} värden, intervall {min} till {max}, trend {trend}',
   chartSeriesNoData: '{label}: inga data',
   chartSummaryWithData: '{type}diagram. {summaries}.',
   chartSummaryEmpty: '{type}diagram utan data.',
-  chartSummarySeparator: '. ',
   chartData: 'Diagramdata',
   chartRenderUnavailable: 'Diagramvisning är inte tillgänglig.',
+  chartPreparedSummaryZoom: 'Zoom visar den förberedda sammanfattningen; indexbaserad förfining är inte tillgänglig.',
+  chartSpatialSummary: 'Hela källan: {count} punkter, x {minX} till {maxX}, y {minY} till {maxY}. Vy: {matchedCount} punkter, x {viewMinX} till {viewMaxX}, y {viewMinY} till {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Radie i hela källan: {min} till {max}.',
+  chartSpatialDensityLegend: 'Tätheten omfattar alla serier; seriernas synlighet påverkar bara överlagrade punkter.',
+  chartSpatialPoint: '{series}: {id}, position i källan {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Täthetsområde: {count} punkter, x {minX} till {maxX}, y {minY} till {maxY}.',
+  chartSpatialHidden: ' (serie dold)',
   chartDataSampled: 'Diagrammet och den genererade datatabellen visar ett urval på högst 1 000 poster. Ange en egen datatabell för att komma åt alla diagramdata.',
   chartPlotSampled: 'Diagrammet visar ett urval på högst 1 000 poster; datatabellen visar alla data.',
   chartZoomUnavailable: 'Zoom är inte tillgänglig, men själva diagrammet är fortfarande tillgängligt.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} av {total})',
   chartMissingLibrary: 'Den här komponenten behöver det valfria paketet ”chart.js” för att kunna rita diagram.',
   boxPlotMissingLibrary: 'Den här komponenten behöver det valfria lådagramspaketet för att kunna rita lådagram.',
+  chartInputLimit: 'Vissa diagramdata utelämnades eftersom en indatagräns nåddes. Ange en mindre eller föraggregerad datamängd för att representera de utelämnade värdena.',
+  histogramInputLimit: 'Endast de senaste 10 000 mätvärdena behålls. Ange antal som redan grupperats i intervall till lr-chart för att representera en större fördelning.',
 };
 
 registerLyraLocale('sv', strings);

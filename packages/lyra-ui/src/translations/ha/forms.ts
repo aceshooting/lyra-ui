@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Alƙalami a ƙasa',
   signaturePadPenUp: 'Alƙalami a sama',
+  localePickerInputLimit: 'Shigarwa 512 na farko na saitunan harshe da yanki kawai ake samu.',
+  emojiPickerInputLimit: 'An bar wasu bayanan emoji saboda an kai iyakar shigarwa.',
 };
 
 registerLyraLocale('ha', strings);

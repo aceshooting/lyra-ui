@@ -996,7 +996,7 @@ describe('lr-dataset-viewer', () => {
       });
       expect(await el.search('hit')).to.equal(1_000);
       expect(
-        (el as unknown as { table: { search: { matches: unknown[] } } }).table.search.matches
+        (el as unknown as { tableController: { search: { matches: unknown[] } } }).tableController.search.matches
       ).to.have.lengthOf(1_000);
       expect(cappedDetail).to.deep.include({
         matchCount: 1_000,
@@ -1048,7 +1048,7 @@ describe('lr-dataset-viewer', () => {
         await el.updateComplete;
         await aTimeout(0);
         expect(
-          (el as unknown as { table: { search: { matches: unknown[] } } }).table.search.matches
+          (el as unknown as { tableController: { search: { matches: unknown[] } } }).tableController.search.matches
         ).to.have.lengthOf(2);
       } finally {
         restore();

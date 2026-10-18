@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'قلم ښکته',
   signaturePadPenUp: 'قلم پورته',
+  localePickerInputLimit: 'یوازې د ژبې او سیمې لومړۍ 512 ننوتنې شته.',
+  emojiPickerInputLimit: 'د ننوتو حد ته د رسېدو له امله د ایموجي ځینې معلومات پرېښودل شوي دي.',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

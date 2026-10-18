@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Yalnızca ilk {count} test sonucu gösteriliyor.',
   toolTimelineLimit: 'En fazla {count} araç çağrısı gösteriliyor.',
   toolSelectLimit: 'Yalnızca ilk {count} araç gösteriliyor.',
+  testResultsInputTooLarge: 'Test sonucu ayrıntıları görüntüleme sınırını aşıyor.',
   toolCall: 'Araç çağrısı',
   maximize: 'Büyüt',
   promptStudioVariableName: '{index}. değişkenin adı',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Yalnızca ilk {count} dosya gösteriliyor.',
   taskListLimit: 'Yalnızca ilk {count} görev gösterilmektedir.',
   evalDatasetLimit: 'Yalnızca ilk {count} örnek gösteriliyor.',
+  activityFeedInputLimit: '{total} kayıttan yalnızca en yeni {count} tanesi saklanır.',
+  spanWaterfallLimit: '{total} izleme aralığından {shown} tanesi gösteriliyor.',
+  toolTimelineInputLimit: 'Toplam {total} araç çağrısının yalnızca en yeni {count} tanesi tutulur.',
 };
 
 registerLyraLocale('tr', strings);

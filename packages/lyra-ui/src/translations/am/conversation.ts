@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'እስካሁን ውይይት የለም',
   agentWorkspaceLabel: 'የወኪል የሥራ ቦታ',
+  agentWorkspaceInputLimit: '{collection}፦ ከ{total} ግቤቶች {count} ብቻ ይቀመጣሉ።',
   agentWorkspaceConversation: 'ውይይት',
   agentWorkspaceDetails: 'የአሂድ ዝርዝሮች',
   agentWorkspaceRun: 'የወኪል አሂድ',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'ይህን ክፍል እንደገና ሞክር',
   promptQueueLabel: 'በወረፋ ላይ ያሉ ጥያቄዎች',
   promptQueueEmpty: 'በወረፋ ላይ ጥያቄ የለም',
+  promptQueueInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ በወረፋ ያሉ ጥያቄዎች ወይም አባሪዎች ተወግደዋል።',
+  promptQueueAttachmentLimit: 'ከተቀመጡት {total} አባሪዎች {shown} እየታዩ ነው።',
   promptQueueSendNow: 'አሁን ላክ',
   selectionToolbarLabel: 'የምርጫ እርምጃዎች',
   selectionAsk: 'ጠይቅ',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} ቶከን',
     other: '{count} ቶከኖች',
   },
+  threadListInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ የውይይት ክሮች ተወግደዋል።',
+  promptInputInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ ጥቆማዎች ወይም የካታሎግ ግቤቶች ተወግደዋል።',
+  transcriptFeedInputLimit: 'ከ{total} ግቤቶች የቅርብ ጊዜዎቹ {count} ብቻ ይቀመጣሉ።',
+  codeBlockHighlightLimit: 'ረጅም ኮድ የአገባብ ማድመቂያ ሳይኖረው ይታያል።',
 };
 
 registerLyraLocale('am', strings);

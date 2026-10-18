@@ -89,6 +89,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'لا توجد محادثات بعد',
   agentWorkspaceLabel: 'مساحة عمل الوكيل',
+  agentWorkspaceInputLimit: '{collection}: يُحتفظ فقط بـ{count} من أصل {total} إدخالًا.',
   agentWorkspaceConversation: 'المحادثة',
   agentWorkspaceDetails: 'تفاصيل التشغيل',
   agentWorkspaceRun: 'تشغيل الوكيل',
@@ -106,6 +107,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'إعادة محاولة هذا الجزء',
   promptQueueLabel: 'المُوجّهات في قائمة الانتظار',
   promptQueueEmpty: 'لا توجد مُوجّهات في قائمة الانتظار',
+  promptQueueInputLimit: 'حُذف بعض المطالبات المنتظرة أو المرفقات لبلوغ حد الإدخال.',
+  promptQueueAttachmentLimit: 'يُعرض {shown} من أصل {total} مرفقًا محتفظًا به.',
   promptQueueSendNow: 'إرسال الآن',
   selectionToolbarLabel: 'إجراءات التحديد',
   selectionAsk: 'سؤال',
@@ -175,6 +178,10 @@ const strings: LyraLocaleStrings = {
     many: '{count} رمزًا',
     other: '{count} رمز',
   },
+  threadListInputLimit: 'حُذف بعض سلاسل المحادثات لبلوغ حد الإدخال.',
+  promptInputInputLimit: 'حُذف بعض الاقتراحات أو إدخالات الكتالوج لبلوغ حد الإدخال.',
+  transcriptFeedInputLimit: 'يُحتفظ بأحدث {count} من أصل {total} إدخالًا فقط.',
+  codeBlockHighlightLimit: 'يُعرض الكود الطويل دون تلوين الصياغة البرمجية.',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

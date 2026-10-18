@@ -126,6 +126,7 @@ it('keeps preferred duplicate identities and unknown gaps when a preferred optio
   control.value = ['missing'];
   second.selected = true;
   third.selected = true;
+  await Promise.resolve();
   expect(control.value).to.deep.equal(['missing', 'same', 'same']);
   expect(control.selectedData).to.deep.equal([undefined, 'second', 'third']);
   second.remove();

@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} ajaja',
     other: '{count} ajajoota',
   },
+  commandPaletteInputLimit: 'Ajajoonni tokko tokko daangaan galchaa waan ga\'eef dhiifamaniiru.',
 };
 
 registerLyraLocale('om', strings);

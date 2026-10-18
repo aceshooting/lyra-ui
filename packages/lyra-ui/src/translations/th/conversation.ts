@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'ยังไม่มีการสนทนา',
   agentWorkspaceLabel: 'พื้นที่ทำงานเอเจนต์',
+  agentWorkspaceInputLimit: '{collection}: เก็บไว้เพียง {count} จาก {total} รายการ',
   agentWorkspaceConversation: 'การสนทนา',
   agentWorkspaceDetails: 'รายละเอียดการทำงาน',
   agentWorkspaceRun: 'การทำงานของเอเจนต์',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'ลองส่วนนี้อีกครั้ง',
   promptQueueLabel: 'พรอมป์ในคิว',
   promptQueueEmpty: 'ไม่มีพรอมป์ในคิว',
+  promptQueueInputLimit: 'พรอมป์ต์ในคิวหรือไฟล์แนบบางส่วนถูกละไว้เนื่องจากถึงขีดจำกัดข้อมูลขาเข้า',
+  promptQueueAttachmentLimit: 'แสดงไฟล์แนบที่เก็บไว้ {shown} จาก {total} รายการ',
   promptQueueSendNow: 'ส่งตอนนี้',
   selectionToolbarLabel: 'การดำเนินการกับข้อความที่เลือก',
   selectionAsk: 'ถาม',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '{count} โทเค็น',
   },
+  threadListInputLimit: 'เธรดการสนทนาบางส่วนถูกละไว้เนื่องจากถึงขีดจำกัดข้อมูลขาเข้า',
+  promptInputInputLimit: 'คำแนะนำหรือรายการแค็ตตาล็อกบางส่วนถูกละไว้เนื่องจากถึงขีดจำกัดข้อมูลขาเข้า',
+  transcriptFeedInputLimit: 'เก็บเฉพาะรายการล่าสุด {count} จาก {total} รายการเท่านั้น',
+  codeBlockHighlightLimit: 'โค้ดที่ยาวจะแสดงโดยไม่มีการเน้นสีไวยากรณ์',
 };
 
 registerLyraLocale('th', strings);

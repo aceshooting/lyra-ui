@@ -63,6 +63,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '{count} ntụnye ndị ọzọ',
   },
+  mentionInputLimit: 'Naanị ntụnye 10,000 mbụ maka ịkpọ aha dị.',
+  diffViewHighlightLimit: 'A na-egosi koodu dị ogologo na-enweghị iji agba mee ka sintaksị ya pụta ìhè.',
 };
 
 registerLyraLocale('ig', strings);

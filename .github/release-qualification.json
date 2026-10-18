@@ -17,6 +17,7 @@
         "lint",
         "packed-consumer",
         "safari / Node 22 / shard 1/1",
+        "scale-budgets",
         "static-checks",
         "visual-regression"
       ]

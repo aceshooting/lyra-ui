@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '完整分布中有 {validCount} 個有效樣本；{belowCount} 個低於所顯示區間的下限，{aboveCount} 個高於其上限；{invalidCount} 個無效樣本。',
+  histogramDistributionRange: '觀測樣本範圍：{min} 至 {max}。',
   chartCategory: '類別',
   chartTotal: '合計',
   chartAxisTotal: '{axis}合計',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x：{x}，y：{y}',
   chartBubblePointCoordinates: 'x：{x}，y：{y}，半徑：{radius}',
   chartLabeledPoint: '{label}：{coordinates}',
-  chartTrendIncreasing: '上升',
-  chartTrendDecreasing: '下降',
-  chartTrendFlat: '持平',
-  chartSummary: '{label}：{count}個值，範圍從{min}到{max}，趨勢{trend}',
   chartSeriesNoData: '{label}：無資料',
   chartSummaryWithData: '{type}圖。{summaries}。',
   chartSummaryEmpty: '{type}圖，無資料。',
-  chartSummarySeparator: '。',
   chartData: '圖表資料',
   chartRenderUnavailable: '圖表繪製無法使用。',
+  chartPreparedSummaryZoom: '縮放顯示預先處理的摘要；無法透過索引進一步細化。',
+  chartSpatialSummary: '完整資料來源：{count} 個點，x {minX} 至 {maxX}，y {minY} 至 {maxY}。檢視：{matchedCount} 個點，x {viewMinX} 至 {viewMaxX}，y {viewMinY} 至 {viewMaxY}。',
+  chartSpatialRadiusDomain: '完整資料來源中的半徑：{min} 至 {max}。',
+  chartSpatialDensityLegend: '密度包含所有系列；系列可見性僅影響點疊加層。',
+  chartSpatialPoint: '{series}：{id}，資料來源位置 {sourceIndex}，{coordinates}{hidden}',
+  chartSpatialBin: '密度區域：{count} 個點，x {minX} 至 {maxX}，y {minY} 至 {maxY}。',
+  chartSpatialHidden: ' (系列已隱藏)',
   chartDataSampled: '圖表和生成的資料表顯示最多 1,000 條記錄的樣本。請提供自定義資料表以訪問全部圖表資料。',
   chartPlotSampled: '圖表顯示最多 1,000 條記錄的樣本；資料表列出全部資料。',
   chartZoomUnavailable: '縮放不可用，但核心圖表仍可用。',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content}（第{index}項，共{total}項）',
   chartMissingLibrary: '此元件需要安裝可選的 "chart.js" 套件才能渲染圖表。',
   boxPlotMissingLibrary: '此元件需要安裝可選的箱線圖擴充套件包才能渲染箱線圖。',
+  chartInputLimit: '由於達到輸入限制，部分圖表資料已被省略。請提供較小或預先彙總的資料集，以呈現被省略的值。',
+  histogramInputLimit: '僅保留最新的 10,000 個樣本。請向 lr-chart 提供預先依區間分組的計數，以呈現更大規模的分布。',
 };
 
 registerLyraLocale('zh-TW', strings);

@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Koko jakaumassa on {validCount} kelvollista havaintoa; {belowCount} näytettyjen luokkavälien alapuolella ja {aboveCount} yläpuolella; {invalidCount} virheellistä havaintoa.',
+  histogramDistributionRange: 'Havaittu näytealue: {min}–{max}.',
   chartCategory: 'Luokka',
   chartTotal: 'Yhteensä',
   chartAxisTotal: '{axis} yhteensä',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, säde {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'nouseva',
-  chartTrendDecreasing: 'laskeva',
-  chartTrendFlat: 'tasainen',
-  chartSummary: '{label}: {count} arvoa, vaihteluväli {min}–{max}, trendi: {trend}',
   chartSeriesNoData: '{label}: ei tietoja',
   chartSummaryWithData: 'Kaavio ({type}). {summaries}.',
   chartSummaryEmpty: 'Kaavio ({type}) ilman tietoja.',
-  chartSummarySeparator: '. ',
   chartData: 'Kaavion tiedot',
   chartRenderUnavailable: 'Kaavion piirtäminen ei ole käytettävissä.',
+  chartPreparedSummaryZoom: 'Zoomaus näyttää valmistellun yhteenvedon; tarkempia tietoja ei ole saatavilla indeksin avulla.',
+  chartSpatialSummary: 'Koko lähde: {count} pistettä, x {minX}–{maxX}, y {minY}–{maxY}. Näkymä: {matchedCount} pistettä, x {viewMinX}–{viewMaxX}, y {viewMinY}–{viewMaxY}.',
+  chartSpatialRadiusDomain: 'Säde koko lähteessä: {min}–{max}.',
+  chartSpatialDensityLegend: 'Tiheys sisältää kaikki sarjat; sarjojen näkyvyys vaikuttaa vain päälle piirrettyihin pisteisiin.',
+  chartSpatialPoint: '{series}: {id}, sijainti lähteessä {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Tiheysalue: {count} pistettä, x {minX}–{maxX}, y {minY}–{maxY}.',
+  chartSpatialHidden: ' (sarja piilotettu)',
   chartDataSampled: 'Kaavio ja luotu datataulukko näyttävät otoksen, jossa on enintään 1 000 tietuetta. Anna mukautettu datataulukko, jotta kaikki kaavion tiedot ovat käytettävissä.',
   chartPlotSampled: 'Kaavio näyttää otoksen, jossa on enintään 1 000 tietuetta; datataulukossa ovat kaikki tiedot.',
   chartZoomUnavailable: 'Zoomaus ei ole käytettävissä, mutta peruskaavio on edelleen käytettävissä.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index}/{total})',
   chartMissingLibrary: 'Tämä komponentti tarvitsee valinnaisen ”chart.js”-paketin kaavioiden piirtämiseen.',
   boxPlotMissingLibrary: 'Tämä komponentti tarvitsee valinnaisen laatikkokaaviopaketin laatikkokaavioiden piirtämiseen.',
+  chartInputLimit: 'Osa kaavion tiedoista jätettiin pois syöterajan täyttymisen vuoksi. Anna pienempi tai ennalta koostettu tietojoukko, jotta pois jätetyt arvot voidaan esittää.',
+  histogramInputLimit: 'Vain uusimmat 10 000 havaintoa säilytetään. Anna lr-chart-komponentille ennalta luokkaväleihin ryhmitellyt lukumäärät suuremman jakauman esittämiseksi.',
 };
 
 registerLyraLocale('fi', strings);

@@ -446,3 +446,17 @@ export const LightDomProjection: Story = {
     </div>
   `,
 };
+
+/** Scroll travel is scaled while visible rows retain their normal height. */
+export const MillionRowSource: Story = {
+  parameters: { docs: { description: { story: 'One million addressable rows with a bounded visible window. Call requestUpdate() after mutating the indexed count or callback closures to refresh key lookup and geometry.' } } },
+  render: () => html`
+    <lr-virtual-list
+      style="max-width:32rem;--lr-virtual-list-height:20rem"
+      row-height="56"
+      active-item-id="indexed-999999"
+      .source=${{ ...indexedMessages, count: 1_000_000 }}
+      .renderItem=${renderMessage}
+    ></lr-virtual-list>
+  `,
+};

@@ -136,14 +136,15 @@ uses for its own `[part="body"]`.
   the header also removes authored style elements and their CSS text to prevent visual copy
   deception. Trusted mode provides no such guarantee.
 - `withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`) — turns off
-  fenced-code syntax highlighting. Unset (the default), every fenced block is upgraded via the
+  fenced-code syntax highlighting. Unset (the default), eligible fenced blocks are upgraded via the
   optional `shiki` peer once it is available; set it to keep plain output even when `shiki` is
   installed. In progressive mode, a block can be highlighted after it settles; the mutable tail
   remains unhighlighted.
-- `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — same shape and purpose as
-  `<lr-code-block>`'s own `languages`: a fine-grained, explicit language-grammar bundle scoping
-  shiki's build output to just those grammars instead of its full ~200-language bundle. Forwarded
-  verbatim to `loadShikiHighlighterCore()`. Unset (the default) uses the default full-bundle loader
+- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — explicit
+  grammars, supplied either resolved or as lazy loaders such as
+  `{ json: () => import('shiki/langs/json.mjs') }`. Only a matching fenced language invokes its
+  loader. Languages absent from the map, or an unset map, use the full loader's built-in fallback.
+  Replace the map identity when changing its grammars
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
@@ -169,6 +170,16 @@ pass. It reuses that index across navigation and painting. Host-highlight admiss
 10,000 unique nonempty records after inspecting at most 10,001 inputs; rendering selects at most
 1,000 candidates and paints at most 100, with an active entry anywhere in the admitted snapshot
 placed first and preserved inside both ceilings.
+
+Syntax highlighting admits the first 100 distinct language/code pairs in a document, or across a
+progressive session. Each eligible block is limited to 8,192 UTF-16 code units, including its
+terminal newline. Later or larger blocks remain readable plain code. Both Markdown tags share a
+content-addressed cache, partitioned by the supplied `languages` map identity, with at most 100
+entries and 2 MiB of retained key/output storage (two bytes per UTF-16 code unit); each entry is
+limited to 512 KiB. Matching authored grammars share cached output across the full and core tags;
+full-tag fallback languages do not populate the core tag's cache. When highlighted output exceeds
+the byte budget, evicted blocks may remain plain instead of repeatedly tokenizing. Plain streaming
+defers highlighting until completion; progressive streaming highlights settled blocks.
 
 **Methods:**
 

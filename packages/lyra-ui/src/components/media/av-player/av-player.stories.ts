@@ -2,7 +2,7 @@ import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './av-player.js';
 import '../../../surfaces/glass.css';
-import type { LyraAvCue, LyraAvPlayer } from './av-player.class.js';
+import type { LyraAvCueSource, LyraAvCue, LyraAvPlayer } from './av-player.class.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {
@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Removing mime-type restores automatic video fallback. Open-ended transcript cues use the next strictly chronological start with linear reconciliation per seek, and unavailable timeline controls retain resting paint under hover and press. Audio/video player built on a native media element with bounded readonly cue/track collections whose retained records are cloned and frozen. Cue collections require a trimmed nonempty `cueId` and retain the first occurrence, while the transcript stays synced to playback. Cue changes carry a frozen readonly `{ cueId, index }`; time-range marker activations carry `{ highlightId }`. Marker buttons are siblings of the slider rather than nested controls. Self-registers into the document-viewer registry for common audio/video MIME types.',
+          'Removing mime-type restores automatic video fallback. Open-ended transcript cues use the next strictly chronological start with indexed reconciliation per seek, and unavailable timeline controls retain resting paint under hover and press. Audio/video player built on a native media element with bounded readonly cue/track collections whose retained records are cloned and frozen. Cue collections require a trimmed nonempty `cueId` and retain the first occurrence, while the transcript stays synced to playback. Cue changes carry a frozen readonly `{ cueId, index }`; time-range marker activations carry `{ highlightId }`. Marker buttons are siblings of the slider rather than nested controls. Self-registers into the document-viewer registry for common audio/video MIME types.',
       },
     },
   },
@@ -138,4 +138,53 @@ export const ThemedActiveStates: Story = {
 export const ClearControls: Story = {
   render: () => html`<lr-av-player controls-surface="clear" src=${VIDEO_SRC} mime-type="video/mp4" name="Clear controls"></lr-av-player>`,
   parameters: { docs: { description: { story: 'Load surfaces/glass.css for the player-owned gradient scrim and clear playback-rate controls. Native video controls remain browser-owned.' } } },
+};
+
+export const PreparedWaveform: Story = {
+  parameters: { docs: { description: { story: 'A bounded envelope represents the complete million-sample timeline. Bind matching media to enable seeking; its duration must agree within 1ms. Unequal bucket spans retain their actual positions, including the loud final interval even when the last sample is quiet.' } } },
+  render: () => {
+    const waveform: import('../../../utilities/data-preparation.js').LyraPreparedWaveform = {
+      revision: 'recording', sampleCount: 1000000, duration: 10,
+      counts: { sourceCount: 1000000, validCount: 1000000, invalidCount: 0 },
+      buckets: [
+        { startIndex: 0, endIndex: 700000, maxAmplitude: 0.2 },
+        { startIndex: 700000, endIndex: 900000, maxAmplitude: 0.5 },
+        { startIndex: 900000, endIndex: 1000000, maxAmplitude: 1 },
+      ], firstAmplitude: 0.1, lastAmplitude: 0,
+    };
+    return html`<lr-av-player kind="audio" name="Whole recording envelope" .waveform=${waveform}></lr-av-player>`;
+  },
+};
+
+/** A provider may keep its full transcript in a database; this small authored example makes
+ * the same indexed contract inspectable without allocating a large transcript in the story. */
+const INDEXED_CUES: LyraAvCueSource = {
+  revision: 'episode-1',
+  count: CUES.length,
+  getCue: index => CUES[index] ?? null,
+  findCue: cueId => {
+    const index = CUES.findIndex(cue => cue.cueId === cueId);
+    return index < 0 ? null : { index, cue: CUES[index]! };
+  },
+  activeAt: time => {
+    const index = CUES.findIndex(cue => time >= cue.start && time < cue.end!);
+    if (index >= 0) return { index, cue: CUES[index]!, validFrom: CUES[index]!.start, validUntil: CUES[index]!.end! };
+    return { index: null, cue: null, validFrom: CUES.at(-1)!.end!, validUntil: Infinity };
+  },
+  search: (query, request) => {
+    const folded = query.toLocaleLowerCase(request.locale);
+    const matches = CUES.flatMap((cue, index) => cue.text.toLocaleLowerCase(request.locale).includes(folded) ||
+      (cue.speaker ?? '').toLocaleLowerCase(request.locale).includes(folded) ? [{ index, cue }] : []);
+    return { count: matches.length, getMatch: index => matches[index]! };
+  },
+};
+
+export const IndexedTranscript: Story = {
+  parameters: { docs: { description: { story: 'A host-owned transcript source supplies indexed rows, active intervals, and exact search counts. This example searches speaker labels and reveals the next match without seeking playback. Large providers keep their search index outside the player; the player requests one match at a time.' } } },
+  play: async ({ canvasElement }) => {
+    const player = canvasElement.querySelector<LyraAvPlayer>('lr-av-player');
+    if (player) { await player.search('Host'); await player.searchNext(); }
+  },
+  render: () => html`<lr-av-player src=${AUDIO_SRC} mime-type="audio/mp4" name="Indexed transcript"
+    .cueSource=${INDEXED_CUES}></lr-av-player>`,
 };

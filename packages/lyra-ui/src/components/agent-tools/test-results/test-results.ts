@@ -1,3 +1,4 @@
+import '../../data/pagination/pagination.js';
 /** @deprecated Import @aceshooting/lyra-ui/components/lr-test-results.js to register this component. */
 export * from './test-results.class.js';
 import '../../overlays/empty/empty.js';

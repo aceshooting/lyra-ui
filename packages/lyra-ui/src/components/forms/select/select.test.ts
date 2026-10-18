@@ -1995,9 +1995,7 @@ describe("lr-select mapped Select parity surface", () => {
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve())
       );
-      expect(el.shadowRoot!.querySelectorAll('[part="option"]')).to.have.lengthOf(
-        1000
-      );
+      expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(200);
       expect(performance.now() - started).to.be.below(3000);
     } finally {
       el.remove();

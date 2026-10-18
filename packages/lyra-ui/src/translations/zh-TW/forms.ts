@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: '已落筆',
   signaturePadPenUp: '已抬筆',
+  localePickerInputLimit: '僅提供前 512 個語言與地區項目。',
+  emojiPickerInputLimit: '由於達到輸入限制，部分表情資料已被省略。',
 };
 
 registerLyraLocale('zh-TW', strings);

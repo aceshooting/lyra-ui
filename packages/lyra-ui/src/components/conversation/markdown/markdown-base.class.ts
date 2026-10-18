@@ -1,4 +1,5 @@
 import type { PropertyValues, TemplateResult } from 'lit';
+import { normalizeShikiLanguage } from '../code-block/shiki-types.js';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger } from '../../../internal/numbers.js';
@@ -10,6 +11,7 @@ import {
   buildQuoteAnchor,
   createTextQuoteIndex,
   scopeFromElement,
+  IncrementalTextQuoteScope,
   TEXT_QUOTE_LIMITS,
   type TextQuoteIndex,
 } from '../../../internal/text-quote.js';
@@ -50,7 +52,6 @@ import {
   markdownHasTableWrappers,
   labelMarkdownTableWrappers,
   markdownHighlightConfigChanged,
-  markdownLanguageSetChanged,
   markdownMathPeerError,
   markdownNeedsReparse,
   MarkdownOwnedAnimationFrameController,
@@ -183,6 +184,16 @@ export type MarkdownHighlightAttempt = string | null | undefined;
 // Deliberately not tagged internal -- see MarkdownVariantContext's note above. lr-markdown and
 // lr-markdown-core publicly extend this class, so stripping it would leave both concrete classes'
 // extends clauses naming a type absent from the shipped .d.ts, breaking the package's own build.
+const sharedHighlightCache = new Map<string, string>();
+const highlightGrammarIds = new WeakMap<object, number>();
+let nextHighlightGrammarId = 1;
+function highlightGrammarKey(languages: object | undefined, key: string): string {
+  if (!languages) return `default:${key}`;
+  let id = highlightGrammarIds.get(languages);
+  if (id === undefined) { id = nextHighlightGrammarId++; highlightGrammarIds.set(languages, id); }
+  return `${id}:${key}`;
+}
+
 /**
  * Peer-neutral implementation shared by the full and core Markdown tags. Public reactive fields
  * remain declared on each concrete class so their CEM/JSDoc surfaces stay explicit; all state,
@@ -228,6 +239,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   @state() private renderedBlocks: Array<{ id: string; html: string }> = [];
   @state() private streamingTail: { kind: 'text' | 'open-fence'; text: string } | null = null;
   @state() private progressiveRevision = 0;
+  private progressiveChangedFrom = 0;
   @state() private isDarkTheme = false;
 
   private readonly boundLocalize = this.localize.bind(this);
@@ -248,7 +260,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   private markdownTextScopeBuilds = 0;
   private resolvedHighlightRanges: ResolvedHighlightRange[] = [];
   private mathFailureReported = false;
-  private highlightCache = new Map<string, string>();
+  private readonly highlightCache = sharedHighlightCache;
+  private completedHighlights = new Map<string, string>();
   private highlightToken = 0;
   private streamingRenderRaf?: number;
   private readonly streamingRenderFrames =
@@ -276,7 +289,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     new ThemeWatcher(this, () => this.refreshTheme());
     this.codeHeader = new MarkdownCodeHeaderController(this, {
       isEnabled: () => this.codeBlockHeader,
-      contentVersion: () => this.progressiveSession ? this.renderedBlocks : this.renderedHtml,
+      getChangedRoots: () => this.changedMarkdownRoots(),
+      contentVersion: () => this.progressiveSession ? this.progressiveRevision : this.renderedHtml,
       getContentRoot: () => this.contentRoot(),
       localize: this.boundLocalize,
       buildHeader: (frame, language) => renderMarkdownCodeHeader(frame, language),
@@ -312,16 +326,22 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.markdownVariant.connectedInstances.delete(this);
     super.disconnectedCallback();
     this.highlightToken++;
+    this.completedHighlights = new Map();
     this.cancelStreamingRender();
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
     this.textQuoteIndexCache = undefined;
+    this.quoteScope?.builder.disconnect(); this.quoteScope = undefined;
+    this.cancelHighlightRepaint();
+    this.domSnapshot?.observer.disconnect(); this.domSnapshot = undefined;
     this.fallbackCode.reset();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.codeHeader.hostAdopted();
+    this.quoteScope?.builder.disconnect(); this.quoteScope = undefined;
+    this.cancelHighlightRepaint();
     this.cancelStreamingRender();
     if (this.streaming && this.progressiveSession) this.scheduleStreamingRender();
   }
@@ -352,7 +372,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     if (markdownHighlightConfigChanged(changed) || (!progressive && (changed.has('content') || changed.has('streaming')))) this.highlightToken++;
     if (markdownHighlightConfigChanged(changed)) {
       this.failedHighlightKeys.clear();
-      if (markdownLanguageSetChanged(changed)) this.highlightCache = new Map();
+      this.completedHighlights = new Map();
     }
     if (!progressive) this.resetProgressiveMarkdown();
     else if (configurationChanged) this.progressiveRebuild = true;
@@ -414,6 +434,36 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     return super.getUpdateComplete();
   }
 
+  private domSnapshot?: { root: Element; revision: number; html: string | null;
+    observer: MutationObserver; records: MutationRecord[]; tail: Element | null; changed: readonly ParentNode[] };
+  private changedMarkdownRoots(): readonly ParentNode[] {
+    const root = this.contentRoot();
+    if (!root) return [];
+    let snapshot = this.domSnapshot;
+    if (snapshot?.root !== root) {
+      snapshot?.observer.disconnect();
+      const records: MutationRecord[] = [];
+      const Observer = this.ownerDocument.defaultView?.MutationObserver ?? MutationObserver;
+      const observer = new Observer(changes => records.push(...changes));
+      observer.observe(root, { childList: true });
+      this.domSnapshot = { root, revision: this.progressiveRevision, html: this.renderedHtml,
+        observer, records, tail: this.streamingTail ? root.lastElementChild : null, changed: [root] };
+      return [root];
+    }
+    if (snapshot.revision === this.progressiveRevision && snapshot.html === this.renderedHtml) return snapshot.changed;
+    const records = snapshot.records.splice(0); records.push(...snapshot.observer.takeRecords());
+    const roots: ParentNode[] = [];
+    let reset = !this.progressiveSession;
+    for (const record of records) {
+      for (const node of record.removedNodes) if (node.nodeType === 1 && node !== snapshot.tail) reset = true;
+      for (const node of record.addedNodes) if (node.nodeType === 1 && node.parentNode === root) roots.push(node as Element);
+    }
+    snapshot.revision = this.progressiveRevision; snapshot.html = this.renderedHtml;
+    snapshot.tail = this.streamingTail ? root.lastElementChild : null;
+    snapshot.changed = reset ? [root] : roots;
+    return snapshot.changed;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     applyMarkdownAriaBusy(this, !this.deps || this.streaming);
@@ -421,15 +471,19 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     // table-free document under a `lang` with no registered catalog would otherwise raise the
     // dev-mode locale-fallback warning on every update. Wrappers arrive only through the rendered
     // HTML/blocks, so the (cheap) existence probe reruns only when those change.
-    const renderedChanged = changed.has('renderedHtml') || changed.has('renderedBlocks');
-    if (renderedChanged) this.hasTableWrappers = markdownHasTableWrappers(this.contentRoot());
+    const renderedChanged = changed.has('renderedHtml') || changed.has('renderedBlocks') || changed.has('progressiveRevision');
+    const changedRoots = renderedChanged ? this.changedMarkdownRoots() : [];
+    if (renderedChanged) this.hasTableWrappers = changedRoots.includes(this.contentRoot()!)
+      ? markdownHasTableWrappers(this.contentRoot())
+      : this.hasTableWrappers || changedRoots.some(root => markdownHasTableWrappers(root));
     if (!this.hasTableWrappers) {
       this.tableRegionLabel = undefined;
     } else {
       const tableLabel = markdownTableRegionLabel(this.boundLocalize);
       if (renderedChanged || tableLabel !== this.tableRegionLabel) {
+        const roots = tableLabel !== this.tableRegionLabel ? [this.contentRoot()] : changedRoots;
         this.tableRegionLabel = tableLabel;
-        labelMarkdownTableWrappers(this.contentRoot(), tableLabel);
+        for (const root of roots) labelMarkdownTableWrappers(root, tableLabel);
       }
     }
     const remembered = this.rememberedFocus;
@@ -451,7 +505,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     const renderedContentChanged =
       changed.has('renderedHtml') || changed.has('renderedBlocks') || changed.has('streamingTail') || changed.has('progressiveRevision');
     if (localeChanged || renderedContentChanged || changed.has('content')) {
-      this.textQuoteIndexCache = undefined;
+      if (this.progressiveSession && !localeChanged && this.textQuoteIndexCache) this.textQuoteIndexCache.mappingDirty = true;
+      else this.textQuoteIndexCache = undefined;
     }
     if (
       renderedContentChanged ||
@@ -459,7 +514,12 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       changed.has('activeHighlightId') ||
       (localeChanged && this.highlights.length > 0)
     ) {
-      this.repaintHighlights();
+      if (this.streaming && this.progressiveSession && renderedContentChanged &&
+        !changed.has('highlights') && !changed.has('activeHighlightId') && !localeChanged) this.scheduleHighlightRepaint();
+      else { this.cancelHighlightRepaint(); this.repaintHighlights(); }
+    }
+    if (changed.has('streaming') && !this.streaming) {
+      this.cancelHighlightRepaint(); this.repaintHighlights();
     }
     // Signals a settle point -- new content (including the transient plain-text fallback shown
     // while `streaming` or before the optional parser peer resolves, and a later async highlight
@@ -521,7 +581,9 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     if (adopt) { this.progressiveAdopted = true; this.syncProgressiveMarkdown(); }
     else this.resetProgressiveMarkdown();
     this.renderedHtml = outcome.html;
+    this.completedHighlights = new Map();
     this.codeHeader.setBlocks(this.codeBlocks);
+    if (adopt) session.suspend();
     if (outcome.mathFailed) this.reportMathFailure();
     if (outcome.pendingKeys.length > 0 && !this.withoutSyntaxHighlighting) void this.highlightPending(outcome.pendingKeys);
   }
@@ -530,6 +592,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.progressiveSession = undefined;
     this.progressiveAdopted = false;
     this.progressiveRebuild = false;
+    this.progressiveChangedFrom = 0;
     if (this.renderedBlocks.length) this.renderedBlocks = [];
     this.streamingTail = null;
   }
@@ -551,12 +614,12 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
         const pendingKeys: PendingHighlight[] = [], headings: MarkdownHeadingItem[] = [];
         const records: MarkdownCodeBlockRecord[] = [];
         const options = this.markdownParseOptions(deps.marked!, source, pendingKeys, headings, slugger, records, rawSource);
-        options.codeBlockIndexOffset = prefix.length;
+        options.codeBlockIndexOffset = prefix;
         options.activeHighlightKeys = activeHighlightKeys;
         options.highlightCodeOption = !this.withoutSyntaxHighlighting;
         const result = createMarkdownRenderContext(options).render(source, { links, state });
         this.maybeLoadKatex();
-        return { ...result, rawHtml: result.html, html: finishMarkdownHtml(deps, policy, result.html), headings, codeBlocks: records, pendingKeys };
+        return { ...result, rawHtml: result.html, html: finishMarkdownHtml(deps, policy, result.html, result.hasRawHtml), headings, codeBlocks: records, pendingKeys };
       },
     }, previous?.blocks);
     session.update(this.content ?? '');
@@ -583,6 +646,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     session.step();
     this.renderedHtml = '';
     this.syncProgressiveMarkdown();
+    if (!session.pending) this.completedHighlights = new Map();
     const pending = session.nextHighlight();
     if (pending && !this.withoutSyntaxHighlighting) void this.highlightPending([pending]);
     if (session.pending) this.scheduleStreamingRender();
@@ -591,14 +655,19 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   private syncProgressiveMarkdown(): void {
     const session = this.progressiveSession;
     if (!session) return;
-    if (session.blocks.length !== this.renderedBlocks.length || session.blocks.some((block, index) => block.html !== this.renderedBlocks[index]?.html)) {
-      this.renderedBlocks = session.blocks.map((block, index) => ({ id: `stream-${index}`, html: block.html }));
+    const start = session.takeChangedFrom();
+    if (start !== undefined) {
+      this.progressiveChangedFrom = Math.min(this.progressiveChangedFrom, start);
+      for (let index = start; index < session.blocks.length; index++) {
+        this.renderedBlocks[index] = { id: `stream-${index}`, html: session.blocks[index]!.html };
+      }
+      this.renderedBlocks.length = session.blocks.length;
       this.progressiveRevision++;
+      this.headingTree = session.headings;
+      this.codeHeader.setBlocks(session.records, session.recordOffset(start));
     }
     const tail = session.tail;
     if (tail?.kind !== this.streamingTail?.kind || tail?.text !== this.streamingTail?.text) this.streamingTail = tail;
-    this.headingTree = session.headings;
-    this.codeHeader.setBlocks(session.records);
   }
 
   /** @internal Deterministic counters for bounded progressive work. */
@@ -615,14 +684,20 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.emit('lr-render-error', { error: markdownMathPeerError(this.markdownVariant.tag) });
   }
 
+  private grammarCacheKey(key: string): string {
+    const language = key.slice(0, key.indexOf(':'));
+    const authored = this.languages?.[language] ?? this.languages?.[normalizeShikiLanguage(language)];
+    return highlightGrammarKey(this.languages, `${authored ? 'authored' : this.markdownVariant.tag}:${key}`);
+  }
+
   private getCachedHighlight(key: string): string | undefined {
-    return getCachedHighlight(this.highlightCache, key);
+    return this.completedHighlights.get(key) ?? getCachedHighlight(this.highlightCache, this.grammarCacheKey(key));
   }
 
   private setCachedHighlight(key: string, html: string): boolean {
     return setCachedHighlight(
       this.highlightCache,
-      key,
+      this.grammarCacheKey(key),
       html,
       HIGHLIGHT_CACHE_MAX
     );
@@ -638,6 +713,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     const token = this.highlightToken;
     for (const { key } of work) this.inFlightHighlightKeys.set(key, token);
     const languages = this.languages;
+    const completed = new Map<string, string>();
     const isCurrent = (): boolean =>
       token === this.highlightToken && this.isConnected;
 
@@ -648,9 +724,10 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
         isCurrent
       );
       if (!isCurrent() || html === undefined) return;
-      if (html === null || !this.setCachedHighlight(pending.key, html)) {
-        addFailedHighlightKey(this.failedHighlightKeys, pending.key);
-      }
+      if (html !== null) { setCachedHighlight(completed, pending.key, html); this.setCachedHighlight(pending.key, html); }
+      // An evicted result stays plain for this configuration instead of cycling through
+      // tokenization again when a document's highlighted output exceeds the cache budget.
+      addFailedHighlightKey(this.failedHighlightKeys, pending.key);
     };
 
     try {
@@ -680,7 +757,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     } finally {
       for (const { key } of work) if (this.inFlightHighlightKeys.get(key) === token) this.inFlightHighlightKeys.delete(key);
     }
-    if (!this.isConnected) return;
+    if (!isCurrent()) return;
+    for (const [key, html] of completed) setCachedHighlight(this.completedHighlights, key, html);
     if (this.progressiveSession) {
       this.progressiveSession.invalidateHighlights(work.map(({ key }) => key));
       if (this.streaming) this.scheduleStreamingRender();
@@ -754,6 +832,25 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     return this.highlightHandle;
   }
 
+  private quoteScope?: { root: Element; builder: IncrementalTextQuoteScope };
+  private highlightRepaintTimer?: { view: Window; id: number };
+  private cancelHighlightRepaint(): void {
+    const timer = this.highlightRepaintTimer; this.highlightRepaintTimer = undefined;
+    if (timer) timer.view.clearTimeout(timer.id);
+  }
+  private scheduleHighlightRepaint(): void {
+    if (this.highlights.length === 0 || this.highlightRepaintTimer) return;
+    const view = this.ownerDocument.defaultView;
+    if (!view) { this.repaintHighlights(); return; }
+    const timer = { view, id: 0 };
+    timer.id = view.setTimeout(() => {
+      if (this.highlightRepaintTimer !== timer) return;
+      this.highlightRepaintTimer = undefined;
+      if (this.isConnected && this.ownerDocument.defaultView === view) this.repaintHighlights();
+    }, 100);
+    this.highlightRepaintTimer = timer;
+  }
+
   private markdownTextIndex(root: Element): TextQuoteIndex {
     const locale = this.effectiveLocale;
     const cached = this.textQuoteIndexCache;
@@ -767,8 +864,18 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       }
       handle.setActive(null);
     }
-    const markers = this.progressiveSession ? this.renderedBlocks.length * 2 + 8 : 0;
-    const scope = scopeFromElement(root, { maxTraversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes + markers });
+    let scope;
+    if (this.progressiveSession) {
+      if (this.quoteScope?.root !== root) {
+        this.quoteScope?.builder.disconnect();
+        // At most 2,000 committed groups, with two Lit markers per group and fixed tail markers.
+        this.quoteScope = { root, builder: new IncrementalTextQuoteScope(root, { maxTraversalNodes: TEXT_QUOTE_LIMITS.maxTraversalNodes + 4008 }) };
+      }
+      scope = this.quoteScope.builder.update(this.streamingTail ? root.lastElementChild : null);
+    } else {
+      this.quoteScope?.builder.disconnect(); this.quoteScope = undefined;
+      scope = scopeFromElement(root);
+    }
     this.markdownTextScopeBuilds++;
     if (
       cached?.root === root
@@ -839,13 +946,14 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   override render(): TemplateResult {
     const progressiveRendering =
       Boolean(this.progressiveSession && (this.streaming || this.progressiveAdopted));
+    const changedFrom = this.progressiveChangedFrom; this.progressiveChangedFrom = Infinity;
     return renderMarkdownContent({
       content: this.content ?? '',
       sanitized: normalizeMarkdownHtmlMode(this.htmlMode) === 'sanitize',
       renderedHtml: this.renderedHtml,
       fallbackSegments: !progressiveRendering && this.renderedHtml === null
         ? this.fallbackCode.segments(this.content ?? '') : null,
-      progressive: progressiveRendering ? { blocks: this.renderedBlocks, tail: this.streamingTail } : null,
+      progressive: progressiveRendering ? { blocks: this.renderedBlocks, tail: this.streamingTail, revision: this.progressiveRevision, changedFrom } : null,
       hostAriaLabel: this.getAttribute('aria-label'),
       isDarkTheme: this.isDarkTheme,
       onClick: this.onContentClick,

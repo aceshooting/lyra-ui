@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: '아직 대화가 없습니다',
   agentWorkspaceLabel: '에이전트 작업 공간',
+  agentWorkspaceInputLimit: '{collection}: 총 {total}개 항목 중 {count}개만 유지됩니다.',
   agentWorkspaceConversation: '채팅',
   agentWorkspaceDetails: '실행 세부 정보',
   agentWorkspaceRun: '에이전트 실행',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: '이 부분 다시 시도',
   promptQueueLabel: '대기열에 있는 프롬프트',
   promptQueueEmpty: '대기 중인 프롬프트 없음',
+  promptQueueInputLimit: '입력 한도에 도달하여 일부 대기 중인 프롬프트 또는 첨부 파일이 생략되었습니다.',
+  promptQueueAttachmentLimit: '유지된 첨부 파일 {total}개 중 {shown}개를 표시합니다.',
   promptQueueSendNow: '지금 보내기',
   selectionToolbarLabel: '선택 작업',
   selectionAsk: '질문하기',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '토큰 {count}개',
   },
+  threadListInputLimit: '입력 한도에 도달하여 일부 대화 스레드가 생략되었습니다.',
+  promptInputInputLimit: '입력 한도에 도달하여 일부 제안 또는 카탈로그 항목이 생략되었습니다.',
+  transcriptFeedInputLimit: '총 {total}개 항목 중 최신 {count}개만 유지됩니다.',
+  codeBlockHighlightLimit: '긴 코드는 구문 강조 없이 표시됩니다.',
 };
 
 registerLyraLocale('ko', strings);

@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'இன்னும் உரையாடல்கள் இல்லை',
   agentWorkspaceLabel: 'முகவர் பணியிடம்',
+  agentWorkspaceInputLimit: '{collection}: {total} பதிவுகளில் {count} மட்டுமே தக்கவைக்கப்படுகின்றன.',
   agentWorkspaceConversation: 'உரையாடல்',
   agentWorkspaceDetails: 'இயக்க விவரங்கள்',
   agentWorkspaceRun: 'முகவர் இயக்கம்',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'இந்தப் பகுதியை மீண்டும் முயற்சி செய்',
   promptQueueLabel: 'வரிசையிலுள்ள கோரிக்கைகள்',
   promptQueueEmpty: 'வரிசையில் கோரிக்கைகள் இல்லை',
+  promptQueueInputLimit: 'உள்ளீட்டு வரம்பை அடைந்ததால் வரிசையில் உள்ள சில கோரிக்கைகள் அல்லது இணைப்புகள் விடப்பட்டன.',
+  promptQueueAttachmentLimit: 'தக்கவைக்கப்பட்ட {total} இணைப்புகளில் {shown} காட்டப்படுகின்றன.',
   promptQueueSendNow: 'இப்போதே அனுப்பு',
   selectionToolbarLabel: 'தேர்வுச் செயல்கள்',
   selectionAsk: 'கேள்',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} டோக்கன்',
     other: '{count} டோக்கன்கள்',
   },
+  threadListInputLimit: 'உள்ளீட்டு வரம்பை அடைந்ததால் சில உரையாடல் தொடர்கள் விடப்பட்டன.',
+  promptInputInputLimit: 'உள்ளீட்டு வரம்பை அடைந்ததால் சில பரிந்துரைகள் அல்லது பட்டியல் பதிவுகள் விடப்பட்டன.',
+  transcriptFeedInputLimit: '{total} பதிவுகளில் மிகப் புதிய {count} மட்டுமே தக்கவைக்கப்படுகின்றன.',
+  codeBlockHighlightLimit: 'நீளமான குறியீடு தொடரியல் சிறப்பித்தல் இல்லாமல் காட்டப்படுகிறது.',
 };
 
 registerLyraLocale('ta', strings);

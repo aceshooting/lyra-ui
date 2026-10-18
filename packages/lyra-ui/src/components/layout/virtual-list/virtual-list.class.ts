@@ -1,4 +1,6 @@
+import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { VirtualListCompositionController } from '../../../internal/virtual-list-composition.js';
 import {
   html,
   nothing,
@@ -10,6 +12,7 @@ import {
 import { html as staticHtml, unsafeStatic } from 'lit/static-html.js';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { literalSetConverter } from '../../../internal/converters.js';
@@ -40,6 +43,7 @@ import { styles } from './virtual-list.styles.js';
  *  chat-list row that the initial scrollbar/spacer size doesn't jump wildly
  *  once real measurements arrive. Irrelevant in fixed-`row-height` mode. */
 const DEFAULT_ROW_ESTIMATE_PX = 48;
+const MAX_SCROLL_EXTENT_PX = 8_000_000;
 /** Initial block-size estimate for a visible group marker, replaced by its live measurement. */
 const DEFAULT_GROUP_ESTIMATE_PX = 32;
 const DEFAULT_OVERSCAN_ROWS = 6;
@@ -333,8 +337,10 @@ export interface LyraVirtualListEventMap {
  * anchors, with `label: ''` so no duplicate `[part="group"]` marker renders.
  *
  * **Position queries.** `offsetForIndex(index)` and `indexAtOffset(px)` expose the windowing math
- * itself: they translate between an item index and the pixel offset that row renders at, in the same
- * coordinate space as the scroll container's `scrollTop`. A host doing its own scroll-linked layout
+ * itself: they translate between an item index and its logical pixel offset. Above 8,000,000 pixels,
+ * scrollbar travel is scaled below browser layout limits, while visible row heights stay unchanged.
+ * Position queries and scroll events retain logical pixels; native scrollTop uses scaled pixels.
+ * Scaling emits a one-time development warning. A host doing its own scroll-linked layout
  * (a pinned group header, a scrollbar minimap, a "jump to here" affordance) needs those numbers and
  * would otherwise have to duplicate the offsets array.
  *
@@ -464,7 +470,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * and frozen while retaining each generic row's identity; reassign a new array after sequence
    * changes. Indexed-source objects pass through by identity. When set, this takes precedence over
    * `items`; an indexed source lets synthetic or remote models expose a large row count without
-   * allocating an `Array(0…count)` merely to feed the virtualizer.
+   * allocating an `Array(0…count)` merely to feed the virtualizer. After mutating an indexed
+   * source's count or callback closures, call `requestUpdate()` to refresh identities, active-key
+   * lookup and measured geometry; this remains effective when a property update is pending.
    */
   @property({ attribute: false }) source?: LyraVirtualListSource;
 
@@ -711,7 +719,61 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * The band is reported as the scroller's whole height even when the list occupies only part of
    * it, which over-renders slightly at the edges and never under-renders.
    */
-  private readScrollMetrics(): {
+  private externalGeometry?: { spacer: Element; external: Element | Window; height: number; extent: number; spacerScale: number; scrollerScale: number; borderTop: number };
+  private externalStyleObserver?: MutationObserver;
+
+  private invalidateExternalGeometry = (): void => {
+    this.externalGeometry = undefined;
+    if (this.isConnected) this.syncExternalScrollMetrics();
+  };
+
+  private scrollRoundingAnchor?: { physical: number; logical: number };
+
+  private scrollScale(viewport = this.viewportHeight): number {
+    const total = this.offsetAt(this.itemCount);
+    if (total <= MAX_SCROLL_EXTENT_PX) return 1;
+    return Math.max(1, (total - viewport) / Math.max(1, MAX_SCROLL_EXTENT_PX - viewport));
+  }
+
+  private logicalScroll(physical: number, viewport = this.viewportHeight): number {
+    if (this.scrollRoundingAnchor) {
+      if (Math.abs(physical - this.scrollRoundingAnchor.physical) < 0.01) return this.scrollRoundingAnchor.logical;
+      this.scrollRoundingAnchor = undefined;
+    }
+    return physical < 0 ? physical : physical * this.scrollScale(viewport);
+  }
+
+  private physicalScroll(logical: number, viewport = this.viewportHeight): number {
+    return logical < 0 ? logical : logical / this.scrollScale(viewport);
+  }
+
+  /** Keep row sizes in layout pixels; only the distance travelled by the scrollbar is scaled. */
+  private physicalRowOffset(logical: number): number {
+    if (this.scrollScale() === 1) return logical;
+    const physical = this.scrollRoundingAnchor?.logical === this.containerScrollTop
+      ? this.scrollRoundingAnchor.physical : this.physicalScroll(this.containerScrollTop);
+    return physical + logical - this.containerScrollTop;
+  }
+
+  /** Retain the subpixel remainder lost by native scrollTop rounding at a programmatic target. */
+  private captureScrollRounding(logical: number): void {
+    this.scrollRoundingAnchor = undefined;
+    const metrics = this.readPhysicalScrollMetrics();
+    if (!metrics || this.scrollScale(metrics.viewportHeight) === 1) return;
+    const physical = this.physicalScroll(logical, metrics.viewportHeight);
+    if (Math.abs(physical - metrics.rawScrollTop) <= 1.1) {
+      this.scrollRoundingAnchor = { physical: metrics.rawScrollTop, logical };
+    }
+  }
+
+  private readScrollMetrics(): ReturnType<LyraVirtualList['readPhysicalScrollMetrics']> {
+    const metrics = this.readPhysicalScrollMetrics();
+    if (!metrics) return metrics;
+    const rawScrollTop = this.logicalScroll(metrics.rawScrollTop, metrics.viewportHeight);
+    return { ...metrics, rawScrollTop, scrollTop: Math.max(0, rawScrollTop) };
+  }
+
+  private readPhysicalScrollMetrics(): {
     scrollTop: number;
     rawScrollTop: number;
     viewportHeight: number;
@@ -731,9 +793,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     const spacer = this.spacerElement ?? base;
     const spacerRect = spacer.getBoundingClientRect();
-    const spacerScale = this.visualBlockScale(spacer, spacerRect);
+    const extent = this.offsetAt(this.itemCount);
+    const cached = this.externalGeometry;
+    const valid = cached?.spacer === spacer && cached.external === external &&
+      cached.height === spacerRect.height && cached.extent === extent;
+    const spacerScale = valid ? cached.spacerScale : this.visualBlockScale(spacer, spacerRect);
     const spacerTop = spacerRect.top;
     if (isWindowScroller(external)) {
+      this.externalGeometry = { spacer, external, height: spacerRect.height, extent, spacerScale, scrollerScale: 1, borderTop: 0 };
       // documentElement.clientHeight excludes a classic scrollbar's thickness; innerHeight does not.
       const documentHeight = finiteNumber(
         external.document?.documentElement?.clientHeight ?? 0,
@@ -752,15 +819,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // Rects are visual pixels, while row offsets and scrollTop use layout pixels. The two
     // elements can have different scales (for example, a transformed list inside a scroller).
     const scrollerRect = external.getBoundingClientRect();
-    const relativeScale = this.relativeBlockScale(spacer, external);
+    const relativeScale = valid ? null : this.relativeBlockScale(spacer, external);
     // The spacer's long, explicit height gives a precise visual/layout ratio. A scroller's short
     // border box does not: zoom can round its borders before painting, even when its content still
     // scales fractionally. Divide out only transforms and zoom between spacer and scroller.
     const inferredScrollerScale = relativeScale === null ? 0 : spacerScale / relativeScale;
-    const scrollerScale = Number.isFinite(inferredScrollerScale) && inferredScrollerScale > 0
+    const scrollerScale = valid ? cached.scrollerScale : Number.isFinite(inferredScrollerScale) && inferredScrollerScale > 0
       ? inferredScrollerScale : this.visualBlockScale(external, scrollerRect);
-    const scrollerStyle = external.ownerDocument.defaultView?.getComputedStyle(external);
-    const borderTop = Number.parseFloat(scrollerStyle?.borderTopWidth ?? '');
+    const scrollerStyle = valid ? undefined : external.ownerDocument.defaultView?.getComputedStyle(external);
+    const borderTop = valid ? cached.borderTop : Number.parseFloat(scrollerStyle?.borderTopWidth ?? '');
+    this.externalGeometry = { spacer, external, height: spacerRect.height, extent, spacerScale, scrollerScale, borderTop };
     const scrollerTop = scrollerRect.top +
       (Number.isFinite(borderTop) ? borderTop : external.clientTop) * scrollerScale;
     const rawScrollTop = finiteNumber((scrollerTop - spacerTop) / spacerScale, 0);
@@ -835,19 +903,25 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (!external) {
       const base = this.scrollContainer;
       if (!base) return;
-      const next = Math.max(0, finiteNumber(top, 0));
+      const next = Math.max(0, this.physicalScroll(finiteNumber(top, 0), base.clientHeight));
       if (behavior === undefined) base.scrollTop = next;
       else base.scrollTo({ top: next, behavior });
+      if (behavior !== 'smooth') {
+        this.captureScrollRounding(top);
+        // A changed logical target may share the same capped physical scroll position, in which
+        // case the browser emits no scroll event to advance the rendered window.
+        this.scheduleScrollMetricsRefresh();
+      }
       return;
     }
-    const metrics = this.readScrollMetrics();
+    const metrics = this.readPhysicalScrollMetrics();
     if (!metrics) return;
     // List coordinates are an offset *into* the external scroller's content, not a position within
     // it, so move it by the difference rather than assigning an absolute value. The difference is
     // taken against the UNCLAMPED position: while the scroller is still above the list the true
     // list-space position is negative, and measuring from the clamped zero would move the scroller
     // short by exactly the distance it has yet to travel to reach the list.
-    const delta = (finiteNumber(top, metrics.rawScrollTop) - metrics.rawScrollTop) *
+    const delta = (this.physicalScroll(finiteNumber(top, metrics.rawScrollTop), metrics.viewportHeight) - metrics.rawScrollTop) *
       metrics.scrollDeltaScale;
     if (isWindowScroller(external)) {
       // A Window has no writable scrollTop, so even the instant path goes through scrollTo().
@@ -856,14 +930,36 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       };
       if (behavior !== undefined) options.behavior = behavior;
       external.scrollTo(options);
+      if (behavior !== 'smooth') {
+        this.captureScrollRounding(top);
+        // A changed logical target may share the same capped physical scroll position, in which
+        // case the browser emits no scroll event to advance the rendered window.
+        this.scheduleScrollMetricsRefresh();
+      }
       return;
     }
     const next = Math.max(0, finiteNumber(external.scrollTop + delta, 0));
     if (behavior === undefined) external.scrollTop = next;
     else external.scrollTo({ top: next, behavior });
+    if (behavior !== 'smooth') {
+      this.captureScrollRounding(top);
+      this.scheduleScrollMetricsRefresh();
+    }
   }
 
-  /** Re-reads the external scroller's geometry into the reactive windowing state. Writes only on a
+  private scrollMetricsRefreshPending = false;
+
+  private scheduleScrollMetricsRefresh(): void {
+    if (this.scrollMetricsRefreshPending) return;
+    this.scrollMetricsRefreshPending = true;
+    const owner = this.ownerDocument.defaultView;
+    queueMicrotask(() => {
+      this.scrollMetricsRefreshPending = false;
+      if (this.isConnected && this.ownerDocument.defaultView === owner) this.syncExternalScrollMetrics();
+    });
+  }
+
+  /** Re-reads the current scroller's geometry into the reactive windowing state. Writes only on a
    *  real change, so the render this can trigger converges instead of looping. */
   private syncExternalScrollMetrics(): void {
     const metrics = this.readScrollMetrics();
@@ -903,6 +999,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   /** `offsets[i]` = row `i`'s pixel top for array sources. Indexed sources compute offsets from
    * their count plus sparse measurements and never allocate this array at source cardinality. */
   private offsets: number[] = [0];
+  private offsetDirtyStart = 0;
+  private appendIdentityStart = -1;
+  private identityIndices = new Map<string, number>();
+  private keyIndices = new Map<string, number>();
+  private keyOccurrences = new Map<string, number>();
+  private groupPrefixDirty = true;
+  private rowKeys: VirtualListKey[] = [];
   /** Occurrence-safe internal identities. Public duplicate keys remain visible as distinct rows,
    * while the first occurrence alone owns `activeItemId`. */
   private rowIdentities: string[] = [];
@@ -934,6 +1037,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  no longer present in `items`. */
   private itemsChangedPendingPrune = false;
 
+  private compositionVersion = 0;
+  private compositionScrollTarget?: number;
+  private readonly composition = new VirtualListCompositionController(this, () => {
+    const previous = this.compositionVersion;
+    this.compositionVersion++;
+    if (!this.composition.profile) this.compositionScrollTarget = undefined;
+    this.requestUpdate('compositionVersion', previous);
+  });
+
   private renderStart = 0;
   private renderEnd = -1;
   /** Index of the focused row kept mounted outside the window by the last render, else -1. */
@@ -945,7 +1057,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     item: unknown;
     index: number;
     identity: string;
+    key: VirtualListKey;
   }[] = [];
+  private rowElements = new Map<string, HTMLElement>();
+  private groupElements = new Map<number, HTMLElement>();
+  private stickyElement?: HTMLElement;
   /** Trailing comment bounding the light-DOM render part; also where lit-html caches that part. */
   private projectionAnchor?: Comment;
   private projectionPart?: RootPart;
@@ -967,7 +1083,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   /** Stable reference so `seedFirstRenderState()`'s pending set dedupes the re-arm below. */
   private readonly releaseRowProjection = (): void => {
     this.projectionDeferred = false;
-    this.requestUpdate();
+    super.requestUpdate();
   };
   private visibleStart = 0;
   private visibleEnd = -1;
@@ -1051,14 +1167,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private rowObserveRafOwner?: Window;
   private rowObserveRafDocument?: Document;
 
-  /** Reference-keyed memo for `activeItemId`'s resolved index. `render()` re-runs on every scroll
-   *  frame (`scrollTop` drives reactive state), and resolving an array source means scanning it
-   *  with `keyOf` -- O(items) *per frame* without this memo. Indexed sources never scan their
-   *  declared count: they use `indexOfKey`, or decline the match when it is absent/overridden by a
-   *  consumer `keyFunction`. The inputs are source identity, `activeItemId`, count, and `keyFunction`.
-   *  Mutable array length is keyed too: that catches an in-place
- *  insert/remove followed by a manual `requestUpdate()`. An in-place *reorder* of the same length
- *  is not detected -- the same identity caveat `keyFunction` already documents. */
+  /** Array identities build a first-key index with the offset cache. Indexed sources use the
+   * caller's indexOfKey capability without scanning their declared count. */
   private activeIndexFor?: LyraVirtualListSource;
   private activeIndexForLength = -1;
   private activeIndexForId: VirtualListKey | '' = '';
@@ -1091,13 +1201,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       }
       return this.activeIndexCache;
     }
-    for (let index = 0; index < count; index++) {
-      const item = this.itemAt(index);
-      if (Object.is(this.keyOf(item, index), this.activeItemId)) {
-        this.activeIndexCache = index;
-        break;
-      }
-    }
+    this.activeIndexCache = this.keyIndices.get(domKeyToken(this.activeItemId)) ?? -1;
     return this.activeIndexCache;
   }
   private pendingScrollTop: number | null = null;
@@ -1114,7 +1218,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (this.ownerDocument.defaultView) {
       this.seedFirstRenderState(() => {
         this.renderUnmeasuredWindow = false;
-        this.requestUpdate();
+        super.requestUpdate();
       });
       this.seedFirstRenderState(this.releaseRowProjection);
       // seedFirstRenderState() is a no-op once this element has updated, so an element that first
@@ -1245,6 +1349,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     });
   }
 
+  private contentRefreshPending = false;
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.contentRefreshPending = true;
+    super.requestUpdate(...args);
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     // Re-arm rather than assume. LyraElement drops its deferred seeds when a first update throws
@@ -1265,8 +1376,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.seedFirstRenderState(this.releaseRowProjection);
     this.isFirstUpdate = !this.hasUpdated;
     if (this.hasUpdated) this.noTopLayer = !nativePopoverSupported();
+    const contentRefresh = this.contentRefreshPending;
+    this.contentRefreshPending = false;
+    if (contentRefresh) this.activeIndexFor = undefined;
     // A re-commit of element-wise identical rows still re-renders them, but moves no row.
-    const sequence =
+    const sequence = contentRefresh ||
       (changed.has('items') && !sameSequence(changed.get('items'), this.items)) ||
       (changed.has('source') && !sameSequence(changed.get('source'), this.source));
     if (
@@ -1278,6 +1392,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       changed.has('scrollElement')
     ) this.pendingScrollCorrection = undefined;
     else if (this.pendingScrollCorrection) this.pendingScrollCorrection.source = this.effectiveSource;
+    this.appendIdentityStart = -1;
+    const previous = changed.has('source') ? changed.get('source') : changed.get('items');
+    const current = this.effectiveSource;
+    if (sequence && Array.isArray(previous) && Array.isArray(current) &&
+        previous.length < current.length && previous.length === this.rowIdentities.length &&
+        !changed.has('keyFunction') && !changed.has('groups') && !changed.has('rowHeight') &&
+        previous.every((item, index) => Object.is(item, current[index]))) {
+      this.appendIdentityStart = previous.length;
+    }
     if (sequence || changed.has('keyFunction')) this.identitiesDirty = true;
     if (
       sequence ||
@@ -1286,8 +1409,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       changed.has('groups')
     ) {
       this.offsetsDirty = true;
+      this.offsetDirtyStart = Math.min(this.offsetDirtyStart, this.appendIdentityStart >= 0 ? this.appendIdentityStart : 0);
     }
     if (sequence) {
+      this.compositionScrollTarget = undefined;
       this.itemsChangedPendingPrune = true;
     }
     if (
@@ -1335,10 +1460,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (this.offsetsDirty) {
       this.recomputeOffsets();
       this.offsetsDirty = false;
+      this.offsetDirtyStart = Infinity;
+    }
+    if (changed.has('activeItemId') && !this.isFirstUpdate && this.composition.profile) {
+      const index = this.activeIndex;
+      if (index >= 0) this.compositionScrollTarget = index;
     }
     // Always cheap: just arithmetic over the already-current offsets +
     // scroll/viewport state, so this runs on a pure scroll-driven update too.
     this.computeRange();
+    this.limitCompositionWindow();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -1399,7 +1530,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     return `${token.length}:${token}:${occurrence}`;
   }
 
-  private identityAt(index: number, item = this.itemAt(index)): string {
+  private identityAt(index: number, item?: unknown): string {
+    // Indexed geometry needs only the key. Fetch a record only when a caller key function
+    // actually consumes it; otherwise distant height probes must not demand remote pages.
+    if (arguments.length < 2 && this.keyFunction) item = this.itemAt(index);
     if (!isIndexedSource(this.effectiveSource)) {
       return this.rowIdentities[index] ?? this.rowIdentity(this.keyOf(item, index), index);
     }
@@ -1554,30 +1688,44 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   private recomputeOffsets(): void {
     const n = this.itemCount;
-    this.recomputeGroupHeightPrefix();
+    if (this.groupPrefixDirty) {
+      this.recomputeGroupHeightPrefix();
+      this.groupPrefixDirty = false;
+    }
     if (isIndexedSource(this.effectiveSource)) {
       // Count-backed sources intentionally stay sparse. Offset queries use count arithmetic plus
       // only the rows actually measured by ResizeObserver; no count-sized items/keys/offsets array
       // is synthesized here.
       this.offsets = [0];
       this.rowIdentities = [];
+      this.rowKeys = [];
+      this.identityIndices.clear();
+      this.keyIndices.clear();
+      this.keyOccurrences.clear();
       this.itemsChangedPendingPrune = false;
       return;
     }
-    const offsets = new Array<number>(n + 1);
-    let cursor = 0;
+    const append = this.appendIdentityStart >= 0;
+    const start = this.identitiesDirty && !append ? 0 : Math.min(n, this.offsetDirtyStart);
+    const offsets = start > 0 ? this.offsets : new Array<number>(n + 1);
+    let cursor = start > 0 ? finiteAdd(this.offsets[start - 1]!, this.rowHeightAt(start - 1)) : 0;
     // Only build the live-keys set (and only when in row-height="auto" mode,
     // where measuredHeights is actually populated) when items itself changed
     // -- a measurement-only or rowHeight/keyFunction-only recompute has no
     // stale entries to prune, so skipping this keeps those cases as cheap as
     // before.
     const pruneStale =
-      this.itemsChangedPendingPrune && this.fixedRowHeight == null;
+      this.itemsChangedPendingPrune && !append && this.fixedRowHeight == null;
     const liveKeys = pruneStale ? new Set<string>() : null;
-    const occurrences = new Map<string, number>();
+    const occurrences = append ? this.keyOccurrences : new Map<string, number>();
+    if (this.identitiesDirty && !append) {
+      this.identityIndices.clear();
+      this.keyIndices.clear();
+      this.rowKeys = [];
+    }
     const reuse = !this.identitiesDirty && this.rowIdentities.length === n;
-    const identities = reuse ? this.rowIdentities : new Array<string>(n);
-    for (let i = 0; i < n; i++) {
+    const identities = reuse || append ? this.rowIdentities : new Array<string>(n);
+    for (let i = start; i < n; i++) {
       cursor = finiteAdd(cursor, this.groupHeightAt(i));
       offsets[i] = cursor;
       if (!reuse) {
@@ -1586,6 +1734,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         const occurrence = occurrences.get(token) ?? 0;
         occurrences.set(token, occurrence + 1);
         identities[i] = this.rowIdentity(key, occurrence);
+        this.rowKeys[i] = key;
+        this.identityIndices.set(identities[i]!, i);
+        if (!this.keyIndices.has(token)) this.keyIndices.set(token, i);
       }
       const identity = identities[i]!;
       let h: number;
@@ -1600,6 +1751,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     offsets[n] = cursor;
     this.offsets = offsets;
     this.rowIdentities = identities;
+    if (!reuse) this.keyOccurrences = occurrences;
     this.identitiesDirty = false;
     this.itemsChangedPendingPrune = false;
     if (liveKeys) {
@@ -1656,10 +1808,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   /**
-   * Row `index`'s pixel top in this list's own scroll-coordinate space — the exact value the row is
-   * positioned at (`transform: translateY(...)`), and therefore directly comparable with
-   * `scrollContainer.scrollTop`. `index` is clamped to `0…count`, so
-   * `offsetForIndex(count)` is the total content height (`[part="spacer"]`'s height) and an
+   * Row `index`'s logical pixel top in this list's own scroll-coordinate space.
+   * Above 8,000,000 pixels, native scrollbar travel and row transforms use a scaled extent;
+   * this method and scroll events keep logical pixels. `index` is clamped to `0…count`, so
+   * `offsetForIndex(count)` is the logical total content height and an
    * empty list always answers `0`.
    *
    * In `row-height="auto"` mode an unmeasured row contributes a fixed estimate. A real group marker
@@ -1730,6 +1882,32 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (this.pruneIndexedMeasurements()) this.computeRange();
   }
 
+  /** Keep the existing logical geometry, bounding only its mounted window and focus reserve. */
+  private limitCompositionWindow(): void {
+    const profile = this.composition.profile;
+    if (!profile || this.renderEnd < this.renderStart) return;
+    const start = this.renderStart;
+    const end = this.renderEnd;
+    const focused = this.focusedRowOutsideWindow(true);
+    const requested = this.compositionScrollTarget;
+    const anchor = requested !== undefined && requested >= start && requested <= end
+      ? requested : Math.max(start, this.visibleStart);
+    const range = (budget: number): void => {
+      this.renderStart = Math.max(start, Math.min(anchor - Math.min(normalizeOverscan(this.overscan), budget - 1), end - budget + 1));
+      this.renderEnd = Math.min(end, this.renderStart + budget - 1);
+    };
+    range(profile.maxRows);
+    if (focused >= 0 && (focused < this.renderStart || focused > this.renderEnd))
+      range(profile.maxRows - 1);
+  }
+
+  private setCompositionScrollTarget(index: number): void {
+    if (!this.composition.profile || this.compositionScrollTarget === index) return;
+    const previous = this.compositionScrollTarget;
+    this.compositionScrollTarget = index;
+    this.requestUpdate('compositionScrollTarget', previous);
+  }
+
   private attachContainerListeners(): void {
     const base = this.scrollContainer;
     const ownerDocument = this.ownerDocument;
@@ -1739,6 +1917,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.containerResizeObserver = undefined;
     this.detachContainerListeners();
     const external = this.externalScroller;
+    if (external && ownerWindow.MutationObserver) {
+      const observer = new ownerWindow.MutationObserver(this.invalidateExternalGeometry);
+      for (let ancestor: Element | null = this; ancestor; ancestor = composedParentElement(ancestor)) {
+        observer.observe(ancestor, { attributes: true, attributeFilter: ['style', 'class'] });
+      }
+      this.externalStyleObserver = observer;
+    }
     // One binding site for both modes: whichever element is actually scrolling gets every
     // listener, and the stored reference is what the detach path later removes them from.
     const scrollTarget: EventTarget = external ?? base;
@@ -1753,6 +1938,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         ) return;
         this.beginResizeDelivery();
         if (external) {
+          this.externalGeometry = undefined;
           // Either box resizing changes the same answer -- the scroller's is the visible band, and
           // this element's is the list's own extent within it -- so both route to one rect read.
           this.syncExternalScrollMetrics();
@@ -1800,6 +1986,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private detachContainerListeners(): void {
+    this.scrollRoundingAnchor = undefined;
+    this.externalStyleObserver?.disconnect();
+    this.externalStyleObserver = undefined;
+    this.externalGeometry = undefined;
     const viewportTarget = this.viewportResizeTarget;
     if (viewportTarget) {
       viewportTarget.removeEventListener(
@@ -1818,12 +2008,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private onExternalViewportResize = (): void => {
+    this.externalGeometry = undefined;
     this.syncExternalScrollMetrics();
   };
 
   private onUserScrollIntent = (event: Event): void => {
     if (event instanceof KeyboardEvent && !SCROLL_KEYS.has(event.key)) return;
     this.pendingScrollCorrection = undefined;
+    this.compositionScrollTarget = undefined;
+    this.scrollRoundingAnchor = undefined;
   };
 
   private onScroll = (e: Event): void => {
@@ -1833,7 +2026,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.pendingScrollTop = null;
       this.externalMetricsPending = true;
     } else {
-      this.pendingScrollTop = (e.currentTarget as HTMLElement).scrollTop;
+      this.pendingScrollTop = this.logicalScroll((e.currentTarget as HTMLElement).scrollTop);
     }
     if (this.scrollRafId !== undefined) return;
     // Coalesce to one recompute per animation frame -- native `scroll`
@@ -1923,6 +2116,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       // isn't worth a full offsets rebuild + re-render.
       if (prev === undefined || Math.abs(prev - height) > 0.5) {
         const oldBottom = this.rowBottomAt(index);
+        this.offsetDirtyStart = Math.min(this.offsetDirtyStart, index);
         this.measuredHeights.set(key, height);
         this.measuredIndices.set(key, index);
         // Keep the first visible row anchored while a row fully above it
@@ -1944,7 +2138,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       }
       this.offsetsDirty = true;
       this.measurementGeneration += 1;
-      this.requestUpdate();
+      super.requestUpdate();
     }
   }
 
@@ -1981,6 +2175,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       const previous = this.measuredGroupHeights.get(index) ?? DEFAULT_GROUP_ESTIMATE_PX;
       if (Math.abs(previous - height) <= 0.5) continue;
       const oldRowTop = this.offsetAt(index);
+      this.offsetDirtyStart = Math.min(this.offsetDirtyStart, index);
+      this.groupPrefixDirty = true;
       this.measuredGroupHeights.set(index, height);
       if (oldRowTop <= oldScrollTop) scrollAdjustment += height - previous;
       changed = true;
@@ -1994,7 +2190,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     this.offsetsDirty = true;
     this.measurementGeneration += 1;
-    this.requestUpdate();
+    super.requestUpdate();
   }
 
   /** True while folding a fresh measurement into the offsets would resize a box one of this
@@ -2096,17 +2292,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       return;
     }
     const current = new Map<string, HTMLElement>();
-    this.renderRoot
-      .querySelectorAll<HTMLElement>('[part="row"]')
-      .forEach((el) => {
-        const index = Number(el.getAttribute('data-row-index'));
-        if (!Number.isInteger(index) || index < 0 || index >= this.itemCount)
-          return;
-        const identity = this.identityAt(index);
-        current.set(identity, el);
-        this.observedRowKeys.set(el, identity);
-        this.observedRowIndices.set(el, index);
-      });
+    for (const { identity, index } of this.renderedWindow) {
+      const el = this.rowElements.get(identity);
+      if (!el) continue;
+      current.set(identity, el);
+      this.observedRowKeys.set(el, identity);
+      this.observedRowIndices.set(el, index);
+    }
     for (const [identity, el] of this.observedRows) {
       if (current.get(identity) !== el) {
         ro.unobserve(el);
@@ -2130,14 +2322,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const observer = this.groupResizeObserver;
     if (!observer) return;
     const current = new Map<number, HTMLElement>();
-    this.renderRoot
-      .querySelectorAll<HTMLElement>('[part="group"][data-group-index]')
-      .forEach((marker) => {
-        const index = Number(marker.dataset['groupIndex']);
-        if (!Number.isInteger(index) || !this.normalizedGroupByIndex.has(index)) return;
-        current.set(index, marker);
-        this.observedGroupIndices.set(marker, index);
-      });
+    for (const [index, marker] of this.groupElements) {
+      current.set(index, marker);
+      this.observedGroupIndices.set(marker, index);
+    }
     for (const [index, marker] of this.observedGroups) {
       if (current.get(index) !== marker) {
         observer.unobserve(marker);
@@ -2193,6 +2381,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // unresolvable pending correction. finiteInteger() is the same normalization the sibling
     // position APIs (offsetForIndex/indexAtOffset) already apply.
     const clamped = finiteInteger(index, 0, 0, n - 1);
+    this.setCompositionScrollTarget(clamped);
     const align = options?.align ?? 'auto';
     const behavior: 'auto' | 'smooth' = prefersReducedMotion(this)
       ? 'auto'
@@ -2282,7 +2471,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       ? this.activeIndex
       : isIndexedSource(this.effectiveSource)
         ? pending.index
-        : this.rowIdentities.indexOf(pending.identity);
+        : this.identityIndices.get(pending.identity) ?? -1;
     if (
       index < 0 ||
       index >= this.itemCount ||
@@ -2436,18 +2625,18 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           ${ROW_ATTRIBUTE_STATIC}
           slot=${this.rowSlotName(w.identity)}
           data-row-index=${w.index}
-          data-row-key=${domKeyToken(this.keyOf(w.item, w.index))}
+          data-row-key=${domKeyToken(w.key)}
         >${this.renderItem(w.item, w.index)}</div>`
     );
   }
 
   /** The focused row's index when it sits outside the window: it stays mounted until focus leaves. */
-  private focusedRowOutsideWindow(): number {
+  private focusedRowOutsideWindow(includeInside = false): number {
     for (let node = deepActiveElementIn(this.ownerDocument); node && node !== this; node = composedParentElement(node)) {
       if (node.getAttribute('part') !== 'row' || node.getRootNode() !== this.renderRoot) continue;
       const index = Number(node.getAttribute('data-row-index'));
       return Number.isInteger(index) && index >= 0 && index < this.itemCount &&
-        (index < this.renderStart || index > this.renderEnd) &&
+        (includeInside || index < this.renderStart || index > this.renderEnd) &&
         node.getAttribute('data-row-key') === domKeyToken(this.keyOf(this.itemAt(index), index))
         ? index
         : -1;
@@ -2457,7 +2646,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   private onFocusOut = (event: FocusEvent): void => {
     const next = event.relatedTarget as Node | null;
-    if (this.pinnedRow >= 0 && !(next && (this.contains(next) || this.renderRoot.contains(next)))) this.requestUpdate();
+    if (this.pinnedRow >= 0 && !(next && (this.contains(next) || this.renderRoot.contains(next)))) super.requestUpdate();
   };
 
   private renderRow(
@@ -2465,22 +2654,29 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     index: number,
     total: number,
     activeIndex: number,
-    identity: string
+    identity: string,
+    key: VirtualListKey
   ): TemplateResult {
-    const key = this.keyOf(item, index);
-    const top = this.offsetAt(index);
+    let top = this.physicalRowOffset(this.offsetAt(index));
+    if (this.scrollScale() > 1 && (index < this.renderStart || index > this.renderEnd)) {
+      // A retained focused row must not extend the browser's capped scrollable overflow.
+      const height = this.rowHeightAt(index);
+      top = Math.max(-height, Math.min(MAX_SCROLL_EXTENT_PX - height, top));
+    }
     const isActive = index === activeIndex;
     const isRowMode = this.itemRole === 'row';
+    const transparent = this.composition.profile !== undefined;
     return html`
       <div
         part="row"
-        role=${isRowMode ? 'row' : 'listitem'}
+        ${ref(element => { if (element) this.rowElements.set(identity, element as HTMLElement); else this.rowElements.delete(identity); })}
+        role=${transparent ? 'presentation' : isRowMode ? 'row' : 'listitem'}
         data-row-key=${domKeyToken(key)}
         data-row-index=${index}
-        aria-setsize=${isRowMode ? nothing : total}
-        aria-posinset=${isRowMode ? nothing : index + 1}
-        aria-rowindex=${isRowMode ? this.computedAriaRowIndex(index) : nothing}
-        aria-current=${isActive ? 'true' : 'false'}
+        aria-setsize=${transparent || isRowMode ? nothing : total}
+        aria-posinset=${transparent || isRowMode ? nothing : index + 1}
+        aria-rowindex=${!transparent && isRowMode ? this.computedAriaRowIndex(index) : nothing}
+        aria-current=${transparent ? nothing : isActive ? 'true' : 'false'}
         style=${styleMap({
           transform: `translateY(${top}px)`,
           '--_lr-virtual-list-row-offset': `${top}px`,
@@ -2495,6 +2691,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /** Normalizes group definitions only when their inputs change. */
   private recomputeGroups(): void {
+    this.groupPrefixDirty = true;
     const normalized: LyraVirtualListGroup[] = [];
     const seen = new Set<number>();
     try {
@@ -2570,9 +2767,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           (group) => html`
             <div
               part="group"
+              ${ref(element => { if (element) this.groupElements.set(group.startIndex, element as HTMLElement); else this.groupElements.delete(group.startIndex); })}
               data-group-index=${group.startIndex}
               style=${styleMap({
-                transform: `translateY(${this.groupTopAt(group.startIndex)}px)`,
+                transform: `translateY(${this.physicalRowOffset(this.groupTopAt(group.startIndex))}px)`,
               })}
             >
               ${group.label ??
@@ -2635,6 +2833,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     return html`
       <div
         part="sticky-group"
+        ${ref(element => { this.stickyElement = element as HTMLElement | undefined; })}
         aria-hidden="true"
         inert
         ?data-inactive=${!state.active}
@@ -2650,9 +2849,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   /** Keeps the overlay's measured height current. Focus/activation ownership is declarative through
    * the overlay's `inert` attribute, so no caller-rendered subtree traversal is needed here. */
   private syncStickyOverlay(): void {
-    const overlay = this.renderRoot.querySelector<HTMLElement>(
-      '[part="sticky-group"]'
-    );
+    const overlay = this.stickyElement;
     if (overlay !== this.observedSticky) {
       if (this.observedSticky)
         this.stickyResizeObserver?.unobserve(this.observedSticky);
@@ -2672,21 +2869,31 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   override render(): TemplateResult {
     const n = this.itemCount;
-    const totalHeight = this.offsetAt(n);
+    const totalHeight = Math.min(MAX_SCROLL_EXTENT_PX, this.offsetAt(n));
+    if (this.offsetAt(n) > MAX_SCROLL_EXTENT_PX) devWarnOnce('virtual-list-scroll-scaling',
+      'Virtual list scroll travel is scaled to fit browser layout limits; row sizes and public offsets remain in logical pixels.');
     // The identity is computed once here and reused by both the `repeat()` key and the row
     // template (and, in projection mode, by the light-DOM template through `renderedWindow`), so
     // enabling projection adds no extra `identityAt()` call per row per frame.
-    const windowed: { item: unknown; index: number; identity: string }[] = [];
+    const windowed: { item: unknown; index: number; identity: string; key: VirtualListKey }[] = [];
     const add = (i: number): void => {
       const item = this.itemAt(i);
-      windowed.push({ item, index: i, identity: this.identityAt(i, item) });
+      const key = isIndexedSource(this.effectiveSource) ? this.keyOf(item, i) : this.rowKeys[i] ?? this.keyOf(item, i);
+      const identity = isIndexedSource(this.effectiveSource) ? this.rowIdentity(key, i) : this.identityAt(i, item);
+      windowed.push({ item, index: i, identity, key });
     };
     const pinned = (this.pinnedRow = this.focusedRowOutsideWindow());
+    this.composition.profile?.beforeRender?.(Object.freeze({
+      start: this.renderStart,
+      endExclusive: Math.max(this.renderStart, this.renderEnd + 1),
+      pinnedIndex: pinned >= 0 ? pinned : null,
+    }));
     if (pinned >= 0 && pinned < this.renderStart) add(pinned);
     for (let i = this.renderStart; i <= this.renderEnd; i++) add(i);
     if (pinned > this.renderEnd) add(pinned);
     this.renderedWindow = windowed;
     const isRowMode = this.itemRole === 'row';
+    const transparent = this.composition.profile !== undefined;
     // Native keyboard/anchor scrolling gets the same treatment as the programmatic paths, from one
     // declaration -- and the attribute is absent entirely while there is no sticky layer.
     const stickyInset = this.stickyInset;
@@ -2698,27 +2905,28 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     return html`
       <div
         part="base"
-        role=${isRowMode ? 'rowgroup' : 'list'}
+        role=${transparent ? 'presentation' : isRowMode ? 'rowgroup' : 'list'}
         ?data-external-scroll=${isExternallyScrolled}
         ?data-lr-no-top-layer=${this.noTopLayer}
-        tabindex=${isExternallyScrolled ? nothing : '0'}
+        tabindex=${transparent || isExternallyScrolled ? nothing : '0'}
         style=${stickyInset > 0
           ? `scroll-padding-block-start:${stickyInset}px`
           : nothing}
-        aria-label=${this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : nothing}
-        aria-busy=${this.loading ? 'true' : 'false'}
+        aria-label=${!transparent && this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : nothing}
+        aria-busy=${transparent ? nothing : this.loading ? 'true' : 'false'}
         @focusout=${this.onFocusOut}
       >
         <div
           part="spacer"
-          role=${isRowMode ? 'presentation' : nothing}
+          data-item-count=${n}
+          role=${transparent || isRowMode ? 'presentation' : nothing}
           style=${styleMap({ height: `${totalHeight}px` })}
         >
           ${this.renderGroups()}
           ${repeat(
             windowed,
             (w) => w.identity,
-            (w) => this.renderRow(w.item, w.index, n, activeIndex, w.identity)
+            (w) => this.renderRow(w.item, w.index, n, activeIndex, w.identity, w.key)
           )}
           ${this.renderStickyLayer()}
         </div>

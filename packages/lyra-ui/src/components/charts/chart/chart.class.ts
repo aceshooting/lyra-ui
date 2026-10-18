@@ -1,3 +1,12 @@
+import { SpatialSourceController, spatialContains } from '../../../internal/spatial-source-controller.js';
+import type { LyraSpatialBounds, LyraSpatialBin, LyraSpatialChartPoint, LyraSpatialChartSource, LyraChartSpatialPointSelectDetail, LyraSpatialBinSelectDetail } from '../../../utilities/data-spatial.js';
+export type { LyraSpatialBounds, LyraSpatialBin, LyraSpatialChartPoint, LyraSpatialChartSeries, LyraSpatialChartSource, LyraChartSpatialPointSelectDetail, LyraSpatialBinSelectDetail } from '../../../utilities/data-spatial.js';
+import { spatialCoordinate, spatialOriginal, spatialPaintRadius, spatialCsv } from './chart-spatial-data.js';
+import { SourceRequestController } from '../../../internal/source-request-controller.js';
+import { prepareChartModel, withPreparedPoint, withPreparedRange, preparedResponse, type PreparedChartModel, type LyraChartPreparedData, type LyraChartSourcePointSelectDetail, type LyraChartSourceCategorySelectDetail } from './chart-prepared-data.js';
+import type { LyraSeriesPointRef } from '../../../utilities/data-preparation.js';
+export type { LyraChartPreparedData, LyraChartSourcePointSelectDetail, LyraChartSourceCategorySelectDetail } from './chart-prepared-data.js';
+export type { LyraPreparedSeriesData, LyraPreparedCategoryData, LyraPreparedSeries, LyraSeriesSample, LyraSeriesPointRef, LyraSeriesObservation, LyraSeriesRangeRequest } from '../../../utilities/data-preparation.js';
 import { snapshotStructuredData, admitSnapshotArray, snapshotArrayStillAdmitted as chartArrayIsStillAdmitted, projectSnapshotArray, type SnapshotArrayAdmission as ChartArrayAdmission } from '../../../internal/structured-snapshot.js';
 import type { ChartSyncPresentation } from './chart-sync.js';
 import { LazyChartSyncController } from './chart-sync-lazy.js';
@@ -66,7 +75,7 @@ import {
   type LyraChartDatumVisibilityChangeDetail,
 } from './chart-legend-visibility.js';
 export type { LyraChartLegendVisibilityChangeDetail, LyraChartDatumVisibilityChangeDetail } from './chart-legend-visibility.js';
-import { sampleChartTableIndexes } from './chart-table-sampling.js';
+import { sampleChartTableIndexes, normalizeChartRecordLimit } from './chart-table-sampling.js';
 import {
   canvasSentence,
   canvasTextDirection,
@@ -82,8 +91,8 @@ import {
 } from './chart-bidi.js';import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
-import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPreparedSummaryZoom, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSpatialBin, LYRA_DEFAULT_chartSpatialDensityLegend, LYRA_DEFAULT_chartSpatialHidden, LYRA_DEFAULT_chartSpatialPoint, LYRA_DEFAULT_chartSpatialRadiusDomain, LYRA_DEFAULT_chartSpatialSummary, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartPreparedSummary, LYRA_DEFAULT_chartPreparedUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -490,12 +499,24 @@ function warnChartInputCap(): void {
     'lr-chart: an input array exceeded 10,000 entries; only the first 10,000 are used.');
 }
 
+const truncatedChartInputs = new WeakSet<object>();
+
+function retainChartInputLimit(source: unknown, value: unknown): void {
+  if (typeof source === 'object' && source !== null && truncatedChartInputs.has(source) &&
+    typeof value === 'object' && value !== null) truncatedChartInputs.add(value);
+}
+
 function admitChartArray(value: unknown): ChartArrayAdmission | undefined {
-  return admitSnapshotArray(value, warnChartInputCap);
+  let truncated = false;
+  const admitted = admitSnapshotArray(value, () => { truncated = true; warnChartInputCap(); });
+  if (admitted && truncated) truncatedChartInputs.add(admitted.source);
+  return admitted;
 }
 
 function copyChartArrayEntries(admission: ChartArrayAdmission): readonly unknown[] {
-  return projectSnapshotArray(admission, value => value, { missing: undefined }) ?? Object.freeze([]);
+  const value = projectSnapshotArray(admission, value => value, { missing: undefined }) ?? Object.freeze([]);
+  retainChartInputLimit(admission.source, value);
+  return value;
 }
 
 /** Enumerates only after the caller established an ordinary record, and contains hostile traps. */
@@ -525,6 +546,7 @@ const canonicalChartDatasetValues = new WeakMap<object, readonly unknown[]>();
 // the same private provenance on its caller-visible data array so that clone does not force a
 // second read of an opaque datum merely to rebuild the owning dataset snapshot.
 const canonicalChartDatasetDataValues = new WeakMap<object, readonly unknown[]>();
+const canonicalChartDataSnapshots = new WeakSet<object>();
 
 /** Reuse a prior one-read projection, or safely admit a derived subclass series on demand. */
 function canonicalChartSeries(value: unknown): LyraChartSeries | undefined {
@@ -741,9 +763,11 @@ const CHART_SERIES_PROPERTIES = [
 ] as const;
 
 /** The simplified surface tolerates an omitted label/data payload, but every admitted field is
- * copied through an own data descriptor before later rendering code sees it. */
-function projectChartSeries(value: unknown): LyraChartSeries | undefined {
+ * copied through an own data descriptor before later rendering code sees it.
+ * @internal */
+export function projectChartSeries(value: unknown): LyraChartSeries | undefined {
   try {
+    if (typeof value === 'object' && value !== null && canonicalChartSeriesSnapshots.has(value)) return value as LyraChartSeries;
     if (!isChartRecord(value)) return undefined;
     const descriptors = new Map<
       (typeof CHART_SERIES_PROPERTIES)[number],
@@ -830,6 +854,8 @@ function projectChartSeries(value: unknown): LyraChartSeries | undefined {
     if (segmentColors) output.segmentColors = segmentColors;
     if (type === 'line' || type === 'bar') output.type = type;
     const series = Object.freeze(output) as LyraChartSeries;
+    retainChartInputLimit(rawData, series);
+    retainChartInputLimit(rawPoints, series);
     canonicalChartSeriesSnapshots.set(series, {
       data: data ?? Object.freeze([]),
       ...(points ? { points } : {}),
@@ -840,9 +866,20 @@ function projectChartSeries(value: unknown): LyraChartSeries | undefined {
   }
 }
 
+/** Replaces numeric data on an already admitted series without rereading retained values. */
+function appendChartSeries(series: LyraChartSeries, data: readonly (number | null)[]): LyraChartSeries {
+  const values = Object.freeze(data);
+  const result = Object.freeze({ ...series, data: values });
+  canonicalChartSeriesSnapshots.set(result, { data: values });
+  return result;
+}
+
 function normalizeChartSeries(value: unknown): readonly LyraChartSeries[] {
   // Retained series reuse their private canonical snapshots, never their live data/points.
-  return projectSnapshotArray(admitChartArray(value), canonicalChartSeries, { compact: true }) ?? Object.freeze([]);
+  const result = projectSnapshotArray(admitChartArray(value), canonicalChartSeries, { compact: true }) ?? Object.freeze([]);
+  retainChartInputLimit(value, result);
+  if (result.some(series => truncatedChartInputs.has(series))) truncatedChartInputs.add(result);
+  return result;
 }
 
 function isSafeChartConfigurationRecord(value: unknown): value is Record<string, unknown> {
@@ -906,10 +943,12 @@ function copyChartConfigurationValue(
     omitKeys: UNSAFE_KEYS,
     onArrayTruncate: warnChartInputCap,
     onClone: (source, copied) => {
+      retainChartInputLimit(source, copied);
       const canonical = canonicalChartDatasetDataValues.get(source);
       if (canonical) canonicalChartDatasetDataValues.set(copied, canonical);
     },
   });
+  if (snapshot.truncated && typeof snapshot.value === 'object' && snapshot.value !== null) truncatedChartInputs.add(snapshot.value);
   return snapshot.value === undefined && value !== undefined
     ? OMIT_CHART_CONFIGURATION_VALUE : snapshot.value;
 }
@@ -1017,6 +1056,7 @@ function projectChartDatasetConfigurations(
  * by Lyra's own later render, table, tooltip, append, and accessibility reads.
  */
 function projectChartDataConfiguration(value: unknown): LyraChartDataConfiguration | undefined {
+  if (typeof value === 'object' && value !== null && canonicalChartDataSnapshots.has(value)) return value as LyraChartDataConfiguration;
   if (!isSafeChartConfigurationRecord(value)) return undefined;
   const keys = chartEnumerableKeys(value);
   if (!keys) return undefined;
@@ -1041,6 +1081,8 @@ function projectChartDataConfiguration(value: unknown): LyraChartDataConfigurati
     }
     output[key] = descriptor.value;
   }
+  retainChartInputLimit(value, output);
+  canonicalChartDataSnapshots.add(output);
   return Object.freeze(output) as LyraChartDataConfiguration;
 }
 
@@ -1078,6 +1120,7 @@ function projectChartConfiguration(value: unknown): LyraChartConfiguration | und
       // data-model consumer reprojects it and therefore treats it as empty, but append callers
       // still observe the original explicit config member they supplied.
       output[property] = projected ?? copied;
+      retainChartInputLimit(copied, output);
       continue;
     }
     output[property] = copied;
@@ -1207,6 +1250,10 @@ export interface LyraChartDatumActivateDetail<
 }
 
 export interface LyraChartEventMap {
+  'lr-spatial-point-select': CustomEvent<LyraChartSpatialPointSelectDetail>;
+  'lr-spatial-bin-select': CustomEvent<LyraSpatialBinSelectDetail>;
+  'lr-source-point-select': CustomEvent<LyraChartSourcePointSelectDetail>;
+  'lr-source-category-select': CustomEvent<LyraChartSourceCategorySelectDetail>;
   /** A data point, segment or generated-table value was activated by pointer or keyboard. */
   'lr-point-activate': CustomEvent<{
     datasetIndex: number;
@@ -1333,7 +1380,9 @@ function chartDatasetValues(dataset: unknown): readonly unknown[] {
 
 /** The peer payload stays opaque, but append cloning needs its admitted source identity. */
 function chartDatasetPeerValues(dataset: unknown): readonly unknown[] {
-  const admission = admitChartArray(chartDatasetValue(dataset, 'data'));
+  const data = chartDatasetValue(dataset, 'data');
+  if (typeof data === 'object' && data !== null && canonicalChartDatasetDataValues.has(data)) return data as readonly unknown[];
+  const admission = admitChartArray(data);
   return admission ? copyChartArrayEntries(admission) : Object.freeze([]);
 }
 
@@ -1447,8 +1496,23 @@ function isDenseChartSize(size: LyraSize): boolean {
  * Create a new collection and reassign it after changes; mutating the assigned array does not
  * update the view. `labels` does not yet share this contract.
  *
+ * Prepared inputs are immutable summaries of a complete source. Series preserve original x/y,
+ * indices and gaps; category values represent named aggregates. Generated tables and synchronous
+ * Spatial scatter/bubble sources preserve complete density counts with bounded point overlays.
+ * Spatial mode requires maxRecords >= 3 and linear axes; viewport and selectedPointId are
+ * property-only controls. Density always includes all series, independently of point visibility.
+ * exportData contain the displayed summary, not every original observation. Exact point reveal
+ * reads one original position and optionally requests an indexed neighborhood. Zoom itself remains
+ * on the overview; it never guesses source indices from a numeric x coordinate.
+ *
  * @customElement lr-chart
  * @event lr-zoom - `detail: { zoomed }`.
+ * @event lr-spatial-point-select - A spatial point was activated; detail preserves revision and original point identity, coordinates, series and radius.
+ * @event lr-spatial-bin-select - A density region was activated; detail contains revision, bounds and count.
+ * @event lr-source-point-select - A prepared observation was activated. Detail contains revision,
+ *   seriesId, original sourceIndex and point { x, y }; legacy activation indices remain plotted indices.
+ * @event lr-source-category-select - A prepared aggregate was activated. Detail contains revision,
+ *   seriesId, categoryId, value and observationCount.
  * @event lr-point-activate - Fired when pointer input lands on a data point/segment, when a
  *   generated data-table value is activated, or when Enter/Space activates the keyboard-current
  *   canvas datum. `detail: { datasetIndex: number, index: number, label: string |
@@ -1489,6 +1553,7 @@ function isDenseChartSize(size: LyraSize): boolean {
  *   the data table visible and retries on data updates or `refreshTheme()`; its transition is
  *   announced through a shared light-DOM alert.
  * @csspart notices - Wrapper for nonfatal feature warnings and generated-data truncation notices.
+ * @csspart limit - Admission-limit disclosure when an input exceeds 10,000 entries.
  * @csspart data-truncation - Explanation shown when the generated accessible alternative samples
  *   a data set larger than its 1,000-record ceiling.
  * @csspart feature-warning - Static nonfatal warning when a requested optional feature peer is
@@ -1590,16 +1655,26 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     chartData: LYRA_DEFAULT_chartData,
     chartDataLabelsUnavailable: LYRA_DEFAULT_chartDataLabelsUnavailable,
     chartDataSampled: LYRA_DEFAULT_chartDataSampled,
+    chartInputLimit: LYRA_DEFAULT_chartInputLimit,
     chartLabeledPoint: LYRA_DEFAULT_chartLabeledPoint,
     chartMissingLibrary: LYRA_DEFAULT_chartMissingLibrary,
     chartPlotSampled: LYRA_DEFAULT_chartPlotSampled,
     chartPointCoordinates: LYRA_DEFAULT_chartPointCoordinates,
     chartPointLabel: LYRA_DEFAULT_chartPointLabel,
+    chartPreparedSummary: LYRA_DEFAULT_chartPreparedSummary,
+    chartPreparedSummaryZoom: LYRA_DEFAULT_chartPreparedSummaryZoom,
+    chartPreparedUnavailable: LYRA_DEFAULT_chartPreparedUnavailable,
     chartPrimaryAxis: LYRA_DEFAULT_chartPrimaryAxis,
     chartRenderUnavailable: LYRA_DEFAULT_chartRenderUnavailable,
     chartSecondaryAxis: LYRA_DEFAULT_chartSecondaryAxis,
     chartSeriesLabel: LYRA_DEFAULT_chartSeriesLabel,
     chartSeriesNoData: LYRA_DEFAULT_chartSeriesNoData,
+    chartSpatialBin: LYRA_DEFAULT_chartSpatialBin,
+    chartSpatialDensityLegend: LYRA_DEFAULT_chartSpatialDensityLegend,
+    chartSpatialHidden: LYRA_DEFAULT_chartSpatialHidden,
+    chartSpatialPoint: LYRA_DEFAULT_chartSpatialPoint,
+    chartSpatialRadiusDomain: LYRA_DEFAULT_chartSpatialRadiusDomain,
+    chartSpatialSummary: LYRA_DEFAULT_chartSpatialSummary,
     chartStackTotalsUnavailable: LYRA_DEFAULT_chartStackTotalsUnavailable,
     chartSummary: LYRA_DEFAULT_chartSummary,
     chartSummaryEmpty: LYRA_DEFAULT_chartSummaryEmpty,
@@ -1660,7 +1735,296 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   @property({ converter: { fromAttribute: (value) => normalizeChartType(value) } })
   type: LyraChartType = 'bar';
+  private _preparedData: LyraChartPreparedData | null = null;
+  /**
+   * Property-only immutable whole-source summary. Takes precedence over labels, datasets and
+   * config.data. Series require line/bar; categories require bar or a radial category chart.
+   * Spatial sources require scatter/bubble, linear axes and maxRecords >= 3. Bubble sources
+   * declare an exact full-source radiusDomain and a finite nonnegative radius on every point.
+   * Spatial CSV exports bounded point/bin rows with original coordinates and identity.
+   * All peer entries (including gap separators) must fit aggregate maxRecords, with two slots
+   * reserved for an isolated exact-point overlay. Rectangular table cells stay at most 1,000;
+   * semantic samples plus the overlay stay at most 9,000. Four samples without gaps need at
+   * least six maxRecords slots; each line gap needs another slot. Oversized summaries fail visibly.
+   * Reassign or explicitly requestUpdate after changing a host-authored descriptor/revision.
+   */
+  @property({ attribute: false })
+  get preparedData(): LyraChartPreparedData | null { return this._preparedData; }
+  set preparedData(value: LyraChartPreparedData | null) {
+    const previous = this._preparedData;
+    this._preparedData = value;
+    this.requestUpdate('preparedData', previous);
+    if (value === previous) this.requestUpdate();
+  }
+
+  /** Specialized derived distributions may supply their own bounded semantic input. */
+  protected preparedDataInput(): LyraChartPreparedData | null { return this._preparedData; }
+
+  /** Full spatial viewport; null retains the exact global source bounds. */
+  @property({ attribute: false }) viewport: LyraSpatialBounds | null = null;
+  /** Controlled exact spatial selection, independent of reveal focus. */
+  @property({ attribute: false }) selectedPointId = '';
+  private spatialActive = false;
+  private spatial = new SpatialSourceController(this, () => this.spatialChanged(), () => this.effectiveLocale);
+  private spatialWaiters = new Set<() => void>();
+  private spatialRevealToken: object = {};
+  private preparedGeneration: object = {};
+  private spatialKeyboardIndex = 0;
+  private spatialChanged(): void {
+    this.preparedChanged = true;
+    this.preparedPending = this.spatial?.loading ?? false;
+    this.preparedRequestFailed = this.spatial?.error ?? false;
+    this.descriptionMemo = undefined;
+    this.dataTableRows = undefined;
+    super.requestUpdate('spatialView', null);
+    if (!this.spatial?.loading || this.spatial.error) this.wakeSpatialWaiters();
+  }
+  private wakeSpatialWaiters(): void {
+    for (const resolve of this.spatialWaiters ?? []) resolve();
+    this.spatialWaiters?.clear();
+  }
+  private spatialPoints(): readonly LyraSpatialChartPoint[] {
+    return this.spatial.points() as readonly LyraSpatialChartPoint[];
+  }
+  private spatialSeriesPoints(visible = false): readonly LyraSpatialChartPoint[][] {
+    const points = this.spatialPoints(), view = this.spatial.view, series = this.spatial.binding?.chart?.series ?? [];
+    const groups = series.map(() => [] as LyraSpatialChartPoint[]);
+    const indices = new Map(series.map((entry, index) => [entry.id, index]));
+    for (const point of points) {
+      const index = indices.get(point.seriesId);
+      if (index !== undefined && (!visible || !!view && spatialContains(view, point))) groups[index]!.push(point);
+    }
+    return groups;
+  }
+  private spatialGuard(member: () => boolean = () => true): (event?: Event) => boolean {
+    const binding = this.spatial.binding, result = this.spatial.result, owner = this.ownerDocument;
+    const epoch = this.spatial.authority.epoch, generation = this.preparedGeneration;
+    return event => {
+      const target = event?.currentTarget as Element | null | undefined;
+      return this.isConnected && this.ownerDocument === owner && this.spatialActive && generation === this.preparedGeneration &&
+        binding === this.spatial.binding && result === this.spatial.result && epoch === this.spatial.authority.epoch &&
+        !this.spatial.loading && !this.spatial.error && member() &&
+        (!event || !!target?.isConnected && target.getRootNode() === this.renderRoot && target.ownerDocument === owner);
+    };
+  }
+  private spatialPointText(point: LyraSpatialChartPoint): string {
+    const series = this.spatial.binding!.chart!.series;
+    const datasetIndex = series.findIndex(series => series.id === point.seriesId);
+    const coordinates = this.datumDisplayValue({ x: point.x, y: point.y, ...(point.radius === undefined ? {} : { r: point.radius }) },
+      { surface: 'table', datasetIndex, index: point.sourceIndex, label: point.label, seriesLabel: series[datasetIndex]!.label });
+    return this.localize('chartSpatialPoint', undefined, { series: series[datasetIndex]!.label, id: point.id,
+      sourceIndex: this.formatSummaryValue(point.sourceIndex), coordinates,
+      hidden: this.canonicalHiddenDatasets()?.includes(datasetIndex) ? this.localize('chartSpatialHidden') : '' });
+  }
+  private spatialBinText(bin: LyraSpatialBin): string {
+    const format = (value: number) => this.formatSummaryValue(value);
+    return this.localize('chartSpatialBin', undefined, { count: format(bin.count), minX: format(bin.bounds.minX), maxX: format(bin.bounds.maxX), minY: format(bin.bounds.minY), maxY: format(bin.bounds.maxY) });
+  }
+  private activateSpatialPoint(point: LyraSpatialChartPoint): void {
+    const current = this.spatialGuard(() => this.spatialPoints().includes(point));
+    if (!current()) return;
+    const binding = this.spatial.binding!, result = this.spatial.result!;
+    this.emit('lr-spatial-point-select', Object.freeze({ revision: binding.revision, point }));
+    if (!current() || !result.points.includes(point)) return;
+    const datasetIndex = this.spatial.binding!.chart!.series.findIndex(series => series.id === point.seriesId);
+    const index = this.spatialSeriesPoints(true)[datasetIndex]!.indexOf(point);
+    if (index < 0) return;
+    const datum = { datasetIndex, index, label: point.label, value: Object.freeze({ x: point.x, y: point.y, ...(point.radius === undefined ? {} : { r: point.radius }), ...(point.label === undefined ? {} : { label: point.label }) }) };
+    this.emit('lr-point-activate', datum);
+    if (!current()) return;
+    this.emit('lr-datum-activate', { ...datum, kind: 'point' });
+  }
+  private activateSpatialBin(bin: LyraSpatialBin): void {
+    if (this.spatialGuard(() => this.spatial.result?.bins.includes(bin) === true)())
+      this.emit('lr-spatial-bin-select', Object.freeze({ revision: this.spatial.binding!.revision, bounds: bin.bounds, count: bin.count }));
+  }
+  private async revealSpatialPoint(id: string): Promise<boolean> {
+    const token = this.spatialRevealToken = {}; this.wakeSpatialWaiters();
+    if (this.preparedDirty) await this.updateComplete;
+    const epoch = this.spatial.authority.epoch, binding = this.spatial.binding, owner = this.ownerDocument;
+    const current = () => token === this.spatialRevealToken && this.spatialActive && this.isConnected &&
+      owner === this.ownerDocument && binding === this.spatial.binding && epoch === this.spatial.authority.epoch;
+    if (!current() || this.spatial.error) return false;
+    const point = await this.spatial.reveal(id);
+    if (!point || !current()) return false;
+    const series = this.spatial.binding!.chart!.series.findIndex(series => series.id === point.seriesId);
+    if (this.canonicalHiddenDatasets()?.includes(series)) return false;
+    const viewport = this.spatial.panTo(point);
+    if (viewport === undefined) return false;
+    if (viewport !== this.viewport) this.viewport = viewport;
+    await this.updateComplete;
+    if (!current()) return false;
+    if (this.spatial.loading) await new Promise<void>(resolve => this.spatialWaiters.add(resolve));
+    if (!current() || this.spatial.error) return false;
+    await this.updateComplete;
+    if (!current()) return false;
+    const index = this.spatialKeyboardItems().findIndex(item => 'id' in item && item.id === id);
+    const canvas = this.canvasEl;
+    if (index < 0 || !canvas) return false;
+    this.spatialKeyboardIndex = index; canvas.focus();
+    return current() && !this.spatial.error && !this.spatial.loading && this.canvasEl === canvas &&
+      this.spatialKeyboardItems().includes(point as LyraSpatialChartPoint) && this.renderRoot.querySelector(':focus') === canvas;
+  }
+  private spatialKeyboardItems(): readonly (LyraSpatialChartPoint | LyraSpatialBin)[] {
+    const hidden = this.canonicalHiddenDatasets() ?? [];
+    return [...this.spatialSeriesPoints(true).flatMap((points, index) => hidden.includes(index) ? [] : points), ...(this.spatial.result?.bins ?? [])];
+  }
+  private spatialKeyDown(event: KeyboardEvent): void {
+    if (!this.spatialGuard()()) return;
+    const items = this.spatialKeyboardItems(); if (!items.length) return;
+    let next = Math.min(this.spatialKeyboardIndex, items.length - 1);
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault(); if (event.repeat) return;
+      const item = items[next]!; if ('id' in item) this.activateSpatialPoint(item); else this.activateSpatialBin(item);
+      return;
+    }
+    const rtl = this.effectiveDirection === 'rtl';
+    if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = items.length - 1;
+    else if (event.key === (rtl ? 'ArrowLeft' : 'ArrowRight') || event.key === 'ArrowDown') next = Math.min(items.length - 1, next + 1);
+    else if (event.key === (rtl ? 'ArrowRight' : 'ArrowLeft') || event.key === 'ArrowUp') next = Math.max(0, next - 1);
+    else return;
+    event.preventDefault(); this.spatialKeyboardIndex = next;
+    const item = items[next]!; this.keyboardDatumAnnouncement = 'id' in item ? this.spatialPointText(item) : this.spatialBinText(item);
+  }
+  private renderSpatialTable(): TemplateResult {
+    return html`<table class=${this.dataTableVisible ? nothing : 'sr-only'}><caption>${this.accessibleName(this.localize('chartData'))}</caption>
+      <thead><tr><th scope="col">${this.localize('chartCategory')}</th><th scope="col">${this.localize('chartData')}</th></tr></thead><tbody>
+      ${this.spatialPoints().map(point => { const current = this.spatialGuard(() => this.spatialPoints().includes(point));
+        return html`<tr><th scope="row">${point.label ?? point.id}</th><td><button type="button" tabindex=${this.dataTableVisible ? '0' : '-1'} data-spatial-id=${point.id}
+          @click=${(event: Event) => { if (current(event)) this.activateSpatialPoint(point); }}>${this.spatialPointText(point)}</button></td></tr>`; })}
+      ${(this.spatial.result?.bins ?? []).map((bin, index) => { const current = this.spatialGuard(() => this.spatial.result?.bins.includes(bin) === true);
+        return html`<tr><th scope="row">${this.spatialBinText(bin)}</th><td><button type="button" tabindex=${this.dataTableVisible ? '0' : '-1'} aria-label=${this.spatialBinText(bin)} data-spatial-bin=${index}
+          @click=${(event: Event) => { if (current(event)) this.activateSpatialBin(bin); }}>${this.formatSummaryValue(bin.count)}</button></td></tr>`; })}
+      </tbody></table>`;
+  }
+
+  private preparedDirty = true;
+  private preparedActive = false;
+  private preparedChanged = false;
+  private preparedInvalid = false;
+  private preparedPending = false;
+  private preparedRequestFailed = false;
+  private announcedPreparedInvalid = false;
+  private preparedBaseModel?: PreparedChartModel;
+  private preparedModel?: PreparedChartModel;
+  private preparedEffective?: { model: PreparedChartModel; data: EffectiveChartData };
+  private readonly preparedRequests = new SourceRequestController(this, {
+    channels: ['point'] as const, onReset: () => { this.preparedPending = false; },
+  });
+
+  private refreshPreparedModel(): void {
+    if (!this.preparedDirty) return;
+    this.preparedDirty = false;
+    this.preparedChanged = true;
+    this.preparedInvalid = false;
+    this.preparedRequestFailed = false;
+    this.preparedBaseModel = this.preparedModel = undefined;
+    this.preparedEffective = undefined;
+    const generation = this.preparedGeneration;
+    const input = this.preparedDataInput();
+    this.spatialActive = false;
+    this.preparedActive = input !== null;
+    try {
+      if (input !== null) {
+        const kind = Object.getOwnPropertyDescriptor(input, 'kind');
+        if (generation !== this.preparedGeneration) return;
+        if (kind && 'value' in kind && kind.value === 'spatial') {
+          const type = this.effectiveType();
+          if ((type !== 'scatter' && type !== 'bubble') || this.scaleType !== 'linear') throw new TypeError('Incompatible spatial chart');
+          this.spatialActive = true;
+          this.preparedRequests.setSource(undefined, undefined);
+          this.spatial.bind(input as LyraSpatialChartSource, this.viewport, normalizeChartRecordLimit(this.maxRecords), this.selectedPointId, { type: type as 'scatter' | 'bubble' });
+          if (generation !== this.preparedGeneration) return;
+          this.preparedInvalid = this.spatial.error;
+          return;
+        }
+        const model = prepareChartModel(input, this.effectiveType(), normalizeChartRecordLimit(this.maxRecords));
+        this.preparedBaseModel = this.preparedModel = model;
+        this.preparedRequests.setSource(input, model.revision);
+      } else this.preparedRequests.setSource(undefined, undefined);
+    } catch {
+      this.preparedInvalid = true;
+      this.preparedRequests.setSource(undefined, undefined);
+    }
+  }
+
+  /**
+   * Resolves one original source position and adds a bounded isolated overlay. Returns false for
+   * missing, invalid, canceled or obsolete points. It never interprets sourceIndex as a peer index
+   * or scans the original source. An optional queryRange refines a bounded index neighborhood
+   * around the revealed point. Zoom itself remains summary-only and never guesses an x/index map.
+   */
+  revealSourcePoint(id: string): Promise<boolean>;
+  revealSourcePoint(ref: LyraSeriesPointRef): Promise<boolean>;
+  async revealSourcePoint(ref: LyraSeriesPointRef | string): Promise<boolean> {
+    if (typeof ref === 'string') return this.revealSpatialPoint(ref);
+    if (!this.isConnected || !ref || typeof ref.seriesId !== 'string') return false;
+    ref = Object.freeze({ seriesId: ref.seriesId, sourceIndex: ref.sourceIndex });
+    if (this.preparedDirty) await this.updateComplete;
+    const model = this.preparedBaseModel;
+    if (!model || model.kind !== 'series') return false;
+    const series = model.series.find(series => series.id === ref.seriesId);
+    if (!series || !Number.isSafeInteger(ref.sourceIndex) || ref.sourceIndex < 0 || ref.sourceIndex >= series.counts.sourceCount) return false;
+    const lease = this.preparedRequests.begin('point', this.effectiveLocale);
+    if (!lease) return false;
+    this.preparedPending = true;
+    this.preparedRequestFailed = false;
+    this.requestUpdate('preparedView', null);
+    const signal = lease.context.signal;
+    try {
+      const source = model.source;
+      if (source.kind !== 'series' || source.revision !== model.revision) throw new Error('Prepared source revision changed');
+      const response = source.getPoint(ref, { signal });
+      const point = await preparedResponse(response, signal);
+      if (!lease.isCurrent() || this.preparedBaseModel !== model || source.revision !== model.revision) return false;
+      if (point === null) return false;
+      let next = model;
+      const refinement = Object.getOwnPropertyDescriptor(source, 'queryRange');
+      if (refinement) {
+        if (!('value' in refinement) || typeof refinement.value !== 'function') throw new TypeError('Invalid indexed refinement');
+        const otherEntries = model.peerCount - series.samples.length;
+        // A line refinement can need one separator between every pair of samples, plus
+        // two entries for the isolated overlay. Every series also shares the table rows.
+        const entryBudget = Math.min(model.limit - otherEntries, Math.floor(1000 / model.series.length));
+        const maxPoints = Math.max(1, Math.floor((entryBudget - 1) / 2));
+        const startIndex = Math.max(0, ref.sourceIndex - maxPoints);
+        const endIndex = Math.min(series.counts.sourceCount, ref.sourceIndex + Math.min(maxPoints + 1, series.counts.sourceCount - ref.sourceIndex));
+        const request = { seriesId: ref.seriesId, startIndex, endIndex, maxPoints, signal };
+        const points = await preparedResponse(source.queryRange!(request), signal);
+        if (!lease.isCurrent() || this.preparedBaseModel !== model || source.revision !== model.revision) return false;
+        next = withPreparedRange(model, request, points);
+      }
+      const overlay = withPreparedPoint(next, ref, point);
+      if (!lease.isCurrent() || this.preparedBaseModel !== model || source.revision !== model.revision) return false;
+      this.preparedModel = overlay;
+      this.preparedChanged = true;
+      this.preparedEffective = undefined;
+      this.descriptionMemo = undefined;
+      this.dataTableRows = undefined;
+      return true;
+    } catch {
+      if (lease.isCurrent()) {
+        this.preparedRequestFailed = true;
+        this.announcements.announceAssertive(this.localize('chartPreparedUnavailable'));
+      }
+      return false;
+    } finally {
+      if (lease.isCurrent()) {
+        this.preparedPending = false;
+        this.requestUpdate('preparedView', null);
+      }
+    }
+  }
+
   @property({ attribute: false }) labels: string[] = [];
+  /** Maximum rendered records across all series, clamped to 2–1,000. The plot width may lower
+   * this bound. Numeric bucket extremes and both endpoints are retained when the budget permits.
+   * Summaries and CSV exports retain the complete admitted input (at most 10,000 entries per array).
+   * @default 1000
+   */
+  @property({ type: Number, attribute: 'max-records' }) maxRecords = 1_000;
+  @state() private samplingWidth = 0;
   private labelsSnapshot?: { source: unknown; value: readonly string[] };
   private annotationsSnapshot?: {
     source: unknown;
@@ -2018,7 +2382,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private effectiveConfig(): LyraChartConfiguration | undefined {
-    return this.normalizeEffectiveConfig(this.config ?? this.slottedConfig);
+    const config = this.normalizeEffectiveConfig(this.config ?? this.slottedConfig);
+    if (this.preparedDataInput() === null || !config) return config;
+    return { type: config.type, options: config.options, plugins: config.plugins };
   }
 
   private onConfigSlotChange(event: Event): void {
@@ -2059,7 +2425,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         next = undefined;
       }
     }
-    this.slottedConfig = next;
+    if (!Object.is(this.slottedConfig, next)) this.slottedConfig = next;
   }
 
   /**
@@ -2068,6 +2434,30 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * while an omitted member falls back to the simplified property surface.
    */
   private effectiveData(): EffectiveChartData {
+    if (this.spatialActive) {
+      const groups = this.spatialSeriesPoints();
+      return { labels: [], datasets: (this.spatial.binding?.chart?.series ?? []).map((series, index) => {
+        const data = groups[index]!.map(point => Object.freeze({ x: point.x, y: point.y, ...(point.radius === undefined ? {} : { r: point.radius }), ...(point.label === undefined ? {} : { label: point.label }) }));
+        const dataset = Object.freeze({ label: series.label, data }); canonicalChartDatasetValues.set(dataset, data); return dataset;
+      }) };
+    }
+    if (this.preparedActive) {
+      const model = this.preparedModel;
+      if (!model) return { labels: [], datasets: [] };
+      if (this.preparedEffective?.model === model) return this.preparedEffective.data;
+      const datasets = model.series.map(series => {
+        const data = model.kind === 'series'
+          ? series.samples.map(point => point ? Object.freeze({ x: point.x, y: point.y, label: String(point.sourceIndex) }) : null)
+          : [...series.values];
+        Object.freeze(data);
+        const dataset = Object.freeze({ label: series.label, data });
+        canonicalChartDatasetValues.set(dataset, data);
+        return dataset;
+      });
+      const data = { labels: [...model.labels], datasets };
+      this.preparedEffective = { model, data };
+      return data;
+    }
     // Hover, keyboard and render paths read this many times per update; its inputs are immutable
     // snapshots, so their identities decide whether the projection is still current.
     const labels = this.canonicalLabels();
@@ -2251,9 +2641,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * `maxPoints` categories. An explicitly supplied `config.data` member is updated at that same
    * source; generated members continue to update `labels`/`datasets`, preserving generated styling.
    * Point-based scatter/bubble series are left unchanged because their x/y/r coordinates need a
-   * richer host-defined append contract.
+   * richer host-defined append contract. Inactive while preparedData is supplied.
    */
   appendData(label: string, values: (number | null)[], maxPoints: number = 0): void {
+    if (this.preparedDataInput() !== null) return;
+    this.withStreamedTableUpdate(() => {
     const requested = Number.isFinite(maxPoints) ? Math.max(0, Math.floor(maxPoints)) : 0;
     // Input admission keeps the FIRST 10,000 entries of each array, so an unbounded stream would
     // freeze on its oldest data. Appending therefore always keeps a rolling window of the newest.
@@ -2290,14 +2682,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ...Array.from({ length: Math.max(0, domainLength - current.length) }, () => null),
             appendedValues[index] ?? null,
           ];
-          return { ...series, data: data.slice(-limit) };
+          return appendChartSeries(series, data.slice(-limit));
         });
         this.datasets = datasets;
       }
 
       if (explicitLabels || explicitDatasets) {
         const nextData: Record<string, unknown> = { ...currentData };
-        if (explicitLabels) nextData['labels'] = nextLabels;
+        if (explicitLabels) nextData['labels'] = Object.freeze(nextLabels);
         if (explicitDatasets) {
           nextData['datasets'] = effective.datasets.map((dataset, index) => {
             if (this.isPointDataset(dataset)) return dataset;
@@ -2313,13 +2705,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
               appendedValues[index] ?? null,
             ];
             const canonical = [...current, ...padding, appendedValues[index] ?? null];
-            const nextData = data.slice(-limit);
+            const nextData = Object.freeze(data.slice(-limit));
             const nextCanonical = canonical.slice(-limit);
             canonicalChartDatasetDataValues.set(nextData, Object.freeze(nextCanonical));
-            return { ...dataset, data: nextData };
+            const nextDataset = Object.freeze({ ...dataset, data: nextData });
+            canonicalChartDatasetValues.set(nextDataset, Object.freeze(nextCanonical));
+            return nextDataset;
           });
         }
-        this.config = { ...effectiveConfig, data: nextData as LyraChartDataConfiguration };
+        if (Array.isArray(nextData['datasets'])) Object.freeze(nextData['datasets']);
+        canonicalChartDataSnapshots.add(nextData);
+        const previous = this._config;
+        this._config = Object.freeze({ ...effectiveConfig, data: Object.freeze(nextData) as LyraChartDataConfiguration });
+        this.configSource = this._config;
+        this.requestUpdate('config', previous);
       }
       return;
     }
@@ -2343,10 +2742,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         ...Array.from({ length: Math.max(0, domainLength - current.length) }, () => null),
         appendedValues[index] ?? null,
       ];
-      return { ...series, data: data.slice(-limit) };
+      return appendChartSeries(series, data.slice(-limit));
     });
     this.labels = labels.slice(-limit);
     this.datasets = datasets;
+    });
   }
 
   /**
@@ -2355,6 +2755,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   exportData(format: LyraChartExportFormat): string {
     if (format === 'png') return this.chart?.toBase64Image?.() ?? '';
+    if (this.spatialActive) return spatialCsv(this.spatial.binding?.chart?.series ?? [], this.spatialPoints(), this.spatial.result?.bins ?? [], (value, record, column) => {
+      const datasetIndex = 'seriesId' in record ? this.spatial.binding!.chart!.series.findIndex(series => series.id === record.seriesId) : undefined;
+      return this.formatExportValue(value, { datasetIndex, ...('sourceIndex' in record ? { index: record.sourceIndex, label: record.label } : {}), ...(column === 'x' || column === 'y' || column === 'radius' ? { statistic: column === 'radius' ? 'r' : column } : {}) });
+    });
     const effective = this.effectiveData();
     const columns = effective.datasets.map((dataset, datasetIndex) => {
       const values = this.datasetValues(dataset);
@@ -2572,6 +2976,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.preparedDirty = true;
     this.stopAnnotationRegistrationWatch?.();
     this.stopAnnotationRegistrationWatch = onAnnotationPluginRegistered(() =>
       this.rebuildAfterAnnotationRegistration()
@@ -2600,6 +3005,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           this.resizeDrawFrame = undefined;
           this.resizeDrawFrameOwner = undefined;
           if (!this.isConnected || this.ownerWindow !== frameOwner) return;
+          const samplingWidth = Number.isFinite(this.lastObservedInlineSize)
+            ? Math.max(0, Math.floor(this.lastObservedInlineSize!)) : 0;
+          if (samplingWidth !== this.samplingWidth) {
+            this.samplingWidth = samplingWidth;
+            this.updateAutoLegendPosition();
+            return;
+          }
           // A changed auto position schedules the same visibility-gated draw through `updated()`.
           // Avoid drawing once here and again in that reactive pass.
           if (!this.updateAutoLegendPosition()) this.drawIfVisible();
@@ -2667,7 +3079,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.spatialRevealToken = {}; this.spatial.reset(); this.wakeSpatialWaiters();
+    this.preparedRequests.refresh();
+    this.preparedModel = this.preparedBaseModel = undefined;
+    this.preparedEffective = undefined;
+    this.preparedDirty = true;
     this.chartSync.disconnect();
+    this.cancelDeferredTable?.();
+    this.cancelDeferredTable = undefined;
+    this.deferredTableRows = undefined;
     super.disconnectedCallback();
     this.stopAnnotationRegistrationWatch?.();
     this.stopAnnotationRegistrationWatch = undefined;
@@ -2696,6 +3116,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.spatial.authority.adopted(); this.spatialRevealToken = {}; this.wakeSpatialWaiters();
+    this.preparedRequests.adopted();
     this.chartSync.disconnect();
     this.canvasTokens.clear();
     super.adoptedCallback();
@@ -2756,7 +3178,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // A rebuild resets Chart.js's per-instance visibility metadata to the configured `hidden`
     // flags. Nothing reactive changes after the async plugin resolves, so refresh the DOM legend
     // explicitly instead of leaving its pre-rebuild aria-pressed state stale.
-    if (rebuilt && this.showsLegend) this.requestUpdate();
+    if (rebuilt && this.showsLegend) this.requestUpdate('canvasPresentation', null);
   }
 
   private get zoomFeatureAvailable(): boolean {
@@ -2796,7 +3218,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         this.chartJsModule = result.mod;
       }
       this.drawIfVisible();
-      this.requestUpdate();
+      this.requestUpdate('canvasPresentation', null);
     });
   }
 
@@ -2816,7 +3238,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       }
       this.annotationFeatureState = result.kind === 'available' ? 'available' : 'unavailable';
       this.applyAnnotationPlugin(result.kind === 'available' ? result.plugin : undefined);
-      this.requestUpdate();
+      this.requestUpdate('canvasPresentation', null);
     });
   }
 
@@ -2871,7 +3293,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         this.chartJsModule = result.mod;
       }
       this.applyDataLabelsPlugin(result.kind === 'available' ? result.plugin : undefined);
-      this.requestUpdate();
+      this.requestUpdate('canvasPresentation', null);
     });
   }
 
@@ -2891,6 +3313,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.refreshPreparedModel();
+    if (this.spatialActive) { this.zoomed = this.viewport !== null; return; }
     if (!this.zoomed) return;
     if (this.effectiveType() !== this.builtType) {
       this.zoomed = false;
@@ -2951,11 +3375,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       canvasChanges = new Map(changed);
       canvasChanges.delete('hiddenDatasets');
     }
-    const contentChanged = this.chartContentChanged(canvasChanges);
+    const contentChanged = this.preparedChanged || this.chartContentChanged(canvasChanges);
+    this.preparedChanged = false;
     const syncDataChanged = contentChanged || changed.has('hiddenDatasets') || changed.has('hiddenDatums');
     this.chartSync.update(this.syncGroup, typeof this.syncGroup === 'string' && this.syncGroup.trim() !== '' && this.syncCompatible(), syncDataChanged);
     const wasMounting = this.isMounting;
     this.isMounting = false;
+    if (!wasMounting && this.preparedInvalid && !this.announcedPreparedInvalid) this.announcements.announceAssertive(this.localize('chartPreparedUnavailable'));
+    this.announcedPreparedInvalid = this.preparedInvalid;
 
     // The default empty datum state is part of the first update and must stay silent. Later
     // keyboard changes are appended once to the light-DOM sink; the shadow copy is aria-hidden.
@@ -2973,7 +3400,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     ) {
       this.announcements.announceAssertive(this.localize('chartMissingLibrary'));
     }
-    const dataTruncation = this.dataTruncationMessage();
+    const dataTruncation = [this.inputLimitMessage(), this.dataTruncationMessage()].filter(Boolean).join(this.localize('chartSummarySeparator'));
     if (wasMounting) {
       // The peer loader completes on a later update, so establish the initial value now rather
       // than treating its successful completion as a user-visible data change.
@@ -2993,7 +3420,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       }
     }
 
-    this.setAttribute('aria-busy', String(this.loading));
+    this.setAttribute('aria-busy', String(this.loading || this.preparedPending));
 
     // Keep the author-facing `--lr-chart-height` hook entirely consumer-owned. The component's
     // property supplies only the private fallback, so consumer CSS continues to win across valid,
@@ -3059,7 +3486,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   protected chartContentChanged(changed: PropertyValues): boolean {
     return [
+      'preparedData', 'preparedView', 'spatialView', 'viewport', 'selectedPointId',
       'type',
+      'maxRecords',
+      'samplingWidth',
       'labels',
       'datasets',
       'hiddenDatasets',
@@ -3839,18 +4269,24 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const stackedY2 = stackableType && this.axisStacked('y2');
     const horizontalCategorical =
       (effectiveType === 'bar' || effectiveType === 'line') && this.effectiveIndexAxis() === 'y';
-    const pointChart = effectiveType === 'scatter' || effectiveType === 'bubble';
+    const pointChart = this.preparedModel?.kind === 'series' || effectiveType === 'scatter' || effectiveType === 'bubble';
     const xKind: 'category' | 'value' = pointChart || horizontalCategorical ? 'value' : 'category';
-    const yKind: 'category' | 'value' = horizontalCategorical ? 'category' : 'value';
+    const yKind: 'category' | 'value' = this.preparedModel?.kind === 'series' ? 'value' : horizontalCategorical ? 'category' : 'value';
     const valueAxis =
       horizontalCategorical ? 'x' : 'y';
     const bounds = this.scaleBounds();
+    const prepared = this.preparedModel;
+    const fullBounds = (axis: 'xDomain' | 'yDomain') => {
+      const domains = prepared?.kind === 'series' ? prepared.series.flatMap(series => series[axis] ? [series[axis]!] : []) : [];
+      return domains.length ? { min: Math.min(...domains.map(domain => domain.min)), max: Math.max(...domains.map(domain => domain.max)) } : {};
+    };
     return {
       x: {
         ...this.tickLabelIsolation(direction),
         display: this.axisVisible('x'),
         type: xKind === 'value' ? this.valueScaleType() : 'category',
         beginAtZero: xKind === 'value' ? this.valueBeginAtZero() : undefined,
+        ...fullBounds('xDomain'),
         ...(valueAxis === 'x' ? bounds : {}),
         title: { display: !!this.xLabel, text: isolateCanvasLabel(this.xLabel, direction), color: theme.tick },
         ticks: this.tickOptions(theme, xKind, 'x'),
@@ -3868,6 +4304,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         type: yKind === 'value' ? this.valueScaleType() : 'category',
         position: rtl ? 'right' : 'left',
         beginAtZero: yKind === 'value' ? this.valueBeginAtZero() : undefined,
+        ...fullBounds('yDomain'),
         ...(valueAxis === 'y' ? bounds : {}),
         title: { display: !!this.yLabel, text: isolateCanvasLabel(this.yLabel, direction), color: theme.tick },
         ticks: this.tickOptions(theme, yKind, 'y'),
@@ -3914,6 +4351,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * chart type (bar/line/pie/doughnut/etc.), not just bars.
    */
   private handlePointClick(event: unknown, chart: RuntimeChart): void {
+    if (!this.isConnected || chart !== this.chart) return;
     // Chart.js's own `onClick` handler hands us its `ChartEvent` wrapper, but
     // `getElementsAtEventForMode()`'s .d.ts (inaccurately) types its first
     // param as a DOM `Event` — at runtime Chart.js only reads `.x`/`.y` off
@@ -3948,29 +4386,25 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   private chartDatums(): ChartDatum[] {
     const effective = this.effectiveData();
+    const plan = this.dataTableSample(effective);
     const memo = this.chartDatumsMemo;
     if (
-      memo?.effective === effective &&
+      memo?.effective === effective && memo.plan === plan &&
       memo.datasets === this.visualDatasetSourceIndexes &&
       memo.rows === this.visualRowSourceIndexes
     )
       return memo.value;
-    const datasetIndexes = this.visualDatasetSourceIndexes ??
-      effective.datasets.map((_dataset, index) => index);
+    const datasetIndexes = this.visualDatasetSourceIndexes ?? this.dataTableSample(effective).seriesIndexes;
     const datasets = datasetIndexes.map((index) => effective.datasets[index]);
     let rowIndexes = this.visualRowSourceIndexes;
     if (!rowIndexes) {
-      let sourceRowCount = effective.labels.length;
-      for (const dataset of datasets) {
-        sourceRowCount = Math.max(sourceRowCount, chartDatasetValues(dataset).length);
-      }
-      rowIndexes = Array.from({ length: sourceRowCount }, (_value, index) => index);
+      rowIndexes = this.dataTableSample(effective).rowIndexes;
     }
     const labels = rowIndexes.map((index) => effective.labels[index]);
     // `rowIndexes` is already the visual sample when the chart was bounded for rendering. Sample
     // only its local positions here, then translate through that map exactly once below.
     const rowCount = rowIndexes.length;
-    const sample = sampleChartTableIndexes(rowCount, datasets.length);
+    const sample = this.preparedModel ? { rowIndexes: Array.from({ length: rowCount }, (_, index) => index), seriesIndexes: Array.from({ length: datasets.length }, (_, index) => index) } : sampleChartTableIndexes(rowCount, datasets.length);
     const datums: ChartDatum[] = [];
     sample.seriesIndexes.forEach((datasetIndex) => {
       const dataset = datasets[datasetIndex];
@@ -3982,7 +4416,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         if (value == null) return;
         if (typeof value === 'number' && !Number.isFinite(value)) return;
         datums.push({
-          datasetIndex: this.visualDatasetSourceIndexes?.[datasetIndex] ?? datasetIndex,
+          datasetIndex: datasetIndexes[datasetIndex] ?? datasetIndex,
           index: sourceIndex,
           label: normalizedChartPoint(value)?.label ?? (labelText(labels[localIndex]) || undefined),
           value,
@@ -3990,6 +4424,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       });
     });
     this.chartDatumsMemo = {
+      plan,
       effective,
       datasets: this.visualDatasetSourceIndexes,
       rows: this.visualRowSourceIndexes,
@@ -4055,6 +4490,24 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     });
   }
 
+  /** @internal Specialized distributions may retain only their existing aggregate activation. */
+  protected emitPreparedSourceSelection(datasetIndex: number, index: number): void {
+    const model = this.preparedModel;
+    const series = model?.series[datasetIndex];
+    if (model && series) {
+      if (model.kind === 'series') {
+        const point = series.samples[index];
+        if (point) this.emit('lr-source-point-select', { revision: model.revision, seriesId: series.id, sourceIndex: point.sourceIndex, point: Object.freeze({ x: point.x, y: point.y }) });
+      } else {
+        const categoryId = model.categoryIds[index], value = series.values[index];
+        if (categoryId !== undefined && value !== undefined) this.emit('lr-source-category-select', { revision: model.revision, seriesId: series.id, categoryId, value, observationCount: model.categoryCounts[index]! });
+      }
+    }
+  }
+
+  /** @internal Specialized distributions may describe observations outside their plotted bins. */
+  protected preparedSummary(): string | undefined { return undefined; }
+
   private activateDatum(datum: ChartDatum): void {
     const datums = this.chartDatums();
     const position = datums.findIndex(
@@ -4074,6 +4527,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           : type === 'line'
             ? 'segment'
             : 'point';
+    this.emitPreparedSourceSelection(datum.datasetIndex, datum.index);
     this.emit('lr-datum-activate', { ...datum, kind });
     this.emit('lr-point-activate', { ...datum });
   }
@@ -4099,6 +4553,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private chartDatumsMemo?: {
+    plan: ReturnType<LyraChart['dataTableSample']>;
     effective: EffectiveChartData;
     datasets: readonly number[] | undefined;
     rows: readonly number[] | undefined;
@@ -4245,6 +4700,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   };
 
   private onCanvasFocus(event: FocusEvent): void {
+    if (this.spatialActive) return;
     const datums = this.chartDatums();
     if (!datums.length) return;
     this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
@@ -4258,6 +4714,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private onCanvasKeyDown(event: KeyboardEvent): void {
+    if (this.spatialActive) { this.spatialKeyDown(event); return; }
     const datums = this.chartDatums();
     if (!datums.length) return;
     this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
@@ -4677,7 +5134,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.chartAreaUpdateQueued = true;
       queueMicrotask(() => {
         this.chartAreaUpdateQueued = false;
-        if (this.isConnected) this.requestUpdate();
+        if (this.isConnected) this.requestUpdate('canvasPresentation', null);
       });
     }
   }
@@ -4694,7 +5151,126 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     /* read-only, derived from the live Chart.js instance; direct writes are silently ignored */
   }
 
+  private spatialDescription(): string {
+    const binding = this.spatial.binding, global = binding?.bounds, view = this.spatial.view;
+    if (!global || !view) return this.localize('noData');
+    const f = (value: number) => this.formatSummaryValue(value);
+    const summary = this.localize('chartSpatialSummary', undefined, { count: f(binding.count), matchedCount: f(this.spatial.result?.matchedCount ?? 0),
+      minX: f(global.minX), maxX: f(global.maxX), minY: f(global.minY), maxY: f(global.maxY),
+      viewMinX: f(view.minX), viewMaxX: f(view.maxX), viewMinY: f(view.minY), viewMaxY: f(view.maxY) });
+    const radius = binding.chart?.type === 'bubble' && binding.chart.radiusDomain;
+    return [summary, ...(radius ? [this.localize('chartSpatialRadiusDomain', undefined, { min: f(radius.min), max: f(radius.max) })] : []), this.localize('chartSpatialDensityLegend')].join(this.localize('chartSummarySeparator'));
+  }
+  private buildSpatialConfig(): RuntimeChartConfiguration {
+    const binding = this.spatial.binding, view = this.spatial.view;
+    const series = binding?.chart?.series ?? [], groups = this.spatialSeriesPoints(true), bins = this.spatial.result?.bins ?? [];
+    const current = this.spatialGuard(), theme = this.themeColors(), palette = this.seriesPalette();
+    const type = binding?.chart?.type ?? 'scatter';
+    const color = (index: number) => this.canvasTokens.resolve(series[index]?.color ?? palette[index % palette.length] ?? theme.tick, theme.tick);
+    const datasets = series.map((entry, index) => ({ label: entry.label, borderColor: color(index), backgroundColor: color(index),
+      borderWidth: groups[index]!.map(point => point.id === this.selectedPointId ? 3 : 1),
+      data: groups[index]!.map(point => ({ x: spatialCoordinate(point.x, view!.minX, view!.maxX), y: spatialCoordinate(point.y, view!.minY, view!.maxY),
+        ...(type === 'bubble' ? { r: spatialPaintRadius(point.radius!, this.canvasEl?.clientWidth ?? 0, this.canvasEl?.clientHeight ?? 0) } : {}) })),
+    }));
+    const toPixel = (chart: RuntimeChart, x: number, y: number) => {
+      const area = chart.chartArea!;
+      const normalizedX = spatialCoordinate(x, view!.minX, view!.maxX);
+      return { x: area.left + (this.effectiveDirection === 'rtl' ? 1 - normalizedX : normalizedX) * area.width,
+        y: area.bottom - spatialCoordinate(y, view!.minY, view!.maxY) * area.height };
+    };
+    const density = {
+      id: 'lyra-spatial-density',
+      beforeDatasetsUpdate: (chart: RuntimeChart) => {
+        if (!current() || type !== 'bubble' || !chart.chartArea) return;
+        chart.data.datasets.forEach((dataset, index) => dataset.data?.forEach((raw, pointIndex) => {
+          const point = groups[index]?.[pointIndex];
+          if (point && raw && typeof raw === 'object') Reflect.set(raw, 'r', spatialPaintRadius(point.radius!, chart.chartArea!.width, chart.chartArea!.height));
+        }));
+      },
+      beforeDatasetsDraw: (chart: RuntimeChart & { ctx: CanvasRenderingContext2D }) => {
+        if (!current() || !view || !chart.chartArea) return;
+        const context = chart.ctx, area = chart.chartArea;
+        context.save(); context.beginPath(); context.rect(area.left, area.top, area.width, area.height); context.clip();
+        context.fillStyle = color(0); context.strokeStyle = color(0);
+        for (const bin of bins) {
+          const a = toPixel(chart, bin.bounds.minX, bin.bounds.maxY), b = toPixel(chart, bin.bounds.maxX, bin.bounds.minY);
+          context.globalAlpha = 0.15 + 0.65 * bin.count / Math.max(1, this.spatial.result!.matchedCount);
+          if (a.x === b.x && a.y === b.y) context.fillRect(a.x - 0.5, a.y - 0.5, 1, 1);
+          else if (a.x === b.x || a.y === b.y) { context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke(); }
+          else context.fillRect(Math.min(a.x, b.x), a.y, Math.abs(b.x - a.x), b.y - a.y);
+        }
+        context.restore();
+      },
+    };
+    const pointFor = (context: { datasetIndex?: number; dataIndex?: number }) => {
+      if (!current() || !Number.isSafeInteger(context.datasetIndex) || !Number.isSafeInteger(context.dataIndex)) return undefined;
+      const point = groups[context.datasetIndex!]?.[context.dataIndex!];
+      return current() && point && this.spatialPoints().includes(point) ? point : undefined;
+    };
+    const axis = (name: 'x' | 'y') => {
+      const min = name === 'x' ? view?.minX : view?.minY, max = name === 'x' ? view?.maxX : view?.maxY;
+      return { type: 'linear', min: 0, max: 1, reverse: name === 'x' && this.effectiveDirection === 'rtl',
+        title: { display: !!(name === 'x' ? this.xLabel : this.yLabel), text: name === 'x' ? this.xLabel : this.yLabel, color: theme.tick },
+        ...(min === max ? { afterBuildTicks: (scale: { ticks: { value: number }[] }) => { scale.ticks = [{ value: 0.5 }]; } } : {}),
+        ticks: { color: theme.tick, callback: (value: number) => {
+          if (!current() || min === undefined || max === undefined || value < 0 || value > 1) return '';
+          const original = spatialOriginal(value, min, max), formatted = this.formatValue(original, 'tick', { axis: name });
+          return typeof formatted === 'string' ? formatted : this.formatSummaryValue(original);
+        } },
+      };
+    };
+    const generated: RuntimeChartConfiguration = { type, data: { labels: [], datasets }, plugins: [density, ...this.plugins], options: {
+      responsive: true, maintainAspectRatio: false, animation: this.withoutAnimation || prefersReducedMotion(this) ? false : undefined,
+      locale: this.effectiveLocale, indexAxis: 'x', parsing: false, scales: { x: axis('x'), y: axis('y') },
+      onResize: (chart: RuntimeChart) => { if (current()) this.updateChartArea(chart); },
+      onClick: (event: { native?: Event; x?: number; y?: number }, _hits: unknown, chart: RuntimeChart) => {
+        if (!current() || !view) return;
+        const hits = chart.getElementsAtEventForMode(event.native ?? event as unknown as Event, 'nearest', { intersect: true }, true);
+        const hit = hits[0], point = hit && groups[hit.datasetIndex]?.[hit.index];
+        if (point && !this.canonicalHiddenDatasets()?.includes(hit!.datasetIndex)) { this.activateSpatialPoint(point); return; }
+        if (!chart.chartArea || typeof event.x !== 'number' || typeof event.y !== 'number') return;
+        const bin = bins.find(bin => { const a = toPixel(chart, bin.bounds.minX, bin.bounds.maxY), b = toPixel(chart, bin.bounds.maxX, bin.bounds.minY);
+          return event.x! >= Math.min(a.x, b.x) - (a.x === b.x ? 2 : 0) && event.x! <= Math.max(a.x, b.x) + (a.x === b.x ? 2 : 0) && event.y! >= a.y - (a.y === b.y ? 2 : 0) && event.y! <= b.y + (a.y === b.y ? 2 : 0); });
+        if (bin) this.activateSpatialBin(bin);
+      },
+      plugins: { legend: { display: false }, tooltip: { enabled: !this.withoutTooltip, backgroundColor: theme.tooltipBg, titleColor: theme.tooltipText, bodyColor: theme.tooltipText,
+        callbacks: { title: (contexts: { datasetIndex?: number; dataIndex?: number }[]) => {
+          const point = contexts[0] && pointFor(contexts[0]);
+          if (!point) return '';
+          const metadata: LyraChartFormatterContext = { value: point.y, surface: 'tooltip', datasetIndex: contexts[0]!.datasetIndex, index: point.sourceIndex, label: point.label, seriesLabel: series[contexts[0]!.datasetIndex!]!.label, axis: 'y' };
+          return this.tooltipTitleFormatter?.([metadata]) ?? point.label ?? point.id;
+        },
+          footer: (contexts: { datasetIndex?: number; dataIndex?: number }[]) => {
+            const point = contexts[0] && pointFor(contexts[0]);
+            return point ? this.tooltipFooterFormatter?.([{ value: point.y, surface: 'tooltip', datasetIndex: contexts[0]!.datasetIndex, index: point.sourceIndex, label: point.label, seriesLabel: series[contexts[0]!.datasetIndex!]!.label, axis: 'y' }]) ?? '' : '';
+          },
+          label: (context: { datasetIndex?: number; dataIndex?: number }) => {
+            const point = pointFor(context); if (!point) return '';
+            const datasetIndex = context.datasetIndex!;
+            const metadata = { datasetIndex, index: point.sourceIndex, label: point.label, seriesLabel: series[datasetIndex]!.label, axis: 'y' as const };
+            return this.formatter?.({ value: point.y, surface: 'tooltip', ...metadata }) ?? this.valueFormatter?.(point.y, 'tooltip') ?? this.spatialPointText(point);
+          } } },
+        zoom: this.zoomable && this.zoomFeatureState !== 'unavailable' ? { pan: { enabled: false }, zoom: { wheel: { enabled: true }, drag: { enabled: true }, pinch: { enabled: true }, mode: 'x',
+          onZoomComplete: ({ chart }: { chart: RuntimeChart & { scales: { x: { min: number; max: number } } } }) => {
+            if (!current() || !view || this.suppressZoomComplete || view.minX === view.maxX) return;
+            const lo = Math.max(0, chart.scales.x.min), hi = Math.min(1, chart.scales.x.max); if (!Number.isFinite(lo) || !Number.isFinite(hi) || lo >= hi) return;
+            this.viewport = Object.freeze({ ...view, minX: spatialOriginal(lo, view.minX, view.maxX), maxX: spatialOriginal(hi, view.minX, view.maxX) });
+            this.zoomed = true; this.emit('lr-zoom', { zoomed: true });
+          } }, limits: { x: { min: 0, max: 1 } } } : undefined,
+        datalabels: { display: false },
+      },
+    } };
+    const config = this.effectiveConfig();
+    if (!config) return generated;
+    const merged = deepMerge(generated, config);
+    merged.type = generated.type; merged.data = generated.data; merged.plugins = [...(merged.plugins ?? []).filter(plugin => plugin.id !== density.id), density];
+    merged.options = { ...merged.options, scales: generated.options['scales'], indexAxis: 'x', parsing: false, onClick: generated.options['onClick'], onResize: generated.options['onResize'],
+      plugins: generated.options['plugins'] };
+    return merged;
+  }
+
   private buildConfig(): RuntimeChartConfiguration {
+    if (this.spatialActive) return this.buildSpatialConfig();
     this.forcedColorPatterns = new Map();
     const theme = this.themeColors();
     // Resolve the effective type up front: `config.type` (if set) overrides
@@ -4712,40 +5288,24 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const wantsTooltipLabelCallback =
       !!(this.formatter || this.valueFormatter) ||
       ((effectiveType === 'pie' || effectiveType === 'doughnut') && !rawDataEscapeHatch);
-    const labels = this.canonicalLabels();
+    const prepared = this.preparedModel;
+    const labels = prepared ? this.effectiveData().labels : this.canonicalLabels();
+    const inputSeries: readonly LyraChartSeries[] = prepared ? prepared.series.map(series => ({ label: series.label, data: series.values })) : this.datasets;
     let visualRows: readonly number[] | undefined;
     let visualSeries: readonly number[] | undefined;
-    if (rawDataEscapeHatch) {
-      this.visualRowSourceIndexes = undefined;
-      this.visualDatasetSourceIndexes = undefined;
-    } else {
-      let rowCount = labels.length;
-      for (const series of this.datasets) {
-        rowCount = Math.max(
-          rowCount,
-          (canonicalSeriesPoints(series) ?? canonicalSeriesData(series)).length,
-        );
-      }
-      const sample = sampleChartTableIndexes(rowCount, this.datasets.length);
-      // Keep the ordinary in-budget path byte-for-byte faithful to the authored arrays. Besides
-      // avoiding needless copies, this preserves Chart.js's native short-array semantics for
-      // point radii/colors and segment-color cycling. Source maps are only needed when an axis was
-      // genuinely sampled.
-      visualRows = sample.rowIndexes.length < rowCount ? sample.rowIndexes : undefined;
-      visualSeries = sample.seriesIndexes.length < this.datasets.length
-        ? sample.seriesIndexes
-        : undefined;
-      this.visualRowSourceIndexes = visualRows;
-      this.visualDatasetSourceIndexes = visualSeries;
-    }
+    const sample = this.dataTableSample();
+    visualRows = !prepared && sample.rowIndexes.length < sample.rowCount ? sample.rowIndexes : undefined;
+    visualSeries = !prepared && sample.seriesIndexes.length < sample.seriesCount ? sample.seriesIndexes : undefined;
+    this.visualRowSourceIndexes = visualRows;
+    this.visualDatasetSourceIndexes = visualSeries;
     const generated: RuntimeChartConfiguration = {
       type: effectiveType,
       data: {
-        labels: visualRows ? visualRows.map((index) => labels[index] ?? '') : [...labels],
-        datasets: visualSeries
+        labels: !rawDataEscapeHatch && visualRows ? visualRows.map((index) => labels[index] ?? '') : [...labels],
+        datasets: !rawDataEscapeHatch && visualSeries
           ? visualSeries.map((sourceIndex) =>
               this.seriesToDataset(
-                this.datasets[sourceIndex]!,
+                inputSeries[sourceIndex]!,
                 sourceIndex,
                 palette,
                 effectiveType,
@@ -4753,8 +5313,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 visualRows
               )
             )
-          : this.datasets.map((s, i) =>
-              this.seriesToDataset(s, i, palette, effectiveType, chartStyle, visualRows)
+          : inputSeries.map((s, i) =>
+              this.seriesToDataset(s, i, palette, effectiveType, chartStyle, rawDataEscapeHatch ? undefined : visualRows)
             ),
       },
       // `chartjs-plugin-datalabels` is registered PER-INSTANCE (only on charts
@@ -4786,8 +5346,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         // checked here instead and fed into `options.animation`.
         animation: this.withoutAnimation || prefersReducedMotion(this) ? false : undefined,
         interaction: { intersect: false, mode: effectiveType === 'scatter' ? 'nearest' : 'index', },
-        onClick: (event: unknown, _elements: unknown, chart: RuntimeChart) =>
-          this.handlePointClick(event, chart),
+        onClick: (event: unknown, _elements: unknown, chart: RuntimeChart) => {
+          if (prepared !== this.preparedModel) return;
+          this.handlePointClick(event, chart);
+        },
         plugins: {
           // Only emitted when there is something to draw AND the peer actually loaded, so a chart
           // without annotations carries no annotation options at all.
@@ -4881,6 +5443,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       },
     };
 
+    if (prepared) {
+      const effective = this.effectiveData();
+      generated.data.labels = [...effective.labels];
+      generated.data.datasets.forEach((dataset, index) => {
+        const values = this.datasetValues(effective.datasets[index]!);
+        dataset.data = values.map((value, row) => value ?? { x: prepared.series[index]!.samples[row + 1]?.x ?? 0, y: null });
+        if (prepared.kind === 'series') Reflect.set(dataset, 'spanGaps', false);
+      });
+    }
     const effectiveConfig = this.effectiveConfig();
     if (!effectiveConfig) return generated;
 
@@ -4890,6 +5461,37 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // single nested key (e.g. `config.options.scales.y.min`) without
     // clobbering the rest of the generated sibling object.
     const merged = deepMerge(generated, effectiveConfig);
+    if (rawDataEscapeHatch && (visualRows || visualSeries)) {
+      const sourceDatasets = merged.data.datasets;
+      const sourceLabels = merged.data.labels;
+      merged.data = {
+        ...merged.data,
+        labels: visualRows ? visualRows.map(index => sourceLabels[index] ?? '') : sourceLabels,
+        datasets: (visualSeries ?? sourceDatasets.map((_dataset, index) => index)).map(index => {
+          const dataset = sourceDatasets[index]!;
+          const values = chartDatasetPeerValues(dataset);
+          const sampled = { ...dataset, data: visualRows ? visualRows.map(row => values[row] ?? null) : [...values] };
+          if (visualRows) {
+            const controller = chartDatasetValue(dataset, 'type') ?? merged.type;
+            const doughnut = controller === 'doughnut' || controller === 'pie';
+            for (const key of [
+              'backgroundColor', 'borderColor', 'borderWidth', 'hoverBackgroundColor', 'hoverBorderColor', 'hoverBorderWidth',
+              'pointBackgroundColor', 'pointBorderColor', 'pointBorderWidth', 'pointHitRadius', 'pointRadius', 'pointRotation', 'pointStyle',
+              'pointHoverBackgroundColor', 'pointHoverBorderColor', 'pointHoverBorderWidth', 'pointHoverRadius',
+              'radius', 'hitRadius', 'rotation', 'hoverRadius', 'drawActiveElementsOnTop',
+              'base', 'borderSkipped', 'borderRadius', 'hoverBorderRadius', 'inflateAmount',
+              'selfJoin', 'borderAlign', 'borderDashOffset', 'borderJoinStyle', 'offset', 'circular', 'spacing',
+              'hoverBorderDashOffset', 'hoverOffset', 'borderCapStyle', 'hoverBorderCapStyle', 'hoverBorderJoinStyle',
+            ]) {
+              if (doughnut && (key === 'spacing' || key.startsWith('borderDash') || key.startsWith('hoverBorderDash'))) continue;
+              const source = chartDatasetValue(dataset, key);
+              if (Array.isArray(source) && source.length) Reflect.set(sampled, key, visualRows.map(row => source[row % source.length]));
+            }
+          }
+          return sampled;
+        }),
+      };
+    }
     tooltipIndexAxis = merged.options['indexAxis'] === 'y' ? 'y' : 'x';
     // `deepMerge` replaces arrays wholesale, so a consumer `config.plugins`
     // would drop the per-instance data-labels plugin the generated config added
@@ -4935,6 +5537,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private draw(): void {
+    if (this.preparedInvalid || this.spatialActive && this.spatial.error) { this.discardChart(false); return; }
+    if (this.spatialActive && this.spatial.loading && this.chart) return;
     if (!this.chartJsModule || !this.canvasEl) return;
     if (!this.chart && !this.canvasEl.getContext('2d')) {
       this.setCanvasUnavailable(true);
@@ -4965,7 +5569,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.canvasTokens.rememberTheme();
       return;
     }
-    this.discardChart(true);
+    this.discardChart(!this.spatialActive, this.spatialActive && this.viewport !== null);
     const candidate = new this.chartJsModule.Chart(
       this.canvasEl,
       { ...config, plugins: [...nextPlugins, this.chartAreaPlugin] } as never
@@ -5001,7 +5605,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.canvasUnavailable = unavailable;
     // Drawing can run from updated(); render the fallback after that update has settled.
     queueMicrotask(() => {
-      if (this.isConnected) this.requestUpdate();
+      if (this.isConnected) this.requestUpdate('canvasPresentation', null);
     });
     if (unavailable) this.announcements.announceAssertive(this.localize('chartRenderUnavailable'));
   }
@@ -5016,7 +5620,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     chart: RuntimeChart,
     bounds: Record<string, { min: number; max: number } | undefined> | undefined
   ): void {
-    if (!bounds || typeof chart.zoomScale !== 'function') return;
+    if (this.spatialActive || !bounds || typeof chart.zoomScale !== 'function') return;
     for (const [id, range] of Object.entries(bounds)) {
       if (range && Number.isFinite(range.min) && Number.isFinite(range.max)) {
         chart.zoomScale(id, { min: range.min, max: range.max }, 'none');
@@ -5025,13 +5629,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /** Destroys the peer instance and reconciles the Lyra-owned zoom state in one place. */
-  private discardChart(announceZoomReset: boolean): void {
+  private discardChart(announceZoomReset: boolean, preserveZoom = false): void {
     this.appliedLegendVisibility = undefined;
     this.chartSync.disconnect();
     this.chart?.destroy();
     this.chart = undefined;
     this.resolvedChartArea = undefined;
-    if (!this.zoomed) return;
+    if (preserveZoom || !this.zoomed) return;
     this.zoomed = false;
     if (announceZoomReset) this.emit('lr-zoom', { zoomed: false });
   }
@@ -5046,6 +5650,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /** Reset any active zoom/pan back to the original view. */
   resetZoom(): void {
+    if (this.spatialActive) this.viewport = null;
     this.suppressZoomComplete = true;
     try {
       (this.chart as unknown as { resetZoom?: () => void })?.resetZoom?.();
@@ -5071,11 +5676,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.drawIfVisible();
     // The wrapping DOM legend carries a concrete, computed swatch color too; refresh its
     // template without turning the resulting empty-property update into another canvas draw.
-    if (this.showsLegend) this.requestUpdate();
+    if (this.showsLegend) this.requestUpdate('canvasPresentation', null);
+  }
+
+  private readonly seriesSummaryMemo = new WeakMap<LyraChartDatasetConfiguration, ReturnType<LyraChart['summarizeSeriesValues']>>();
+
+  private summarizeSeries(dataset: LyraChartDatasetConfiguration) {
+    if (this.seriesSummaryMemo.has(dataset)) return this.seriesSummaryMemo.get(dataset);
+    const value = this.summarizeSeriesValues(dataset);
+    this.seriesSummaryMemo.set(dataset, value);
+    return value;
   }
 
   /** Aggregates a numeric series without materializing a second unbounded values array. */
-  private summarizeSeries(
+  private summarizeSeriesValues(
     dataset: LyraChartDatasetConfiguration,
   ):
     | {
@@ -5190,9 +5804,42 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return this.getAttribute('aria-label') ?? this.label ?? fallback;
   }
 
+  private descriptionMemo?: { keys: readonly unknown[]; value: string };
+
   private chartDescription(): string {
     if (this.description) return this.description;
     const effective = this.effectiveData();
+    const keys = [effective, this.dataTableSample(effective), this.effectiveLocale, this.strings,
+      this.effectiveType(), this.effectiveIndexAxis(), this.effectiveDirection, this.formatter, this.valueFormatter,
+      this.annotations, this.hasCustomDataTable()];
+    if (this.descriptionMemo?.keys.every((key, index) => key === keys[index])) return this.descriptionMemo.value;
+    const value = this.buildChartDescription(effective);
+    this.descriptionMemo = { keys, value };
+    return value;
+  }
+
+  private buildChartDescription(effective: EffectiveChartData): string {
+    if (this.spatialActive) return this.spatialDescription();
+    if (this.preparedModel) {
+      const specialized = this.preparedSummary();
+      if (specialized !== undefined) return specialized;
+      const model = this.preparedModel;
+      const summary = this.localize('chartPreparedSummary', undefined, {
+        validCount: this.formatSummaryValue(model.validCount), invalidCount: this.formatSummaryValue(model.invalidCount), displayedCount: this.formatSummaryValue(model.displayedCount),
+      });
+      const domains = model.series.flatMap((series, index) => {
+        const original = this.preparedBaseModel?.series[index] ?? series;
+        if (!original.yDomain) return [];
+        const first = original.samples[0]?.y ?? 0;
+        const last = original.samples.at(-1)?.y ?? 0;
+        return [this.localize('chartSummary', undefined, {
+          label: original.label, count: this.formatSummaryValue(original.counts.validCount),
+          min: this.formatSummaryValue(original.yDomain.min), max: this.formatSummaryValue(original.yDomain.max),
+          trend: this.localize(last > first ? 'chartTrendIncreasing' : last < first ? 'chartTrendDecreasing' : 'chartTrendFlat'),
+        })];
+      });
+      return [...domains, summary].join(this.localize('chartSummarySeparator'));
+    }
     const sample = this.dataTableSample(effective);
     const includePointDetails = !this.hasCustomDataTable();
     const summaries = sample.seriesIndexes.map((index) => {
@@ -5273,41 +5920,61 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private dataTableSample(effective = this.effectiveData()) {
-    if (this.dataTableSampleMemo?.effective === effective) return this.dataTableSampleMemo.value;
+    const maxRecords = normalizeChartRecordLimit(this.maxRecords);
+    const width = this.samplingWidth;
+    if (this.dataTableSampleMemo?.effective === effective && this.dataTableSampleMemo.maxRecords === maxRecords &&
+      this.dataTableSampleMemo.width === width) return this.dataTableSampleMemo.value;
     // Do not spread an unbounded consumer-provided dataset list into Math.max():
     // the accessible alternative itself must remain usable for very wide input.
     let rowCount = effective.labels.length;
     for (const dataset of effective.datasets) {
       rowCount = Math.max(rowCount, this.datasetValues(dataset).length);
     }
-    const indexes = sampleChartTableIndexes(rowCount, effective.datasets.length);
+    const values = effective.datasets.map(dataset => this.datasetValues(dataset));
+    const indexes = this.preparedModel || this.spatialActive ? { rowIndexes: Array.from({ length: rowCount }, (_, index) => index).filter(index => values.some(series => series[index] != null)), seriesIndexes: Array.from({ length: effective.datasets.length }, (_, index) => index) } : sampleChartTableIndexes(rowCount, effective.datasets.length, {
+      maxRecords, width,
+      valueAt: (row, series) => chartDatumNumericValue(values[series]?.[row]),
+    });
     const value = {
       rowCount,
       seriesCount: effective.datasets.length,
       ...indexes,
     };
-    this.dataTableSampleMemo = { effective, value };
+    this.dataTableSampleMemo = { effective, maxRecords, width, value };
     return value;
   }
 
   private dataTableSampleMemo?: {
+    maxRecords: number;
+    width: number;
     effective: EffectiveChartData;
     value: { rowCount: number; seriesCount: number } & ReturnType<typeof sampleChartTableIndexes>;
   };
 
   private generatedDataIsSampled(): boolean {
+    if (this.spatialActive) return false;
     const sample = this.dataTableSample();
     if (sample.rowCount === 0 || sample.seriesCount === 0) return false;
     return ( sample.rowIndexes.length < sample.rowCount || sample.seriesIndexes.length < sample.seriesCount
     );
   }
 
+  protected inputLimitMessage(): string {
+    if (this.preparedActive) return '';
+    this.canonicalLabels();
+    const values = [this.labels, this.datasets, this.config ?? this.slottedConfig];
+    return values.some(value => typeof value === 'object' && value !== null && truncatedChartInputs.has(value))
+      ? this.localize('chartInputLimit') : '';
+  }
+
   private dataTruncationMessage(): string {
+    if (this.preparedModel) return this.zoomable && this.preparedModel.kind === 'series' && !Object.getOwnPropertyDescriptor(this.preparedModel.source, 'queryRange') ? this.localize('chartPreparedSummaryZoom') : '';
     if (!this.generatedDataIsSampled()) return '';
     return this.hasCustomDataTable() ? this.localize('chartPlotSampled') : this.localize('chartDataSampled');
   }
 
   private renderDataTable(): TemplateResult {
+    if (this.spatialActive) return this.renderSpatialTable();
     const effective = this.effectiveData();
     const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
     const sample = this.dataTableSample(effective);
@@ -5336,20 +6003,76 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private dataTableRows?: TemplateResult[];
+  private deferredTableRows?: TemplateResult[];
+  private cancelDeferredTable?: () => void;
+
+  private streamingTableUpdate = false;
+
+  /** Keep only stream-originated invalidations inside a coalesced table refresh. */
+  protected withStreamedTableUpdate(update: () => void): void {
+    this.deferStreamedTable();
+    this.streamingTableUpdate = true;
+    try { update(); } finally { this.streamingTableUpdate = false; }
+  }
+
+  private clearDeferredTable(): void {
+    this.cancelDeferredTable?.();
+    this.cancelDeferredTable = undefined;
+    this.deferredTableRows = undefined;
+  }
+
+  /** Coalesce streamed hidden-table formatting until the browser has an idle opportunity. */
+  private deferStreamedTable(): void {
+    if (this.dataTableVisible || this.canvasUnavailable) { this.clearDeferredTable(); return; }
+    const view = this.ownerWindow as (Window & {
+      requestIdleCallback?: (callback: () => void, options: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    }) | undefined;
+    if (!this.isConnected || !view || this.dataTableVisible || this.cancelDeferredTable || !this.dataTableRows) return;
+    this.deferredTableRows = this.dataTableRows;
+    const rows = this.deferredTableRows;
+    const refresh = () => {
+      if (this.deferredTableRows !== rows) return;
+      this.cancelDeferredTable = undefined;
+      this.deferredTableRows = undefined;
+      this.dataTableRows = undefined;
+      if (this.isConnected) this.requestUpdate('dataTableIdleRefresh', null);
+    };
+    if (view.requestIdleCallback && view.cancelIdleCallback) {
+      const handle = view.requestIdleCallback(refresh, { timeout: 250 });
+      this.cancelDeferredTable = () => view.cancelIdleCallback?.(handle);
+    } else {
+      const handle = view.setTimeout(refresh, 0);
+      this.cancelDeferredTable = () => view.clearTimeout(handle);
+    }
+  }
 
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
-    // Caption, description and keyboard announcement edits do not change table rows. Every other
-    // request, including an explicit requestUpdate() coalesced with one of those edits,
-    // refreshes formatter closure state and all
-    // data, locale, direction, axis, and visibility dependencies. Formatters depending on a
-    // caption through captured state can request that explicit refresh as well.
-    if (args[0] !== 'label' && args[0] !== 'description' && args[0] !== 'keyboardDatumAnnouncement') {
+    const key = args[0];
+    if (key === undefined || ['preparedData', 'maxRecords', 'type', 'config', 'slottedConfig', 'scaleType'].includes(String(key))) {
+      this.preparedGeneration = {};
+      this.spatialRevealToken = {}; this.spatial?.reset(); this.wakeSpatialWaiters();
+      this.preparedDirty = true;
+      this.preparedRequests?.refresh();
+      this.descriptionMemo = undefined;
+    }
+    if (this.spatialActive && this.spatial) {
+      if (key === 'viewport') this.spatial.configure(this.viewport, normalizeChartRecordLimit(this.maxRecords));
+      if (key === 'selectedPointId') this.spatial.setSelected(this.selectedPointId);
+    }
+    if (key === undefined) this.descriptionMemo = undefined;
+    if (key === undefined || ['preparedData', 'preparedView', 'spatialView', 'viewport', 'selectedPointId', 'datasets', 'labels', 'values', 'bins', 'seriesLabel', 'config', 'slottedConfig',
+      'type', 'indexAxis', 'formatter', 'valueFormatter', 'locale', 'strings', 'stacked', 'stackedAxes', 'stackTotals',
+      'xLabel', 'yLabel', 'y2Label', 'withDataTable', 'dataTableToggle', 'dataTableExpandedOverride',
+      'maxRecords', 'samplingWidth', 'canvasUnavailable'].includes(String(key))) {
       this.dataTableRows = undefined;
+      if (!this.streamingTableUpdate || this.dataTableVisible || this.canvasUnavailable) this.clearDeferredTable();
     }
     super.requestUpdate(...args);
   }
 
   private renderDataTableRows(): TemplateResult[] {
+    if (!this.dataTableVisible && !this.canvasUnavailable && this.deferredTableRows) return this.deferredTableRows;
     if (this.dataTableRows) return this.dataTableRows;
     const effective = this.effectiveData();
     const direction: ChartTextDirection = this.effectiveDirection === 'rtl' ? 'rtl' : 'ltr';
@@ -5546,7 +6269,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.applyDatasetVisibility();
     this.chart.update('none');
     this.appliedLegendVisibility = appliedVisibility;
-    this.requestUpdate();
+    this.requestUpdate('canvasPresentation', null);
     this.emit(
       'lr-legend-visibility-change',
       legendVisibilityDetail(datasetIndex, visible, nextHidden)
@@ -5583,7 +6306,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     );
     const forcedColors = forcedColorsActive(this.ownerWindow);
     const hiddenDatums = new Set(normalizeHiddenDatasets(this.hiddenDatums, sample.rowCount));
-    const needValues = this.legendDisplay !== 'label' &&
+    const needValues = !this.spatialActive && this.legendDisplay !== 'label' &&
       (this.legendDisplay === 'value' || this.legendDisplay === 'percentage' ||
         this.legendDisplay === 'value-percentage' || this.formatter || this.valueFormatter);
     // Each render owns its projections and color probes, so repeated category entries share work
@@ -5686,6 +6409,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   override render(): TemplateResult {
+    this.refreshPreparedModel();
+    if (this.preparedInvalid) return html`<div part="base"><div part="error">${this.localize('chartPreparedUnavailable')}</div></div>`;
     if (this.loading) {
       return html`
         <div part="base">
@@ -5767,6 +6492,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
         <p class="sr-only" aria-hidden="true">${this.keyboardDatumAnnouncement}</p>
         <div part="notices">
+          ${this.spatialActive ? html`<p part="feature-warning">${this.localize('chartSpatialDensityLegend')}</p>` : nothing}
+          ${this.preparedPending ? html`<p part="feature-warning">${this.localize('loading')}</p>` : nothing}
+          ${this.preparedRequestFailed ? html`<p part="error">${this.localize('chartPreparedUnavailable')}</p>` : nothing}
+          ${this.inputLimitMessage() ? html`<p part="limit">${this.inputLimitMessage()}</p>` : nothing}
           ${this.featureWarningMessages().map(
             (warning) => html`<p part="feature-warning">${warning}</p>`
           )}
@@ -5792,7 +6521,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         >
           <slot
             name="data-table"
-            @slotchange=${() => this.requestUpdate()}
+            @slotchange=${() => this.requestUpdate('dataTableSlot', null)}
           ></slot>
           ${hasCustomDataTable ? nothing : this.renderDataTable()}
         </div>

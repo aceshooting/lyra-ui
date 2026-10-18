@@ -19,10 +19,18 @@
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
 Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
-If the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
+With `dataSource` unset, if the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
 number of retained examples. Pagination within those examples remains available in the table.
 
 **Properties:**
+
+- `dataSource: EvalDatasetSource | undefined = undefined` (property only) — a host-owned full
+  logical source; takes display precedence over `examples`. Invalid defined sources fail visibly;
+  unsetting restores the current legacy examples without overwriting their getter.
+- `sourcePage: number = 0` (`source-page`) — zero-based source page.
+- `sourcePageSize: number = 100` (`source-page-size`) — source page size, normalized to 1–500.
+- readonly `sourceTotal: number | null` — exact accepted query total, or `null` until a current
+  authoritative result is available.
 
 - `examples: readonly EvalExample[] = []` (attribute: false) — `EvalExample { id: string; input: string;
 expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unknown> }` (exported here).
@@ -30,9 +38,18 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   `input`/`expectedOutput` are plain
   strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
   controlled: add/remove/import/export are all _requests_; the host mutates and passes the array
-  back. Empty/blank ids and later duplicate ids are omitted before selection, filtering, mutation requests, and the
+  back. The bounded readonly outer snapshot retains at most the first 10,000 examples; records and
+  opaque `metadata` retain identity. Reassign `examples` after editing records, including when
+  reusing the same source array. A keyless `requestUpdate()` also refreshes the normalized rows and
+  search corpus. Other clone-owned collections retain the 10,000-entry/50,000-node safety budgets.
+  Empty/blank ids and later duplicate ids are omitted before selection, filtering, mutation requests, and the
   nested grid are derived. Distinct tag chips are ordered with the component's effective-locale
-  collation
+  collation; at most 500 distinct tags render. Active tags reserve places within that budget so
+  their deselection controls remain visible; the remaining places show the earliest unselected
+  tags. A localized `limit` note reports the omitted count. Search and tag filtering still use all
+  admitted examples and tags, including tags
+  outside the displayed facet window. Filtering and the tag corpus are reused across unrelated
+  disabled or selection changes
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
@@ -50,6 +67,38 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   localized `evalDatasetLabel`. A host `aria-label` remains on the custom-element host as its
   overall name and is not cloned onto the independently interactive grid
 
+The provider query type is `EvalDatasetSourceQuery { readonly search: string;
+readonly tags: readonly string[]; readonly sortKey: string | null;
+readonly sortDir: 'asc' | 'desc' }`.
+
+**Full-source paging:** `EvalDatasetSource = LyraPageSource<EvalExample, EvalDatasetSourceQuery>`;
+both types are exported from the component entry and package root. `EvalDatasetSourceQuery`
+contains `search`, readonly `tags`, `sortKey: string | null`, and `sortDir: 'asc' | 'desc'`.
+The provider owns complete-source text filtering, OR-tag filtering combined with that text query,
+and ordering. The nested table uses server sorting and one-based paging while `sourcePage` remains
+zero-based. Query and page-size changes reset source page zero; an invalid page receives at most
+one corrective last-page request. Loading, unknown totals and failures use the composed table's
+localized states; stale rows cannot be activated.
+
+The shared `LyraPageSource` contract comes from `@aceshooting/lyra-ui/data-sources.js`. Its page
+must include explicit global `tags` metadata, even for an empty catalogue. Facets have
+`{ values, total, unavailableSelected }`; at most 500 values retain global labels and counts.
+Available active tags must reserve positions in that budget so they remain removable. Only
+`unavailableSelected`, not absence from one page, removes an active filter. Source rows allow at
+most 500 tags and 65,536 display-text UTF-16 units per row; opaque `metadata` is not traversed or
+rendered. Invalid or oversized responses fail visibly rather than becoming a partial dataset.
+
+Source page/query transitions clear the private selected example once, keeping Remove restricted
+to a visible current row. Existing import/export/add events remain requests for the host; export
+does not silently serialize just the loaded page. A source-mode sort both issues the provider
+query and preserves the single existing `lr-sort` pass-through event. `disabled` also prevents
+source sorting and mutations. Instance `strings` reach the composed table.
+
+The source is retained by identity. Reassign it, including the same object, or call unnamed
+`requestUpdate()` after source/revision mutation. Replacement, explicit refresh, locale change,
+disconnect and adoption revoke obsolete responses; unrelated named presentation updates reuse
+the current data. No million-row snapshot or whole-source filter/index is created by this route.
+
 **Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
 `lr-example-add-request` (`detail: null` — no payload; `emit()`
 normalizes an omitted detail to `null`, never `undefined`), `lr-example-remove-request` (`detail: { exampleId:
@@ -59,12 +108,12 @@ format: string }`), and the deliberate nested-table pass-through `lr-sort` (`det
 re-dispatched (no detail) when the internal search field (only rendered while `searchable`) gains or
 loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 All three built-in columns are sortable; activating one of their headers produces that commit for
-the host to apply to its controlled `examples` array.
+the host to apply to its controlled `examples` array, or for the source to order its query result.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input` (the composed `lr-input type="search"`),
 `search-input-field` (its native `<input>`), `search-clear` (its clear button, rendered only while the field has text), `tag-filter`,
-`grid`, `add-button`, `remove-button`, `limit` (shown when the source examples exceed the snapshot
-cap), `import` (the internal `compact` `lr-file-input`; its
+`grid`, `add-button`, `remove-button`, `limit` (shown for source examples beyond the snapshot
+cap or distinct tags beyond the 500-facet ceiling), `import` (the internal `compact` `lr-file-input`; its
 dropzone text and accessible name are the localized `evalDatasetImportLabel`), `export`.
 
 **Themeable custom properties:** the built-in search field is a composed `lr-input`, so it is themed through the shared `--lr-input-*` and `--lr-form-control-*` tokens (the former `--lr-eval-dataset-search-*` hooks are removed).
@@ -72,7 +121,7 @@ The search field remains a filter toolbar, with the native editing hints listed 
 
 **Known gotchas:**
 
-- Shrinking `examples` out from under live UI state is handled: a `selectedId` that no longer matches
+- With `dataSource` unset, shrinking `examples` out from under live UI state is handled: a `selectedId` that no longer matches
   any row resets to `null`, and an active tag filter that no longer matches any row's `tags` is
   dropped rather than silently matching zero rows forever.
 - A search or tag filter that hides the selected row also clears that selection and emits

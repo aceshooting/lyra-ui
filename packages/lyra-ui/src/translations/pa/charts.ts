@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'ਪੂਰੀ ਵੰਡ ਵਿੱਚ {validCount} ਵੈਧ ਨਮੂਨੇ; ਦਿਖਾਏ ਅੰਤਰਾਲਾਂ ਦੀਆਂ ਹੱਦਾਂ ਤੋਂ ਹੇਠਾਂ {belowCount} ਅਤੇ ਉੱਪਰ {aboveCount}; {invalidCount} ਅਵੈਧ ਨਮੂਨੇ।',
+  histogramDistributionRange: 'ਵੇਖੇ ਗਏ ਨਮੂਨੇ ਦੀ ਸੀਮਾ: {min} ਤੋਂ {max}।',
   chartCategory: 'ਸ਼੍ਰੇਣੀ',
   chartTotal: 'ਕੁੱਲ',
   chartAxisTotal: '{axis} ਕੁੱਲ',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ਅਰਧ-ਵਿਆਸ {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'ਵਧ ਰਿਹਾ',
-  chartTrendDecreasing: 'ਘਟ ਰਿਹਾ',
-  chartTrendFlat: 'ਸਥਿਰ',
-  chartSummary: '{label}: {count} ਮੁੱਲ, ਹੱਦ {min} ਤੋਂ {max}, {trend} ਰੁਝਾਨ',
   chartSeriesNoData: '{label}: ਕੋਈ ਡਾਟਾ ਨਹੀਂ',
   chartSummaryWithData: '{type} ਚਾਰਟ। {summaries}।',
   chartSummaryEmpty: 'ਬਿਨਾਂ ਡਾਟੇ ਵਾਲਾ {type} ਚਾਰਟ।',
-  chartSummarySeparator: '. ',
   chartData: 'ਚਾਰਟ ਡਾਟਾ',
   chartRenderUnavailable: 'ਚਾਰਟ ਪ੍ਰਦਰਸ਼ਨ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।',
+  chartPreparedSummaryZoom: 'ਜ਼ੂਮ ਤਿਆਰ ਕੀਤਾ ਸਾਰ ਦਿਖਾਉਂਦਾ ਹੈ; ਸੂਚਕਾਂਕ ਰਾਹੀਂ ਹੋਰ ਵਿਸਥਾਰ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।',
+  chartSpatialSummary: 'ਪੂਰਾ ਸਰੋਤ: {count} ਬਿੰਦੂ, x {minX} ਤੋਂ {maxX}, y {minY} ਤੋਂ {maxY}। ਦ੍ਰਿਸ਼: {matchedCount} ਬਿੰਦੂ, x {viewMinX} ਤੋਂ {viewMaxX}, y {viewMinY} ਤੋਂ {viewMaxY}।',
+  chartSpatialRadiusDomain: 'ਪੂਰੇ ਸਰੋਤ ਦਾ ਅਰਧ-ਵਿਆਸ: {min} ਤੋਂ {max}।',
+  chartSpatialDensityLegend: 'ਘਣਤਾ ਵਿੱਚ ਸਾਰੀਆਂ ਲੜੀਆਂ ਸ਼ਾਮਲ ਹਨ; ਲੜੀ ਦੀ ਦਿੱਖ ਸਿਰਫ਼ ਬਿੰਦੂ ਓਵਰਲੇ ਨੂੰ ਪ੍ਰਭਾਵਿਤ ਕਰਦੀ ਹੈ।',
+  chartSpatialPoint: '{series}: {id}, ਸਰੋਤ ਸਥਿਤੀ {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'ਘਣਤਾ ਖੇਤਰ: {count} ਬਿੰਦੂ, x {minX} ਤੋਂ {maxX}, y {minY} ਤੋਂ {maxY}।',
+  chartSpatialHidden: ' (ਲੜੀ ਲੁਕਾਈ ਗਈ)',
   chartDataSampled: 'ਚਾਰਟ ਅਤੇ ਤਿਆਰ ਕੀਤੀ ਡਾਟਾ ਸਾਰਣੀ ਵੱਧ ਤੋਂ ਵੱਧ 1,000 ਰਿਕਾਰਡਾਂ ਦਾ ਨਮੂਨਾ ਦਿਖਾਉਂਦੇ ਹਨ। ਚਾਰਟ ਦੇ ਸਾਰੇ ਡਾਟੇ ਤੱਕ ਪਹੁੰਚ ਲਈ ਕਸਟਮ ਡਾਟਾ ਸਾਰਣੀ ਦਿਓ।',
   chartPlotSampled: 'ਚਾਰਟ ਵੱਧ ਤੋਂ ਵੱਧ 1,000 ਰਿਕਾਰਡਾਂ ਦਾ ਨਮੂਨਾ ਦਿਖਾਉਂਦਾ ਹੈ; ਡਾਟਾ ਸਾਰਣੀ ਵਿੱਚ ਸਾਰਾ ਡਾਟਾ ਹੈ।',
   chartZoomUnavailable: 'ਜ਼ੂਮ ਉਪਲਬਧ ਨਹੀਂ, ਪਰ ਮੁੱਖ ਚਾਰਟ ਉਪਲਬਧ ਹੈ।',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total} ਵਿੱਚੋਂ {index}ਵਾਂ)',
   chartMissingLibrary: 'ਚਾਰਟ ਦਿਖਾਉਣ ਲਈ ਇਸ ਕੰਪੋਨੈਂਟ ਵਿੱਚ ਵਿਕਲਪਿਕ "chart.js" ਪੈਕੇਜ ਸਥਾਪਤ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।',
   boxPlotMissingLibrary: 'ਬਾਕਸ ਪਲਾਟ ਦਿਖਾਉਣ ਲਈ ਇਸ ਕੰਪੋਨੈਂਟ ਵਿੱਚ ਵਿਕਲਪਿਕ ਬਾਕਸ-ਪਲਾਟ ਚਾਰਟ ਪੈਕੇਜ ਸਥਾਪਤ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।',
+  chartInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਚਾਰਟ ਦਾ ਕੁਝ ਡਾਟਾ ਛੱਡ ਦਿੱਤਾ ਗਿਆ ਹੈ। ਛੱਡੇ ਗਏ ਮੁੱਲਾਂ ਨੂੰ ਦਰਸਾਉਣ ਲਈ ਛੋਟਾ ਜਾਂ ਪਹਿਲਾਂ ਤੋਂ ਜੋੜ ਕੇ ਸੰਖੇਪ ਕੀਤਾ ਡਾਟਾਸੈੱਟ ਦਿਓ।',
+  histogramInputLimit: 'ਸਿਰਫ਼ ਸਭ ਤੋਂ ਨਵੇਂ 10,000 ਨਮੂਨੇ ਰੱਖੇ ਜਾਂਦੇ ਹਨ। ਵੱਡੀ ਵੰਡ ਦਰਸਾਉਣ ਲਈ ਪਹਿਲਾਂ ਤੋਂ ਅੰਤਰਾਲਾਂ ਵਿੱਚ ਵੰਡੀਆਂ ਗਿਣਤੀਆਂ lr-chart ਨੂੰ ਦਿਓ।',
 };
 
 registerLyraLocale('pa', strings);

@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Tam dağılımda {validCount} geçerli örnek; gösterilen aralıkların altında {belowCount}, üstünde {aboveCount}; {invalidCount} geçersiz örnek.',
+  histogramDistributionRange: 'Gözlemlenen örneklem aralığı: {min} ile {max}.',
   chartCategory: 'Kategori',
   chartTotal: 'Toplam',
   chartAxisTotal: '{axis} toplamı',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, yarıçap {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'yükseliyor',
-  chartTrendDecreasing: 'düşüyor',
-  chartTrendFlat: 'sabit',
-  chartSummary: '{label}: {count} değer, {min}–{max} aralığı, {trend} eğilimi',
   chartSeriesNoData: '{label}: veri yok',
   chartSummaryWithData: '{type} grafik. {summaries}.',
   chartSummaryEmpty: 'Veri içermeyen {type} grafik.',
-  chartSummarySeparator: '. ',
   chartData: 'Grafik verileri',
   chartRenderUnavailable: 'Grafik görüntüleme kullanılamıyor.',
+  chartPreparedSummaryZoom: 'Yakınlaştırma hazırlanmış özeti gösterir; dizin tabanlı ayrıntılandırma kullanılamıyor.',
+  chartSpatialSummary: 'Kaynağın tamamı: {count} nokta, x {minX} ile {maxX}, y {minY} ile {maxY}. Görünüm: {matchedCount} nokta, x {viewMinX} ile {viewMaxX}, y {viewMinY} ile {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Kaynağın tamamındaki yarıçap: {min} ile {max}.',
+  chartSpatialDensityLegend: 'Yoğunluk tüm serileri içerir; serilerin görünürlüğü yalnızca nokta katmanlarını etkiler.',
+  chartSpatialPoint: '{series}: {id}, kaynak konumu {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Yoğunluk bölgesi: {count} nokta, x {minX} ile {maxX}, y {minY} ile {maxY}.',
+  chartSpatialHidden: ' (seri gizli)',
   chartDataSampled: 'Grafikte ve oluşturulan veri tablosunda en fazla 1.000 kaydın örneği gösterilir. Tüm grafik verilerine erişmek için özel bir veri tablosu sağlayın.',
   chartPlotSampled: 'Grafikte en fazla 1.000 kaydın örneği gösterilir; veri tablosunda tüm veriler listelenir.',
   chartZoomUnavailable: 'Yakınlaştırma kullanılamıyor; temel grafik kullanılabilir durumda.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total} içinden {index}.)',
   chartMissingLibrary: 'Grafikleri görüntülemek için bu bileşenin isteğe bağlı "chart.js" paketine ihtiyacı vardır.',
   boxPlotMissingLibrary: 'Kutu grafiklerini görüntülemek için bu bileşenin isteğe bağlı kutu grafiği paketine ihtiyacı vardır.',
+  chartInputLimit: 'Girdi sınırına ulaşıldığı için bazı grafik verileri atlandı. Atlanan değerleri temsil etmek için daha küçük veya önceden toplulaştırılmış bir veri kümesi sağlayın.',
+  histogramInputLimit: 'Yalnızca en yeni 10.000 örnek saklanır. Daha büyük bir dağılımı temsil etmek için lr-chart bileşenine önceden aralıklara göre gruplandırılmış sayımlar sağlayın.',
 };
 
 registerLyraLocale('tr', strings);

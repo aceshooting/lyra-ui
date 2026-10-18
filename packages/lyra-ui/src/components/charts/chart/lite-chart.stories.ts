@@ -507,3 +507,29 @@ export const SynchronizedMixedRenderers: Story = {
     </div>
   `,
 };
+
+/** Reduce the shared SVG and accessible-data budget without losing an interior peak. */
+export const SampledRecords: Story = {
+  render: () => {
+    const data = Array.from({ length: 2_000 }, (_, index) => 10 + Math.sin(index / 20));
+    data[937] = 100;
+    return html`<lr-lite-chart type="line" max-records="80" style="inline-size: 30rem"
+      label="Sampled measurements" .labels=${data.map((_, index) => String(index))}
+      .datasets=${[{ label: 'Measurement', data }]}></lr-lite-chart>`;
+  },
+};
+
+/** A bounded overview retains original source positions without storing the full source in the view. */
+export const PreparedOverview: Story = {
+  render: () => {
+    const prepared: import('../../../utilities/data-preparation.js').LyraPreparedSeriesData = {
+      kind: 'series', revision: 'overview',
+      series: [{ id: 'signal', label: 'Signal', counts: { sourceCount: 1000000, validCount: 1000000, invalidCount: 0 },
+        xDomain: { min: 0, max: 999999 }, yDomain: { min: 0, max: 99 },
+        samples: [0, 99, 500000, 999999].map(sourceIndex => ({ x: sourceIndex, y: sourceIndex % 100, sourceIndex, breakBefore: sourceIndex === 0 })),
+      }],
+      getPoint: ref => ({ x: ref.sourceIndex, y: ref.sourceIndex % 100 }),
+    };
+    return html`<lr-lite-chart type="line" with-data-table with-legend .preparedData=${prepared}></lr-lite-chart>`;
+  },
+};

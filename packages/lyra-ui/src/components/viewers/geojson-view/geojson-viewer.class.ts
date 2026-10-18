@@ -1,3 +1,4 @@
+import { guard } from 'lit/directives/guard.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -119,6 +120,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  *  pretty serialization, json-viewer handoff, or MapLibre handoff. Geometry has stricter rules
  *  below; this first pass also covers Feature properties, foreign members, and arrays unrelated
  *  to coordinates. */
+function assertGeoJsonSerializedSize(root: unknown): void {
+  let units = 0;
+  const stringUnits = (text: string): number => {
+    let length = 2;
+    for (let index = 0; index < text.length; index++) {
+      const code = text.charCodeAt(index);
+      if (code >= 0xd800 && code <= 0xdbff && text.charCodeAt(index + 1) >= 0xdc00 && text.charCodeAt(index + 1) <= 0xdfff) {
+        length += 2; index++;
+      } else length += code >= 0xd800 && code <= 0xdfff ? 6
+        : code < 32 ? ([8, 9, 10, 12, 13].includes(code) ? 2 : 6)
+        : code === 34 || code === 92 ? 2 : 1;
+    }
+    return length;
+  };
+  const tasks = [{ value: root, depth: 0 }];
+  while (tasks.length) {
+    const { value, depth } = tasks.pop()!;
+    if (value === null) units += 4;
+    else if (typeof value === 'string') units += stringUnits(value);
+    else if (typeof value !== 'object') units += String(value).length;
+    else {
+      const entries = Array.isArray(value) ? value.map(entry => [undefined, entry] as const) : Object.entries(value);
+      units += 2;
+      if (entries.length) units += entries.length * (2 * (depth + 1) + 2) + 2 * depth;
+      for (const [key, entry] of entries) {
+        if (key !== undefined) units += stringUnits(key) + 2;
+        tasks.push({ value: entry, depth: depth + 1 });
+      }
+    }
+    if (units > MAX_GEOJSON_SERIALIZED_UNITS) throw new LyraResourceLimitError('The serialized GeoJSON is too large.');
+  }
+}
+
 function assertGeoJsonGraphWithinLimits(root: unknown): void {
   const tasks: Array<{ value: unknown; depth: number }> = [
     { value: root, depth: 0 },
@@ -402,6 +436,7 @@ function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
     root['type'] === 'FeatureCollection' && Array.isArray(root['features'])
       ? root['features'].length
       : 1;
+  assertGeoJsonSerializedSize(root);
   const metadata = JSON.stringify(root, null, 2);
   if (metadata.length > MAX_GEOJSON_SERIALIZED_UNITS) {
     throw new LyraResourceLimitError('The serialized GeoJSON is too large.');
@@ -460,6 +495,7 @@ type GeoJsonViewerState =
       center: [number, number];
       zoom: number;
       peerAvailable: boolean;
+      dataLayers?: readonly LyraMapGeoJsonDataLayer[];
     }
   | { kind: 'error'; message: string };
 
@@ -479,7 +515,9 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  * distinct subclass; it does not register the former `lr-geojson-view` tag.
  * The inherited fragment path performs an exact DOM `id` lookup, but the generated metadata,
  * status, and map output define no fragment ids; such a jump reports `found: false`. Use a
- * text-quote anchor for the serialized metadata.
+ * text-quote anchor for the serialized metadata. Responses are limited to 4 MiB before JSON
+ * parsing; pretty metadata is limited to 4,194,304 UTF-16 units before serialization. Loaded
+ * documents are retained across disconnect/reconnect while src is unchanged.
  *
  * @customElement lr-geojson-viewer
  * @event lr-render-error - Fetch, parse, shape-validation, or missing-map-capability failure.
@@ -602,7 +640,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
+    if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc && this.loadState.kind !== 'loaded') {
       this.scheduleAfterUpdate(() => {
         void this.load();
       });
@@ -613,7 +651,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     this.generation++;
     if (this.registeredMap) setMapCanvasReadyCallback(this.registeredMap, null);
     this.registeredMap = null;
-    this.loadState = { kind: 'idle' };
+    if (this.loadState.kind !== 'loaded') this.loadState = { kind: 'idle' };
     this.mapReady = false;
     this.mapCanvas = null;
     this.announcements.disconnect();
@@ -702,7 +740,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok)
         throw new Error(`${response.status} ${response.statusText}`);
-      const text = await readResponseText(response);
+      const text = await readResponseText(response, MAX_GEOJSON_SERIALIZED_UNITS);
       if (!this.isConnected || generation !== this.generation) return;
       const parsed: unknown = JSON.parse(text);
       const analysis = analyzeGeoJson(parsed);
@@ -714,6 +752,10 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
         ? null
         : await loadMaplibre();
       if (!this.isConnected || generation !== this.generation) return;
+      if (!maplibre) {
+        await import('../../utility/json-viewer/json-viewer.js');
+        if (!this.isConnected || generation !== this.generation) return;
+      }
       this.loadState = {
         kind: 'loaded',
         value: analysis.value,
@@ -722,6 +764,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
         center,
         zoom,
         peerAvailable: maplibre !== null,
+        dataLayers: Object.freeze([{ sourceId: 'lr-geojson', geojson: analysis.value as never }]),
       };
       if (!maplibre) {
         this.emit('lr-render-error', {
@@ -791,17 +834,18 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
             ></lr-json-viewer>
           `;
         }
-        const dataLayers: LyraMapGeoJsonDataLayer[] = [
+        const dataLayers = this.loadState.dataLayers ??= Object.freeze([
           { sourceId: 'lr-geojson', geojson: value as never },
-        ];
+        ]);
         return html`
           <div part="status">${statusText}</div>
           <pre part="metadata">${metadata}</pre>
           <lr-map
+            engine="maplibre"
             .center=${center}
             .zoom=${zoom}
             .mapStyle=${GEOJSON_BASE_MAP_STYLE}
-            .dataLayers=${dataLayers}
+            .dataLayers=${guard([dataLayers], () => dataLayers)}
             label=${this.effectiveLabel}
             @lr-map-load=${this.stopChildEvent}
             @lr-map-click=${this.stopChildEvent}

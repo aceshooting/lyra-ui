@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Belum ada perbualan',
   agentWorkspaceLabel: 'Ruang kerja ejen',
+  agentWorkspaceInputLimit: '{collection}: Hanya {count} daripada {total} entri dikekalkan.',
   agentWorkspaceConversation: 'Perbualan',
   agentWorkspaceDetails: 'Butiran larian',
   agentWorkspaceRun: 'Larian ejen',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Cuba semula bahagian ini',
   promptQueueLabel: 'Prompt dalam baris gilir',
   promptQueueEmpty: 'Tiada prompt dalam baris gilir',
+  promptQueueInputLimit: 'Sebahagian prom dalam baris gilir atau lampiran telah digugurkan kerana had input dicapai.',
+  promptQueueAttachmentLimit: 'Menunjukkan {shown} daripada {total} lampiran yang dikekalkan.',
   promptQueueSendNow: 'Hantar sekarang',
   selectionToolbarLabel: 'Tindakan pilihan',
   selectionAsk: 'Tanya',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '{count} token',
   },
+  threadListInputLimit: 'Sebahagian utas perbualan telah digugurkan kerana had input dicapai.',
+  promptInputInputLimit: 'Sebahagian cadangan atau entri katalog telah digugurkan kerana had input dicapai.',
+  transcriptFeedInputLimit: 'Hanya {count} entri terkini daripada {total} entri dikekalkan.',
+  codeBlockHighlightLimit: 'Kod panjang dipaparkan tanpa penyerlahan sintaks.',
 };
 
 registerLyraLocale('ms', strings);

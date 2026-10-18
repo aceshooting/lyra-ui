@@ -1,3 +1,10 @@
+import { GraphSourceCompositionController } from './graph-source-composition.js';
+import { tag } from '../../../internal/prefix.js';
+import type { LyraGraphSource, LyraGraphRecord, LyraGraphSourceQuery, LyraGraphSourceSummary, LyraSourceRecord } from '../../../data-sources.js';
+import { GraphSourceController } from './graph-source-controller.js';
+import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
+import '../../data/pagination/pagination.class.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import {
@@ -46,9 +53,9 @@ import {
   type CanvasCamera,
   type CanvasScene,
 } from './graph-canvas.js';
-import { GraphSpatialController } from './graph-spatial-controller.js';
-import { normalizeGraphCamera } from './graph-spatial.js';
-import { layeredLayout } from '../../../internal/layered-layout.js';
+import type { GraphSpatialController } from './graph-spatial-controller.js';
+import { normalizeGraphCamera, spatialNodePosition } from './graph-spatial-model.js';
+import type { layeredLayout } from '../../../internal/layered-layout.js';
 import {
   finiteNumber,
   finiteRange,
@@ -94,8 +101,57 @@ import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphFit, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodeLimit, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphOrbitDown, LYRA_DEFAULT_graphOrbitLeft, LYRA_DEFAULT_graphOrbitRight, LYRA_DEFAULT_graphOrbitUp, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphSpatialControls, LYRA_DEFAULT_graphSpatialInstructions, LYRA_DEFAULT_graphSpatialPage, LYRA_DEFAULT_graphSpatialUnavailable, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_graphView3d, LYRA_DEFAULT_graphViewList } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_previous, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_loading, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** Complete host-owned node/edge catalog with bounded graph scenes. Source edges require stable IDs. */
+export type GraphSource = LyraGraphSource<LyraGraphNode, LyraGraphEdge & { readonly id: string }>;
+type GraphSourceValue = LyraGraphRecord<LyraGraphNode, LyraGraphEdge & { readonly id: string }>;
+type GraphSourceRecord = LyraSourceRecord<GraphSourceValue>;
+const EMPTY_SOURCE_QUERY: LyraGraphSourceQuery = Object.freeze({ kind: 'nodes', search: '', centerKey: null, direction: 'both', nodeTypes: Object.freeze([]) });
+function graphSourceField(value: unknown, key: PropertyKey): unknown {
+  if (value === null || typeof value !== 'object') throw new TypeError('Invalid graph record');
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (descriptor && !('value' in descriptor)) throw new TypeError('Accessor graph record');
+  return descriptor?.value;
+}
+function graphSourceRows(raw: unknown, limit: number): readonly GraphSourceRecord[] {
+  if (!Array.isArray(raw)) throw new TypeError('Invalid graph records');
+  const length = sourceCount(graphSourceField(raw, 'length'));
+  if (length > limit) throw new RangeError('Graph record limit exceeded');
+  let units = 0;
+  const text = (value: unknown, required = false): string | undefined => {
+    if (value === undefined && !required) return undefined;
+    if (typeof value !== 'string' || (required && !value.length) || value.length > 65_536 || (units += value.length) > 2_000_000) throw new TypeError('Invalid graph record text');
+    return value;
+  };
+  const rows: GraphSourceRecord[] = [];
+  for (let index = 0; index < length; index++) {
+    const entry = graphSourceField(raw, index);
+    const key = text(graphSourceField(entry, 'key'), true)!;
+    const order = sourceCount(graphSourceField(entry, 'order'));
+    const record = graphSourceField(entry, 'value');
+    const kind = graphSourceField(record, 'kind');
+    if (kind !== 'node' && kind !== 'edge') throw new TypeError('Invalid graph record kind');
+    const rawValue = graphSourceField(record, 'value');
+    const id = text(graphSourceField(rawValue, 'id'), true)!;
+    if (key !== `${kind}:${id}`) throw new TypeError('Invalid graph record identity');
+    const label = text(graphSourceField(rawValue, 'label'));
+    const accessibleLabel = text(graphSourceField(rawValue, 'accessibleLabel'));
+    const description = text(graphSourceField(rawValue, 'description'));
+    const fields = { id, ...(label === undefined ? {} : { label }), ...(accessibleLabel === undefined ? {} : { accessibleLabel }), ...(description === undefined ? {} : { description }) };
+    const value: GraphSourceValue = kind === 'node' ? Object.freeze({ kind, value: Object.freeze({ ...fields,
+      type: text(graphSourceField(rawValue, 'type')), communityId: text(graphSourceField(rawValue, 'communityId')),
+    }) }) : Object.freeze({ kind, value: Object.freeze({ ...fields,
+      source: text(graphSourceField(rawValue, 'source'), true)!, target: text(graphSourceField(rawValue, 'target'), true)!,
+    }) });
+    rows.push(Object.freeze({ key, order, value }));
+  }
+  return Object.freeze(rows);
+}
+function graphSourceSummary(raw: unknown): LyraGraphSourceSummary {
+  return Object.freeze({ nodes: sourceCount(graphSourceField(raw, 'nodes')), edges: sourceCount(graphSourceField(raw, 'edges')) });
+}
 
 export type LyraGraphLayout = 'force' | 'layered';
 
@@ -293,7 +349,7 @@ export interface LyraGraphEventMap {
   }>;
   'lr-node-expand': CustomEvent<{ nodeId: string }>;
   'lr-selection-change': CustomEvent<
-    LyraEventDetailSnapshot<{ selectedNodeIds: string[]; selectedEdgeIds: string[] }>
+    LyraEventDetailSnapshot<{ selectedNodeIds: readonly string[]; selectedEdgeIds: readonly string[] }>
   >;
   /** A hull was activated by pointer or keyboard. */
   'lr-community-activate': CustomEvent<{ communityId: string }>;
@@ -354,6 +410,15 @@ export interface LyraGraphEventMap {
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
+ * Source mode uses a global paged node/edge navigator beside a bounded diagram. Its complete
+ * logical totals come from the provider; neighborhood/summary coverage is disclosed separately.
+ * fit() frames the current scene, not the full source. Dragging changes local layout only.
+ * Removing graphSource restores the current legacy arrays without modifying their getters.
+ * @csspart source-navigator - Global node/edge query, record list and pagination.
+ * @csspart source-row - A mounted global record activation button.
+ * @csspart source-row-active - The record holding the navigator's roving tab stop.
+ * @csspart source-status - Source loading, unavailable-record, and error text.
+ * @csspart source-coverage - Full-source totals and current diagram coverage.
  * @customElement lr-graph
  * Empty/blank node, link, node-type, and community identities are omitted, and later duplicate
  * effective identities are first-wins before layout, keyed DOM, selection, focus, or events.
@@ -483,6 +548,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     graphOrbitRight: LYRA_DEFAULT_graphOrbitRight,
     graphOrbitUp: LYRA_DEFAULT_graphOrbitUp,
     graphSelectionCount: LYRA_DEFAULT_graphSelectionCount,
+    graphSourceAllRecords: LYRA_DEFAULT_graphSourceAllRecords,
+    graphSourceBothDirections: LYRA_DEFAULT_graphSourceBothDirections,
+    graphSourceCoverageAggregate: LYRA_DEFAULT_graphSourceCoverageAggregate,
+    graphSourceCoverageComplete: LYRA_DEFAULT_graphSourceCoverageComplete,
+    graphSourceCoverageNeighborhood: LYRA_DEFAULT_graphSourceCoverageNeighborhood,
+    graphSourceDirection: LYRA_DEFAULT_graphSourceDirection,
+    graphSourceEdges: LYRA_DEFAULT_graphSourceEdges,
+    graphSourceIncidentEdges: LYRA_DEFAULT_graphSourceIncidentEdges,
+    graphSourceNodes: LYRA_DEFAULT_graphSourceNodes,
+    graphSourceRecordMissing: LYRA_DEFAULT_graphSourceRecordMissing,
+    graphSourceRecords: LYRA_DEFAULT_graphSourceRecords,
+    graphSourceRecordsError: LYRA_DEFAULT_graphSourceRecordsError,
+    graphSourceSceneError: LYRA_DEFAULT_graphSourceSceneError,
+    graphSourceTotals: LYRA_DEFAULT_graphSourceTotals,
     graphSpatialControls: LYRA_DEFAULT_graphSpatialControls,
     graphSpatialInstructions: LYRA_DEFAULT_graphSpatialInstructions,
     graphSpatialPage: LYRA_DEFAULT_graphSpatialPage,
@@ -491,14 +570,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     graphView3d: LYRA_DEFAULT_graphView3d,
     graphViewList: LYRA_DEFAULT_graphViewList,
     loading: LYRA_DEFAULT_loading,
+    neighborDirectionIn: LYRA_DEFAULT_neighborDirectionIn,
+    neighborDirectionOut: LYRA_DEFAULT_neighborDirectionOut,
     next: LYRA_DEFAULT_next,
     noData: LYRA_DEFAULT_noData,
     previous: LYRA_DEFAULT_previous,
+    retry: LYRA_DEFAULT_retry,
+    search: LYRA_DEFAULT_search,
     zoomIn: LYRA_DEFAULT_zoomIn,
     zoomOut: LYRA_DEFAULT_zoomOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
+
+  protected static override readonly identityCollectionObjectProperties = Object.freeze(['graphSource']);
 
   protected static override readonly ownedCollectionProperties = Object.freeze([
     'nodes',
@@ -525,6 +610,319 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-selection-change',
   ]);
+
+  private _graphSource?: GraphSource;
+  private sourceEpoch = 0;
+  private sourceNavigation = 0;
+  private sourceSyncing = false;
+  private sourceInputs?: readonly unknown[];
+  private sourcePageInputs?: readonly unknown[];
+  private sourceBindingError?: unknown;
+  private sourceQuery: LyraGraphSourceQuery = EMPTY_SOURCE_QUERY;
+  private sourceCenter: string | null = null;
+  private sourceKeys: readonly string[] = [];
+  private sourceModel?: NormalizedGraphModel;
+  private sourceModelScene?: GraphSourceController['state']['scene'];
+  private sourceMissing = false;
+  private sourceRovingKey?: string;
+  private sourceRestoreFocus = false;
+  private sourceRestorePager = false;
+  private sourcePagePromise: Promise<boolean> = Promise.resolve(false);
+  @state() private sourceState = 0;
+  @state() private sourceModelVersion = 0;
+  @state() private sourcePaint = 0;
+  private readonly sourceScene = new GraphSourceController(this, { onChange: () => { this.sourceState++; } });
+  private readonly sourcePages = new SourcePageController<GraphSourceValue, LyraGraphSourceQuery, LyraGraphSourceSummary>(this, {
+    normalizeRecord: record => record as GraphSourceRecord,
+    normalizeSummary: value => graphSourceSummary(value),
+    validateMetadata: (result, query) => {
+      const count = result.summary[query.kind];
+      if (result.total > count || (!query.search && query.centerKey === null && !query.nodeTypes.length && result.total !== count) ||
+        result.rows.some(row => row.value.kind !== (query.kind === 'nodes' ? 'node' : 'edge'))) throw new TypeError('Invalid global graph count or kind');
+      this.assertSourceTotals(result.summary);
+    },
+    onChange: () => { this.sourceState++; },
+  });
+
+  private compositionPublished?: readonly unknown[];
+  private readonly sourceComposition = new GraphSourceCompositionController(this, () => {
+    const profile = this.sourceComposition.profile;
+    if (profile) this.setSourceQuery({ ...EMPTY_SOURCE_QUERY, search: profile.search, nodeTypes: profile.nodeTypes });
+    this.sourceState++;
+  }, async keys => {
+    if (!this.sourceMode || this.sourceComposition.profile?.empty) return undefined;
+    const profile = this.sourceComposition.profile, currentSource = this.sourceAuthority();
+    const current = () => currentSource() && this.sourceComposition.profile === profile;
+    const records = await this.sourcePages.resolveSelection(keys);
+    return records && current() ? Object.freeze({ records, current }) : undefined;
+  }, async key => {
+    if (!this.sourceMode || this.sourceComposition.profile?.empty) return undefined;
+    const source = this.graphSource, epoch = this.sourceEpoch, profile = this.sourceComposition.profile;
+    this.sourceNavigation++;
+    const current = this.sourceAuthority();
+    if (this.sourceScene.state.pending || !this.sourceScene.state.scene?.nodes.some(node => node.key === key)) {
+      if (!await this.ensureSourceScene(key, current) || !current()) return undefined;
+    }
+    if (this.sourceList) {
+      const mounted = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')].some(row => row.dataset['sourceKey'] === key);
+      if (!mounted && !await this.revealSourceRecord(key, false)) return undefined;
+    } else if (!await this.focusSceneNode(key.slice(5), undefined, current)) return undefined;
+    const finalCurrent = this.sourceAuthority();
+    const accepted = () => finalCurrent() && this.graphSource === source && this.sourceEpoch === epoch && this.sourceComposition.profile === profile;
+    return accepted() ? accepted : undefined;
+  });
+
+  private publishSourceComposition(): void {
+    const profile = this.sourceComposition.profile;
+    if (!profile || !this.sourceMode) return;
+    const state = this.sourcePages.state;
+    const signature = [profile, state, this.sourceQuery, this.sourcePage, this.sourceEpoch, this.sourceBindingError];
+    if (this.compositionPublished && signature.every((value, index) => value === this.compositionPublished![index])) return;
+    this.compositionPublished = signature;
+    const currentSource = this.sourceAuthority();
+    const current = () => currentSource() && this.sourceComposition.profile === profile && this.sourcePages.state === state;
+    if (current()) profile.accepted(Object.freeze({ query: this.sourceQuery, page: finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER),
+      pageSize: finiteInteger(this.sourcePageSize, 100, 1, 500), total: this.sourceTotal, current }));
+  }
+
+  /** Full host-owned graph. Node keys are node:<id>; edge keys are edge:<id> with explicit edge IDs.
+   * Takes precedence over nodes/edges; undefined restores legacy arrays. Reassign even the same
+   * source or call requestUpdate() to refresh. Records are paged globally; diagrams retain at
+   * most 500 nodes and 1,000 edges, with up to 32 reserved active/focused keys. */
+  @property({ attribute: false, noAccessor: true, hasChanged: () => true })
+  get graphSource(): GraphSource | undefined { return this._graphSource; }
+  set graphSource(value: GraphSource | undefined) {
+    const previous = this._graphSource;
+    this._graphSource = value; this.sourceEpoch++; this.sourceNavigation++;
+    this.requestUpdate('graphSource', previous);
+  }
+  /** Zero-based global records page. Applies only with graphSource. */
+  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  /** Records per source page, normalized to 1..500. Changing size resets sourcePage to zero. */
+  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  /** Exact total for the active node/edge query, or null before a successful current response. */
+  get sourceTotal(): number | null { if (this.sourceMode && this.sourceComposition.profile?.empty) return 0; return this.sourceMode && !this.sourceBindingError ? this.sourcePages.state.result?.total ?? null : null; }
+  private get sourceMode(): boolean { return this.graphSource !== undefined; }
+  private get sourceList(): boolean { return this.sourceMode && this.view === 'list'; }
+  private get sourceRows(): readonly GraphSourceRecord[] { return this.sourceBindingError ? [] : this.sourcePages.state.result?.rows ?? []; }
+  private get sourceDiagramBlocked(): boolean { return this.sourceMode && (!!this.sourceBindingError || !this.sourceScene.state.scene); }
+
+  private paintGraph(): void { this.sourcePaint++; }
+
+  private assertSourceTotals(summary: LyraGraphSourceSummary): void {
+    const scene = this.sourceScene.state.scene;
+    if (scene && (scene.total.nodes !== summary.nodes || scene.total.edges !== summary.edges)) throw new TypeError('Inconsistent graph totals');
+  }
+
+  private syncGraphSource(): void {
+    if (!this.sourcePages || !this.sourceScene || this.sourceSyncing) return;
+    this.sourceSyncing = true;
+    const epoch = this.sourceEpoch;
+    try {
+      if (!this.sourceMode || this.sourceComposition.profile?.empty) {
+        if (this.sourceInputs) {
+          this.sourcePages.bind(undefined); this.sourceScene.bind(undefined);
+          this.sourceInputs = undefined; this.sourcePageInputs = undefined; this.sourceModel = undefined;
+          this.sourceModelScene = undefined; this.sourceBindingError = undefined; this.sourceModelVersion++;
+          this.lastPositionById.clear();
+        }
+        return;
+      }
+      const source = this.graphSource!;
+      if (!source || typeof source !== 'object') throw new TypeError('Invalid graph source');
+      const revision = sourceRevision(source.revision);
+      const records = source.records;
+      if (!records || sourceRevision(records.revision) !== revision) throw new TypeError('Invalid graph records source');
+      const locale = this.effectiveLocale;
+      if (epoch !== this.sourceEpoch || source !== this.graphSource) return;
+      const inputs = [source, revision, records, epoch, locale];
+      const rebound = !this.sourceInputs || inputs.some((value, index) => value !== this.sourceInputs![index]);
+      if (rebound) {
+        this.sourceNavigation++; this.cancelCameraTween(); this.simulation?.stop();
+        this.sourceBindingError = undefined; this.sourceMissing = false; this.sourcePageInputs = undefined;
+        const current = () => this.sourceEpoch === epoch && this.graphSource === source && source.revision === revision && source.records === records && records.revision === revision;
+        const check = () => { if (!current()) throw new Error('Graph source revoked'); };
+        const wrapped: GraphSource['records'] = {
+          revision,
+          query: async request => {
+            const raw = await records.query(request); check();
+            if (graphSourceField(raw, 'groups') !== undefined || graphSourceField(raw, 'tags') !== undefined) throw new TypeError('Unexpected graph metadata');
+            const rows = graphSourceRows(graphSourceField(raw, 'rows'), request.pageSize);
+            const result = { rows, total: sourceCount(graphSourceField(raw, 'total')), summary: graphSourceSummary(graphSourceField(raw, 'summary')) };
+            check(); return result;
+          },
+          lookup: async (keys, context) => {
+            if (keys.length > 32) throw new RangeError('Graph reservation limit exceeded');
+            const raw = await records.lookup(keys, context); check();
+            const rows = graphSourceRows(raw, keys.length); check(); return rows;
+          },
+          locate: async (key, query, context) => { const result = await records.locate(key, query, context); check(); return result; },
+        };
+        if (!this.sourceScene.bind({ source, epoch, locale }) || epoch !== this.sourceEpoch || source !== this.graphSource) return;
+        this.sourcePages.bind({ source: wrapped, revision, epoch, locale });
+        if (epoch !== this.sourceEpoch || source !== this.graphSource) return;
+        this.sourceInputs = inputs;
+        this.lastPositionById.clear(); this.sourceModel = undefined; this.sourceModelScene = undefined; this.sourceModelVersion++;
+        if (this.view !== 'list') void this.sourceScene.request({ mode: 'neighborhood', centerKey: this.sourceCenter, bounds: null, includeKeys: this.sourceKeys });
+      }
+      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
+      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      if (this.sourcePageInputs && this.sourcePageInputs[1] !== size) { page = 0; this.sourcePage = 0; }
+      const pageInputs = [page, size, this.sourceQuery];
+      if (!this.sourcePageInputs || pageInputs.some((value, index) => value !== this.sourcePageInputs![index])) {
+        this.sourcePageInputs = pageInputs; this.sourceMissing = false;
+        this.sourcePagePromise = this.sourcePages.request(this.sourceQuery, page, size);
+      }
+    } catch (error) {
+      if (epoch === this.sourceEpoch) {
+        this.sourcePages.bind(undefined); this.sourceScene.bind(undefined);
+        if (epoch === this.sourceEpoch) { this.sourceBindingError = error; this.sourceInputs = undefined; this.sourceState++; }
+      }
+    } finally {
+      this.sourceSyncing = false;
+      if (epoch !== this.sourceEpoch) queueMicrotask(() => { if (this.isConnected) this.sourceState++; });
+    }
+  }
+
+  private sourceAuthority(): () => boolean {
+    const source = this.graphSource, epoch = this.sourceEpoch, owner = this.ownerDocument, navigation = this.sourceNavigation;
+    const revision = source?.revision;
+    return () => source?.revision === revision && this.isConnected && this.ownerDocument === owner &&
+      this.graphSource === source && this.sourceEpoch === epoch && this.sourceNavigation === navigation;
+  }
+
+  private setSourceQuery(query: LyraGraphSourceQuery): void {
+    this.sourceNavigation++; this.sourceQuery = Object.freeze({ ...query, nodeTypes: Object.freeze([...query.nodeTypes]) });
+    this.sourceSyncing = true; this.sourcePage = 0; this.sourceSyncing = false;
+    this.sourcePageInputs = undefined; this.syncGraphSource(); this.sourceState++;
+  }
+
+  /** Reveal and focus a canonical node:<id> or edge:<id> row in the global navigator. Clears
+   * query filters, uses provider locate, and never selects or activates the record. */
+  async revealSourceKey(key: string): Promise<boolean> { return this.revealSourceRecord(key, true); }
+
+  private async revealSourceRecord(key: string, focus: boolean): Promise<boolean> {
+    if (!this.sourceMode || typeof key !== 'string' || key.length > 65_536 || !/^(node|edge):.+/s.test(key)) return false;
+    this.setSourceQuery({ ...EMPTY_SOURCE_QUERY, kind: key.startsWith('node:') ? 'nodes' : 'edges' });
+    const current = this.sourceAuthority();
+    await this.sourcePagePromise;
+    if (!current()) return false;
+    const index = await this.sourcePages.locate(key);
+    if (!current()) return false;
+    if (index === null) { this.sourceMissing = true; this.sourceState++; return false; }
+    this.sourceSyncing = true;
+    this.sourcePage = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
+    this.sourceSyncing = false;
+    this.syncGraphSource(); await this.sourcePagePromise;
+    if (!current()) return false;
+    this.sourceRovingKey = key; this.sourceRestoreFocus = false; this.sourceState++;
+    await this.updateComplete;
+    if (!current()) return false;
+    const target = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')].find(row => row.dataset['sourceKey'] === key);
+    if (!target) return false;
+    target.scrollIntoView({ block: 'nearest' }); if (focus) target.focus();
+    return true;
+  }
+
+  private async ensureSourceScene(key: string, current: () => boolean): Promise<GraphSourceRecord | undefined> {
+    const records = await this.sourcePages.resolveSelection([key]);
+    if (!current() || !records) return undefined;
+    const record = records.find(row => row.key === key);
+    if (!record) { this.sourceMissing = true; this.sourceState++; return undefined; }
+    const keys = new Set<string>([key]);
+    if (record.value.kind === 'edge') {
+      keys.add(`node:${record.value.value.source}`); keys.add(`node:${record.value.value.target}`);
+      this.sourceCenter = `node:${record.value.value.source}`;
+    } else this.sourceCenter = key;
+    for (const id of canonicalIdentityList(this.selectedNodeIds)) { if (keys.size === 32) break; keys.add(`node:${id}`); }
+    for (const id of canonicalIdentityList(this.selectedEdgeIds)) { if (keys.size === 32) break; keys.add(`edge:${id}`); }
+    this.sourceKeys = Object.freeze([...keys]);
+    const accepted = await this.sourceScene.request({ mode: 'neighborhood', centerKey: this.sourceCenter, bounds: null, includeKeys: this.sourceKeys });
+    if (!accepted || !current()) return undefined;
+    const scene = this.sourceScene.state.scene!;
+    if (!(record.value.kind === 'node' ? scene.nodes : scene.edges).some(item => item.key === key)) return undefined;
+    this.sourceState++;
+    await this.updateComplete;
+    return current() ? record : undefined;
+  }
+
+  private async activateSourceRecord(record: GraphSourceRecord, event: MouseEvent | KeyboardEvent): Promise<void> {
+    if (!this.sourceRows.includes(record) || this.sourcePages.state.pending || this.sourceBindingError) return;
+    this.sourceNavigation++; const current = this.sourceAuthority();
+    const nodes = this.selectedNodeIds, edges = this.selectedEdgeIds;
+    const toggle = event.ctrlKey || event.metaKey;
+    const accepted = await this.ensureSourceScene(record.key, current);
+    if (!accepted || !current() || nodes !== this.selectedNodeIds || edges !== this.selectedEdgeIds) return;
+    if (accepted.value.kind === 'node') {
+      const value = accepted.value.value;
+      const position = this.sourceScene.state.scene?.nodes.find(node => node.key === record.key)?.value.position ?? { x: 0, y: 0, z: 0 };
+      this.emit('lr-node-activate', { nodeId: value.id, ...position });
+      if (current() && nodes === this.selectedNodeIds && edges === this.selectedEdgeIds) this.emitSelectionIntent('node', value.id, toggle);
+    } else {
+      const value = accepted.value.value;
+      this.emit('lr-edge-activate', { sourceNodeId: value.source, targetNodeId: value.target, edgeId: value.id });
+      if (current() && nodes === this.selectedNodeIds && edges === this.selectedEdgeIds) this.emitSelectionIntent('link', value.id, toggle);
+    }
+  }
+
+  private onSourceRowKey(event: KeyboardEvent): void {
+    const rows = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')];
+    const index = rows.indexOf(event.currentTarget as HTMLButtonElement);
+    const forward = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+    const backward = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? rows.length - 1 :
+      event.key === 'ArrowDown' || event.key === forward ? Math.min(rows.length - 1, index + 1) :
+        event.key === 'ArrowUp' || event.key === backward ? Math.max(0, index - 1) : -1;
+    if (next < 0 || rows[next]?.disabled || rows[next]?.closest('[inert]')) return;
+    event.preventDefault(); this.sourceRovingKey = rows[next]!.dataset['sourceKey']; this.sourceState++; rows[next]!.focus();
+  }
+
+  private renderSourceNavigator(): TemplateResult {
+    const state = this.sourcePages.state;
+    const current = this.sourceAuthority();
+    const bindingError = this.sourceBindingError;
+    const currentPage = () => current() && this.sourcePages.state === state && this.sourceBindingError === bindingError;
+    const failed = !!this.sourceBindingError || !!state.error || !!state.selectionError;
+    const rows = this.sourceRows;
+    const active = rows.some(row => row.key === this.sourceRovingKey) ? this.sourceRovingKey : rows[0]?.key;
+    const summary = state.result?.summary;
+    const scene = this.sourceScene.state.scene;
+    const format = (value: number) => getNumberFormat(this.effectiveLocale, { useGrouping: false }).format(value);
+    const values = summary ? { nodes: format(summary.nodes), edges: format(summary.edges), shownNodes: format(scene?.nodes.length ?? 0), shownEdges: format(scene?.edges.length ?? 0) } : undefined;
+    const stop = (event: Event) => event.stopPropagation();
+    return html`<section part="source-navigator" aria-label=${this.accessibleLabel ?? this.label ?? this.localize('graphSourceRecords')} aria-busy=${state.pending ? 'true' : 'false'} tabindex="-1">
+      <div class="source-toolbar">
+        <select data-source-kind aria-label=${this.localize('graphSourceRecords')} .value=${this.sourceQuery.kind} @change=${(event: Event) => this.setSourceQuery({ ...this.sourceQuery, kind: (event.target as HTMLSelectElement).value === 'edges' ? 'edges' : 'nodes' })}>
+          <option value="nodes">${this.localize('graphSourceNodes')}</option><option value="edges">${this.localize('graphSourceEdges')}</option>
+        </select>
+        ${this.sourceComposition.profile ? nothing : html`<input data-source-search type="search" aria-label=${this.localize('search')} .value=${this.sourceQuery.search} @input=${(event: Event) => this.setSourceQuery({ ...this.sourceQuery, search: (event.target as HTMLInputElement).value.slice(0, 65_536) })}>`}
+        ${this.sourceQuery.centerKey ? html`<button type="button" @click=${() => this.setSourceQuery({ ...this.sourceQuery, centerKey: null, direction: 'both' })}>${this.localize('graphSourceAllRecords')}</button>
+          <select aria-label=${this.localize('graphSourceDirection')} .value=${this.sourceQuery.direction} @change=${(event: Event) => { const value = (event.target as HTMLSelectElement).value; this.setSourceQuery({ ...this.sourceQuery, direction: value === 'in' || value === 'out' ? value : 'both' }); }}>
+            <option value="both">${this.localize('graphSourceBothDirections')}</option><option value="in">${this.localize('neighborDirectionIn')}</option><option value="out">${this.localize('neighborDirectionOut')}</option>
+          </select>` : nothing}
+      </div>
+      ${values ? html`<p part="source-coverage">${this.localize(scene ? scene.coverage === 'complete' ? 'graphSourceCoverageComplete' : scene.coverage === 'aggregate' ? 'graphSourceCoverageAggregate' : 'graphSourceCoverageNeighborhood' : 'graphSourceTotals', undefined, values)}</p>` : nothing}
+      ${failed || state.pending || this.sourceMissing ? html`<p part="source-status">${this.localize(failed ? 'graphSourceRecordsError' : state.pending ? 'loading' : 'graphSourceRecordMissing')}</p>` : nothing}
+      ${failed ? html`<button type="button" @click=${() => { if (currentPage()) this.requestUpdate(); }}>${this.localize('retry')}</button>` : nothing}
+      ${!failed && !state.pending ? html`<ul class="source-rows">${rows.length ? rows.map(record => {
+        const value = record.value.value;
+        const label = value.accessibleLabel || value.label || value.id;
+        const selected = this.isSelected(record.value.kind === 'node' ? 'node' : 'link', value.id);
+        return html`<li><button type="button" part=${`source-row${active === record.key ? ' source-row-active' : ''}`} data-source-key=${record.key}
+          tabindex=${active === record.key ? '0' : '-1'} aria-pressed=${this.selectionMode === 'none' ? nothing : selected ? 'true' : 'false'}
+          @keydown=${this.onSourceRowKey} @click=${(event: MouseEvent) => this.activateSourceRecord(record, event)}>${label}</button>
+          ${record.value.kind === 'node' ? html`<button type="button" data-source-incident=${record.key} aria-label=${this.localize('graphSourceIncidentEdges', undefined, { label })}
+            @click=${() => {
+              if (currentPage() && !state.pending && !bindingError && this.sourceRows.includes(record))
+                this.setSourceQuery({ ...EMPTY_SOURCE_QUERY, kind: 'edges', centerKey: record.key });
+            }}>${this.localize('graphSourceIncidentEdges', undefined, { label })}</button>` : nothing}</li>`;
+      }) : html`<li>${this.localize('noData')}</li>`}</ul>` : nothing}
+      <lr-pagination format="compact" with-edges .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
+        .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${this.sourceTotal ?? -1} .disabled=${failed || state.pending || this.sourceTotal === null}
+        .strings=${this.strings} @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); this.sourcePage = event.detail.page - 1; }}
+        @lr-before-page-change=${stop} @lr-activate=${stop} @focus=${stop} @blur=${stop}></lr-pagination>
+    </section>`;
+  }
 
   /** Readonly nodes in the controlled graph model. Node ids provide stable render and interaction identity. */
   @property({ attribute: false }) nodes: readonly LyraGraphNode[] = [];
@@ -555,6 +953,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** A single cached projection keeps every graph consumer on the same deterministic identity
    * policy without rescanning the bounded public snapshots on every lookup or render branch. */
   private get graphModel(): NormalizedGraphModel {
+    if (this.sourceMode) {
+      if (!this.sourceModel) {
+        const scene = this.sourceBindingError ? undefined : this.sourceScene.state.scene;
+        const nodes = Object.freeze(scene?.nodes.map(entry => entry.value) ?? []);
+        const ids = new Set(nodes.map(node => node.id));
+        this.sourceModel = Object.freeze({ nodes, links: Object.freeze(scene?.edges.map(entry => entry.value) ?? []), nodeTypes: this.nodeTypes,
+          communities: Object.freeze(this.communities.map(community => Object.freeze({ ...community, memberIds: Object.freeze(community.memberIds.filter(id => ids.has(id))) }))) });
+      }
+      return this.sourceModel;
+    }
     const sources = this.normalizedGraphSources;
     if (
       !sources ||
@@ -872,6 +1280,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   )[] = [];
   private canvasDragNode?: SimNode;
   private canvasPointerId?: number;
+  private canvasDragFrame?: number;
+  private canvasDragFrameOwner?: Window;
+  private canvasDragGeneration = 0;
+  private pendingCanvasDrag?: { x: number; y: number };
+
   private canvasPointerDownAt?: { x: number; y: number };
   private canvasPointerDownId?: number;
   /** The latest hover pointer position awaiting a hit test -- `pointermove` can fire far more
@@ -938,7 +1351,77 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private reducedMotion = false;
 
   // @renderController GraphSpatialController
-  private readonly spatial = new GraphSpatialController(this, {
+  private spatial?: GraphSpatialController;
+  private spatialLoad?: Promise<void>;
+  private spatialGeneration = 0;
+  private layeredEngine?: typeof layeredLayout;
+  private layeredLoad?: Promise<void>;
+  private layeredGeneration = 0;
+  private optionalLoadFailure?: 'spatial' | 'layered';
+  private d3LoadFailed = false;
+
+  private loadSpatialController() { return import('./graph-spatial-controller.js'); }
+  private loadLayeredLayout() { return import('../../../internal/layered-layout.js'); }
+
+  private ensureSpatial(): Promise<void> {
+    if (this.spatial || !this.isConnected || this.view === '2d' || this.sourceList) return Promise.resolve();
+    if (this.spatialLoad) return this.spatialLoad;
+    const generation = ++this.spatialGeneration;
+    const pending = this.loadSpatialController().then(({ GraphSpatialController }) => {
+      if (generation !== this.spatialGeneration || !this.isConnected || this.view === '2d' || this.sourceList) return;
+      this.spatial = this.createSpatial(GraphSpatialController);
+      this.optionalLoadFailure = undefined;
+      this.loadFailed = false;
+      this.paintGraph();
+    }, () => {
+      if (generation === this.spatialGeneration && this.isConnected && this.view !== '2d') {
+        this.optionalLoadFailure = 'spatial';
+        this.loadFailed = true;
+        this.announcements.announceAssertive(this.localize('graphSpatialUnavailable'));
+        this.paintGraph();
+      }
+    }).finally(() => { if (this.spatialLoad === pending) this.spatialLoad = undefined; });
+    this.spatialLoad = pending;
+    return pending;
+  }
+
+  private ensureLayered(): Promise<void> {
+    if (this.layeredEngine || !this.isConnected || this.view !== '2d' || this.layout !== 'layered') return Promise.resolve();
+    if (this.layeredLoad) return this.layeredLoad;
+    const generation = ++this.layeredGeneration;
+    this.loading = true;
+    const pending = this.loadLayeredLayout().then(({ layeredLayout }) => {
+      if (generation !== this.layeredGeneration || !this.isConnected || this.view !== '2d' || this.layout !== 'layered') return;
+      this.layeredEngine = layeredLayout;
+      this.optionalLoadFailure = undefined;
+      this.loading = !this.d3;
+      this.loadFailed = false;
+      if (this.d3) this.rebuildSimulation();
+      this.paintGraph();
+    }, () => {
+      if (generation === this.layeredGeneration && this.isConnected && this.layout === 'layered') {
+        this.optionalLoadFailure = 'layered';
+        this.loading = false;
+        this.loadFailed = true;
+      }
+    }).finally(() => { if (this.layeredLoad === pending) this.layeredLoad = undefined; });
+    this.layeredLoad = pending;
+    return pending;
+  }
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    const complete = await super.getUpdateComplete();
+    const pending = this.view !== '2d' ? this.spatialLoad : this.layout === 'layered' ? this.layeredLoad : undefined;
+    if (pending) {
+      await pending;
+      if (this.isUpdatePending) return super.getUpdateComplete();
+    }
+    return complete;
+  }
+
+  private createSpatial(Controller: typeof GraphSpatialController): GraphSpatialController {
+    return new Controller(this, {
+    repaint: () => this.paintGraph(),
     model: () => this.graphModel,
     locale: () => this.effectiveLocale,
     direction: () => this.effectiveDirection,
@@ -967,11 +1450,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       };
     }),
     activate: (hit, event) => {
+      if (this.sourceDiagramBlocked) return;
       if (hit.kind === 'node') {
-        const position = this.spatial.position(hit.id);
+        const position = this.spatial?.position(hit.id);
         if (!position) return;
+        const current = this.selectionActionAuthority();
         this.emit('lr-node-activate', { nodeId: hit.id, ...position });
-        this.emitSelectionIntent('node', hit.id, event.ctrlKey || event.metaKey);
+        if (current()) this.emitSelectionIntent('node', hit.id, event.ctrlKey || event.metaKey);
       } else this.onLinkClick(hit.edge, event);
     },
     expand: (nodeId) => this.emit('lr-node-expand', { nodeId }),
@@ -987,7 +1472,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     unavailable: () => this.announcements.announceAssertive(this.localize('graphSpatialUnavailable')),
     clearSelection: () => this.clearSelection(),
     afterUpdate: (callback, key) => this.scheduleAfterUpdate(callback, key),
-  });
+    });
+  }
 
   private spatialMessages(): Readonly<Record<string, string>> {
     return {
@@ -1009,11 +1495,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       if (reduced !== this.reducedMotion) {
         this.reducedMotion = reduced;
         if (reduced) this.simulation?.stop();
-        else if (this.view === '2d' && this.safeSeed == null) this.simulation?.restart();
+        else if (this.visible && this.view === '2d' && this.safeSeed == null) this.simulation?.restart();
       }
       this.linkPaintVisibilityCache.clear();
       this.resolvedCssColorCache.clear();
-      if (this.view !== '2d') this.spatial.invalidate();
+      if (this.view !== '2d') this.spatial?.invalidate();
       else if (this.renderer === 'canvas') this.markCanvasDirty();
     }, ['(prefers-reduced-motion: reduce)']);
   }
@@ -1061,13 +1547,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.sourceInputs = undefined; this.syncGraphSource();
     // A detached property can round-trip to its original value while replacing its render node.
     // Even when every keyed request is a no-op, rebind d3 to the surviving renderer on reconnect.
     if (this.detachedGraphChanges.size) {
       for (const [key, previous] of this.detachedGraphChanges)
         this.requestUpdate(key as keyof this, previous as this[keyof this]);
       this.detachedGraphChanges.clear();
-      this.requestUpdate();
+      this.paintGraph();
     }
     this.reducedMotion = prefersReducedMotion(this);
     // Observed unconditionally (both first mount and any reconnect below) -- visibility gating
@@ -1075,12 +1562,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const IntersectionObserverCtor = this.ownerWindow?.IntersectionObserver;
     if (this.view === '2d' && IntersectionObserverCtor) {
       this.intersectionObserver = new IntersectionObserverCtor((entries) => {
-        const wasVisible = this.visible;
-        this.visible = entries[0]?.isIntersecting ?? true;
-        if (this.visible && !wasVisible && this.canvasDrawPending) {
-          this.canvasDrawPending = false;
-          this.scheduleCanvasDraw();
-        }
+        this.setGraphVisibility(entries[0]?.isIntersecting ?? true);
       });
       this.intersectionObserver.observe(this);
     }
@@ -1097,19 +1579,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.measureHostBox();
     }
     if (this.view === '2d') this.connect2d();
-    else { this.loading = false; this.requestUpdate(); }
+    else { this.loading = false; void this.ensureSpatial(); this.paintGraph(); }
+  }
+
+  private setGraphVisibility(visible: boolean): void {
+    const wasVisible = this.visible;
+    this.visible = visible;
+    if (!visible) this.simulation?.stop();
+    else if (!wasVisible) {
+      if (!this.reducedMotion && this.safeSeed == null && this.view === '2d' &&
+        this.simulation && this.simulation.alpha() > this.simulation.alphaMin()) this.simulation.restart();
+      if (this.canvasDrawPending) { this.canvasDrawPending = false; this.scheduleCanvasDraw(); }
+    }
   }
 
   private connect2d(): void {
     const Observer = this.ownerWindow?.IntersectionObserver;
     if (!this.intersectionObserver && Observer) {
       this.intersectionObserver = new Observer((entries) => {
-        const wasVisible = this.visible;
-        this.visible = entries[0]?.isIntersecting ?? true;
-        if (this.visible && !wasVisible && this.canvasDrawPending) {
-          this.canvasDrawPending = false;
-          this.scheduleCanvasDraw();
-        }
+        this.setGraphVisibility(entries[0]?.isIntersecting ?? true);
       });
       this.intersectionObserver.observe(this);
     }
@@ -1123,7 +1611,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // whole ~300-tick alpha=1 settle animation for no reason — just resume
     // the existing simulation in place instead.
     if (this.d3) {
-      if (!this.reducedMotion && this.safeSeed == null) this.simulation?.restart();
+      if (this.visible && !this.reducedMotion && this.safeSeed == null) this.simulation?.restart();
       // renderer="canvas" mode's own resize/DPR watchers are torn down by disconnectedCallback()
       // below on every disconnect (including this reconnect) -- the <canvas> element itself
       // survived the reparent along with the rest of this shadow tree (canvasEl === zoomedEl still
@@ -1149,7 +1637,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // tree. The shared browser-state seam delays only the hydrating branch change; client-only
       // mounts proceed as soon as their initial update completes.
       try {
-        await this.updateComplete;
+        await super.getUpdateComplete();
       } catch {
         return;
       }
@@ -1162,9 +1650,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // error branch plus its light-DOM alert rather than leaving a blank surface. Guarded on
       // `mods` alone: a disconnect is not a load failure.
       if (!mods) {
+        this.d3LoadFailed = true;
         this.loadFailed = true;
         return;
       }
+      this.d3LoadFailed = false;
       this.loadFailed = false;
       // The element may have been removed from the DOM while the dynamic
       // d3 imports were in flight — don't spin up a simulation for a
@@ -1175,8 +1665,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.sourceNavigation++; this.sourceEpoch++; this.sourceInputs = undefined; this.sourcePageInputs = undefined;
     super.disconnectedCallback();
-    this.spatial.disconnect();
+    this.spatialGeneration++;
+    this.layeredGeneration++;
+    this.spatialLoad = undefined;
+    this.layeredLoad = undefined;
+    this.spatial?.disconnect();
     this.loadGeneration += 1;
     this.simulation?.stop();
     this.finishCanvasNodeDrag(undefined, true, false);
@@ -1218,6 +1713,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.announcements.adopted();
+    this.sourceEpoch++; this.sourceNavigation++; this.sourceInputs = undefined;
+    this.sourceScene.adopted(); this.sourcePages.adopted(); this.sourceState++;
     this.ensureCanvasOwnerRealm();
   }
 
@@ -1602,20 +2099,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return { resolved, dangling };
   }
 
-  /** A community's currently-visible members -- the union of `memberIds` and every currently
-   *  simulated node (already filtered by `hiddenTypes`) whose `communityId` matches. */
-  private communityMembers(community: LyraGraphCommunity): SimNode[] {
-    const idSet = new Set(community.memberIds);
-    return this.simNodes.filter(
-      (n) => idSet.has(n.id) || n.communityId === community.id
-    );
-  }
-
   /** Memoized `visibleCommunities()` result -- `undefined` means "stale, recompute on next call".
    *  Cleared from `willUpdate()` whenever `simNodes`/`communities` actually change, the same
    *  structural-change gate `applyInteractions()` re-caches its own DOM lookups on, so every other
    *  call site (roving-ring math, `render()`'s template, keyboard navigation) shares one
-   *  `O(communities × simNodes)` computation per structural update instead of repeating it. */
+   *  indexed membership join per structural update, with member ordering performed once. */
   private visibleCommunitiesCache?: {
     community: LyraGraphCommunity;
     members: SimNode[];
@@ -1629,12 +2117,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     members: SimNode[];
   }[] {
     if (!this.visibleCommunitiesCache) {
-      this.visibleCommunitiesCache = this.graphModel.communities
-        .map((community) => ({
-          community,
-          members: this.communityMembers(community),
-        }))
-        .filter((entry) => entry.members.length > 0);
+      const byCommunity = new Map<string, SimNode[]>();
+      const positions = new Map<string, number>();
+      this.simNodes.forEach((node, index) => {
+        positions.set(node.id, index);
+        if (node.communityId != null) {
+          const members = byCommunity.get(node.communityId);
+          if (members) members.push(node); else byCommunity.set(node.communityId, [node]);
+        }
+      });
+      this.visibleCommunitiesCache = this.graphModel.communities.flatMap(community => {
+        const members = new Map<string, SimNode>();
+        for (const node of byCommunity.get(community.id) ?? []) members.set(node.id, node);
+        for (const id of community.memberIds ?? []) {
+          const node = this.simNodeById.get(id);
+          if (node) members.set(id, node);
+        }
+        const ordered = [...members.values()].sort((a, b) => positions.get(a.id)! - positions.get(b.id)!);
+        return ordered.length ? [{ community, members: ordered }] : [];
+      });
     }
     return this.visibleCommunitiesCache;
   }
@@ -1766,14 +2267,27 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  to center on. Announces `graphNodeFocused` through the shared light-DOM sink. Does not move DOM
    *  focus -- this is a camera operation, not a roving-focus one. */
   async focusNode(id: string, options?: { zoom?: number }): Promise<boolean> {
+    if (this.sourceMode) {
+      if (typeof id !== 'string' || !id.length || id.length + 5 > 65_536) return false;
+      if (this.sourceList) return this.revealSourceRecord(`node:${id}`, false);
+      this.sourceNavigation++; const current = this.sourceAuthority();
+      if (!await this.ensureSourceScene(`node:${id}`, current) || !current()) return false;
+      return this.focusSceneNode(id, options, current);
+    }
+    return this.focusSceneNode(id, options);
+  }
+
+  private async focusSceneNode(id: string, options?: { zoom?: number }, currentSource: () => boolean = () => true): Promise<boolean> {
     if (this.view !== '2d') {
       if (!this.isConnected) return false;
-      const focused = this.spatial.focusNode(id, options?.zoom);
+      await this.ensureSpatial();
+      if (!this.isConnected || this._view === '2d' || !currentSource()) return false;
+      const focused = this.spatial?.focusNode(id, options?.zoom);
       if (focused) {
         const node = this.graphModel.nodes.find((candidate) => candidate.id === id);
         if (node) this.announcements.announcePolite(this.localize('graphNodeFocused', undefined, { label: this.nodeAccessibleText(node) }));
       }
-      return focused;
+      return focused ?? false;
     }
     const node = this.simNodes.find((n) => n.id === id);
     if (!node || !this.d3 || !this.zoomedEl || !this.zoomBehavior) return false;
@@ -1791,12 +2305,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         this.safeHeight / 2 - k * (node.y ?? 0)
       ).scale(k)
     );
-    if (arrived) {
+    if (arrived && currentSource()) {
       this.graphLiveText = this.localize('graphNodeFocused', undefined, {
         label: this.nodeAccessibleText(node),
       });
     }
-    return arrived;
+    return arrived && currentSource();
   }
 
   /** Animates the camera to frame the bounding box of every currently visible node position (plus
@@ -1804,7 +2318,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  `padding` viewport-px on each side (clamped to `[minZoom, maxZoom]`). Silent -- no data
    *  changed, so no announcement. A no-op with no visible nodes. */
   fit(options?: { padding?: number }): void {
-    if (this.view !== '2d') { if (this.isConnected) this.spatial.fit(options?.padding); return; }
+    if (this.view !== '2d') {
+      if (this.spatial) this.spatial.fit(options?.padding);
+      else if (this.isConnected) void this.ensureSpatial().then(() => { if (this.isConnected && this.view !== '2d') this.spatial?.fit(options?.padding); });
+      return;
+    }
     if (
       !this.d3 ||
       !this.zoomedEl ||
@@ -1845,7 +2363,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.focusHaloEl) return;
     const node =
       this.focusNodeId != null
-        ? this.simNodes.find((n) => n.id === this.focusNodeId)
+        ? this.simNodeById.get(this.focusNodeId)
         : undefined;
     if (node) {
       this.focusHaloEl.setAttribute('cx', String(node.x ?? 0));
@@ -2059,7 +2577,55 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
   }
 
+  private canvasNodesById = new Map<string, CanvasScene['nodes'][number]>();
+  private canvasLinksById = new Map<string, CanvasScene['links'][number]>();
+  private canvasLabelNodes: SimNode[] = [];
+  private canvasExpandableNodes: SimNode[] = [];
+
+  private refreshCanvasGeometry(scene: CanvasScene): void {
+    for (let i = 0; i < this.simNodes.length; i++) {
+      const node = this.simNodes[i]!;
+      scene.nodes[i]!.x = node.x ?? 0;
+      scene.nodes[i]!.y = node.y ?? 0;
+    }
+    for (let i = 0; i < this.simLinks.length; i++)
+      Object.assign(scene.links[i]!, this.linkCoordinates(this.simLinks[i]!));
+    for (let i = 0; i < this.canvasLabelNodes.length; i++) {
+      const node = this.canvasLabelNodes[i]!;
+      scene.nodeLabels[i]!.x = (node.x ?? 0) + this.nodeRadius(node) + 2;
+      scene.nodeLabels[i]!.y = node.y ?? 0;
+    }
+    for (let i = 0; i < this.canvasExpandableNodes.length; i++) {
+      const node = this.canvasExpandableNodes[i]!;
+      const indicator = scene.expandIndicators![i]!;
+      indicator.x = node.x ?? 0;
+      indicator.y = node.y ?? 0;
+    }
+    const communities = this.visibleCommunities();
+    for (let i = 0; i < communities.length; i++)
+      scene.hulls[i]!.d = hullPathD(this.communityHull(communities[i]!.members));
+    const focus = this.focusNodeId == null ? undefined : this.simNodeById.get(this.focusNodeId);
+    if (focus && scene.focusHalo) {
+      scene.focusHalo.x = focus.x ?? 0;
+      scene.focusHalo.y = focus.y ?? 0;
+    }
+    // Edge label visibility depends on the current edge length, while its paint does not.
+    scene.edgeLabels.length = 0;
+    if (this.withEdgeLabels && this.canvasCamera.k >= this.safeEdgeLabelMinZoom) {
+      for (const link of this.simLinks) {
+        const label = ownGraphText(link, 'label');
+        if (!label) continue;
+        const coordinates = this.linkCoordinates(link);
+        if (this.edgeLabelWidth(label) > Math.hypot(coordinates.x2 - coordinates.x1,
+          coordinates.y2 - coordinates.y1) * EDGE_LABEL_LENGTH_GATE_RATIO) continue;
+        scene.edgeLabels.push({ ...this.edgeLabelPosition(link), text: label });
+      }
+    }
+  }
+
   private buildCanvasScene(cs: CSSStyleDeclaration): CanvasScene {
+    this.canvasLabelNodes = this.simNodes.filter((node) => Boolean(ownGraphText(node, 'label')));
+    this.canvasExpandableNodes = this.simNodes.filter((node) => node.expandable);
     return this.withCanvasColorResolver((resolveColor) => {
       const hullFillDefault =
         cs.getPropertyValue('--lr-graph-hull-fill').trim() ||
@@ -2138,7 +2704,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         .map((n) => ({ x: n.x ?? 0, y: n.y ?? 0, r: this.nodeRadius(n) }));
       const focusNode =
         this.focusNodeId != null
-          ? this.simNodes.find((n) => n.id === this.focusNodeId)
+          ? this.simNodeById.get(this.focusNodeId)
           : undefined;
       const scene: CanvasScene = {
         hulls,
@@ -2202,6 +2768,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             }) ?? index + 1
         ) as [number, number, number],
       };
+      this.canvasNodesById = new Map(this.simNodes.map((node, index) => [node.id, scene.nodes[index]!]));
+      this.canvasLinksById = new Map(this.simLinks.map((link, index) => [this.linkKey(link), scene.links[index]!]));
       this.updateCanvasFocus(scene);
       return scene;
     });
@@ -2261,7 +2829,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.canvasSceneHasEdgeLabels = edgeLabelsVisible;
     }
     this.updateCanvasFocus(this.canvasScene);
-    drawGraphScene(ctx, this.canvasCamera, this.canvasScene);
+    drawGraphScene(ctx, this.canvasCamera, this.canvasScene, { width: w, height: h });
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -2428,13 +2996,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private onCanvasPointerMove = (e: PointerEvent): void => {
     if (this.canvasDragNode && this.canvasPointerId === e.pointerId) {
-      // A rebuild may have replaced the dragged node object: move the live one.
-      const node = this.simNodeById.get(this.canvasDragNode.id);
-      if (node) {
-        const rect = this.canvasEl!.getBoundingClientRect();
-        node.fx = (e.clientX - rect.left - this.canvasCamera.x) / this.canvasCamera.k;
-        node.fy = (e.clientY - rect.top - this.canvasCamera.y) / this.canvasCamera.k;
-        this.markCanvasDirty();
+      this.pendingCanvasDrag = { x: e.clientX, y: e.clientY };
+      if (this.canvasDragFrame === undefined) {
+        const owner = this.ownerWindow;
+        if (owner) {
+          const generation = this.canvasDragGeneration;
+          this.canvasDragFrameOwner = owner;
+          this.canvasDragFrame = owner.requestAnimationFrame(() => {
+            if (generation !== this.canvasDragGeneration) return;
+            this.flushCanvasDrag();
+          });
+        }
       }
       return;
     }
@@ -2499,6 +3071,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     else this.onCommunityClick(hit.entry.community);
   };
 
+  private flushCanvasDrag(redraw = true): void {
+    this.canvasDragGeneration++;
+    if (this.canvasDragFrame !== undefined) this.canvasDragFrameOwner?.cancelAnimationFrame(this.canvasDragFrame);
+    this.canvasDragFrame = undefined;
+    this.canvasDragFrameOwner = undefined;
+    const pending = this.pendingCanvasDrag;
+    this.pendingCanvasDrag = undefined;
+    if (!pending || !redraw || !this.isConnected || !this.canvasEl) return;
+    const node = this.canvasDragNode && this.simNodeById.get(this.canvasDragNode.id);
+    if (!node) return;
+    const rect = this.canvasEl.getBoundingClientRect();
+    node.fx = (pending.x - rect.left - this.canvasCamera.x) / this.canvasCamera.k;
+    node.fy = (pending.y - rect.top - this.canvasCamera.y) / this.canvasCamera.k;
+    this.markCanvasCameraDirty();
+  }
+
   /** Releases the force pin and capture belonging to one active canvas node drag. Pointer state is
    *  cleared before `releasePointerCapture()` because that call may synchronously dispatch
    *  `lostpointercapture`; the resulting handler then observes an already-finished gesture. */
@@ -2514,11 +3102,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     )
       return;
 
+    this.flushCanvasDrag(redraw);
     const node = this.canvasDragNode && this.simNodeById.get(this.canvasDragNode.id);
     this.canvasDragNode = undefined;
     this.canvasPointerId = undefined;
     this.simulation?.alphaTarget(0);
     if (node) {
+      if (redraw && this.isConnected && node.fx != null && node.fy != null) {
+        node.x = node.fx; node.y = node.fy;
+        node.vx = 0; node.vy = 0;
+        const position = this.lastPositionById.get(node.id);
+        if (position) { position.x = node.x; position.y = node.y; }
+      }
       node.fx = null;
       node.fy = null;
     }
@@ -2772,7 +3367,64 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.emit('lr-selection-change', { selectedNodeIds: [], selectedEdgeIds: [] });
   }
 
+  private explicitRefresh = false;
+  private cursorUpdate = false;
+  private paintUpdate = true;
+  private svgTemplate?: TemplateResult;
+  private svgCursorItems: (HTMLElement | SVGElement)[] = [];
+  private svgCursorElement?: HTMLElement | SVGElement;
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) { this.explicitRefresh = true; this.sourceEpoch = (this.sourceEpoch ?? 0) + 1; this.sourceNavigation = (this.sourceNavigation ?? 0) + 1; }
+    if (!this.sourceSyncing && ['sourcePage', 'sourcePageSize'].includes(String(args[0]))) {
+      this.sourceNavigation = (this.sourceNavigation ?? 0) + 1;
+      const active = this.shadowRoot?.activeElement;
+      this.sourceRestoreFocus = !!active && !!this.shadowRoot?.querySelector('[part="source-navigator"]')?.contains(active);
+      this.sourceRestorePager = active === this.shadowRoot?.querySelector(tag('pagination'));
+    }
+    if (args[0] === undefined || ['graphSource', 'sourcePage', 'sourcePageSize'].includes(String(args[0]))) this.syncGraphSource();
+    super.requestUpdate(...args);
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
+    this.syncGraphSource();
+    const acceptedScene = this.sourceScene.state.scene;
+    const sourceSceneChanged = this.sourceMode && (this.sourceModelScene !== acceptedScene || changed.has('graphSource') || changed.has('nodeTypes') || changed.has('communities'));
+    if (sourceSceneChanged) { this.sourceModelScene = acceptedScene; this.sourceModel = undefined; this.sourceModelVersion++; }
+    if (this.sourceMode && this.sourcePages.state.result) {
+      try { this.assertSourceTotals(this.sourcePages.state.result.summary); } catch (error) { this.sourceBindingError = error; this.sourceModel = undefined; }
+      if (this.sourcePage !== this.sourcePages.state.page) {
+        this.sourceSyncing = true; this.sourcePage = this.sourcePages.state.page; this.sourceSyncing = false;
+        if (this.sourcePageInputs) this.sourcePageInputs = [this.sourcePage, ...this.sourcePageInputs.slice(1)];
+      }
+    }
+    if (this.sourceMode) {
+      const records = this.sourcePages.state;
+      const recordStatus = this.sourceBindingError || records.error || records.selectionError ? 'error' : records.pending ? 'loading' : 'ready';
+      this.announcements.transition('source-records', recordStatus, recordStatus === 'error' ? this.localize('graphSourceRecordsError') : recordStatus === 'loading' ? this.localize('loading') : '');
+      const scene = this.sourceScene.state;
+      const sceneStatus = this.sourceBindingError || scene.error ? 'error' : scene.pending ? 'loading' : 'ready';
+      this.announcements.transition('source-scene', sceneStatus, sceneStatus === 'error' ? this.localize('graphSourceSceneError') : sceneStatus === 'loading' ? this.localize('loading') : '');
+    }
+    if (this.sourceMode && !this.sourceComposition.profile?.empty && changed.has('view') && this.view !== 'list' && !this.sourceScene.state.scene && !this.sourceScene.state.pending && !this.sourceBindingError)
+      void this.sourceScene.request({ mode: 'neighborhood', centerKey: this.sourceCenter, bounds: null, includeKeys: this.sourceKeys });
+    if (changed.has('view')) {
+      this.spatialGeneration++; this.spatialLoad = undefined;
+      if (this.view !== '2d') { this.layeredGeneration++; this.layeredLoad = undefined; }
+    }
+    if ((this.optionalLoadFailure === 'spatial' && this.view === '2d') ||
+      (this.optionalLoadFailure === 'layered' && (this.view !== '2d' || this.layout !== 'layered'))) {
+      this.optionalLoadFailure = undefined;
+    }
+    this.loadFailed = this.view !== '2d'
+      ? this.optionalLoadFailure === 'spatial'
+      : this.d3LoadFailed || (this.layout === 'layered' && this.optionalLoadFailure === 'layered');
+    if (changed.has('layout') && this.layout !== 'layered') {
+      this.layeredGeneration++; this.layeredLoad = undefined;
+      if (this.view === '2d') this.loading = !this.d3 && !this.loadFailed;
+    }
+    if (this.view !== '2d' && !this.loadFailed && !this.sourceList) void this.ensureSpatial();
+    if (this.view === '2d' && this.layout === 'layered' && !this.loadFailed) void this.ensureLayered();
     super.willUpdate(changed); // no-op today, but a future shared mixin under LyraElement must still run
     if (changed.has('view') && this.isConnected) {
       if (this.view !== '2d') {
@@ -2795,19 +3447,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         this.canvasDprQuery = undefined;
         this.intersectionObserver?.disconnect();
         this.intersectionObserver = undefined;
-        this.loading = false;
-        this.loadFailed = false;
         this.zoomedEl = undefined;
         this.gEl = undefined;
         this.boundNodeEls = new WeakSet();
         this.syncHostResizeObserver();
       } else if (changed.get('view') !== undefined) {
-        this.spatial.disconnect();
-        this.loading = !this.d3;
+        this.spatial?.disconnect();
         this.connect2d();
         if (this.d3) this.rebuildSimulation();
       }
     }
+    this.loading = this.view === '2d' && !this.loadFailed &&
+      (!this.d3 || (this.layout === 'layered' && !this.layeredEngine));
     // Keeps the rendered host height following the `height` property -- see syncRequestedHeightVar()
     // for why the property it writes is private and why it normalizes `height` itself.
     // measureHostBox() writes it too, so a connect-time measurement never reads an unsized host.
@@ -2823,19 +3474,35 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // 800x600 fallback and correcting it a frame later (the same reason rebuildSimulation() runs
     // here; see its own note). The observer owns every measurement after this one.
     if (this.fitTo === 'container' && !this.containerSize) this.measureHostBox();
-    const cursorOnly = changed.size > 0 && [...changed.keys()].every(
+    const cursorOnly = !this.explicitRefresh && changed.size > 0 && [...changed.keys()].every(
       (key) => key === 'activeGraphItem' || key === 'graphLiveText'
     );
-    if (!cursorOnly) this.resolvedCssColorCache.clear();
+    this.paintUpdate = this.explicitRefresh || ![...changed.keys()].every(key => [
+      'activeGraphItem', 'graphLiveText', 'selectedNodeIds', 'selectedEdgeIds',
+      'dimmedNodeIds', 'dimmedEdgeIds', 'minZoom', 'maxZoom', 'camera', 'focusNodeId', 'selectionMode',
+    ].includes(String(key)));
+    this.cursorUpdate = cursorOnly;
+    if (this.paintUpdate) {
+      const geometryOnly = !this.explicitRefresh && [...changed.keys()].every(key =>
+        ['width', 'height', 'containerSize', 'fitTo'].includes(String(key)));
+      if (geometryOnly) {
+        // Numeric color literals cannot depend on container size. Contextual values still
+        // resolve again because a size change can alter the inherited CSS cascade.
+        for (const value of this.resolvedCssColorCache.keys())
+          if (!/^(?:#[\da-f]{3,8}|(?:rgb|hsl)a?\([\d\s.,%+/-]+\))$/i.test(value))
+            this.resolvedCssColorCache.delete(value);
+      } else this.resolvedCssColorCache.clear();
+    }
+    this.explicitRefresh = false;
     // Non-cursor updates get a fresh navigableLinks() result computed at most once (see that cache
     // field's own doc comment for why this can't be gated on graphItemsChanged like the sibling
     // caches below).
-    if (!cursorOnly) this.navigableLinksCache = undefined;
+    if (this.paintUpdate) this.navigableLinksCache = undefined;
     this.syncGraphHostRole();
     if (this.view !== '2d') {
-      this.spatial.prepare();
+      this.spatial?.prepare();
       if (this.focusNodeId == null) this.lastAppliedFocusNodeId = null;
-      else if (this.focusNodeId !== this.lastAppliedFocusNodeId && this.spatial.focusNode(this.focusNodeId))
+      else if (!this.sourceMode && this.focusNodeId !== this.lastAppliedFocusNodeId && this.spatial?.focusNode(this.focusNodeId))
         this.lastAppliedFocusNodeId = this.focusNodeId;
       this.isMounting = false;
       return;
@@ -2862,8 +3529,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       );
     const structureChanged =
       this.d3 &&
-      (changed.has('nodes') ||
-        changed.has('edges') ||
+      (sourceSceneChanged || changed.has('sourceModelVersion') || (!this.sourceMode && (changed.has('nodes') ||
+        changed.has('edges'))) ||
         hiddenTypesChanged ||
         changed.has('layout') ||
         (this.layout === 'layered' && changed.has('edgeDistance')));
@@ -2952,7 +3619,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
-    super.updated(changed); // no-op today, but a future shared mixin under LyraElement must still run
+    super.updated(changed);
+    this.publishSourceComposition();
+    if (this.sourceMode && !this.sourcePages.state.pending && this.sourceRestoreFocus) {
+      this.sourceRestoreFocus = false;
+      const target = this.sourceRestorePager
+        ? this.renderRoot.querySelector<HTMLElement & { updateComplete: Promise<boolean> }>(tag('pagination'))
+        : undefined;
+      this.sourceRestorePager = false;
+      if (target) {
+        const current = this.sourceAuthority();
+        void target.updateComplete.then(() => { if (current()) target.focus(); });
+      } else (this.renderRoot.querySelector<HTMLElement>('[data-source-key]') ?? this.renderRoot.querySelector<HTMLElement>('[part="source-navigator"]'))?.focus();
+    }
+    if (this.sourceMode && this.focusNodeId && this.focusNodeId !== this.lastAppliedFocusNodeId && (!this.loading || this.view !== '2d')) {
+      this.lastAppliedFocusNodeId = this.focusNodeId; void this.focusNode(this.focusNodeId);
+    }
     if (!this.isConnected) {
       for (const [key, previous] of changed)
         if (!this.detachedGraphChanges.has(key)) this.detachedGraphChanges.set(key, previous);
@@ -2960,7 +3642,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
     if (this.view !== '2d') {
       this.setAttribute('aria-busy', 'false');
-      this.spatial.update();
+      this.spatial?.update(this.paintUpdate);
       return;
     }
     this.setAttribute('aria-busy', String(this.loading));
@@ -3031,20 +3713,32 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // node/link querySelectorAll scan on that is equivalent to "structurally
     // changed" without needing a separate flag.
     this.applyInteractions(changed);
-    const cursorOnly = changed.size > 0 && [...changed.keys()].every(
-      (key) => key === 'activeGraphItem' || key === 'graphLiveText'
-    );
+    const cursorOnly = this.cursorUpdate;
+    if (this.renderer === 'svg') {
+      if (!cursorOnly) {
+        this.svgCursorItems = [
+          ...this.renderRoot.querySelectorAll<SVGElement>('[part="node"]'),
+          ...this.renderRoot.querySelectorAll<SVGElement>('[part="link"][tabindex]'),
+          ...this.renderRoot.querySelectorAll<SVGElement>('[part="hull"]'),
+        ];
+      }
+      const next = this.svgCursorItems[this.normalizedGraphItem()];
+      if (this.svgCursorElement !== next) this.svgCursorElement?.setAttribute('tabindex', '-1');
+      next?.setAttribute('tabindex', '0');
+      this.svgCursorElement = next;
+    }
     if (this.renderer === 'canvas' && cursorOnly) this.scheduleCanvasDraw();
-    else this.applyCanvasInteractions();
+    else this.applyCanvasInteractions(changed);
     if (this.focusNodeId == null) {
       this.lastAppliedFocusNodeId = null;
     } else if (
-      this.focusNodeId !== this.lastAppliedFocusNodeId &&
-      this.simNodes.some((n) => n.id === this.focusNodeId)
+      !this.sourceMode && this.focusNodeId !== this.lastAppliedFocusNodeId &&
+      this.simNodeById.has(this.focusNodeId)
     ) {
       this.lastAppliedFocusNodeId = this.focusNodeId;
       void this.focusNode(this.focusNodeId);
     }
+    if (!this.visible) this.simulation?.stop();
     this.updateFocusHalo();
     const pendingFocus = this.pendingGraphItemFocus;
     if (pendingFocus !== undefined) {
@@ -3285,7 +3979,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  marks the canvas dirty on every call so any structural/style-affecting change (new nodes/
    *  links, a selection change, a hiddenTypes toggle, ...) schedules a fresh draw the same way a
    *  Lit re-render already does for svg mode. */
-  private applyCanvasInteractions(): void {
+  private applyCanvasInteractions(changed: PropertyValues): void {
     if (this.renderer !== 'canvas' || !this.canvasEl) return;
     if (this.canvasEl !== this.zoomedEl) {
       this.zoomedEl = this.canvasEl;
@@ -3293,7 +3987,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
     const bounds = this.effectiveZoomBounds;
     this.zoomBehavior?.scaleExtent([bounds.min, bounds.max]);
-    this.markCanvasDirty();
+    if (!this.paintUpdate && this.canvasScene) {
+      for (const [property, map, flag] of [
+        ['selectedNodeIds', this.canvasNodesById, 'selected'],
+        ['selectedEdgeIds', this.canvasLinksById, 'selected'],
+        ['dimmedNodeIds', this.canvasNodesById, 'dimmed'],
+        ['dimmedEdgeIds', this.canvasLinksById, 'dimmed'],
+      ] as const) {
+        if (!changed.has(property)) continue;
+        const before = identitySet((changed.get(property) as readonly string[] | undefined) ?? []);
+        const after = identitySet(this[property]);
+        for (const id of before) { const item = map.get(id); if (item) item[flag] = after.has(id); }
+        for (const id of after) { const item = map.get(id); if (item) item[flag] = true; }
+      }
+      if (changed.has('focusNodeId')) {
+        const node = this.focusNodeId == null ? undefined : this.simNodeById.get(this.focusNodeId);
+        this.canvasScene.focusHalo = node ? { x: node.x ?? 0, y: node.y ?? 0, r: this.nodeRadius(node) + FOCUS_HALO_PADDING } : undefined;
+      }
+      this.scheduleCanvasDraw();
+    } else this.markCanvasDirty();
   }
 
   /**
@@ -3322,8 +4034,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // reactive-property touch, so this stays on the same cheap per-tick path as the rest of this
     // method.
     for (const n of this.simNodes) {
-      if (n.x != null && n.y != null)
-        this.lastPositionById.set(n.id, { x: n.x, y: n.y });
+      if (n.x != null && n.y != null) {
+        const position = this.lastPositionById.get(n.id);
+        if (position) { position.x = n.x; position.y = n.y; }
+        else this.lastPositionById.set(n.id, { x: n.x, y: n.y });
+      }
+    }
+    if (this.renderer === 'canvas') {
+      if (this.canvasScene) this.refreshCanvasGeometry(this.canvasScene);
+      this.markCanvasCameraDirty();
+      this.scheduleViewportChange();
+      return;
     }
     this.simNodes.forEach((n, i) => {
       const el = this.nodeEls[i];
@@ -3415,12 +4136,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         labelEl.setAttribute('y', String(hullTopY(hull) - HULL_PADDING));
       }
     });
-    // renderer="canvas" mode has no DOM to write positions straight to (everything above this line
-    // no-ops there: nodeEls/linkEls/etc. are only ever populated by applyInteractions()'s svg-only
-    // branch) -- schedule a fresh draw off the same simulation tick instead, so the settle
-    // animation and a live node drag actually repaint the canvas rather than freezing at whatever
-    // was last drawn on mount.
-    if (this.renderer === 'canvas') this.markCanvasDirty();
     // A settling/dragged simulation moves rendered node screen positions the same way a pan/zoom
     // does, even with the camera transform unchanged -- see `lr-viewport-change`'s class doc.
     this.scheduleViewportChange();
@@ -3450,6 +4165,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const visible = this.visibleNodes();
 
     if (this.layout === 'layered') {
+      if (!this.layeredEngine) { void this.ensureLayered(); return; }
       this.rebuildLayeredLayout(visible);
       return;
     }
@@ -3547,6 +4263,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       )
       .on('tick', () => this.onTick());
     this.simulation = simulation;
+    if (!this.visible) simulation.stop();
 
     if (prefersReducedMotion(this) || this.safeSeed != null) {
       // Pin every node that already had a known position before this rebuild -- either carried
@@ -3654,7 +4371,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const edges = this.graphModel.links
       .filter((l) => visibleIds.has(l.source) && visibleIds.has(l.target))
       .map((l) => ({ source: l.source, target: l.target }));
-    const { positions: raw } = layeredLayout({
+    const { positions: raw } = this.layeredEngine!({
       nodes: boxes,
       edges,
       options: { gapX: 12, gapY: this.safeLinkDistance },
@@ -3689,16 +4406,25 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.announceHiddenNodeCount(nodes.length);
   }
 
+  private selectionActionAuthority(): () => boolean {
+    if (!this.sourceMode) return () => true;
+    const current = this.sourceAuthority();
+    const nodes = this.selectedNodeIds, edges = this.selectedEdgeIds;
+    return () => current() && nodes === this.selectedNodeIds && edges === this.selectedEdgeIds;
+  }
+
   private onNodeClick(node: SimNode, e?: MouseEvent | KeyboardEvent): void {
+    if (this.sourceDiagramBlocked) return;
+    const current = this.selectionActionAuthority();
     const detail = { nodeId: node.id, x: node.x ?? 0, y: node.y ?? 0 };
     this.emit('lr-node-activate', { ...detail });
-    this.emitSelectionIntent('node', node.id, !!(e?.ctrlKey || e?.metaKey));
+    if (current()) this.emitSelectionIntent('node', node.id, !!(e?.ctrlKey || e?.metaKey));
   }
 
   /** Returns a node's current position in the graph's local drawing space. */
   getNodePosition(id: string): { x: number; y: number } | undefined {
     if (this.view !== '2d') {
-      const position = this.spatial.position(id);
+      const position = this.getNodePosition3d(id);
       return position ? { x: position.x, y: position.y } : undefined;
     }
     const node = this.simNodes.find((candidate) => candidate.id === id);
@@ -3710,14 +4436,17 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** World x/y/z in spatial/list view, or undefined for a missing/hidden node or view="2d".
    * The returned point is an immutable copy and never a projected screen position. */
   getNodePosition3d(id: string): LyraGraphPosition | undefined {
-    return this.view === '2d' ? undefined : this.spatial.position(id);
+    if (this.view === '2d') return undefined;
+    if (this.spatial) return this.spatial.position(id);
+    const node = this.visibleNodes().find(candidate => candidate.id === id);
+    return node ? spatialNodePosition(node) : undefined;
   }
 
   /** Projected CSS pixels relative to this element's border-box top-left. Undefined for list
    * view, missing/hidden nodes or a spatial point behind the near plane. Add the host's viewport
    * rect left/top to anchor a viewport-positioned overlay. This method does not move the camera. */
   getNodeScreenPosition(id: string): { x: number; y: number } | undefined {
-    if (this.view !== '2d') return this.spatial.screenPosition(id);
+    if (this.view !== '2d') return this.spatial?.screenPosition(id);
     const position = this.getNodePosition(id);
     if (!position || !this.zoomedEl || !this.d3) return undefined;
     const hostRect = this.getBoundingClientRect();
@@ -3733,6 +4462,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private onLinkClick(link: SimLink, e?: MouseEvent | KeyboardEvent): void {
+    if (this.sourceDiagramBlocked) return;
     const source =
       typeof link.source === 'object'
         ? (link.source as SimNode).id
@@ -3741,12 +4471,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       typeof link.target === 'object'
         ? (link.target as SimNode).id
         : String(link.target);
+    const current = this.selectionActionAuthority();
     this.emit('lr-edge-activate', {
       sourceNodeId: source,
       targetNodeId: target,
       ...(link.id ? { edgeId: link.id } : {}),
     });
-    this.emitSelectionIntent(
+    if (current()) this.emitSelectionIntent(
       'link',
       this.linkKey(link),
       !!(e?.ctrlKey || e?.metaKey)
@@ -4101,12 +4832,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.scheduleCanvasDraw();
       return;
     }
-    const items = [
-      ...this.renderRoot.querySelectorAll('[part="node"]'),
-      ...this.renderRoot.querySelectorAll('[part="link"][tabindex]'),
-      ...this.renderRoot.querySelectorAll('[part="hull"]'),
-    ] as HTMLElement[];
-    items[index]?.focus();
+    this.svgCursorItems[index]?.focus();
   }
 
   /**
@@ -4162,8 +4888,31 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   override render(): TemplateResult {
-    const nodeLimit = publicCollectionTruncation(this, 'nodes');
-    const edgeLimit = publicCollectionTruncation(this, 'edges');
+    if (this.sourceList || (this.sourceMode && this.sourceComposition.profile?.empty)) return html`<div class="source-layout source-list">${this.renderSourceNavigator()}</div>`;
+    const svg = this.view === '2d' && this.renderer === 'svg';
+    const result = svg && this.cursorUpdate && this.svgTemplate
+      ? this.svgTemplate : this.renderGraph();
+    this.svgTemplate = svg ? result : undefined;
+    const sceneState = this.sourceScene.state;
+    const bindingError = this.sourceBindingError;
+    const current = this.sourceAuthority();
+    const retryScene = () => {
+      if (current() && this.sourceScene.state === sceneState && this.sourceBindingError === bindingError &&
+        !sceneState.pending && (sceneState.error || bindingError)) this.requestUpdate();
+    };
+    const diagram = this.sourceMode && (this.sourceScene.state.pending || this.sourceScene.state.error || this.sourceBindingError)
+      ? html`<div part="source-status" aria-busy=${this.sourceScene.state.pending ? 'true' : 'false'}>${this.localize(this.sourceScene.state.pending ? 'loading' : 'graphSourceSceneError')}
+        ${!this.sourceScene.state.pending ? html`<button type="button" @click=${retryScene}>${this.localize('retry')}</button>` : nothing}</div>` : result;
+    const content = this.sourceMode ? html`<div class="source-layout"><div class="source-diagram">${diagram}</div>${this.renderSourceNavigator()}</div>` : result;
+    return html`${content}${svg ? html`<div part="live-region" class="sr-only" aria-hidden="true">${
+      this.graphLiveText || (this.normalizedGraphItem() >= 0
+        ? this.graphItemAnnouncement(this.normalizedGraphItem()) : '')
+    }</div>` : nothing}`;
+  }
+
+  private renderGraph(): TemplateResult {
+    const nodeLimit = this.sourceMode ? undefined : publicCollectionTruncation(this, 'nodes');
+    const edgeLimit = this.sourceMode ? undefined : publicCollectionTruncation(this, 'edges');
     const limitNotices = html`${nodeLimit ? html`<p part="limit" role="note">${this.localize('graphNodeLimit', undefined, {
       shown: getNumberFormat(this.effectiveLocale).format(nodeLimit.retained),
       total: getNumberFormat(this.effectiveLocale).format(nodeLimit.source),
@@ -4171,7 +4920,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       shown: getNumberFormat(this.effectiveLocale).format(edgeLimit.retained),
       total: getNumberFormat(this.effectiveLocale).format(edgeLimit.source),
     })}</p>` : nothing}`;
-    if (this.view !== '2d') return this.spatial.render(limitNotices);
+    if (this.view !== '2d' && this.spatial) return this.spatial.render(limitNotices);
+    if (this.view !== '2d') return html`<div part="base"><span part=${this.loadFailed ? 'error' : 'loading'}>${this.localize(this.loadFailed ? 'graphSpatialUnavailable' : 'loading')}</span>${limitNotices}</div>`;
     if (this.loading) {
       return html`
         <div part="base">
@@ -4633,12 +5383,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             ></circle>
           </g>
         </svg>
-        <div part="live-region" class="sr-only" aria-hidden="true">
-          ${this.graphLiveText ||
-          (this.normalizedGraphItem() >= 0
-            ? this.graphItemAnnouncement(this.normalizedGraphItem())
-            : '')}
-        </div>
         <ul
           part="data-list"
           class="sr-only"

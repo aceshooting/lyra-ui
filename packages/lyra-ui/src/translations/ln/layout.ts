@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} etinda',
     other: '{count} mitindo',
   },
+  commandPaletteInputLimit: 'Balongoli ndambo ya mitindo mpo motango ya kokɔtisa ekómi na ndelo.',
 };
 
 registerLyraLocale('ln', strings);

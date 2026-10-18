@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'କଲମ ତଳେ',
   signaturePadPenUp: 'କଲମ ଉପରେ',
+  localePickerInputLimit: 'କେବଳ ପ୍ରଥମ 512ଟି ଭାଷା ଓ ଅଞ୍ଚଳ ପ୍ରବିଷ୍ଟି ଉପଲବ୍ଧ।',
+  emojiPickerInputLimit: 'ଇନପୁଟ୍ ସୀମାରେ ପହଞ୍ଚିଥିବାରୁ କିଛି ଇମୋଜି ତଥ୍ୟ ବାଦ ଦିଆଯାଇଛି।',
 };
 
 registerLyraLocale('or', strings);

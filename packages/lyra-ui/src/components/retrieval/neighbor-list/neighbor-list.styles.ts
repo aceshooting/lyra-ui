@@ -5,6 +5,23 @@ export const styles = css`
   :host {
     display: block;
   }
+  [part='source-summary'], [part='source-status'] {
+    margin-block: var(--lr-space-xs);
+    color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
+  }
+  [part='source-retry'] {
+    ${iconHitTarget}
+    font: inherit;
+    color: var(--lr-color-text);
+    background: var(--lr-color-surface-raised);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    cursor: pointer;
+  }
+  [part='source-retry']:hover { background: var(--lr-color-brand-quiet); }
+  [part='source-retry']:focus-visible { ${focusRing} }
+  [data-source-key] { min-inline-size: 0; overflow-wrap: anywhere; }
   /* Every row rule below has an lr-virtual-list::part(x) twin because rows render through two
      paths: at or below virtualize-at, renderNeighborRow()'s result lands in this component's own
      shadow root and the plain [part=] selector matches; above it, the same content becomes
@@ -121,5 +138,10 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-semibold);
     text-transform: uppercase;
+  }
+  [part='limit'] {
+    margin-block: var(--lr-space-xs);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
   }
 `;

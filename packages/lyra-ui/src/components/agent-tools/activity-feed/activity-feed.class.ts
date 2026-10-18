@@ -1,4 +1,4 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
@@ -30,7 +30,7 @@ import {
 import { firstByIdentityMemo } from '../collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedLabel } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedInputLimit, LYRA_DEFAULT_activityFeedLabel } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface ActivityEntry {
@@ -144,6 +144,7 @@ function variantDotPart(variant: LyraVariant): string {
  *   expanded }`.
  * @event lr-follow-change - A user scroll released or re-engaged `follow`. `detail: {
  *   following }`. Direct property/attribute assignments never echo an event.
+ * @csspart limit - Notice of input entries omitted by retention limits.
  * @csspart base - The outer container.
  * @csspart header - The clickable header (`<button>`).
  * @csspart status-dot - The decorative mode indicator dot; pulses while `mode="live"`.
@@ -200,12 +201,14 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     activityFeedCompletedSteps: LYRA_DEFAULT_activityFeedCompletedSteps,
+    activityFeedInputLimit: LYRA_DEFAULT_activityFeedInputLimit,
     activityFeedLabel: LYRA_DEFAULT_activityFeedLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['entries']);
+  protected static readonly appendOrderedCollectionProperties = Object.freeze(['entries']);
   /** Entries may carry opaque caller `data`. Keep each admitted entry's identity only, rather
    *  than deep-cloning unknown data -- the same policy `<lr-prompt-queue>`'s `items` uses for its
    *  own opaque `metadata` field. */
@@ -213,7 +216,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
-  /** Append-only: stable ids, new entries at the end. Entries never change state once added.
+  /** Append-only: stable ids, new entries at the end. The newest 10,000 caller-owned entry
+   *  identities are retained; a localized limit notice discloses omitted history. Entries never change state once added.
    *  Empty/blank ids are omitted and duplicates normalize first-wins before summary,
    *  virtualization, and rendering. */
   @property({ attribute: false }) entries: readonly ActivityEntry[] = [];
@@ -409,12 +413,24 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     }
   }
 
+  private explicitRowRefresh = false;
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.explicitRowRefresh = true;
+    super.requestUpdate(...args);
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const explicitRefresh = this.explicitRowRefresh;
+    this.explicitRowRefresh = false;
+    if (explicitRefresh || ['withTimestamps', 'formatTimestamp', 'renderText', 'locale', 'strings'].some(name => changed.has(name))) this.virtualListEl?.requestUpdate();
     this.syncListRelationships();
     this.scheduleListRelationshipSync();
     const wasMounting = this.isMounting;
     this.isMounting = false;
+    const inputNotice = this.inputLimitMessage();
+    if (!wasMounting && inputNotice && inputNotice !== this.lastInputNotice) this.liveRegion?.announce(inputNotice, { force: true });
+    this.lastInputNotice = inputNotice;
 
     if (!wasMounting && changed.has('mode')) {
       const previousMode = changed.get('mode') as ActivityFeedMode | undefined;
@@ -717,6 +733,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
+  private readonly renderEntry = (item: unknown): TemplateResult => this.entryTemplate(item as ActivityEntry, false);
+
   private entryTemplate(entry: ActivityEntry, ownRole: boolean): TemplateResult {
     const ts = this.normalizedTimestamp(entry.timestamp);
     const formatter = this.formatTimestamp ?? ((date: Date) => formatTimeOfDay(date, this.effectiveLocale));
@@ -735,6 +753,12 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     `;
   }
 
+  private lastInputNotice = '';
+  private inputLimitMessage(): string {
+    const loss = publicCollectionTruncation(this, 'entries');
+    return loss ? this.localize('activityFeedInputLimit', undefined, { count: getNumberFormat(this.effectiveLocale).format(loss.retained), total: getNumberFormat(this.effectiveLocale).format(loss.source) }) : '';
+  }
+
   override render(): TemplateResult {
     const entries = this.normalizedEntries;
     const fallbackLabel = this.localize('activityFeedLabel');
@@ -746,6 +770,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
     return html`
       <div part="base">
+        ${this.inputLimitMessage() ? html`<p part="limit">${this.inputLimitMessage()}</p>` : nothing}
         <button
           part="header"
           type="button"
@@ -773,7 +798,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
             ? html`<lr-virtual-list
                 exportparts="entry:entry, entry-icon:entry-icon, variant-dot:variant-dot, variant-dot-neutral:variant-dot-neutral, variant-dot-brand:variant-dot-brand, variant-dot-success:variant-dot-success, variant-dot-warning:variant-dot-warning, variant-dot-danger:variant-dot-danger, entry-text:entry-text, entry-timestamp:entry-timestamp"
                 .items=${guard([this.entries], () => entries)}
-                .renderItem=${(item: unknown) => this.entryTemplate(item as ActivityEntry, false)}
+                .renderItem=${this.renderEntry}
                 .keyFunction=${this.activityEntryKey}
                 aria-label=${listAriaLabel}
                 @lr-visible-range-change=${this.onVirtualListRangeChanged}

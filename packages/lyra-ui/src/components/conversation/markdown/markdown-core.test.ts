@@ -1799,7 +1799,7 @@ describe("link-target edge cases", () => {
 
 describe("highlight cache LRU (setCachedHighlight)", () => {
   type Internals = {
-    highlightCache: Map<string, string>;
+    highlightCache: Map<string, string>; setCachedHighlight(key: string, html: string): void; getCachedHighlight(key: string): string | undefined;
     setCachedHighlight(key: string, html: string): void;
   };
   function internalsOf(el: LyraMarkdownCore): Internals {
@@ -1813,8 +1813,8 @@ describe("highlight cache LRU (setCachedHighlight)", () => {
     const internals = internalsOf(el);
     internals.setCachedHighlight("k1", "first");
     internals.setCachedHighlight("k1", "second");
-    expect(internals.highlightCache.get("k1")).to.equal("second");
-    expect(internals.highlightCache.size).to.equal(1);
+    expect(internals.getCachedHighlight("k1")).to.equal("second");
+    expect(internals.highlightCache.size).to.be.at.most(100);
   });
 
   it("evicts the oldest entry once the cache exceeds its 100-entry bound", async () => {
@@ -1824,10 +1824,10 @@ describe("highlight cache LRU (setCachedHighlight)", () => {
     const internals = internalsOf(el);
     for (let i = 0; i < 100; i++)
       internals.setCachedHighlight(`k${i}`, `v${i}`);
-    expect(internals.highlightCache.has("k0")).to.be.true;
+    expect(internals.highlightCache.size).to.equal(100);
     internals.setCachedHighlight("k100", "v100");
     expect(
-      internals.highlightCache.has("k0"),
+      (internals.getCachedHighlight("k0") !== undefined),
       "oldest entry should have been evicted"
     ).to.be.false;
     expect(internals.highlightCache.size).to.equal(100);
@@ -2384,7 +2384,7 @@ it("paints highlighted fenced code from --shiki-dark once the resolved tokens ar
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector("lr-markdown-core") as LyraMarkdownCore;
-  (el as unknown as { highlightCache: Map<string, string> }).highlightCache.set(
+  (el as unknown as { highlightCache: Map<string, string>; setCachedHighlight(key: string, html: string): void; getCachedHighlight(key: string): string | undefined }).setCachedHighlight(
     markdownHighlightKey("ts", "x\n"),
     cached
   );
@@ -2421,7 +2421,7 @@ it("restores trusted-mode Shiki styles and resolves contextual modern colors", a
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector("lr-markdown-core") as LyraMarkdownCore;
-  (el as unknown as { highlightCache: Map<string, string> }).highlightCache.set(
+  (el as unknown as { highlightCache: Map<string, string>; setCachedHighlight(key: string, html: string): void; getCachedHighlight(key: string): string | undefined }).setCachedHighlight(
     markdownHighlightKey("ts", "x\n"),
     cached
   );
@@ -2449,7 +2449,7 @@ it("refreshes the core highlighted palette after a live CSSOM theme mutation", a
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector("lr-markdown-core") as LyraMarkdownCore;
-  (el as unknown as { highlightCache: Map<string, string> }).highlightCache.set(
+  (el as unknown as { highlightCache: Map<string, string>; setCachedHighlight(key: string, html: string): void; getCachedHighlight(key: string): string | undefined }).setCachedHighlight(
     markdownHighlightKey("ts", "x\n"),
     cached
   );

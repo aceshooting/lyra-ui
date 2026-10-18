@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'هنوز گفت‌وگویی وجود ندارد',
   agentWorkspaceLabel: 'فضای کاری عامل',
+  agentWorkspaceInputLimit: '{collection}: از {total} ورودی، فقط {count} مورد نگه داشته می‌شود.',
   agentWorkspaceConversation: 'گفت‌وگو',
   agentWorkspaceDetails: 'جزئیات اجرا',
   agentWorkspaceRun: 'اجرای عامل',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'تلاش دوباره برای این بخش',
   promptQueueLabel: 'درخواست‌های در صف',
   promptQueueEmpty: 'هیچ درخواستی در صف وجود ندارد',
+  promptQueueInputLimit: 'برخی پرسش‌های در صف یا پیوست‌ها به‌دلیل رسیدن به محدودیت ورودی حذف شدند.',
+  promptQueueAttachmentLimit: 'از {total} پیوست نگه‌داشته‌شده، {shown} مورد نمایش داده می‌شود.',
   promptQueueSendNow: 'اکنون ارسال کنید',
   selectionToolbarLabel: 'اقدامات انتخاب',
   selectionAsk: 'بپرسید',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} توکن',
     other: '{count} توکن',
   },
+  threadListInputLimit: 'برخی رشته‌های گفتگو به‌دلیل رسیدن به محدودیت ورودی حذف شدند.',
+  promptInputInputLimit: 'برخی پیشنهادها یا ورودی‌های فهرست به‌دلیل رسیدن به محدودیت ورودی حذف شدند.',
+  transcriptFeedInputLimit: 'فقط تازه‌ترین {count} مورد از {total} ورودی نگه داشته می‌شوند.',
+  codeBlockHighlightLimit: 'کد طولانی بدون برجسته‌سازی نحوی نمایش داده می‌شود.',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: '暂无对话',
   agentWorkspaceLabel: '智能体工作区',
+  agentWorkspaceInputLimit: '{collection}：仅保留 {total} 个条目中的 {count} 个。',
   agentWorkspaceConversation: '对话',
   agentWorkspaceDetails: '运行详情',
   agentWorkspaceRun: '智能体运行',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: '重试此部分',
   promptQueueLabel: '排队的提示词',
   promptQueueEmpty: '没有排队的提示词',
+  promptQueueInputLimit: '由于达到输入限制，部分排队的提示词或附件已被省略。',
+  promptQueueAttachmentLimit: '显示已保留的 {total} 个附件中的 {shown} 个。',
   promptQueueSendNow: '立即发送',
   selectionToolbarLabel: '选区操作',
   selectionAsk: '提问',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '{count} token',
   },
+  threadListInputLimit: '由于达到输入限制，部分对话线程已被省略。',
+  promptInputInputLimit: '由于达到输入限制，部分建议或目录条目已被省略。',
+  transcriptFeedInputLimit: '仅保留最新的 {count} 条记录，共 {total} 条。',
+  codeBlockHighlightLimit: '较长的代码会以无语法高亮的形式显示。',
 };
 
 registerLyraLocale('zh-CN', strings);

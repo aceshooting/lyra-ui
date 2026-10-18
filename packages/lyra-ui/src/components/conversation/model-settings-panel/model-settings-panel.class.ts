@@ -1,5 +1,6 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { normalizeCatalog } from '../../../internal/catalog-picker.js';
@@ -14,6 +15,7 @@ import '../../forms/slider/slider.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_model, LYRA_DEFAULT_selectModel, LYRA_DEFAULT_temperature } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_catalogPickerInputLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -73,6 +75,7 @@ const DEFAULT_TEMPERATURE = 1;
  * @customElement lr-model-settings-panel
  * @event lr-change - Either child control changed. `detail: { model: string; inCatalog: boolean; temperature: number }` — always the full current settings, not just whatever changed.
  * @csspart base - The outermost wrapping container.
+ * @csspart limit - Catalog loss at this wrapper's input boundary.
  * @csspart model-row - The row wrapping the internal `lr-model-select`.
  * @csspart model-select - The internal model selector.
  * @csspart model-label - The model selector's visible label.
@@ -90,6 +93,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    catalogPickerInputLimit: LYRA_DEFAULT_catalogPickerInputLimit,
     model: LYRA_DEFAULT_model,
     selectModel: LYRA_DEFAULT_selectModel,
     temperature: LYRA_DEFAULT_temperature,
@@ -227,12 +231,34 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
     }
   }
 
+  private readonly inputLimitAnnouncements = new AnnouncementSinkController(this);
+  private get inputLimitMessage(): string {
+    return publicCollectionTruncation(this, 'catalog') ? this.localize('catalogPickerInputLimit') : '';
+  }
+  private syncInputLimitAnnouncement(): void {
+    const loss = publicCollectionTruncation(this, 'catalog');
+    this.inputLimitAnnouncements.transition('input-limit', loss ? `${loss.source}:${loss.retained}:${loss.kept}` : '', this.inputLimitMessage, 'polite');
+  }
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.syncInputLimitAnnouncement();
+  }
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.syncInputLimitAnnouncement();
+  }
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.inputLimitAnnouncements.adopted();
+  }
+
   override render(): TemplateResult {
     const domain = this.temperatureDomain;
     const modelLabel = this.localize('model');
     const temperatureLabel = this.localize('temperature');
     return html`
       <div part="base" @input=${this.containNativeEvent} @change=${this.containNativeEvent}>
+        ${this.inputLimitMessage ? html`<p part="limit">${this.inputLimitMessage}</p>` : nothing}
         <div part="model-row">
           <lr-model-select
             part="model-select"

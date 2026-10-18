@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -36,6 +36,25 @@ including explicit empty strings, override that presentation. The catalog is cop
 to change options. At most 1024 rows are examined, invalid rows are skipped, and the first valid
 entry for each normalized code wins. Caller order is preserved. Names and symbols resolve once per
 catalog and locale and are shared by every picker using that catalog.
+
+A localized `catalogPickerInputLimit` notice in `part="limit"` reports original catalog positions
+omitted beyond the 1,024-position inspection ceiling. Invalid and duplicate positions inside the
+prefix still consume that allowance. This notice is separate from `select-option-overflow`, which
+counts admitted rows outside the popup's render window. Search covers only admitted entries;
+provide a narrower or replacement catalog to include omitted input. Rebinding the picker's retained
+catalog snapshot preserves the notice; a fresh below-limit catalog, `[]`, or restoring defaults
+clears it. Initial mounting and reconnecting are quiet; later changed input loss is politely
+announced. The message supports the usual per-instance `.strings` override.
+
+Country, currency, time-zone and unit pickers defer their option catalog until first focus or
+opening. Before that, only the committed option is mounted to preserve its label; an unset picker
+mounts none. Programmatic option inspection should await that interaction and update completion.
+After initialization, unchanged option presentations are reused; explicit `requestUpdate()`
+refreshes consumer presentation overrides. Each popup renders at most 1,000 options, exposing
+omitted rows through `select-option-overflow`. Built-in catalogs remain fully available. For an
+admitted catalog larger than the popup window, enable `searchable` and filter to entries outside
+that initial window;
+a committed tail value remains represented within the bounded popup.
 
 **Unavailable values stay visible.** A value outside the configured catalog, a malformed nonempty
 value, or a selected entry that becomes disabled is retained and marked unavailable. It fails
@@ -83,8 +102,9 @@ updates, resets, locale changes and catalog replacements emit no change event. N
 **Slots:** `label`, `hint`, `error` — custom field copy. There is no option/default content slot;
 bind `currencies` to supply rows.
 
-**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`;
-`select-trigger`, `select-display-input`, `select-listbox`, `select-option`, `select-option-sub`,
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit` (original catalog
+input-loss notice);
+`select-trigger`, `select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`,
 `select-clear-button`, `select-group-label`. Both composed controls preserve these part names
 and inherit shared form-control and surface tokens.
 

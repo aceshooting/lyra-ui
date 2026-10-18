@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} ఆదేశం',
     other: '{count} ఆదేశాలు',
   },
+  commandPaletteInputLimit: 'ఇన్‌పుట్ పరిమితి చేరుకోవడంతో కొన్ని ఆదేశాలు వదిలివేయబడ్డాయి.',
 };
 
 registerLyraLocale('te', strings);

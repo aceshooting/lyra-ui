@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} yaada dabalataa',
     other: '{count} yaada dabalataa',
   },
+  mentionInputLimit: 'Kaadhimamtoota maqaa eeruuf jalqabaa 10,000 qofa argamu.',
+  diffViewHighlightLimit: 'Koodiin dheeraan sintaksii isaa halluudhaan adda baasuu malee agarsiifama.',
 };
 
 registerLyraLocale('om', strings);

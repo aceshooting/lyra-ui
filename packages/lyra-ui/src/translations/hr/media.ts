@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Slika {index} od {total}',
   playWithContext: 'Reproduciraj: {name}',
   pauseWithContext: 'Pauziraj: {name}',
+  avPlayerWaveformUnavailable: 'Podaci valnog oblika nisu dostupni ili ne odgovaraju ovom mediju.',
+  avPlayerTranscriptUnavailable: 'Podaci transkripta nisu dostupni.',
   dropzoneReleaseToAdd: 'Otpustite za dodavanje datoteke.',
   dropzoneRejectedType: 'Ova vrsta datoteke nije prihvaćena.',
   attachmentAdd: 'Dodaj privitak',

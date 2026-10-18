@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} مزید تجویز',
     other: '{count} مزید تجاویز',
   },
+  mentionInputLimit: 'ذکر کے لیے صرف پہلے 10,000 امیدوار دستیاب ہیں۔',
+  diffViewHighlightLimit: 'طویل کوڈ سنٹیکس ہائی لائٹنگ کے بغیر دکھایا جاتا ہے۔',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

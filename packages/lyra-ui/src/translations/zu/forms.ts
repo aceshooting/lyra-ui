@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Ipeni phansi',
   signaturePadPenUp: 'Ipeni phezulu',
+  localePickerInputLimit: 'Kutholakala okufakiwe kokuqala kolimi nesifunda okungu-512 kuphela.',
+  emojiPickerInputLimit: 'Enye idatha yama-emoji ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
 };
 
 registerLyraLocale('zu', strings);

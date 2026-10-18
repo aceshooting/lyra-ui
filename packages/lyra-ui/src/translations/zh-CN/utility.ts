@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '还有 {count} 条建议',
   },
+  mentionInputLimit: '仅提供前 10,000 个提及候选项。',
+  diffViewHighlightLimit: '较长的代码会以无语法高亮的形式显示。',
 };
 
 registerLyraLocale('zh-CN', strings);

@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Endast de första {count} testresultaten visas.',
   toolTimelineLimit: 'Högst {count} verktygsanrop visas.',
   toolSelectLimit: 'Endast de första {count} verktygen visas.',
+  testResultsInputTooLarge: 'Testresultatens detaljer överskrider visningsgränsen.',
   toolCall: 'Verktygsanrop',
   maximize: 'Maximera',
   promptStudioVariableName: 'Namn på variabel {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Endast de första {count} filerna visas.',
   taskListLimit: 'Endast de första {count} uppgifterna visas.',
   evalDatasetLimit: 'Endast de första {count} exemplen visas.',
+  activityFeedInputLimit: 'Endast de senaste {count} av {total} poster behålls.',
+  spanWaterfallLimit: 'Visar {shown} av {total} spårningsspann.',
+  toolTimelineInputLimit: 'Endast de senaste {count} av {total} verktygsanrop behålls.',
 };
 
 registerLyraLocale('sv', strings);

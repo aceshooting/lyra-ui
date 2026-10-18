@@ -1,10 +1,14 @@
+import type { LyraPreparedWordCloud, LyraWeightedWord } from '../../../utilities/data-preparation.js';
+import type { LyraSourceRevision } from '../../../data-sources.js';
+import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
+import { CollectionSourceTracker } from '../../../internal/collection-source-tracker.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
-import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
+import { syncAriaDescribedByElements, updateDescriptionBaseline } from '../../../internal/aria-reflection.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -27,11 +31,12 @@ import {
 import { styles } from './word-cloud.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_wordCloud, LYRA_DEFAULT_wordCloudLegend, LYRA_DEFAULT_wordCloudWord, LYRA_DEFAULT_wordCloudWordAnnouncement, LYRA_DEFAULT_wordCloudWords } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_wordCloud, LYRA_DEFAULT_wordCloudLegend, LYRA_DEFAULT_wordCloudPreparedSummary, LYRA_DEFAULT_wordCloudPreparedUnavailable, LYRA_DEFAULT_wordCloudWord, LYRA_DEFAULT_wordCloudWordAnnouncement, LYRA_DEFAULT_wordCloudWords } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_items, LYRA_DEFAULT_noData, LYRA_DEFAULT_paginationSummary } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { WordCloudRotation, WordCloudScale, WordCloudWord };
+export type { LyraPreparedWordCloud, LyraWeightedWord };
 
 const DEFAULT_MIN_FONT_SIZE = 12;
 const DEFAULT_MAX_FONT_SIZE = 48;
@@ -52,6 +57,72 @@ const MAX_LEGEND_TEXT = 256;
 const MAX_TOTAL_LEGEND_TEXT = 8_192;
 const MAX_PALETTE_ITEMS = 64;
 
+interface PreparedWordSnapshot {
+  readonly revision: LyraSourceRevision;
+  readonly counts: LyraPreparedWordCloud['counts'];
+  readonly totalWeight: number;
+  readonly retainedWeight: number;
+  readonly words: readonly LyraWeightedWord[];
+}
+
+function preparedField(value: unknown, key: PropertyKey): unknown {
+  if (typeof value !== 'object' || value === null) throw new TypeError('Invalid prepared word record');
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (!descriptor || !('value' in descriptor)) throw new TypeError('Prepared word fields must be own data properties');
+  return descriptor.value;
+}
+
+function preparedWeight(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) throw new TypeError('Invalid prepared word weight');
+  return value;
+}
+
+function preparedText(value: unknown): string {
+  if (typeof value !== 'string' || value.length > MAX_WORD_TEXT || !value.trim()) throw new TypeError('Invalid prepared word text');
+  return value;
+}
+
+/** Copies only the admitted exact labels and scalar metadata; never scans source words. */
+function snapshotPreparedWords(value: unknown): PreparedWordSnapshot {
+  const revision = sourceRevision(preparedField(value, 'revision'));
+  const rawCounts = preparedField(value, 'counts');
+  const source = sourceCount(preparedField(rawCounts, 'sourceCount'));
+  const valid = sourceCount(preparedField(rawCounts, 'validCount'));
+  const invalid = sourceCount(preparedField(rawCounts, 'invalidCount'));
+  if (!Number.isSafeInteger(valid + invalid) || valid + invalid !== source) throw new RangeError('Prepared word counts do not conserve observations');
+  const totalWeight = preparedWeight(preparedField(value, 'totalWeight'));
+  const retainedWeight = preparedWeight(preparedField(value, 'retainedWeight'));
+  const raw = preparedField(value, 'words');
+  if (!Array.isArray(raw)) throw new TypeError('Invalid prepared words');
+  const length = sourceCount(preparedField(raw, 'length'));
+  if (length > MAX_WORDS || length > valid || (valid > 0 && length === 0)) throw new RangeError('Prepared word capacity exceeded');
+  const words: LyraWeightedWord[] = [];
+  const ids = new Set<string>();
+  let weightSum = 0, textUnits = 0, largestWeight = 0;
+  for (let index = 0; index < length; index++) {
+    const word = preparedField(raw, String(index));
+    const id = preparedText(preparedField(word, 'id'));
+    const text = preparedText(preparedField(word, 'text'));
+    const weight = preparedWeight(preparedField(word, 'weight'));
+    if (ids.has(id)) throw new TypeError('Duplicate prepared word ID');
+    ids.add(id);
+    textUnits += text.length;
+    weightSum += weight;
+    largestWeight = Math.max(largestWeight, weight);
+    if (textUnits > MAX_TOTAL_WORD_TEXT || !Number.isFinite(weightSum)) throw new RangeError('Prepared word budget exceeded');
+    words.push(Object.freeze({ id, text, weight }));
+  }
+  if (weightSum !== retainedWeight || totalWeight < largestWeight || (valid === 0 && (totalWeight !== 0 || retainedWeight !== 0))) throw new RangeError('Inconsistent prepared word weights');
+  if (retainedWeight > totalWeight || (valid === length && totalWeight > retainedWeight)) {
+    const summedCount = valid === length ? valid : source;
+    const rounding = (summedCount + length) * (Number.EPSILON / 2);
+    const gamma = rounding < 1 ? rounding / (1 - rounding) : 1;
+    const relativeDifference = Math.abs(retainedWeight - totalWeight) / Math.max(retainedWeight, totalWeight);
+    if (totalWeight === 0 || relativeDifference > gamma) throw new RangeError('Inconsistent prepared total weight');
+  }
+  return Object.freeze({ revision, counts: Object.freeze({ sourceCount: source, validCount: valid, invalidCount: invalid }), totalWeight, retainedWeight, words: Object.freeze(words) });
+}
+
 function warnSkippedWords(count: number, warnedSkipCounts: Set<number>): void {
   if (warnedSkipCounts.has(count)) return;
   warnedSkipCounts.add(count);
@@ -62,7 +133,7 @@ function warnSkippedWords(count: number, warnedSkipCounts: Set<number>): void {
 }
 
 export interface LyraWordCloudEventMap {
-  'lr-word-activate': CustomEvent<Readonly<{ text: string; weight: number; group?: string }>>;
+  'lr-word-activate': CustomEvent<Readonly<{ text: string; weight: number; group?: string; id?: string; revision?: LyraSourceRevision }>>;
 }
 
 /** A named CSS-color override shown by the optional word-cloud legend. Invalid colors render a
@@ -247,9 +318,13 @@ function normalizePalette(value: unknown): readonly string[] | undefined {
  * The eight default palette custom properties inherit from theme ancestors; setting one directly
  * on the word cloud still wins through the normal cascade.
  *
+ * Property-only preparedWords accepts an immutable whole-catalog weighted summary, takes
+ * precedence over words, and retains exact selected IDs for activation. Reassign the descriptor
+ * or call unnamed requestUpdate() after changing it; null restores legacy words.
+ *
  * @customElement lr-word-cloud
  * @event lr-word-activate - Fired from pointer activation, or Enter/Space on the focused word.
- * `detail: { text, weight, group }`.
+ * `detail: { text, weight, group }`; prepared words additionally carry original id and revision.
  * @csspart base - The word-cloud wrapper.
  * @csspart svg - The word-cloud SVG.
  * @csspart word - A rendered word.
@@ -263,6 +338,8 @@ function normalizePalette(value: unknown): readonly string[] | undefined {
  *   announcement uses the shared light-DOM polite sink.
  * @csspart empty - The empty-state message.
  * @csspart limit - Numeric rendered/input disclosure when input normalization or layout omits data.
+ * @csspart summary - Full-source valid/invalid counts and retained/full weight for prepared words.
+ * @csspart error - Localized invalid prepared-input message.
  * @cssprop [--lr-word-cloud-color-1=var(--lr-color-brand)] - First entry of the default categorical palette.
  * @cssprop [--lr-word-cloud-color-2=var(--lr-color-success)] - Second entry of the default categorical palette.
  * @cssprop [--lr-word-cloud-color-3=var(--lr-color-warning)] - Third entry of the default categorical palette.
@@ -284,6 +361,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     paginationSummary: LYRA_DEFAULT_paginationSummary,
     wordCloud: LYRA_DEFAULT_wordCloud,
     wordCloudLegend: LYRA_DEFAULT_wordCloudLegend,
+    wordCloudPreparedSummary: LYRA_DEFAULT_wordCloudPreparedSummary,
+    wordCloudPreparedUnavailable: LYRA_DEFAULT_wordCloudPreparedUnavailable,
     wordCloudWord: LYRA_DEFAULT_wordCloudWord,
     wordCloudWordAnnouncement: LYRA_DEFAULT_wordCloudWordAnnouncement,
     wordCloudWords: LYRA_DEFAULT_wordCloudWords,
@@ -292,8 +371,68 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   static override styles = [LyraElement.styles, specialistTokens, styles, srOnly];
 
+  private _preparedWords: LyraPreparedWordCloud | null = null;
+  private preparedDirty = true;
+  private preparedGeneration = 0;
+  private preparedContinuationQueued = false;
+  private preparedActive = false;
+  private preparedInvalid = false;
+  private preparedSnapshot?: PreparedWordSnapshot;
+  private committedPrepared?: PreparedWordSnapshot;
+  private preparedAnnouncementMounted = false;
+  private previousPreparedMessage = '';
+
+  /** Whole-source weighted summary with at most 150 unique-ID words and exact bounded labels.
+   * Takes precedence over words. Reassign (including the same identity) or explicitly requestUpdate
+   * after host descriptor/revision changes. Null restores the current legacy word snapshot. */
+  @property({ attribute: false })
+  get preparedWords(): LyraPreparedWordCloud | null { return this._preparedWords; }
+  set preparedWords(value: LyraPreparedWordCloud | null) {
+    const previous = this._preparedWords;
+    this._preparedWords = value;
+    this.requestUpdate('preparedWords', previous);
+    if (previous === value) this.requestUpdate();
+  }
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === 'preparedWords' || (args[0] === undefined && this._preparedWords !== null)) {
+      this.preparedDirty = true;
+      this.preparedGeneration = (this.preparedGeneration ?? 0) + 1;
+    }
+    super.requestUpdate(...args);
+  }
+
+  private refreshPreparedWords(): boolean {
+    if (!this.preparedDirty) return false;
+    this.preparedDirty = false;
+    const input = this._preparedWords;
+    const generation = this.preparedGeneration;
+    let snapshot: PreparedWordSnapshot | undefined;
+    let invalid = false;
+    if (input !== null) {
+      try { snapshot = snapshotPreparedWords(input); }
+      catch { invalid = true; }
+    }
+    if (generation !== this.preparedGeneration || input !== this._preparedWords) return false;
+    this.preparedActive = input !== null;
+    this.preparedInvalid = invalid;
+    this.preparedSnapshot = snapshot;
+    return true;
+  }
+
+  private preparedMessage(): string {
+    if (this.preparedInvalid) return this.localize('wordCloudPreparedUnavailable');
+    const model = this.preparedSnapshot;
+    if (!model) return '';
+    return this.localize('wordCloudPreparedSummary', undefined, {
+      retainedCount: this.formatCount(model.words.length), validCount: this.formatCount(model.counts.validCount),
+      invalidCount: this.formatCount(model.counts.invalidCount), retainedWeight: this.formatCount(model.retainedWeight),
+      totalWeight: this.formatCount(model.totalWeight),
+    });
+  }
+
   private _words: readonly WordCloudWord[] = [];
-  private lastWordsInput: unknown;
+  private readonly assignedSources = new CollectionSourceTracker();
   private inputDroppedCount = 0;
   private inputTruncatedCount = 0;
   private inputWordCount = 0;
@@ -304,8 +443,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   @property({ attribute: false })
   get words(): readonly WordCloudWord[] { return this._words; }
   set words(value: readonly WordCloudWord[]) {
-    if (value === this._words || value === this.lastWordsInput) return;
-    this.lastWordsInput = value;
+    if (this.assignedSources.isRebind('words', value, this._words)) return;
     const previous = this._words;
     const normalized = normalizeWords(value);
     this._words = normalized.items;
@@ -363,7 +501,6 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private _palette?: readonly string[];
-  private lastPaletteInput: unknown;
   /** Custom CSS-color palette, cycled by word index (or by `group`, see `words`). Invalid entries
    *  and `url()` paint servers are skipped; an all-invalid palette falls back to the
    *  `--lr-word-cloud-color-*` tokens. Assignment freezes at most 64 colors; assign a new array to
@@ -371,8 +508,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   @property({ attribute: false })
   get palette(): readonly string[] | undefined { return this._palette; }
   set palette(value: readonly string[] | undefined) {
-    if (value === this._palette || value === this.lastPaletteInput) return;
-    this.lastPaletteInput = value;
+    if (this.assignedSources.isRebind('palette', value, this._palette)) return;
     const previous = this._palette;
     this._palette = normalizePalette(value);
     this.paint = undefined;
@@ -380,7 +516,6 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private _legend: readonly WordCloudLegendItem[] = [];
-  private lastLegendInput: unknown;
   private legendDroppedCount = 0;
   private legendTruncatedCount = 0;
   private legendInputCount = 0;
@@ -391,8 +526,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   @property({ attribute: false })
   get legend(): readonly WordCloudLegendItem[] { return this._legend; }
   set legend(value: readonly WordCloudLegendItem[]) {
-    if (value === this._legend || value === this.lastLegendInput) return;
-    this.lastLegendInput = value;
+    if (this.assignedSources.isRebind('legend', value, this._legend)) return;
     const previous = this._legend;
     const normalized = normalizeLegend(value);
     this._legend = normalized.items;
@@ -435,17 +569,33 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     new ThemeWatcher(this, this.onThemeInvalidated);
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.preparedAnnouncementMounted = false;
+    if (this._preparedWords !== null) {
+      this.preparedDirty = true;
+      this.requestUpdate('preparedReconnect', null);
+    }
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.focusedIndex = null;
     this.liveText = '';
     this.pressedOriginalIndex = null;
     this.hoveredOriginalIndex = null;
+    this.preparedAnnouncementMounted = false;
+    this.previousPreparedMessage = '';
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.announcements.adopted();
+    this.preparedAnnouncementMounted = false;
+    if (this._preparedWords !== null) {
+      this.preparedDirty = true;
+      this.requestUpdate('preparedAdoption', null);
+    }
   }
 
   // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never reaches
@@ -454,8 +604,23 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   // `syncAriaDescribedByElements` use.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Writes during capture join the current update; defer one coalesced capture until it ends.
+    if (this.preparedDirty && this.isConnected && !this.preparedContinuationQueued) {
+      this.preparedContinuationQueued = true;
+      queueMicrotask(() => {
+        this.preparedContinuationQueued = false;
+        if (this.preparedDirty && this.isConnected) this.requestUpdate('preparedContinuation', null);
+      });
+    }
+    const message = this.preparedMessage();
+    if (this.preparedAnnouncementMounted && message && message !== this.previousPreparedMessage) {
+      if (this.preparedInvalid) this.announcements.announceAssertive(message);
+      else this.announcements.announcePolite(message);
+    }
+    this.previousPreparedMessage = message;
+    this.preparedAnnouncementMounted = true;
     const describedBy = this.getAttribute('aria-describedby');
-    if (!describedBy && !this.hasSyncedDescribedByElements) return;
+    if (!describedBy && !this.hasSyncedDescribedByElements && !this.preparedSnapshot) return;
     // `ariaDescribedByElements` is part of `ARIAMixin`, which every `Element` (SVG included)
     // implements at runtime -- the cast only works around `syncAriaDescribedByElements()`'s
     // `HTMLElement`-shaped parameter, which every other caller happens to satisfy natively.
@@ -464,6 +629,16 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       this.svgEl as unknown as HTMLElement | undefined,
       describedBy,
     );
+    const control = this.svgEl;
+    if (control && 'ariaDescribedByElements' in control) {
+      const references = [...(control.ariaDescribedByElements ?? [])];
+      for (const id of ['prepared-summary', 'word-limit']) {
+        const own = this.shadowRoot?.getElementById(id);
+        if (own) references.push(own);
+      }
+      updateDescriptionBaseline(control as unknown as HTMLElement, () => { control.ariaDescribedByElements = references; });
+      this.hasSyncedDescribedByElements ||= references.length > 0;
+    }
   }
 
   private fontFamily(): string {
@@ -529,8 +704,10 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    const preparedChanged = this.refreshPreparedWords();
     if (
-      changed.has('words') ||
+      preparedChanged ||
+      (!this.preparedActive && changed.has('words')) ||
       changed.has('minFontSize') ||
       changed.has('maxFontSize') ||
       changed.has('domain') ||
@@ -566,7 +743,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     // it, rather than duplicating that swap as a second source of truth here.
     const minFontSize = finiteRange(this.minFontSize, DEFAULT_MIN_FONT_SIZE, MIN_SANE_FONT_SIZE, MAX_FONT_SIZE_PX);
     const maxFontSize = finiteRange(this.maxFontSize, DEFAULT_MAX_FONT_SIZE, MIN_SANE_FONT_SIZE, MAX_FONT_SIZE_PX);
-    this.cachedLayout = layoutWordCloud(this.words, {
+    this.committedPrepared = this.preparedSnapshot;
+    this.cachedLayout = layoutWordCloud(this.preparedActive ? this.preparedSnapshot?.words ?? [] : this.words, {
       minFontSize,
       maxFontSize,
       domain: this.domain,
@@ -574,9 +752,10 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       wordRotation: this.wordRotation,
       measureText,
     });
+    this.hitRects = new WeakMap(this.cachedLayout.placed.map(word => [word, this.focusRingRect(word)]));
     this.order = [...this.cachedLayout.placed].sort((a, b) => a.originalIndex - b.originalIndex);
     this.paint = undefined;
-    const skippedCount = this.inputDroppedCount + this.cachedLayout.skippedCount;
+    const skippedCount = (this.preparedActive ? 0 : this.inputDroppedCount) + this.cachedLayout.skippedCount;
     if (skippedCount > 0) {
       warnSkippedWords(skippedCount, this.warnedSkipCounts);
     }
@@ -601,9 +780,13 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
    *  automatically only when the effective typography metrics changed; the public method remains
    *  available for host theme systems that need an explicit synchronous refresh. */
   refreshTheme(): void {
+    if (this.preparedDirty && this._preparedWords !== null) {
+      this.requestUpdate('typographyTheme', null);
+      return;
+    }
     this.relayout(true);
     this.captureThemeSignatures();
-    this.requestUpdate();
+    this.requestUpdate('typographyTheme', null);
   }
 
   private captureThemeSignatures(): void {
@@ -621,7 +804,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     if (palette !== this.paletteThemeSignature) {
       this.paletteThemeSignature = palette;
       this.paint = undefined;
-      this.requestUpdate();
+      this.requestUpdate('paletteTheme', null);
     }
   };
 
@@ -631,7 +814,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private activate(word: PlacedWord): void {
-    this.emit('lr-word-activate', Object.freeze({ text: word.text, weight: word.weight, group: word.group }));
+    if (!this.isConnected || !this.cachedLayout.placed.includes(word)) return;
+    const model = this.committedPrepared;
+    const original = model?.words[word.originalIndex];
+    this.emit('lr-word-activate', Object.freeze({ text: word.text, weight: word.weight, group: word.group,
+      ...(original ? { id: original.id, revision: model!.revision } : {}),
+    }));
   }
 
   private announce(word: PlacedWord): void {
@@ -671,7 +859,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     let nearest: PlacedWord | undefined;
     let distance = Number.POSITIVE_INFINITY;
     for (const word of this.cachedLayout.placed) {
-      const box = this.focusRingRect(word);
+      const box = this.hitRects.get(word)!;
       const dx = Math.max(box.x - x, 0, x - box.x - box.width);
       const dy = Math.max(box.y - y, 0, y - box.y - box.height);
       const candidateDistance = dx * dx + dy * dy;
@@ -716,6 +904,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   };
 
   private onWordClick = (word: PlacedWord): void => {
+    if (!this.isConnected || !this.cachedLayout.placed.includes(word)) return;
     const order = this.order;
     const idx = order.findIndex((w) => w.originalIndex === word.originalIndex);
     this.focusedIndex = idx === -1 ? null : idx;
@@ -804,6 +993,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   /** Axis-aligned focus-ring rect for `w`, already accounting for its rotation. */
+  private hitRects = new WeakMap<PlacedWord, { x: number; y: number; width: number; height: number }>();
+
   private focusRingRect(w: PlacedWord): { x: number; y: number; width: number; height: number;
   } {
     const boxW = w.rotated ? w.height : w.width;
@@ -818,9 +1009,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   override render(): TemplateResult {
     const layout = this.cachedLayout;
-    const inputCount = Math.max(this.inputWordCount, this.words.length);
-    const omittedCount = this.inputDroppedCount + layout.skippedCount;
-    const hasWordLimit = omittedCount > 0 || this.inputTruncatedCount > 0;
+    if (this.preparedInvalid) return html`<div part="base"><div part="error">${this.preparedMessage()}</div></div>`;
+    const preparedSummary = this.preparedSnapshot
+      ? html`<div id="prepared-summary" part="summary">${this.preparedMessage()}</div>` : nothing;
+    const inputCount = this.preparedActive ? this.preparedSnapshot?.words.length ?? 0 : Math.max(this.inputWordCount, this.words.length);
+    const omittedCount = (this.preparedActive ? 0 : this.inputDroppedCount) + layout.skippedCount;
+    const hasWordLimit = omittedCount > 0 || (!this.preparedActive && this.inputTruncatedCount > 0);
     const wordLimitText = hasWordLimit
       ? this.collectionSummary(
           layout.placed.length,
@@ -830,6 +1024,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       : '';
     if (layout.placed.length === 0) {
       return html`<div part="base">
+        ${preparedSummary}
         <div part="empty">${this.localize('noData')}</div>
         ${hasWordLimit ? html`<div id="word-limit" part="limit">${wordLimitText}</div>` : nothing}
       </div>`;
@@ -847,11 +1042,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
     return html`
       <div part="base">
+        ${preparedSummary}
         <svg
           part="svg"
           role="application"
           aria-label=${accessibleLabel}
-          aria-describedby=${[this.getAttribute('aria-describedby') ?? '', hasWordLimit ? 'word-limit' : '']
+          aria-describedby=${[this.getAttribute('aria-describedby') ?? '', this.preparedSnapshot ? 'prepared-summary' : '', hasWordLimit ? 'word-limit' : '']
             .filter(Boolean)
             .join(' ') || nothing}
           tabindex="0"

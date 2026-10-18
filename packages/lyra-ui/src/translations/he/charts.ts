@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} דגימות תקינות בהתפלגות המלאה; {belowCount} מתחת ו-{aboveCount} מעל לטווחים המוצגים; {invalidCount} דגימות לא תקינות.',
+  histogramDistributionRange: 'טווח הדגימות שנצפה: {min} עד {max}.',
   chartCategory: 'קטגוריה',
   chartTotal: 'סך הכל',
   chartAxisTotal: 'סך הכול בציר {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'קואורדינטת x: {x}, קואורדינטת y: {y}',
   chartBubblePointCoordinates: 'קואורדינטת x: {x}, קואורדינטת y: {y}, רדיוס: {radius}',
   chartLabeledPoint: '{label} — {coordinates}',
-  chartTrendIncreasing: 'עולה',
-  chartTrendDecreasing: 'יורדת',
-  chartTrendFlat: 'יציבה',
-  chartSummary: '{label}: {count} ערכים, טווח {min} עד {max}, מגמה {trend}',
   chartSeriesNoData: '{label}: אין נתונים',
   chartSummaryWithData: 'תרשים {type}. {summaries}.',
   chartSummaryEmpty: 'תרשים {type} ללא נתונים.',
-  chartSummarySeparator: '. ',
   chartData: 'נתוני תרשים',
   chartRenderUnavailable: 'הצגת התרשים אינה זמינה.',
+  chartPreparedSummaryZoom: 'הזום מציג את הסיכום שהוכן; פירוט נוסף באמצעות אינדקס אינו זמין.',
+  chartSpatialSummary: 'המקור המלא: {count} נקודות, x מ־{minX} עד {maxX}, y מ־{minY} עד {maxY}. תצוגה: {matchedCount} נקודות, x מ־{viewMinX} עד {viewMaxX}, y מ־{viewMinY} עד {viewMaxY}.',
+  chartSpatialRadiusDomain: 'הרדיוס במקור המלא: {min} עד {max}.',
+  chartSpatialDensityLegend: 'הצפיפות כוללת את כל הסדרות; נראות הסדרות משפיעה רק על שכבות הנקודות.',
+  chartSpatialPoint: '{series}: {id}, מיקום במקור {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'אזור צפיפות: {count} נקודות, x מ־{minX} עד {maxX}, y מ־{minY} עד {maxY}.',
+  chartSpatialHidden: ' (הסדרה מוסתרת)',
   chartDataSampled: 'התרשים וטבלת הנתונים שנוצרה מציגים מדגם של עד 1,000 רשומות. ספקו טבלת נתונים מותאמת אישית כדי לגשת לכל נתוני התרשים.',
   chartPlotSampled: 'התרשים מציג מדגם של עד 1,000 רשומות; טבלת הנתונים מפרטת את כל הנתונים.',
   chartZoomUnavailable: 'הזום אינו זמין, אך התרשים הראשי נשאר זמין.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} מתוך {total})',
   chartMissingLibrary: 'כדי להציג תרשימים, יש להתקין את החבילה האופציונלית "chart.js".',
   boxPlotMissingLibrary: 'כדי להציג תרשימי קופסה, יש להתקין את חבילת התרשימים האופציונלית המתאימה.',
+  chartInputLimit: 'חלק מנתוני התרשים הושמטו משום שהקלט הגיע למגבלה. יש לספק מערך נתונים קטן יותר או נתונים שאוגדו מראש כדי לייצג את הערכים שהושמטו.',
+  histogramInputLimit: 'רק 10,000 הדגימות החדשות ביותר נשמרות. יש להעביר ל-lr-chart ספירות שקובצו מראש לטווחים כדי לייצג התפלגות גדולה יותר.',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

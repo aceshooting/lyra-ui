@@ -69,6 +69,8 @@ const strings: LyraLocaleStrings = {
     few: 'Încă {count} sugestii',
     other: 'Încă {count} de sugestii',
   },
+  mentionInputLimit: 'Sunt disponibili doar primii 10.000 de candidați pentru menționare.',
+  diffViewHighlightLimit: 'Codul lung este afișat fără evidențierea sintaxei.',
 };
 
 registerLyraLocale('ro', strings);

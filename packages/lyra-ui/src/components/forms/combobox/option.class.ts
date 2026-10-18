@@ -1,3 +1,5 @@
+import { subscribeInheritedAttributes } from '../../../internal/inherited-attribute-hub.js';
+import { composedParentElement } from '../../../internal/active-element.js';
 import { html, svg, type SVGTemplateResult, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -120,7 +122,9 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   /** Whether this option is currently selected. Parent controls write this live, property-only
-   * state without changing `defaultSelected` or the declarative reset attribute.
+   * state without changing `defaultSelected` or the declarative reset attribute. Consumer writes
+   * update this option immediately; select/combobox parent selection and form state settle in
+   * the next microtask. Multiple writes share one reconciliation and emit no parent value events.
    * @default false */
   @property({ type: Boolean, attribute: false })
   get selected(): boolean {
@@ -246,7 +250,8 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   }
 
   private readonly labelTextObserver = new AccessibleTextController(
-    this, [], (records) => this.handleLabelRecords([...records]), ['slot', 'title'],
+    this, [], (records) => this.handleLabelRecords([...records]), ['slot', 'title'], true, false,
+    () => this.labelForwardingSlots().length > 0,
   );
   private observedDefaultLabel = '';
   private cachedDefaultLabel?: string;
@@ -351,6 +356,26 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.handleLabelMutation();
   };
 
+  private inertAncestorReleases: Array<() => void> = [];
+  private bindInertAncestors(): void {
+    for (const release of this.inertAncestorReleases.splice(0)) release();
+    const roots = new Map<Node, Set<Element>>();
+    for (let ancestor = composedParentElement(this); ancestor; ancestor = composedParentElement(ancestor)) {
+      const root = ancestor.getRootNode();
+      let elements = roots.get(root); if (!elements) roots.set(root, elements = new Set());
+      elements.add(ancestor);
+    }
+    for (const [root, ancestors] of roots) {
+      const release = subscribeInheritedAttributes(root, this.ownerDocument.defaultView?.MutationObserver, {
+        attributes: ['inert'],
+        changed: records => {
+          if (!this.labelForwardingSlots().length && records.some(record => ancestors.has(record.target as Element))) this.emit('lr-option-change');
+        },
+      });
+      if (release) this.inertAncestorReleases.push(release);
+    }
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('pointerenter', this.handlePointerEnter);
@@ -361,9 +386,11 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.addEventListener('slotchange', this.handleLabelSlotChange);
     this.cachedDefaultLabel = undefined;
     this.observedDefaultLabel = this.defaultLabel;
+    this.bindInertAncestors();
   }
 
   override disconnectedCallback(): void {
+    for (const release of this.inertAncestorReleases.splice(0)) release();
     this.removeEventListener('pointerenter', this.handlePointerEnter);
     this.removeEventListener('pointerleave', this.handlePointerLeave);
     this.removeEventListener('focusin', this.handleFocusIn);
@@ -379,6 +406,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     super.adoptedCallback();
     this.cachedDefaultLabel = undefined;
     this.labelTextObserver.adopted();
+    if (this.isConnected) this.bindInertAncestors();
   }
 
   private handleLabelRecords(records: MutationRecord[]): void {
@@ -409,6 +437,13 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       return false;
     }
     return super.shouldUpdate(changed);
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (this.hasUpdated && !changed.has('label') && !changed.has('slot')) {
+      this.labelTextObserver.preserveBindingForNextUpdate();
+    }
   }
 
   protected override updated(changed: PropertyValues): void {

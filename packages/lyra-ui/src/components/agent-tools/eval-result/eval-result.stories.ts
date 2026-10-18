@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { EvalRunResult } from './eval-result.js';
+import type { EvalResultSource, EvalRunResult } from './eval-result.js';
 import type { TableColumn } from '../../data/table/table.class.js';
 import type { RubricKey } from '../../forms/rubric-form/rubric-form.class.js';
 
@@ -33,7 +33,7 @@ const columns: TableColumn<EvalRunResult>[] = [
   { key: 'label', label: 'Run', sortable: true, cell: (r) => r.label },
   { key: 'model', label: 'Model', cell: (r) => r.model },
   { key: 'promptVersion', label: 'Prompt version', cell: (r) => r.promptVersion },
-  { key: 'accuracy', label: 'Accuracy', sortable: true, cell: (r) => r.review?.accuracy ?? r.scores?.accuracy },
+  { key: 'accuracy', label: 'Accuracy', sortable: true, cell: (r) => r.review?.['accuracy'] ?? r.scores?.['accuracy'] },
 ];
 
 const meta: Meta = {
@@ -83,4 +83,30 @@ export const NarrowContainer: Story = {
       .rubricKeys=${rubricKeys}
       selected-run-id="claude-candidate"
     ></lr-eval-result>`,
+};
+
+/** A logical million-run provider with off-page comparison and global server order. */
+export const SourcePages: Story = {
+  render: () => {
+    const total = 1_000_000;
+    const run = (index: number): EvalRunResult => ({ id: `run-${index}`, label: `Run ${index + 1}`, output: `Output from run ${index + 1}` });
+    const record = (index: number) => ({ key: `run-${index}`, order: index, value: run(index) });
+    const source: EvalResultSource = {
+      revision: 1,
+      query: async ({ page, pageSize, query }) => ({ total, rows: Array.from({ length: Math.min(pageSize, total - page * pageSize) }, (_, offset) => record(query.sortDir === 'desc' ? total - 1 - page * pageSize - offset : page * pageSize + offset)) }),
+      lookup: async keys => keys.flatMap(key => {
+        const index = Number(key.slice(4));
+        return /^run-\d+$/.test(key) && Number.isSafeInteger(index) && index < total ? [record(index)] : [];
+      }),
+      locate: async (key, query) => {
+        const index = Number(key.slice(4));
+        return /^run-\d+$/.test(key) && Number.isSafeInteger(index) && index < total ? query.sortDir === 'desc' ? total - 1 - index : index : null;
+      },
+    };
+    return html`<lr-eval-result label="Run comparison" .dataSource=${source}
+      .columns=${[{ key: 'label', label: 'Run', sortable: true, cell: (value: EvalRunResult) => value.label }]}
+      selected-run-id="run-999999" baseline-run-id="run-0"
+      @lr-run-activate=${(event: CustomEvent<{ runId: string }>) => { (event.currentTarget as HTMLElement & { selectedRunId: string }).selectedRunId = event.detail.runId; }}
+    ></lr-eval-result>`;
+  },
 };

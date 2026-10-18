@@ -321,3 +321,66 @@ export const RetintedConnectionLine: Story = {
     </div>
   `,
 };
+
+export const LargeWorkflow: Story = {
+  parameters: { docs: { description: { story:
+    'Pan or use keyboard navigation across 1,000 nodes. The canvas renders visible cards and keeps selected and active items available; the minimap retains the complete overview.' } } },
+  render: () => {
+    const workflow = Array.from({ length: 1000 }, (_, index) => ({
+      id: `step-${index}`, position: { x: (index % 50) * 320, y: Math.floor(index / 50) * 200 },
+      data: { label: `Step ${index + 1}` },
+    }));
+    return html`<lr-flow-canvas style="width:100%;height:32rem" .nodes=${workflow}>
+      <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>`;
+  },
+};
+
+/** Input metadata admission and graph layout have independent notices. */
+export const InputLimit: Story = {
+  render: () => html`<lr-flow-canvas .nodes=${[{
+    id: 'source', position: { x: 0, y: 0 },
+    data: Object.fromEntries(Array.from({ length: 10_001 }, (_, index) => [`field-${index}`, index])),
+  }]}></lr-flow-canvas>`,
+};
+
+/** The provider owns the complete graph; the positioned scene and records page stay bounded. */
+export const SourceViewport: Story = {
+  render: () => {
+    const rows = [
+      ...nodes.map((value, order) => ({ key: `node:${value.id}`, order, value: { kind: 'node' as const, value } })),
+      ...edges.map((value, order) => ({ key: `edge:${value.id}`, order, value: { kind: 'edge' as const, value } })),
+    ];
+    const matches = (query: import('../../../data-sources.js').LyraGraphSourceQuery) => rows.filter(row => {
+      if (row.value.kind !== (query.kind === 'nodes' ? 'node' : 'edge')) return false;
+      if (query.search && !row.key.toLowerCase().includes(query.search.toLowerCase())) return false;
+      if (!query.centerKey || row.value.kind !== 'edge') return true;
+      const id = query.centerKey.slice(5), edge = row.value.value;
+      return query.direction === 'in' ? edge.target === id : query.direction === 'out' ? edge.source === id : edge.source === id || edge.target === id;
+    });
+    const worldBounds = { x: -100, y: -100, width: 1000, height: 400 };
+    const source: import('./flow-canvas.class.js').FlowCanvasSource = {
+      revision: 1,
+      records: {
+        revision: 1,
+        query: async ({ query, page, pageSize }) => {
+          const all = matches(query), start = page * pageSize;
+          return { rows: all.slice(start, start + pageSize).map((row, index) => ({ ...row, order: start + index })),
+            total: all.length, summary: { nodes: nodes.length, edges: edges.length } };
+        },
+        lookup: async keys => rows.filter(row => keys.includes(row.key)),
+        locate: async (key, query) => { const index = matches(query).findIndex(row => row.key === key); return index < 0 ? null : index; },
+      },
+      scene: async () => ({
+        nodes: nodes.map(value => ({ key: `node:${value.id}`, value, position: value.position! })),
+        edges: edges.map(value => ({ key: `edge:${value.id}`, value, source: `node:${value.source}`, target: `node:${value.target}` })),
+        coverage: 'complete', total: { nodes: nodes.length, edges: edges.length }, worldBounds,
+      }),
+      overview: async () => ({ bounds: worldBounds, bins: [{ bounds: worldBounds, count: nodes.length }] }),
+    };
+    return html`<lr-flow-canvas style="height:32rem" .graphSource=${source}>
+      <lr-flow-controls slot="controls"></lr-flow-controls><lr-flow-minimap slot="minimap"></lr-flow-minimap>
+    </lr-flow-canvas>`;
+  },
+};

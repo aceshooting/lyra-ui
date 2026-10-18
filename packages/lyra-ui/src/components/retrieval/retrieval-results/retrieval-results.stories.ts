@@ -186,3 +186,42 @@ export const AnnounceOnMount: Story = {
     </div>
   `,
 };
+
+export const InputLimit: Story = {
+  render: () => html`<lr-retrieval-results .chunks=${Array.from({ length: 10001 }, (_, index) => ({
+    id: `chunk-${index}`, text: `Result ${index + 1}`, score: 0.5,
+    source: { id: 'source', name: 'Source document' },
+  }))}></lr-retrieval-results>`,
+};
+
+const millionResultSource: import('./retrieval-results.class.js').RetrievalResultsSource = {
+  revision: 1,
+  async query({ page, pageSize, query, signal }) {
+    await new Promise(resolve => setTimeout(resolve, 40));
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    return {
+      total: 1_000_000,
+      rows: Array.from({ length: Math.min(pageSize, 1_000_000 - page * pageSize) }, (_, index) => {
+        const order = page * pageSize + index;
+        return { key: `chunk-${order}`, order, value: { id: `chunk-${order}`, text: `Generated retrieval passage ${order}.`, score: 1 - order / 1_000_000, source: { id: 'generated', name: `Document ${order}` } } };
+      }),
+      groups: query.grouping === 'none' ? [] : [{ key: 'generated', label: 'Generated documents', startIndex: 0, itemCount: 1_000_000 }],
+    };
+  },
+  async lookup(keys) {
+    return keys.flatMap(key => {
+      const order = /^chunk-\d+$/.test(key) ? Number(key.slice(6)) : -1;
+      return Number.isSafeInteger(order) && order >= 0 && order < 1_000_000
+        ? [{ key, order, value: { id: key, text: `Generated retrieval passage ${order}.`, score: 1 - order / 1_000_000, source: { id: 'generated', name: `Document ${order}` } } }] : [];
+    });
+  },
+  async locate(key) {
+    const order = /^chunk-\d+$/.test(key) ? Number(key.slice(6)) : -1;
+    return Number.isSafeInteger(order) && order >= 0 && order < 1_000_000 ? order : null;
+  },
+};
+
+/** The provider keeps full selection records available across independently loaded pages. */
+export const MillionSource: Story = {
+  render: () => html`<p>Browse one million generated passages. Selections remain available across pages.</p><lr-retrieval-results .dataSource=${millionResultSource}></lr-retrieval-results>`,
+};

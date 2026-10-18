@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} gyldige målingar i heile fordelinga; {belowCount} under og {aboveCount} over dei viste intervalla; {invalidCount} ugyldige målingar.',
+  histogramDistributionRange: 'Observert utvalsspenn: {min} til {max}.',
   chartCategory: 'Kategori',
   chartTotal: 'Totalt',
   chartAxisTotal: '{axis} totalt',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, radius {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'stigande',
-  chartTrendDecreasing: 'fallande',
-  chartTrendFlat: 'flat',
-  chartSummary: '{label}: {count} verdiar, område {min} til {max}, trend: {trend}',
   chartSeriesNoData: '{label}: ingen data',
   chartSummaryWithData: '{type}diagram. {summaries}.',
   chartSummaryEmpty: '{type}diagram utan data.',
-  chartSummarySeparator: '. ',
   chartData: 'Diagramdata',
   chartRenderUnavailable: 'Diagramvising er ikkje tilgjengeleg.',
+  chartPreparedSummaryZoom: 'Zoom viser det førebudde samandraget; indeksbasert detaljering er ikkje tilgjengeleg.',
+  chartSpatialSummary: 'Heile kjelda: {count} punkt, x {minX} til {maxX}, y {minY} til {maxY}. Vising: {matchedCount} punkt, x {viewMinX} til {viewMaxX}, y {viewMinY} til {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Radius i heile kjelda: {min} til {max}.',
+  chartSpatialDensityLegend: 'Tettleiken omfattar alle seriar; seriesynlegheit påverkar berre overlagde punkt.',
+  chartSpatialPoint: '{series}: {id}, posisjon i kjelda {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Tettleiksområde: {count} punkt, x {minX} til {maxX}, y {minY} til {maxY}.',
+  chartSpatialHidden: ' (serie skjult)',
   chartDataSampled: 'Diagrammet og den genererte datatabellen viser eit utval på opptil 1 000 postar. Legg ved ein eigen datatabell for å få tilgang til alle diagramdata.',
   chartPlotSampled: 'Diagrammet viser eit utval på opptil 1 000 postar; datatabellen viser alle data.',
   chartZoomUnavailable: 'Zoom er ikkje tilgjengeleg, men sjølve diagrammet er framleis tilgjengeleg.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} av {total})',
   chartMissingLibrary: 'Denne komponenten treng den valfrie pakken «chart.js» for å teikne diagram.',
   boxPlotMissingLibrary: 'Denne komponenten treng den valfrie diagrampakken for boksplott for å teikne boksplott.',
+  chartInputLimit: 'Nokre diagramdata vart utelatne fordi ei inndatagrense vart nådd. Oppgje eit mindre eller førehandsaggregert datasett for å representere dei utelatne verdiane.',
+  histogramInputLimit: 'Berre dei nyaste 10 000 målingane blir tekne vare på. Oppgje tal som alt er grupperte i intervall, til lr-chart for å representere ei større fordeling.',
 };
 
 registerLyraLocale('nn', strings);

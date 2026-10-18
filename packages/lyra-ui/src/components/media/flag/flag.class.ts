@@ -14,7 +14,7 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { getFlagResolverGeneration, subscribeFlagResolver, loadFlagUrlResolver, warnMissingFlagResolver } from './flag-url-resolver.js';
 
 export type { LyraFlagFidelity, LyraFlagShape, LyraFlagUrlResolver } from './flag-url-resolver.js';
-import type { LyraFlagFidelity, LyraFlagShape } from './flag-url-resolver.js';
+import type { LyraFlagFidelity, LyraFlagShape, LyraFlagUrlResolver } from './flag-url-resolver.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_flagLoadError } from '../../../internal/default-strings/media.generated.js';
@@ -40,6 +40,27 @@ function normalizeFlagFidelity(value: unknown): LyraFlagFidelity {
 
 function normalizeFlagShape(value: unknown): LyraFlagShape {
   return FLAG_SHAPES.has(value as LyraFlagShape) ? (value as LyraFlagShape) : 'rect';
+}
+
+const pendingFlagUrls = new Map<string, Promise<string | undefined>>();
+let pendingFlagGeneration = -1;
+
+function sharedFlagUrl(resolve: LyraFlagUrlResolver, code: string, fidelity: LyraFlagFidelity, generation: number): Promise<string | undefined> {
+  if (pendingFlagGeneration !== generation) {
+    pendingFlagUrls.clear();
+    pendingFlagGeneration = generation;
+  }
+  const key = `${code}:${fidelity}`;
+  const cached = pendingFlagUrls.get(key);
+  if (cached) return cached;
+  let request: Promise<string | undefined>;
+  try { request = Promise.resolve(resolve(code, fidelity === 'standard' ? undefined : { variant: fidelity })); }
+  catch (error) { return Promise.reject(error); }
+  if (pendingFlagUrls.size >= 256) pendingFlagUrls.delete(pendingFlagUrls.keys().next().value!);
+  pendingFlagUrls.set(key, request);
+  const release = () => { if (pendingFlagUrls.get(key) === request) pendingFlagUrls.delete(key); };
+  void request.then(release, release);
+  return request;
 }
 
 /**
@@ -424,10 +445,7 @@ export class LyraFlag extends LyraElement {
           this.failSource(identity);
           return;
         }
-        const candidate = await resolve(
-          code,
-          fidelity === 'standard' ? undefined : { variant: fidelity },
-        );
+        const candidate = await sharedFlagUrl(resolve, code, fidelity, this.resolverGeneration);
         if (token !== this.resolveToken || request !== this.activeSourceRequest || !this.isConnected) return;
         if (candidate === undefined) {
           this.setSourceState({ status: 'idle', identity });

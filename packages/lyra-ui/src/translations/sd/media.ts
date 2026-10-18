@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{total} مان تصوير {index}',
   playWithContext: '{name} هلايو',
   pauseWithContext: '{name} روڪيو',
+  avPlayerWaveformUnavailable: 'موج جي شڪل وارو ڊيٽا دستياب ناهي يا هن ميڊيا سان نٿو ملي.',
+  avPlayerTranscriptUnavailable: 'لکت جو ڊيٽا دستياب ناهي.',
   dropzoneReleaseToAdd: 'فائل شامل ڪرڻ لاءِ ڇڏي ڏيو.',
   dropzoneRejectedType: 'هي فائل جو قسم قبول ناهي.',
   attachmentAdd: 'منسلڪ شامل ڪريو',

@@ -19,6 +19,8 @@ describe('<lr-time-zone-picker>', () => {
     ]}></lr-time-zone-picker>`);
     expect(el.value).to.equal('Europe/Paris');
     expect(el.validity.valid).to.equal(true);
+    el.click();
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('lr-option').length === 2);
     expect([...el.shadowRoot!.querySelectorAll('lr-option')].map((row) => row.value)).to.deep.equal(['UTC', 'Europe/Paris']);
     el.timeZones = ['UTC'];
     expect(el.validity.customError).to.equal(true);
@@ -29,8 +31,9 @@ describe('<lr-time-zone-picker>', () => {
     const el = await fixture<LyraTimeZonePicker>(html`<lr-time-zone-picker searchable label="Time zone" .timeZones=${['UTC', 'Asia/Beirut']} value="UTC"></lr-time-zone-picker>`);
     const child = el.shadowRoot!.querySelector('lr-combobox')!;
     await child.updateComplete;
-    expect(el.shadowRoot!.querySelectorAll('lr-option').length).to.equal(2);
     await child.show();
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('lr-option').length === 2);
+    expect(el.shadowRoot!.querySelectorAll('lr-option').length).to.equal(2);
     expect(child.shadowRoot!.querySelector('[role="listbox"]')!.getBoundingClientRect().height > 0).to.equal(true);
     expect(child.shadowRoot!.querySelectorAll('[part~="option"]').length).to.equal(2);
     await expect(el).to.be.accessible();
@@ -94,6 +97,8 @@ describe('<lr-time-zone-picker>', () => {
     expect(el.timeZones).to.deep.equal([{ code: 'UTC', label: 'Coordinated time', group: 'Common' }]);
     expect(reads).to.equal(0);
     expect(Object.isFrozen(el.timeZones)).to.equal(true);
+    el.click();
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-option') !== null);
     first.label = 'Changed';
     expect(el.shadowRoot!.querySelector('lr-option')?.label).to.equal('Coordinated time');
     el.timeZones = undefined;

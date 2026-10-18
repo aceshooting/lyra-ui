@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Показаны только первые {count} результатов тестов.',
   toolTimelineLimit: 'Отображается не более {count} вызовов инструментов.',
   toolSelectLimit: 'Показаны только первые {count} инструментов.',
+  testResultsInputTooLarge: 'Подробности результатов тестов превышают предел отображения.',
   toolCall: 'Вызов инструмента',
   maximize: 'Развернуть',
   promptStudioVariableName: 'Имя переменной {index}',
@@ -298,6 +299,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Показаны только первые {count} файлов.',
   taskListLimit: 'Показаны только первые {count} задач.',
   evalDatasetLimit: 'Показаны только первые {count} примеров.',
+  activityFeedInputLimit: 'Сохраняются только {count} самых новых записей из {total}.',
+  spanWaterfallLimit: 'Показано участков трассировки: {shown} из {total}.',
+  toolTimelineInputLimit: 'Сохранены только самые новые вызовы инструментов: {count} из {total}.',
 };
 
 registerLyraLocale('ru', strings);

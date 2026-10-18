@@ -649,3 +649,59 @@ export const SearchGeometryHooks: Story = {
     </div>
   `,
 };
+
+/** All admitted threads remain reachable after structural headings are added. */
+export const GroupedAdmissionBoundary: Story = {
+  parameters: { docs: { description: { story: 'Ten thousand admitted threads each have a structural heading. Headings do not consume the thread admission budget; activate the final thread to reveal the end of the indexed model.' } } },
+  render: () => html`
+    <div data-grouped-admission style="display:grid;gap:var(--lr-space-s);inline-size:320px;max-inline-size:100%;">
+      <button type="button" @click=${(event: Event) => {
+        const list = (event.currentTarget as HTMLElement).closest('[data-grouped-admission]')?.querySelector<LyraThreadList>('lr-thread-list');
+        if (list) list.activeConversationId = 'thread-9999';
+      }}>Reveal the final thread</button>
+      <div style="block-size:240px;border:1px solid var(--lr-color-border);">
+        <lr-thread-list grouping="custom" sticky-groups
+          .groupBy=${(thread: LyraChatThread) => thread.id}
+          .threads=${Array.from({ length: 10000 }, (_, index) => ({ id: `thread-${index}`, title: `Thread ${index + 1}` }))}
+        ></lr-thread-list>
+      </div>
+    </div>
+  `,
+};
+
+export const InputLimit: StoryObj = {
+  render: () => html`<lr-thread-list style="height:240px" .threads=${Array.from({ length: 10001 }, (_, index) => ({ id: `thread${index}`, title: `Thread ${index}` }))}></lr-thread-list>`,
+};
+
+const millionThreadSource: import('./thread-list.class.js').ThreadListSource = {
+  revision: 1,
+  async query({ page, pageSize, query, signal }) {
+    await new Promise(resolve => setTimeout(resolve, 40));
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    const term = query.search.trim();
+    const index = /^\d+$/.test(term) ? Number(term) : -1;
+    const total = term ? (Number.isSafeInteger(index) && index >= 0 && index < 1_000_000 ? 1 : 0) : 1_000_000;
+    const rows = Array.from({ length: Math.min(pageSize, Math.max(0, total - page * pageSize)) }, (_, offset) => {
+      const order = term ? index : page * pageSize + offset;
+      return { key: `thread-${order}`, order, value: { id: `thread-${order}`, title: `Thread ${order}`, timestamp: now } };
+    });
+    return { total, rows, groups: query.grouping === 'none' || !rows.length ? [] : [{ key: 'today', label: 'Generated threads', startIndex: 0, itemCount: total }] };
+  },
+  async lookup(keys) {
+    return keys.flatMap(key => {
+      const order = /^thread-\d+$/.test(key) ? Number(key.slice(7)) : -1;
+      return Number.isSafeInteger(order) && order >= 0 && order < 1_000_000
+        ? [{ key, order, value: { id: key, title: `Thread ${order}`, timestamp: now } }] : [];
+    });
+  },
+  async locate(key, query) {
+    const order = /^thread-\d+$/.test(key) ? Number(key.slice(7)) : -1;
+    if (!Number.isSafeInteger(order) || order < 0 || order >= 1_000_000) return null;
+    return query.search.trim() ? (String(order) === query.search.trim() ? 0 : null) : order;
+  },
+};
+
+/** Pages count matching records before collapse; headers remain available on collapsed pages. */
+export const MillionSource: Story = {
+  render: () => html`<p>Browse one million generated threads. Search by an exact thread number from 0 to 999999.</p><lr-thread-list searchable sticky-groups .dataSource=${millionThreadSource}></lr-thread-list>`,
+};

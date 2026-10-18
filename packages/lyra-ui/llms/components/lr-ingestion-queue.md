@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,6 +22,18 @@ embedding counts, retry attempts, errors, and retry/cancel requests. Never inges
 Nonstring failure details use the localized failed-stage label for row text and fresh failure
 announcements. Omitted details stay omitted. Formatting uses the effective locale, and historical
 failures remain silent on mount.
+
+Assignment retains the first 10,000 queue items in a bounded readonly outer snapshot. Admitted
+record identities feed a descriptor-safe copy of the closed row/document display fields rather
+than a deep copy of arbitrary provider data, so nested input does not consume the shared
+50,000-value deep-copy budget. Replace the collection to publish record changes. Normalized rows
+are reused until the admitted items or the resolved localized failure label changes; replacing the
+queue normalizes the new rows once and compares failures with the previous normalized rows.
+
+A localized `[part="limit"]` note reports retained and assigned-source counts when the input
+ceiling is exceeded on the legacy items route. Counts use the effective locale. Initial truncation is silent; a later
+transition into input truncation is announced through the shared polite sink, separately from
+failure announcements.
 
 **Properties:**
 
@@ -47,7 +59,7 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   exactly this many items still render as a plain list. Before 9.0.0 this was spelled
   `virtualizeThreshold`/`virtualize-threshold` _and_ compared inclusively (`>=`), so a migration
   that only renames the attribute shifts the switchover point by one item
-- `announce: boolean = false` (reflected) — opt-in: announce the failures the queue **already
+- `announce: boolean = false` (reflected) — legacy items route opt-in: announce the failures the queue **already
   carries** the first time it mounts, instead of staying silent until a row fails later. The
   mount-time pass reuses the one announcement path a later failure takes — the same shared
   assertive light-DOM region, the same locale-aware conjunction list of the caller-supplied
@@ -65,6 +77,44 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
 
 Queue item ids must be nonblank and unique. Malformed rows and later duplicates are omitted
 first-wins before empty state, counts, virtualization, failure announcements, rendering, or actions.
+
+**Provider pages:**
+
+- `dataSource: IngestionQueueSource | undefined = undefined` (attribute: false) —
+  `IngestionQueueSource = LyraPageSource<IngestionQueueItem, IngestionQueueSourceQuery>`, exported
+  by `@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js`.
+  `LyraPageSource` is exported by `@aceshooting/lyra-ui/data-sources.js`. The query is one frozen
+  empty object (`readonly [key: string]: never`); the provider owns queue order and exact total.
+  A present source takes precedence over `items`, including invalid sources, which fail visibly.
+  Setting `undefined` restores the existing items route and virtualization defaults.
+- `sourcePage: number = 0` (attribute `source-page`) — zero-based provider page, normalized to a
+  finite nonnegative safe offset for the effective page size.
+- `sourcePageSize: number = 100` (attribute `source-page-size`) — normalized to 1–500; an effective
+  size change resets page zero. Pages above `virtualizeAt` use the existing virtual list.
+- `readonly sourceTotal: number | null` — null without a source, while pending or after failure;
+  otherwise the exact global queue total, including settled zero. The compact child pager uses
+  one-based pages and unknown total `-1`, disables navigation pending/error, and contains its
+  events. A valid stale page corrects once and synchronizes `sourcePage`.
+
+Only the current bounded page is retained; source mode never normalizes the legacy inventory.
+Closed row/document display fields are frozen copies with at most 65,536 aggregate UTF-16 text
+units per row. Required malformed records reject the whole page, rather than silently dropping
+rows; source getters are not invoked and arbitrary nested fields are not traversed. Existing stage,
+fallback text and action semantics apply. Historical failures stay quiet on page changes, refresh
+and reconnect even with `announce`; loading/errors use localized source status announcements.
+
+Same-source assignment or keyless `requestUpdate()` refreshes source/revision. Named paints and
+string overrides reuse the current page; reconnect replays the current bounded request. Changes to
+source, revision, refresh intent or connection revoke obsolete work. Requests receive an abort
+signal and stale results cannot publish; the provider owns callback execution cost and cooperation
+with cancellation. Rapid changes retain bounded active work and latest intent, without page history
+or a complete queue cache.
+
+Only current settled source rows can emit the existing retry/cancel details below. Pending,
+replaced, removed or disconnected source controls cannot act on stale rows. Provider-load failure
+shows `source-status` with a `source-retry` button: it reloads only the current failed page, emits
+no row `lr-retry`, and obsolete load-retry controls are inert. `source-pagination` styles navigation.
+This route adds no public event, table or CSV export.
 
 **Events:**
 
@@ -86,7 +136,8 @@ per-item stage label), `item-progress`,
 `chunkCount` and `embeddedChunkCount` are set), `item-attempts` (only once `attempts > 0`),
 `item-error` (only for `stage="failed"` with `error` set), `failure-live` (the visually hidden,
 `aria-hidden` mirror of the last announced batch of fresh failures), `item-actions`,
-`retry-button`, `cancel-button`, `empty`.
+`retry-button`, `cancel-button`, `empty`, `limit` (the input-retention notice),
+`source-status`, `source-retry`, `source-pagination`.
 
 `failure-live` is a styling and inspection surface and carries no live-region role of its own. The
 announcement itself goes to the library's shared **light-DOM** assertive region, appended to the

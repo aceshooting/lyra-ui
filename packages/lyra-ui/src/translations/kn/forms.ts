@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'ಪೆನ್ ಕೆಳಗೆ',
   signaturePadPenUp: 'ಪೆನ್ ಮೇಲೆ',
+  localePickerInputLimit: 'ಮೊದಲ 512 ಭಾಷೆ ಮತ್ತು ಪ್ರದೇಶ ಸೆಟ್ಟಿಂಗ್‌ಗಳ ನಮೂದುಗಳು ಮಾತ್ರ ಲಭ್ಯವಿವೆ.',
+  emojiPickerInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಕೆಲವು ಇಮೋಜಿ ಡೇಟಾವನ್ನು ಬಿಡಲಾಗಿದೆ.',
 };
 
 registerLyraLocale('kn', strings);

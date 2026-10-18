@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} na utos',
     other: '{count} mga utos',
   },
+  commandPaletteInputLimit: 'May ilang command na hindi isinama dahil naabot ang limitasyon sa input.',
 };
 
 registerLyraLocale('tl', strings);

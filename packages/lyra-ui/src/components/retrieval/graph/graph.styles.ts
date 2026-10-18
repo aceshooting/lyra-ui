@@ -12,6 +12,52 @@ export const styles = css`
       var(--_lr-graph-requested-height, var(--lr-size-24rem))
     );
   }
+  .source-layout {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+  .source-diagram { flex: 1 1 50%; min-block-size: 0; }
+  [part="source-navigator"] {
+    flex: 0 1 50%;
+    min-block-size: 0;
+    min-inline-size: 0;
+    overflow: auto;
+    padding: var(--lr-space-s);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  .source-list [part="source-navigator"] { flex: 1 1 auto; }
+  .source-toolbar { display: flex; flex-wrap: wrap; gap: var(--lr-space-s); }
+  .source-toolbar input { flex: 1 1 auto; min-inline-size: 0; }
+  .source-rows { list-style: none; padding: 0; margin-block: var(--lr-space-s); }
+  .source-rows li { display: flex; flex-wrap: wrap; gap: var(--lr-space-xs); margin-block: var(--lr-space-xs); }
+  [part="source-navigator"] :where(button, input, select), [part="source-status"] button {
+    --_lr-source-fill: var(--lr-color-neutral-fill-quiet);
+    min-block-size: var(--lr-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    font: inherit;
+    color: var(--lr-color-text);
+    background: var(--_lr-source-fill);
+    transition: var(--lr-transition-interactive);
+    overflow-wrap: anywhere;
+  }
+  [part~="source-row"] { flex: 1 1 auto; text-align: start; }
+  [part~="source-row"]:where([aria-pressed="true"]) { --_lr-source-fill: var(--lr-color-brand-fill-quiet); }
+  [part="source-navigator"] button, [part="source-status"] button { cursor: pointer; }
+  [part="source-navigator"] :where(button, input, select):hover, [part="source-status"] button:hover {
+    background: color-mix(in oklab, var(--_lr-source-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part="source-navigator"] button:active, [part="source-status"] button:active {
+    background: color-mix(in oklab, var(--_lr-source-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part="source-navigator"] :where(button, input, select):focus-visible, [part="source-status"] button:focus-visible { ${focusRing} }
+  [part="source-status"], [part="source-coverage"] { overflow-wrap: anywhere; margin-block: var(--lr-space-s); }
   [part="base"] {
     position: relative;
     inline-size: 100%;

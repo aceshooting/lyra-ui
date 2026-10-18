@@ -9,20 +9,21 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
-- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-csv-viewer`
 
-Fetches CSV text, parses quoted fields with the optional `papaparse` peer, and virtualizes body rows.
+Fetches CSV text with the optional `papaparse` peer, or reads a host-owned `dataSource`, and
+virtualizes body rows.
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
 header row included unless `without-header-row` is set; `scrollToAnchor()` scrolls the addressed
 row/column into view via the virtualized list's `active-item-id`. `highlights` paint as a focusable
-`part="cell-highlight"`. A jump whose document is replaced by a concurrent `src` reassignment
-mid-flight reports `found: false` rather than a phantom success.
+`part="cell-highlight"`. A jump whose document is replaced by a concurrent `src`, `rows`, or
+`dataSource` reassignment mid-flight reports `found: false` rather than a phantom success.
 
 **Properties:** `src: string = ''` and `name: string = ''`. `withoutHeaderRow: boolean = false`
 (attribute `without-header-row`) renders the first parsed row as an ordinary data row instead of the
@@ -35,13 +36,92 @@ values, declaration breaks, and `url()` are ignored. `anchorKinds: readonly Lyra
 ['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
 contract).
 
-**Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
+Input properties and legacy limits:
+
+- `maxRows: number = 10000` (attribute `max-rows`) — raw rows, including the first row whether it
+  is displayed as a header or a body row; effective range 1–100,000.
+- `maxColumns: number = 1000` (attribute `max-columns`) — columns in any row;
+  effective range 1–10,000.
+- `maxBytes: number = 26214400` (attribute `max-bytes`) — source bytes, default 25 MiB;
+  effective range 1–262,144,000 bytes (250 MiB).
+- `rows: unknown[][] | undefined` (property only, default `undefined`) — an already parsed grid,
+  including its first row. `withoutHeaderRow` still controls whether that row is a header.
+
+- `dataSource: CsvViewerSource | undefined` (property only, default `undefined`) — a host-owned
+  logical source, described below; `CsvViewerSource = LyraTabularSource`.
+
+Limits truncate finite fractions and clamp to their effective ranges; non-finite inputs use the
+stated defaults. Set limits before assigning `rows`. In-memory input bypasses fetching and
+PapaParse, takes precedence over `src` even when empty, and setting it to `undefined` restores
+the configured URL source. Admission reads own data properties and rejects accessors in those
+fields without invoking them; cells may be strings, numbers, booleans, `null` or `undefined`.
+The outer grid and rows are frozen snapshots. Reassigning the accepted caller array or getter
+snapshot is a no-op while effective limits are unchanged; replace the outer array after caller
+mutation. Limit changes revalidate the current snapshot. Byte admission counts UTF-8 cell text,
+with nullish cells contributing empty text; the independent 1,000,000-cell ceiling includes the
+first row. Malformed or over-limit input displays a localized error and emits `lr-render-error`.
+
+**Host-owned source input:** A defined `dataSource` takes precedence over `rows` and `src`,
+bypassing file fetching and parsing. Invalid defined sources show a localized error and emit
+`lr-render-error`; they do not fall back to legacy input. Setting `dataSource = undefined` cancels
+source work and restores the current `rows` or URL input. Source pages never overwrite the
+legacy `rows` getter. The source remains host-owned by identity rather than being cloned. After
+changing its data or revision, reassign it (the same identity is accepted) or call the viewer's
+unnamed `requestUpdate()`. Source replacement, refresh and locale changes invalidate stale reads,
+search results and navigation. Unrelated presentation updates reuse source data.
+
+The source supplies `revision`, full logical body `rowCount`, `columnCount` and `columnAt(index)`
+returning `{ key, label }`, plus either synchronous scalar `cellAt(row, column)` or asynchronous
+`readCells(request)`. Requests carry revision, locale, an `AbortSignal`, and an absolute zero-based
+rectangle; return exactly its requested rows and columns. Accepted cells are strings, finite
+numbers, booleans, `null` or `undefined`, with nullish values displaying empty text.
+Logical body rows are not truncated by `maxRows` or materialized as a complete array. Each active
+source's `columnCount` must fit `maxColumns` (default 1,000, effective hard maximum 10,000); an
+oversized column count is an error. Reads remain bounded to at most 500 rows, 100 columns and
+10,000 cells per rectangle, with two retained rectangles. Each scalar's display text and each
+column key/label is limited to 65,536 UTF-16 units. Retained cell and column metadata text shares a
+2,000,000-unit ceiling.
+Malformed or oversized replies fail visibly instead of silently clipping source values.
+
+Only source mode uses fixed row boxes and matching virtual-list row geometry, both resolved live
+from `--lr-size-3rem` (3rem, or 48px at a 16px root font). Oversized cell display stays within that
+row box without changing the source scalar. Legacy file and in-memory rows keep their automatic
+heights. Column windows retain absolute `aria-colindex` values; anchors still use one-based display
+coordinates and can reveal unloaded rows and offscreen columns.
+Source column labels are separate metadata: hit `row: -1` is the header and body row `0` appears
+at display row 2 by default, or row 1 with `withoutHeaderRow`. Hidden header hits are omitted from
+search results and make the retained count nonexact. Changing `withoutHeaderRow` in source mode
+clears search results and pending navigation because displayed coordinates change; cached cells
+remain available.
+
+In source mode, `search(query)` delegates to the source's global search capability rather than
+scanning loaded rectangles or an admitted prefix. The viewer requests at most 1,000 hits and keeps
+`matchCount` equal to retained, cursor-addressable hits. A larger known provider total does not
+replace that count; `matchCountExact` is true only for exhaustive, fully retained results. Without
+that capability, a nonempty query returns 0 with `matchCountExact: false` and `part="search-status"`
+shows the localized `sourceSearchUnavailable` message. This adds no local search toolbar or event
+fields. `searchNext()`/`searchPrevious()` report whether the target was actually revealed;
+`clearSearch()` cancels pending search and dependent navigation.
+`LyraTabularHit` coordinates use zero-based body `row` (or -1 for labels) and zero-based `column`.
+
+`CsvViewerSource` is available from the component entry and package root. The component entry also
+re-exports `LyraSourceCell`, `LyraTabularColumn`, `LyraTabularHit`, `LyraTabularReadRequest`,
+`LyraSourceSearchRequest` and `LyraSourceSearchResult`. Shared contracts can be imported with
+`import type` from `@aceshooting/lyra-ui/data-sources.js`.
+
+Body rows and columns are windowed. Header and body share the visible column window, with
+`aria-colindex` preserving full-grid positions. Search and anchors reveal offscreen columns
+before navigating; admitted row/column counts and raw-grid anchor coordinates remain complete.
+
+**Methods:** With `dataSource` undefined, `search(query)` resolves the match count via a
+case-insensitive substring match over
 the same stringified cell values `cell()` renders, ordered row then column (empty/whitespace query
 behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
 `detail.diagnostic` (`code: 'delimited-parse-diagnostic'`, `source: 'papaparse'`,
 `severity: 'warning'`, `fatal: false`, `cause: errors`) while the partial grid remains rendered.
@@ -59,7 +139,7 @@ cell covered by a `highlights` entry), `cell-highlight-action` (the native butto
 highlighted cell; emits `lr-highlight-activate`; its complete accessible name uses the localized
 `cellHighlightWithLabel` message with independent `{value}` and `{label}` placeholders; this action,
 not the structural `cell-highlight`, owns keyboard focus and its focus ring), `rows`,
-`spinner`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
+`spinner`, `error`, `search-status` (global source-search unavailable notice), and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the latest
 anchor-jump message; the spoken copy is appended to the shared document-level polite sink only while
 the viewer and its composed ancestors are exposed to the accessibility tree). `data-row`,
 `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
@@ -85,10 +165,13 @@ that deferred too can instead import
 same registration lazily and exports `CSV_VIEWER_TAG` (`'lr-csv-viewer'`) as a stable reference to
 the tag it eventually registers.
 
-Remote resources are capped at 25 MB. A quote-aware scan stops before PapaParse at 10,000 raw rows
-(the first row consumes the same budget whether or not it is displayed as the header),
-1,000 columns in any row, 1,000,000 aggregate cells, or more than 100 parser diagnostics; streaming
-row callbacks enforce the same ceilings again. Exceeding any ceiling surfaces the localized
-`documentPreviewResourceTooLarge` message instead of a partial grid.
+Remote resources use `maxBytes`. By default, a quote-aware scan stops before PapaParse at 10,000
+raw rows and 1,000 columns in any row; `maxRows` and `maxColumns` configure those limits. The
+first row consumes the row budget whether displayed as the header or as a body row. The
+1,000,000 aggregate-cell ceiling and 100-parser-diagnostic budget remain independent. Streaming
+row callbacks enforce the same ceilings again. Exceeding a ceiling surfaces the localized
+`documentPreviewResourceTooLarge` message instead of a partial grid. The fetched-text path yields
+between dialect detection, structural admission and materialization; each parse pass remains
+synchronous.
 
 ---

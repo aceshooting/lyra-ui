@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'په بشپړ وېش کې {validCount} باوري نمونې؛ د ښودل شوو واټنونو له پولو ښکته {belowCount} او پورته {aboveCount}؛ {invalidCount} ناباوره نمونې.',
+  histogramDistributionRange: 'د لیدل شوې نمونې لړۍ: له {min} څخه تر {max} پورې.',
   chartCategory: 'ډول',
   chartTotal: 'ټولټال',
   chartAxisTotal: 'د {axis} ټولټال',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, شعاع {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'مخ پر زیاتېدونکی',
-  chartTrendDecreasing: 'مخ پر کمېدونکی',
-  chartTrendFlat: 'هوار',
-  chartSummary: '{label}: {count} ارزښتونه، لړۍ له {min} تر {max}، {trend} بهیر',
   chartSeriesNoData: '{label}: معلومات نشته',
   chartSummaryWithData: '{type} چارټ. {summaries}.',
   chartSummaryEmpty: 'د {type} چارټ معلومات نه لري.',
-  chartSummarySeparator: '. ',
   chartData: 'د چارټ معلومات',
   chartRenderUnavailable: 'د چارټ ښودل شتون نه لري.',
+  chartPreparedSummaryZoom: 'لویول چمتو شوی لنډیز ښيي؛ د شاخص له لارې نور تفصیل شتون نه لري.',
+  chartSpatialSummary: 'بشپړه سرچینه: {count} ټکي، x له {minX} تر {maxX}، y له {minY} تر {maxY}. لید: {matchedCount} ټکي، x له {viewMinX} تر {viewMaxX}، y له {viewMinY} تر {viewMaxY}.',
+  chartSpatialRadiusDomain: 'د بشپړې سرچینې شعاع: له {min} تر {max}.',
+  chartSpatialDensityLegend: 'کثافت ټولې لړۍ رانغاړي؛ د لړۍ ښکاره کېدل یوازې د ټکو پوښښونه اغېزمنوي.',
+  chartSpatialPoint: '{series}: {id}، په سرچینه کې ځای {sourceIndex}، {coordinates}{hidden}',
+  chartSpatialBin: 'د کثافت سیمه: {count} ټکي، x له {minX} تر {maxX}، y له {minY} تر {maxY}.',
+  chartSpatialHidden: ' (لړۍ پټه ده)',
   chartDataSampled: 'چارټ او جوړ شوی د معلوماتو جدول د تر ۱۰۰۰ ریکارډونو بېلګه ښيي. د چارټ ټولو معلوماتو ته د لاسرسي لپاره خپل د معلوماتو جدول ورکړئ.',
   chartPlotSampled: 'چارټ د تر ۱۰۰۰ ریکارډونو بېلګه ښيي؛ د معلوماتو جدول ټول معلومات لېست کوي.',
   chartZoomUnavailable: 'لویول شوني نه دي، خو اصلي چارټ لا هم کار کوي.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} (له {total} څخه {index})',
   chartMissingLibrary: 'د چارټونو د ښودلو لپاره په دې برخه کې د "chart.js" اختیاري بسته نصب کړئ.',
   boxPlotMissingLibrary: 'د بکس چارټ د ښودلو لپاره د بکس چارټ اختیاري بسته نصب کړئ.',
+  chartInputLimit: 'د ننوتو حد ته د رسېدو له امله د چارټ ځینې معلومات پرېښودل شوي دي. د پرېښودل شوو ارزښتونو د ښودلو لپاره یو کوچنی یا له مخکې لنډیز شوی معلوماتي ټولګی ورکړئ.',
+  histogramInputLimit: 'یوازې تر ټولو نوي 10,000 نمونې ساتل کېږي. د لوی وېش د ښودلو لپاره lr-chart ته له مخکې په واټنونو کې ډلبندي شوي شمېرونه ورکړئ.',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

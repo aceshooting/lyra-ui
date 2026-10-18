@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Зображення {index} із {total}',
   playWithContext: 'Відтворити {name}',
   pauseWithContext: 'Призупинити {name}',
+  avPlayerWaveformUnavailable: 'Дані форми хвилі недоступні або не відповідають цьому медіафайлу.',
+  avPlayerTranscriptUnavailable: 'Дані текстової розшифровки недоступні.',
   dropzoneReleaseToAdd: 'Відпустіть, щоб додати файл.',
   dropzoneRejectedType: 'Цей тип файлу не підтримується.',
   attachmentAdd: 'Додати вкладення',

@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: '처음 {count}개의 테스트 결과만 표시됩니다.',
   toolTimelineLimit: '최대 {count}개의 도구 호출만 표시됩니다.',
   toolSelectLimit: '처음 {count}개의 도구만 표시됩니다.',
+  testResultsInputTooLarge: '테스트 결과 세부 정보가 표시 한도를 초과합니다.',
   toolCall: '도구 호출',
   maximize: '최대화',
   promptStudioVariableName: '변수 {index} 이름',
@@ -292,6 +293,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: '처음 {count} 파일만 표시됩니다.',
   taskListLimit: '처음 {count}개의 작업만 표시됩니다.',
   evalDatasetLimit: '처음 {count}개의 예제만 표시됩니다.',
+  activityFeedInputLimit: '총 {total}개 항목 중 최신 {count}개만 유지됩니다.',
+  spanWaterfallLimit: '전체 {total}개 스팬 중 {shown}개를 표시합니다.',
+  toolTimelineInputLimit: '전체 {total}개 도구 호출 중 최신 {count}개만 유지됩니다.',
 };
 
 registerLyraLocale('ko', strings);

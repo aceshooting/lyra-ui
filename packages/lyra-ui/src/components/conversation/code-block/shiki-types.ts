@@ -1,3 +1,6 @@
+/** Maximum UTF-16 source code units admitted to synchronous syntax tokenization. */
+export const SHIKI_SOURCE_MAX_CODE_UNITS = 8192;
+
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { unwrapOptionalPeerDefault } from '../../../internal/optional-peer-capabilities.js';
 

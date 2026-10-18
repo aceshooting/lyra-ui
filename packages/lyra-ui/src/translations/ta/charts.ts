@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'முழுப் பரவலில் {validCount} செல்லுபடியான மாதிரிகள்; காட்டப்படும் இடைவெளிகளின் வரம்புகளுக்குக் கீழே {belowCount}, மேலே {aboveCount}; {invalidCount} செல்லாத மாதிரிகள்.',
+  histogramDistributionRange: 'காணப்பட்ட மாதிரி வரம்பு: {min} முதல் {max} வரை.',
   chartCategory: 'வகை',
   chartTotal: 'மொத்தம்',
   chartAxisTotal: '{axis} மொத்தம்',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ஆரம் {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'அதிகரிக்கிறது',
-  chartTrendDecreasing: 'குறைகிறது',
-  chartTrendFlat: 'மாறவில்லை',
-  chartSummary: '{label}: {count} மதிப்புகள், வரம்பு {min} முதல் {max} வரை, {trend} போக்கு',
   chartSeriesNoData: '{label}: தரவு இல்லை',
   chartSummaryWithData: '{type} விளக்கப்படம். {summaries}.',
   chartSummaryEmpty: 'தரவு இல்லாத {type} விளக்கப்படம்.',
-  chartSummarySeparator: '. ',
   chartData: 'விளக்கப்படத் தரவு',
   chartRenderUnavailable: 'விளக்கப்படக் காட்சி கிடைக்கவில்லை.',
+  chartPreparedSummaryZoom: 'பெரிதாக்கம் தயாரிக்கப்பட்ட சுருக்கத்தைக் காட்டுகிறது; குறியீட்டின் மூலம் கூடுதல் விவரம் கிடைக்கவில்லை.',
+  chartSpatialSummary: 'முழு மூலம்: {count} புள்ளிகள், x {minX} முதல் {maxX} வரை, y {minY} முதல் {maxY} வரை. காட்சி: {matchedCount} புள்ளிகள், x {viewMinX} முதல் {viewMaxX} வரை, y {viewMinY} முதல் {viewMaxY} வரை.',
+  chartSpatialRadiusDomain: 'முழு மூலத்தின் ஆரம்: {min} முதல் {max} வரை.',
+  chartSpatialDensityLegend: 'அடர்த்தி அனைத்துத் தொடர்களையும் உள்ளடக்கும்; தொடர்களின் காட்சிநிலை புள்ளி மேலடுக்குகளை மட்டுமே பாதிக்கும்.',
+  chartSpatialPoint: '{series}: {id}, மூலத்தில் இடம் {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'அடர்த்திப் பகுதி: {count} புள்ளிகள், x {minX} முதல் {maxX} வரை, y {minY} முதல் {maxY} வரை.',
+  chartSpatialHidden: ' (தொடர் மறைக்கப்பட்டுள்ளது)',
   chartDataSampled: 'விளக்கப்படமும் உருவாக்கப்பட்ட தரவு அட்டவணையும் அதிகபட்சம் 1,000 பதிவுகளின் மாதிரியைக் காட்டுகின்றன. விளக்கப்படத்தின் முழுத் தரவை அணுக தனிப்பயன் தரவு அட்டவணையை வழங்கவும்.',
   chartPlotSampled: 'விளக்கப்படம் அதிகபட்சம் 1,000 பதிவுகளின் மாதிரியைக் காட்டுகிறது; தரவு அட்டவணையில் எல்லாத் தரவும் உள்ளது.',
   chartZoomUnavailable: 'பெரிதாக்கம் கிடைக்கவில்லை; அடிப்படை விளக்கப்படம் தொடர்ந்து கிடைக்கும்.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total}-இல் {index})',
   chartMissingLibrary: 'விளக்கப்படங்களைக் காட்ட இந்தக் கூறுக்கு விருப்பமான "chart.js" தொகுப்பை நிறுவ வேண்டும்.',
   boxPlotMissingLibrary: 'பெட்டி-கோடு விளக்கப்படங்களைக் காட்ட இந்தக் கூறுக்கு விருப்பமான box-plot chart தொகுப்பை நிறுவ வேண்டும்.',
+  chartInputLimit: 'உள்ளீட்டு வரம்பை எட்டியதால் சில விளக்கப்படத் தரவுகள் விடுபட்டுள்ளன. விடுபட்ட மதிப்புகளைக் குறிப்பிட சிறிய அல்லது முன்கூட்டியே தொகுக்கப்பட்ட தரவுத்தொகுப்பை வழங்கவும்.',
+  histogramInputLimit: 'மிகப் புதிய 10,000 மாதிரிகள் மட்டுமே தக்கவைக்கப்படுகின்றன. பெரிய பரவலைக் குறிப்பிட, முன்கூட்டியே இடைவெளிக் குழுக்களாகப் பிரிக்கப்பட்ட எண்ணிக்கைகளை lr-chart-க்கு வழங்கவும்.',
 };
 
 registerLyraLocale('ta', strings);

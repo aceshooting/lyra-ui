@@ -1593,11 +1593,69 @@ an item and reassign the same source array to publish that change. Unrelated pro
 reuse the current projection where possible.
 
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
-axis, one row per span in start order, status-toned bars (Langfuse timeline / Temporal
+axis, one row per legacy span in start order, status-toned bars (Langfuse timeline / Temporal
 event-history style).
 
-Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
+
+**Complete provider timeline:** `treeSource: TraceTreeSource | undefined = undefined`
+(attribute: false) takes precedence over `spans`; invalid defined providers show a localized failure.
+Setting `undefined` restores current legacy spans. The exact alias is shared with `lr-trace-tree`:
+`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`.
+
+```ts
+import type { TraceTreeSource, LyraSpan } from
+  "@aceshooting/lyra-ui/components/agent-tools/span-waterfall/span-waterfall.class.js";
+import type { LyraTraceSourceSummary } from "@aceshooting/lyra-ui/data-sources.js";
+```
+
+The immutable provider revision is a nonempty string or finite number. Its `project` receives
+revision/locale/abort signal, prior opaque state, provider reset/toggle/reveal/item-select actions,
+and `{ search: '', hiddenKinds: [] }`. Return `{ state, total, rows, summary, focusIndex? }` as in
+the trace-tree contract. `total` counts all logical nodes including collapsed ones; `rows.count`
+is the complete visible preorder. Counts are safe nonnegative integers with `rows.count <= total`.
+Rows use indexed `itemAt`/`keyAt`/`indexOfKey`, or ranged `read` with required direct `indexOfKey`.
+Provider preorder is displayed as supplied, without local start-time sorting or a full topology
+scan. Each row's `key === value.id`, parent/depth/sibling/child metadata, expanded, selected and
+disabled states are authoritative; span `parentId` does not rebuild source topology.
+
+Required `summary: LyraTraceSourceSummary { startMs, endMs }` describes the complete trace,
+independently of the loaded window. Endpoints are finite nonnegative trace-relative milliseconds,
+end is at least start and their difference is finite. Missing/invalid summaries fail visibly;
+current rows and stale legacy extents never substitute. Equal global endpoints remain valid.
+Default axis/bar extent uses that global start/end, so an offscreen tail does not stretch visible
+bars. `viewStartMs`/`viewEndMs` override the display window without reloading the provider: null
+uses the corresponding global endpoint, nonfinite input falls back, finite explicit start/end
+clamp to `0..Number.MAX_SAFE_INTEGER - 1` / `0..Number.MAX_SAFE_INTEGER`, and an end at/before start
+uses `start + 1` for drawing. Source summary values remain unchanged by display overrides.
+
+Closed source display records retain id/name/kind/status/start/end; start is finite/nonnegative
+and an explicit end finite and at least start. Existing kind/status normalization applies.
+Oversized strings/rows fail without clipping: keys/state/display strings are at most 65,536 UTF-16
+units each, row text including key/parent accounting at most 65,536, and cache/staging/focused-row
+plus projection state share 2,000,000 payload units. Four 100-row pages (400 rows) plus one focused
+ready row are retained; at most 301 rows mount. Range reads request at most 100 rows with two
+physical reads pending; projection calls serialize with only the latest intent queued. Global
+uniqueness, immutable consistency and full trace summary truth remain provider obligations.
+
+`revealSourceKey(key: string): Promise<boolean>` directly resolves a full-source key, opens its
+ancestors and focuses its row. It returns false for missing, disabled, invalid, failed, revoked or
+unset-source targets. Home/End reaches full visible-preorder endpoints; branch navigation is
+RTL-aware and disabled-row traversal is bounded to 32 candidates. Controlled `activeSpanId` paints
+current state and reveals once per binding/ID without changing on activation. Accepted item
+activation emits only existing `lr-span-select { spanId }`. Expansion uses provider actions;
+there is no new public toggle event. `source-row` owns the single treeitem/focus/activation target,
+while its duration bar is decorative, unlike the legacy interactive bar below.
+
+Reassign even the same provider, or call a keyless `requestUpdate()`, after revision/state changes.
+Named display/selection/view-window paints reuse accepted data. Locale/lifecycle/source changes
+revoke obsolete requests, controls, reveal effects and announcements; ignored aborts keep physical
+permits until settlement. Localized loading/error/empty/retry and source counts do not turn newly
+loaded historical spans into status-change announcements. Source-only parts are `source-list`,
+`source-row`, `source-label`, `source-toggle`, `source-status` and `source-error`; existing axis,
+name/bar/meta/status/duration parts remain applicable. The following array admission/sorting and
+interactive-bar descriptions apply with `treeSource` unset.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — `LyraSpan { id: string; parentId?:
 string; name: string; kind: 'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other';
@@ -1609,12 +1667,19 @@ by the host (e.g. `"$0.0012"`) and rendered verbatim, never parsed or summed. On
 both this component (timeline projection via `startMs`/`endMs`) and `lr-trace-tree` (hierarchy
 projection via `parentId`) — never two shapes. Foreign runtime `kind` values render as `'other'`;
 explicitly unrecognized `status` values render the localized neutral `'unknown'` state, while an
-absent status renders `'pending'`. Raw provider status text is never shown. At most 500 unique valid
+absent status renders `'pending'`. Raw provider status text is never shown. Assignment retains the
+first 10,000 source entries in a bounded readonly outer snapshot; admitted row identities feed a
+descriptor-safe copy of the closed span display schema, so opaque provider fields do not consume
+the shared deep-copy budget. Reassign the collection after record changes. At most 500 unique valid
 spans mount; when `activeSpanId` resolves beyond
 the ordinary input-order budget, that span and its ancestor path reserve positions so the
-controlled active state remains visible. A localized `[part="limit"]` note exposes truncation. The
-time axis always scales to the whole trace, measured before that 500-span cap is applied, so a
-truncated tail can never shrink the axis and stretch the surviving bars across the track.
+controlled active state remains visible. A localized `[part="limit"]` note reports the actual
+number shown and the assigned source count when either ceiling omits entries. Counts use the
+effective locale; initial truncation stays silent and a later transition into truncation is
+announced politely. The time axis scales to the full admitted trace, measured before the 500-span
+cap is applied, so spans omitted only by that render cap cannot shrink the axis and stretch the
+surviving bars across the track. Active changes within the ordinary window reuse the existing
+projection and sort; reserving an outside active path can change the projection.
 `activeSpanId: string | null = null`
 (attribute `active-span-id`), `viewStartMs: number | null = null` (attribute `view-start-ms`) and
 `viewEndMs: number | null = null` (attribute `view-end-ms`) — override the auto-computed time
@@ -1635,7 +1700,7 @@ Space).
 **CSS parts:** `base`, `axis` (the time-ruler row, hidden when `without-axis` is set), `tick`, `tick-label`,
 `row`, `name` (the row's name gutter), `bar-track`, `bar` (the interactive, focusable status-toned
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
-when `spans` is empty), `limit` (the 500-span projection notice), and `live-region`.
+when `spans` is empty), `limit` (the actual shown/source count for projection or input truncation).
 The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
 paint width would otherwise be only a few pixels.
 
@@ -1673,11 +1738,87 @@ property below works the same way.
 A live, collapsible tracker for an agent's plan: ordered steps with per-step lifecycle status and one
 level of nested sub-steps, embedded in the transcript. `items` is controlled and never mutated by this
 component. Unlike `<lr-stepper>`'s single-`current` navigation, task-list has no selection and
-several steps may be `running` at once. By default it is a status report; `reorderable` adds
-controlled keyboard reorder requests without changing ownership of `items`. Status changes and
-confirmed moves are announced through an internal `<lr-live-region>`.
-The list renders at most 500 tasks across top-level rows and direct children; `[part="limit"]`
-explains when more were supplied. The summary still counts every top-level task.
+several steps may be `running` at once. By default it is a status report; with `treeSource` unset,
+`reorderable` adds controlled keyboard reorder requests without changing ownership of `items`.
+Legacy status changes and confirmed moves are announced through an internal `<lr-live-region>`.
+
+**Complete source tasks:** `treeSource: TaskListSource | undefined = undefined`
+(attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
+falling back to the array. Only `undefined` restores current legacy items.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-task-list.js";
+import type { TaskListSource, TaskItem, TaskStatus } from
+  "@aceshooting/lyra-ui/components/agent-tools/task-list/task-list.class.js";
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraTaskSourceSummary } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`TaskListSource = LyraHierarchySource<TaskItem, LyraHierarchyQuery, LyraTaskSourceSummary>`.
+The exact shared hierarchy/request/row protocols and
+`LyraTaskSourceSummary` declaration are in [shared source contracts](shared/events-and-types.md).
+The required summary has readonly `total` and `completed` safe nonnegative integers with
+`completed <= total <= projection.total`. Its counts describe all top-level tasks, independently
+of the current visible preorder and mounted rows. `projection.total` counts all logical tasks,
+including collapsed children; `projection.rows.count` counts the complete currently visible
+preorder and cannot exceed that total. The header uses the provider's summary, never counts
+from a loaded window; unavailable summaries do not paint a fabricated 0-of-0 header.
+
+The provider implements `project({ revision, locale, signal, query, state, action })`; query stays
+`{ search: '', hiddenKinds: [] }`. Revision is a nonempty string or finite number. Each immutable
+projection supplies a nonempty `state` token of at most 65,536 UTF-16 units,
+`total`, `rows`, required `summary` and optional `focusIndex`. Rows use either indexed
+`count`/`itemAt`/`keyAt`/`indexOfKey`, or ranged `count`/`read`/`indexOfKey`; ranged reads return
+exactly the requested in-bounds range. Keys resolve directly without a full-source scan.
+Provider preorder, parent keys, one-based `level`/`position`/`setSize`, `childCount`, `expanded`,
+`selected`, optional `disabled` and `selectionState` own topology and semantic metadata.
+Task rows must be level 1 with null parent, or level 2 with a nonempty parent and no children;
+deeper source rows fail visibly. The component never traverses `value.children` or opaque task
+metadata, and `row.key` must equal the nonblank `value.id`.
+
+Source values copy only own data fields `id`, `label`, `status` and optional `detail`.
+Accessor-backed fields reject; nonstring label/detail normalize to empty text and unknown status
+to `'pending'`. A normalized row's key, parent key, id, label and detail share a 65,536 UTF-16-unit
+budget. Retained rows, focused reserve and pending admission share a 2,000,000-unit payload
+ceiling. Four 100-row pages retain at most 400 rows plus one focused row; at most 301 rows mount,
+with at most two physical range reads. Projection work permits one physical call and only the
+latest queued intent; ignored aborts keep their physical permits until settlement. Provider
+storage and indexing remain caller-owned.
+
+The virtualized tree navigates the complete visible preorder, with global Home/End, Up/Down,
+RTL-aware expansion/parent keys and disabled-row handling. `revealSourceKey(key: string):
+Promise<boolean>` requests a provider reveal and focuses its returned `focusIndex`; it resolves
+false when no source is set, the key is invalid/absent/disabled, focus cannot be transferred, or
+the operation is obsolete. Reveal, refresh and row focus emit no task action or selection event.
+Row activation does not request provider selection. Provider expansion controls remain available,
+but emit no new task toggle event; the existing `lr-toggle-request`/`lr-toggle` pair controls only
+the outer panel. `reorderable` and `maxNodes` govern legacy items; source mode disables reorder,
+clears pending moves and never replays historical per-item status changes as fresh announcements.
+
+`heading`, `headingLevel`, `frame`, `size` and panel collapse remain local presentation. The
+header's existing cancelable toggle proposal/veto behavior remains; a superseded proposal cannot
+change a replacement view. Source rows retain status icons, text/detail and `detail-<id>` slots.
+Their native treeitem accessible names derive from the rendered status, label, detail and rich
+slot content, each once; the focus owner is `source-row`, rather than a legacy reorder row.
+Source parts are `source-list`, `source-row`, `source-label`, `source-toggle`, `source-status` and
+`source-error`. Localized loading, complete visible/logical counts, empty, projection failure and
+per-row retry states stay distinct. Initial status is quiet; later current source status/failure
+changes use light-DOM announcements without historical task-status replay.
+
+Reassign even the same source or call a keyless `requestUpdate()` after revision/state changes.
+Named presentation paints reuse accepted data unless revision or effective locale changes.
+Source/revision replacement, reveal/expansion supersession, disconnect and adoption revoke old
+rows, callbacks and effects; reconnect requests the current source. Retained controls cannot act
+on a replacement row that reuses the same key. Provider results and displayed records must remain
+immutable for their captured revision.
+
+**Legacy array admission:** with `treeSource` unset, the list renders at most `maxNodes` tasks
+(default 500) across top-level rows and direct children;
+`[part="limit"]` explains when source admission or rendering omits tasks. The summary counts every
+valid admitted top-level task. Initial limit notices are silent; a later transition into truncation is announced politely.
+Assignment examines the first 10,000 outer entries; direct-child arrays share a separate 10,000-position
+budget. Display fields are copied without invoking accessors or traversing opaque metadata. Reassign
+a new array after changing task data; unrelated updates and reconnects retain the assigned snapshot.
 
 **Properties:** `items: readonly TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
 status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
@@ -1689,6 +1830,8 @@ line; `children` is exactly **one** level of sub-steps — a child's own `childr
 rendering, summaries, announcements, and reorder validation. While `reorderable`, every retained
 top-level task and direct child must additionally have a globally unique `id`; duplicate data stays
 visible but fails closed, with no row keyboard stops or reorder requests.
+`maxNodes: number = 500` (attribute `max-nodes`) sets the rendered parent-plus-child budget,
+normalized to `1..5000`; unset or non-finite values restore 500.
 `reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
 It emits a request only; the host must assign a new reordered `items` array before the task visibly
 moves or an announcement is made. `heading?: string` — the visible section title; omission
@@ -1716,7 +1859,8 @@ that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
 **Events:** cancelable `lr-toggle-request` (`detail: { expanded }`, the requested state), `lr-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
 expanded }`. `lr-reorder` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused task within its
 own sibling list. `detail: { taskId, parentTaskId, fromIndex, toIndex }`; `parentTaskId` is `null`
-for a top-level task and indices are sibling-scoped. It fires only while `reorderable` with unique,
+for a top-level task and indices are sibling-scoped. It fires only with `treeSource` unset while
+`reorderable` with unique,
 nonempty ids.
 A boundary key is a silent no-op, so it never reparents a child; the component announces success only
 after the host's rendered array confirms the exact requested swap.
@@ -1727,9 +1871,9 @@ after the host's rendered array confirms the exact requested swap.
 otherwise, within the configured semantic heading), `label` (the `heading` text),
 `summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
 indicator, not rendered while `without-collapse`), `body` (the list of items, `hidden` while collapsed),
-`item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
+`item` (legacy `role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
 valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, `limit` (shown when the task
-render cap is exceeded), and `item-children` (the
+source or render cap is exceeded), and `item-children` (the
 nested `role="list"` wrapper around a top-level item's children).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
@@ -1763,6 +1907,14 @@ cursor-addressed full-screen apps. An ANSI sequence split across chunks retains 
 characters; an overlong unterminated CSI/OSC sequence is dropped and the next write resumes from a
 clean parser boundary. Carriage return and erase-in-line (`CSI K`, `0K`, `1K`, `2K`) support
 in-place progress updates; other cursor-addressing sequences remain unsupported.
+
+The buffer retains at most 2,000,000 UTF-16 text units and 10,000 lines, subject to
+`max-scrollback`. Each `write()` or content commit accepts at most 1,000,000 UTF-16 units; each
+line accepts at most 20,000 scalar columns. When a commit loses data, `lr-overflow` carries
+`LyraTerminalOverflowDetail { truncated: true; inputCharactersDropped: number;
+lineCharactersDropped: number; linesDropped: number }`. Character counts use UTF-16 units;
+`linesDropped` includes scrollback and resource-limit pruning. `write()` remains `void`. Supply
+bounded chunks and consume this event when complete capture matters.
 
 Direction: every line is left-to-right. With `without-wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. By default (lines soft-wrap), the scrollport follows the page direction.
 
@@ -1812,6 +1964,7 @@ plain text of the whole buffer.
 default the component creates a plain-text `Blob`/object URL and activates a synthetic
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
+`lr-overflow` (`detail: LyraTerminalOverflowDetail`, a write or content commit lost data),
 `lr-follow-change` (`detail: { following }`), `lr-search-change` (`detail: { query, matchCount,
 matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
@@ -1923,15 +2076,92 @@ A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tre
 name, status, an inline duration bar on the shared trace time scale, and optional tokens/cost
 columns. Consumes the same `LyraSpan[]` as `<lr-span-waterfall>`.
 
-Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
+
+**Complete provider hierarchy:** `treeSource: TraceTreeSource | undefined = undefined`
+(attribute: false) takes display precedence over `spans`, including when a defined provider is
+invalid. Invalid input shows a localized source failure; setting `undefined` restores current
+legacy spans. `maxNodes` limits only the legacy span projection, not complete provider counts.
+
+```ts
+import type { TraceTreeSource } from
+  "@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.class.js";
+import type { LyraSpan } from
+  "@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js";
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`TraceTreeSource` is exactly
+`LyraHierarchySource<LyraSpan, LyraHierarchyQuery, LyraTraceSourceSummary>`. Its immutable `revision`
+is a nonempty string or finite number. `project(request)` receives revision, locale, abort signal,
+previous opaque `state` (initially `null`), an action (`reset`, `toggle`, `reveal` or item `select`),
+and `{ search: '', hiddenKinds }`. The provider applies kind filtering to the complete hierarchy;
+the component has no source search or copy controls. Return
+`{ state, total, rows, summary: { startMs, endMs }, focusIndex? }`: `total` counts every logical
+node including collapsed nodes, and `rows.count` is the complete currently visible preorder.
+Counts are safe nonnegative integers with `rows.count <= total`; `state` is a nonempty immutable
+snapshot token of at most 65,536 UTF-16 units.
+
+The required `LyraTraceSourceSummary` describes the entire trace's timing extent, independent of
+loaded rows, collapsed branches and kind filters. Both endpoints are finite nonnegative
+trace-relative milliseconds, `endMs >= startMs`, with finite difference. Equal endpoints remain
+valid and reported unchanged. Missing/invalid summaries fail visibly; the component never derives
+the global extent from the current window or legacy spans. Bars subtract the global start before
+scaling; running spans retain a visible minimum width without rewriting the supplied extent.
+
+`rows` is an immutable `LyraHierarchyView<LyraHierarchyRow<LyraSpan>>`, either indexed
+`itemAt`/`keyAt`/`indexOfKey` or asynchronous `read` plus required `indexOfKey`. Each row has globally
+unique nonblank `key === value.id`, `parentKey`, one-based `level`/`position`, exact sibling
+`setSize`, `childCount`, `expanded`, `selected`, and optional `disabled`/`selectionState`. These
+fields own topology, expansion and provider selection; span `parentId` and nested children never
+rebuild a local hierarchy. Global uniqueness and immutable consistency remain provider obligations
+beyond the bounded admitted window.
+
+Only closed span display fields are copied: `id`, `name`, `detail`, `costText`, normalized
+`kind`/`status`, `startMs`, optional `endMs` and valid `tokensIn`/`tokensOut`. Nonblank IDs preserve
+surrounding whitespace. Source start must be finite/nonnegative; an explicit end must be finite
+and at least start. Unknown kinds become `other`, absent statuses `pending`, explicit unknown
+statuses `unknown`; invalid token metrics are omitted. Oversized display strings/rows fail without
+clipping. Keys/state/display strings are each at most 65,536 UTF-16 units; aggregate normalized
+row text including key/parent accounting is bounded to 65,536 units. Admitted cache/staging,
+focused-row and projection-state payloads share 2,000,000 units. Opaque metadata is not traversed.
+
+Four 100-row pages are retained (400 rows), plus at most one focused ready row. At most 301 rows
+mount, including the focused row; range reads request at most 100 rows with two physically pending
+reads. One projection call runs at a time with only the latest replacement queued. Ignored aborts
+retain physical permits until settlement. No complete source array, ancestor index or count-sized
+key map is built. Flat rows expose exact logical ARIA depth/sibling positions while visual
+indentation remains bounded; source rows own one treeitem/focus target each.
+
+`revealSourceKey(key: string): Promise<boolean>` directly resolves a global provider key, opens its
+ancestors and focuses the returned row. Absent, disabled, invalid, failed, canceled, obsolete and
+unset-source targets resolve `false`; there is no source-wide scan fallback. Source Home/End uses
+the full visible preorder, parent/reveal navigation uses direct lookup and branch arrows are
+RTL-aware. Disabled-row traversal examines at most 32 candidates. `activeSpanId` remains
+caller-controlled: source activation emits `lr-span-select { spanId }` only after the accepted
+item-selection action, without changing it. The active ID paints `aria-current` and reveals once
+per binding/ID; unrelated paints do not repeatedly undo user navigation. Accepted expansion emits
+exactly `lr-span-toggle { spanId, expanded }`. No additional source-selection event is introduced.
+`expandAll()`/`collapseAll()` are no-ops in source mode.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Changing `hiddenKinds` refreshes the provider query; named selection/presentation paints reuse
+accepted data. Locale/lifecycle refresh and source replacement revoke obsolete controls, requests,
+announcements and reveal effects. Loading/error/empty/retry are localized; window movement does
+not announce historical loaded span statuses as fresh changes. Source-only parts are `source-list`,
+`source-row`, `source-label`, `source-toggle`, `source-status` and `source-error`; existing span
+icon/name/detail/status/duration/token/cost/bar parts remain on their content. The following array
+admission and local hierarchy rules apply with `treeSource` unset.
 
 **Properties:** `spans: LyraSpan[] = []` (attribute: false) — the same `LyraSpan` shape documented
 under `lr-span-waterfall` above (exported from `trace-tree/span.ts`); hierarchy comes from
 `parentId`, and a span whose `parentId` is missing or doesn't resolve within the same array renders
 as a root rather than being dropped. Duration bars scale to the whole trace, measured before the
-shared 500-span cap is applied, so a truncated tail never stretches the surviving bars across their
-tracks. `activeSpanId: string | null = null`
+configured span cap is applied, so a truncated tail never stretches the surviving bars across their
+tracks. `maxNodes: number = 500` (attribute `max-nodes`) sets that cap, normalized to `1..5000`;
+unset or non-finite values restore 500. `activeSpanId: string | null = null`
 (attribute `active-span-id`), `label?: string`, `withTokens: boolean = false` (attribute
 `with-tokens`, reflected) — surfaces `tokensIn`/`tokensOut`, `withCost: boolean = false` (attribute
 `with-cost`, reflected) — surfaces `costText`, and `withoutBars: boolean = false` (attribute
@@ -1942,24 +2172,28 @@ Token counts render only when finite and non-negative; invalid metrics are omitt
 reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
 as its name/status/metrics, and updates when the supplied span data changes. Every trace view uses
 the same bounded runtime projection: provider records are normalized with deterministic first-wins
-identity, then at most 500 mount. The controlled `activeSpanId` and its resolvable ancestor path
-reserve positions before ordinary input-order spans. Non-object records, empty/blank ids, non-finite
+identity, then at most `maxNodes` mount. The controlled `activeSpanId` and its nearest resolvable
+ancestors reserve positions inside that budget before ordinary input-order spans. Non-object records, empty/blank ids, non-finite
 starts/ends, and later duplicate ids are omitted; negative starts clamp to zero, ends clamp to at
 least their start, unknown kinds become `other`, and explicit unknown statuses become `unknown`;
 an absent status defaults to `pending`. A localized
-`[part="limit"]` note exposes truncation.
+`[part="limit"]` note exposes source or projection truncation. The first 10,000 outer input entries
+are admitted by identity; canonical display fields are copied without traversing opaque provider
+metadata. The active span cannot reserve an entry excluded by source admission. Initial limit
+notices are silent; a later transition into truncation is announced politely.
 
-**Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.
+**Methods:** with `treeSource` unset, `expandAll()` and `collapseAll()` set every row's expanded
+state at once; `revealSourceKey(key)` is the provider navigation method described above.
 
 **Events:** `lr-span-select` (`detail: { spanId: string }`, a row was activated) and `lr-span-toggle`
 (`detail: { spanId: string; expanded: boolean }`, a row was expanded or collapsed).
 
-**Hidden kinds and focus:** `hiddenKinds: readonly LyraSpan['kind'][] = []` (attribute: false) leaves those kinds out of the tree; a span whose parent is hidden becomes a root, and the duration bars and the 500-row limit notice keep following the whole trace (`lr-agent-trace` forwards its own `hiddenKinds` here). `spans` is kept by item identity, so a large trace with opaque provider metadata is never cut by a field budget. The browsed row stays the tab stop across `spans`/collapse changes, and the active row scrolls into view only when `active-span-id` changes.
+**Hidden kinds and focus with `treeSource` unset:** `hiddenKinds: readonly LyraSpan['kind'][] = []` (attribute: false) leaves those kinds out of the tree; a span whose parent is hidden becomes a root, and the duration bars and configured limit notice keep following the whole admitted trace (`lr-agent-trace` forwards its own `hiddenKinds` here). Opaque provider metadata does not consume a deep-field budget. The browsed row stays the tab stop across `spans`/collapse changes, and the active row scrolls into view only when `active-span-id` changes.
 
 **CSS parts:** `base` (`role="tree"`), `header` (the column-header row, only when
 `with-tokens`/`with-cost`), `row` (`role="treeitem"`), `toggle`, `icon`, `name`, `detail`, `status-text`,
 `duration`, `tokens-in`, `tokens-out` (when `with-tokens`), `cost` (when `with-cost`), `bar-track`,
-`bar`, `empty` (shown when `spans` is empty), `limit` (the 500-span projection notice), and
+`bar`, `empty` (shown when `spans` is empty), `limit` (source or projection truncation notice), and
 `live-region`.
 
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
@@ -2016,6 +2250,11 @@ left alone — appending a live entry never steals focus from an unrelated, stil
 Above `virtualizeAt`
 entries, the body renders through an internal `<lr-virtual-list>` instead of a plain keyed list.
 
+`entries` retains the newest 10,000 identities. The visible `limit` part discloses omitted entries
+through `activityFeedInputLimit`, with `count` and `total` placeholders. The existing follow and
+tail controls reach the newest retained entry. After changing external state read by a stable
+`renderText` or `formatTimestamp` callback, call `requestUpdate()` to refresh rendered rows.
+
 **Properties:** `entries: ActivityEntry[] = []` (attribute: false) — `ActivityEntry { id: string;
 text: string; icon?: string; timestamp?: Date | string; variant?: LyraVariant; data?: unknown }`
 (exported here). `icon` is a literal glyph hint (e.g. an emoji), the same convention
@@ -2061,7 +2300,7 @@ outer card goes.
 **Toggle request, follow and threshold:** `lr-toggle-request` (`detail: { expanded }`) is a cancelable proposal dispatched before the header toggles. `follow` reflects like every `true`-defaulting boolean: absent while following, `follow="false"` once released. The body virtualizes when entries exceed (not equal) `virtualize-at`.
 
 **CSS parts:** `base`, `header` (a `<button>`), `status-dot` (pulses while `mode="live"`), `label`,
-`summary`, `toggle`, `body` (the scrollable region, or the internal virtual-list), `entry` (carries
+`summary`, `toggle`, `limit` (input-loss notice), `body` (the scrollable region, or the internal virtual-list), `entry` (carries
 `data-variant`), `entry-icon`, `variant-dot` (the dot rendered inside `entry-icon` when the entry
 sets no literal `icon`), `variant-dot-neutral`/`variant-dot-brand`/`variant-dot-success`/
 `variant-dot-warning`/`variant-dot-danger` (each also carries `variant-dot`), `entry-text`, and
@@ -2178,6 +2417,72 @@ alongside the plain failure message.
 
 Direction: a failure message (`::part(failure-message)`) uses `unicode-bidi: plaintext`, so each line takes the direction of its own first strong character — assertion text reads left-to-right and a translated message right-to-left. WebKit resolves this once per block from its first strong character rather than per line.
 
+**Full-source paging:** `dataSource: TestResultsSource | undefined = undefined` (attribute:
+false) takes display precedence over `suites`; invalid defined providers fail visibly.
+Setting `undefined` restores the current legacy suites. `sourcePage: number = 0` (`source-page`)
+is zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500.
+Readonly `sourceTotal: number | null` is the exact filtered record count after success, and `null`
+while unavailable or without a source. Filter/page-size changes reset page zero; an out-of-range
+page receives at most one corrective last-page request.
+
+```ts
+import type {
+  TestResultsSource, TestResultsSourceQuery, TestResultsSourceRow, TestResultsSourceSummary,
+} from "@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`TestResultsSource` is `LyraPageSource<TestResultsSourceRow, TestResultsSourceQuery,
+TestResultsSourceSummary>`. The provider has immutable `revision` (nonempty string or finite
+number), `query({ revision, locale, signal, page, pageSize, query })`, `lookup(keys, context)` and
+`locate(key, query, context)`. Ordinary paging uses only `query`; it does not lookup or locate
+records. Query contains `{ statuses: readonly TestStatus[] }`, empty for all statuses, and returns
+`{ rows, total, summary }`. Each row is `{ key, order, value: { suiteId, suiteName, test } }`, with
+`key === JSON.stringify([suiteId, test.id])`, nonblank original suite/test IDs and safe canonical
+`order`. Page keys/orders are unique; the response must contain exactly the requested in-bounds
+records. The provider applies filtering to the complete logical result set before paging.
+
+Required `TestResultsSourceSummary` is `{ total, passed, failed, skipped, running }` for the complete
+unfiltered run, regardless of the current page/filter. All counts are safe nonnegative integers
+and status counts sum to summary total. Page `total` equals the selected status counts' sum, or
+summary total for an empty filter. Admitted rows must match the filter and cannot exceed the full
+summary's per-status counts. Pending/error states show unknown counts, never a partial page count
+as a complete summary. Complete-source truth remains provider-owned beyond these consistency checks.
+
+At most 500 source records are admitted and mounted per page, with suite headings following
+provider order even when suites interleave. Closed own-data row fields exclude arbitrary provider
+output/attachments. `suiteId`, `suiteName`, test ID/name/message share a 65,536 UTF-16-unit bound;
+oversized or accessor-backed records reject atomically. Record keys are at most 65,536 units and
+share the page helper's 2,000,000-unit key budget. Source mode retains bounded page/in-progress
+results and current-page expansion rather than flattening the complete run. It does not run the
+legacy projection when filters change. Each page/lookup/locate lane allows one physical provider
+call plus only the latest queued intent; ignored aborts occupy their permit until settlement.
+
+Source name activation and toggle events preserve exact original `{ suiteId, testId }` values;
+the canonical JSON key is navigation identity rather than a replacement event ID. Existing
+suite-scoped detail slots and cancelable toggle-request contracts apply. Source expansion resets
+with the current page binding and remains separate from legacy manual expansion. Explicit
+`runState` completion waits for a current authoritative full summary; resuming the run, changing
+run/source or lifecycle revocation cancels obsolete deferred completion announcements.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named presentation updates reuse accepted data; source/lifecycle/locale changes revoke obsolete
+requests, controls and announcements. Source-only parts are `source-status`, `source-retry` and
+`source-pagination`; existing summary/filter/test/detail parts remain applicable. A failed page
+has a localized retry and light-DOM announcement. The following `suites` behavior describes the
+legacy route.
+
+**Exported test-results source declarations:**
+
+These types use the existing `TestStatus` and `TestCaseResult` declarations.
+
+`TestResultsSourceQuery { readonly statuses: readonly TestStatus[]; }`
+
+`TestResultsSourceRow { readonly suiteId: string; readonly suiteName: string; readonly test: TestCaseResult; }`
+
+`TestResultsSourceSummary { readonly total: number; readonly passed: number; readonly failed: number; readonly skipped: number; readonly running: number; }`
+
 **Properties:** `suites: readonly TestSuiteResult[] = []` (attribute: false) — `TestSuiteResult { id: string;
 name: string; tests: readonly TestCaseResult[] }` and `TestCaseResult { id: string; name: string; status:
 TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed' | 'failed' |
@@ -2193,7 +2498,12 @@ first-wins identity. Foreign runtime statuses normalize
 once to the localized neutral `skipped` state, so every accepted row contributes to one coherent
 summary count and renders a label/glyph.
 
-Summary counts cover the complete normalized input. At most 1,000 rows mount for the active filter;
+Legacy normalization retains the complete canonical input once with O(n) rows/indexes, yielding
+after at most 500 combined suite/test positions. It normalizes status once per corpus; filtering
+may still traverse O(n) records. New input/source entry cancels older staged work, and
+`updateComplete` waits for the current normalization and render. Oversized aggregate row text or
+identity fails visibly with unknown counts in `input-error`; caller arrays and slotted DOM remain
+host-owned. Summary counts cover the complete normalized input. At most 1,000 rows mount for the active filter;
 manually expanded identities reserve positions first, failed rows next, then ordinary input-order
 rows. A localized `[part="limit"]` note exposes truncation without losing the complete counts.
 
@@ -2225,7 +2535,7 @@ adjacent localized status word carries the meaning. Running rows use the decorat
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
 `data-status`), `test-status`, `test-name`, `test-duration`, `test-expand-toggle`, `failure`
-(hidden while collapsed), `failure-message`, `limit`, and `empty`.
+(hidden while collapsed), `failure-message`, `limit`, `input-error` (rejected legacy snapshot), and `empty`.
 
 **Themeable custom properties:** `--lr-test-results-filter-active-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default
@@ -2727,8 +3037,42 @@ three outright.
 Provider-neutral agent/LLM trace view combining span-kind filters, handoff quick-jumps, and a
 hierarchical trace tree from one shared `spans` array.
 
-Span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
+With `treeSource` unset, span views omit whitespace-only IDs and preserve every nonblank business ID exactly, including
 surrounding whitespace. The first valid admitted duplicate continues to win.
+
+**Complete provider trace:** `treeSource: TraceTreeSource | undefined = undefined` (attribute:
+false) forwards the exact trace-tree provider contract above to the existing single child. It takes
+precedence over `spans`; invalid defined input fails visibly without restoring legacy content.
+Setting `undefined` restores current legacy spans, kind inventory and handoff quick-jumps.
+
+```ts
+import type { TraceTreeSource } from
+  "@aceshooting/lyra-ui/components/agent-tools/agent-trace/agent-trace.class.js";
+```
+
+The child owns the complete preorder, authoritative topology, required global trace extent,
+provider actions and bounded 400-row cache plus focused row/301 mounted rows/two range-read
+permits. The wrapper creates no second provider controller, loaded-span collection, topology index
+or window-derived summary. It never scans source rows to discover kinds or handoffs. Provider mode
+shows the fixed six public choices, in order: `agent`, `llm`, `tool`, `retriever`, `embedding`,
+`other`. Existing `hiddenKinds` is forwarded globally to the child. Handoff quick-jumps and the
+outer legacy admission notice are absent; provider rows and key reveal provide global navigation.
+
+`revealSourceKey(key: string): Promise<boolean>` waits for the current child binding and delegates
+to that child once, resolving `false` for missing, invalid, disabled, failed, obsolete, disconnected
+or unset-source targets. It does not activate or change selection. Same-identity assignment and
+keyless `requestUpdate()` forward a single refresh; named presentation/active-ID paints reuse the
+child. Source replacement/removal and lifecycle changes revoke obsolete child and wrapper controls.
+`label`, `withTokens`, `withCost`, `withoutBars`, `activeSpanId` and strings forward to the child;
+locale and direction inherit normally.
+
+The child remains caller-controlled when used alone. This wrapper preserves its two-way active
+binding: an accepted child's `lr-span-select` updates wrapper `activeSpanId` before that original
+event bubbles to external listeners, without re-emission. `lr-span-toggle` also bubbles once.
+Kind filtering keeps the existing veto/containment behavior and emits only the domain
+`lr-span-visibility-change { hiddenKinds }` after a current accepted change. No second source event
+or provider summary/filter API is added. The following span-array projection/handoff details apply
+with `treeSource` unset.
 
 **Properties:**
 
@@ -2736,9 +3080,11 @@ surrounding whitespace. The first valid admitted duplicate continues to win.
   `lr-trace-tree.spans` (see `lr-span-waterfall` above for the `LyraSpan` shape). Controlled and
   never mutated
 - `activeSpanId: string | null = null` (attribute `active-span-id`) — controlled selection forwarded
-  into the composed `lr-trace-tree`; also updated locally (and re-emitted as `lr-span-select`) when a
-  span is activated from either the tree or the handoff quick-jump list, so it works as a two-way
-  binding
+  into the composed `lr-trace-tree`; tree activation updates it before the original
+  `lr-span-select` bubbles, while a legacy handoff quick-jump updates it and emits that event.
+  Both routes support two-way binding
+- `maxNodes: number = 500` (attribute `max-nodes`) — projected span budget forwarded to the tree,
+  normalized to `1..5000`; unset or non-finite values restore 500
 - `hiddenKinds: LyraSpan['kind'][] = []` (attribute: false) — span kinds hidden from the tree
   (`'agent' | 'llm' | 'tool' | 'retriever' | 'embedding' | 'other'`). Empty shows every kind;
   pre-settable (e.g. to hide `retriever`/`embedding` by default) and readable back after
@@ -2755,15 +3101,19 @@ expanded: boolean }`), and `lr-span-visibility-change` (`detail: { hiddenKinds:
 LyraSpan['kind'][] }`). The internal graph legend's generic `lr-visibility-change` event is
 contained; consumers receive this trace-domain event instead.
 
-`spans` is normalized through the same at-most-500-record projection as `<lr-trace-tree>` before
+With `treeSource` unset, `spans` is normalized through the same bounded projection as `<lr-trace-tree>` before
 filtering, handoff lookup, and tree rendering. The controlled active span and its ancestor path
 reserve positions, and malformed records plus later duplicate ids are omitted, so the composed
-surfaces cannot disagree.
+surfaces cannot disagree. The first 10,000 outer entries are admitted without traversing opaque
+provider metadata; active reservation stays inside admitted data and `maxNodes`. A visible limit
+notice discloses source or projection loss without duplicating the composed tree's notice. It is
+silent on initial mount; a later transition into truncation is announced politely.
 
 **CSS parts:** `base`, `filter` (the composed `lr-graph-legend` filter row, only rendered while
-`spans` is non-empty), `handoffs` (the quick-jump list wrapper, only rendered while at least one
+legacy `spans` is non-empty, or while a provider is defined), `handoffs` (the quick-jump list wrapper, only rendered while at least one
 visible span has `kind: 'agent'`), `handoff` (one entry — a `<button>` wrapping an
-`lr-handoff-divider`, carrying `data-active`), `tree` (the composed `lr-trace-tree`).
+`lr-handoff-divider`, carrying `data-active`), `tree` (the composed `lr-trace-tree`), and `limit`
+(source truncation notice when the tree does not already show its own notice).
 
 **Themeable custom properties:** `--lr-agent-trace-handoff-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) handoff quick-jump
@@ -2833,10 +3183,18 @@ shown when `segments` exceeds the 500-row render ceiling).
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
 Filterable and taggable evaluation-example list with add, remove, import, and export affordances.
-If the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
+With `dataSource` unset, if the public collection boundary truncates an oversized dataset, `[part="limit"]` names the
 number of retained examples. Pagination within those examples remains available in the table.
 
 **Properties:**
+
+- `dataSource: EvalDatasetSource | undefined = undefined` (property only) — a host-owned full
+  logical source; takes display precedence over `examples`. Invalid defined sources fail visibly;
+  unsetting restores the current legacy examples without overwriting their getter.
+- `sourcePage: number = 0` (`source-page`) — zero-based source page.
+- `sourcePageSize: number = 100` (`source-page-size`) — source page size, normalized to 1–500.
+- readonly `sourceTotal: number | null` — exact accepted query total, or `null` until a current
+  authoritative result is available.
 
 - `examples: readonly EvalExample[] = []` (attribute: false) — `EvalExample { id: string; input: string;
 expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unknown> }` (exported here).
@@ -2844,9 +3202,18 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   `input`/`expectedOutput` are plain
   strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
   controlled: add/remove/import/export are all _requests_; the host mutates and passes the array
-  back. Empty/blank ids and later duplicate ids are omitted before selection, filtering, mutation requests, and the
+  back. The bounded readonly outer snapshot retains at most the first 10,000 examples; records and
+  opaque `metadata` retain identity. Reassign `examples` after editing records, including when
+  reusing the same source array. A keyless `requestUpdate()` also refreshes the normalized rows and
+  search corpus. Other clone-owned collections retain the 10,000-entry/50,000-node safety budgets.
+  Empty/blank ids and later duplicate ids are omitted before selection, filtering, mutation requests, and the
   nested grid are derived. Distinct tag chips are ordered with the component's effective-locale
-  collation
+  collation; at most 500 distinct tags render. Active tags reserve places within that budget so
+  their deselection controls remain visible; the remaining places show the earliest unselected
+  tags. A localized `limit` note reports the omitted count. Search and tag filtering still use all
+  admitted examples and tags, including tags
+  outside the displayed facet window. Filtering and the tag corpus are reused across unrelated
+  disabled or selection changes
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
@@ -2864,6 +3231,38 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   localized `evalDatasetLabel`. A host `aria-label` remains on the custom-element host as its
   overall name and is not cloned onto the independently interactive grid
 
+The provider query type is `EvalDatasetSourceQuery { readonly search: string;
+readonly tags: readonly string[]; readonly sortKey: string | null;
+readonly sortDir: 'asc' | 'desc' }`.
+
+**Full-source paging:** `EvalDatasetSource = LyraPageSource<EvalExample, EvalDatasetSourceQuery>`;
+both types are exported from the component entry and package root. `EvalDatasetSourceQuery`
+contains `search`, readonly `tags`, `sortKey: string | null`, and `sortDir: 'asc' | 'desc'`.
+The provider owns complete-source text filtering, OR-tag filtering combined with that text query,
+and ordering. The nested table uses server sorting and one-based paging while `sourcePage` remains
+zero-based. Query and page-size changes reset source page zero; an invalid page receives at most
+one corrective last-page request. Loading, unknown totals and failures use the composed table's
+localized states; stale rows cannot be activated.
+
+The shared `LyraPageSource` contract comes from `@aceshooting/lyra-ui/data-sources.js`. Its page
+must include explicit global `tags` metadata, even for an empty catalogue. Facets have
+`{ values, total, unavailableSelected }`; at most 500 values retain global labels and counts.
+Available active tags must reserve positions in that budget so they remain removable. Only
+`unavailableSelected`, not absence from one page, removes an active filter. Source rows allow at
+most 500 tags and 65,536 display-text UTF-16 units per row; opaque `metadata` is not traversed or
+rendered. Invalid or oversized responses fail visibly rather than becoming a partial dataset.
+
+Source page/query transitions clear the private selected example once, keeping Remove restricted
+to a visible current row. Existing import/export/add events remain requests for the host; export
+does not silently serialize just the loaded page. A source-mode sort both issues the provider
+query and preserves the single existing `lr-sort` pass-through event. `disabled` also prevents
+source sorting and mutations. Instance `strings` reach the composed table.
+
+The source is retained by identity. Reassign it, including the same object, or call unnamed
+`requestUpdate()` after source/revision mutation. Replacement, explicit refresh, locale change,
+disconnect and adoption revoke obsolete responses; unrelated named presentation updates reuse
+the current data. No million-row snapshot or whole-source filter/index is created by this route.
+
 **Events:** `lr-example-select` (`detail: { exampleId: string | null }`),
 `lr-example-add-request` (`detail: null` — no payload; `emit()`
 normalizes an omitted detail to `null`, never `undefined`), `lr-example-remove-request` (`detail: { exampleId:
@@ -2873,12 +3272,12 @@ format: string }`), and the deliberate nested-table pass-through `lr-sort` (`det
 re-dispatched (no detail) when the internal search field (only rendered while `searchable`) gains or
 loses focus, since native focus neither bubbles nor crosses the shadow boundary.
 All three built-in columns are sortable; activating one of their headers produces that commit for
-the host to apply to its controlled `examples` array.
+the host to apply to its controlled `examples` array, or for the source to order its query result.
 
 **CSS parts:** `base`, `toolbar`, `search`, `search-input` (the composed `lr-input type="search"`),
 `search-input-field` (its native `<input>`), `search-clear` (its clear button, rendered only while the field has text), `tag-filter`,
-`grid`, `add-button`, `remove-button`, `limit` (shown when the source examples exceed the snapshot
-cap), `import` (the internal `compact` `lr-file-input`; its
+`grid`, `add-button`, `remove-button`, `limit` (shown for source examples beyond the snapshot
+cap or distinct tags beyond the 500-facet ceiling), `import` (the internal `compact` `lr-file-input`; its
 dropzone text and accessible name are the localized `evalDatasetImportLabel`), `export`.
 
 **Themeable custom properties:** the built-in search field is a composed `lr-input`, so it is themed through the shared `--lr-input-*` and `--lr-form-control-*` tokens (the former `--lr-eval-dataset-search-*` hooks are removed).
@@ -2886,7 +3285,7 @@ The search field remains a filter toolbar, with the native editing hints listed 
 
 **Known gotchas:**
 
-- Shrinking `examples` out from under live UI state is handled: a `selectedId` that no longer matches
+- With `dataSource` unset, shrinking `examples` out from under live UI state is handled: a `selectedId` that no longer matches
   any row resets to `null`, and an active tag filter that no longer matches any row's `tags` is
   dropped rather than silently matching zero rows forever.
 - A search or tag filter that hides the selected row also clears that selection and emits
@@ -2909,6 +3308,85 @@ The table uses `label` or the localized purpose-specific evaluation-runs name. A
 on `<lr-eval-result>` remains the overall host name and is not cloned onto the independently
 interactive table; use `label` to distinguish several comparison grids on one page.
 
+**Full-source comparison runs:** `dataSource: EvalResultSource | undefined = undefined`
+(attribute: false) takes precedence over `runs`; invalid defined providers fail visibly.
+Setting `undefined` restores current legacy runs. `sourcePage: number = 0` (`source-page`) is
+zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500. Readonly
+`sourceTotal: number | null` is the accepted current-query total, or null while unavailable/without
+a source. Page-size and accepted sort changes reset page zero. An out-of-range page receives at
+most one corrective last-page request.
+
+```ts
+import type { EvalResultSource, EvalResultSourceQuery, EvalRunResult } from
+  "@aceshooting/lyra-ui/components/agent-tools/eval-result/eval-result.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`EvalResultSource` is `LyraPageSource<EvalRunResult, EvalResultSourceQuery>`. The immutable provider
+revision is a nonempty string or finite number. `query({ revision, locale, signal, page, pageSize,
+query })` returns `{ rows, total }`; query is `{ sortKey: string | null, sortDir: 'asc' | 'desc' }`,
+initially null/asc. Each record is `{ key, order, value }`, with `key === value.id`, nonblank original
+ID and safe canonical source `order`; page keys/orders are unique and rows exactly fill the
+requested in-bounds page. `lookup(keys, context)` returns complete globally present requested
+records, omitting absent IDs; `locate(key, query, context)` supplies the shared page-source
+contract but ordinary comparison paging does not use it. Provider order/sorting applies globally,
+without sorting a partial page locally.
+
+Source mode forwards the table's original cancelable `lr-sort-request`
+`{ phase: 'request', sortKey, sortDir }` and accepted `lr-sort`
+`{ phase: 'commit', sortKey, sortDir }` once. Veto prevents a source order change; only a current
+commit updates the server query and resets page zero. These sort events remain contained in the
+legacy route. Existing columns define the sorting choices rather than a new sort property API.
+
+`selectedRunId` and `baselineRunId` stay fully controlled and are never rewritten. A null ID means
+the first global row of the current query, not the first row of whichever page is displayed.
+Starting on a nonzero page can therefore request a size-one page-zero primer before the requested
+page; only its fallback key is retained and its row/total never becomes the displayed page.
+Paging preserves that fallback; sort/locale/source refresh recomputes it. Explicit selected and
+baseline IDs resolve off-page through one deduplicated lookup of at most two keys. A missing
+explicit ID does not fall back to the first row; an absent selection suppresses review/diff, while
+missing baseline retains the existing selected-output comparison behavior. Empty-source success
+and failed lookup remain distinct. Controlled ID changes and fallback resolution emit no activation.
+Same-revision paging/sorting and locale-only formatting retain explicit comparison records;
+source revision/rebind/lifecycle changes revoke old pair data before it can drive review/diff.
+
+The current page holds at most 500 rows and the selected/baseline cache at most two records;
+pending replacement work is separately bounded by those same limits. There is no full runs array
+or secondary corpus. Page, selected-pair and locate work share the source's existing fixed
+lanes: one physical call per lane plus only the latest queued intent. The primer uses the same
+page lane, and ignored aborts keep physical permits until settlement. Fixed own-data fields
+`id`, `label`, optional `model`/`promptVersion` and `output` share a 65,536 UTF-16-unit row budget;
+a missing streaming output becomes `''`. Oversized/accessor-backed rows reject without clipping.
+Keys are at most 65,536 units and share the page helper's 2,000,000-unit key admission budget.
+
+Source `scores`/`review` dictionaries remain complete opaque provider references. Custom column
+cell/style/title/value callbacks and footers receive borrowed original provider records; built-in
+identity/diff/review uses closed frozen projections. Source `lr-run-activate { runId, run }`
+freezes the event envelope/run shell while preserving the complete scores/review identities,
+without deeply cloning or freezing those maps. Legacy activation retains its whole-detail deep
+snapshot and existing exhaustion-to-null behavior. Built-in review reads only configured
+`rubricKeys`, bounded to 10,000 combined scalar/category entries and 65,536 UTF-16 text units;
+it never JSON-serializes the complete source review dictionary. Existing review events retain
+original run IDs and their current selected-pair ownership. Disabled review stays inactive while
+the comparison grid remains usable.
+
+Initial source loading uses `source-status`. Current page errors/retry use the composed table;
+selected/baseline or review-projection failure uses `selection-status`/`selection-retry` and retries
+the pair without refetching the page. Initial failure is quiet; later page failures are announced
+by the table and pair failures by the parent, without duplicated announcements. Reassign even the
+same source, or call a keyless `requestUpdate()`, after revision/state changes. Named presentation
+updates reuse accepted records. Source/lifecycle replacement and obsolete page/pair changes revoke
+old controls, callbacks and review effects. The following run-array normalization/fallback details
+apply to the legacy route; columns/rubric/presentation contracts apply to both.
+
+**Exported source query declaration:**
+
+`EvalResultSourceQuery {
+  readonly sortKey: string | null;
+  readonly sortDir: 'asc' | 'desc';
+}`
+
 **Properties:**
 
 - `runs: EvalRunResult[] = []` (attribute: false) — `EvalRunResult { id: string; label: string;
@@ -2926,9 +3404,10 @@ model?: string; promptVersion?: string; output: string; scores?: RubricValue; re
 - `label: string = ''` — accessible name for the independently interactive comparison grid;
   falls back to the localized evaluation-runs name when unset
 - `selectedRunId: string | null = null` (attribute `selected-run-id`) — the run open for review and the diff's
-  **new** side; falls back to `runs[0]?.id` when empty
+  **new** side; null falls back to the first legacy run, or the first global current-query run
+  in source mode
 - `baselineRunId: string | null = null` (attribute `baseline-run-id`) — the run compared against and the
-  diff's **old** side; falls back to `runs[0]?.id` when empty
+  diff's **old** side; null uses the same first-run fallback described above
 - `reviewSkippable: boolean = false` (attribute `review-skippable`) — shows a Skip control on the
   review form (forwarded to `lr-rubric-form.skippable`)
 - `disabled: boolean = false` (reflected) — disables the review form's controls only; the comparison
@@ -2939,7 +3418,7 @@ string; value: RubricValue }`), `lr-review-validity-change` (`detail: { runId: s
 boolean; errors: Record<string, string> }`), `lr-review-submit` (`detail: { runId: string; value:
 RubricValue }`), `lr-review-skip` (`detail: { runId: string }`).
 
-**CSS parts:** `base`, `empty`, `grid`, `diff`, `diff-view`,
+**CSS parts:** `base`, `empty`, `grid`, `source-status`, `selection-status`, `selection-retry`, `diff`, `diff-view`,
 `diff-labels`, `diff-label-old`, `diff-label-new`, `review`.
 
 ## `lr-eval-run`
@@ -3095,9 +3574,17 @@ applied its controlled `entries` update (it never mutates `entries` itself). `re
 void` releases a held dialog after persistence fails, retaining the reviewer’s current argument edit
 so they can retry. Both are no-ops when no decision is held.
 
-At most 500 unique entries mount. Open disclosures and the entry under approval review reserve
-positions before later ordinary history is omitted; a localized `[part="limit"]` note exposes the
-bounded projection. Redaction is deferred until a disclosure opens and memoized while the entry's
+Assignment retains the newest 10,000 source entries (the array end is newest) in a bounded readonly
+outer snapshot. Source records and opaque `args`/`result` payloads retain identity, while a closed
+descriptor-safe projection copies the display fields once per admitted array. Reassign the
+collection to publish record changes; approval lookups reuse canonical identity indexes.
+
+After first-wins duplicate canonicalization, the newest 500 unique entries are selected before
+timestamp sorting. Open disclosures and the entry under approval review reserve positions within
+that same 500-row budget, displacing the oldest unreserved rows. Separate localized
+`[part="limit"]` notes disclose input retention and the rendered window; their counts use the
+effective locale. Initial truncation stays silent; a later transition into either limit is
+announced politely. Redaction is deferred until a disclosure opens and memoized while the entry's
 payload and path list are unchanged. It is bounded to 100 paths, 64 levels, 10,000 visited nodes,
 and 4,096 characters per path; crossing a ceiling masks the affected branch instead of exposing
 data or exhausting the page.
@@ -3141,7 +3628,8 @@ timeline.addEventListener("lr-tool-approval-decide-request", async (event) => {
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
-`entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`, `empty`, `limit`.
+`entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`, `empty`, `limit` (input-retention
+and rendered-window notices).
 Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
 repeated bare "Details" label.
 
@@ -4148,7 +4636,10 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
   `normalizeLyraSpanKind(value: unknown): LyraSpanKind`
   Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
-  `normalizeLyraSpans(values: readonly unknown[], activeSpanId?: string | null): LyraSpanProjection`
+  `normalizeLyraSpans(values: readonly unknown[], activeSpanId?: string | null, limit?: number): LyraSpanProjection`
+  The optional limit defaults to 500, is normalized to `1..5000`, and falls back to 500 for
+  non-finite input. Each call returns independent mutable `spans` and `byId` containers;
+  normalized span records remain immutable. Existing two-argument calls retain the 500-row default.
   Import: `@aceshooting/lyra-ui/components/agent-tools/trace-tree/span.js`.
   `normalizeLyraSpanStatus(value: unknown): LyraSpanStatus`
 

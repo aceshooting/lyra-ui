@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} આદેશ',
     other: '{count} આદેશો',
   },
+  commandPaletteInputLimit: 'ઇનપુટ મર્યાદા પહોંચી જવાથી કેટલીક વસ્તુઓ છોડી દેવાઈ છે: આદેશો.',
 };
 
 registerLyraLocale('gu', strings);

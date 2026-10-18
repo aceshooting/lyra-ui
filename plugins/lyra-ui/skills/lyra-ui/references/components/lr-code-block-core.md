@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 15 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,12 +17,13 @@
 ## `lr-code-block-core`
 
 A build-lean sibling of `<lr-code-block>` above, for a consumer whose `languages` map already
-covers every language it will ever render. Where `<lr-code-block>` unconditionally calls
+covers every language it will ever render. Where `<lr-code-block>` can call
 `loadShikiHighlighter()` — the default ~200-language dynamic-import table loader, whose bundled
 lookup table a bundler can't statically narrow away even when a consumer never actually uses it —
 this component's own module never imports or calls that function at all. It only ever calls
 `loadShikiHighlighterCore(languages)` (shiki's "fine-grained bundle" recipe: `createHighlighterCore()`
-plus an explicit oniguruma engine, seeded with _only_ the grammars in `languages`), so a consumer
+plus an explicit oniguruma engine, seeded with the resolved grammars in `languages`; a lazy grammar
+is loaded only when requested), so a consumer
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
 
@@ -42,7 +43,10 @@ same as `<lr-code-block>`'s own plain-text fallback. Everything else — `code`/
 `filename`/`withoutCopyButton`/`collapsible`/`collapsed`/`maxHeight`, the copy button, the collapse header
 toggle, the loading-skeleton behavior while the fine-grained highlighter resolves — matches
 `<lr-code-block>` exactly, including its CSS parts, themeable custom properties, and stylesheet
-(this component reuses `code-block.styles.ts` directly).
+(this component reuses `code-block.styles.ts` directly). Its inclusive syntax-highlighting ceiling
+of 8,192 UTF-16 code units also matches: larger source stays fully readable as plain text with a
+localized `limit` notice when `language` is set, without a loading skeleton. Highlight changes
+patch existing lines without retokenizing, and gutter navigation reuses the source lines.
 
 **Properties:**
 
@@ -76,10 +80,11 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract, identical to `<lr-code-block>`.
-- `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) — grammar definitions this
+- `languages: Readonly<Record<string, ShikiLanguageSource>> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`), or a
   lazy loader per key, e.g. `{ bash: () => import('@shikijs/langs/bash') }` — called at most once
-  per key, memoized, the first time a fenced block actually requests that language. Empty
+  per highlighter/key pair, memoized, the first time this code block requests that language;
+  unused loaders do not run. Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback, and so
   does a key whose lazy loader rejects.
   If `languages` changes while highlighting is loading, only results for the current map can update
@@ -105,7 +110,7 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 **Slots:** `header-actions` — identical to `<lr-code-block>`'s own slot.
 
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `copy-button-text`,
-`copy-button-icon`, `copy-button-control`, `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button` —
+`copy-button-icon`, `copy-button-control`, `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button`, `limit` —
 identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`

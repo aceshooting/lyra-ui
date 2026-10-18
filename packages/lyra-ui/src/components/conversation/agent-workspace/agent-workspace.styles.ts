@@ -2,6 +2,14 @@ import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
+  [part='input-limit'], [part='slices-limit'] {
+    margin: 0;
+    font-size: var(--lr-font-size-s);
+    color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
+  }
+  [part='input-limit'] { flex-basis: 100%; }
+
   :host {
     display: block;
     min-inline-size: 0;

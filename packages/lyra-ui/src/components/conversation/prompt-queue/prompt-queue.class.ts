@@ -1,7 +1,8 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
@@ -16,8 +17,8 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import { styles } from './prompt-queue.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptQueueActionLabel, LYRA_DEFAULT_promptQueueEmpty, LYRA_DEFAULT_promptQueueItemLabel, LYRA_DEFAULT_promptQueueLabel, LYRA_DEFAULT_promptQueueSendNow } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_remove } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_promptInputAttachments, LYRA_DEFAULT_promptQueueActionLabel, LYRA_DEFAULT_promptQueueAttachmentLimit, LYRA_DEFAULT_promptQueueEmpty, LYRA_DEFAULT_promptQueueInputLimit, LYRA_DEFAULT_promptQueueItemLabel, LYRA_DEFAULT_promptQueueLabel, LYRA_DEFAULT_promptQueueSendNow } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_attachmentUntitledFile, LYRA_DEFAULT_moveDown, LYRA_DEFAULT_moveUp, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_previous, LYRA_DEFAULT_remove } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface PromptQueueItem {
@@ -44,6 +45,9 @@ export interface LyraPromptQueueEventMap {
 
 const MAX_PROJECTED_QUEUE_ITEMS = 10_000;
 const MAX_PROJECTED_QUEUE_ATTACHMENTS = 10_000;
+const QUEUE_PAGE_SIZE = 20;
+const ATTACHMENT_PREVIEW_SIZE = 50;
+interface QueueAttachmentBudget { remaining: number; readonly onTruncate?: () => void; }
 
 interface CanonicalPromptQueueAttachment {
   readonly id: string;
@@ -62,6 +66,8 @@ interface CanonicalPromptQueueItem {
   readonly createdAt?: number;
   readonly metadata?: unknown;
 }
+
+const canonicalByExportedItem = new WeakMap<object, CanonicalPromptQueueItem>();
 
 const EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS: readonly CanonicalPromptQueueItem[] = Object.freeze([]);
 
@@ -107,7 +113,7 @@ function projectPromptQueueAttachment(value: unknown): CanonicalPromptQueueAttac
   }
 }
 
-function projectPromptQueueAttachments(value: unknown): readonly CanonicalPromptQueueAttachment[] | undefined {
+function projectPromptQueueAttachments(value: unknown, budget: QueueAttachmentBudget): readonly CanonicalPromptQueueAttachment[] | undefined {
   try {
     if (!Array.isArray(value)) return undefined;
     const lengthDescriptor = descriptorValue(value, 'length');
@@ -120,8 +126,10 @@ function projectPromptQueueAttachments(value: unknown): readonly CanonicalPrompt
     ) return undefined;
 
     const attachments: CanonicalPromptQueueAttachment[] = [];
-    const length = Math.min(lengthDescriptor.value, MAX_PROJECTED_QUEUE_ATTACHMENTS);
+    const length = Math.min(lengthDescriptor.value, budget.remaining);
+    if (length < lengthDescriptor.value) budget.onTruncate?.();
     for (let index = 0; index < length; index += 1) {
+      budget.remaining--;
       const descriptor = descriptorValue(value, String(index));
       if (
         descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -136,9 +144,14 @@ function projectPromptQueueAttachments(value: unknown): readonly CanonicalPrompt
   }
 }
 
-function projectPromptQueueItem(value: unknown): CanonicalPromptQueueItem | undefined {
+function projectPromptQueueItem(value: unknown, budget: QueueAttachmentBudget): CanonicalPromptQueueItem | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const owned = canonicalByExportedItem.get(value);
+    if (owned && (owned.attachments?.length ?? 0) <= budget.remaining) {
+      budget.remaining -= owned.attachments?.length ?? 0;
+      return owned;
+    }
     const idDescriptor = descriptorValue(value, 'id');
     const valueDescriptor = descriptorValue(value, 'value');
     const attachmentsDescriptor = descriptorValue(value, 'attachments');
@@ -156,7 +169,7 @@ function projectPromptQueueItem(value: unknown): CanonicalPromptQueueItem | unde
     const attachmentsValue = valueOfDescriptor(attachmentsDescriptor);
     const attachments = attachmentsDescriptor === MISSING_OWN_DATA_DESCRIPTOR || attachmentsValue === undefined
       ? undefined
-      : projectPromptQueueAttachments(attachmentsValue);
+      : projectPromptQueueAttachments(attachmentsValue, budget);
     const createdAt = valueOfDescriptor(createdAtDescriptor);
     const metadata = valueOfDescriptor(metadataDescriptor);
     return Object.freeze({
@@ -172,7 +185,7 @@ function projectPromptQueueItem(value: unknown): CanonicalPromptQueueItem | unde
   }
 }
 
-function projectPromptQueueItems(value: unknown): readonly CanonicalPromptQueueItem[] {
+function projectPromptQueueItems(value: unknown, onTruncate?: () => void): readonly CanonicalPromptQueueItem[] {
   try {
     if (!Array.isArray(value)) return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
     const lengthDescriptor = descriptorValue(value, 'length');
@@ -184,16 +197,18 @@ function projectPromptQueueItems(value: unknown): readonly CanonicalPromptQueueI
       lengthDescriptor.value < 0
     ) return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
 
+    const budget: QueueAttachmentBudget = { remaining: MAX_PROJECTED_QUEUE_ATTACHMENTS, onTruncate };
     const items: CanonicalPromptQueueItem[] = [];
     const seen = new Set<string>();
     const length = Math.min(lengthDescriptor.value, MAX_PROJECTED_QUEUE_ITEMS);
+    if (length < lengthDescriptor.value) onTruncate?.();
     for (let index = 0; index < length; index += 1) {
       const descriptor = descriptorValue(value, String(index));
       if (
         descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
         descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
       ) continue;
-      const item = projectPromptQueueItem(descriptor.value);
+      const item = projectPromptQueueItem(descriptor.value, budget);
       // Validation deliberately precedes identity reservation, so an invalid duplicate cannot
       // hide a later valid row with the same public id.
       if (!item || seen.has(item.id)) continue;
@@ -206,26 +221,29 @@ function projectPromptQueueItems(value: unknown): readonly CanonicalPromptQueueI
   }
 }
 
-function toDocumentRef(attachment: CanonicalPromptQueueAttachment): DocumentRef {
-  return Object.freeze({
-    id: attachment.id,
-    name: attachment.name,
-    ...(attachment.mimeType === undefined ? {} : { mimeType: attachment.mimeType }),
-    ...(attachment.uri === undefined ? {} : { uri: attachment.uri }),
-    ...(attachment.version === undefined ? {} : { version: attachment.version }),
-  });
-}
+const exportedItems = new WeakMap<CanonicalPromptQueueItem, PromptQueueItem>();
 
+/** Canonical attachment records already implement the closed DocumentRef schema and are frozen.
+ * Keep those arrays and unchanged exported rows stable across complete controlled proposals. */
 function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): PromptQueueItem {
-  return Object.freeze({
-    id: item.id,
-    value,
-    ...(item.attachments === undefined ? {} : {
-      attachments: Object.freeze(item.attachments.map(toDocumentRef)),
-    }),
-    ...(item.createdAt === undefined ? {} : { createdAt: item.createdAt }),
-    ...(item.metadata === undefined ? {} : { metadata: item.metadata as Record<string, unknown> }),
-  });
+  let exported = exportedItems.get(item);
+  if (!exported) {
+    exported = Object.freeze({
+      id: item.id,
+      value: item.value,
+      ...(item.attachments === undefined ? {} : { attachments: item.attachments }),
+      ...(item.createdAt === undefined ? {} : { createdAt: item.createdAt }),
+      ...(item.metadata === undefined ? {} : { metadata: item.metadata as Record<string, unknown> }),
+    });
+    exportedItems.set(item, exported);
+    canonicalByExportedItem.set(exported, item);
+  }
+  if (value === item.value) return exported;
+  const edited = Object.freeze({ ...exported, value });
+  const canonical = Object.freeze({ ...item, source: edited, value });
+  canonicalByExportedItem.set(edited, canonical);
+  exportedItems.set(canonical, edited);
+  return edited;
 }
 
 /**
@@ -242,13 +260,21 @@ function toPromptQueueItem(item: CanonicalPromptQueueItem, value = item.value): 
  * while a descriptor-safe projection copies the queue's display and proposal fields once; later
  * rendering and events never reread the source row or its opaque metadata. Create a new collection
  * and reassign it after changes; mutating an assigned array does not update the view.
+ * At most 10,000 outer positions and 10,000 attachment positions across the entire assignment
+ * are inspected. Internal pages keep every admitted prompt addressable, while each row previews
+ * at most 50 retained attachment names. Change events still contain all canonical admitted items.
  *
  * @customElement lr-prompt-queue
  * @event lr-queue-change - A proposed controlled queue update. `detail: { items, reason, itemId }`.
  * @event lr-send-now - Immediate send was requested. `detail: { item }`.
  * @csspart base - The queue wrapper.
  * @csspart heading - The queue heading; omitted when the visible label is empty.
- * @csspart list - The ordered queue list.
+ * @csspart list - The current page of at most 20 admitted queued prompts.
+ * @csspart input-limit - The input-admission loss notice for prompts or attachments.
+ * @csspart attachment-limit - Retained attachment counts when a row's preview exceeds 50 names.
+ * @csspart pagination - Internal queue page controls.
+ * @csspart page-status - Localized current page and page count.
+ * @csspart page-button - One page navigation button.
  * @csspart item - One queued prompt.
  * @csspart value - Read-only prompt text while `readonly`.
  * @csspart editor - A queued prompt editor.
@@ -268,9 +294,17 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     attachmentUntitledFile: LYRA_DEFAULT_attachmentUntitledFile,
     moveDown: LYRA_DEFAULT_moveDown,
     moveUp: LYRA_DEFAULT_moveUp,
+    next: LYRA_DEFAULT_next,
+    paginationApplied: LYRA_DEFAULT_paginationApplied,
+    paginationFirstPage: LYRA_DEFAULT_paginationFirstPage,
+    paginationLabel: LYRA_DEFAULT_paginationLabel,
+    paginationLastPage: LYRA_DEFAULT_paginationLastPage,
+    previous: LYRA_DEFAULT_previous,
     promptInputAttachments: LYRA_DEFAULT_promptInputAttachments,
     promptQueueActionLabel: LYRA_DEFAULT_promptQueueActionLabel,
+    promptQueueAttachmentLimit: LYRA_DEFAULT_promptQueueAttachmentLimit,
     promptQueueEmpty: LYRA_DEFAULT_promptQueueEmpty,
+    promptQueueInputLimit: LYRA_DEFAULT_promptQueueInputLimit,
     promptQueueItemLabel: LYRA_DEFAULT_promptQueueItemLabel,
     promptQueueLabel: LYRA_DEFAULT_promptQueueLabel,
     promptQueueSendNow: LYRA_DEFAULT_promptQueueSendNow,
@@ -314,7 +348,14 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   /** Heading level of the visible label; `none` renders it as plain text. */
   @property({ attribute: 'heading-level' }) headingLevel: LyraHeadingLevel = '3';
 
+  @state() private page = 0;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private readonly inputLossByItems = new WeakSet<readonly CanonicalPromptQueueItem[]>();
+  private readonly drafts = new Map<string, { sourceValue: string; value: string }>();
+
   private pendingRemovalFocus?: {
+    editor: boolean;
+    pageAction?: string;
     targetId?: string;
     action?: string;
     actionIndex: number;
@@ -334,7 +375,9 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
       return EMPTY_CANONICAL_PROMPT_QUEUE_ITEMS;
     const cached = this.canonicalItemsBySource.get(source);
     if (cached) return cached;
-    const result = projectPromptQueueItems(source);
+    let truncated = false;
+    const result = projectPromptQueueItems(source, () => { truncated = true; });
+    if (truncated) this.inputLossByItems.add(result);
     this.canonicalItemsBySource.set(source, result);
     return result;
   }
@@ -356,8 +399,23 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!changed.has('items') && !changed.has('readonly') && !changed.has('disabled')) return;
+    const currentItems = this.effectiveItems;
+    this.page = Math.min(this.page, Math.max(0, Math.ceil(currentItems.length / QUEUE_PAGE_SIZE) - 1));
+    if (changed.has('items')) {
+      const byId = new Map(currentItems.map(item => [item.id, item]));
+      for (const [id, draft] of this.drafts) {
+        if (byId.get(id)?.value !== draft.sourceValue) this.drafts.delete(id);
+      }
+      if (this.hasUpdated && this.inputTruncated)
+        this.announcements.announcePolite(this.localize('promptQueueInputLimit'));
+    }
+    if (!changed.has('items') && !changed.has('readonly') && !changed.has('disabled') && !changed.has('page')) return;
     const focusedControl = shadowFocusTarget(this) as HTMLElement | null;
+    const pageAction = focusedControl?.dataset['pageAction'];
+    if (pageAction && focusedControl) {
+      this.pendingRemovalFocus = { pageAction, editor: false, actionIndex: -1, origin: focusedControl };
+      return;
+    }
     const action = focusedControl?.getAttribute('data-action') ?? undefined;
     const editorFocused = focusedControl?.getAttribute('part') === 'editor';
     if (!action && !editorFocused) return;
@@ -372,15 +430,17 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     const previousIndex = previousItems.findIndex((item) => item.id === focusedId);
     const index = items.findIndex((item) => item.id === focusedId);
     const rowRemoved = changed.has('items') && index < 0;
-    const rowMoved = Boolean(action) && changed.has('items') && index >= 0 && index !== previousIndex;
+    const rowMoved = changed.has('items') && index >= 0 && index !== previousIndex;
     const editorRemoved = editorFocused && changed.has('readonly') && this.readonly;
     const controlDisabled = changed.has('disabled') && this.disabled;
     if (!rowRemoved && !rowMoved && !editorRemoved && !controlDisabled) return;
     const target = rowRemoved
       ? items[Math.min(Math.max(previousIndex, 0), items.length - 1)]
       : items.find((item) => item.id === focusedId);
+    if (target) this.page = Math.floor(items.indexOf(target) / QUEUE_PAGE_SIZE);
     const rowActions = focusedItem?.querySelectorAll<HTMLElement>('[data-action]') ?? [];
     this.pendingRemovalFocus = {
+      editor: editorFocused,
       targetId: target?.id,
       action,
       actionIndex: action ? [...rowActions].findIndex((candidate) => candidate === focusedControl) : -1,
@@ -399,12 +459,21 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
       (internalActive !== null && internalActive !== pending.origin) ||
       (documentActive !== null && documentActive !== this && documentActive !== this.ownerDocument.body)
     ) return;
+    if (pending.pageAction) {
+      const pages = [...(this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-page-action]:not(:disabled)') ?? [])];
+      const page = pages.find(button => button.dataset['pageAction'] === pending.pageAction) ?? pages[0];
+      if (page) { if (internalActive !== page) page.focus(); return; }
+    }
     if (!pending.targetId) {
       this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
       return;
     }
     const targetItem = [...(this.shadowRoot?.querySelectorAll<HTMLElement>('[data-id]') ?? [])]
       .find((item) => item.dataset['id'] === pending.targetId);
+    if (pending.editor && !this.readonly && !this.disabled) {
+      const editor = targetItem?.querySelector<HTMLElement>('[part="editor"]');
+      if (editor) { editor.focus(); return; }
+    }
     const actions = [...(targetItem?.querySelectorAll<HTMLElement>('[data-action]') ?? [])];
     const isEnabled = (candidate: HTMLElement): boolean =>
       (candidate as HTMLElement & { disabled?: boolean }).disabled !== true &&
@@ -434,6 +503,36 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     this.shadowRoot?.querySelector<HTMLElement>('[part="base"]')?.focus();
   }
 
+  override adoptedCallback(): void { super.adoptedCallback(); this.announcements.adopted(); }
+  override disconnectedCallback(): void { this.pendingRemovalFocus = undefined; super.disconnectedCallback(); }
+
+  private get inputTruncated(): boolean {
+    return Boolean(publicCollectionTruncation(this, 'items')) || this.inputLossByItems.has(this.effectiveItems);
+  }
+
+  private changePage(page: number): void {
+    if (this.disabled) return;
+    this.page = Math.max(0, Math.min(page, Math.ceil(this.effectiveItems.length / QUEUE_PAGE_SIZE) - 1));
+    this.announcements.announcePolite(this.pageText());
+  }
+
+  private pageText(): string {
+    const format = getNumberFormat(this.effectiveLocale);
+    return this.localize('paginationApplied', undefined, { page: format.format(this.page + 1),
+      totalPages: format.format(Math.ceil(this.effectiveItems.length / QUEUE_PAGE_SIZE)) });
+  }
+
+  private renderPagination(): TemplateResult | typeof nothing {
+    const pages = Math.ceil(this.effectiveItems.length / QUEUE_PAGE_SIZE);
+    return pages > 1 ? html`<div part="pagination" role="group" aria-label=${this.localize('paginationLabel')}>
+      <button part="page-button" data-page-action="first" type="button" ?disabled=${this.disabled || this.page === 0} @click=${() => this.changePage(0)}>${this.localize('paginationFirstPage')}</button>
+      <button part="page-button" data-page-action="previous" type="button" ?disabled=${this.disabled || this.page === 0} @click=${() => this.changePage(this.page - 1)}>${this.localize('previous')}</button>
+      <span part="page-status">${this.pageText()}</span>
+      <button part="page-button" data-page-action="next" type="button" ?disabled=${this.disabled || this.page >= pages - 1} @click=${() => this.changePage(this.page + 1)}>${this.localize('next')}</button>
+      <button part="page-button" data-page-action="last" type="button" ?disabled=${this.disabled || this.page >= pages - 1} @click=${() => this.changePage(pages - 1)}>${this.localize('paginationLastPage')}</button>
+    </div>` : nothing;
+  }
+
   private emitChange(items: PromptQueueItem[], reason: PromptQueueChangeReason, itemId: string): void {
     if (this.disabled) return;
     this.emit('lr-queue-change', { items, reason, itemId });
@@ -441,6 +540,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
 
   private edit(item: CanonicalPromptQueueItem, value: string): void {
     if (this.disabled || this.readonly) return;
+    this.drafts.set(item.id, { sourceValue: item.value, value });
     this.emitChange(
       this.effectiveItems.map((candidate) => toPromptQueueItem(
         candidate,
@@ -491,11 +591,11 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     });
     const actionLabel = (action: string): string =>
       this.localize('promptQueueActionLabel', undefined, { action, index: formattedIndex });
-    return html`<li part="item" data-id=${item.id}>
+    return html`<li part="item" data-id=${item.id} aria-posinset=${index + 1} aria-setsize=${itemCount}>
       ${!this.readonly
         ? html`<lr-textarea
             part="editor"
-            .value=${item.value}
+            .value=${this.drafts.get(item.id)?.value ?? item.value}
             .disabled=${this.disabled}
             .label=${editorLabel}
             resize="auto"
@@ -508,11 +608,15 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
         : html`<span part="value">${item.value}</span>`}
       ${item.attachments?.length
         ? html`<ul part="attachments" aria-label=${this.localize('promptInputAttachments')}>
-            ${item.attachments.map((attachment) => html`
+            ${item.attachments.slice(0, ATTACHMENT_PREVIEW_SIZE).map((attachment) => html`
               <li part="attachment">${attachment.name || this.localize('attachmentUntitledFile')}</li>
             `)}
           </ul>`
         : nothing}
+      ${(item.attachments?.length ?? 0) > ATTACHMENT_PREVIEW_SIZE ? html`<p part="attachment-limit" role="note">${this.localize('promptQueueAttachmentLimit', undefined, {
+        shown: getNumberFormat(this.effectiveLocale).format(ATTACHMENT_PREVIEW_SIZE),
+        total: getNumberFormat(this.effectiveLocale).format(item.attachments!.length),
+      })}</p>` : nothing}
       <div part="actions">
         <lr-button
           part="action"
@@ -573,9 +677,11 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
       ${visibleLabel
         ? html`<div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>`
         : nothing}
+      ${this.inputTruncated ? html`<p part="input-limit" role="note">${this.localize('promptQueueInputLimit')}</p>` : nothing}
+      ${this.renderPagination()}
       ${items.length
-        ? html`<ol part="list" role="list">
-            ${repeat(items, (item) => item.id, (item, index) => this.renderItem(item, index, items.length))}
+        ? html`<ol part="list" role="list" start=${this.page * QUEUE_PAGE_SIZE + 1}>
+            ${repeat(items.slice(this.page * QUEUE_PAGE_SIZE, (this.page + 1) * QUEUE_PAGE_SIZE), (item) => item.id, (item, index) => this.renderItem(item, this.page * QUEUE_PAGE_SIZE + index, items.length))}
           </ol>`
         : html`<p part="empty">${this.localize('promptQueueEmpty')}</p>`}
     </section>`;

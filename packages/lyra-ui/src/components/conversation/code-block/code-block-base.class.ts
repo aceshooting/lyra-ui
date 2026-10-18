@@ -6,7 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraHighlight, LyraAnchor, TextSelectRect } from '../../viewers/document-viewer/anchors.js';
-import type { ShikiHighlighter } from './shiki-types.js';
+import { SHIKI_SOURCE_MAX_CODE_UNITS, type ShikiHighlighter } from './shiki-types.js';
 import {
   CodeBlockHeaderActionsController,
   CodeBlockInteractionController,
@@ -26,7 +26,7 @@ import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../..
 import type { LyraCodeBlockCopyAppearance, LyraCodeBlockToggleDetail } from './code-block-shared.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_codeBlockHighlightLimit, LYRA_DEFAULT_codeBlockLineLabel, LYRA_DEFAULT_codeRegion, LYRA_DEFAULT_codeRegionWithLanguage, LYRA_DEFAULT_collapseCode, LYRA_DEFAULT_copiedToClipboard, LYRA_DEFAULT_copyCode, LYRA_DEFAULT_expandCode } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -54,6 +54,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    codeBlockHighlightLimit: LYRA_DEFAULT_codeBlockHighlightLimit,
     codeBlockLineLabel: LYRA_DEFAULT_codeBlockLineLabel,
     codeRegion: LYRA_DEFAULT_codeRegion,
     codeRegionWithLanguage: LYRA_DEFAULT_codeRegionWithLanguage,
@@ -87,7 +88,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   abstract activeHighlightId: string | null;
 
   @state() protected hasHeaderActions = false;
-  @state() protected focusedLine = 1;
+  protected focusedLine = 1;
   @state() protected highlightedHtml: string | null = null;
   @state() protected shikiReady = false;
   @state() protected justCopied = false;
@@ -96,6 +97,19 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
 
   protected restoreFocusedLineAfterUpdate = false;
   protected highlightToken = 0;
+  private plainTemplate?: TemplateResult;
+  private plainKey: readonly unknown[] = [];
+  private countedCode?: string;
+  private countedLines = 1;
+  private paintedCode?: Element | null;
+  private plainDomChanged = false;
+  private paintedLines = new Map<number, HTMLElement>();
+  private previousHighlighted = new Set<number>();
+  private previousActive = new Set<number>();
+
+  protected get highlightLimited(): boolean {
+    return (this.code ?? '').length > SHIKI_SOURCE_MAX_CODE_UNITS;
+  }
   protected readonly bodyId = nextId('code-block-body');
 
   protected readonly interactions = new CodeBlockInteractionController({
@@ -161,6 +175,8 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     this.headerActions.sync();
     this.restoreFocusedLineAfterUpdate = codeBlockLineHasFocus(this);
     if (changed.has('code')) {
+      this.plainTemplate = undefined;
+      this.plainKey = [];
       this.focusedLine = clampCodeBlockFocusedLine(this.focusedLine, this.lineCount());
     }
     this.beforeHighlightUpdate(changed);
@@ -169,13 +185,19 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       this.effectiveLocale,
       this.localize('codeBlockLineLabel'),
     )) return;
-    if (this.shikiReady || this.preSuppliedGrammar()) this.syncHighlight();
+    if (this.highlightLimited) {
+      this.highlightToken++;
+      this.highlightedHtml = null;
+    } else if (this.shikiReady || this.preSuppliedGrammar()) this.syncHighlight();
     else this.highlightedHtml = null;
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    applyCodeBlockAriaBusy(this, this.showsSkeleton());
+    applyCodeBlockAriaBusy(this, !this.highlightLimited && this.showsSkeleton());
+    this.patchLineState();
+    this.interactions.syncLineButtons(this.focusedLine, this.plainDomChanged);
+    this.plainDomChanged = false;
     if (this.restoreFocusedLineAfterUpdate) {
       restoreCodeBlockLineFocus(this, this.focusedLine);
       this.restoreFocusedLineAfterUpdate = false;
@@ -196,10 +218,16 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   }
 
   protected lineCount(): number {
-    return codeBlockLineCount(this.code ?? '');
+    const code = this.code ?? '';
+    if (code !== this.countedCode) {
+      this.countedCode = code;
+      this.countedLines = codeBlockLineCount(code);
+    }
+    return this.countedLines;
   }
 
   protected tokenize(hl: ShikiHighlighter, lang: string): string | null {
+    if (this.highlightLimited) return null;
     return tokenizeCodeBlock(hl, {
       code: this.code ?? '',
       lang,
@@ -233,6 +261,44 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     });
   }
 
+  private patchLineState(): void {
+    const code = this.renderRoot.querySelector('code');
+    if (code !== this.paintedCode || this.plainDomChanged) {
+      this.paintedCode = code;
+      this.paintedLines.clear();
+      for (const line of code?.querySelectorAll<HTMLElement>('.line[data-line]') ?? []) {
+        // A cached plain template can remount attributes from an earlier highlight selection.
+        line.removeAttribute('data-highlighted');
+        line.removeAttribute('data-active');
+        line.part.remove('line-highlight');
+        this.paintedLines.set(Number(line.dataset['line']), line);
+      }
+    }
+    const highlighted = this.lineHighlightSet();
+    const active = this.activeHighlightLineSet();
+    const changed = new Set([...this.previousHighlighted, ...highlighted, ...this.previousActive, ...active]);
+    for (const number of changed) {
+      const line = this.paintedLines.get(number);
+      if (!line) continue;
+      line.toggleAttribute('data-highlighted', highlighted.has(number));
+      line.toggleAttribute('data-active', active.has(number));
+      if (highlighted.has(number)) line.part.add('line-highlight');
+      else line.part.remove('line-highlight');
+    }
+    this.previousHighlighted = highlighted;
+    this.previousActive = active;
+  }
+
+  private cachedPlainCode(): TemplateResult {
+    const key = [this.code, this.lineNumbers, this.activatableLines, this.effectiveLocale, this.localize('codeBlockLineLabel')];
+    if (!this.plainTemplate || key.some((value, index) => value !== this.plainKey[index])) {
+      this.plainDomChanged = true;
+      this.plainKey = key;
+      this.plainTemplate = this.renderPlainCode();
+    }
+    return this.plainTemplate;
+  }
+
   override render(): TemplateResult {
     return renderCodeBlockShell({
       filename: this.filename,
@@ -248,11 +314,12 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       accessibleLabel: this.accessibleLabel,
       maxHeight: this.maxHeight,
       isDarkTheme: this.isDarkTheme,
-      showSkeleton: this.showsSkeleton(),
+      showSkeleton: !this.highlightLimited && this.showsSkeleton(),
+      highlightLimited: this.highlightLimited && !!this.language,
       highlightedHtml: this.highlightedHtml,
       lineNumbers: this.lineNumbers,
       localize: this.localize.bind(this),
-      renderPlainCode: () => this.renderPlainCode(),
+      renderPlainCode: () => this.cachedPlainCode(),
       onToggle: this.interactions.toggleCollapsed,
       onCopy: this.interactions.copy,
       onBodyMouseUp: this.interactions.onBodyMouseUp,

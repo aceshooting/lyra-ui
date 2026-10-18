@@ -29,6 +29,7 @@ import {
   loadModularMap,
   type LyraMapFeatureRequirements,
   type MapLibreGeoJsonSource,
+  type MapLibreSourceDataDiff,
   type MapLibreMapCapability,
   type MapLibreMarkerCapability,
   type MapLibrePopupCapability,
@@ -60,6 +61,9 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** A caller-authored GeoJSON source diff; feature IDs must be unique and stable. */
+export type LyraMapSourceDataDiff = MapLibreSourceDataDiff;
 
 /** Probes for a real WebGL2 context without ever touching maplibre-gl's own (unreliable) failure
  *  path -- see the call site in `tryConstructMap()`. */
@@ -1991,7 +1995,18 @@ const BASIC_MAP_PAINT_COLOR_NAMES = new Set([
  * numeric rgb() but not modern color()/oklch()/color-mix(), even when the browser computes them.
  * Preserve already-supported layer-paint strings, and only pay for the DOM probe when needed.
  */
+const paintColorCache = new WeakMap<Element, Map<string, string | undefined>>();
 function resolvedMapPaintColor(host: Element, color: string | undefined, preserveLegacy: boolean): string | undefined {
+  let cache = paintColorCache.get(host);
+  if (!cache) paintColorCache.set(host, cache = new Map());
+  const key = `${preserveLegacy}:${color ?? ''}`;
+  if (cache.has(key)) return cache.get(key);
+  const result = resolveMapPaintColor(host, color, preserveLegacy);
+  if (cache.size >= 512) cache.clear();
+  cache.set(key, result);
+  return result;
+}
+function resolveMapPaintColor(host: Element, color: string | undefined, preserveLegacy: boolean): string | undefined {
   const candidate = typeof color === 'string' ? color.trim() : '';
   if (!candidate) return undefined;
   if (preserveLegacy) {
@@ -2146,6 +2161,10 @@ export interface LyraMapEventMap {
  * `@aceshooting/lyra-map` with its bundler plugin or an explicit worker URL. `engine="maplibre"`
  * selects the full optional `maplibre-gl` peer (v5 or v6). Both engines require WebGL2; the
  * component styles generated canvas, marker, popup, and control DOM inside its shadow root.
+ *
+ * Marker inspection is limited to 2,000 entries (markersTruncated reports an omitted suffix),
+ * and dataLayers to 100 entries. Automatic diffs support 10,000 features; updateSourceData()
+ * forwards explicit diffs for larger sources without whole-source comparison.
  *
  * The underlying `maplibregl.Map` — and the WebGL context it opens — isn't
  * constructed until this element is first visible in the viewport (tracked
@@ -2373,9 +2392,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   constructor() {
     super();
     new ThemeWatcher(this, () => {
+      if (!this.syncPaintTheme()) return;
       this.refreshThemePaint();
       this.legendIsLine = this.legendDescribesLine();
-      this.applyMarkers();
     });
     new GlassScrollLayer(this, '[part="legend"]');
   }
@@ -2405,6 +2424,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private readonly fitToken = Object.freeze({});
   /** Whether a non-camera update is pending, so `syncMapSemantics()` has work to do. */
   private semanticsStale = true;
+  private markerSemanticsStale = true;
+  private geoJsonRefreshRequested = false;
+  private refreshingGeoJson = false;
   /** The camera just read back from the peer into `center`/`zoom`. The update that write schedules
    *  consumes it, so that update does not push the same camera straight back. */
   private reflectedCamera?: { readonly center: readonly [number, number]; readonly zoom: number };
@@ -2704,12 +2726,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false }) choropleth?: Readonly<LyraMapChoroplethLayer>;
   /** Point markers rendered over the map. Explicit IDs are unique-nonempty first-wins. An idless
    * marker is instead identified by its coordinate occurrence, so colocated idless markers remain
-   * separate. */
+   * separate. At most the first 2,000 entries are inspected; use dataLayers with cluster for
+   * larger collections. markersTruncated reports an omitted suffix. */
   @property({ attribute: false }) markers: readonly LyraMapMarker[] = [];
+  /** Whether authored marker entries exceed the 2,000-entry inspection ceiling. */
+  get markersTruncated(): boolean {
+    const descriptor = getOwnDataDescriptor(this.markers, 'length');
+    return typeof descriptor !== 'symbol' && typeof descriptor.value === 'number' && descriptor.value > MAX_MAP_MARKERS;
+  }
+
   /**
    * Additive GeoJSON layers rendered alongside the choropleth/markers -- each entry becomes a
    * source plus fill/line/circle layers. `sourceId` values are trimmed, must be nonempty, and retain
-   * only their first occurrence. Defaults empty.
+   * only their first occurrence. Defaults empty; at most 100 entries are inspected. Automatic
+   * diffs inspect at most 10,000 features and 10,000,000 values (4,096 per feature, minimum
+   * 50,000); larger changes use whole-source replacement or explicit updateSourceData().
+   * Call requestUpdate() after intentionally mutating an opaque GeoJSON source in place.
    *
    * An entry opts into either of two other renderings, both strictly additive: `cluster` turns its
    * source into a natively clustered one (aggregate circle, count label, unclustered points), which
@@ -2906,6 +2938,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     else if (diff.update.length > 0 || diff.add?.length || diff.remove?.length)
       source.updateData(diff);
     this._appliedGeoJson.set(resolvedSourceId, projection);
+  }
+
+  /** Forwards a caller-authored diff to an applied dataLayers or choropleth public sourceId.
+   * Returns false before the source is ready, after disconnect, or if the engine lacks updateData.
+   * The diff is passed through without cloning; the caller owns feature IDs and validity. This
+   * route bypasses the automatic 10,000-feature comparison ceiling. It does not rewrite public
+   * properties; reassigning controlled GeoJSON later replaces this imperative state in full. */
+  updateSourceData(sourceId: string, diff: LyraMapSourceDataDiff): boolean {
+    if (!this._map || !this._styleLoaded || !this.isConnected || typeof sourceId !== 'string') return false;
+    const publicId = sourceId.trim();
+    const resolved = this._appliedDataLayerIds.get(publicId) ??
+      (this.canonicalChoropleth?.sourceId === publicId ? this._appliedChoroplethSourceId : undefined);
+    if (!resolved) return false;
+    const source = this._map.getSource(resolved) as MapLibreGeoJsonSource | undefined;
+    if (typeof source?.updateData !== 'function') return false;
+    this._appliedGeoJson.delete(resolved);
+    source.updateData(diff);
+    return true;
   }
 
   /** Normalized `maxBounds`, or `null` when unset or unusable. Rejects rather than clamps a
@@ -3302,8 +3352,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.reflectedCamera = undefined;
     this._appliedChoroplethSourceId = undefined;
     this._appliedFillLayerId = undefined;
+    this.appliedChoroplethPaintKey = undefined;
     this._appliedDataLayerIds.clear();
     this._appliedDataLayerShapes.clear();
+    this.appliedLayerPaintKeys.clear();
     this.appliedPointIcons.clear();
     this.appliedPointPaint.clear();
     this.appliedPointMuting.clear();
@@ -3461,6 +3513,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const canvas = candidate.getCanvas?.() as HTMLCanvasElement | undefined;
       if (canvas) notifyMapCanvasReady(this, canvas);
       this._map = candidate;
+      this.syncMapSemantics();
       this.observeMapAllocation(candidate, this.containerEl);
       this.observePeerChrome();
       this.failure = undefined;
@@ -3481,9 +3534,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.geoJsonRefreshRequested = true;
     super.requestUpdate(...args);
     // A no-op property write schedules nothing and must not mark the semantics stale.
-    if (this.isUpdatePending && args[0] !== 'center' && args[0] !== 'zoom') this.semanticsStale = true;
+    if (this.isUpdatePending && (args[0] === undefined || ['label', 'lang', 'locale', 'strings', 'markers',
+      'legend', 'legendGradient', 'hasLegendSlot', 'hasLegendStartSlot'].includes(String(args[0])))) this.semanticsStale = true;
+    if (this.isUpdatePending && (args[0] === undefined || ['label', 'lang', 'locale', 'strings', 'markers'].includes(String(args[0])))) this.markerSemanticsStale = true;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -3522,6 +3578,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this._styleLoaded = false;
       this._appliedChoroplethSourceId = undefined;
       this._appliedFillLayerId = undefined;
+      this.appliedChoroplethPaintKey = undefined;
       // Register the listener *before* calling setStyle(): maplibre-gl's
       // diff-based style update path (small, incremental style changes) can
       // fire 'style.load' synchronously from inside setStyle() itself —
@@ -3548,6 +3605,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             this._styleLoaded = true;
             this._appliedDataLayerIds.clear(); // a style change wipes every layer/source maplibre-gl knows about
             this._appliedDataLayerShapes.clear();
+            this.appliedLayerPaintKeys.clear();
             this.appliedPointPaint.clear();
             this.appliedPointMuting.clear();
             this._appliedGeoJson.clear();
@@ -3561,7 +3619,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       } catch {
         failStyle();
       }
-    } else if (this._styleLoaded && (changed.has('dataLayers') || changed.has('choropleth'))) {
+    } else if (this._styleLoaded && (this.refreshingGeoJson || changed.has('dataLayers') || changed.has('choropleth'))) {
       this.reconcileGeneratedLayers();
     }
     if (changed.has('hiddenCategories') && this._map && this._styleLoaded) this.refreshThemePaint();
@@ -3570,12 +3628,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('markers') && this._map) this.applyMarkers();
     if (this.semanticsStale) {
       this.semanticsStale = false;
-      this.syncMapSemantics();
+      this.syncMapSemantics(this.markerSemanticsStale);
+      this.markerSemanticsStale = false;
     }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.refreshingGeoJson = this.geoJsonRefreshRequested;
+    this.geoJsonRefreshRequested = false;
+    if (this.refreshingGeoJson) {
+      const choropleth = this.canonicalChoropleth;
+      if (choropleth) this._canonicalChoropleth = {
+        ...choropleth, geojsonProjection: projectAdmittedGeoJson(choropleth.geojson, true),
+      };
+      this._canonicalDataLayers = this.canonicalDataLayers.map(layer => ({
+        ...layer, geojsonProjection: projectAdmittedGeoJson(layer.geojson, true),
+      }));
+    }
     if (changed.has('legendGradient') || changed.has('dataLayers')) {
       this.legendIsLine = this.legendDescribesLine();
     }
@@ -3594,10 +3664,42 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
+  private paintThemeKey?: string;
+  private paintThemeSources?: readonly unknown[];
+  private paintThemeTokens: string[] = [];
+  private syncPaintTheme(): boolean {
+    const sources = [this.dataLayers, this.choropleth];
+    if (!this.paintThemeSources || sources.some((source, index) => source !== this.paintThemeSources![index])) {
+      this.paintThemeSources = sources;
+      const tokens = new Set([...Object.values(TONE_TOKEN), ...Object.values(ON_TONE_TOKEN),
+        '--lr-map-choropleth-fill-opacity', '--lr-map-hidden-category-opacity']);
+      const inputs = JSON.stringify([this.canonicalDataLayers.map(({geojson: _geojson, geojsonProjection: _projection, ...paint}) => paint),
+        [this.canonicalChoropleth?.stops, this.canonicalChoropleth?.stepBaseColor]]);
+      for (const match of inputs.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
+      this.paintThemeTokens = [...tokens];
+    }
+    const style = ownerWindow(this)?.getComputedStyle(this);
+    if (!style) return false;
+    const tokens = new Set(this.paintThemeTokens);
+    const values = [style.color, style.colorScheme];
+    for (const token of tokens) {
+      const value = style.getPropertyValue(token).trim(); values.push(token, value);
+      if (tokens.size < 512) for (const match of value.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
+    }
+    const key = JSON.stringify(values);
+    if (this.paintThemeKey === key) return false;
+    this.paintThemeKey = key;
+    paintColorCache.delete(this);
+    this.appliedLayerPaintKeys.clear();
+    this.appliedChoroplethPaintKey = undefined;
+    return true;
+  }
+
   /** Repaints token-derived and visibility-derived MapLibre values without touching sources,
    *  layers, or map geometry -- which is exactly what a theme change and a `hiddenCategories`
    *  change each need. */
   private refreshThemePaint(): void {
+    paintColorCache.delete(this);
     if (!this._map || !this._styleLoaded || this.preparingFeatures) return;
     const fillOpacity = choroplethFillOpacity(this);
     if (this._appliedFillLayerId) {
@@ -3617,6 +3719,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // entry never created those, and MapLibre reports a paint write to a layer that does not
       // exist as an error event on this component's own handler.
       this.paintDataLayer(sourceId, dataLayer);
+      const {geojson: _geojson, geojsonProjection: _projection, ...paint} = dataLayer;
+      this.appliedLayerPaintKeys.set(sourceId, JSON.stringify(paint));
     }
   }
 
@@ -3725,8 +3829,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     } catch { fail(); }
   }
 
+  private appliedChoroplethPaintKey?: string;
   private applyChoropleth(): void {
     if (!this._map) return;
+    this.syncPaintTheme();
     const choropleth = this.canonicalChoropleth;
     if (!choropleth) {
       this.removeChoropleth();
@@ -3772,6 +3878,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // exists (if any) untouched until `stops` is non-empty again.
     if (stops.length === 0) return;
 
+    const {geojson: _geojson, geojsonProjection: _projection, ...paint} = choropleth;
+    const paintKey = JSON.stringify(paint);
+    if (this.appliedChoroplethPaintKey === paintKey && this._map.getLayer(fillLayerId)) return;
+    this.appliedChoroplethPaintKey = paintKey;
     const colorExpr = this.choroplethColorExpression(choropleth);
     if (this._map.getLayer(fillLayerId)) {
       this._map.setPaintProperty(fillLayerId, 'fill-color', colorExpr as never);
@@ -3843,6 +3953,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._appliedGeoJson.delete(this._appliedChoroplethSourceId);
     this._appliedChoroplethSourceId = undefined;
     this._appliedFillLayerId = undefined;
+    this.appliedChoroplethPaintKey = undefined;
   }
 
   /**
@@ -3852,8 +3963,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * previously-applied id no longer present in `dataLayers` -- mirrors
    * `applyChoropleth()`'s add-or-update-in-place pattern above.
    */
+  private readonly appliedLayerPaintKeys = new Map<string, string>();
+
   private applyDataLayers(): void {
     if (!this._map) return;
+    this.syncPaintTheme();
     const layers = this.canonicalDataLayers;
     const nextIds = new Set(layers.map((layer) => layer.sourceId));
     for (const publicSourceId of this._appliedDataLayerIds.keys()) {
@@ -3887,7 +4001,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         });
         this._appliedGeoJson.set(sourceId, geojsonProjection);
       }
-      this.applyDataLayerRendering(sourceId, layer);
+      const { geojson: _geojson, geojsonProjection: _projection, ...paint } = layer;
+      const paintKey = JSON.stringify(paint);
+      if (!existingSource || this.appliedLayerPaintKeys.get(sourceId) !== paintKey) {
+        this.applyDataLayerRendering(sourceId, layer);
+        this.appliedLayerPaintKeys.set(sourceId, paintKey);
+      }
       this._appliedDataLayerIds.set(publicSourceId, sourceId);
       this._appliedDataLayerShapes.set(publicSourceId, shape);
     }
@@ -4394,6 +4513,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._appliedDataLayerIds.delete(publicSourceId);
     this._appliedDataLayerShapes.delete(publicSourceId);
     this._appliedGeoJson.delete(sourceId);
+    this.appliedLayerPaintKeys.delete(sourceId);
   }
 
   // Deliberately synchronous (no `await loadMaplibre()`): `_maplibreModule` is
@@ -4417,7 +4537,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // order in the accepted marker sequence doesn't change.
     const coordCounts = new Map<string, number>();
     const explicitIds = new Set<string>();
-    let defaultColor: string | undefined;
     for (const m of this.canonicalMarkers) {
       const lngLat = m.lngLat;
       const mapLngLat: [number, number] = [lngLat[0], lngLat[1]];
@@ -4438,12 +4557,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       let existing = this._markerInstances.get(key);
       // An explicit, invalid color (or a `url()` paint server) still falls through to
       // maplibre-gl's own hardcoded default -- documented on `LyraMapMarker.color` -- but an
-      // omitted color resolves the themed brand token, the same way `dataLayerColor()` resolves
-      // an untoned data layer, so a default pin retextures with the rest of the map instead of
-      // staying pinned to maplibre-gl's unthemed `#3FB1CE`.
+      // omitted color inherits the brand token through CSS, preserving marker and popup identity
+      // when the theme changes.
       const markerColor =
         sanitizeCssColor(m.color) ??
-        (m.color === undefined ? (defaultColor ??= dataLayerColor(this, 'accent')) : undefined);
+        (m.color === undefined ? 'currentColor' : undefined);
       const previous = this._markerSources.get(key);
       this._markerSources.set(key, m);
       const sameColor = this._markerColors.get(key) === markerColor;
@@ -4644,7 +4762,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private peerControlsResizeObserver?: ResizeObserver;
   private peerControlsResizeFrame?: { view: Window; handle: number };
 
-  private schedulePeerControlInsets(observer: ResizeObserver, container: HTMLElement): void {
+  private schedulePeerControlInsets(observer: ResizeObserver | undefined, container: HTMLElement): void {
     if (
       this.peerControlsResizeObserver !== observer ||
       this.observedPeerContainer !== container ||
@@ -4711,8 +4829,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     ];
     for (const [selector, part] of selectors) {
       const candidate = root as ParentNode & { matches?: (value: string) => boolean };
-      const elements = [...root.querySelectorAll(selector)];
+      const elements: Element[] = [];
       if (candidate.matches?.(selector)) elements.push(candidate as unknown as Element);
+      if (!(root instanceof Element) || root.childElementCount > 0) elements.push(...root.querySelectorAll(selector));
       for (const element of elements) {
         addPartToken(element, part);
         const label = part === 'attribution-toggle' ? this.localize('mapToggleAttribution')
@@ -4747,12 +4866,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.measurePeerControlInsets(container);
     this.peerChromeObserver = new MutationObserverCtor((records) => {
       if (!this.isConnected || this.containerEl !== container) return;
+      let elementsChanged = false;
       for (const record of records) {
+        for (const node of record.removedNodes) if (node.nodeType === 1) elementsChanged = true;
         for (const node of record.addedNodes) {
-          if (node.nodeType === Node.ELEMENT_NODE) this.syncPeerChromeParts(node as Element);
+          if (node.nodeType !== 1) continue;
+          elementsChanged = true;
+          const element = node as Element;
+          if (element.matches('.maplibregl-marker[part~="marker"]')) continue;
+          this.syncPeerChromeParts(element);
         }
       }
-      this.measurePeerControlInsets(container);
+      if (elementsChanged) this.schedulePeerControlInsets(this.peerControlsResizeObserver, container);
     });
     this.peerChromeObserver.observe(container, { childList: true, subtree: true });
   }
@@ -4786,7 +4911,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     closeButton?.setAttribute('aria-label', this.localize('close'));
   }
 
-  private syncMapSemantics(): void {
+  private syncMapSemantics(markers = true): void {
     const canvas = this._map?.getCanvas?.() as HTMLCanvasElement | undefined;
     if (canvas) {
       canvas.setAttribute('aria-label', this.effectiveMapLabel);
@@ -4798,6 +4923,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       else canvas.removeAttribute('aria-describedby');
     }
     this.hostDescription.refresh();
+    if (!markers) return;
     for (const [key, marker] of this._markerInstances) {
       const markerElement = marker.getElement?.() as HTMLElement | undefined;
       if (!markerElement) continue;

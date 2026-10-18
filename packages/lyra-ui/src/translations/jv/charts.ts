@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} sampel valid ing kabeh distribusi; {belowCount} ing sangisore lan {aboveCount} ing ndhuwure interval sing ditampilake; {invalidCount} sampel ora valid.',
+  histogramDistributionRange: 'Rentang sampel sing diamati: {min} nganti {max}.',
   chartCategory: 'Kategori',
   chartTotal: 'Gunggung',
   chartAxisTotal: 'Gunggung {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'sumbu x {x}, sumbu y {y}',
   chartBubblePointCoordinates: 'sumbu x {x}, sumbu y {y}, radius {radius}',
   chartLabeledPoint: '{label} — {coordinates}',
-  chartTrendIncreasing: 'mundhak',
-  chartTrendDecreasing: 'mudhun',
-  chartTrendFlat: 'tetep',
-  chartSummary: '{label}: {count} nilai, rentang {min} nganti {max}, tren {trend}',
   chartSeriesNoData: '{label}: ora ana data',
   chartSummaryWithData: 'Grafik {type}. {summaries}.',
   chartSummaryEmpty: 'Grafik {type} tanpa data.',
-  chartSummarySeparator: '. ',
   chartData: 'Data grafik',
   chartRenderUnavailable: 'Tampilan bagan ora kasedhiya.',
+  chartPreparedSummaryZoom: 'Zoom nampilake ringkesan sing wis disiapake; rincian luwih cetha liwat indeks ora kasedhiya.',
+  chartSpatialSummary: 'Kabeh sumber: {count} titik, x {minX} nganti {maxX}, y {minY} nganti {maxY}. Tampilan: {matchedCount} titik, x {viewMinX} nganti {viewMaxX}, y {viewMinY} nganti {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Radius ing kabeh sumber: {min} nganti {max}.',
+  chartSpatialDensityLegend: 'Kapadhetan nyakup kabeh seri; katon orané seri mung mengaruhi lapisan titik.',
+  chartSpatialPoint: '{series}: {id}, posisi ing sumber {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Wilayah kapadhetan: {count} titik, x {minX} nganti {maxX}, y {minY} nganti {maxY}.',
+  chartSpatialHidden: ' (seri didhelikake)',
   chartDataSampled: 'Grafik lan tabel data sing digawe nuduhake sampel nganti 1.000 rekaman. Wenehana tabel data khusus supaya kabeh data grafik bisa diakses.',
   chartPlotSampled: 'Grafik nuduhake sampel nganti 1.000 rekaman; tabel data ngemot kabeh data.',
   chartZoomUnavailable: 'Zoom ora kasedhiya, nanging grafik utama isih bisa digunakake.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} saka {total})',
   chartMissingLibrary: 'Komponen iki mbutuhake paket opsional "chart.js" supaya bisa nggambar grafik.',
   boxPlotMissingLibrary: 'Komponen iki mbutuhake paket grafik box-plot opsional supaya bisa nggambar diagram kothak.',
+  chartInputLimit: 'Sawetara data bagan ora dilebokake amarga wates input wis tekan. Wenehana kumpulan data sing luwih cilik utawa wis diringkes sadurunge kanggo nggambarake nilai sing ora dilebokake.',
+  histogramInputLimit: 'Mung 10.000 sampel paling anyar sing disimpen. Wenehana cacah sing wis diklompokake ing interval marang lr-chart kanggo nggambarake distribusi sing luwih gedhe.',
 };
 
 registerLyraLocale('jv', strings);

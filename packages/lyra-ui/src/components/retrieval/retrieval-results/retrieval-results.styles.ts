@@ -124,4 +124,38 @@ export const styles = css`
   [part='spinner'] {
     padding: var(--lr-space-l);
   }
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
+  [part='source-status'], [part='source-selection-status'] {
+    margin: 0;
+    padding: var(--lr-space-s);
+    overflow-wrap: anywhere;
+  }
+  [part='source-pagination'] {
+    display: block;
+    min-inline-size: 0;
+    padding: var(--lr-space-s);
+  }
+  [part='source-retry'], [part='source-selection-retry'] {
+    ${iconHitTarget}
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font: inherit;
+    cursor: pointer;
+    transition: var(--lr-transition-interactive);
+  }
+  [part='source-retry']:hover, [part='source-selection-retry']:hover {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='source-retry']:focus-visible, [part='source-selection-retry']:focus-visible {
+    ${focusRing}
+  }
 `;

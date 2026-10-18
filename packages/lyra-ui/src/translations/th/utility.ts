@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: 'คำแนะนำเพิ่มเติม {count} รายการ',
   },
+  mentionInputLimit: 'มีเฉพาะตัวเลือกสำหรับการกล่าวถึง 10,000 รายการแรกเท่านั้น',
+  diffViewHighlightLimit: 'โค้ดที่ยาวจะแสดงโดยไม่มีการเน้นสีไวยากรณ์',
 };
 
 registerLyraLocale('th', strings);

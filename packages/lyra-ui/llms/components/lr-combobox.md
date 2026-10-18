@@ -21,12 +21,11 @@ Filterable single/multi-select combining a text input with a listbox. Mirrors th
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated**, with shared internals and validation plumbing while retaining its own
 single/multiple value and option synchronization.
 
-Consumer writes on mounted options immediately update the owning picker and its submission,
-without changing the reset default or emitting picker input/change events. Owner synchronization
-does not echo as a consumer selected write.
-
-A mounted `option.selected` assignment updates the live picker value and form submission
-immediately, including deselection and equal-value writes; it emits no user input/change event.
+Programmatic `option.selected` writes update the option immediately, including deselection and
+equal-value writes. The owning combobox reconciles selection and form state once in the next
+microtask; await one microtask before reading settled parent state. These writes do not change the
+reset default or emit picker input/change events. Assign the parent value array for a bulk
+replacement. Owner synchronization does not echo as a consumer selected write.
 
 When `multiple` becomes false, the public value, live option flags, popup `aria-selected`,
 `selectedRows`, event `data` and `with-unknown-option` rows expose one selected occurrence. The
@@ -139,7 +138,8 @@ other value (a plain object, a function) is dropped from the row instead of reac
 - `hint: string = ''`
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
-- `open: boolean = false` (reflected). Rows mount the first time the listbox opens. Disabling the
+- `open: boolean = false` (reflected). Rows mount when the listbox opens and are removed after it
+  closes; reopening restores them. Disabling the
   combobox, making it `readonly` or disabling its fieldset closes an open listbox at once; that
   close is policy, so it emits no `lr-hide`/`lr-after-hide` and cannot be vetoed.
 - `allowCreate: boolean = false` (attribute `allow-create`) — a nonmatching query renders a
@@ -290,10 +290,12 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
   falling back to `200` for a non-finite value)
-- `maxRender: number = 200` (attribute `max-render` — caps how many rows render at once, always
-  keeping the current selection visible even if it's outside the cap; the excess renders as one
-  `overflowText` row instead of being dropped silently. See "Large option lists" below for how to
-  size it, and when `source` is the better answer. Runtime writes are capped at 1,000)
+- `maxRender: number = 200` (attribute `max-render`) — ordinary suggestion-prefix size, retaining
+  active and selected options within an absolute 1,000-row ceiling. The active option has priority;
+  selections remain committed even when every selected row cannot mount. Zero omits the ordinary
+  prefix while retaining active/selected rows; non-finite values use 200. Rows keep source order,
+  and excess options are summarized by `overflowText`. See "Large option lists" below for sizing
+  and the async `source` alternative
 - `sourceTotal: number` (read-only) — provider-side total for the latest accepted response
 - `sourceTruncated: boolean` (read-only) — whether the response reported or contained more rows
   than the bounded retained snapshot; the overflow row includes that hidden count
@@ -469,6 +471,14 @@ element-reflection replacement can reach — element reflection resolves same-ro
 `<lr-virtual-list>` stays `role="list"`/`role="listitem"` and is the right tool for feeds and
 viewers, not for a listbox whose active row must stay addressable.
 
+A remote `source` can search a backend containing millions of records without supplying that entire
+collection to the component. Keep the search index on the host or server, return at most
+`options.limit` candidate rows, and include `total` to disclose omitted matches. A discriminating
+query can select an identity anywhere in the backend; selected labels and data survive later
+result windows. This is bounded search, with no paging or cursor for traversing every match of a
+broad query. Refine the query to reach the desired record, or use a paged or indexed data browser
+when complete match traversal is required.
+
 What that means in practice:
 
 - **Up to a few hundred rows, raise `maxRender` and move on.** A few hundred flex rows is an
@@ -480,9 +490,10 @@ What that means in practice:
   rendering everything and asking the browser to lay it out. Pair it with `sourceDelay` to debounce.
 - **Leave the overflow row doing its job.** When the cap does bite, the excess collapses into one
   `overflowText` row (default `"+{n} more — refine your search"`) rather than disappearing
-  silently, and the current selection is always kept visible even when it falls outside the cap.
-  Suppressing that row by setting `maxRender` far above the real list size trades a useful "keep
-  typing" affordance for layout work no user asked for.
+  silently. Active and selected rows reserve space inside the absolute 1,000-row ceiling;
+  oversized selections remain selected even when some selected rows cannot mount.
+  Increasing `maxRender` can expose more rows only within the absolute 1,000-row ceiling;
+  use filtering or `source` to narrow larger catalogs.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided), plus two adornment slots:
@@ -621,7 +632,8 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   baseline without overwriting a dirty live selection
 - `selected: boolean = false` (property only) — live selectedness. The parent combobox/select
   updates it as the current value changes; those live writes never rewrite the `selected`
-  attribute or `defaultSelected`
+  attribute or `defaultSelected`. Consumer writes update the option immediately and reconcile
+  parent selection/form state once in the next microtask, without parent input/change events
 - `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
   for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
 - `group: string = ''` (section header)

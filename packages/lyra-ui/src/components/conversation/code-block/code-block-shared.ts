@@ -1,3 +1,4 @@
+import { SHIKI_SOURCE_MAX_CODE_UNITS } from './shiki-types.js';
 /**
  * Everything `<lr-code-block>` and `<lr-code-block-core>` render and compute identically:
  * localized label helpers, line addressing (`highlight-lines`/`highlights` parsing, line counting,
@@ -424,9 +425,6 @@ function codeBlockNeedsHighlightResync(
     changed.has('code') ||
     changed.has('language') ||
     changed.has('languages') ||
-    changed.has('highlightLines') ||
-    changed.has('highlights') ||
-    changed.has('activeHighlightId') ||
     changed.has('lineNumbers') ||
     changed.has('activatableLines')
   );
@@ -483,6 +481,7 @@ export function tokenizeCodeBlock(
   hl: ShikiHighlighterCore,
   options: CodeBlockTokenizeOptions
 ): string | null {
+  if (options.code.length > SHIKI_SOURCE_MAX_CODE_UNITS) return null;
   try {
     return hl.codeToHtml(options.code, {
       lang: options.lang,
@@ -825,6 +824,7 @@ export interface CodeBlockShellOptions {
   maxHeight: string;
   isDarkTheme: boolean;
   showSkeleton: boolean;
+  highlightLimited?: boolean;
   /** shiki's own markup for this render, or `null` for the plain-text fallback path. */
   highlightedHtml: string | null;
   lineNumbers: boolean;
@@ -910,6 +910,7 @@ export function renderCodeBlockShell(
             : options.highlightedHtml !== null
               ? unsafeHTML(options.highlightedHtml)
               : html`<pre part="pre" class=${options.lineNumbers ? 'line-numbers' : nothing}>${options.renderPlainCode()}</pre>`}
+          ${options.highlightLimited ? html`<div part="limit" role="note">${options.localize('codeBlockHighlightLimit')}</div>` : nothing}
         </div>
       </div>
     `;
@@ -926,7 +927,7 @@ interface CodeBlockInteractionHost extends HTMLElement {
 }
 
 /** The reactive writes and event emissions the controller cannot perform itself: each component
- *  keeps `focusedLine`/`justCopied`/`isDarkTheme` as its own `@state()` (they reach its template)
+ *  keeps `justCopied`/`isDarkTheme` as its own `@state()` and retains the focused line
  *  and its own typed `emit()`, and hands those in as callbacks. */
 export interface CodeBlockInteractionOptions {
   host: CodeBlockInteractionHost;
@@ -959,6 +960,11 @@ export interface CodeBlockInteractionOptions {
 export class CodeBlockInteractionController {
   private copyTimer?: { owner: Window; handle: number };
   private copyGeneration = 0;
+  private lineButtons = new Map<number, HTMLElement>();
+  private lineSource?: Element | null;
+  private focusedLine = 1;
+  private countedCode?: string;
+  private countedLines = 1;
   private highlightedLocale?: string;
   private highlightedLineLabel?: string;
 
@@ -1000,11 +1006,26 @@ export class CodeBlockInteractionController {
   /** Moves the roving tab stop to `line`, both in the component's state and on the rendered
    *  gutter buttons (which Lit will not have re-rendered yet). */
   setFocusedLine(line: number): void {
+    if (line === this.focusedLine) return;
+    this.lineButtons.get(this.focusedLine)?.setAttribute('tabindex', '-1');
+    this.focusedLine = line;
     this.options.setFocusedLine(line);
-    for (const target of this.options.host.renderRoot.querySelectorAll<HTMLElement>(
-      '[data-line][part~="line-button"]'
-    )) {
-      target.tabIndex = Number(target.dataset['line']) === line ? 0 : -1;
+    this.lineButtons.get(line)?.setAttribute('tabindex', '0');
+  }
+
+  /** Rebuilds the gutter index only when the source DOM is replaced. */
+  syncLineButtons(focusedLine: number, force = false): void {
+    const source = this.options.host.renderRoot.querySelector('code');
+    if (!force && source === this.lineSource) return;
+    this.lineSource = source;
+    this.lineButtons.clear();
+    this.focusedLine = focusedLine;
+    this.countedCode = this.options.host.code;
+    this.countedLines = codeBlockLineCount(this.countedCode ?? '');
+    for (const button of source?.querySelectorAll<HTMLElement>('[part~="line-button"][data-line]') ?? []) {
+      const line = Number(button.dataset['line']);
+      this.lineButtons.set(line, button);
+      button.tabIndex = line === focusedLine ? 0 : -1;
     }
   }
 
@@ -1017,10 +1038,14 @@ export class CodeBlockInteractionController {
   // renderCodeBlockPlainCode() while activatableLines && lineNumbers are both set).
   onLineKeyDown = (e: KeyboardEvent, line: number): void => {
     const { host } = this.options;
+    if (host.code !== this.countedCode) {
+      this.countedCode = host.code;
+      this.countedLines = codeBlockLineCount(host.code ?? '');
+    }
     const action = codeBlockLineKeyAction(
       e.key,
       line,
-      codeBlockLineCount(host.code ?? '')
+      this.countedLines
     );
     if (action === null) return;
     e.preventDefault();
@@ -1031,11 +1056,7 @@ export class CodeBlockInteractionController {
     const next = action.line;
     this.setFocusedLine(next);
     void host.updateComplete.then(() => {
-      host.renderRoot
-        .querySelector<HTMLElement>(
-          `[part~="line-button"][data-line="${next}"]`
-        )
-        ?.focus();
+      this.lineButtons.get(next)?.focus();
     });
   };
 

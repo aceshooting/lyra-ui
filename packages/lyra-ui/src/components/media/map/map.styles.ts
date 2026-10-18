@@ -57,6 +57,7 @@ export const styles = css`
     touch-action: none;
   }
   .maplibregl-marker {
+    color: var(--lr-color-brand);
     position: absolute;
     top: 0;
     /* policy-allow(physical-css): MapLibre projects marker transforms from the canvas top-left. */

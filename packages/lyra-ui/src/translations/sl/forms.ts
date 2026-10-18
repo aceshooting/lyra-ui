@@ -121,6 +121,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pero spuščeno',
   signaturePadPenUp: 'Pero dvignjeno',
+  localePickerInputLimit: 'Na voljo je samo prvih 512 jezikovnih in območnih vnosov.',
+  emojiPickerInputLimit: 'Nekateri podatki emodžijev so bili izpuščeni, ker je bila dosežena omejitev vnosa.',
 };
 
 registerLyraLocale('sl', strings);

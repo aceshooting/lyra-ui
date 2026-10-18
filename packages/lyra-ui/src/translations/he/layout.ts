@@ -61,6 +61,7 @@ const strings: LyraLocaleStrings = {
     two: '{count} פקודות',
     other: '{count} פקודות',
   },
+  commandPaletteInputLimit: 'חלק מהפקודות הושמטו משום שהקלט הגיע למגבלה.',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

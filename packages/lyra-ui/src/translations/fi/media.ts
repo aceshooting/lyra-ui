@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Kuva {index}/{total}',
   playWithContext: 'Toista: {name}',
   pauseWithContext: 'Keskeytä: {name}',
+  avPlayerWaveformUnavailable: 'Aaltomuototiedot eivät ole saatavilla tai ne eivät vastaa tätä mediaa.',
+  avPlayerTranscriptUnavailable: 'Litterointitiedot eivät ole saatavilla.',
   dropzoneReleaseToAdd: 'Lisää tiedosto vapauttamalla.',
   dropzoneRejectedType: 'Tätä tiedostotyyppiä ei hyväksytä.',
   attachmentAdd: 'Lisää liite',

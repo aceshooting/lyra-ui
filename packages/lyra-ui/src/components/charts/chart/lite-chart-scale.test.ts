@@ -1,6 +1,11 @@
+import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
+import { collectionTruncationWarningKey } from '../../../internal/collection-snapshot.js';
+expectDevWarning(collectionTruncationWarningKey('lr-lite-chart', 'labels'));
+expectDevWarning('lr-chart-series-cap');
 
 const labelsOf = (length: number): string[] => Array.from({ length }, (_, index) => `t${index}`);
 
@@ -67,4 +72,57 @@ describe('lr-lite-chart logarithmic scale', () => {
     el.datasets = [{ label: 'S', data: data.slice(0, 10) }];
     expect(marks() === first).to.equal(false);
   });
+});
+
+
+it('moves the roving mark without reevaluating the 100000-point chart', async () => {
+  const datasets = [{ label: 'S', data: Array.from({ length: 100_000 }, (_, i) => i + 1) }];
+  const el = await mount(html`<lr-lite-chart .labels=${labelsOf(100_000)} .datasets=${datasets}></lr-lite-chart>`);
+  expect(el.labels.length).to.equal(10_000);
+  expect(el.datasets[0]!.data.length).to.equal(10_000);
+  const seam = el as unknown as { renderChart(): unknown; onMarkFocus(index: number): void };
+  const original = seam.renderChart;
+  let renders = 0;
+  seam.renderChart = function () { renders++; return original.call(this); };
+  try {
+    seam.onMarkFocus(1);
+    await el.updateComplete;
+    expect(renders).to.equal(0);
+    recordScaleMeasurement('lr-lite-chart', '100000 points focus move', { renders });
+    expect(el.shadowRoot!.querySelector('[data-mark-index="0"]')!.getAttribute('tabindex')).to.equal('-1');
+    expect(el.shadowRoot!.querySelector('[data-mark-index="1"]')!.getAttribute('tabindex')).to.equal('0');
+  } finally { seam.renderChart = original; }
+});
+
+it('does not retain the caller dataset array after snapshotting it', async () => {
+  const datasets = [{ label: 'S', data: [1, 2] }];
+  const el = await mount(html`<lr-lite-chart .labels=${['a', 'b']} .datasets=${datasets}></lr-lite-chart>`);
+  expect(Object.values(el).filter((value) => value === datasets).length).to.equal(0);
+});
+
+it('bounds sampled records and scroll width while retaining an interior extremum', async () => {
+  const data = Array.from({ length: 10_000 }, () => 1);
+  data[4321] = 9999;
+  const el = await mount(html`<lr-lite-chart layout="scroll" max-records="20"
+    .labels=${labelsOf(data.length)} .datasets=${[{ label: 'S', data }]}></lr-lite-chart>`);
+  const marks = el.shadowRoot!.querySelectorAll('[part="bar"]');
+  expect(marks.length).to.be.at.most(20);
+  expect(Array.from(marks, mark => Number(mark.getAttribute('data-index')))).to.include(4321);
+  expect(el.shadowRoot!.querySelector('svg')!.getBoundingClientRect().width).to.be.lessThan(1000);
+});
+
+
+it('keeps the default record ceiling when maxRecords is unset or invalid', async () => {
+  const data = Array.from({ length: 20 }, (_, index) => index + 1);
+  const el = await mount(html`<lr-lite-chart layout="scroll" .labels=${labelsOf(20)}
+    .datasets=${[{label:'S',data}]}></lr-lite-chart>`);
+  expect(el.maxRecords).to.equal(1000);
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
+  el.maxRecords = 4; await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.be.at.most(4);
+  el.maxRecords = Number.NaN; await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
+  el.setAttribute('max-records', '4'); await el.updateComplete;
+  el.removeAttribute('max-records'); await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
 });

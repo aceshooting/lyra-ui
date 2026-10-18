@@ -13,6 +13,8 @@ describe('<lr-unit-picker>', () => {
   it('offers standard measurement units without choosing or converting a value', async () => {
     const el = await fixture<LyraUnitPicker>(html`<lr-unit-picker label="Unit"></lr-unit-picker>`);
     expect(el.value).to.equal('');
+    el.click();
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('lr-option').length === UNIT_CODES.length);
     expect(UNIT_CODES.includes('kilometer')).to.equal(true);
     expect(UNIT_CODES.includes('celsius')).to.equal(true);
     expect(el.shadowRoot!.querySelectorAll('lr-option').length).to.equal(UNIT_CODES.length);

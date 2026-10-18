@@ -274,3 +274,24 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   run *and* the `CustomStateSet` updated, so never read one synchronously after a press
   (`image-comparer.test.ts`'s drag assertion is the reference). Find offenders by grepping for an
   `expect(` within three lines of a mouse `down`.
+
+## Scale tests
+
+Colocate `<name>-scale.test.ts` with the component, using fixed-size fixtures and stable scenario
+names such as `mount@10000`. Run `pnpm exec wtr src/components/<family>/<name>/<name>-scale.test.ts`
+while developing; run `pnpm test:scale` for the complete Chromium measurement report. The scale group
+rejects coverage instrumentation and other engines. Ordinary per-file runs do not overwrite the report.
+
+Import `recordScaleMeasurement`, `measureScale`, `countCalls`, `renderedNodeCount`, or the array
+probe helpers from `test/scale-budgets.js`. `measureScale(host, { update, settle })` counts layout and
+style reads, property definitions, Intl constructions, and rendered elements including nested shadow
+roots. It restores global spies on both success and rejection. Omit memory fields when choosing
+blocking counters. Use attributed private-method or array probes for mechanism-specific costs.
+`countCalls(target, key)` returns a `calls` getter and `restore()`; always restore in `finally`.
+
+`recordScaleMeasurement('lr-table', 'mount@10000', { domNodes: count })` records finite nonnegative
+integer counters. An optional fourth `advisory` argument carries timing or memory data. Each
+component/scenario pair must be unique across the complete run. Assertions retain semantic contracts
+(retained records, disclosure, rendered cap); reviewable JSON ceilings enforce operation counts.
+`check:scale-budgets` fails when a recorded counter has no budget or a budget has no measurement.
+The complete run must succeed before its report can be checked or used to write budgets.

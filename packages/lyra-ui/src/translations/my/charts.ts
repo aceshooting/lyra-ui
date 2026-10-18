@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'ဖြန့်ဝေမှုတစ်ခုလုံးတွင် မှန်ကန်သော နမူနာ {validCount} ခုရှိသည်။ ပြသထားသော အပိုင်းအခြားများအောက်တွင် {belowCount} ခုနှင့် အထက်တွင် {aboveCount} ခုရှိသည်။ မမှန်ကန်သော နမူနာ {invalidCount} ခုရှိသည်။',
+  histogramDistributionRange: 'တွေ့ရှိထားသော နမူနာအပိုင်းအခြား။ {min} မှ {max} အထိ။',
   chartCategory: 'အမျိုးအစား',
   chartTotal: 'စုစုပေါင်း',
   chartAxisTotal: '{axis} စုစုပေါင်း',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x ဝင်ရိုး {x}၊ y ဝင်ရိုး {y}',
   chartBubblePointCoordinates: 'x ဝင်ရိုး {x}၊ y ဝင်ရိုး {y}၊ အချင်းဝက် {radius}',
   chartLabeledPoint: '{label} — {coordinates}',
-  chartTrendIncreasing: 'တိုးလာနေသည်',
-  chartTrendDecreasing: 'လျော့လာနေသည်',
-  chartTrendFlat: 'တည်ငြိမ်သည်',
-  chartSummary: '{label}: တန်ဖိုး {count} ခု၊ အပိုင်းအခြား {min} မှ {max}၊ {trend} လမ်းကြောင်း',
   chartSeriesNoData: '{label}: ဒေတာမရှိပါ',
   chartSummaryWithData: '{type} ဇယား။ {summaries}။',
   chartSummaryEmpty: 'ဒေတာမရှိသော {type} ဇယား။',
-  chartSummarySeparator: '။ ',
   chartData: 'ဇယားဒေတာ',
   chartRenderUnavailable: 'ဇယားပုံဖော်ပြမှုကို မရနိုင်ပါ။',
+  chartPreparedSummaryZoom: 'ချဲ့ကြည့်ခြင်းသည် ကြိုတင်ပြင်ဆင်ထားသော အကျဉ်းချုပ်ကို ပြသသည်။ အညွှန်းမှတစ်ဆင့် ပိုမိုအသေးစိတ်ကြည့်ရှုခြင်းကို မရရှိနိုင်ပါ။',
+  chartSpatialSummary: 'မူရင်းအပြည့်အစုံ။ အမှတ် {count} ခု၊ x {minX} မှ {maxX}၊ y {minY} မှ {maxY}။ မြင်ကွင်း။ အမှတ် {matchedCount} ခု၊ x {viewMinX} မှ {viewMaxX}၊ y {viewMinY} မှ {viewMaxY}။',
+  chartSpatialRadiusDomain: 'မူရင်းအပြည့်အစုံရှိ အချင်းဝက်။ {min} မှ {max} အထိ။',
+  chartSpatialDensityLegend: 'သိပ်သည်းမှုတွင် စီးရီးအားလုံးပါဝင်သည်။ စီးရီးများကို ပြသခြင်း သို့မဟုတ် ဖျောက်ခြင်းသည် ထပ်ဆင့်ပြသထားသော အမှတ်များကိုသာ သက်ရောက်သည်။',
+  chartSpatialPoint: '{series}: {id}၊ မူရင်းရှိ တည်နေရာ {sourceIndex}၊ {coordinates}{hidden}',
+  chartSpatialBin: 'သိပ်သည်းမှုဧရိယာ။ အမှတ် {count} ခု၊ x {minX} မှ {maxX}၊ y {minY} မှ {maxY}။',
+  chartSpatialHidden: ' (စီးရီးကို ဖျောက်ထားသည်)',
   chartDataSampled: 'ဇယားနှင့် ဖန်တီးထားသော ဒေတာဇယားသည် မှတ်တမ်း ၁,၀၀၀ အထိ နမူနာကို ပြသသည်။ ဇယားဒေတာအားလုံးကို အသုံးပြုရန် စိတ်ကြိုက်ဒေတာဇယားကို ပေးပါ။',
   chartPlotSampled: 'ဇယားသည် မှတ်တမ်း ၁,၀၀၀ အထိ နမူနာကို ပြသပြီး ဒေတာဇယားတွင် ဒေတာအားလုံး ပါဝင်သည်။',
   chartZoomUnavailable: 'ချဲ့ကြည့်၍မရသော်လည်း အဓိကဇယားကို ဆက်လက်အသုံးပြုနိုင်သည်။',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total} ခုအနက် {index})',
   chartMissingLibrary: 'ဇယားများပြရန် ဤအစိတ်အပိုင်းတွင် ရွေးချယ်နိုင်သော "chart.js" ပက်ကေ့ဂျ်ကို ထည့်သွင်းရန် လိုအပ်သည်။',
   boxPlotMissingLibrary: 'ဘောက်စ်ပလော့များပြရန် ဤအစိတ်အပိုင်းတွင် ရွေးချယ်နိုင်သော box-plot chart ပက်ကေ့ဂျ်ကို ထည့်သွင်းရန် လိုအပ်သည်။',
+  chartInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် ဇယားဒေတာအချို့ကို ချန်လှပ်ထားသည်။ ချန်လှပ်ထားသော တန်ဖိုးများကို ဖော်ပြရန် ပိုသေးငယ်သော သို့မဟုတ် ကြိုတင်စုစည်းထားသော ဒေတာအစုကို ပေးပါ။',
+  histogramInputLimit: 'နောက်ဆုံးနမူနာ 10,000 ကိုသာ ထိန်းသိမ်းထားသည်။ ပိုကြီးသော ဖြန့်ဝေမှုကို ဖော်ပြရန် အပိုင်းအခြားအလိုက် ကြိုတင်အုပ်စုဖွဲ့ထားသော အရေအတွက်များကို lr-chart သို့ ပေးပါ။',
 };
 
 registerLyraLocale('my', strings);

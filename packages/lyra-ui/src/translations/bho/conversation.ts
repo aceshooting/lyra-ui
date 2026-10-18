@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'अभी ले बातचीत नइखे',
   agentWorkspaceLabel: 'एजेंट के कार्यक्षेत्र',
+  agentWorkspaceInputLimit: '{collection}: कुल {total} प्रविष्टि में से खाली {count} रखल जात बा।',
   agentWorkspaceConversation: 'बातचीत',
   agentWorkspaceDetails: 'रन के ब्योरा',
   agentWorkspaceRun: 'एजेंट रन',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'ई हिस्सा फेर कोशिश करीं',
   promptQueueLabel: 'कतार के प्रॉम्प्ट',
   promptQueueEmpty: 'कवनो प्रॉम्प्ट कतार में नइखे',
+  promptQueueInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से कुछ कतार में पड़ल प्रॉम्प्ट भा अटैचमेंट छोड़ दिहल गइल बा।',
+  promptQueueAttachmentLimit: 'रखल गइल {total} अटैचमेंट में से {shown} देखावल जात बा।',
   promptQueueSendNow: 'अबहीं भेजीं',
   selectionToolbarLabel: 'चुनाव के काम',
   selectionAsk: 'पूछीं',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} टोकन',
     other: '{count} टोकन',
   },
+  threadListInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से कुछ बातचीत के थ्रेड छोड़ दिहल गइल बा।',
+  promptInputInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से कुछ सुझाव भा कैटलॉग प्रविष्टि छोड़ दिहल गइल बा।',
+  transcriptFeedInputLimit: '{total} में से खाली सबसे नया {count} गो प्रविष्टि रखल जाला।',
+  codeBlockHighlightLimit: 'लमहर कोड बिना सिंटैक्स हाइलाइटिंग के देखावल जात बा।',
 };
 
 registerLyraLocale('bho', strings);

@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Chỉ hiển thị {count} kết quả kiểm thử đầu tiên.',
   toolTimelineLimit: 'Hiển thị tối đa {count} lần gọi công cụ.',
   toolSelectLimit: 'Chỉ hiển thị {count} công cụ đầu tiên.',
+  testResultsInputTooLarge: 'Chi tiết kết quả kiểm thử vượt quá giới hạn hiển thị.',
   toolCall: 'Lần gọi công cụ',
   maximize: 'Phóng to',
   promptStudioVariableName: 'Tên biến {index}',
@@ -292,6 +293,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Chỉ có tệp {count} đầu tiên được hiển thị.',
   taskListLimit: 'Chỉ có {count} nhiệm vụ đầu tiên được hiển thị.',
   evalDatasetLimit: 'Chỉ hiển thị {count} ví dụ đầu tiên.',
+  activityFeedInputLimit: 'Chỉ giữ lại {count} mục mới nhất trong tổng số {total} mục.',
+  spanWaterfallLimit: 'Đang hiển thị {shown} trong số {total} span.',
+  toolTimelineInputLimit: 'Chỉ giữ lại {count} lần gọi công cụ mới nhất trong tổng số {total} lần gọi.',
 };
 
 registerLyraLocale('vi', strings);

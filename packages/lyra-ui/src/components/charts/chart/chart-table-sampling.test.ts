@@ -89,3 +89,19 @@ it('normalizes non-finite counts and handles enormous source dimensions without 
   expect(sample.seriesIndexes.at(-1)).to.equal(Number.MAX_SAFE_INTEGER - 1);
   expectWithinCellBudget(sample);
 });
+
+it('preserves bucket extremes and endpoints inside width and record budgets', () => {
+  const values = Array.from({ length: 10_000 }, () => 0);
+  values[123] = 900;
+  values[456] = -800;
+  const sample = sampleChartTableIndexes(10_000, 1, {
+    maxRecords: 100,
+    width: 40,
+    valueAt: (row: number) => values[row],
+  });
+  expect(sample.rowIndexes).to.include(123);
+  expect(sample.rowIndexes).to.include(456);
+  expect(sample.rowIndexes[0]).to.equal(0);
+  expect(sample.rowIndexes.at(-1)).to.equal(9_999);
+  expect(sample.rowIndexes.length).to.be.at.most(40);
+});

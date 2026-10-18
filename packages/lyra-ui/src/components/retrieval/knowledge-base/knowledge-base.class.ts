@@ -1,3 +1,6 @@
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
+import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import {
@@ -9,11 +12,11 @@ import {
   type SVGTemplateResult,
   type TemplateResult,
 } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { createRetryForwarder } from '../../../internal/retry-forwarder.js';
 import {
@@ -22,12 +25,13 @@ import {
 } from '../../../internal/intl-cache.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { styles } from './knowledge-base.styles.js';
-import type { TableColumn } from '../../data/table/table.class.js';
+import type { LyraTableEventMap, TableColumn } from '../../data/table/table.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { LyraMenu, MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_knowledgeBaseActionsColumn, LYRA_DEFAULT_knowledgeBaseCreateSource, LYRA_DEFAULT_knowledgeBaseDeleteAction, LYRA_DEFAULT_knowledgeBaseDocumentCount, LYRA_DEFAULT_knowledgeBaseEmptyDescription, LYRA_DEFAULT_knowledgeBaseEmptyHeading, LYRA_DEFAULT_knowledgeBaseHeading, LYRA_DEFAULT_knowledgeBaseHealthColumn, LYRA_DEFAULT_knowledgeBaseHealthDegraded, LYRA_DEFAULT_knowledgeBaseHealthFailed, LYRA_DEFAULT_knowledgeBaseHealthHealthy, LYRA_DEFAULT_knowledgeBaseHealthUnknown, LYRA_DEFAULT_knowledgeBaseNameColumn, LYRA_DEFAULT_knowledgeBaseNeedsAttention, LYRA_DEFAULT_knowledgeBaseNeverSynced, LYRA_DEFAULT_knowledgeBasePauseAction, LYRA_DEFAULT_knowledgeBasePermissionColumn, LYRA_DEFAULT_knowledgeBasePermissionEditor, LYRA_DEFAULT_knowledgeBasePermissionOwner, LYRA_DEFAULT_knowledgeBasePermissionRestricted, LYRA_DEFAULT_knowledgeBasePermissionViewer, LYRA_DEFAULT_knowledgeBaseRowActionsLabel, LYRA_DEFAULT_knowledgeBaseSyncAction, LYRA_DEFAULT_knowledgeBaseSyncColumn, LYRA_DEFAULT_knowledgeBaseSyncError, LYRA_DEFAULT_knowledgeBaseSyncIdle, LYRA_DEFAULT_knowledgeBaseSyncPaused, LYRA_DEFAULT_knowledgeBaseSyncSynced, LYRA_DEFAULT_knowledgeBaseSyncSyncing, LYRA_DEFAULT_knowledgeBaseSyncedSources, LYRA_DEFAULT_knowledgeBaseSyncingSources, LYRA_DEFAULT_knowledgeBaseTotalSources, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_loading, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Sync lifecycle state of one knowledge source, as last reported by the host. */
@@ -79,7 +83,67 @@ export interface KnowledgeSource {
   errorMessage?: string;
 }
 
+/** Full-source server order for the source grid. */
+export interface KnowledgeBaseSourceQuery {
+  readonly sortKey: string | null;
+  readonly sortDir: 'asc' | 'desc';
+}
+/** Full-source counts; attention may overlap either lifecycle count. */
+export interface KnowledgeBaseSourceSummary {
+  readonly total: number;
+  readonly synced: number;
+  readonly syncing: number;
+  readonly attention: number;
+}
+export type KnowledgeBaseSource = LyraPageSource<KnowledgeSource, KnowledgeBaseSourceQuery, KnowledgeBaseSourceSummary>;
+
+function sourceField(value: unknown, key: string, current: () => boolean, required = false): unknown {
+  if (!current()) throw new Error('Source record revoked');
+  if (!value || typeof value !== 'object') throw new TypeError('Invalid source value');
+  const descriptor = getOwnDataDescriptor(value, key);
+  if (!current()) throw new Error('Source record revoked');
+  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR || (required && descriptor === MISSING_OWN_DATA_DESCRIPTOR)) throw new TypeError('Invalid source field');
+  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
+}
+function sourceCount(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) throw new TypeError('Invalid source count');
+  return value;
+}
+function projectKnowledgeSource(record: LyraSourceRecord<unknown>, current: () => boolean): KnowledgeSource {
+  const read = (key: string, required = false) => sourceField(record.value, key, current, required);
+  const id = read('id', true); const name = read('name', true); const type = read('type');
+  const syncStatus = read('syncStatus', true); const indexingHealth = read('indexingHealth'); const permission = read('permission');
+  const documentCount = read('documentCount'); const timestamp = read('lastSyncedAt'); const errorMessage = read('errorMessage');
+  let units = 0;
+  for (const value of [id, name, type, syncStatus, indexingHealth, permission, errorMessage, typeof timestamp === 'string' ? timestamp : undefined]) {
+    if (value !== undefined && typeof value !== 'string') throw new TypeError('Invalid source text');
+    units += typeof value === 'string' ? value.length : 0;
+  }
+  if (typeof id !== 'string' || !id.trim() || id !== record.key || typeof name !== 'string' || units > 65_536) throw new TypeError('Invalid source record');
+  if (!['idle', 'syncing', 'paused', 'synced', 'error'].includes(syncStatus as string)) throw new TypeError('Invalid source status');
+  if (indexingHealth !== undefined && !['healthy', 'degraded', 'failed', 'unknown'].includes(indexingHealth as string)) throw new TypeError('Invalid source health');
+  if (permission !== undefined && !['owner', 'editor', 'viewer', 'restricted'].includes(permission as string)) throw new TypeError('Invalid source permission');
+  if (documentCount !== undefined) sourceCount(documentCount);
+  let lastSyncedAt: Date | string | undefined;
+  if (typeof timestamp === 'string' || timestamp === undefined) lastSyncedAt = timestamp;
+  else {
+    const time = Date.prototype.getTime.call(timestamp);
+    if (!Number.isFinite(time)) throw new TypeError('Invalid source timestamp');
+    lastSyncedAt = new Date(time);
+  }
+  if (!current()) throw new Error('Source record revoked');
+  return Object.freeze({ id, name, type: type as string | undefined, syncStatus: syncStatus as KnowledgeSourceSyncStatus,
+    indexingHealth: indexingHealth as KnowledgeSourceIndexingHealth | undefined, permission: permission as KnowledgeSourcePermission | undefined,
+    documentCount: documentCount as number | undefined, lastSyncedAt, errorMessage: errorMessage as string | undefined });
+}
+function projectKnowledgeSummary(value: unknown, current: () => boolean): KnowledgeBaseSourceSummary {
+  const read = (key: string) => sourceCount(sourceField(value, key, current, true));
+  return Object.freeze({ total: read('total'), synced: read('synced'), syncing: read('syncing'), attention: read('attention') });
+}
+
 export interface LyraKnowledgeBaseEventMap {
+  'lr-sort-request': LyraTableEventMap<KnowledgeSource>['lr-sort-request'];
+  'lr-sort': LyraTableEventMap<KnowledgeSource>['lr-sort'];
   /** The toolbar's "Add source" affordance was activated. No `sourceId` -- there is nothing yet to
    *  reference; the host owns the actual creation flow (naming, connector picking, ...). */
   'lr-source-create': CustomEvent<null>;
@@ -209,6 +273,13 @@ function normalizeTimestamp(
  * Blank source ids and later duplicates are ignored before summary counts, rendering, or actions.
  * The first source for an id wins.
  *
+ * `dataSource` opts into provider-owned server pages of at most 500 rows. Source keys must
+ * equal record IDs. Each response supplies authoritative total/synced/syncing/attention counts;
+ * attention can overlap the lifecycle counts. Only the current page is retained, and the name,
+ * sync, health, and permission headers request server sorting. Undefined restores `sources`.
+ * Reassign the provider or call requestUpdate() to refresh; ordinary presentation updates do not
+ * refetch. Provider failures retain the toolbar and use the existing cancelable retry contract.
+ *
  * A separate `error` state reports a failed source-list load without discarding the toolbar and
  * summary context around it: while `error` is set, the nested `<lr-table>` shows its own built-in
  * failed-load state (the same `error`-prefixed exported parts and `[part='retry-button']` as
@@ -219,7 +290,10 @@ function normalizeTimestamp(
  * (it intercepts the table's own `lr-retry-request`, re-proposes its own cancelable one, and only then
  * clears `error`) so the outer property never drifts out of sync with the table's internal state.
  *
+ * @csspart source-status - Localized provider loading or failed-summary status.
  * @customElement lr-knowledge-base
+ * @event lr-sort-request - Source mode only: cancelable original table sort proposal.
+ * @event lr-sort - Source mode only: original accepted table sort commit.
  * @event lr-source-create - The toolbar "Add source" affordance was activated. No detail.
  * @event lr-source-sync - A row's "Sync now" action was activated. `detail: { sourceId }`.
  * @event lr-source-pause - A row's "Pause sync" action was activated. `detail: { sourceId }`.
@@ -309,6 +383,8 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     knowledgeBaseSyncedSources: LYRA_DEFAULT_knowledgeBaseSyncedSources,
     knowledgeBaseSyncingSources: LYRA_DEFAULT_knowledgeBaseSyncingSources,
     knowledgeBaseTotalSources: LYRA_DEFAULT_knowledgeBaseTotalSources,
+    loading: LYRA_DEFAULT_loading,
+    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     untitledSource: LYRA_DEFAULT_untitledSource,
   };
   // GENERATED DEFAULT-STRING SLICE: END
@@ -318,7 +394,122 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     'sources',
   ]);
 
+  protected static override readonly identityCollectionObjectProperties = Object.freeze(['dataSource']);
+
   static override styles = [LyraElement.styles, styles];
+
+  @state() private sourceStateVersion = 0;
+  private _dataSource?: KnowledgeBaseSource;
+  private sourceEpoch = 0;
+  private sourceVersion = 0;
+  private sourceSyncing = false;
+  private sourceResync = false;
+  private sourceLocaleUpdate = false;
+  private sourceInputs?: readonly unknown[];
+  private sourceResult?: LyraPageResult<KnowledgeSource, KnowledgeBaseSourceSummary>;
+  private sourceRows: KnowledgeSource[] = [];
+  private sourceFailure: unknown;
+  private sourceTableShown = false;
+  private sourceSortKey: string | null = null;
+  private sourceSortDir: 'asc' | 'desc' = 'asc';
+  private sortRequest?: { target: EventTarget | null; version: number; columns: readonly TableColumn<KnowledgeSource>[]; key: string; dir: 'asc' | 'desc' };
+  private readonly sourcePages = new SourcePageController<KnowledgeSource, KnowledgeBaseSourceQuery, KnowledgeBaseSourceSummary>(this, {
+    normalizeRecord: (record, isCurrent) => {
+      const current = this.sourceCurrent();
+      return Object.freeze({ ...record, value: projectKnowledgeSource(record, () => isCurrent() && current()) });
+    },
+    normalizeSummary: value => projectKnowledgeSummary(value, this.sourceCurrent()),
+    validateMetadata: result => {
+      const summary = result.summary!;
+      if (summary.total !== result.total || summary.synced > summary.total || summary.syncing > summary.total || summary.attention > summary.total || summary.synced + summary.syncing > summary.total) throw new TypeError('Invalid source summary');
+      const rows = result.rows.map(record => record.value);
+      if (rows.filter(row => row.syncStatus === 'synced').length > summary.synced || rows.filter(row => row.syncStatus === 'syncing').length > summary.syncing || rows.filter(row => row.syncStatus === 'error' || row.indexingHealth === 'failed' || row.indexingHealth === 'degraded').length > summary.attention) throw new TypeError('Inconsistent source summary');
+    },
+    onChange: () => { this.sourceStateVersion++; },
+  });
+
+  /** Immutable full-source provider; takes precedence over sources. Keys equal source IDs.
+   * Reassigning the same provider or requestUpdate() refreshes. undefined restores sources. */
+  @property({ attribute: false })
+  get dataSource(): KnowledgeBaseSource | undefined { return this._dataSource; }
+  set dataSource(value: KnowledgeBaseSource | undefined) {
+    const old = this._dataSource; this._dataSource = value;
+    this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
+    this.requestUpdate('dataSource', old);
+  }
+  /** Zero-based provider page. */
+  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  /** Provider page size, normalized to 1–500. */
+  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  /** Accepted full-source total; null while pending, failed, or using sources. */
+  get sourceTotal(): number | null { return this.sourceMode ? this.sourceResult?.total ?? null : null; }
+  private get sourceMode(): boolean { return this.dataSource !== undefined; }
+  private sourceCurrent(): () => boolean {
+    const version = this.sourceVersion; const epoch = this.sourceEpoch; const source = this.dataSource; const owner = this.ownerDocument;
+    return () => this.isConnected && this.ownerDocument === owner && this.sourceVersion === version && this.sourceEpoch === epoch && this.dataSource === source;
+  }
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (this.sourceLocaleUpdate) { super.requestUpdate(...args); this.syncSource(); return; }
+    if (args[0] === undefined && (!this.sourceInputs || this.effectiveLocale === this.sourceInputs[3])) this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
+    if (args[0] === undefined || ['dataSource', 'sourcePage', 'sourcePageSize'].includes(String(args[0]))) this.syncSource();
+    super.requestUpdate(...args);
+  }
+  override attributeChangedCallback(name: string, old: string | null, value: string | null): void {
+    const previous = this.sourceLocaleUpdate;
+    if (name === 'lang' || name === 'locale') this.sourceLocaleUpdate = true;
+    try { super.attributeChangedCallback(name, old, value); } finally { this.sourceLocaleUpdate = previous; }
+  }
+  override connectedCallback(): void { super.connectedCallback(); this.syncSource(); }
+  override adoptedCallback(): void { this.clearSourceLifecycle(); this.sourcePages.adopted(); super.adoptedCallback(); this.syncSource(); }
+  protected override willUpdate(changed: PropertyValues): void { super.willUpdate(changed); this.syncSource(); }
+  private clearSourceLifecycle(): void {
+    this.sourceEpoch++; this.sourceVersion++; this.sourceInputs = undefined;
+    this.sourceRows = []; this.sourceResult = undefined; this.sourceFailure = undefined; this.sourceTableShown = false;
+    this.closeActionMenus(); this.sourcePages.bind(undefined);
+  }
+  private syncSource(): void {
+    if (!this.sourcePages || !this.isConnected) return;
+    if (this.sourceSyncing) { this.sourceResync = true; return; }
+    this.sourceSyncing = true;
+    const source = this.dataSource; const epoch = this.sourceEpoch; const owner = this.ownerDocument;
+    const current = () => this.isConnected && this.ownerDocument === owner && this.dataSource === source && this.sourceEpoch === epoch;
+    try {
+      if (source === undefined) {
+        if (this.sourceInputs || this.sourceFailure) this.clearSourceLifecycle();
+        return;
+      }
+      const revision = source.revision;
+      if (!current()) return;
+      const locale = this.effectiveLocale; const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
+      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      if (this.sourceInputs && (size !== this.sourceInputs[6] || this.sourceSortKey !== this.sourceInputs[4] || this.sourceSortDir !== this.sourceInputs[5])) page = 0;
+      const inputs = [source, revision, epoch, locale, this.sourceSortKey, this.sourceSortDir, size, page];
+      if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
+      const version = ++this.sourceVersion;
+      this.sourceInputs = inputs; this.sourceRows = []; this.sourceResult = undefined; this.sourceFailure = undefined;
+      this.closeActionMenus(); this.sourcePage = page;
+      this.sourcePages.bind({ source, revision, epoch, locale });
+      if (!current() || this.sourceVersion !== version) return;
+      void this.loadSourcePage(version, Object.freeze({ sortKey: this.sourceSortKey, sortDir: this.sourceSortDir }), page, size);
+    } catch (error) {
+      if (current()) { this.sourceVersion++; this.sourceRows = []; this.sourceResult = undefined; this.sourceFailure = error; this.closeActionMenus(); this.sourcePages.bind(undefined); }
+    } finally {
+      this.sourceSyncing = false;
+      if (this.sourceResync) { this.sourceResync = false; this.syncSource(); }
+    }
+  }
+  private async loadSourcePage(version: number, query: KnowledgeBaseSourceQuery, page: number, size: number): Promise<void> {
+    const owner = this.ownerDocument;
+    const accepted = await this.sourcePages.request(query, page, size);
+    if (!this.isConnected || this.ownerDocument !== owner || this.sourceVersion !== version || !this.sourceMode) return;
+    if (accepted) {
+      this.sourceResult = this.sourcePages.state.result;
+      this.sourceRows = this.sourceResult!.rows.map(record => record.value);
+      if (this.sourceInputs) this.sourceInputs = [...this.sourceInputs.slice(0, -1), this.sourcePages.state.page];
+      this.sourcePage = this.sourcePages.state.page;
+    }
+    this.sourceStateVersion++;
+  }
 
   /** The sources to list, in display order. */
   @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
@@ -356,10 +547,27 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   /** Forward the nested table's retry as this component's request; a veto keeps both error states. */
-  private onTableRetry = createRetryForwarder(
+  private legacyTableRetry = createRetryForwarder(
     (init) => this.emit('lr-retry-request', null, init),
     () => { this.error = false; },
   );
+
+  private sourceRetryCommit?: () => void;
+  private readonly sourceTableRetry = createRetryForwarder(
+    init => this.emit('lr-retry-request', null, init),
+    () => this.sourceRetryCommit?.(),
+  );
+
+  private retrySource(event: CustomEvent<null>, current: () => boolean, failed: boolean): void {
+    if (!current()) { event.stopPropagation(); event.preventDefault(); return; }
+    const nested = this.sourceRetryCommit !== undefined;
+    if (!nested) this.sourceRetryCommit = () => {
+      if (!current() || !this.sourceMode) return;
+      this.error = false;
+      if (failed && current()) this.requestUpdate();
+    };
+    try { this.sourceTableRetry(event); } finally { if (!nested) this.sourceRetryCommit = undefined; }
+  }
 
   private sourcesCache?: { source: unknown; value: KnowledgeSource[] };
 
@@ -501,11 +709,21 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
       this.emit('lr-source-delete', { sourceId: source.id });
   }
 
-  private readonly openActionMenus = new Map<HTMLElement, string>();
+  private readonly openActionMenus = new Map<HTMLElement, { source: KnowledgeSource; current: () => boolean }>();
+
+  private closeActionMenus(): void {
+    for (const dropdown of this.openActionMenus.keys()) {
+      (dropdown as HTMLElement & { open: boolean }).open = false;
+      const menu = dropdown.querySelector<LyraMenu>(tag('menu'));
+      if (menu) renderLit(nothing, menu);
+    }
+    this.openActionMenus.clear();
+  }
 
   private updateActionMenu(dropdown: HTMLElement, sourceId: string): void {
     const menu = dropdown.querySelector<LyraMenu>(tag('menu'));
-    const source = this.normalizedSources.find((row) => row.id === sourceId);
+    const admitted = this.openActionMenus.get(dropdown);
+    const source = this.sourceMode ? (admitted?.current() ? admitted.source : undefined) : this.normalizedSources.find((row) => row.id === sourceId);
     if (!menu || !source) return;
     menu.label = this.localize('knowledgeBaseRowActionsLabel', undefined, { name: this.sourceName(source) });
     const canPause = source.syncStatus === 'syncing';
@@ -515,21 +733,23 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    for (const [dropdown, sourceId] of this.openActionMenus) {
+    for (const [dropdown, admission] of this.openActionMenus) {
       if (!dropdown.isConnected || !(dropdown as HTMLElement & { open: boolean }).open) {
         this.openActionMenus.delete(dropdown);
         continue;
       }
-      this.updateActionMenu(dropdown, sourceId);
+      this.updateActionMenu(dropdown, admission.source.id);
     }
   }
 
   override disconnectedCallback(): void {
-    this.openActionMenus.clear();
+    this.clearSourceLifecycle();
     super.disconnectedCallback();
   }
 
   private renderActionsCell(source: KnowledgeSource): TemplateResult {
+    const sourceMode = this.sourceMode; const authority = this.sourceCurrent();
+    const current = () => sourceMode ? authority() && this.sourceMode && this.sourceRows.includes(source) : !this.sourceMode;
     const label = this.localize('knowledgeBaseRowActionsLabel', undefined, {
       name: this.sourceName(source),
     });
@@ -537,13 +757,13 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
       <lr-dropdown without-arrow part="actions-menu" placement="bottom-end"
         @lr-show=${(event: Event) => {
           const dropdown = event.currentTarget as HTMLElement & { open: boolean };
-          if (event.target !== dropdown) return;
+          if (event.target !== dropdown || !current()) return;
           const menu = dropdown.querySelector<LyraMenu>(tag('menu'));
           if (menu) {
-            this.openActionMenus.set(dropdown, source.id);
+            this.openActionMenus.set(dropdown, { source, current });
             this.updateActionMenu(dropdown, source.id);
             queueMicrotask(() => {
-              if (!dropdown.open) {
+              if (current() && !dropdown.open) {
                 this.openActionMenus.delete(dropdown);
                 renderLit(nothing, menu);
               }
@@ -552,7 +772,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         }}
         @lr-after-hide=${(event: Event) => {
           const dropdown = event.currentTarget as HTMLElement & { open: boolean };
-          if (event.target !== dropdown) return;
+          if (event.target !== dropdown || !current()) return;
           const menu = dropdown.querySelector<LyraMenu>(tag('menu'));
           if (!dropdown.open && menu) {
             this.openActionMenus.delete(dropdown);
@@ -571,7 +791,10 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           label=${label}
           @lr-select=${(e: CustomEvent<MenuItemSelectDetail>) => {
             e.stopPropagation();
-            this.onRowAction(source, e.detail.item.value);
+            if (!current()) return;
+            const action = e.detail.item.value;
+            if (!current() || (sourceMode && ((action === 'sync' && source.syncStatus === 'syncing') || (action === 'pause' && source.syncStatus !== 'syncing')))) return;
+            this.onRowAction(source, action);
           }}
         ></lr-menu>
       </lr-dropdown>
@@ -598,6 +821,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   private columnsCache?: {
     locale: string;
     strings: unknown;
+    source: boolean;
     value: TableColumn<KnowledgeSource>[];
   };
 
@@ -605,25 +829,29 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   private tableColumns(): TableColumn<KnowledgeSource>[] {
     const { effectiveLocale: locale, strings } = this;
     const cached = this.columnsCache;
-    if (cached?.locale === locale && cached.strings === strings) return cached.value;
+    if (cached?.locale === locale && cached.strings === strings && cached.source === this.sourceMode) return cached.value;
     const value: TableColumn<KnowledgeSource>[] = [
       {
         key: 'name',
+        sortable: this.sourceMode,
         label: this.localize('knowledgeBaseNameColumn'),
         cell: (row) => this.renderNameCell(row),
       },
       {
         key: 'sync',
+        sortable: this.sourceMode,
         label: this.localize('knowledgeBaseSyncColumn'),
         cell: (row) => this.renderSyncCell(row),
       },
       {
         key: 'health',
+        sortable: this.sourceMode,
         label: this.localize('knowledgeBaseHealthColumn'),
         cell: (row) => this.renderHealthCell(row),
       },
       {
         key: 'permission',
+        sortable: this.sourceMode,
         label: this.localize('knowledgeBasePermissionColumn'),
         cell: (row) => this.renderPermissionCell(row),
       },
@@ -634,15 +862,16 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         cell: (row) => this.renderActionsCell(row),
       },
     ];
-    this.columnsCache = { locale, strings, value };
+    this.columnsCache = { locale, strings, source: this.sourceMode, value };
     return value;
   }
 
   private renderSummary(sources: readonly KnowledgeSource[]): TemplateResult {
-    const total = sources.length;
-    const synced = sources.filter((s) => s.syncStatus === 'synced').length;
-    const syncing = sources.filter((s) => s.syncStatus === 'syncing').length;
-    const attention = sources.filter(
+    const summary = this.sourceMode ? this.sourceResult?.summary : undefined;
+    const total = summary?.total ?? sources.length;
+    const synced = summary?.synced ?? sources.filter((s) => s.syncStatus === 'synced').length;
+    const syncing = summary?.syncing ?? sources.filter((s) => s.syncStatus === 'syncing').length;
+    const attention = summary?.attention ?? sources.filter(
       (s) =>
         s.syncStatus === 'error' ||
         s.indexingHealth === 'failed' ||
@@ -677,7 +906,13 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   }
 
   override render(): TemplateResult {
-    const sources = this.normalizedSources;
+    const source = this.sourceMode;
+    const sources = source ? this.sourceRows : this.normalizedSources;
+    const current = this.sourceCurrent(); const version = this.sourceVersion;
+    const state = this.sourcePages.state;
+    const failed = source && !!(state.error || this.sourceFailure);
+    if (source && !state.pending && (this.sourceResult || failed)) this.sourceTableShown = true;
+    const columns = this.tableColumns();
     const heading =
       this.label == null ? this.localize('knowledgeBaseHeading') : this.label;
     // An explicitly blank heading is a visual choice; the grid still needs a name.
@@ -699,13 +934,37 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
               </lr-button>`
             : nothing}
         </div>
-        ${!this.withoutSummary && sources.length > 0
-          ? this.renderSummary(sources)
-          : nothing}
+        ${source && !this.sourceResult
+          ? html`<p part="source-status">${this.localize(failed ? 'tableLoadFailed' : 'loading')}</p>`
+          : !this.withoutSummary && sources.length > 0 ? this.renderSummary(sources) : nothing}
+        ${source && !this.sourceTableShown && !this.error ? nothing : html`
         <lr-table
           part="table"
           exportparts=${TABLE_EXPORT_PARTS}
-          .columns=${this.tableColumns()}
+          .columns=${columns}
+          .strings=${this.strings}
+          .paginationMode=${source ? 'server' : 'client'}
+          .sortMode=${source ? 'server' : 'client'}
+          .page=${source ? finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1 : 1}
+          .pageSize=${source ? finiteInteger(this.sourcePageSize, 100, 1, 500) : 100}
+          .sortKey=${source ? this.sourceSortKey ?? '' : ''}
+          .sortDir=${source ? this.sourceSortDir : 'asc'}
+          .totalItems=${source ? this.sourceTotal ?? 0 : 0}
+          .unknownTotal=${source && this.sourceTotal === null}
+          .hasNext=${false}
+          .loading=${source && state.pending && !this.error}
+          @lr-page-change=${(event: CustomEvent<{ page: number }>) => { if (!source) return; event.stopPropagation(); if (current()) this.sourcePage = event.detail.page - 1; }}
+          @lr-sort-request=${(event: CustomEvent<{ sortKey: string; sortDir: 'asc' | 'desc' }>) => {
+            if (!source) return;
+            if (!current()) { event.preventDefault(); event.stopPropagation(); return; }
+            this.sortRequest = { target: event.currentTarget, version, columns, key: event.detail.sortKey, dir: event.detail.sortDir };
+          }}
+          @lr-sort=${(event: CustomEvent<{ sortKey: string; sortDir: 'asc' | 'desc' }>) => {
+            if (!source) return;
+            const request = this.sortRequest; this.sortRequest = undefined;
+            if (!current() || !request || request.target !== event.currentTarget || request.version !== version || request.columns !== this.tableColumns() || request.key !== event.detail.sortKey || request.dir !== event.detail.sortDir) { event.stopPropagation(); return; }
+            this.sourceSortKey = event.detail.sortKey; this.sourceSortDir = event.detail.sortDir; this.syncSource(); this.sourceStateVersion++;
+          }}
           .rows=${sources}
           .rowKey=${this.rowKey}
           aria-label=${tableLabel}
@@ -714,15 +973,15 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
             'knowledgeBaseEmptyDescription',
             undefined
           )}
-          ?error=${this.error}
+          ?error=${this.error || failed}
           error-heading=${this.errorHeading ?? nothing}
           error-description=${this.errorDescription}
           @lr-row-activate=${(e: Event) => e.stopPropagation()}
           @lr-row-click=${(e: Event) => e.stopPropagation()}
-          @lr-retry-request=${this.onTableRetry}
+          @lr-retry-request=${(event: CustomEvent<null>) => { if (!source) { this.legacyTableRetry(event); return; } this.retrySource(event, current, failed); }}
         >${this.hasErrorSlot
           ? html`<div slot="error"><slot name="error"></slot></div>`
-          : nothing}</lr-table>
+          : nothing}</lr-table>`}
       </div>
     `;
   }

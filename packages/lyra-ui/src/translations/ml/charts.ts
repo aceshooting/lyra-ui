@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'മുഴുവൻ വിതരണത്തിലും {validCount} സാധുവായ സാമ്പിളുകൾ; കാണിച്ച ഇടവേളകൾക്ക് താഴെ {belowCount}, മുകളിൽ {aboveCount}; {invalidCount} അസാധുവായ സാമ്പിളുകൾ.',
+  histogramDistributionRange: 'നിരീക്ഷിച്ച സാമ്പിളുകളുടെ പരിധി: {min} മുതൽ {max} വരെ.',
   chartCategory: 'വിഭാഗം',
   chartTotal: 'ആകെ',
   chartAxisTotal: '{axis} ആകെ',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ആരം {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'വർധിക്കുന്നു',
-  chartTrendDecreasing: 'കുറയുന്നു',
-  chartTrendFlat: 'സ്ഥിരം',
-  chartSummary: '{label}: {count} മൂല്യങ്ങൾ, {min} മുതൽ {max} വരെ പരിധി, {trend} പ്രവണത',
   chartSeriesNoData: '{label}: ഡാറ്റയില്ല',
   chartSummaryWithData: '{type} ചാർട്ട്. {summaries}.',
   chartSummaryEmpty: 'ഡാറ്റയില്ലാത്ത {type} ചാർട്ട്.',
-  chartSummarySeparator: '. ',
   chartData: 'ചാർട്ട് ഡാറ്റ',
   chartRenderUnavailable: 'ചാർട്ട് പ്രദർശനം ലഭ്യമല്ല.',
+  chartPreparedSummaryZoom: 'സൂം തയ്യാറാക്കിയ സംഗ്രഹം കാണിക്കുന്നു; സൂചികയിലൂടെ കൂടുതൽ വിശദാംശങ്ങൾ ലഭ്യമല്ല.',
+  chartSpatialSummary: 'മുഴുവൻ ഉറവിടം: {count} ബിന്ദുക്കൾ, x {minX} മുതൽ {maxX} വരെ, y {minY} മുതൽ {maxY} വരെ. കാഴ്ച: {matchedCount} ബിന്ദുക്കൾ, x {viewMinX} മുതൽ {viewMaxX} വരെ, y {viewMinY} മുതൽ {viewMaxY} വരെ.',
+  chartSpatialRadiusDomain: 'മുഴുവൻ ഉറവിടത്തിലെ ആരം: {min} മുതൽ {max} വരെ.',
+  chartSpatialDensityLegend: 'സാന്ദ്രതയിൽ എല്ലാ ശ്രേണികളും ഉൾപ്പെടുന്നു; ശ്രേണികളുടെ ദൃശ്യത ബിന്ദുക്കളുടെ മേൽപ്പാളികളെ മാത്രം ബാധിക്കുന്നു.',
+  chartSpatialPoint: '{series}: {id}, ഉറവിടത്തിലെ സ്ഥാനം {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'സാന്ദ്രതാ പ്രദേശം: {count} ബിന്ദുക്കൾ, x {minX} മുതൽ {maxX} വരെ, y {minY} മുതൽ {maxY} വരെ.',
+  chartSpatialHidden: ' (ശ്രേണി മറച്ചിരിക്കുന്നു)',
   chartDataSampled: 'ചാർട്ടും സൃഷ്ടിച്ച ഡാറ്റ പട്ടികയും പരമാവധി 1,000 രേഖകളുടെ മാതൃക കാണിക്കുന്നു. ചാർട്ടിലെ മുഴുവൻ ഡാറ്റയും ലഭിക്കാൻ ഇഷ്ടാനുസൃത ഡാറ്റ പട്ടിക നൽകുക.',
   chartPlotSampled: 'ചാർട്ട് പരമാവധി 1,000 രേഖകളുടെ മാതൃക കാണിക്കുന്നു; ഡാറ്റ പട്ടികയിൽ മുഴുവൻ ഡാറ്റയും ഉണ്ട്.',
   chartZoomUnavailable: 'സൂം ലഭ്യമല്ലെങ്കിലും അടിസ്ഥാന ചാർട്ട് ലഭ്യമാണ്.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index}/{total})',
   chartMissingLibrary: 'ചാർട്ടുകൾ കാണിക്കാൻ ഈ ഘടകത്തിൽ ഐച്ഛിക "chart.js" പാക്കേജ് ഇൻസ്റ്റാൾ ചെയ്യണം.',
   boxPlotMissingLibrary: 'ബോക്സ് പ്ലോട്ടുകൾ കാണിക്കാൻ ഈ ഘടകത്തിൽ ഐച്ഛിക box-plot chart പാക്കേജ് ഇൻസ്റ്റാൾ ചെയ്യണം.',
+  chartInputLimit: 'ഇൻപുട്ട് പരിധിയിലെത്തിയതിനാൽ ചാർട്ടിലെ ചില ഡാറ്റ ഒഴിവാക്കി. ഒഴിവാക്കിയ മൂല്യങ്ങൾ പ്രതിനിധീകരിക്കാൻ ചെറുതോ മുൻകൂട്ടി സംഗ്രഹിച്ചതോ ആയ ഡാറ്റാസെറ്റ് നൽകുക.',
+  histogramInputLimit: 'ഏറ്റവും പുതിയ 10,000 സാമ്പിളുകൾ മാത്രമേ സൂക്ഷിക്കൂ. വലിയൊരു വിതരണം പ്രതിനിധീകരിക്കാൻ മുൻകൂട്ടി ഇടവേളകളായി തരംതിരിച്ച എണ്ണങ്ങൾ lr-chart-ന് നൽകുക.',
 };
 
 registerLyraLocale('ml', strings);

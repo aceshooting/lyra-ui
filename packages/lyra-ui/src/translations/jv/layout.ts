@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} prentah',
   },
+  commandPaletteInputLimit: 'Sawetara prentah ora dilebokake amarga wates input wis tekan.',
 };
 
 registerLyraLocale('jv', strings);

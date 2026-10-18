@@ -1,5 +1,6 @@
 /** @deprecated Import @aceshooting/lyra-ui/components/lr-xml-viewer.js to register this component. */
 export * from './xml-viewer.class.js';
+import '../../layout/virtual-list/virtual-list.js';
 import { html } from 'lit';
 import { LyraXmlViewer } from './xml-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';

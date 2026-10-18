@@ -62,6 +62,7 @@ const strings: LyraLocaleStrings = {
     many: '{count} poleceń',
     other: '{count} polecenia',
   },
+  commandPaletteInputLimit: 'Pominięto niektóre polecenia, ponieważ osiągnięto limit danych wejściowych.',
 };
 
 registerLyraLocale('pl', strings);

@@ -9,22 +9,22 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `xlsx` — see `llms/peers.md`
-- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-spreadsheet-viewer`
 
-Fetches and renders `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer. Multiple
-worksheets render through a `<lr-tab-group>` switcher, and body rows use `<lr-virtual-list>`.
+Fetches `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer, or reads a host-owned
+`dataSource`. Multiple worksheets render through a `<lr-tab-group>` switcher, and body rows use `<lr-virtual-list>`.
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses one sheet's raw grid, 1-based, with
 its header row included, resolving the target sheet from the anchor's own `sheet` field (falling
 back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` switches
 `<lr-tab-group>`'s active tab first when needed, then scrolls the addressed row/column into view.
 `highlights` paint as a focusable `part="cell-highlight"`. A jump whose workbook is replaced by a
-concurrent `src` reassignment mid-flight reports `found: false` rather than a phantom success —
+concurrent `src`, `workbook`, or `dataSource` reassignment mid-flight reports `found: false` rather than a phantom success —
 matching `lr-csv-viewer`/`lr-dataset-viewer` (it wrongly reported `found: true` before 9.0.0).
 
 **Properties:** `src: string = ''` and `name: string = ''`. `maxHeight: string = ''` (attribute
@@ -33,13 +33,103 @@ matching `lr-csv-viewer`/`lr-dataset-viewer` (it wrongly reported `found: true` 
 ignored. `anchorKinds: readonly LyraAnchorKind[] = ['cell-range']` (this viewer's supported
 `LyraAnchor.kind` values for the shared anchor-target contract).
 
-**Methods:** `search(query)` resolves the match count across every sheet's stringified cell values,
+Input properties and legacy limits:
+
+- `maxRows: number = 10000` (attribute `max-rows`) — rows per sheet, including its header;
+  effective range 1–100,000. For fetched ZIP workbooks, this also bounds the total row elements
+  encountered across inspected archive parts before SheetJS parsing.
+- `maxColumns: number = 1000` (attribute `max-columns`) — columns per sheet;
+  effective range 1–10,000.
+- `maxBytes: number = 26214400` (attribute `max-bytes`) — source bytes, default 25 MiB;
+  effective range 1–262,144,000 bytes (250 MiB).
+- `workbook: SpreadsheetViewerWorkbook | undefined` (property only, default `undefined`) —
+  `{ sheets: { name: string; rows: unknown[][] }[] }`. Each grid includes its header row and
+  accepts string, number, boolean, `null` or `undefined` cells.
+
+- `dataSource: SpreadsheetViewerSource | undefined` (property only, default `undefined`) — a host-owned
+  logical source, described below; `SpreadsheetViewerSource = LyraWorkbookSource`.
+
+Limits truncate finite fractions and clamp to their effective ranges; non-finite inputs use the
+stated defaults. Set limits before assigning `workbook`. In-memory input bypasses fetching and
+SheetJS, takes precedence over `src` even when empty, and setting it to `undefined` restores the
+configured URL source. Admission reads own data properties and rejects accessors in those fields
+without invoking them. The workbook, sheet records and row arrays are frozen snapshots.
+Reassigning the accepted caller object or getter snapshot is a no-op while effective limits are
+unchanged; replace the outer workbook after caller mutation. Limit changes revalidate the current
+snapshot. Byte admission counts UTF-8 cell text and sheet names, with nullish cells contributing
+empty text. Workbooks remain bounded to 256 sheets and 1,000,000 aggregate cells, counting headers.
+Malformed or over-limit input displays a localized error and emits `lr-render-error`.
+
+**Host-owned source input:** A defined `dataSource` takes precedence over `workbook` and `src`,
+bypassing file fetching and parsing. Invalid defined sources show a localized error and emit
+`lr-render-error`; they do not fall back to legacy input. Setting `dataSource = undefined` cancels
+source work and restores the current `workbook` or URL input. Source pages never overwrite the
+legacy `workbook` getter. The source remains host-owned by identity rather than being cloned. After
+changing its data or revision, reassign it (the same identity is accepted) or call the viewer's
+unnamed `requestUpdate()`. Source replacement, refresh and locale changes invalidate stale reads,
+search results and navigation. Unrelated presentation updates reuse source data.
+
+The source supplies a `revision` and at most 256 sheet descriptors with unique nonempty `key`
+and `name` values and a `data: LyraTabularSource` for each sheet. Sheet keys and names are each
+limited to 65,536 UTF-16 units. Each sheet exposes full logical
+body `rowCount`, `columnCount`, separate `columnAt(index)` labels, and either scalar `cellAt` or
+asynchronous rectangular `readCells`. Only the active sheet's cells are read for viewport
+rendering. Read requests carry revision, locale and an `AbortSignal`; replies must match the
+requested rectangle. Cells are strings, finite numbers, booleans, `null` or `undefined`, with
+nullish values displaying empty text.
+Logical body rows are not truncated by `maxRows` or materialized as a complete array. Each active
+source's `columnCount` must fit `maxColumns` (default 1,000, effective hard maximum 10,000); an
+oversized column count is an error. Reads remain bounded to at most 500 rows, 100 columns and
+10,000 cells per rectangle, with two retained rectangles. Each scalar's display text and each
+column key/label is limited to 65,536 UTF-16 units. Retained cell and column metadata text shares a
+2,000,000-unit ceiling.
+Malformed or oversized replies fail visibly instead of silently clipping source values.
+
+Only source mode uses fixed row boxes and matching virtual-list row geometry, both resolved live
+from `--lr-size-3rem` (3rem, or 48px at a 16px root font). Oversized cell display stays within that
+row box without changing the source scalar. Legacy file and in-memory rows keep their automatic
+heights. Column windows retain absolute `aria-colindex` values; anchors still use one-based display
+coordinates and can reveal unloaded rows and offscreen columns.
+Source column labels always occupy display row 1; hit `row: -1` addresses those labels and body
+row `0` appears at display row 2. Source search hits use stable `sheetKey` values; existing anchors
+continue to use sheet names in `sheet` or a `Sheet!` range prefix. There is no headerless source
+option.
+
+In source mode, `search(query)` delegates to the source's global search capability rather than
+scanning loaded rectangles or an admitted prefix. The viewer requests at most 1,000 hits and keeps
+`matchCount` equal to retained, cursor-addressable hits. A larger known provider total does not
+replace that count; `matchCountExact` is true only for exhaustive, fully retained results. Without
+that capability, a nonempty query returns 0 with `matchCountExact: false` and `part="search-status"`
+shows the localized `sourceSearchUnavailable` message. This adds no local search toolbar or event
+fields. `searchNext()`/`searchPrevious()` report whether the target was actually revealed;
+`clearSearch()` cancels pending search and dependent navigation.
+Global search comes from `LyraWorkbookSource.search`, not a fanout over sheet search callbacks;
+its `LyraWorkbookHit` records include `sheetKey`, zero-based body `row` (or -1 for labels), and
+zero-based `column`.
+
+`SpreadsheetViewerSource` is available from the component entry and package root. The component entry also
+re-exports `LyraSourceCell`, `LyraTabularColumn`, `LyraTabularHit`, `LyraTabularReadRequest`,
+`LyraSourceSearchRequest` and `LyraSourceSearchResult` plus `LyraWorkbookHit`. Shared contracts can be imported with
+`import type` from `@aceshooting/lyra-ui/data-sources.js`.
+
+Body rows and columns are windowed, with the header using the same column window and
+`aria-colindex` preserving full-sheet positions. Search and anchors switch sheets and reveal
+offscreen columns before navigating. Public counts and raw-grid coordinates still describe the
+complete admitted sheet.
+
+**Exports:** `SpreadsheetViewerWorkbook` is the exact workbook type above, available from the
+component entry and as a type export from the package root. Its declared arrays are mutable types;
+the viewer's admitted runtime snapshot is frozen.
+
+**Methods:** With `dataSource` undefined, `search(query)` resolves the match count across every
+sheet's stringified cell values,
 ordered sheet then row then column, switching tabs as navigation crosses sheets (empty/whitespace
 query behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through
 matches (wrapping, resolving `false` when there are none); `clearSearch()` clears the query,
 matches, and painted marks.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:** `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
+data-source validation/read/search fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) — from
@@ -51,7 +141,7 @@ grid viewer's event contract; its registry capabilities advertise `textSelect: f
 structural cell covered by a `highlights` entry), `cell-highlight-action` (the native button
 filling a highlighted cell; focusable and emits `lr-highlight-activate`; its complete accessible
 name uses the localized `cellHighlightWithLabel` message with independent `{value}` and `{label}`
-placeholders), `rows`, `spinner`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow
+placeholders), `rows`, `spinner`, `error`, `search-status` (global source-search unavailable notice), and `anchor-live-region` (an aria-hidden, non-live shadow
 mirror of the latest anchor-jump message; the spoken copy is appended to the shared document-level
 polite sink only while the viewer and its composed ancestors are exposed to the accessibility tree).
 `data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
@@ -81,13 +171,18 @@ Importing `spreadsheet-viewer.js` (this component's own registration entry) load
 installs the same registration lazily and exports `SPREADSHEET_VIEWER_TAG`
 (`'lr-spreadsheet-viewer'`) as a stable reference to the tag it eventually registers.
 
-Cells render through their workbook number formats: date and time cells localize with the
+Fetched cells render through their workbook number formats: date and time cells localize with the
 effective locale, other formatted numbers (percent, currency, zero-padded codes) show the
 workbook's formatted text, and General numbers use locale digits without grouping.
 
-Remote resources are capped at 25 MB, each sheet's used range at 10,000 rows and 1,000 columns, and
-each workbook at 256 sheets and 1,000,000 aggregate cells in those ranges; the ranges are checked
-before the grid is expanded. Row limits are per sheet, not cumulative across a workbook. Exceeding
-any ceiling surfaces the localized `documentPreviewResourceTooLarge` message instead of the
-workbook. ZIP input must be an Office Open XML workbook: OpenDocument and Numbers packages are
-refused, and binary (`.bin`) parts count against the cell ceiling by size.
+Remote resources use `maxBytes`. By default, each sheet's used range is bounded to 10,000 rows
+and 1,000 columns; `maxRows` and `maxColumns` configure those limits. Every workbook remains
+bounded to 256 sheets and 1,000,000 aggregate cells in those ranges, checked before grid expansion.
+In-memory row limits apply per sheet. Fetched ZIP workbooks additionally enforce `maxRows` across
+row elements encountered by the archive-wide XML admission scan. Archive-entry, expanded-byte,
+aggregate-cell and XML-node budgets also remain in force. Exceeding a ceiling surfaces
+the localized `documentPreviewResourceTooLarge` message instead of the workbook. ZIP input must
+be an Office Open XML workbook: OpenDocument and Numbers packages are refused, and binary
+(`.bin`) parts count against the cell ceiling by size. The fetched-workbook path yields after
+archive admission before SheetJS parsing, and between sheet projections; each parse/projection
+pass remains synchronous.

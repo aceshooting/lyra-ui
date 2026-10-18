@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Πένα κάτω',
   signaturePadPenUp: 'Πένα πάνω',
+  localePickerInputLimit: 'Είναι διαθέσιμες μόνο οι πρώτες 512 καταχωρίσεις τοπικών ρυθμίσεων.',
+  emojiPickerInputLimit: 'Ορισμένα δεδομένα emoji παραλείφθηκαν επειδή συμπληρώθηκε ένα όριο εισόδου.',
 };
 
 registerLyraLocale('el', strings);

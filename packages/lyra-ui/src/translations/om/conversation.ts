@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Hanga ammaatti haasaan hin jiru',
   agentWorkspaceLabel: 'Iddoo hojii ejentii',
+  agentWorkspaceInputLimit: '{collection}: galmeewwan {total} keessaa {count} qofa kuufamu.',
   agentWorkspaceConversation: 'Haasaa',
   agentWorkspaceDetails: 'Bal\'ina raawwii',
   agentWorkspaceRun: 'Raawwii ejentii',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Kutaa kana irra deebi\'i',
   promptQueueLabel: 'Ajajoota eeggatan',
   promptQueueEmpty: 'Ajajni eeggataa hin jiru',
+  promptQueueInputLimit: 'Ajajoonni tarree keessa jiran yookaan faayiloonni itti dabalaman tokko tokko daangaan galchaa waan ga\'eef dhiifamaniiru.',
+  promptQueueAttachmentLimit: 'Faayiloota itti dabalaman kuufaman {total} keessaa {shown} agarsiifamaa jiru.',
   promptQueueSendNow: 'Amma ergi',
   selectionToolbarLabel: 'Gochaalee filannoo',
   selectionAsk: 'Gaafadhu',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: 'Tokenii {count}',
     other: 'Tokenii {count}',
   },
+  threadListInputLimit: 'Mariilee tokko tokko daangaan galchaa waan ga\'eef dhiifamaniiru.',
+  promptInputInputLimit: 'Yaadawwan yookaan galmeewwan kaataalogii tokko tokko daangaan galchaa waan ga\'eef dhiifamaniiru.',
+  transcriptFeedInputLimit: 'Galmeewwan {total} keessaa haaraan {count} qofa kuufamu.',
+  codeBlockHighlightLimit: 'Koodiin dheeraan sintaksii isaa halluudhaan adda baasuu malee agarsiifama.',
 };
 
 registerLyraLocale('om', strings);

@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} Befehl',
     other: '{count} Befehle',
   },
+  commandPaletteInputLimit: 'Einige Befehle wurden ausgelassen, weil eine Eingabegrenze erreicht wurde.',
 };
 
 registerLyraLocale('de', strings);

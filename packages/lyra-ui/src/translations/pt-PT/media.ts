@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Imagem {index} de {total}',
   playWithContext: 'Reproduzir {name}',
   pauseWithContext: 'Pausar {name}',
+  avPlayerWaveformUnavailable: 'Os dados da forma de onda não estão disponíveis ou não correspondem a este conteúdo multimédia.',
+  avPlayerTranscriptUnavailable: 'Os dados da transcrição não estão disponíveis.',
   dropzoneReleaseToAdd: 'Largue para adicionar o ficheiro.',
   dropzoneRejectedType: 'Este tipo de ficheiro não é aceite.',
   attachmentAdd: 'Adicionar anexo',

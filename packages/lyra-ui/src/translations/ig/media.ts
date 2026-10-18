@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Onyonyo {index} n’ime {total}',
   playWithContext: 'Kpọọ {name}',
   pauseWithContext: 'Kwụsịtụ {name}',
+  avPlayerWaveformUnavailable: 'Data ọdịdị ebili mmiri adịghị ma ọ bụ ọ dakọghị na mgbasa ozi a.',
+  avPlayerTranscriptUnavailable: 'Data ederede okwu e kwuru adịghị.',
   dropzoneReleaseToAdd: 'Hapụ faịlụ ahụ ka ị gbakwunye ya.',
   dropzoneRejectedType: 'Anaghị anabata ụdị faịlụ a.',
   attachmentAdd: 'Tinye ihe agbakwunyere',

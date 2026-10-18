@@ -24,3 +24,8 @@ export const WithoutFlags: Story = {
 export const NarrowRtl: Story = {
   render: () => html`<div dir="rtl" lang="ar" style="inline-size: 280px"><lr-country-picker searchable label="البلد" value="LB"></lr-country-picker></div>`,
 };
+
+export const InputLimit: StoryObj = {
+  parameters: { docs: { description: { story: 'Catalog input loss is disclosed separately from the popup row window, including when repeated rows consume the inspected prefix.' } } },
+  render: () => html`<lr-country-picker label="Bounded catalog" .countries=${Array.from({ length: 1025 }, () => 'US')}></lr-country-picker>`,
+};

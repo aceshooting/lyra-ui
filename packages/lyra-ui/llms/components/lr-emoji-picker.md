@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 18 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,6 +27,11 @@ search index, not just the group headings — follows the page's locale; a later
 reloads it. This only applies to the built-in dataset, never to a consumer-supplied `groups`.
 When the filtered set reaches 200 items, the grid automatically windows its visible rows while
 preserving the full option count through `aria-setsize`/`aria-posinset`.
+
+`groups` retains at most 64 groups, 20,000 emoji items in total and 64 shortcodes per item. The
+localized `limit` part reports omitted input through `emojiPickerInputLimit`. Built-in datasets
+are admitted once per loaded dataset and shared as frozen snapshots; caller assignments retain
+their owned snapshot behavior.
 
 Removing `label`, `hint`, or `error-text` treats the removed value as absent for rendering while
 preserving native attribute-removal property readback. Host `aria-describedby` references resolve in
@@ -107,7 +112,7 @@ transferring focus, so End and long row jumps never strand focus on a removed vi
 **Slots:** `label` (custom label content), `hint` (custom hint content), `error` (custom error
 content, overrides the `errorText` attribute when provided).
 
-**CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
+**CSS parts:** `limit` (input-loss notice), `form-control` (the outer wrapper around label, `base`, error and hint),
 `form-control-label` (the visible label), `base`, `search-wrapper` (the row wrapper around
 `search` and `search-clear`), `search` (`role="combobox"`), `search-clear` (clears the search
 field, replacing the native search-cancel glyph the component resets; rendered only while it has a

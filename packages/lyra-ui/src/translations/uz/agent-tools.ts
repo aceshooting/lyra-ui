@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Faqat dastlabki {count} ta test natijasi koʻrsatilmoqda.',
   toolTimelineLimit: 'Koʻpi bilan {count} ta vosita chaqiruvi koʻrsatilmoqda.',
   toolSelectLimit: 'Faqat dastlabki {count} ta vosita koʻrsatilmoqda.',
+  testResultsInputTooLarge: 'Test natijalari tafsilotlari koʻrsatish chegarasidan oshib ketdi.',
   toolCall: 'Vosita chaqiruvi',
   maximize: 'Kattalashtirish',
   promptStudioVariableName: '{index}-oʻzgaruvchi nomi',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Faqat birinchi {count} ta fayl koʻrsatiladi.',
   taskListLimit: 'Faqat birinchi {count} ta vazifa koʻrsatiladi.',
   evalDatasetLimit: 'Faqat dastlabki {count} ta namuna koʻrsatilmoqda.',
+  activityFeedInputLimit: '{total} ta yozuvdan faqat eng yangi {count} tasi saqlanadi.',
+  spanWaterfallLimit: '{total} ta spandan {shown} tasi koʻrsatilmoqda.',
+  toolTimelineInputLimit: '{total} ta vosita chaqiruvidan faqat eng yangi {count} tasi saqlanadi.',
 };
 
 registerLyraLocale('uz', strings);

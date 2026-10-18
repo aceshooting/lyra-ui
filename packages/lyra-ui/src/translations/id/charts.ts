@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} sampel valid dalam seluruh distribusi; {belowCount} di bawah dan {aboveCount} di atas interval yang ditampilkan; {invalidCount} sampel tidak valid.',
+  histogramDistributionRange: 'Rentang sampel yang diamati: {min} hingga {max}.',
   chartCategory: 'Kategori',
   chartTotal: 'Total',
   chartAxisTotal: 'Total {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, jari-jari {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'meningkat',
-  chartTrendDecreasing: 'menurun',
-  chartTrendFlat: 'stabil',
-  chartSummary: '{label}: {count} nilai, rentang {min} hingga {max}, tren {trend}',
   chartSeriesNoData: '{label}: tidak ada data',
   chartSummaryWithData: 'Bagan {type}. {summaries}.',
   chartSummaryEmpty: 'Bagan {type} tanpa data.',
-  chartSummarySeparator: '. ',
   chartData: 'Data bagan',
   chartRenderUnavailable: 'Tampilan bagan tidak tersedia.',
+  chartPreparedSummaryZoom: 'Pembesaran menampilkan ringkasan yang disiapkan; perincian lebih lanjut melalui indeks tidak tersedia.',
+  chartSpatialSummary: 'Seluruh sumber: {count} titik, x {minX} hingga {maxX}, y {minY} hingga {maxY}. Tampilan: {matchedCount} titik, x {viewMinX} hingga {viewMaxX}, y {viewMinY} hingga {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Radius pada seluruh sumber: {min} hingga {max}.',
+  chartSpatialDensityLegend: 'Kepadatan mencakup semua seri; visibilitas seri hanya memengaruhi lapisan titik.',
+  chartSpatialPoint: '{series}: {id}, posisi dalam sumber {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Wilayah kepadatan: {count} titik, x {minX} hingga {maxX}, y {minY} hingga {maxY}.',
+  chartSpatialHidden: ' (seri disembunyikan)',
   chartDataSampled: 'Bagan dan tabel data yang dibuat menampilkan sampel hingga 1.000 catatan. Berikan tabel data khusus untuk mengakses semua data bagan.',
   chartPlotSampled: 'Bagan menampilkan sampel hingga 1.000 catatan; tabel data mencantumkan semua data.',
   chartZoomUnavailable: 'Pembesaran tidak tersedia, tetapi bagan utama tetap dapat digunakan.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} dari {total})',
   chartMissingLibrary: 'Komponen ini memerlukan paket opsional "chart.js" agar bagan dapat ditampilkan.',
   boxPlotMissingLibrary: 'Komponen ini memerlukan paket bagan diagram kotak opsional agar diagram kotak dapat ditampilkan.',
+  chartInputLimit: 'Sebagian data bagan dihilangkan karena batas masukan tercapai. Berikan kumpulan data yang lebih kecil atau sudah diagregasi untuk mewakili nilai yang dihilangkan.',
+  histogramInputLimit: 'Hanya 10.000 sampel terbaru yang disimpan. Berikan jumlah yang sudah dikelompokkan ke dalam interval kepada lr-chart untuk mewakili distribusi yang lebih besar.',
 };
 
 registerLyraLocale('id', strings);

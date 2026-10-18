@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Ba échantillons {validCount} oyo ezali valide na distribution mobimba; {belowCount} na nse mpe {aboveCount} na likoló ya ba intervalles oyo emonisami; ba échantillons {invalidCount} oyo ezali valide te.',
+  histogramDistributionRange: 'Intervalle ya ba échantillons oyo emonanaki: {min} kino {max}.',
   chartCategory: 'Catégorie',
   chartTotal: 'Motango mobimba',
   chartAxisTotal: 'Total ya {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, rayon {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'Emati',
-  chartTrendDecreasing: 'Ekiti',
-  chartTrendFlat: 'Etelemi',
-  chartSummary: '{label}: ba valeur {count}, intervalle {min} ti {max}, tendance {trend}',
   chartSeriesNoData: '{label}: data ezali te',
   chartSummaryWithData: 'Graphique {type}. {summaries}.',
   chartSummaryEmpty: 'Graphique {type} na data te.',
-  chartSummarySeparator: '. ',
   chartData: 'Data ya graphique',
   chartRenderUnavailable: 'Kolakisa graphique ezali te.',
+  chartPreparedSummaryZoom: 'Zoom ezali kolakisa bokuse oyo ebongisami; makambo ya mikemike koleka na nzela ya index ezali te.',
+  chartSpatialSummary: 'Source mobimba: ba points {count}, x {minX} kino {maxX}, y {minY} kino {maxY}. Vue: ba points {matchedCount}, x {viewMinX} kino {viewMaxX}, y {viewMinY} kino {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Rayon na source mobimba: {min} kino {max}.',
+  chartSpatialDensityLegend: 'Densité esangisi ba séries nyonso; komonana ya ba séries ebongolaka kaka ba points oyo emonisami likoló.',
+  chartSpatialPoint: '{series}: {id}, position na source {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Région ya densité: ba points {count}, x {minX} kino {maxX}, y {minY} kino {maxY}.',
+  chartSpatialHidden: ' (série ebombami)',
   chartDataSampled: 'Graphique mpe table ya data oyo esalemi ezali kolakisa échantillon ya ba enregistrement tii 1 000. Pesa table ya data ya sikisiki mpo na kozwa data nyonso ya graphique.',
   chartPlotSampled: 'Graphique ezali kolakisa échantillon ya ba enregistrement tii 1 000; table ya data ezali na data nyonso.',
   chartZoomUnavailable: 'Zoom ezali te, kasi graphique ya ntina ezali kosala.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} kati na {total})',
   chartMissingLibrary: 'Composant oyo esengaka paquet "chart.js" ya option mpo na kolakisa ba graphique.',
   boxPlotMissingLibrary: 'Composant oyo esengaka paquet ya graphique box-plot ya option mpo na kolakisa ba graphique ya boîte.',
+  chartInputLimit: 'Balongoli ndambo ya ba données ya graphique mpo motango ya kokɔtisa ekómi na ndelo. Pesa etuluku ya ba données ya moke to oyo esangisami liboso mpo na komonisa ba valeurs oyo balongoli.',
+  histogramInputLimit: 'Kaka ba échantillons 10 000 ya sika koleka nde ebatelami. Pesa lr-chart mitángo oyo ekabolami liboso na bituluku ya ba intervalles mpo na komonisa distribution ya monene koleka.',
 };
 
 registerLyraLocale('ln', strings);

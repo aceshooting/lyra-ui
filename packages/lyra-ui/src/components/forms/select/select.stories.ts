@@ -637,3 +637,10 @@ export const SelectionVeto: Story = {
     </lr-select>
   `,
 };
+
+/** Bounded popup rows retain a selected value beyond the visible prefix. */
+export const BoundedOptions: Story = {
+  render: () => html`<lr-select label="Options" max-render="20" value="999">
+    ${Array.from({ length: 1000 }, (_, index) => html`<lr-option value=${String(index)}>Option ${index}</lr-option>`)}
+  </lr-select>`,
+};

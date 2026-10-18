@@ -14,4 +14,12 @@ export const styles = css`
   [exportparts]::part(display-input), [exportparts]::part(combobox-input),
   [exportparts]::part(option-label), [exportparts]::part(option-sub) { unicode-bidi: isolate; }
   [part='flag'] { display: inline-flex; align-items: center; flex-shrink: 0; font-size: var(--lr-font-size-lg); line-height: 1; }
+
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
 `;

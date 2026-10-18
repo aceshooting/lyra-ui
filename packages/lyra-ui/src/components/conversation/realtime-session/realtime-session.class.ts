@@ -1,4 +1,5 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -17,7 +18,7 @@ import { activeElementIn, shadowFocusTarget } from '../../../internal/active-ele
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_realtimeSessionConnect, LYRA_DEFAULT_realtimeSessionConnected, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_realtimeSessionConnectionFailed, LYRA_DEFAULT_realtimeSessionDisconnect, LYRA_DEFAULT_realtimeSessionDisconnected, LYRA_DEFAULT_realtimeSessionError, LYRA_DEFAULT_realtimeSessionInterrupt, LYRA_DEFAULT_realtimeSessionLabel, LYRA_DEFAULT_realtimeSessionMute, LYRA_DEFAULT_realtimeSessionReconnecting, LYRA_DEFAULT_realtimeSessionUnmute } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_realtimeSessionConnect, LYRA_DEFAULT_realtimeSessionConnected, LYRA_DEFAULT_realtimeSessionConnecting, LYRA_DEFAULT_realtimeSessionConnectionFailed, LYRA_DEFAULT_realtimeSessionDisconnect, LYRA_DEFAULT_realtimeSessionDisconnected, LYRA_DEFAULT_realtimeSessionError, LYRA_DEFAULT_realtimeSessionInterrupt, LYRA_DEFAULT_realtimeSessionLabel, LYRA_DEFAULT_realtimeSessionMute, LYRA_DEFAULT_realtimeSessionReconnecting, LYRA_DEFAULT_realtimeSessionUnmute, LYRA_DEFAULT_transcriptFeedInputLimit } from '../../../internal/default-strings/conversation.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type RealtimeConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
@@ -50,6 +51,7 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Original input omissions are disclosed in input-limit before forwarding the retained collection.
  *
  * @customElement lr-realtime-session
  * @slot controls - Additional provider-specific controls.
@@ -64,6 +66,7 @@ const STATE_VARIANT: Record<RealtimeConnectionState, BadgeVariant> = {
  * @event lr-record-error - Passthrough from capture. `detail: { error: DOMException | Error }`.
  * @event lr-level - Passthrough from capture. `detail: { level: number }`.
  * @event lr-record-state-change - Passthrough from capture. `detail: { state: PushToTalkState }`.
+ * @csspart input-limit - Original collection admission-loss notice.
  * @csspart base - The named session region.
  * @csspart header - Status and session controls.
  * @csspart status - Connection status badge.
@@ -96,6 +99,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     realtimeSessionMute: LYRA_DEFAULT_realtimeSessionMute,
     realtimeSessionReconnecting: LYRA_DEFAULT_realtimeSessionReconnecting,
     realtimeSessionUnmute: LYRA_DEFAULT_realtimeSessionUnmute,
+    transcriptFeedInputLimit: LYRA_DEFAULT_transcriptFeedInputLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -174,6 +178,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.suppressNextStateAnnouncement = true;
+    this.inputNoticeMounted = false;
   }
 
   override adoptedCallback(): void {
@@ -207,8 +212,22 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     if (shouldTransfer) this.transferActionFocus = { target: 'connection', origin: focused };
   }
 
+  private lastInputNotice = '';
+  private inputNoticeMounted = false;
+  private inputLimitMessage(): string {
+    const loss = publicCollectionTruncation(this, 'entries');
+    const format = getNumberFormat(this.effectiveLocale);
+    return loss ? this.localize('transcriptFeedInputLimit', undefined, {
+      count: format.format(loss.retained), total: format.format(loss.source),
+    }) : '';
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    const notice = this.inputLimitMessage();
+    if (this.inputNoticeMounted && notice && notice !== this.lastInputNotice) this.announcements.announcePolite(notice);
+    this.lastInputNotice = notice;
+    this.inputNoticeMounted = true;
     const stateChanged = changed.has('state');
     if (stateChanged && !this.suppressNextStateAnnouncement) {
       // A state supplied at mount is context. Later error transitions use only the assertive sink;
@@ -311,6 +330,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
           .disabled=${!active || this.muted || this.withoutCapture}
           level-events
         ></lr-push-to-talk>
+        ${this.inputLimitMessage() ? html`<p part="input-limit" role="note">${this.inputLimitMessage()}</p>` : nothing}
         <lr-transcript-feed
           part="transcript"
           .sessionId=${this.sessionId}

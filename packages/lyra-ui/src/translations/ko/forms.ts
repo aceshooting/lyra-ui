@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: '펜 내림',
   signaturePadPenUp: '펜 올림',
+  localePickerInputLimit: '처음 512개의 로캘 항목만 사용할 수 있습니다.',
+  emojiPickerInputLimit: '입력 한도에 도달하여 일부 이모지 데이터가 생략되었습니다.',
 };
 
 registerLyraLocale('ko', strings);

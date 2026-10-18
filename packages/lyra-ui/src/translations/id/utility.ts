@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '{count} saran lainnya',
   },
+  mentionInputLimit: 'Hanya 10.000 saran penyebutan pertama yang tersedia.',
+  diffViewHighlightLimit: 'Kode panjang ditampilkan tanpa penyorotan sintaks.',
 };
 
 registerLyraLocale('id', strings);

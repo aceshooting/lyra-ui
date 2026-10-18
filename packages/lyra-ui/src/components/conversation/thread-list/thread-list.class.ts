@@ -1,5 +1,10 @@
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from '../../../data-sources.js';
+import { SourcePageController, type SourcePageState } from '../../../internal/source-page-controller.js';
+import { finiteInteger } from '../../../internal/numbers.js';
+import { createHaystackMemo } from '../../../internal/search-haystack.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import {
   html,
@@ -22,6 +27,7 @@ import type { LyraConversationItem } from '../conversation-item/conversation-ite
 import type {
   LyraVirtualList,
   LyraVirtualListGroup,
+  LyraVirtualListIndexedSource,
 } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './thread-list.styles.js';
@@ -47,7 +53,7 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupCollapse, LYRA_DEFAULT_threadGroupExpand, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListInputLimit, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -64,6 +70,19 @@ export interface LyraChatThread {
 export type ThreadRowAction = 'pin' | 'archive' | 'delete';
 
 export type ThreadListGrouping = 'date' | 'custom' | 'none';
+
+/** Global provider query; callbacks are applied by the provider, never to a partial page. */
+export interface ThreadListSourceQuery {
+  readonly search: string;
+  readonly withArchived: boolean;
+  readonly grouping: ThreadListGrouping;
+  readonly collapsedGroupIds: readonly string[];
+  readonly filter: LyraThreadList['filter'];
+  readonly groupBy: LyraThreadList['groupBy'];
+  readonly getGroupLabel: LyraThreadList['getGroupLabel'];
+  readonly groupOrder: LyraThreadList['groupOrder'];
+}
+export type ThreadListSource = LyraPageSource<LyraChatThread, ThreadListSourceQuery>;
 
 /** Payload shared by the `lr-group-toggle-request`/`lr-group-toggle` pair. */
 export interface ThreadGroupToggleDetail {
@@ -123,20 +142,10 @@ interface ThreadListModel {
   key: readonly unknown[];
   visible: readonly LyraChatThread[];
   items: ThreadListItem[];
+  source?: LyraVirtualListIndexedSource;
   groups?: LyraVirtualListGroup[];
 }
 
-function defaultFilter(
-  thread: LyraChatThread,
-  query: string,
-  locale: string
-): boolean {
-  const intlLocale = resolveIntlLocale(locale);
-  return (
-    thread.title.toLocaleLowerCase(intlLocale).includes(query) ||
-    (thread.excerpt ?? '').toLocaleLowerCase(intlLocale).includes(query)
-  );
-}
 
 const THREADS_AND_SLOTTED_CONTENT_WARNING_KEY =
   'lyra-thread-list:threads-and-slotted-content';
@@ -277,12 +286,27 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  * `<lr-table>`) replaces the virtual list/empty state, behind its own `error` slot. `error` beats
  * the built-in empty state, matching `<lr-table>`'s own precedence.
  *
+ * With dataSource, the provider owns global search, filtering, ordering and group metadata.
+ * Source pages contain at most 500 records plus their intersecting group headings. sourceTotal
+ * counts all matching records before collapse; collapsedGroupIds hides only the current page's
+ * members and keeps their headings actionable. Group-label callbacks are passed to the provider;
+ * renderGroupAdornment is legacy-only because it requires a complete group array. Row render
+ * hooks still receive the original provider record identity. Source record display text is
+ * bounded to 65,536 aggregate UTF-16 units; malformed pages fail visibly without partial rows.
+ * Active IDs use provider locate to navigate once without scanning; clearing/restoring an ID
+ * starts a new lookup. Manual page changes do not reapply an unchanged active ID. Provider search
+ * events report the authoritative global record count after success. Same-source assignment or
+ * requestUpdate() refreshes; named paints retain the page. Removing dataSource restores threads
+ * and default-slot behavior. Source retry preserves the existing cancelable retry event.
+ *
  * @customElement lr-thread-list
  * @slot - Slotted mode only: host-supplied `lr-conversation-item`s, rendered in order. Each
  *   top-level assigned element that doesn't already carry an explicit `role` is given
  *   `role="listitem"`, since `[part="list"]` is `role="list"` in this mode and `lr-conversation-item`
  *   deliberately doesn't self-apply that role (see its own class doc).
  * @slot empty - Replaces the built-in empty state.
+ * @csspart source-status - Provider loading text.
+ * @csspart source-pagination - Provider record-page navigation.
  * @slot error - Replaces the built-in failed-load state, including its retry button, while `error`
  *   is set.
  * @event lr-select - `detail: { conversationId }` -- a row was activated (data mode only).
@@ -319,6 +343,7 @@ function canonicalThreads(values: readonly unknown[]): readonly LyraChatThread[]
  * @csspart clear-button - Clears the search field. Rendered only while it has a value.
  * @csspart list - The list region.
  * @csspart empty - The empty/no-matches state.
+ * @csspart limit - Original thread input-loss notice.
  * @csspart error - The built-in `<lr-empty>` host rendered while `error` is set.
  * @csspart error-base - Exported from the built-in error `<lr-empty>`'s own `base` part.
  * @csspart error-icon - Exported from the built-in error `<lr-empty>`'s `icon` part.
@@ -437,6 +462,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     threadGroupToday: LYRA_DEFAULT_threadGroupToday,
     threadGroupYesterday: LYRA_DEFAULT_threadGroupYesterday,
     threadListEmpty: LYRA_DEFAULT_threadListEmpty,
+    threadListInputLimit: LYRA_DEFAULT_threadListInputLimit,
     threadListLabel: LYRA_DEFAULT_threadListLabel,
     threadListMatchAnnounce: LYRA_DEFAULT_threadListMatchAnnounce,
     unarchiveConversation: LYRA_DEFAULT_unarchiveConversation,
@@ -450,6 +476,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected static override readonly immutableSourceCollectionProperties = Object.freeze(['threads']);
 
   static override styles = [LyraElement.styles, contextualSizes, styles];
+  private readonly inputLimitAnnouncements = new AnnouncementSinkController(this);
+  private get inputLimitMessage(): string {
+    if (this.sourceMode) return '';
+    return publicCollectionTruncation(this, 'threads') ? this.localize('threadListInputLimit') : '';
+  }
+  private syncInputLimitAnnouncement(): void {
+    const loss = this.sourceMode ? undefined : publicCollectionTruncation(this, 'threads');
+    this.inputLimitAnnouncements.transition('input-limit', loss ? `${loss.source}:${loss.retained}:${loss.kept}` : '', this.inputLimitMessage, 'polite');
+  }
   private readonly hostDescription = new HostDescriptionController(
     this, () => this.renderRoot.querySelector<HTMLElement>('[part="base"][role="region"]'),
   );
@@ -457,12 +492,232 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.hostDescription.adopted();
+    this.inputLimitAnnouncements.adopted();
+    this.sourcePages.adopted();
+    this.sourceRequestVersion++; this.sourceActiveInputs = undefined; this.sourceFilterIntent = undefined;
+  }
+
+  private _dataSource?: ThreadListSource;
+  private sourceEpoch = 0;
+  private sourceSyncing = false;
+  private sourceInputs?: readonly unknown[];
+  private sourceQueryInputs?: readonly unknown[];
+  private sourceRequestVersion = 0;
+  private sourceResult?: LyraPageResult<LyraChatThread>;
+  private sourceRows: readonly LyraChatThread[] = [];
+  private sourcePageModel?: ThreadListModel;
+  private readonly sourceRowIdentities = new WeakSet<LyraChatThread>();
+  private readonly sourceGroupIdentities = new WeakSet<Extract<ThreadListItem, { kind: 'group' }>>();
+  private sourceFilterIntent?: { text: string; version: number };
+  private sourceActiveInputs?: readonly unknown[];
+  private sourceActiveReveal?: { id: string; version: number };
+  @state() private sourceStateVersion = 0;
+  private readonly sourcePages = new SourcePageController<LyraChatThread, ThreadListSourceQuery>(this, {
+    normalizeRecord: (record, isCurrent) => this.projectSourceThread(record, isCurrent),
+    validateMetadata: (result, query) => this.validateSourceGroups(result, query),
+    onChange: () => { this.sourceStateVersion++; },
+  });
+
+  /** Full-source page provider, taking precedence over threads and the default slot. Present
+   * invalid providers fail visibly. Reassign even the same source or call requestUpdate() to
+   * refresh; undefined restores legacy data/slotted mode. */
+  @property({ attribute: false })
+  get dataSource(): ThreadListSource | undefined { return this._dataSource; }
+  set dataSource(value: ThreadListSource | undefined) {
+    const previous = this._dataSource; this._dataSource = value; this.sourceEpoch++;
+    this.requestUpdate('dataSource', previous);
+  }
+  /** Zero-based source record page. Collapsing groups preserves this page and its record positions. */
+  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  /** Source records per page, normalized to 1..500. Size changes reset page 0. */
+  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  /** Exact current-query record count before group collapse, or null before success/without a source. */
+  get sourceTotal(): number | null { return this.sourceMode ? this.sourcePages.state.result?.total ?? null : null; }
+  private get sourceMode(): boolean { return this.dataSource !== undefined; }
+  private get sourceFailed(): boolean { return this.sourceMode && !this.sourcePages.state.pending && !this.sourcePages.state.result; }
+  private get sourceBlocked(): boolean { return this.sourceMode && (!this.isConnected || this.error || this.sourcePages.state.pending || this.sourceFailed); }
+
+  private projectSourceThread(record: LyraSourceRecord<unknown>, isCurrent: () => boolean): LyraSourceRecord<LyraChatThread> {
+    const raw = record.value;
+    if (!isSafeNonArrayObject(raw)) throw new TypeError('Invalid source thread');
+    let units = 0;
+    const snapshot: Record<string, unknown> = {};
+    for (const key of ['id', 'title', 'excerpt', 'timestamp', 'pinned', 'archived']) {
+      if (!isCurrent()) throw new Error('Obsolete source thread');
+      const field = getOwnDataDescriptor(raw, key);
+      if (!isCurrent()) throw new Error('Obsolete source thread');
+      if (field === UNSAFE_OWN_DATA_DESCRIPTOR) throw new TypeError('Invalid source thread field');
+      if (field !== MISSING_OWN_DATA_DESCRIPTOR) snapshot[key] = field.value;
+      if (field !== MISSING_OWN_DATA_DESCRIPTOR && typeof field.value === 'string') {
+        units += field.value.length;
+        if (field.value.length > 65_536 || units > 65_536) throw new RangeError('Source thread text too large');
+      }
+    }
+    const value = projectThread(snapshot);
+    if (!isCurrent()) throw new Error('Obsolete source thread');
+    if (!value || value.id !== record.key) throw new TypeError('Invalid source thread identity');
+    sourceThreadByProjection.set(value, raw as LyraChatThread);
+    this.sourceRowIdentities.add(value);
+    return { key: record.key, order: record.order, value };
+  }
+
+  private validateSourceGroups(result: LyraPageResult<LyraChatThread>, query: ThreadListSourceQuery): void {
+    if (query.grouping === 'none') {
+      if (result.groups?.length) throw new TypeError('Unexpected source groups');
+      return;
+    }
+    if (!result.groups) throw new TypeError('Missing source groups');
+    if (!result.rows.length) return;
+    const size = this.sourcePages.state.pageSize;
+    const page = Math.min(this.sourcePages.state.page, Math.floor((result.total - 1) / size));
+    const start = page * size;
+    const end = start + result.rows.length;
+    let covered = start;
+    let previousEnd = -1;
+    for (const group of result.groups) {
+      const groupEnd = group.startIndex + group.itemCount;
+      if (group.startIndex < previousEnd || Math.max(start, group.startIndex) !== covered) throw new TypeError('Invalid source group coverage');
+      previousEnd = groupEnd;
+      covered = Math.min(end, groupEnd);
+    }
+    if (covered !== end) throw new TypeError('Incomplete source groups');
+  }
+
+  private syncSource(): void {
+    if (!this.sourcePages || this.sourceSyncing) return;
+    this.sourceSyncing = true;
+    try {
+      if (!this.sourceMode) {
+        if (this.sourceInputs) { this.sourceRequestVersion++; this.focusTaskGeneration++; this.sourcePages.bind(undefined); }
+        this.sourceInputs = undefined; this.sourceQueryInputs = undefined; this.sourceResult = undefined;
+        this.sourceRows = []; this.sourcePageModel = undefined; this.sourceActiveInputs = undefined;
+        this.sourceActiveReveal = undefined; this.sourceFilterIntent = undefined; return;
+      }
+      const source = this.dataSource!;
+      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
+      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const queryInputs = [this.searchText, this.withArchived, this.grouping, this.filter, this.groupBy, this.getGroupLabel, this.groupOrder, size];
+      if (this.hasUpdated && this.sourceQueryInputs && queryInputs.some((value, index) => value !== this.sourceQueryInputs![index])) { page = 0; this.sourcePage = 0; }
+      this.sourceQueryInputs = queryInputs;
+      const revision = source.revision;
+      const inputs = [source, revision, this.sourceEpoch, this.effectiveLocale, ...queryInputs, this.collapsedGroupIds, page];
+      if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
+      this.sourceInputs = inputs; this.sourceRequestVersion++; this.focusTaskGeneration++;
+      this.sourceRows = []; this.sourceResult = undefined; this.sourcePageModel = undefined;
+      this.sourceActiveReveal = undefined; this.sourceFilterIntent = undefined;
+      this.sourcePages.bind({ source, revision, epoch: this.sourceEpoch, locale: this.effectiveLocale });
+      const query: ThreadListSourceQuery = Object.freeze({ search: this.searchText, withArchived: this.withArchived,
+        grouping: this.grouping, collapsedGroupIds: this.collapsedGroupIds, filter: this.filter, groupBy: this.groupBy,
+        getGroupLabel: this.getGroupLabel, groupOrder: this.groupOrder });
+      void this.sourcePages.request(query, page, size);
+    } catch {
+      this.sourcePages.bind(undefined); this.sourceRows = []; this.sourceResult = undefined; this.sourcePageModel = undefined;
+    } finally { this.sourceSyncing = false; }
+  }
+
+  private acceptSourcePage(): void {
+    const result = this.sourcePages.state.result;
+    if (!result || result === this.sourceResult) return;
+    this.sourceResult = result; this.sourceRows = result.rows.map(record => record.value); this.sourcePageModel = undefined;
+    if (this.sourcePage !== this.sourcePages.state.page) {
+      this.sourceSyncing = true; this.sourcePage = this.sourcePages.state.page; this.sourceSyncing = false;
+      this.sourceInputs = this.sourceInputs ? [...this.sourceInputs.slice(0, -1), this.sourcePages.state.page] : undefined;
+    }
+    const intent = this.sourceFilterIntent;
+    this.sourceFilterIntent = undefined;
+    if (intent?.version === this.sourceRequestVersion) {
+      const source = this.dataSource;
+      const epoch = this.sourceEpoch;
+      const state = this.sourcePages.state;
+      const owner = this.ownerDocument;
+      this.emit('lr-filter-change', { text: intent.text, matchCount: result.total });
+      if (!this.isConnected || this.ownerDocument !== owner || this.dataSource !== source ||
+          this.sourceEpoch !== epoch || this.sourceRequestVersion !== intent.version ||
+          this.sourcePages.state !== state || this.sourceBlocked) return;
+      this.announceMatchCount(result.total);
+    }
+    const reveal = this.sourceActiveReveal;
+    this.sourceActiveReveal = undefined;
+    if (reveal?.version === this.sourceRequestVersion) this.revealSourceActive(reveal.id, reveal.version);
+  }
+
+  private syncSourceActive(): void {
+    if (!this.activeConversationId) { this.sourceActiveInputs = undefined; return; }
+    if (!this.sourceMode || this.sourceBlocked) return;
+    const source = this.dataSource!;
+    const id = this.activeConversationId;
+    const inputs = [source, source.revision, this.sourceEpoch, this.effectiveLocale, ...(this.sourceQueryInputs ?? []), id];
+    if (this.sourceActiveInputs && inputs.every((value, index) => value === this.sourceActiveInputs![index])) return;
+    this.sourceActiveInputs = inputs;
+    const version = this.sourceRequestVersion;
+    const owner = this.ownerDocument;
+    void this.sourcePages.locate(id).then(index => {
+      if (index === null || !this.isConnected || this.ownerDocument !== owner || !this.sourceMode || this.dataSource !== source || this.activeConversationId !== id || this.sourceRequestVersion !== version) return;
+      const page = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
+      if (page === this.sourcePage) { this.revealSourceActive(id, version); return; }
+      this.sourcePage = page;
+      this.sourceActiveReveal = { id, version: this.sourceRequestVersion };
+    });
+  }
+
+  private revealSourceActive(id: string, version: number): void {
+    const owner = this.ownerDocument;
+    void this.updateComplete.then(async () => {
+      const list = this.virtualListEl;
+      if (!list) return;
+      await list.updateComplete;
+      if (!this.isConnected || this.ownerDocument !== owner || !this.sourceMode || this.sourceBlocked || this.sourceRequestVersion !== version || this.activeConversationId !== id || list !== this.virtualListEl) return;
+      const index = this.model().items.findIndex(item => item.kind === 'thread' && item.thread.id === id);
+      if (index >= 0) list.scrollToIndex(index, { align: 'auto', behavior: 'auto' });
+    });
+  }
+
+  private sourceModel(): ThreadListModel {
+    const key = [this.sourceResult, this.collapsedGroupIds, this.stickyGroups];
+    if (this.sourcePageModel && key.every((value, index) => value === this.sourcePageModel!.key[index])) return this.sourcePageModel;
+    const items: ThreadListItem[] = [];
+    const groups = this.sourceResult?.groups ?? [];
+    if (!groups.length) items.push(...this.sourceRows.map((thread): ThreadListItem => ({ kind: 'thread', thread })));
+    else {
+      const collapsed = new Set(this.collapsedGroupIds);
+      const start = this.sourcePages.state.page * this.sourcePages.state.pageSize;
+      for (const group of groups) {
+        const header: Extract<ThreadListItem, { kind: 'group' }> = { kind: 'group', id: group.key, label: group.label, collapsed: collapsed.has(group.key) };
+        this.sourceGroupIdentities.add(header); items.push(header);
+        if (!header.collapsed) {
+          const from = Math.max(0, group.startIndex - start);
+          const to = Math.min(this.sourceRows.length, group.startIndex + group.itemCount - start);
+          for (let index = from; index < to; index++) items.push({ kind: 'thread', thread: this.sourceRows[index]! });
+        }
+      }
+    }
+    this.sourcePageModel = { key, visible: this.sourceRows, items, groups: this.stickyGroups ? this.stickyAnchors(items) : undefined };
+    return this.sourcePageModel;
+  }
+
+  private canUseThread(thread: LyraChatThread): boolean {
+    return !(this.sourceMode || this.sourceRowIdentities.has(thread)) || (this.sourceMode && !this.sourceBlocked && this.sourceRows.includes(thread));
+  }
+  private canUseGroup(item: Extract<ThreadListItem, { kind: 'group' }>): boolean {
+    return !(this.sourceMode || this.sourceGroupIdentities.has(item)) || (this.sourceMode && !this.sourceBlocked && this.sourceModel().items.includes(item));
+  }
+  private onSourcePage = (event: CustomEvent<{ page: number }>): void => {
+    event.stopPropagation(); if (this.sourceMode && !this.sourceBlocked) this.sourcePage = event.detail.page - 1;
+  };
+  private currentSourceRetry(source: ThreadListSource | undefined, state: SourcePageState<LyraChatThread>): boolean {
+    return this.isConnected && this.sourceMode && this.dataSource === source && this.sourcePages.state === state && (this.error || this.sourceFailed);
+  }
+  private retrySource(source: ThreadListSource | undefined, state: SourcePageState<LyraChatThread>): void {
+    if (!this.currentSourceRetry(source, state)) return;
+    this.error = false; this.sourceInputs = undefined; this.syncSource(); this.sourceStateVersion++;
   }
 
   /** At least one valid thread ⇒ data mode (the default slot is ignored). No valid threads and no
    *  slotted content ⇒ data mode with zero rows (the built-in empty state). No valid threads with
    *  slotted content ⇒ slotted mode. Thread ids must be nonempty and unique; invalid/later
-   *  duplicate rows are omitted, first wins. */
+   *  duplicate rows are omitted, first wins. Group headings do not consume the thread admission
+   *  budget: all admitted threads remain addressable in the virtual list. The first 10,000 input records are retained,
+   *  matching newest-first sidebar ordering. */
   @property({ attribute: false }) threads: readonly LyraChatThread[] = [];
 
   /**
@@ -658,22 +913,35 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   // and hasn't also supplied `threads` -- empty `threads` with nothing slotted is still data mode,
   // just with zero rows, so it renders the built-in empty state rather than a silently blank slot.
   private get dataMode(): boolean {
-    return this.normalizedThreads.length > 0 || !this.hasDefaultSlotContent;
+    return this.sourceMode || this.normalizedThreads.length > 0 || !this.hasDefaultSlotContent;
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) {
+      if (this.sourceMode) { this.sourceActiveInputs = undefined; this.sourceStateVersion++; }
+      this.syncInputLimitAnnouncement();
       const defaultSlotted = this.defaultSlottedElements();
       this.hasDefaultSlotContent = defaultSlotted.length > 0;
-      if (this.normalizedThreads.length === 0) this.markAsListItems(defaultSlotted);
+      if (!this.sourceMode && this.normalizedThreads.length === 0) this.markAsListItems(defaultSlotted);
     }
+  }
+
+  private contentRefreshPending = false;
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) { this.contentRefreshPending = true; this.sourceEpoch = (this.sourceEpoch ?? 0) + 1; }
+    if (args[0] === undefined || ['dataSource', 'sourcePage', 'sourcePageSize', 'searchText', 'withArchived', 'grouping', 'filter', 'groupBy', 'getGroupLabel', 'groupOrder', 'collapsedGroupIds'].includes(String(args[0]))) this.syncSource();
+    super.requestUpdate(...args);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    // An unnamed update is a locale catalog or hydration refresh: group labels may have changed.
-    if (changed.size === 0) this.dataModel = undefined;
+    this.syncSource();
+    if (this.sourceMode) { this.acceptSourcePage(); this.syncSourceActive(); }
+    // Keep explicit refresh authority when another property joins the same update.
+    if (this.contentRefreshPending) this.dataModel = undefined;
+    this.contentRefreshPending = false;
     if (changed.has('size') && optionalSizeConverter.normalize(this.size) === undefined) this.size = 'm';
     if (
       changed.has('threads') ||
@@ -690,10 +958,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const syncSlottedContent = (): void => {
       const defaultSlotted = this.defaultSlottedElements();
       this.hasDefaultSlotContent = defaultSlotted.length > 0;
-      const hasDataThreads = this.normalizedThreads.length > 0;
+      const hasDataThreads = this.sourceMode || this.normalizedThreads.length > 0;
       if (hasDataThreads && defaultSlotted.length > 0) {
         this.restoreInjectedListItemRoles();
-        devWarnOnce(
+        if (!this.sourceMode) devWarnOnce(
           THREADS_AND_SLOTTED_CONTENT_WARNING_KEY,
           THREADS_AND_SLOTTED_CONTENT_WARNING
         );
@@ -713,15 +981,23 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         );
         syncSlottedContent();
       });
-    } else if (changed.has('threads')) {
+    } else if (changed.has('threads') || changed.has('dataSource')) {
       syncSlottedContent();
     }
   }
 
+  private sourceStatusInitialized = false;
+  private previousSourceStatus = '';
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    // Rows read this component's state through the stable `renderItem`; re-render the window.
-    this.virtualListEl?.requestUpdate();
+    this.syncInputLimitAnnouncement();
+    const status = this.sourceMode && this.sourcePages.state.pending ? this.localize('loading')
+      : this.sourceMode && this.sourceFailed ? this.localize('tableLoadFailed') : '';
+    if (this.sourceStatusInitialized && status && status !== this.previousSourceStatus) this.inputLimitAnnouncements.announcePolite(status);
+    this.sourceStatusInitialized = true; this.previousSourceStatus = status;
+    // Rows read parent state through this stable callback. A named render refresh preserves
+    // the child's source identities, group index and measurements when the model is unchanged.
+    this.virtualListEl?.requestUpdate('renderItem');
   }
 
   private defaultSlottedElements(): Element[] {
@@ -754,11 +1030,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.sourceRequestVersion++; this.sourceActiveInputs = undefined; this.sourceActiveReveal = undefined; this.sourceFilterIntent = undefined;
+    this.sourceStatusInitialized = false; this.previousSourceStatus = '';
     this.focusTaskGeneration++;
     this.restoreInjectedListItemRoles();
     super.disconnectedCallback();
   }
 
+  /** The first 10,000 thread identities are retained, matching newest-first sidebar ordering. */
   private get normalizedThreads(): readonly LyraChatThread[] {
     return canonicalThreads(this.threads);
   }
@@ -771,17 +1050,16 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return Object.freeze(threads.map((thread) => this.sourceThread(thread)));
   }
 
+  private readonly titleHaystacks = createHaystackMemo<LyraChatThread>((thread, locale) => thread.title.toLocaleLowerCase(resolveIntlLocale(locale)));
+  private readonly excerptHaystacks = createHaystackMemo<LyraChatThread>((thread, locale) => (thread.excerpt ?? '').toLocaleLowerCase(resolveIntlLocale(locale)));
+
   private get visibleThreads(): LyraChatThread[] {
     const q = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
-    const withArchiveFilter = this.normalizedThreads.filter(
-      (thread) => this.withArchived || !thread.archived
-    );
-    if (q === '') return withArchiveFilter;
-    return withArchiveFilter.filter((t) =>
-      this.filter
-        ? this.filter(this.sourceThread(t), q)
-        : defaultFilter(t, q, this.effectiveLocale)
-    );
+    const threads = this.normalizedThreads;
+    const titles = q && !this.filter ? this.titleHaystacks(threads, this.effectiveLocale) : [];
+    const excerpts = q && !this.filter ? this.excerptHaystacks(threads, this.effectiveLocale) : [];
+    return threads.filter((thread, index) => (this.withArchived || !thread.archived) &&
+      (!q || (this.filter ? this.filter(this.sourceThread(thread), q) : titles[index]!.includes(q) || excerpts[index]!.includes(q))));
   }
 
   private bucketFor(thread: LyraChatThread, today: number): ThreadBucketKey {
@@ -963,11 +1241,12 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private setSearchText(text: string): void {
     this.focusTaskGeneration++;
     this.searchText = text;
+    if (this.sourceMode) { this.sourceFilterIntent = { text, version: this.sourceRequestVersion }; return; }
     if (!this.dataMode) {
       this.emit('lr-query-change', { text });
       return;
     }
-    const count = this.visibleThreads.length;
+    const count = this.model().visible.length;
     this.emit('lr-filter-change', { text, matchCount: count });
     this.announceMatchCount(count);
   }
@@ -1248,7 +1527,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 thread.pinned ? 'unpinConversation' : 'pinConversation'
               )}
               @click=${() =>
-                this.emit('lr-thread-pin', {
+                this.canUseThread(thread) && this.emit('lr-thread-pin', {
                   conversationId: thread.id,
                   pinned: !thread.pinned,
                 })}
@@ -1266,7 +1545,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                   : 'archiveConversation'
               )}
               @click=${() =>
-                this.emit('lr-thread-archive', {
+                this.canUseThread(thread) && this.emit('lr-thread-archive', {
                   conversationId: thread.id,
                   archived: !thread.archived,
                 })}
@@ -1280,7 +1559,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               part="row-action"
               aria-label=${this.localize('deleteConversation')}
               @click=${() =>
-                this.emit('lr-thread-delete', { conversationId: thread.id })}
+                this.canUseThread(thread) && this.emit('lr-thread-delete', { conversationId: thread.id })}
             >
               ${trashIcon()}
             </button>`
@@ -1300,7 +1579,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  management existed, so a consumer already reassigning `collapsedGroupIds` from an
    *  `lr-group-toggle` listener keeps working unchanged: this component's own write, when it
    *  happens, always precedes that listener in the same synchronous dispatch. */
-  private toggleGroupCollapsed(groupId: string, collapsed: boolean): void {
+  private toggleGroupCollapsed(item: Extract<ThreadListItem, { kind: 'group' }>, collapsed: boolean): void {
+    if (!this.canUseGroup(item)) return;
+    const groupId = item.id;
     const detail: ThreadGroupToggleDetail = { groupId, expanded: !collapsed };
     // The library's one request/commit helper rather than a hand-written `defaultPrevented`
     // branch. No write-tracking guard is passed, and the reason is the ordering a guard would
@@ -1318,6 +1599,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       emitRequest: (requestDetail, init: { cancelable: true }) =>
         this.emit('lr-group-toggle-request', requestDetail, init),
       commit: () => {
+        if (!this.canUseGroup(item)) return;
         const next = new Set(this.collapsedGroupIds);
         if (collapsed) next.add(groupId);
         else next.delete(groupId);
@@ -1368,7 +1650,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                   }
                 )}
                 @click=${() =>
-                  this.toggleGroupCollapsed(item.id, nextCollapsed)}
+                  this.toggleGroupCollapsed(item, nextCollapsed)}
               >
                 ${icon}
                 <span part="group-label">${item.label}</span>
@@ -1411,13 +1693,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           // this.emit('lr-select', { item }, ...) on item choice, menu.class.ts's
           // onOwnedItemSelect()) instead targets that descendant element, so e.target !==
           // e.currentTarget here and the event is correctly ignored for row-selection purposes.
-          if (e.target !== e.currentTarget) return;
+          if (e.target !== e.currentTarget || !this.canUseThread(thread)) return;
           this.emit('lr-select', { conversationId: thread.id });
         }}
         @lr-rename=${(
           e: CustomEvent<{ conversationId: string; label: string }>
         ) => {
           e.stopPropagation();
+          if (!this.canUseThread(thread)) return;
           this.emit('lr-thread-rename', {
             conversationId: thread.id,
             label: e.detail.label,
@@ -1576,6 +1859,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         aria-label=${this.dataMode ? label : nothing}
       >
         ${this.searchable ? this.renderSearch() : nothing}
+        ${this.inputLimitMessage ? html`<p part="limit">${this.inputLimitMessage}</p>` : nothing}
         ${this.dataMode ? this.renderDataList() : this.renderSlottedList(label)}
       </div>
     `;
@@ -1599,6 +1883,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** The visible threads and item model, rebuilt only when one of their inputs changes. */
   private model(): ThreadListModel {
+    if (this.sourceMode) return this.sourceModel();
     const today = startOfLocalDay(new Date());
     const key = [
       this.normalizedThreads, this.searchText, this.filter, this.withArchived, this.grouping,
@@ -1610,16 +1895,35 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     if (previous && key.every((value, index) => Object.is(value, previous.key[index]))) return previous;
     const visible = this.visibleThreads;
     const items = this.buildItems(visible, today);
-    this.dataModel = { key, visible, items, groups: this.stickyGroups ? this.stickyAnchors(items) : undefined };
+    // The public thread admission already bounded these records. Structural headings must not
+    // consume a second array admission budget in the child list.
+    let source: LyraVirtualListIndexedSource | undefined;
+    if (items.length > 10000) {
+      const keys = items.map((item) => this.itemKey(item));
+      const indices = new Map<string | number, number>();
+      keys.forEach((itemKey, index) => { if (!indices.has(itemKey)) indices.set(itemKey, index); });
+      source = Object.freeze({
+        count: items.length,
+        itemAt: (index: number) => items[index],
+        keyAt: (index: number) => keys[index]!,
+        indexOfKey: (itemKey: string | number) => indices.get(itemKey) ?? -1,
+      });
+    }
+    this.dataModel = { key, visible, items, source, groups: this.stickyGroups ? this.stickyAnchors(items) : undefined };
     return this.dataModel;
   }
 
   private renderDataList(): TemplateResult {
-    const { visible, items, groups } = this.model();
+    const { visible, items, source, groups } = this.model();
     const showEmpty = visible.length === 0 && !this.hasEmptySlot;
+    const provider = this.sourceMode;
+    const retrySource = this.dataSource;
+    const retryState = this.sourcePages.state;
+    const failed = this.error || (provider && this.sourceFailed);
+    const pending = provider && this.sourcePages.state.pending && !this.error;
     return html`
       <div part="list" @keydown=${this.onListKeyDown}>
-        ${this.error
+        ${pending ? html`<p part="source-status">${this.localize('loading')}</p>` : failed
           ? renderDataState(
               this,
               {
@@ -1628,8 +1932,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 empty: false,
                 errorHeading: this.errorHeading,
                 errorDescription: this.errorDescription,
-                onRetry: this.onErrorRetry,
-                emitRetryRequest: (detail, init: { cancelable: true }) => this.emit('lr-retry-request', detail, init),
+                onRetry: provider ? () => this.retrySource(retrySource, retryState) : this.onErrorRetry,
+                emitRetryRequest: (detail, init: { cancelable: true }) => {
+                  if (provider && !this.currentSourceRetry(retrySource, retryState)) {
+                    const event = new CustomEvent('lr-retry-request', init); event.preventDefault(); return event;
+                  }
+                  return this.emit('lr-retry-request', detail, init);
+                },
               },
               'error',
               'lr-retry-request'
@@ -1643,13 +1952,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           : html`<lr-virtual-list
               exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-adornment:group-adornment, group-icon:group-icon, row-start:row-start, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-base-menu-open:row-item-base-menu-open, row-item-active-indicator:row-item-active-indicator, row-item-select-button:row-item-select-button, row-item-start:row-item-start, row-item-content:row-item-content, row-item-label:row-item-label, row-item-label-input:row-item-label-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
               row-height="auto"
-              .items=${guard([items], () => items)}
+              .items=${guard([items, source], () => source ? [] : items)}
+              .source=${source}
               .groups=${guard([groups], () => groups)}
               .renderStickyGroup=${this.stickyGroups
                 ? this.renderStickyGroup
                 : undefined}
               .renderItem=${this.renderItem}
-              .keyFunction=${this.itemKey}
+              .keyFunction=${source ? undefined : this.itemKey}
               .activeItemId=${this.activeConversationId
                 ? this.threadItemKey(this.activeConversationId)
                 : ''}
@@ -1661,10 +1971,15 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
             ></lr-virtual-list>`}
         <slot
           name="empty"
-          ?hidden=${this.error || !(visible.length === 0 && this.hasEmptySlot)}
+          ?hidden=${failed || pending || !(visible.length === 0 && this.hasEmptySlot)}
           @slotchange=${this.onEmptySlotChange}
         ></slot>
       </div>
+      ${provider ? html`<lr-pagination part="source-pagination" format="compact"
+        .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1} .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)}
+        .total=${this.sourceTotal ?? -1} .disabled=${this.sourceBlocked || this.sourceTotal === null} .strings=${this.strings}
+        @lr-page-change=${this.onSourcePage} @lr-before-page-change=${this.stopEvent} @lr-activate=${this.stopEvent}
+        @focus=${this.stopEvent} @blur=${this.stopEvent}></lr-pagination>` : nothing}
       <lr-live-region></lr-live-region>
     `;
   }

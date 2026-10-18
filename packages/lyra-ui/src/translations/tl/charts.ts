@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} wastong sample sa buong distribusyon; {belowCount} na mas mababa at {aboveCount} na mas mataas sa mga hangganan ng ipinapakitang pagitan; {invalidCount} hindi wastong sample.',
+  histogramDistributionRange: 'Naobserbahang saklaw ng sample: {min} hanggang {max}.',
   chartCategory: 'Kategorya',
   chartTotal: 'Kabuuan',
   chartAxisTotal: 'Kabuuan ng {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, radius {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'tumataas',
-  chartTrendDecreasing: 'bumababa',
-  chartTrendFlat: 'pantay',
-  chartSummary: '{label}: {count} value, saklaw {min} hanggang {max}, {trend} ang takbo',
   chartSeriesNoData: '{label}: walang datos',
   chartSummaryWithData: 'Tsart na {type}. {summaries}.',
   chartSummaryEmpty: 'Tsart na {type} na walang datos.',
-  chartSummarySeparator: '. ',
   chartData: 'Datos ng tsart',
   chartRenderUnavailable: 'Hindi available ang pagpapakita ng chart.',
+  chartPreparedSummaryZoom: 'Ipinapakita ng pag-zoom ang inihandang buod; hindi available ang mas detalyadong pagtingin gamit ang index.',
+  chartSpatialSummary: 'Buong source: {count} punto, x {minX} hanggang {maxX}, y {minY} hanggang {maxY}. View: {matchedCount} punto, x {viewMinX} hanggang {viewMaxX}, y {viewMinY} hanggang {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Radius sa buong source: {min} hanggang {max}.',
+  chartSpatialDensityLegend: 'Kasama sa densidad ang lahat ng serye; ang visibility ng serye ay nakaaapekto lamang sa mga point overlay.',
+  chartSpatialPoint: '{series}: {id}, posisyon sa source {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Rehiyon ng densidad: {count} punto, x {minX} hanggang {maxX}, y {minY} hanggang {maxY}.',
+  chartSpatialHidden: ' (nakatago ang serye)',
   chartDataSampled: 'Nagpapakita ang tsart at ang nabuong talahanayan ng sample na hanggang 1,000 rekord. Magbigay ng pasadyang talahanayan ng datos upang ma-access ang lahat ng datos ng tsart.',
   chartPlotSampled: 'Nagpapakita ang tsart ng sample na hanggang 1,000 rekord; nakalista sa talahanayan ng datos ang lahat ng datos.',
   chartZoomUnavailable: 'Hindi magagamit ang pag-zoom, pero magagamit pa rin ang pangunahing tsart.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} sa {total})',
   chartMissingLibrary: 'Kailangang mai-install ang opsyonal na package na "chart.js" upang maipakita ang mga tsart.',
   boxPlotMissingLibrary: 'Kailangang mai-install ang opsyonal na package para sa box-plot chart upang maipakita ang mga box plot.',
+  chartInputLimit: 'May ilang datos ng tsart na hindi isinama dahil naabot ang limitasyon sa input. Magbigay ng mas maliit o paunang pinagsama-samang dataset upang katawanin ang mga halagang hindi isinama.',
+  histogramInputLimit: 'Ang pinakabagong 10,000 sample lang ang pinananatili. Magbigay sa lr-chart ng mga bilang na paunang pinangkat ayon sa pagitan upang katawanin ang mas malaking distribusyon.',
 };
 
 registerLyraLocale('tl', strings);

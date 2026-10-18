@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count}-komento',
     other: '{count} komentoa',
   },
+  commandPaletteInputLimit: 'Osa komennoista jätettiin pois syöterajan täyttymisen vuoksi.',
 };
 
 registerLyraLocale('fi', strings);

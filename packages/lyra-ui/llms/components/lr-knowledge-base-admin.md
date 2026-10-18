@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,9 +19,65 @@
 Tabbed operations shell composing `lr-knowledge-base` and `lr-ingestion-queue`. It forwards source
 and ingestion actions under namespaced events; host-owned controls such as chunking, embedding,
 permissions, and connector settings go in the `settings` slot.
+Only the active child view is mounted. With its corresponding provider unset, if the shell's own
+admission truncates the source or ingestion array, an `input-limit` note for the active tab reports
+the original assigned count; it does not infer that count from the already-truncated child input. Initial and reconnect notes
+are quiet, and later changed omissions are politely announced.
 
-**Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
-IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
+**Provider forwarding:** `dataSource: KnowledgeBaseSource | undefined = undefined` and
+`ingestionSource: IngestionQueueSource | undefined = undefined` are property-only inputs
+(attribute: false). `dataSource` supplies the Sources tab's `lr-knowledge-base.dataSource`;
+`ingestionSource` supplies the Ingestion tab's `lr-ingestion-queue.dataSource`. Each takes
+precedence over its matching legacy `sources`/`ingestionItems` array. Set that provider to
+`undefined` to restore the current retained legacy collection and its original admission-loss
+notice. Defined invalid providers keep the child's source-authoritative failure behavior when
+activated; the shell does not replace them with the legacy array.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-knowledge-base-admin.js";
+import type { KnowledgeBaseSource } from
+  "@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js";
+import type { IngestionQueueSource } from
+  "@aceshooting/lyra-ui/components/retrieval/ingestion-queue/ingestion-queue.class.js";
+
+declare const inventoryProvider: KnowledgeBaseSource;
+declare const queueProvider: IngestionQueueSource;
+const admin = document.querySelector('lr-knowledge-base-admin')!;
+admin.dataSource = inventoryProvider;
+admin.ingestionSource = queueProvider;
+```
+
+The shell stores provider references by identity without inspecting their revision, methods,
+rows or totals, querying them or cloning them. An inactive assignment only stores the reference;
+it neither reads that provider nor refreshes the active child. Only the mounted active child
+receives its matching provider and owns validation, requests, bounded page data, loading, errors,
+retry and global totals, as described by [knowledge-base](#lr-knowledge-base) and
+[ingestion-queue](#lr-ingestion-queue). The shell adds no `sourcePage`, `sourcePageSize` or
+`sourceTotal` API and keeps no page cache or inactive child instance.
+
+An active provider assignment, including the same reference, synchronously forwards one refresh;
+the following shell render does not repeat that assignment. A keyless `admin.requestUpdate()`
+refreshes only the current child once. Named heading/label/slot paints and re-picking the active
+tab do not refresh providers. To use a repeated `lr-activate` as a refresh intent, explicitly call
+`requestUpdate()` in the host. Locale changes follow the active child's locale-dependent refresh
+contract. Reassign or explicitly refresh after changing provider revision/state.
+
+Switching tabs disconnects the old child and cancels its authority; returning mounts a new child
+at its documented default page zero. Page navigation state does not persist across tab switches.
+If a previous same-provider page call ignores abort, the remounted child's replacement page call
+waits for it to settle instead of overlapping it. Providers should settle promptly after
+cancellation. Different provider identities retain independent request capacity.
+
+A defined provider suppresses only its active collection's legacy `input-limit` notice. The
+inactive provider/collection is not inspected to compute that notice, and both parent-owned
+legacy collections remain intact. Source/ingestion actions are forwarded only from the current
+active child with their existing names, original IDs and bounded immutable detail. Provider
+replacement, refresh, tab change, disconnect and adoption revoke old action callbacks, including
+retained controls that reuse an ID. Ingestion retry/cancel keep their existing namespaced detail
+and non-cancelable notification semantics; the shell never performs the operation itself.
+
+**Properties:** `sources: readonly KnowledgeSource[] = []` (attribute: false); `ingestionItems:
+readonly IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
 `label?: string` (the visible heading and the tablist's distinct accessible name; omission uses the
 localized admin label, while an explicit empty string empties the heading and the tablist keeps the
 localized name; authored host `aria-label` independently names the admin component and is not
@@ -51,7 +107,7 @@ that moves an invalid or newly-hidden tab back to Sources is not a user activati
 
 **Slots:** `settings` — host-owned KB configuration controls.
 
-**CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`.
+**CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`, `input-limit`.
 
 **Themeable custom properties:** `--lr-knowledge-base-admin-tab-selected-border` (default
 `var(--lr-color-brand)`) and `--lr-knowledge-base-admin-tab-selected-color` (default

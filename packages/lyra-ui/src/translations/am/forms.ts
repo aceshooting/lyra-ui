@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'እስክሪብቶ ወርዷል',
   signaturePadPenUp: 'እስክሪብቶ ተነስቷል',
+  localePickerInputLimit: 'የመጀመሪያዎቹ 512 የቋንቋና ክልል ግቤቶች ብቻ ይገኛሉ።',
+  emojiPickerInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ የኢሞጂ ውሂብ ተወግዷል።',
 };
 
 registerLyraLocale('am', strings);

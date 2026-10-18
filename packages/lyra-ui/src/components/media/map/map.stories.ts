@@ -820,3 +820,31 @@ export const SectionedLegend: Story = {
     ] satisfies LyraMapLegendEntry[]}
   ></lr-map>`,
 };
+
+/** An explicit source diff changes one stable feature without replacing the collection. */
+export const IncrementalSourceUpdate: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let value = 0;
+    const dataLayers: LyraMapGeoJsonDataLayer[] = [{ sourceId: 'points', geojson: {
+      type: 'FeatureCollection', features: [{ type: 'Feature', id: 'point',
+        geometry: { type: 'Point', coordinates: [0, 0] }, properties: { value: 0 } }],
+    } }];
+    return html`<button @click=${() => map?.updateSourceData('points', {
+      update: [{ id: 'point', addOrUpdateProperties: [{ key: 'value', value: ++value }] }],
+    })}>Update feature value</button>
+    <lr-map ${ref(element => { map = element as LyraMap | undefined; })}
+      label="Incremental point data" .mapStyle=${OFFLINE_RASTER_STYLE} .dataLayers=${dataLayers}
+      .center=${[0, 0]} zoom="2"></lr-map>`;
+  },
+};
+
+/** Larger point collections use clustered GeoJSON instead of individual DOM markers. */
+export const MarkerInspectionLimit: Story = {
+  render: () => html`<lr-map label="Bounded markers" .mapStyle=${OFFLINE_RASTER_STYLE}
+    .markers=${Array.from({ length: 2001 }, (_, index) => ({ id: String(index), lngLat: [index % 180, 0] }))}
+    @lr-map-load=${(event: Event) => {
+      const map = event.currentTarget as LyraMap;
+      map.title = map.markersTruncated ? 'The first 2,000 marker entries are shown.' : '';
+    }}></lr-map>`,
+};

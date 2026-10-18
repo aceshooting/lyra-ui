@@ -69,6 +69,8 @@ const strings: LyraLocaleStrings = {
     few: 'Još {count} prijedloga',
     other: 'Još {count} prijedloga',
   },
+  mentionInputLimit: 'Dostupno je samo prvih 10.000 prijedloga za spominjanje.',
+  diffViewHighlightLimit: 'Dugačak kôd prikazuje se bez isticanja sintakse.',
 };
 
 registerLyraLocale('hr', strings);

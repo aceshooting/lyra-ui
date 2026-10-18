@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Gambar {index} saka {total}',
   playWithContext: 'Puter {name}',
   pauseWithContext: 'Ngaso {name}',
+  avPlayerWaveformUnavailable: 'Data wujud gelombang ora kasedhiya utawa ora cocog karo media iki.',
+  avPlayerTranscriptUnavailable: 'Data transkrip ora kasedhiya.',
   dropzoneReleaseToAdd: 'Lepasake kanggo nambah berkas.',
   dropzoneRejectedType: 'Jinis berkas iki ora ditampa.',
   attachmentAdd: 'Tambah lampiran',

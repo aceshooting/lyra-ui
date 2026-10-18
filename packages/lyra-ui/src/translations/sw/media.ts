@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Picha {index} kati ya {total}',
   playWithContext: 'Cheza {name}',
   pauseWithContext: 'Sitisha {name}',
+  avPlayerWaveformUnavailable: 'Data ya umbo la wimbi haipatikani au hailingani na media hii.',
+  avPlayerTranscriptUnavailable: 'Data ya nakala ya maandishi haipatikani.',
   dropzoneReleaseToAdd: 'Achia ili kuongeza faili.',
   dropzoneRejectedType: 'Aina hii ya faili haikubaliki.',
   attachmentAdd: 'Ongeza kiambatisho',

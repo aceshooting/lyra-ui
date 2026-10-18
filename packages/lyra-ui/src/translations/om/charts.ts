@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Raabsa guutuu keessatti saamudota sirrii {validCount}; daangaawwan gareewwan agarsiifaman gaditti {belowCount} fi olitti {aboveCount}; saamudota sirrii hin taane {invalidCount}.',
+  histogramDistributionRange: 'Daangaa saamudaa ilaalamee: {min} hanga {max}.',
   chartCategory: 'Ramaddii',
   chartTotal: 'Waliigala',
   chartAxisTotal: 'Waliigala {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, raadiyaasii {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'dabalaa jira',
-  chartTrendDecreasing: 'hir\'achaa jira',
-  chartTrendFlat: 'hin jijjiiramne',
-  chartSummary: '{label}: gatii {count}, daangaa {min} hanga {max}, adeemsa {trend}',
   chartSeriesNoData: '{label}: odeeffannoon hin jiru',
   chartSummaryWithData: 'Chaartii {type}. {summaries}.',
   chartSummaryEmpty: 'Chaartii {type} odeeffannoo hin qabne.',
-  chartSummarySeparator: '. ',
   chartData: 'Odeeffannoo chaartii',
   chartRenderUnavailable: 'Chaartii agarsiisuun hin dandaʼamu.',
+  chartPreparedSummaryZoom: 'Guddisuun cuunfaa qophaaʼe agarsiisa; indeeksiin balʼina dabalataa argachuun hin dandaʼamu.',
+  chartSpatialSummary: 'Madda guutuu: tuqaalee {count}, x {minX} hanga {maxX}, y {minY} hanga {maxY}. Mulʼata: tuqaalee {matchedCount}, x {viewMinX} hanga {viewMaxX}, y {viewMinY} hanga {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Raadiyaasii madda guutuu: {min} hanga {max}.',
+  chartSpatialDensityLegend: 'Rukkinni tartiibawwan hunda hammata; mulʼachuun tartiibaa tuqaalee irra buufaman qofa irratti dhiibbaa qaba.',
+  chartSpatialPoint: '{series}: {id}, iddoo madda {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Naannoo rukkinnaa: tuqaalee {count}, x {minX} hanga {maxX}, y {minY} hanga {maxY}.',
+  chartSpatialHidden: ' (tartiibni dhokate)',
   chartDataSampled: 'Chaartiin fi gabateen odeeffannoo uumame galmeewwan hanga 1,000 keessaa fakkeenya agarsiisu. Odeeffannoo chaartii hunda argachuuf gabatee odeeffannoo ofii keetii dhiyeessi.',
   chartPlotSampled: 'Chaartiin galmeewwan hanga 1,000 keessaa fakkeenya agarsiisa; gabateen odeeffannoo odeeffannoo hunda tarreessa.',
   chartZoomUnavailable: 'Guddisuun hin danda\'amu, garuu chaartiin bu\'uuraa ni jira.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total} keessaa {index})',
   chartMissingLibrary: 'Chaartii agarsiisuuf paakeejiin filannoo "chart.js" qaama kana keessatti fe\'amuu qaba.',
   boxPlotMissingLibrary: 'Chaartii sanduuqaa agarsiisuuf paakeejii chaartii sanduuqaa filannoo fe\'uun barbaachisa.',
+  chartInputLimit: 'Daangaan galtee waan gaʼameef daataan chaartii tokko tokko hafee jira. Gatiiwwan hafan bakka buusuuf tuuta daataa xiqqaa ykn dursee walitti qabame kenni.',
+  histogramInputLimit: 'Saamuda haaraa 10,000 qofa kuufamu. Raabsa guddaa bakka buusuuf lakkoofsota dursee gareewwan daangaa keessatti ramadaman lr-chartʼf kenni.',
 };
 
 registerLyraLocale('om', strings);

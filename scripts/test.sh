@@ -137,6 +137,11 @@ lane_chromium() {
     WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[chromium]}" \
     pnpm --filter @aceshooting/lyra-ui test:coverage
   pnpm --filter @aceshooting/lyra-ui check:coverage-floors
+  WTR_PORT="${WTR_LANE_PORTS[chromium]}" \
+    WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[chromium]}" \
+    WTR_BROWSER=chromium WTR_STRICT_CONSOLE=1 \
+    pnpm --filter @aceshooting/lyra-ui test:scale
+  pnpm --filter @aceshooting/lyra-ui check:scale-budgets
 }
 
 lane_firefox() {

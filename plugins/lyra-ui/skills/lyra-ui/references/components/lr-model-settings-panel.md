@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -52,6 +52,13 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
   reach either, since a form-associated control's own `disabled` IDL property/attribute is never
   mutated by fieldset cascading.
 
+The panel snapshots `catalog` before forwarding it to the model picker. Its own deep input budget
+can omit rows before the child reaches its catalog ceiling. A localized `catalogPickerInputLimit`
+notice in the panel's `part="limit"` discloses that outer loss from the original assignment,
+independently of the child's notice. Rebinding the retained snapshot preserves it; a fresh input
+below the limit clears it. Initial mounting and reconnecting are quiet; later changed input loss
+is politely announced.
+
 **Events:** `lr-change` — `detail: { model: string; inCatalog: boolean; temperature: number }`.
 Fires whenever _either_ child control's own `lr-change` fires, and always carries the full current
 settings snapshot, not just whichever field actually changed. `inCatalog` is recomputed fresh from
@@ -63,7 +70,8 @@ assigned directly instead of via the child's own event. The nested selector's na
 **Slots:** none — this is a fixed two-control composition, not a generic layout shell.
 
 **CSS parts:** `base`, `model-row`, `model-select`, `model-label` (forwarded visible internal
-selector label), `temperature-row`, `temperature-label`, `temperature-value`
+selector label), `temperature-row`, `temperature-label`, `temperature-value`, `limit` (outer catalog
+input-loss notice)
 
 **Themeable custom properties:** `--lr-model-settings-panel-max-inline-size` — the card's own width
 ceiling (default `var(--lr-size-28rem)`). Set a length to retune it, or `none` for a full-width

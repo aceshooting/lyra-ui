@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} കമാൻഡ്',
     other: '{count} കമാൻഡുകൾ',
   },
+  commandPaletteInputLimit: 'ഇൻപുട്ട് പരിധിയിലെത്തിയതിനാൽ ചില ഇനങ്ങൾ ഒഴിവാക്കി: കമാൻഡുകൾ.',
 };
 
 registerLyraLocale('ml', strings);

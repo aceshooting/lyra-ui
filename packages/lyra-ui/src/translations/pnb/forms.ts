@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'قلم تھلے',
   signaturePadPenUp: 'قلم اتے',
+  localePickerInputLimit: 'زبان تے علاقے دے صرف پہلے 512 اندراج دستیاب نیں۔',
+  emojiPickerInputLimit: 'اِن پُٹ دی حد پوری ہون کارن ایموجی دا کجھ ڈیٹا چھڈ دتا گیا اے۔',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

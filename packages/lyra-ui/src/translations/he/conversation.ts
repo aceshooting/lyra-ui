@@ -83,6 +83,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'עדיין אין שיחות',
   agentWorkspaceLabel: 'סביבת עבודה של סוכן',
+  agentWorkspaceInputLimit: '{collection}: נשמרות רק {count} מתוך {total} רשומות.',
   agentWorkspaceConversation: 'שיחה',
   agentWorkspaceDetails: 'פרטי ההרצה',
   agentWorkspaceRun: 'ריצת סוכן',
@@ -100,6 +101,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'נסה שוב את החלק הזה',
   promptQueueLabel: 'הנחיות בתור',
   promptQueueEmpty: 'אין הנחיות בתור',
+  promptQueueInputLimit: 'חלק מהבקשות הממתינות בתור או הקבצים המצורפים הושמטו משום שהקלט הגיע למגבלה.',
+  promptQueueAttachmentLimit: 'מוצגים {shown} מתוך {total} קבצים מצורפים שנשמרו.',
   promptQueueSendNow: 'שלח עכשיו',
   selectionToolbarLabel: 'פעולות בחירה',
   selectionAsk: 'שאל',
@@ -166,6 +169,10 @@ const strings: LyraLocaleStrings = {
     two: '{count} אסימונים',
     other: '{count} אסימונים',
   },
+  threadListInputLimit: 'חלק משרשורי השיחה הושמטו משום שהקלט הגיע למגבלה.',
+  promptInputInputLimit: 'חלק מההצעות או רשומות הקטלוג הושמטו משום שהקלט הגיע למגבלה.',
+  transcriptFeedInputLimit: 'רק {count} הרשומות החדשות ביותר מתוך {total} נשמרות.',
+  codeBlockHighlightLimit: 'קוד ארוך מוצג ללא הדגשת תחביר.',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

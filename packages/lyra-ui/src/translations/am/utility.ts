@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} ተጨማሪ ጥቆማ',
     other: '{count} ተጨማሪ ጥቆማዎች',
   },
+  mentionInputLimit: 'ለመጥቀስ የመጀመሪያዎቹ 10,000 ጥቆማዎች ብቻ ይገኛሉ።',
+  diffViewHighlightLimit: 'ረጅም ኮድ የአገባብ ማድመቂያ ሳይኖረው ይታያል።',
 };
 
 registerLyraLocale('am', strings);

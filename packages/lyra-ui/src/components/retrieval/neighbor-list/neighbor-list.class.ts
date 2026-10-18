@@ -1,11 +1,55 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import type { GraphSource } from '../graph/graph.class.js';
+import type { LyraGraphNode } from '../graph/graph-model.js';
+import type { LyraGraphSourceQuery, LyraGraphSourceSummary, LyraSourceRecord } from '../../../data-sources.js';
+import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
+import '../../data/pagination/pagination.class.js';
+
+export type NeighborListSource = GraphSource;
+export type NeighborSourceDirection = LyraGraphSourceQuery['direction'];
+type NeighborSourceRow = LyraSourceRecord<LyraGraphNode>;
+function sourceField(value: unknown, key: PropertyKey): unknown {
+  if (!value || typeof value !== 'object') throw new TypeError('Invalid neighborhood value');
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (descriptor && !('value' in descriptor)) throw new TypeError('Accessor neighborhood field');
+  return descriptor?.value;
+}
+function sourceRows(raw: unknown, limit: number): readonly NeighborSourceRow[] {
+  if (!Array.isArray(raw)) throw new TypeError('Invalid neighborhood page');
+  const length = sourceCount(sourceField(raw, 'length'));
+  if (length > limit) throw new RangeError('Neighborhood page limit');
+  let units = 0;
+  const text = (value: unknown, required = false): string | undefined => {
+    if (value === undefined && !required) return undefined;
+    if (typeof value !== 'string' || (required && !value.trim()) || value.length > 65_536 || (units += value.length) > 2_000_000) throw new TypeError('Invalid neighborhood text');
+    return value;
+  };
+  return Object.freeze(Array.from({ length }, (_, index) => {
+    const entry = sourceField(raw, index), record = sourceField(entry, 'value');
+    if (sourceField(record, 'kind') !== 'node') throw new TypeError('Expected neighborhood node');
+    const node = sourceField(record, 'value'), key = text(sourceField(entry, 'key'), true)!;
+    const id = text(sourceField(node, 'id'), true)!;
+    if (key !== `node:${id}`) throw new TypeError('Invalid neighborhood identity');
+    const label = text(sourceField(node, 'label')), accessibleLabel = text(sourceField(node, 'accessibleLabel'));
+    const type = text(sourceField(node, 'type'));
+    return Object.freeze({ key, order: sourceCount(sourceField(entry, 'order')), value: Object.freeze({ id,
+      ...(label === undefined ? {} : { label }), ...(accessibleLabel === undefined ? {} : { accessibleLabel }), ...(type === undefined ? {} : { type }),
+    }) });
+  }));
+}
+function sourceSummary(raw: unknown): LyraGraphSourceSummary {
+  return Object.freeze({ nodes: sourceCount(sourceField(raw, 'nodes')), edges: sourceCount(sourceField(raw, 'edges')) });
+}
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { expandIcon } from '../../../internal/icons.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import { finiteInteger, finiteCount } from '../../../internal/numbers.js';
 import {
   getCollator,
   getListFormat,
@@ -22,8 +66,8 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel, LYRA_DEFAULT_neighborSourceChoose, LYRA_DEFAULT_neighborSourceError, LYRA_DEFAULT_neighborSourceSummary } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_loading, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 let virtualListRegistration: Promise<unknown> | undefined;
@@ -68,6 +112,10 @@ export interface LyraNeighborListEventMap {
  * @csspart node-label - The row's node `<button>`.
  * @csspart node-meta - Secondary node text (type/degree), when present.
  * @csspart expand-button - The per-row expand-in-graph icon button, only rendered when `expandable`.
+ * @csspart limit - Localized retained/source counts when the row assignment exceeds its input boundary.
+ * @csspart source-status - Source loading, failure, empty, or missing-center status.
+ * @csspart source-summary - Exact neighborhood total and current page count.
+ * @csspart source-retry - Retry action for the current failed source request.
  * @csspart empty - The empty-state message, shown when `rows` is empty.
  * @status stable
  * @since 4.0.0
@@ -77,6 +125,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
+    loading: LYRA_DEFAULT_loading,
     neighborDirectionBoth: LYRA_DEFAULT_neighborDirectionBoth,
     neighborDirectionIn: LYRA_DEFAULT_neighborDirectionIn,
     neighborDirectionOut: LYRA_DEFAULT_neighborDirectionOut,
@@ -85,6 +135,10 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     neighborListEmpty: LYRA_DEFAULT_neighborListEmpty,
     neighborListLabel: LYRA_DEFAULT_neighborListLabel,
     neighborRowLabel: LYRA_DEFAULT_neighborRowLabel,
+    neighborSourceChoose: LYRA_DEFAULT_neighborSourceChoose,
+    neighborSourceError: LYRA_DEFAULT_neighborSourceError,
+    neighborSourceSummary: LYRA_DEFAULT_neighborSourceSummary,
+    retry: LYRA_DEFAULT_retry,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -114,6 +168,146 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
    *  empty, and so does an explicitly empty `label`. */
   @property() label?: string;
 
+  private _graphSource?: NeighborListSource;
+  /** Full node-neighborhood provider. Wins over rows while defined. Reassign (even the same
+   * source) or call requestUpdate() to refresh; unset restores rows. Relation grouping and
+   * per-row direction are unavailable because node records do not carry edge metadata. */
+  @property({ attribute: false })
+  get graphSource(): NeighborListSource | undefined { return this._graphSource; }
+  set graphSource(value: NeighborListSource | undefined) {
+    const previous = this._graphSource; this._graphSource = value; this.requestUpdate('graphSource', previous);
+    if (previous === value) super.requestUpdate();
+  }
+  /** Canonical node key whose neighborhood is shown; null makes no provider request. */
+  @property({ attribute: false }) centerKey: string | null = null;
+  /** Direction filter for the entire neighborhood, not a per-row edge direction. */
+  @property({ attribute: 'source-direction' }) sourceDirection: NeighborSourceDirection = 'both';
+  private _sourceNodeTypes: readonly string[] = Object.freeze([]);
+  private sourceTypesError = false;
+  private sourceTypesVersion = 0;
+  /** At most 500 distinct nonblank type IDs; 65,536 units each and 2,000,000 combined. */
+  @property({ attribute: false })
+  get sourceNodeTypes(): readonly string[] { return this._sourceNodeTypes; }
+  set sourceNodeTypes(value: readonly string[]) {
+    const previous = this._sourceNodeTypes, transaction = ++this.sourceTypesVersion;
+    try {
+      if (!Array.isArray(value)) throw new TypeError('Invalid neighborhood types');
+      const length = sourceCount(sourceField(value, 'length'));
+      if (length > 500) throw new RangeError('Neighborhood type limit');
+      const types = new Set<string>(); let units = 0;
+      for (let i = 0; i < length; i++) {
+        const item = sourceField(value, i);
+        if (typeof item !== 'string' || !item.trim() || item.length > 65_536) throw new TypeError('Invalid neighborhood type');
+        if (!types.has(item)) { units += item.length; if (units > 2_000_000) throw new RangeError('Neighborhood type budget'); types.add(item); }
+      }
+      if (transaction !== this.sourceTypesVersion) return;
+      this._sourceNodeTypes = Object.freeze([...types].sort()); this.sourceTypesError = false;
+    } catch { if (transaction !== this.sourceTypesVersion) return; this._sourceNodeTypes = Object.freeze([]); this.sourceTypesError = true; }
+    this.requestUpdate('sourceNodeTypes', previous);
+  }
+  /** Zero-based full-neighborhood page. */
+  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  /** Requested page size, normalized to 1–500, default 100. */
+  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  /** Exact matching neighborhood count, or null before a current successful query. */
+  get sourceTotal(): number | null { return this.graphSource !== undefined && this.centerKey !== null && !this.sourceError && this.sourceBinding?.[3] === this.sourceEpoch ? this.sourcePages.state.result?.total ?? null : null; }
+  private sourceEpoch = 0;
+  private sourceNavigation = 0;
+  private sourcePaint = 0;
+  private sourceBinding?: readonly unknown[];
+  private sourcePageBinding?: readonly unknown[];
+  private sourceError = false;
+  private sourceFailedEpoch?: number;
+  private sourceSyncing = false;
+  private sourcePromise: Promise<boolean> = Promise.resolve(false);
+  private readonly sourcePages = new SourcePageController<LyraGraphNode, LyraGraphSourceQuery, LyraGraphSourceSummary>(this, {
+    normalizeRecord: row => row as NeighborSourceRow,
+    normalizeSummary: sourceSummary,
+    validateMetadata: result => { if (result.total > result.summary.nodes) throw new RangeError('Invalid neighborhood total'); },
+    onChange: () => { const old = this.sourcePaint++; this.requestUpdate('sourcePaint', old); },
+  });
+
+  private sourceCurrent(): () => boolean {
+    const source = this.graphSource, epoch = this.sourceEpoch, owner = this.ownerDocument;
+    let revision: unknown;
+    try { revision = source?.revision; } catch { return () => false; }
+    return () => {
+      try { return source?.revision === revision && this.isConnected && this.ownerDocument === owner && this.graphSource === source && this.sourceEpoch === epoch; }
+      catch { return false; }
+    };
+  }
+  private syncSource(): void {
+    if (!this.sourcePages || this.sourceSyncing) return;
+    this.sourceSyncing = true;
+    const epoch = this.sourceEpoch;
+    try {
+      if (this.sourceError && this.sourceFailedEpoch === epoch) return;
+      const source = this.graphSource;
+      if (source === undefined || this.centerKey === null || !this.isConnected) {
+        if (this.sourceBinding || this.sourcePageBinding) this.sourcePages.bind(undefined);
+        this.sourceBinding = undefined; this.sourcePageBinding = undefined; this.sourceError = false; return;
+      }
+      if (this.sourceTypesError || typeof this.centerKey !== 'string' || !this.centerKey.startsWith('node:') || !this.centerKey.slice(5).trim() || this.centerKey.length > 65_536 || !['in', 'out', 'both'].includes(this.sourceDirection)) throw new TypeError('Invalid neighborhood scope');
+      const revision = sourceRevision(source.revision), records = source.records, locale = this.effectiveLocale;
+      const queryRead = records.query, lookupRead = records.lookup, locateRead = records.locate;
+      if (sourceRevision(records.revision) !== revision || typeof queryRead !== 'function' || typeof lookupRead !== 'function' || typeof locateRead !== 'function') throw new TypeError('Invalid neighborhood provider');
+      if (epoch !== this.sourceEpoch || source !== this.graphSource) return;
+      const binding = [source, records, revision, epoch, locale];
+      if (!this.sourceBinding || binding.some((value, index) => value !== this.sourceBinding![index])) {
+        this.sourceBinding = binding; this.sourcePageBinding = undefined; this.sourceError = false;
+        const current = () => {
+          const same = source.revision === revision && source.records === records && records.revision === revision;
+          return same && this.isConnected && epoch === this.sourceEpoch && source === this.graphSource;
+        };
+        const check = () => { if (!current()) throw new Error('Obsolete neighborhood'); };
+        this.sourcePages.bind({ revision, epoch, locale, source: { revision,
+          query: async request => {
+            check(); const raw = await queryRead.call(records, request); check();
+            if (sourceField(raw, 'groups') !== undefined || sourceField(raw, 'tags') !== undefined) throw new TypeError('Unexpected neighborhood metadata');
+            const result = { rows: sourceRows(sourceField(raw, 'rows'), request.pageSize), total: sourceCount(sourceField(raw, 'total')), summary: sourceSummary(sourceField(raw, 'summary')) }; check(); return result;
+          },
+          lookup: async (keys, context) => { check(); const raw = await lookupRead.call(records, keys, context); check(); const rows = sourceRows(raw, keys.length); check(); return rows; },
+          locate: async (key, query, context) => { check(); const result = await locateRead.call(records, key, query, context); check(); return result; },
+        } });
+        if (epoch !== this.sourceEpoch || source !== this.graphSource) return;
+      }
+      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
+      const page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      const signature = [page, size, this.centerKey, this.sourceDirection, this.sourceNodeTypes];
+      if (!this.sourcePageBinding || signature.some((value, index) => value !== this.sourcePageBinding![index])) {
+        this.sourcePageBinding = signature;
+        this.sourcePromise = this.sourcePages.request(Object.freeze({ kind: 'nodes', search: '', centerKey: this.centerKey, direction: this.sourceDirection, nodeTypes: this.sourceNodeTypes }), page, size);
+      }
+    } catch {
+      if (epoch === this.sourceEpoch) { this.sourceError = true; this.sourceFailedEpoch = epoch; this.sourcePages.bind(undefined); this.sourceBinding = undefined; this.sourcePageBinding = undefined; }
+    } finally {
+      this.sourceSyncing = false;
+      if (epoch !== this.sourceEpoch) queueMicrotask(() => { const old = this.sourcePaint++; this.requestUpdate('sourcePaint', old); });
+    }
+  }
+  /** Reveals and focuses a global neighborhood node without selecting or expanding it. */
+  async revealSourceKey(key: string): Promise<boolean> {
+    const navigation = ++this.sourceNavigation;
+    if (this.graphSource === undefined || this.centerKey === null || typeof key !== 'string' || !key.startsWith('node:') || !key.slice(5).trim() || key.length > 65_536) return false;
+    this.syncSource(); const sourceCurrent = this.sourceCurrent();
+    const current = () => sourceCurrent() && this.sourceNavigation === navigation;
+    await this.sourcePromise; if (!current() || this.sourceError) return false;
+    const index = await this.sourcePages.locate(key); if (!current() || index === null) return false;
+    this.sourceSyncing = true;
+    this.sourcePage = Math.floor(index / finiteInteger(this.sourcePageSize, 100, 1, 500));
+    this.sourceSyncing = false; this.syncSource(); await this.sourcePromise; await this.updateComplete;
+    if (!current()) return false;
+    const target = [...this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-source-key]')].find(node => node.dataset['sourceKey'] === key);
+    if (!target || !current()) return false;
+    target.scrollIntoView({ block: 'nearest' }); if (!current()) return false;
+    target.focus(); return current() && this.renderRoot.querySelector('[data-source-key]:focus') === target;
+  }
+  override connectedCallback(): void { super.connectedCallback(); this.sourceEpoch++; this.syncSource(); }
+  override disconnectedCallback(): void {
+    this.sourceEpoch++; this.sourceNavigation++; this.sourcePages.bind(undefined); this.sourceBinding = undefined; this.sourcePageBinding = undefined;
+    super.disconnectedCallback();
+  }
+
   /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
    *  own default of `100`) -- a raw `NaN` (e.g. an invalid `virtualize-at` attribute) would
    *  otherwise make `sorted.length > virtualizeAt` always false, silently disabling
@@ -127,13 +321,36 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   // array reference and it never has to clear its measured row heights / recompute offsets for an
   // unrelated reactive update (e.g. `expandable`, `label`). `willUpdate()` refreshes the cache
   // before `render()` ever reads it, mirroring `lr-retrieval-results`'s `processedChunksCache`.
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private sortedRowsCache: readonly LyraNeighborRow[] = [];
   private groupsCache: LyraVirtualListGroup[] | undefined;
   private hasComputedRows = false;
   private processedSignature = '';
+  private explicitRefresh = 0;
+  private groupDeps?: readonly unknown[];
+  private presentationDeps?: readonly unknown[];
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (this.sourcePages && (!this.sourceSyncing || args[0] !== 'sourcePage')) {
+      if (args[0] === undefined || ['graphSource', 'centerKey', 'sourceDirection', 'sourceNodeTypes', 'sourcePageSize'].includes(String(args[0]))) {
+        this.sourceEpoch++; this.sourceNavigation++;
+        if (['centerKey', 'sourceDirection', 'sourceNodeTypes', 'sourcePageSize'].includes(String(args[0]))) { const syncing = this.sourceSyncing; this.sourceSyncing = true; this.sourcePage = 0; this.sourceSyncing = syncing; }
+      } else if (args[0] === 'sourcePage') this.sourceNavigation++;
+    }
+    if (args[0] === undefined) this.explicitRefresh = (this.explicitRefresh ?? 0) + 1;
+    super.requestUpdate(...args);
+  }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    this.syncSource();
+    if (this.graphSource !== undefined) {
+      if (changed.has('rows') || changed.has('groupByRelation')) this.hasComputedRows = false;
+      return;
+    }
+    if (this.hasUpdated && changed.has('rows')) {
+      const message = this.inputLimitMessage();
+      if (message) this.announcements.announcePolite(message);
+    }
     // Locale (and a `strings` override) affect both the collator used to sort and the group
     // header text/count formatting, but neither reaches this component through a tracked
     // `@property`, so the signature captures the resolved locale directly rather than relying on
@@ -148,7 +365,17 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       this.hasComputedRows = true;
       this.processedSignature = signature;
       this.sortedRowsCache = this.computeSortedRows();
+    }
+    const groupDeps = [this.sortedRowsCache, this.effectiveLocale, this.strings,
+      lyraLocaleCatalogVersion(this.effectiveLocale), this.explicitRefresh];
+    if (!this.groupDeps || groupDeps.some((value, index) => value !== this.groupDeps![index])) {
+      this.groupDeps = groupDeps;
       this.groupsCache = this.computeGroups(this.sortedRowsCache);
+    }
+    const presentationDeps = [...groupDeps, this.types, this.expandable];
+    if (!this.presentationDeps || presentationDeps.some((value, index) => value !== this.presentationDeps![index])) {
+      this.presentationDeps = presentationDeps;
+      this.renderRow = item => this.renderNeighborRow(item as LyraNeighborRow);
     }
     // Registered on first need, so bundles whose lists stay short never load the virtualizer.
     if (this.sortedRowsCache.length > this.effectiveVirtualizeAt)
@@ -302,7 +529,64 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     `;
   }
 
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.announcements.adopted();
+    this.sourceEpoch++; this.sourceNavigation++; this.sourcePages.adopted(); this.syncSource();
+  }
+
+  private renderSource(): TemplateResult {
+    const state = this.sourcePages.state, failed = this.sourceError || Boolean(state.error);
+    const sourceCurrent = this.sourceCurrent(), page = this.sourcePage;
+    const current = () => sourceCurrent() && Object.is(this.sourcePage, page);
+    const valid = () => current() && this.sourcePages.state === state && !this.sourceError;
+    const rows = !failed && this.centerKey !== null ? state.result?.rows ?? [] : [];
+    const label = retrievalSemanticLabel(this, this.label ?? this.localize('neighborListLabel'));
+    const role = retrievalSemanticRole(this, 'group');
+    const status = this.centerKey === null ? this.localize('neighborSourceChoose') : failed ? this.localize('neighborSourceError') : state.pending ? this.localize('loading') : rows.length ? '' : this.localize('neighborListEmpty');
+    const total = this.sourceTotal;
+    return html`<div part="base" role=${role ?? nothing} aria-label=${label ?? nothing} aria-busy=${String(state.pending)}>
+      ${status ? html`<p part="source-status">${status}</p>` : nothing}
+      ${failed ? html`<button part="source-retry" type="button" @click=${() => { if (current() && this.sourcePages.state === state && (this.sourceError || Boolean(state.error))) this.requestUpdate(); }}>${this.localize('retry')}</button>` : nothing}
+      ${total !== null ? html`<p part="source-summary">${this.localize('neighborSourceSummary', undefined, { shown: getNumberFormat(this.effectiveLocale).format(rows.length), total: getNumberFormat(this.effectiveLocale).format(total) })}</p>` : nothing}
+      <div role="list">${rows.map(row => {
+        const name = row.value.accessibleLabel || row.value.label || row.value.id;
+        return html`<div part="row" role="listitem"><button part="node-label" type="button" data-source-key=${row.key} aria-label=${name}
+          @click=${() => { if (valid() && rows.includes(row)) this.emit('lr-entity-select', { entityId: row.value.id }); }}>${row.value.label || row.value.id}</button>
+          ${this.expandable ? html`<button part="expand-button" type="button" aria-label=${this.localize('neighborExpand', undefined, { label: name })}
+            @click=${() => { if (valid() && this.expandable && rows.includes(row)) this.emit('lr-node-expand', { nodeId: row.value.id }); }}>${expandIcon()}</button>` : nothing}</div>`;
+      })}</div>
+      ${this.centerKey !== null ? html`<lr-pagination format="compact" with-edges .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
+        .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${total ?? -1} .disabled=${failed || state.pending || total === null}
+        .strings=${this.strings} @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); if (valid()) this.sourcePage = event.detail.page - 1; }}></lr-pagination>` : nothing}
+    </div>`;
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (this.graphSource !== undefined) {
+      const state = this.sourcePages.state;
+      const status = this.sourceError || state.error ? 'error' : state.pending ? 'loading' : 'ready';
+      this.announcements.transition('source', status, status === 'error' ? this.localize('neighborSourceError') : status === 'loading' ? this.localize('loading') : '');
+      if (state.result && this.sourcePage !== state.page) { this.sourceSyncing = true; this.sourcePage = state.page; this.sourceSyncing = false; if (this.sourcePageBinding) this.sourcePageBinding = [state.page, ...this.sourcePageBinding.slice(1)]; }
+    }
+  }
+
+  private inputLimitMessage(): string {
+    const loss = publicCollectionTruncation(this, 'rows');
+    const format = getNumberFormat(this.effectiveLocale);
+    return loss ? this.localize('graphDataListLimit', undefined, {
+      shown: format.format(loss.retained), total: format.format(loss.source),
+    }) : '';
+  }
+
+  private renderInputLimit(): TemplateResult | typeof nothing {
+    const message = this.inputLimitMessage();
+    return message ? html`<p part="limit" role="note">${message}</p>` : nothing;
+  }
+
   override render(): TemplateResult {
+    if (this.graphSource !== undefined) return this.renderSource();
     const sorted = this.sortedRows();
     const label = retrievalSemanticLabel(
       this,
@@ -319,6 +603,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         role=${role ?? nothing}
         aria-label=${label ?? nothing}
       >
+        ${this.renderInputLimit()}
         <lr-empty part="empty"
           ><span slot="heading"
             >${this.localize('neighborListEmpty')}</span
@@ -329,6 +614,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     if (sorted.length > this.effectiveVirtualizeAt) {
       return html`
         <div part="base" role=${role ?? nothing} aria-label=${label ?? nothing}>
+          ${this.renderInputLimit()}
           <lr-virtual-list
             exportparts="row:row, node-label:node-label, direction:direction, relation:relation, node-meta:node-meta, expand-button:expand-button, group:group-header"
             .items=${guard([sorted], () => sorted)}
@@ -349,6 +635,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     );
     return html`
       <div part="base" role=${role ?? nothing} aria-label=${label ?? nothing}>
+        ${this.renderInputLimit()}
         <div role="list">
           ${sorted.map((row, i) => {
             const group = groupsByStartIndex.get(i);

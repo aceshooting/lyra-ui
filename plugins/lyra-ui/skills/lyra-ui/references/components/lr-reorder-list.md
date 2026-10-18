@@ -39,6 +39,10 @@ controls; making it invalid disables them. Identity edits do not emit a reorder 
 value attribute from a standalone item renders it as absent while preserving `null` readback; an
 explicit empty string remains supplied and later valid values recover.
 
+Movement boundaries reconcile once after an accepted internal move; native slot changes and item
+identity changes remain authoritative. An explicit item `aria-label` avoids content-name
+observation; otherwise the item refreshes its cached accessible name when slotted content changes.
+
 ### `lr-reorder-list`
 
 **Properties:**

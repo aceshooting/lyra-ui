@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'କେବଳ ପ୍ରଥମ {count}ଟି ପରୀକ୍ଷା ଫଳାଫଳ ଦେଖାଯାଏ।',
   toolTimelineLimit: 'ସର୍ବାଧିକ {count}ଟି ଟୁଲ୍ କଲ୍ ଦେଖାଯାଏ।',
   toolSelectLimit: 'କେବଳ ପ୍ରଥମ {count}ଟି ଟୁଲ୍ ଦେଖାଯାଏ।',
+  testResultsInputTooLarge: 'ପରୀକ୍ଷା ଫଳାଫଳର ବିବରଣୀ ପ୍ରଦର୍ଶନ ସୀମା ଅତିକ୍ରମ କରିଛି।',
   toolCall: 'ଟୁଲ୍ କଲ୍',
   maximize: 'ବଡ଼ କରନ୍ତୁ',
   promptStudioVariableName: 'ଭେରିଏବଲ୍ {index}ର ନାମ',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'କେବଳ ପ୍ରଥମ {count} ଫାଇଲଗୁଡିକ ଦେଖାଯାଏ |',
   taskListLimit: 'କେବଳ ପ୍ରଥମ {count} କାର୍ଯ୍ୟଗୁଡ଼ିକ ଦର୍ଶାଯାଇଛି |',
   evalDatasetLimit: 'କେବଳ ପ୍ରଥମ {count}ଟି ଉଦାହରଣ ଦେଖାଯାଏ।',
+  activityFeedInputLimit: '{total}ଟି ପ୍ରବିଷ୍ଟିରୁ କେବଳ ସବୁଠୁ ନୂଆ {count}ଟି ରଖାଯାଏ।',
+  spanWaterfallLimit: 'ମୋଟ {total} ସ୍ପାନ୍‌ରୁ {shown} ଦେଖାଯାଉଛି।',
+  toolTimelineInputLimit: 'ମୋଟ {total} ଟୁଲ୍ କଲ୍‌ରୁ କେବଳ ସବୁଠାରୁ ନୂଆ {count} ରଖାଯାଏ।',
 };
 
 registerLyraLocale('or', strings);

@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} ακόμη πρόταση',
     other: '{count} περισσότερες προτάσεις',
   },
+  mentionInputLimit: 'Είναι διαθέσιμες μόνο οι πρώτες 10.000 προτάσεις για αναφορά.',
+  diffViewHighlightLimit: 'Ο μεγάλος κώδικας εμφανίζεται χωρίς επισήμανση σύνταξης.',
 };
 
 registerLyraLocale('el', strings);

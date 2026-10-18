@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Larawan {index} sa {total}',
   playWithContext: 'I-play ang {name}',
   pauseWithContext: 'I-pause ang {name}',
+  avPlayerWaveformUnavailable: 'Hindi available ang data ng waveform o hindi ito tumutugma sa media na ito.',
+  avPlayerTranscriptUnavailable: 'Hindi available ang data ng transkripsiyon.',
   dropzoneReleaseToAdd: 'Bitawan upang idagdag ang file.',
   dropzoneRejectedType: 'Hindi tinatanggap ang uri ng file na ito.',
   attachmentAdd: 'Magdagdag ng attachment',

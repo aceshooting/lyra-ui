@@ -83,6 +83,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Nicio conversație încă',
   agentWorkspaceLabel: 'Spațiu de lucru al agentului',
+  agentWorkspaceInputLimit: '{collection}: se păstrează doar {count} din {total} intrări.',
   agentWorkspaceConversation: 'Conversație',
   agentWorkspaceDetails: 'Detalii despre execuție',
   agentWorkspaceRun: 'Execuția agentului',
@@ -100,6 +101,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Reîncearcă această parte',
   promptQueueLabel: 'Prompturi în așteptare',
   promptQueueEmpty: 'Niciun prompt în așteptare',
+  promptQueueInputLimit: 'Unele prompturi din coadă sau atașamente au fost omise deoarece a fost atinsă limita de intrare.',
+  promptQueueAttachmentLimit: 'Se afișează {shown} din {total} atașamente păstrate.',
   promptQueueSendNow: 'Trimite acum',
   selectionToolbarLabel: 'Acțiuni pentru selecție',
   selectionAsk: 'Întreabă',
@@ -166,6 +169,10 @@ const strings: LyraLocaleStrings = {
     few: '{count} tokenuri',
     other: '{count} de tokenuri',
   },
+  threadListInputLimit: 'Unele fire de conversație au fost omise deoarece a fost atinsă limita de intrare.',
+  promptInputInputLimit: 'Unele sugestii sau intrări din catalog au fost omise deoarece a fost atinsă limita de intrare.',
+  transcriptFeedInputLimit: 'Sunt păstrate doar cele mai recente {count} din {total} de înregistrări.',
+  codeBlockHighlightLimit: 'Codul lung este afișat fără evidențierea sintaxei.',
 };
 
 registerLyraLocale('ro', strings);

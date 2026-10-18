@@ -70,7 +70,7 @@ it('keeps the active row by id across a catalog refresh while open', async () =>
 
 it('renders only string catalog icons', async () => {
   const branded = { _$litType$: 1, strings: ['x'], values: [] };
-  const el = await fixture<LyraModelSelect>(html`<lr-model-select
+  const el = await fixture<LyraModelSelect>(html`<lr-model-select open
     .catalog=${[{ id: 'a', label: 'A', icon: branded }, { id: 'b', label: 'B', icon: '*' }]}
   ></lr-model-select>`);
   expect(el.shadowRoot!.querySelectorAll('[part="option-icon"]').length).to.equal(1);

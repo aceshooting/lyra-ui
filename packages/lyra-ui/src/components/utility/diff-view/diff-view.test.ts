@@ -1140,7 +1140,7 @@ describe("syntax highlighting", () => {
     const frame = document.createElement("iframe");
     document.body.append(frame);
     const frameDocument = frame.contentDocument!;
-    const frameWindow = frame.contentWindow!;
+    const frameWindow = frame.contentWindow! as Window & typeof globalThis;
     const NativeMainParser = window.DOMParser;
     const NativeFrameParser = frameWindow.DOMParser;
     let mainParsers = 0;
@@ -2192,12 +2192,13 @@ it('retains a plain diff when language name discovery throws', async () => {
   expect(el.shadowRoot!.textContent).to.contain('+ visible');
 });
 
-it('reports a bounded lower search count when more than ten thousand diff lines match', async () => {
+it('does not search diff operations rejected by the render ceiling', async () => {
   const el = await fixture<LyraDiffView>(html`<lr-diff-view .maxLines=${20_000} .newText=${Array(10_001).fill('hit').join('\n')}></lr-diff-view>`);
   let detail: { matchCount: number; matchCountExact: boolean } | undefined;
   el.addEventListener('lr-search-change', (event) => { detail = event.detail; });
-  expect(await el.search('hit')).to.equal(10_000);
-  expect(detail?.matchCount).to.equal(10_000);
-  expect(detail?.matchCountExact).to.equal(false);
-  expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(1);
+  expect(await el.search('hit')).to.equal(0);
+  expect(detail?.matchCount).to.equal(0);
+  expect(detail?.matchCountExact).to.equal(true);
+  expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(0);
+  expect(Boolean(el.shadowRoot!.querySelector('[part="limit"]'))).to.equal(true);
 });

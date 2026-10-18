@@ -1,7 +1,9 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { guard } from 'lit/directives/guard.js';
@@ -33,7 +35,8 @@ import { autocorrectConverter, normalizeAutocorrect, trueDefaultBooleanConverter
 import { lengthLimitConverter } from '../../../internal/length-constraints.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversation, LYRA_DEFAULT_agentWorkspaceDetails, LYRA_DEFAULT_agentWorkspaceEmpty, LYRA_DEFAULT_agentWorkspaceGrounding, LYRA_DEFAULT_agentWorkspaceInputLimit, LYRA_DEFAULT_agentWorkspaceLabel, LYRA_DEFAULT_agentWorkspaceRetrieval, LYRA_DEFAULT_agentWorkspaceRun, LYRA_DEFAULT_agentWorkspaceTools, LYRA_DEFAULT_composerPlaceholder } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const MAX_RENDERED_MESSAGES = 500;
@@ -106,7 +109,9 @@ export interface LyraAgentWorkspaceEventMap {
  * `messages` slot. The `details` slot similarly replaces the built-in details pane while keeping
  * the responsive shell. Empty and duplicate message ids normalize first-wins before the bounded
  * window is chosen; at most the latest 500 valid messages are materialized. Applications needing
- * a larger retained transcript can supply a virtualized `messages` slot.
+ * a larger retained transcript can supply a virtualized `messages` slot. Messages and tools retain
+ * the newest admitted tail; unread indices remain relative to the original message input. Assigned
+ * messages/details slots suppress fallback work. Original collection loss is disclosed in input-limit.
  * Composer value, follow state, and retrieval selection are request-only:
  * child events are forwarded, but the workspace never writes those public
  * properties. The host applies accepted state back to the component.
@@ -146,6 +151,7 @@ export interface LyraAgentWorkspaceEventMap {
  * @event lr-tool-approval-decide-request - Forwarded from the built-in tool timeline.
  * @event lr-cancel - Forwarded from the built-in agent run.
  * @event lr-run-retry - Forwarded from the built-in agent run.
+ * @csspart input-limit - Original collection admission-loss notices.
  * @csspart base - The root workspace wrapper.
  * @csspart header - The workspace heading and header-actions slot.
  * @csspart heading - The visible workspace heading.
@@ -175,11 +181,24 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     agentWorkspaceDetails: LYRA_DEFAULT_agentWorkspaceDetails,
     agentWorkspaceEmpty: LYRA_DEFAULT_agentWorkspaceEmpty,
     agentWorkspaceGrounding: LYRA_DEFAULT_agentWorkspaceGrounding,
+    agentWorkspaceInputLimit: LYRA_DEFAULT_agentWorkspaceInputLimit,
     agentWorkspaceLabel: LYRA_DEFAULT_agentWorkspaceLabel,
     agentWorkspaceRetrieval: LYRA_DEFAULT_agentWorkspaceRetrieval,
     agentWorkspaceRun: LYRA_DEFAULT_agentWorkspaceRun,
     agentWorkspaceTools: LYRA_DEFAULT_agentWorkspaceTools,
+    collapse: LYRA_DEFAULT_collapse,
     composerPlaceholder: LYRA_DEFAULT_composerPlaceholder,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -199,7 +218,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     'citations',
     'contextSegments',
   ]);
-  protected static readonly appendOrderedCollectionProperties = Object.freeze(['messages']);
+  protected static readonly appendOrderedCollectionProperties = Object.freeze(['messages', 'tools']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -322,6 +341,49 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   @property({ attribute: 'composer-inputmode' }) composerInputMode = '';
   @property({ attribute: 'composer-enterkeyhint' }) composerEnterKeyHint = '';
 
+  private readonly inputAnnouncements = new AnnouncementSinkController(this);
+  private lastInputNotice = '';
+  private inputNoticeMounted = false;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.inputNoticeMounted = false;
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.inputAnnouncements.adopted();
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const notice = this.inputLimitMessages().join(' ');
+    if (this.inputNoticeMounted && notice && notice !== this.lastInputNotice) this.inputAnnouncements.announcePolite(notice);
+    this.lastInputNotice = notice;
+    this.inputNoticeMounted = true;
+  }
+
+  private inputLimitMessages(): string[] {
+    const labels = {
+      messages: 'agentWorkspaceConversation', tools: 'agentWorkspaceTools',
+      metrics: 'agentWorkspaceRun', retrievalChunks: 'agentWorkspaceRetrieval',
+      selectedRetrievalChunkIds: 'agentWorkspaceRetrieval', citations: 'agentWorkspaceGrounding',
+      contextSegments: 'agentWorkspaceContext',
+    } as const;
+    const format = getNumberFormat(this.effectiveLocale);
+    return Object.entries(labels).flatMap(([property, label]) => {
+      const loss = publicCollectionTruncation(this, property);
+      return loss ? [this.localize('agentWorkspaceInputLimit', undefined, {
+        collection: this.localize(label), count: format.format(loss.retained), total: format.format(loss.source),
+      })] : [];
+    });
+  }
+
   private hasSlotted(name: string): boolean {
     return Array.from(this.children).some((element) => element.getAttribute('slot') === name);
   }
@@ -368,6 +430,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   private get effectiveMessages(): readonly EffectiveWorkspaceMessage[] {
     const source = this.messages;
     if (this.messagesMemo?.source === source) return this.messagesMemo.result;
+    const loss = publicCollectionTruncation(this, 'messages');
+    const sourceOffset = loss?.kept === 'newest' ? loss.source - source.length : 0;
     const seen = new Set<string>();
     const messages: EffectiveWorkspaceMessage[] = [];
     for (let sourceIndex = 0; sourceIndex < source.length; sourceIndex++) {
@@ -376,7 +440,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
       const id = message?.id;
       if (typeof id !== 'string' || id.trim() === '' || seen.has(id)) continue;
       seen.add(id);
-      messages.push({ message, sourceIndex });
+      messages.push({ message, sourceIndex: sourceOffset + sourceIndex });
     }
     this.messagesMemo = { source, result: messages };
     return messages;
@@ -551,6 +615,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
       <div part="base" role="region" aria-label=${label}>
         <div part="header">
           <h2 part="heading">${heading}</h2>
+          ${this.inputLimitMessages().map((notice) => html`<p part="input-limit" role="note">${notice}</p>`)}
           <span part="header-actions" ?hidden=${!this.hasSlotted('header-actions')}
             ><slot name="header-actions" @slotchange=${this.onNamedSlotChange}></slot
           ></span>
@@ -564,7 +629,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               aria-label=${this.localize('agentWorkspaceConversation')}
             >
               <slot name="messages" @slotchange=${this.onNamedSlotChange}
-                >${this.renderMessages()}</slot
+                >${this.hasSlotted('messages') ? nothing : this.renderMessages()}</slot
               >
             </lr-chat-viewport>
           </section>
@@ -574,7 +639,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
             ?hidden=${!hasDetails}
           >
             <slot name="details" @slotchange=${this.onNamedSlotChange}
-              >${!this.withoutDetails ? this.renderDetails() : nothing}</slot
+              >${!this.withoutDetails && !hasSlottedDetails ? this.renderDetails() : nothing}</slot
             >
           </aside>
         </div>

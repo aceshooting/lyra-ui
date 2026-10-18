@@ -22,6 +22,14 @@ characters; an overlong unterminated CSI/OSC sequence is dropped and the next wr
 clean parser boundary. Carriage return and erase-in-line (`CSI K`, `0K`, `1K`, `2K`) support
 in-place progress updates; other cursor-addressing sequences remain unsupported.
 
+The buffer retains at most 2,000,000 UTF-16 text units and 10,000 lines, subject to
+`max-scrollback`. Each `write()` or content commit accepts at most 1,000,000 UTF-16 units; each
+line accepts at most 20,000 scalar columns. When a commit loses data, `lr-overflow` carries
+`LyraTerminalOverflowDetail { truncated: true; inputCharactersDropped: number;
+lineCharactersDropped: number; linesDropped: number }`. Character counts use UTF-16 units;
+`linesDropped` includes scrollback and resource-limit pruning. `write()` remains `void`. Supply
+bounded chunks and consume this event when complete capture matters.
+
 Direction: every line is left-to-right. With `without-wrap`, the scrollport is laid out left-to-right as well, so a long line scrolls from its start and, under `dir="rtl"`, the vertical scrollbar sits on the physical right; the toolbar and jump-to-latest control still follow the page direction. By default (lines soft-wrap), the scrollport follows the page direction.
 
 A search with no matches clears earlier rendered match markers. Removing the `content` attribute
@@ -70,6 +78,7 @@ plain text of the whole buffer.
 default the component creates a plain-text `Blob`/object URL and activates a synthetic
 `<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
 server-side or other handling),
+`lr-overflow` (`detail: LyraTerminalOverflowDetail`, a write or content commit lost data),
 `lr-follow-change` (`detail: { following }`), `lr-search-change` (`detail: { query, matchCount,
 matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
 ceiling, marking `matchCount` as a lower bound rather than an exact total),

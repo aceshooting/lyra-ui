@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'A na-egosi naanị nsonaazụ ule {count} mbụ.',
   toolTimelineLimit: 'Ọnụọgụ oku ngwa ọrụ a na-egosi agaghị agafe {count}.',
   toolSelectLimit: 'A na-egosi naanị ngwa ọrụ {count} mbụ.',
+  testResultsInputTooLarge: 'Nkọwa nsonaazụ ule gafere oke ngosi.',
   toolCall: 'Oku ngwa ọrụ',
   maximize: 'Mee ka o buru ibu',
   promptStudioVariableName: 'Aha mgbanwe {index}',
@@ -293,6 +294,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Naanị faịlụ {count} mbụ ka egosiri.',
   taskListLimit: 'Naanị ọrụ {count} mbụ ka egosiri.',
   evalDatasetLimit: 'A na-egosi naanị ihe atụ {count} mbụ.',
+  activityFeedInputLimit: 'Naanị ndekọ {count} kachasị ọhụrụ n\'ime {total} ka a na-edobe.',
+  spanWaterfallLimit: 'A na-egosi {shown} n’ime nkebi nsuso {total}.',
+  toolTimelineInputLimit: 'Ọ bụ naanị oku ngwa ọrụ {count} kacha ọhụrụ n’ime {total} ka a na-edobe.',
 };
 
 registerLyraLocale('ig', strings);

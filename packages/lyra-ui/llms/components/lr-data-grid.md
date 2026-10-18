@@ -45,18 +45,34 @@ only that page plus the header. In server mode, `total` still drives `pageCount`
 does not inflate `aria-rowcount` while `aria-rowindex` restarts for each loaded page. Treat these
 ARIA values as page-local positions rather than as the dataset-wide total.
 
+Row details remain virtualized as part of their owning row's measured block. `--max-height: none`
+still opts out of row virtualization. Wide grids mount columns intersecting the inline viewport
+plus overscan, pinned columns, and the focused column; ARIA column positions refer to the complete
+visible column sequence. Above 50 columns, CSS-resolved widths stay stable while scrolling; newly
+mounted content fits those widths. Column definitions/widths, row projection, allocation, font
+changes and explicit refresh recalculate them. Header, body and footer share these tracks.
+Search and text filters reuse folded cells, sorting is independent of query changes, and
+footers/aggregates reuse results until their row/column inputs change. Call `requestUpdate()` after
+changing borrowed row content or callback-dependent external state in place.
+
 **Properties:**
 
 - `appearance: 'outlined' | 'plain' = 'outlined'` (`appearance`, reflected).
 - `childRows: string | ((row) => readonly Row[] | undefined) | null = null` (`child-rows`) — dot path or
   callback for nested rows. Tree sorting stays within each parent and paging keeps a subtree with
-  its top-level parent. Projection is iterative, cycle-safe, and bounded to 10,000 total rows and
+  its top-level parent. Projection is iterative, cycle-safe, and bounded to `maxRows` total rows and
   64 descendant levels; exceeding a budget renders the localized `tree-limit` notice.
 - `columnOrder: readonly string[] = []` (JS-only) — empty preserves declaration order.
 - `columns: readonly DataGridColumn<Row>[] = []` (JS-only).
 - `data: readonly Row[] = []` (JS-only) — client rows, or the currently loaded server page.
-  Flat input beyond 10,000 rows shows the localized `row-limit` notice; nested input retains its
+  Flat input beyond `maxRows` rows shows the localized `row-limit` notice; nested input retains its
   `tree-limit` notice when the node or depth budget is reached.
+- `maxRows: number = 10000` (`max-rows`) — client-row and tree-descendant admission limit,
+  normalized to 1–100,000. Set it before assigning `data`; after raising it, reassign the source
+  array to restore excluded rows. Admission reads at most `maxRows` source positions through own
+  data descriptors while preserving row object identities. Tree depth remains bounded to 64
+  descendant levels, and column definitions retain at most 10,000 entries. Controlled selected
+  and expanded keys remain independent of this row-admission cap.
 - `dataSource: ((request) => Promise<{ rows, total }>) | null = null` (JS-only) — providing it
   enables server behavior.
 - `error: boolean = false` (`error`, reflected) — replaces the body row with the failed-load
@@ -71,7 +87,7 @@ ARIA values as page-local positions rather than as the dataset-wide total.
   The mirrored `expandedKeys` spelling remains a compatibility alias for this same state.
 - `filterDebounce: number = 250` (`filter-debounce`) — finite server search/filter delay.
 - `filteredCount: number` (read-only, JS-only) — matching client rows before paging.
-- `dataTruncated: boolean` (read-only, JS-only) — true when projection drops input over 10,000 rows
+- `dataTruncated: boolean` (read-only, JS-only) — true when projection drops input over `maxRows` rows
   or 64 nesting levels; controlled `selectedRowKeys` remain because omitted keys may exist.
 - `filterFromLeafRows: boolean = false` (`filter-from-leaf-rows`) — retains ancestors of matching
   tree descendants.
@@ -180,9 +196,11 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
   group/tree/detail display rows, and scrolls with `align: 'start' | 'center' | 'end'`. A row hidden
   in a collapsed branch is a no-op.
 
-**Server mode:** `dataSource` receives `{ sort, filters, search, page, pageSize, signal }`. A newer
-request aborts and supersedes the previous one; rejected requests keep prior rows and emit
-`lr-data-error`. Filter/search requests use `filterDebounce`; sorting and paging load immediately.
+**Server mode:** `dataSource` receives `{ sort, filters, search, page, pageSize, signal }`. A new
+query immediately aborts and supersedes the previous request, including while its replacement
+waits for `filterDebounce`. Obsolete results and errors cannot update the grid even when a loader
+ignores the signal. A rejected current request keeps prior rows and emits `lr-data-error`.
+Filter/search requests use `filterDebounce`; sorting and paging load immediately.
 For event-driven loading, set `server`, listen to the mirrored `request` event, and assign `data`,
 `total`, and `loading` yourself. The redundant Lyra-only `lr-data-request` event was removed in
 9.0.0; rename that listener to `request`. Each dispatch carries a fresh frozen detail that cannot

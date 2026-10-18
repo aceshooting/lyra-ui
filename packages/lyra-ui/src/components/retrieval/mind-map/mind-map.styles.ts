@@ -8,6 +8,11 @@ export const styles = css`
   [part="base"] {
     display: block;
   }
+  [part="source-diagram"] {
+    block-size: var(--lr-size-20rem);
+    min-inline-size: 0;
+    overflow: hidden;
+  }
   [part="svg"] {
     display: block;
     inline-size: 100%;
@@ -63,5 +68,10 @@ export const styles = css`
   [part="empty"] {
     padding: var(--lr-space-m);
     color: var(--lr-color-text-quiet);
+  }
+  [part='input-limit'] {
+    margin-block: var(--lr-space-xs);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
   }
 `;

@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'مکمل تقسیم میں {validCount} درست نمونے؛ دکھائے گئے وقفوں کی حدود سے نیچے {belowCount} اور اوپر {aboveCount}؛ {invalidCount} غلط نمونے۔',
+  histogramDistributionRange: 'مشاہدہ کردہ نمونے کی حد: {min} سے {max} تک۔',
   chartCategory: 'زمرہ',
   chartTotal: 'کل',
   chartAxisTotal: '{axis} کا کل',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}، y {y}',
   chartBubblePointCoordinates: 'x {x}، y {y}، رداس {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'بڑھتا ہوا',
-  chartTrendDecreasing: 'گھٹتا ہوا',
-  chartTrendFlat: 'مستحکم',
-  chartSummary: '{label}: {count} قدریں، حد {min} تا {max}، رجحان {trend}',
   chartSeriesNoData: '{label}: کوئی ڈیٹا نہیں',
   chartSummaryWithData: '{type} چارٹ۔ {summaries}۔',
   chartSummaryEmpty: 'خالی {type} چارٹ۔',
-  chartSummarySeparator: '. ',
   chartData: 'چارٹ ڈیٹا',
   chartRenderUnavailable: 'چارٹ کی نمائش دستیاب نہیں ہے۔',
+  chartPreparedSummaryZoom: 'زوم تیار کردہ خلاصہ دکھاتا ہے؛ انڈیکس کے ذریعے مزید تفصیل دستیاب نہیں ہے۔',
+  chartSpatialSummary: 'پورا ماخذ: {count} نقاط، x {minX} سے {maxX}، y {minY} سے {maxY}۔ منظر: {matchedCount} نقاط، x {viewMinX} سے {viewMaxX}، y {viewMinY} سے {viewMaxY}۔',
+  chartSpatialRadiusDomain: 'پورے ماخذ کا رداس: {min} سے {max}۔',
+  chartSpatialDensityLegend: 'کثافت میں تمام سلسلے شامل ہیں؛ سلسلوں کی نمائش صرف نقاط کی اوورلے تہوں پر اثر انداز ہوتی ہے۔',
+  chartSpatialPoint: '{series}: {id}، ماخذ میں مقام {sourceIndex}، {coordinates}{hidden}',
+  chartSpatialBin: 'کثافت کا علاقہ: {count} نقاط، x {minX} سے {maxX}، y {minY} سے {maxY}۔',
+  chartSpatialHidden: ' (سلسلہ پوشیدہ ہے)',
   chartDataSampled: 'چارٹ اور تیار کردہ ڈیٹا جدول میں زیادہ سے زیادہ 1,000 ریکارڈز کا نمونہ ہے۔ چارٹ کا پورا ڈیٹا حاصل کرنے کے لیے اپنی مرضی کا ڈیٹا جدول دیں۔',
   chartPlotSampled: 'چارٹ میں زیادہ سے زیادہ 1,000 ریکارڈز کا نمونہ ہے؛ ڈیٹا جدول میں سارا ڈیٹا موجود ہے۔',
   chartZoomUnavailable: 'زوم دستیاب نہیں، لیکن بنیادی چارٹ موجود ہے۔',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total} میں سے {index})',
   chartMissingLibrary: 'چارٹ دکھانے کے لیے اس جزو کو اختیاری "chart.js" پیکیج درکار ہے۔',
   boxPlotMissingLibrary: 'باکس پلاٹ دکھانے کے لیے اس جزو کو اختیاری باکس پلاٹ چارٹ پیکیج درکار ہے۔',
+  chartInputLimit: 'ان پٹ کی حد پوری ہونے کی وجہ سے چارٹ کا کچھ ڈیٹا چھوڑ دیا گیا ہے۔ چھوڑ دی گئی قدروں کو ظاہر کرنے کے لیے چھوٹا یا پہلے سے یکجا کیا گیا ڈیٹاسیٹ فراہم کریں۔',
+  histogramInputLimit: 'صرف تازہ ترین 10,000 نمونے محفوظ رکھے جاتے ہیں۔ بڑی تقسیم کو ظاہر کرنے کے لیے پہلے سے وقفوں میں گروہ بند کی گئی گنتیاں lr-chart کو فراہم کریں۔',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

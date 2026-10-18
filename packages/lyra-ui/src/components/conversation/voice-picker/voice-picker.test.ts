@@ -498,7 +498,7 @@ it('limits voice catalog admission to the shared first 1,024 source rows', async
     id: `voice-${index}`,
     label: `Voice ${index}`,
   }));
-  const el = (await fixture(html`<lr-voice-picker .catalog=${catalog}></lr-voice-picker>`)) as LyraVoicePicker;
+  const el = (await fixture(html`<lr-voice-picker open .catalog=${catalog}></lr-voice-picker>`)) as LyraVoicePicker;
 
   expect(el.shadowRoot?.querySelectorAll('[part="option"]').length).to.equal(1_024);
 });
@@ -815,7 +815,7 @@ it('selecting a closed-dropdown option commits value and emits lr-change with in
 });
 
 it('emits native input/change events after adoption into a document without a window', async () => {
-  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+  const el = (await fixture(html`<lr-voice-picker open .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
   const detachedDocument = document.implementation.createHTMLDocument('detached');
   detachedDocument.body.append(detachedDocument.adoptNode(el));
   try {

@@ -1,7 +1,9 @@
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { guard } from 'lit/directives/guard.js';
 import { nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { publicCollectionTruncation, collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -24,7 +26,7 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_model, LYRA_DEFAULT_modelSelectNoModels, LYRA_DEFAULT_modelSelectRequired } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_catalogPickerInputLimit, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 installFormControlLabelSupport();
@@ -85,7 +87,7 @@ export interface LyraModelSelectEventMap {
  * A focused trigger/input follows a rendering-mode replacement. If that new owner is disabled or
  * inert, focus returns to the available element that led into the picker, or to the stable
  * `form-control` owner when there is no return target; a newer external focus move always wins.
- * Array-valued catalogs are clone-owned, bounded readonly snapshots. Create and reassign a new
+ * Array-valued catalogs retain at most the first 1,024 source rows under a 50,000-value deep snapshot budget. Input loss is disclosed through the limit part. Snapshots are clone-owned and readonly. Create and reassign a new
  * catalog array after changing its rows.
  *
  * @customElement lr-model-select
@@ -118,6 +120,7 @@ export interface LyraModelSelectEventMap {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required picker is genuinely invalid, but colouring it red
  * before the user has done anything is hostile.
+ * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The complete label, control, hint, error, and listbox frame.
  * @csspart form-control-label - The `<label>` element containing the `label` property and slot.
  * @csspart trigger - The trigger button (closed-dropdown mode's positioning anchor).
@@ -191,6 +194,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    catalogPickerInputLimit: LYRA_DEFAULT_catalogPickerInputLimit,
     model: LYRA_DEFAULT_model,
     modelSelectNoModels: LYRA_DEFAULT_modelSelectNoModels,
     modelSelectRequired: LYRA_DEFAULT_modelSelectRequired,
@@ -201,6 +205,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
+  protected static readonly ownedCollectionLimits = { catalog: { entries: 1024 } };
 
   static formAssociated = true;
   // `sizes` before `styles`: the shared sheet declares the --lr-form-control-* knobs per tier, and
@@ -424,8 +429,16 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     this.catalogPicker.hide();
   }
 
+  private readonly limitAnnouncements = new AnnouncementSinkController(this);
+  private limitMounted = false;
+  private previousInputLimit = false;
+  private get inputLimited(): boolean { return publicCollectionTruncation(this, 'catalog') !== undefined; }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const limited = this.inputLimited;
+    if (this.limitMounted && limited && !this.previousInputLimit) this.limitAnnouncements.announcePolite(this.localize('catalogPickerInputLimit'));
+    this.previousInputLimit = limited;
+    this.limitMounted = true;
     this.syncCatalogDescription(this.controlId);
     const reposition =
       changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
@@ -528,9 +541,9 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
         @click=${this.onListboxClick}
       >
         <span class="glass-scroll-layer" aria-hidden="true"></span>
-        ${rows.length === 0
+        ${this.catalogPicker.listboxHidden ? nothing : rows.length === 0
           ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${emptyText}</div>`
-          : this.renderRows(rows, activeId)}
+          : guard([rows, this.value, this.effectiveLocale, this.strings, this.localize('notInCatalog')], () => this.renderRows(rows, activeId))}
       </div>
     `;
   }
@@ -647,6 +660,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
 
   override render(): TemplateResult {
     return html`<div part="form-control" tabindex="-1">
+      ${this.inputLimited ? html`<p part="limit">${this.localize('catalogPickerInputLimit')}</p>` : nothing}
       ${this.closedMode ? this.renderClosed() : this.renderFreeText()}
     </div>`;
   }

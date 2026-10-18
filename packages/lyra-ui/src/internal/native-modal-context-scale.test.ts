@@ -1,3 +1,4 @@
+import { recordScaleMeasurement } from '../../test/scale-budgets.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import { getActiveNativeModal, registerNativeModalContext } from './native-modal-context.js';
 
@@ -79,4 +80,36 @@ it('notices a library carrier that opens without moving focus', async () => {
     dialog.close();
   }
   expect(getActiveNativeModal(document) === null).to.equal(true);
+});
+
+
+it('bounds discovery without allocating every descendant of a 10000-item shadow root', async () => {
+  const host = await fixture<HTMLElement>(html`<div></div>`);
+  const root = host.attachShadow({ mode: 'open' });
+  root.innerHTML = '<span></span>'.repeat(10000);
+  await Promise.resolve();
+  const query = root.querySelectorAll;
+  const firstQuery = root.querySelector;
+  let wholeQueries = 0;
+  root.querySelector = function (...args: Parameters<ShadowRoot['querySelector']>) { wholeQueries++; return firstQuery.apply(this, args); };
+  const next = TreeWalker.prototype.nextNode;
+  let allocated = 0;
+  let visited = 0;
+  root.querySelectorAll = function (...args: Parameters<ShadowRoot['querySelectorAll']>) {
+    const result = query.apply(this, args);
+    allocated += result.length;
+    return result;
+  };
+  TreeWalker.prototype.nextNode = function () { visited++; return next.call(this); };
+  try {
+    expect(getActiveNativeModal(document) === null).to.equal(true);
+    recordScaleMeasurement('lr-graph', 'n=10000 native modal discovery', { allocated, visited, wholeQueries });
+    expect(allocated).to.equal(0);
+    expect(wholeQueries).to.equal(0);
+    expect(visited).to.be.at.most(4100);
+  } finally {
+    root.querySelectorAll = query;
+    root.querySelector = firstQuery;
+    TreeWalker.prototype.nextNode = next;
+  }
 });

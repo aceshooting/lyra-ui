@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Akukabikho zingxoxo',
   agentWorkspaceLabel: 'Indawo yokusebenza ye-ejenti',
+  agentWorkspaceInputLimit: '{collection}: kugcinwa kuphela {count} kokufakiwe okungu-{total}.',
   agentWorkspaceConversation: 'Ingxoxo',
   agentWorkspaceDetails: 'Imininingwane yokuqalisa',
   agentWorkspaceRun: 'Ukuqalisa kwe-ejenti',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Zama le ngxenye futhi',
   promptQueueLabel: 'Imiyalo esemgqeni',
   promptQueueEmpty: 'Ayikho imiyalo esemgqeni',
+  promptQueueInputLimit: 'Eminye imiyalo esemgqeni noma okunamathiselwe kushiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
+  promptQueueAttachmentLimit: 'Kuboniswa {shown} kokunamathiselwe okungu-{total} okugcinwe.',
   promptQueueSendNow: 'Thumela manje',
   selectionToolbarLabel: 'Izenzo zokukhethiwe',
   selectionAsk: 'Buza',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: 'Ithokheni elingu-{count}',
     other: 'Amathokheni angu-{count}',
   },
+  threadListInputLimit: 'Eminye imicu yezingxoxo ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
+  promptInputInputLimit: 'Ezinye iziphakamiso noma okufakiwe kukhathalogi kushiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
+  transcriptFeedInputLimit: 'Kugcinwa okufakiwe okusha kakhulu okungu-{count} kokungu-{total} kuphela.',
+  codeBlockHighlightLimit: 'Ikhodi ende iboniswa ngaphandle kokugqamisa i-syntax.',
 };
 
 registerLyraLocale('zu', strings);

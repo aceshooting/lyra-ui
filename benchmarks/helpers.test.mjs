@@ -1,3 +1,4 @@
+import './list-fixtures.test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, symlink } from 'node:fs/promises';

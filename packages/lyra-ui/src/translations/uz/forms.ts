@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Qalam pastda',
   signaturePadPenUp: 'Qalam tepada',
+  localePickerInputLimit: 'Faqat dastlabki 512 ta til va hudud yozuvi mavjud.',
+  emojiPickerInputLimit: 'Kiritish chegarasiga yetilgani uchun ayrim emoji maʼlumotlari tashlab ketildi.',
 };
 
 registerLyraLocale('uz', strings);

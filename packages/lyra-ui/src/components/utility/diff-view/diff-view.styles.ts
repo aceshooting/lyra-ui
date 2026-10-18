@@ -46,6 +46,8 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part="line"] {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto calc(var(--lr-font-size-sm) * var(--lr-line-height-snug));
     /* Here rather than on the ancestor pre element so layout="split" -- whose lines sit inside
        [part='side'], not a pre -- gets the same monospace typography as the default unified pre.
        font-family, font-size and line-height are all inheritable, so the move is visually identical

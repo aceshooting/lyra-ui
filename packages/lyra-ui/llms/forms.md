@@ -111,12 +111,11 @@ Filterable single/multi-select combining a text input with a listbox. Mirrors th
 `<wa-combobox>` API under the `lr-` prefix. **Form-associated**, with shared internals and validation plumbing while retaining its own
 single/multiple value and option synchronization.
 
-Consumer writes on mounted options immediately update the owning picker and its submission,
-without changing the reset default or emitting picker input/change events. Owner synchronization
-does not echo as a consumer selected write.
-
-A mounted `option.selected` assignment updates the live picker value and form submission
-immediately, including deselection and equal-value writes; it emits no user input/change event.
+Programmatic `option.selected` writes update the option immediately, including deselection and
+equal-value writes. The owning combobox reconciles selection and form state once in the next
+microtask; await one microtask before reading settled parent state. These writes do not change the
+reset default or emit picker input/change events. Assign the parent value array for a bulk
+replacement. Owner synchronization does not echo as a consumer selected write.
 
 When `multiple` becomes false, the public value, live option flags, popup `aria-selected`,
 `selectedRows`, event `data` and `with-unknown-option` rows expose one selected occurrence. The
@@ -229,7 +228,8 @@ other value (a plain object, a function) is dropped from the row instead of reac
 - `hint: string = ''`
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
-- `open: boolean = false` (reflected). Rows mount the first time the listbox opens. Disabling the
+- `open: boolean = false` (reflected). Rows mount when the listbox opens and are removed after it
+  closes; reopening restores them. Disabling the
   combobox, making it `readonly` or disabling its fieldset closes an open listbox at once; that
   close is policy, so it emits no `lr-hide`/`lr-after-hide` and cannot be vetoed.
 - `allowCreate: boolean = false` (attribute `allow-create`) — a nonmatching query renders a
@@ -380,10 +380,12 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
   falling back to `200` for a non-finite value)
-- `maxRender: number = 200` (attribute `max-render` — caps how many rows render at once, always
-  keeping the current selection visible even if it's outside the cap; the excess renders as one
-  `overflowText` row instead of being dropped silently. See "Large option lists" below for how to
-  size it, and when `source` is the better answer. Runtime writes are capped at 1,000)
+- `maxRender: number = 200` (attribute `max-render`) — ordinary suggestion-prefix size, retaining
+  active and selected options within an absolute 1,000-row ceiling. The active option has priority;
+  selections remain committed even when every selected row cannot mount. Zero omits the ordinary
+  prefix while retaining active/selected rows; non-finite values use 200. Rows keep source order,
+  and excess options are summarized by `overflowText`. See "Large option lists" below for sizing
+  and the async `source` alternative
 - `sourceTotal: number` (read-only) — provider-side total for the latest accepted response
 - `sourceTruncated: boolean` (read-only) — whether the response reported or contained more rows
   than the bounded retained snapshot; the overflow row includes that hidden count
@@ -559,6 +561,14 @@ element-reflection replacement can reach — element reflection resolves same-ro
 `<lr-virtual-list>` stays `role="list"`/`role="listitem"` and is the right tool for feeds and
 viewers, not for a listbox whose active row must stay addressable.
 
+A remote `source` can search a backend containing millions of records without supplying that entire
+collection to the component. Keep the search index on the host or server, return at most
+`options.limit` candidate rows, and include `total` to disclose omitted matches. A discriminating
+query can select an identity anywhere in the backend; selected labels and data survive later
+result windows. This is bounded search, with no paging or cursor for traversing every match of a
+broad query. Refine the query to reach the desired record, or use a paged or indexed data browser
+when complete match traversal is required.
+
 What that means in practice:
 
 - **Up to a few hundred rows, raise `maxRender` and move on.** A few hundred flex rows is an
@@ -570,9 +580,10 @@ What that means in practice:
   rendering everything and asking the browser to lay it out. Pair it with `sourceDelay` to debounce.
 - **Leave the overflow row doing its job.** When the cap does bite, the excess collapses into one
   `overflowText` row (default `"+{n} more — refine your search"`) rather than disappearing
-  silently, and the current selection is always kept visible even when it falls outside the cap.
-  Suppressing that row by setting `maxRender` far above the real list size trades a useful "keep
-  typing" affordance for layout work no user asked for.
+  silently. Active and selected rows reserve space inside the absolute 1,000-row ceiling;
+  oversized selections remain selected even when some selected rows cannot mount.
+  Increasing `maxRender` can expose more rows only within the absolute 1,000-row ceiling;
+  use filtering or `source` to narrow larger catalogs.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided), plus two adornment slots:
@@ -711,7 +722,8 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   baseline without overwriting a dirty live selection
 - `selected: boolean = false` (property only) — live selectedness. The parent combobox/select
   updates it as the current value changes; those live writes never rewrite the `selected`
-  attribute or `defaultSelected`
+  attribute or `defaultSelected`. Consumer writes update the option immediately and reconcile
+  parent selection/form state once in the next microtask, without parent input/change events
 - `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
   for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
 - `group: string = ''` (section header)
@@ -865,7 +877,8 @@ value/form/validity path as a programmatic value write and does not emit `input`
 **Selecting options in browser tests.** The light-DOM `<lr-option>` children supply option data;
 the clickable rows are rendered inside `<lr-select>`'s shadow-root listbox as
 `[part="option"][role="option"]`, each with a `data-value` matching its represented value. Rows
-mount the first time the listbox opens, so a closed select has none. Opening makes the committed
+mount when the listbox opens and are removed after it closes, so a settled closed select has none.
+Opening makes the committed
 option (the first committed one in `multiple`) the active row and scrolls it into view; with
 nothing committed no row is active until an arrow key.
 Click the trigger to open the listbox, then target a rendered row. For example, in Playwright:
@@ -888,17 +901,19 @@ Playwright's locators enter the open shadow root. A light-DOM `lr-option[value="
 clickable box in this picker. If multiple options share a value, `data-value` matches every
 occurrence; narrow by accessible name or assert their order before choosing an occurrence.
 
-Mounted `option.selected` assignments update the picker value and form submission immediately,
-including deselection and equal-value writes. Duplicate-valued options retain their individual
-occurrence identities. These programmatic writes emit no user input/change event.
+Mounted `option.selected` assignments update the option immediately, including deselection and
+equal-value writes. The owning select reconciles its value and form submission once in the next
+microtask; await one microtask before reading settled parent state. Duplicate-valued options retain
+their individual occurrence identities. These writes emit no user input/change event. Assign the
+parent value array for a bulk replacement.
 
 Host `aria-describedby` resolves external guidance onto the trigger before internal value, error,
 and hint guidance. References track missing targets, replacement, removal/reinsertion, reconnect,
 and adoption. Removing `label`, `hint`, `help-text`, or `error-text` safely omits the content
 without changing native `null` property readback; explicit empty strings remain empty.
 
-There is no typing-to-filter and no `filter`/`source`/`empty-text`/`max-render` surface — reach for
-`<lr-combobox>` instead whenever any of those apply. Everything else a closed list needs is here:
+There is no typing-to-filter and no `filter`/`source`/`empty-text` surface — reach for
+`<lr-combobox>` whenever those apply. The popup has a bounded `max-render` surface. Other closed-list features include
 `multiple`, `max-options-visible`, `with-clear`, `getTag`, `placement`, `appearance`, and `pill`.
 
 The trigger and its overlaid multi-select tag row accept constrained allocation. Long selected
@@ -1040,6 +1055,12 @@ the normal combobox trigger continues to expose `aria-required`.
   `multiple` mode before the rest collapse behind a localized "+N" chip. `0` removes the cap
   entirely. Sanitized to a finite, non-negative integer: a fractional value truncates, a negative
   one clamps to `0` (i.e. uncapped), and a non-finite one falls back to `3`
+- `maxRender: number = 200` (attribute `max-render`) — ordinary popup prefix size, retaining
+  selected and active options within an absolute 1,000-row ceiling. The active option has priority;
+  oversized selections remain committed even when every selected row cannot mount. Zero omits
+  the ordinary prefix while retaining selected/active rows; non-finite values use 200. Rows keep
+  source order. `option-overflow` reports omitted rows, which cannot be reached by scrolling;
+  use a filterable combobox or async source for larger searchable catalogs
 - `withClear: boolean = false` (attribute `with-clear`, reflected) — renders a clear button while
   anything is selected (and nothing at all while the selection is empty). It sits in the trigger's
   inline-end band as a **sibling** of the trigger rather than a child of it — same nesting reason as
@@ -1192,7 +1213,8 @@ following option rows; options with an empty `group` get no heading or group wra
 `lr-combobox`'s identical parts), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set),
 `option-badge` (the localized "not in catalog" badge on a synthetic unmatched-value row, rendered
-only while `with-unknown-option` is set), `expand-icon`, `error`, and
+only while `with-unknown-option` is set), `option-overflow` (the localized count of omitted popup
+rows), `expand-icon`, `error`, and
 `hint`/`form-control-help-text` (compatibility names on the same supporting-text node).
 
 **TypeScript:** `LyraSelect<Multiple extends boolean = boolean>` — `value`/`defaultValue` and the
@@ -5862,6 +5884,10 @@ value remains authoritative),
 `allowDuplicates`
 (`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
+`maxTokensVisible: number = 0` (attribute `max-tokens-visible`) — zero leaves every token mounted,
+preserving the default. Positive values bound mounted tokens while retaining the focused or editing
+token; `token-overflow` displays a localized count for the rest. Non-finite values restore the
+unlimited default. The value array and form submission still include every token.
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the tokens), `end` (adornment after
 the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-combobox`'s identical
 `start`/`end`.
@@ -5889,7 +5915,8 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
-glyph), `input`, `start`, `end`, `hint`, `error`. `focus()`, `blur()`, `click()`, and `select()` forward to the
+glyph), `token-overflow` (the localized count of unmounted tokens), `input`, `start`, `end`, `hint`,
+`error`. `focus()`, `blur()`, `click()`, and `select()` forward to the
 internal draft text input. `selectionStart`, `selectionEnd`, and `selectionDirection` are readable/
 writable native-selection passthroughs; `setSelectionRange(start, end, direction?)` and
 `setRangeText(replacement, start?, end?, selectMode?)` expose the matching native methods.
@@ -6490,6 +6517,11 @@ reloads it. This only applies to the built-in dataset, never to a consumer-suppl
 When the filtered set reaches 200 items, the grid automatically windows its visible rows while
 preserving the full option count through `aria-setsize`/`aria-posinset`.
 
+`groups` retains at most 64 groups, 20,000 emoji items in total and 64 shortcodes per item. The
+localized `limit` part reports omitted input through `emojiPickerInputLimit`. Built-in datasets
+are admitted once per loaded dataset and shared as frozen snapshots; caller assignments retain
+their owned snapshot behavior.
+
 Removing `label`, `hint`, or `error-text` treats the removed value as absent for rendering while
 preserving native attribute-removal property readback. Host `aria-describedby` references resolve in
 the host root onto the value-owning listbox before its local error/hint guidance. Target
@@ -6569,7 +6601,7 @@ transferring focus, so End and long row jumps never strand focus on a removed vi
 **Slots:** `label` (custom label content), `hint` (custom hint content), `error` (custom error
 content, overrides the `errorText` attribute when provided).
 
-**CSS parts:** `form-control` (the outer wrapper around label, `base`, error and hint),
+**CSS parts:** `limit` (input-loss notice), `form-control` (the outer wrapper around label, `base`, error and hint),
 `form-control-label` (the visible label), `base`, `search-wrapper` (the row wrapper around
 `search` and `search-clear`), `search` (`role="combobox"`), `search-clear` (clears the search
 field, replacing the native search-cancel glyph the component resets; rendered only while it has a
@@ -6826,8 +6858,10 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   the derived `localeNativeName(tag)` endonym only when it is non-blank; an explicitly blank (or
   whitespace-only) `label` is treated the same as an omitted one and still falls back to
   `localeNativeName(tag)`. Explicit catalogs are
-  capped, cloned and frozen at assignment; mutate a new array/entry and reassign it to update the
-  list. `country` (ISO 3166-1 alpha-2 or alpha-3) overrides a row's derived flag — e.g.
+  capped at the first 512 source entries, cloned and frozen at assignment; mutate a new array/entry
+  and reassign it to update the list. The localized `limit` part reports omitted input through
+  `localePickerInputLimit`. Closed listboxes contain no option rows after their exit transition;
+  the trigger still resolves the selected label. `country` (ISO 3166-1 alpha-2 or alpha-3) overrides a row's derived flag — e.g.
   showing Lebanon's flag for an `'ar'` row instead of the library's default Saudi Arabia mapping;
   only available on the `{tag,label,country}` object form, not the bare `string[]` form. Replacing
   the catalog while the listbox is open keeps keyboard navigation valid: an active row beyond the
@@ -6970,7 +7004,7 @@ priority until cleared.
 
 **Slots:** `label`, `hint`, `error`.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`,
+**CSS parts:** `limit` (input-loss notice), `form-control`, `form-control-label`, `trigger`,
 `trigger-flag` (the trigger's leading `<lr-flag>` for the current value, present only while
 `withoutFlags` is off and `triggerDisplay` is not `label`), `trigger-label` (the current language,
 visually hidden in flag-only mode), `listbox`, `option`, `option-flag` (present only while `withoutFlags` is off),
@@ -7600,6 +7634,25 @@ to change options. At most 1024 rows are examined, invalid rows are skipped, and
 entry for each normalized code wins. Caller order is preserved. Names and symbols resolve once per
 catalog and locale and are shared by every picker using that catalog.
 
+A localized `catalogPickerInputLimit` notice in `part="limit"` reports original catalog positions
+omitted beyond the 1,024-position inspection ceiling. Invalid and duplicate positions inside the
+prefix still consume that allowance. This notice is separate from `select-option-overflow`, which
+counts admitted rows outside the popup's render window. Search covers only admitted entries;
+provide a narrower or replacement catalog to include omitted input. Rebinding the picker's retained
+catalog snapshot preserves the notice; a fresh below-limit catalog, `[]`, or restoring defaults
+clears it. Initial mounting and reconnecting are quiet; later changed input loss is politely
+announced. The message supports the usual per-instance `.strings` override.
+
+Country, currency, time-zone and unit pickers defer their option catalog until first focus or
+opening. Before that, only the committed option is mounted to preserve its label; an unset picker
+mounts none. Programmatic option inspection should await that interaction and update completion.
+After initialization, unchanged option presentations are reused; explicit `requestUpdate()`
+refreshes consumer presentation overrides. Each popup renders at most 1,000 options, exposing
+omitted rows through `select-option-overflow`. Built-in catalogs remain fully available. For an
+admitted catalog larger than the popup window, enable `searchable` and filter to entries outside
+that initial window;
+a committed tail value remains represented within the bounded popup.
+
 **Unavailable values stay visible.** A value outside the configured catalog, a malformed nonempty
 value, or a selected entry that becomes disabled is retained and marked unavailable. It fails
 validation until cleared or replaced; it is never silently switched to another currency. Such a
@@ -7646,8 +7699,9 @@ updates, resets, locale changes and catalog replacements emit no change event. N
 **Slots:** `label`, `hint`, `error` — custom field copy. There is no option/default content slot;
 bind `currencies` to supply rows.
 
-**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`;
-`select-trigger`, `select-display-input`, `select-listbox`, `select-option`, `select-option-sub`,
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit` (original catalog
+input-loss notice);
+`select-trigger`, `select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`,
 `select-clear-button`, `select-group-label`. Both composed controls preserve these part names
 and inherit shared form-control and surface tokens.
 
@@ -7755,9 +7809,25 @@ rows, `disabled` prevents selection, and literal `label` overrides include expli
 A nonempty unknown, malformed or disabled selected value stays visible and invalid until cleared
 or replaced. It is never silently replaced or added as a selectable row.
 
-**SSR:** All three render declarative shadow DOM with catalog rows and the committed identifier
-without browser globals. Country flag emoji need no asset loader. Interactive selection requires
-hydration; use the same explicit catalog and locale on server and client for consistent options.
+A localized `catalogPickerInputLimit` notice in `part="limit"` reports original catalog positions
+omitted beyond the 1,024-position inspection ceiling. Invalid and duplicate positions inside the
+prefix still consume that allowance. This notice is separate from `select-option-overflow`, which
+counts admitted rows outside the popup's render window. Search covers only admitted entries;
+provide a narrower or replacement catalog to include omitted input. Rebinding the picker's retained
+catalog snapshot preserves the notice; a fresh below-limit catalog, `[]`, or restoring defaults
+clears it. Initial mounting and reconnecting are quiet; later changed input loss is politely
+announced. The message supports the usual per-instance `.strings` override.
+
+All four regional pickers mount only the committed option before first focus or opening, then
+reuse the initialized catalog until its inputs change. An explicit `requestUpdate()` refreshes
+consumer presentation overrides. Popup rendering is capped at 1,000 options, with omitted rows
+reported through `select-option-overflow`; source admission still accepts up to 1,024 rows.
+Built-in catalogs remain fully available. Enable `searchable` to filter admitted custom catalog
+entries outside the initial popup window; committed tail values remain represented.
+
+**SSR:** All three render declarative shadow DOM with the committed option and identifier, without
+browser globals. Country flag emoji need no asset loader. Interactive selection and the remaining
+catalog require hydration; use the same explicit catalog and locale on server and client.
 
 `label=''`, `hint=''`, `errorText=''` (`error-text`) and the `label`, `hint`, `error` slots supply
 field chrome. `accessibleLabel=null` (attribute `aria-label`) overrides the actual control's name;
@@ -7799,8 +7869,9 @@ and `LyraUnitChangeDetail` from their respective component modules. Reselecting 
 programmatic updates, catalog/locale changes and resets emit no selection events. Native `focus`
 and `blur` relay once; canceling `lr-invalid` suppresses native validation UI.
 
-**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `select-trigger`,
-`select-display-input`, `select-listbox`, `select-option`, `select-option-sub`, `select-group-label`
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit` (original catalog
+input-loss notice), `select-trigger`,
+`select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`
 and `select-clear-button`; country additionally exposes `flag`. The three field slots are the only content slots; supply options through
 the catalog property. Shared form-control and surface tokens apply, including RTL and dark themes.
 
@@ -7829,6 +7900,11 @@ Selection does not change the application's time zone or calculate offsets, cloc
 saving transitions. Catalog types and `getTimeZoneCodes()` are documented in the
 [catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
+The shared `part="limit"` notice uses `catalogPickerInputLimit` for original input omitted beyond
+the 1,024-position catalog ceiling. It remains separate from popup row overflow. Snapshot rebinds,
+fresh replacement/default clearing, quiet mounting/reconnection, and later polite announcements
+follow the shared field contract.
+
 **Field API:** `label`, `hint`, `errorText` (`error-text`), `placeholder`, `accessibleLabel`
 (`aria-label`), `name`, `form`, `value`, `defaultValue`, `required`, `disabled`, `customError`
 (`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
@@ -7841,8 +7917,8 @@ Defaults and form/editing methods follow the
 
 **Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
 **Slots:** `label`, `hint`, `error`.
-**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `select-trigger`,
-`select-display-input`, `select-listbox`, `select-option`, `select-option-sub`, `select-group-label`,
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit`, `select-trigger`,
+`select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`,
 `select-clear-button`.
 
 ```html
@@ -7868,6 +7944,11 @@ symbols. Selection edits no amount and performs no unit conversion. Catalog type
 resolution are documented in the
 [catalog helper reference](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/forms.md#country-time-zone-and-unit-catalog-helpers).
 
+The shared `part="limit"` notice uses `catalogPickerInputLimit` for original input omitted beyond
+the 1,024-position catalog ceiling. It remains separate from popup row overflow. Snapshot rebinds,
+fresh replacement/default clearing, quiet mounting/reconnection, and later polite announcements
+follow the shared field contract.
+
 **Field API:** `label`, `hint`, `errorText` (`error-text`), `placeholder`, `accessibleLabel`
 (`aria-label`), `name`, `form`, `value`, `defaultValue`, `required`, `disabled`, `customError`
 (`custom-error`), `size`, `clearable`, `searchable`, `topLayer` (`top-layer`),
@@ -7880,8 +7961,8 @@ Defaults and form/editing methods follow the
 
 **Events:** `input`, `lr-input`, `change`, `lr-change`, `focus`, `blur`, `lr-invalid`.
 **Slots:** `label`, `hint`, `error`.
-**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `select-trigger`,
-`select-display-input`, `select-listbox`, `select-option`, `select-option-sub`, `select-group-label`,
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit`, `select-trigger`,
+`select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`,
 `select-clear-button`.
 
 ```html

@@ -1,5 +1,6 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -22,7 +23,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_ragEvalDashboardAllSlices, LYRA_DEFAULT_ragEvalDashboardEmpty, LYRA_DEFAULT_ragEvalDashboardLabel, LYRA_DEFAULT_ragEvalDashboardRuns, LYRA_DEFAULT_ragEvalDashboardSliceUnavailable, LYRA_DEFAULT_ragEvalDashboardSlices } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_ragEvalDashboardAllSlices, LYRA_DEFAULT_ragEvalDashboardEmpty, LYRA_DEFAULT_ragEvalDashboardInputLimit, LYRA_DEFAULT_ragEvalDashboardLabel, LYRA_DEFAULT_ragEvalDashboardRuns, LYRA_DEFAULT_ragEvalDashboardSliceUnavailable, LYRA_DEFAULT_ragEvalDashboardSlices, LYRA_DEFAULT_ragEvalDashboardSlicesLimit } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_ragEvalDashboardRunsLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -64,6 +65,7 @@ export interface LyraRagEvalDashboardEventMap {
  *  interactive rows. Matches the 500-row ceiling used by every other bounded list in this library
  *  (e.g. `lr-task-list`'s `MAX_RENDERED_TASKS`). */
 const MAX_RENDERED_RUNS = 500;
+const MAX_SLICE_CONTROLS = 500;
 
 /**
  * `<lr-rag-eval-dashboard>` — a controlled RAG quality overview with current metric cards,
@@ -80,7 +82,9 @@ const MAX_RENDERED_RUNS = 500;
  * At most the 500 most recent of the currently filtered runs (the array end is newest) render as
  * `[part="run"]` buttons and feed the trend chart; a filtered set past that length renders a
  * localized `[part="limit"]` notice after the run history rather than mounting an unbounded number
- * of rows.
+ * of rows. Runs retain the newest admitted tail. At most 500 slice controls, including All,
+ * render with an available controlled slice reserved. Metrics use the full admitted filtered set;
+ * input-limit and slices-limit disclose admission and facet omissions separately.
  *
  * Nothing here changes on a click: the host owns `metricId`, `slice` and the selected run, and the
  * events only report what the user asked for.
@@ -95,6 +99,8 @@ const MAX_RENDERED_RUNS = 500;
  * @event lr-run-activate - An evaluation run was activated. `detail: { runId, run }`.
  * @event lr-run-change - Deprecated alias of `lr-run-activate` (`detail: { run }`), dispatched right
  *   after it.
+ * @csspart input-limit - Original run admission-loss notice.
+ * @csspart slices-limit - Notice of available slices outside the bounded controls.
  * @csspart base - The named dashboard region.
  * @csspart heading - The visible dashboard heading.
  * @csspart slices - Slice filter controls.
@@ -122,11 +128,13 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     ...super.defaultStrings,
     ragEvalDashboardAllSlices: LYRA_DEFAULT_ragEvalDashboardAllSlices,
     ragEvalDashboardEmpty: LYRA_DEFAULT_ragEvalDashboardEmpty,
+    ragEvalDashboardInputLimit: LYRA_DEFAULT_ragEvalDashboardInputLimit,
     ragEvalDashboardLabel: LYRA_DEFAULT_ragEvalDashboardLabel,
     ragEvalDashboardRuns: LYRA_DEFAULT_ragEvalDashboardRuns,
     ragEvalDashboardRunsLimit: LYRA_DEFAULT_ragEvalDashboardRunsLimit,
     ragEvalDashboardSliceUnavailable: LYRA_DEFAULT_ragEvalDashboardSliceUnavailable,
     ragEvalDashboardSlices: LYRA_DEFAULT_ragEvalDashboardSlices,
+    ragEvalDashboardSlicesLimit: LYRA_DEFAULT_ragEvalDashboardSlicesLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -135,6 +143,8 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     'metrics',
     'runs',
   ]);
+
+  protected static readonly appendOrderedCollectionProperties = Object.freeze(['runs']);
 
   static override styles = [LyraElement.styles, styles];
 
@@ -168,6 +178,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   private metricsCache?: { source: unknown; value: LyraRagEvaluationMetric[] };
   private runsCache?: { source: unknown; value: LyraRagEvaluationRun[] };
   private rovingRunId = '';
+  private activeMetricCache?: { metrics: readonly LyraRagEvaluationMetric[]; id: string; value: LyraRagEvaluationMetric | undefined };
 
   private get normalizedMetrics(): LyraRagEvaluationMetric[] {
     if (this.metricsCache?.source !== this.metrics)
@@ -201,6 +212,64 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     return this.runsCache.value;
   }
 
+  private readonly inputAnnouncements = new AnnouncementSinkController(this);
+  private lastInputNotice = '';
+  private inputNoticeMounted = false;
+  private derivationCache?: {
+    runs: readonly LyraRagEvaluationRun[];
+    metrics: readonly LyraRagEvaluationMetric[];
+    slice: string;
+    slices: readonly string[];
+    visibleSlices: readonly string[];
+    sliceAvailable: boolean;
+    filtered: readonly LyraRagEvaluationRun[];
+    rendered: readonly LyraRagEvaluationRun[];
+    latest: ReadonlyMap<string, number | undefined>;
+  };
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.inputNoticeMounted = false;
+  }
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.inputAnnouncements.adopted();
+  }
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const derived = this.derivationCache;
+    const notice = [this.inputLimitMessage(), derived ? this.slicesLimitMessage(derived.visibleSlices.length, derived.slices.length) : ''].filter(Boolean).join(' ');
+    if (this.inputNoticeMounted && notice && notice !== this.lastInputNotice) this.inputAnnouncements.announcePolite(notice);
+    this.lastInputNotice = notice;
+    this.inputNoticeMounted = true;
+  }
+  private inputLimitMessage(): string {
+    const loss = publicCollectionTruncation(this, 'runs');
+    const format = getNumberFormat(this.effectiveLocale);
+    return loss ? this.localize('ragEvalDashboardInputLimit', undefined, {
+      count: format.format(loss.retained), total: format.format(loss.source),
+    }) : '';
+  }
+
+  private derived(runs: readonly LyraRagEvaluationRun[], metrics: readonly LyraRagEvaluationMetric[]) {
+    if (this.derivationCache?.runs === runs && this.derivationCache.metrics === metrics && this.derivationCache.slice === this.slice) return this.derivationCache;
+    const slices = this.derivationCache?.runs === runs ? this.derivationCache.slices : this.slices(runs);
+    const filtered = this.filteredRuns(runs);
+    const sliceAvailable = !this.slice || slices.includes(this.slice);
+    const visibleSlices = slices.slice(0, MAX_SLICE_CONTROLS - 1);
+    if (this.slice && sliceAvailable && !visibleSlices.includes(this.slice)) visibleSlices[visibleSlices.length - 1] = this.slice;
+    return this.derivationCache = {
+      runs, metrics, slice: this.slice, slices, visibleSlices, sliceAvailable, filtered,
+      rendered: filtered.slice(-MAX_RENDERED_RUNS),
+      latest: new Map(metrics.map((metric) => [metric.id, this.latestValue(metric, filtered)])),
+    };
+  }
+
   private activeMetric(
     metrics: readonly LyraRagEvaluationMetric[]
   ): LyraRagEvaluationMetric | undefined {
@@ -209,9 +278,10 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     // still reports the (rejected) requested id, with no signal anything was substituted. Only an
     // EMPTY metricId (the documented "select first available metric" default) falls through to
     // metrics[0].
-    return this.metricId
-      ? metrics.find((metric) => metric.id === this.metricId)
-      : metrics[0];
+    if (this.activeMetricCache?.metrics === metrics && this.activeMetricCache.id === this.metricId) return this.activeMetricCache.value;
+    const value = this.metricId ? metrics.find((metric) => metric.id === this.metricId) : metrics[0];
+    this.activeMetricCache = { metrics, id: this.metricId, value };
+    return value;
   }
 
   private slices(runs: readonly LyraRagEvaluationRun[]): string[] {
@@ -283,8 +353,14 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     buttons?.[next]?.focus();
   }
 
+  private slicesLimitMessage(count: number, total: number): string {
+    return total > count ? this.localize('ragEvalDashboardSlicesLimit', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(count), total: getNumberFormat(this.effectiveLocale).format(total),
+    }) : '';
+  }
+
   private renderSlices(
-    slices: readonly string[]
+    slices: readonly string[], total = slices.length
   ): TemplateResult | typeof nothing {
     if (!slices.length) return nothing;
     const allSlicesPart = this.slice ? 'slice' : 'slice slice-selected';
@@ -314,6 +390,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
             </button>
           `;
         })}
+        ${total > slices.length ? html`<p part="slices-limit" role="note">${this.slicesLimitMessage(slices.length, total)}</p>` : nothing}
       </nav>
     `;
   }
@@ -321,7 +398,8 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   override render(): TemplateResult {
     const metrics = this.normalizedMetrics;
     const runs = this.normalizedRuns;
-    const slices = this.slices(runs);
+    const derived = this.derived(runs, metrics);
+    const slices = derived.slices;
     const visibleLabel =
       this.label == null ? this.localize('ragEvalDashboardLabel') : this.label;
     const level = resolveHeadingLevel(this.headingLevel);
@@ -334,6 +412,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
         role=${role ?? nothing}
         aria-label=${label ?? nothing}
       >
+        ${this.inputLimitMessage() ? html`<p part="input-limit" role="note">${this.inputLimitMessage()}</p>` : nothing}
         <lr-empty
           part="empty"
           heading=${this.localize('ragEvalDashboardEmpty')}
@@ -341,16 +420,17 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
       </section>`;
     }
     const active = this.activeMetric(metrics);
-    const filtered = this.filteredRuns(runs);
-    if (this.slice && !slices.includes(this.slice)) {
+    const filtered = derived.filtered;
+    if (!derived.sliceAvailable) {
       return html`
         <section
           part="base"
           role=${role ?? nothing}
           aria-label=${label ?? nothing}
         >
+          ${this.inputLimitMessage() ? html`<p part="input-limit" role="note">${this.inputLimitMessage()}</p>` : nothing}
           <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
-          ${this.renderSlices(slices)}
+          ${this.renderSlices(derived.visibleSlices, slices.length)}
           <lr-empty
             part="empty"
             heading=${this.localize(
@@ -367,7 +447,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     // Business values (the metric cards' `latestValue`) are always computed from the full
     // `filtered` set below; only the chart/run-history DOM node count is bounded here.
     const runsTruncated = filtered.length > MAX_RENDERED_RUNS;
-    const renderedRuns = filtered.slice(-MAX_RENDERED_RUNS);
+    const renderedRuns = derived.rendered;
     const rovingRunId = renderedRuns.some((run) => run.id === this.rovingRunId)
       ? this.rovingRunId : renderedRuns[0]?.id;
     return html`
@@ -376,8 +456,9 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
         role=${role ?? nothing}
         aria-label=${label ?? nothing}
       >
+        ${this.inputLimitMessage() ? html`<p part="input-limit" role="note">${this.inputLimitMessage()}</p>` : nothing}
         <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
-        ${this.renderSlices(slices)}
+        ${this.renderSlices(derived.visibleSlices, slices.length)}
         <div part="metrics">
           ${metrics.map((metric) => {
             const selected = metric.id === active?.id;
@@ -395,7 +476,7 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
                   .label=${metric.label}
                   .value=${this.formatMetric(
                     metric,
-                    this.latestValue(metric, filtered)
+                    derived.latest.get(metric.id)
                   )}
                 ></lr-stat>
                 <span part="metric-category">${metric.category}</span>

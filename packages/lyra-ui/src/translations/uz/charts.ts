@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'To‘liq taqsimotda {validCount} ta yaroqli namuna; ko‘rsatilgan oraliqlar chegaralaridan pastda {belowCount} ta va yuqorida {aboveCount} ta; {invalidCount} ta yaroqsiz namuna.',
+  histogramDistributionRange: 'Kuzatilgan tanlanma oraligʻi: {min} dan {max} gacha.',
   chartCategory: 'Turkum',
   chartTotal: 'Jami',
   chartAxisTotal: '{axis} jami',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, radius {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'oʻsuvchi',
-  chartTrendDecreasing: 'pasayuvchi',
-  chartTrendFlat: 'tekis',
-  chartSummary: '{label}: {count} ta qiymat, oraliq {min} dan {max} gacha, {trend} tendensiya',
   chartSeriesNoData: '{label}: maʼlumot yoʻq',
   chartSummaryWithData: '{type} diagrammasi. {summaries}.',
   chartSummaryEmpty: 'Maʼlumotsiz {type} diagrammasi.',
-  chartSummarySeparator: '. ',
   chartData: 'Diagramma maʼlumotlari',
   chartRenderUnavailable: 'Diagrammani ko‘rsatish mavjud emas.',
+  chartPreparedSummaryZoom: 'Masshtablash tayyorlangan xulosani ko‘rsatadi; indeks orqali batafsillashtirish mavjud emas.',
+  chartSpatialSummary: 'Toʻliq manba: {count} ta nuqta, x {minX} dan {maxX} gacha, y {minY} dan {maxY} gacha. Koʻrinish: {matchedCount} ta nuqta, x {viewMinX} dan {viewMaxX} gacha, y {viewMinY} dan {viewMaxY} gacha.',
+  chartSpatialRadiusDomain: 'Toʻliq manbadagi radius: {min} dan {max} gacha.',
+  chartSpatialDensityLegend: 'Zichlik barcha qatorlarni oʻz ichiga oladi; qatorlarning koʻrinishi faqat nuqta ustqatlamlariga taʼsir qiladi.',
+  chartSpatialPoint: '{series}: {id}, manbadagi oʻrin {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Zichlik sohasi: {count} ta nuqta, x {minX} dan {maxX} gacha, y {minY} dan {maxY} gacha.',
+  chartSpatialHidden: ' (qator yashirilgan)',
   chartDataSampled: 'Diagramma va yaratilgan maʼlumotlar jadvalida 1 000 tagacha yozuv namunasi koʻrsatiladi. Barcha diagramma maʼlumotlariga kirish uchun maxsus jadval kiriting.',
   chartPlotSampled: 'Diagrammada 1 000 tagacha yozuv namunasi koʻrsatiladi; maʼlumotlar jadvalida barcha maʼlumotlar bor.',
   chartZoomUnavailable: 'Masshtablash mavjud emas, ammo asosiy diagramma ishlaydi.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total} tadan {index})',
   chartMissingLibrary: 'Diagrammalarni chiqarish uchun ushbu komponentga ixtiyoriy "chart.js" paketini oʻrnatish kerak.',
   boxPlotMissingLibrary: 'Quti diagrammalarini chiqarish uchun ixtiyoriy box-plot paketini oʻrnatish kerak.',
+  chartInputLimit: 'Kiritish chegarasiga yetilgani uchun ayrim diagramma maʼlumotlari tashlab ketildi. Tashlab ketilgan qiymatlarni ifodalash uchun kichikroq yoki oldindan umumlashtirilgan maʼlumotlar toʻplamini taqdim eting.',
+  histogramInputLimit: 'Faqat eng yangi 10 000 ta namuna saqlanadi. Kattaroq taqsimotni ifodalash uchun lr-chartʼga oldindan oraliqlar boʻyicha guruhlangan miqdorlarni taqdim eting.',
 };
 
 registerLyraLocale('uz', strings);

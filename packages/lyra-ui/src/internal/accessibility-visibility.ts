@@ -3,7 +3,7 @@ import { composedParentElement } from './active-element.js';
 import { assignedSlotOf } from './composed-tree.js';
 import { asciiWhitespaceTokens } from './ascii-whitespace.js';
 import { imageMapImageFor } from './dom-guards.js';
-import { subscribeInheritedAttributes } from './inherited-attribute-hub.js';
+import { subscribeInheritedAttributes, type InheritedAttributeRelease } from './inherited-attribute-hub.js';
 
 export { composedParentElement } from './active-element.js';
 
@@ -239,6 +239,17 @@ export function accessibleTextRecordsMatter(
   return false;
 }
 
+/** Shared ancestor subscriptions owned by an accessible-text controller. */
+export interface AccessibleTextAncestors {
+  readonly releases: InheritedAttributeRelease[];
+  readonly enabled: boolean;
+  readonly changed: (records: MutationRecord[]) => void;
+}
+
+export function releaseAccessibleTextAncestors(ancestors: AccessibleTextAncestors): void {
+  for (const release of ancestors.releases.splice(0)) release();
+}
+
 /** Opt-in tracking of `aria-labelledby` targets: their releases and the change callback. */
 export interface AccessibleTextReferences {
   readonly releases: Array<() => void>;
@@ -294,9 +305,11 @@ export function bindAccessibleTextObserver(
   extraAttributes: readonly string[] = [],
   upgrades?: CustomElementUpgradeObserver,
   references?: AccessibleTextReferences,
+  ancestors?: AccessibleTextAncestors,
 ): void {
   if (!observer) return;
   observer.disconnect();
+  if (ancestors) releaseAccessibleTextAncestors(ancestors);
   if (references) releaseAccessibleTextReferences(references);
   observeAccessibleTextNode(observer, host, extraAttributes);
   const baseline = filteringObservers.has(observer) ? new Map<Element, AncestorVisibilityBaseline>() : undefined;
@@ -304,10 +317,17 @@ export function bindAccessibleTextObserver(
   // reports each state it reads; reusing those readings halves the computed-style work per bind.
   // Nothing between here and there mutates the DOM, so the readings are the ones taken here.
   const baselineElements: Element[] = [];
-  let ancestor = composedParentElement(host);
-  while (ancestor) {
-    observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
+  const ancestorElements = new Set<Element>();
+  const observeAncestor = (ancestor: Element): void => {
+    if (ancestors && !ancestors.enabled) return;
+    if (ancestorElements.has(ancestor)) return;
+    ancestorElements.add(ancestor);
+    if (!ancestors) observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
     if (baseline) baselineElements.push(ancestor);
+  };
+  let ancestor = composedParentElement(host);
+  while (ancestor && (!ancestors || ancestors.enabled)) {
+    observeAncestor(ancestor);
     ancestor = composedParentElement(ancestor);
   }
   for (const slot of host.querySelectorAll<HTMLSlotElement>('slot')) {
@@ -320,11 +340,29 @@ export function bindAccessibleTextObserver(
         : assigned.parentElement;
       while (ancestor) {
         if (ancestor !== host && !host.contains(ancestor) && ancestor.getRootNode() !== host.shadowRoot) {
-          observer.observe(ancestor, { attributes: true, attributeFilter: ANCESTOR_ATTRIBUTES });
-          if (baseline) baselineElements.push(ancestor);
+          observeAncestor(ancestor);
         }
         ancestor = composedParentElement(ancestor);
       }
+    }
+  }
+  if (ancestors?.enabled) {
+    const roots = new Map<Node, Set<Element>>();
+    for (const ancestor of ancestorElements) {
+      const root = ancestor.getRootNode();
+      let elements = roots.get(root); if (!elements) roots.set(root, elements = new Set());
+      elements.add(ancestor);
+    }
+    const Observer = host.ownerDocument.defaultView?.MutationObserver;
+    for (const [root, elements] of roots) {
+      const release = subscribeInheritedAttributes(root, Observer, {
+        attributes: ANCESTOR_ATTRIBUTES,
+        changed: records => {
+          const relevant = records.filter(record => elements.has(record.target as Element));
+          if (relevant.length && accessibleTextRecordsMatter(observer, relevant)) ancestors.changed(relevant);
+        },
+      });
+      if (release) ancestors.releases.push(release);
     }
   }
   // Walk only consumer content. Entering the owner's own shadow root would observe its rendered

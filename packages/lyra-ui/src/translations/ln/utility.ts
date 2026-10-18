@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} likanisi mosusu',
     other: '{count} makanisi mosusu',
   },
+  mentionInputLimit: 'Kaka ba suggestion 10 000 ya liboso mpo na kotánga nkombo nde ezali.',
+  diffViewHighlightLimit: 'Code ya molai emonisami kozanga kokesenisa syntaxe na balangi.',
 };
 
 registerLyraLocale('ln', strings);

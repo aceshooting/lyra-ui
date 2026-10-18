@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pen don go down',
   signaturePadPenUp: 'Pen don go up',
+  localePickerInputLimit: 'Na only di first 512 language and region entries dey available.',
+  emojiPickerInputLimit: 'Some emoji data no enter because di input don reach im limit.',
 };
 
 registerLyraLocale('pcm', strings);

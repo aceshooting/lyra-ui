@@ -757,7 +757,7 @@ it('deduplicates provider ids first-wins and bounds the shared projection with a
   const bounded = await fixture<LyraSpanWaterfall>(html`
     <lr-span-waterfall
       .spans=${spans}
-      .strings=${{ spanProjectionLimit: 'Showing at most {count} spans' }}
+      .strings=${{ spanWaterfallLimit: 'Showing at most {shown} spans' }}
     ></lr-span-waterfall>
   `);
   expect(bounded.shadowRoot!.querySelectorAll('[part="row"]')).to.have.length(500);
@@ -776,7 +776,7 @@ it('announces when a live trace first crosses the bounded projection limit', asy
   const el = await fixture<LyraSpanWaterfall>(html`
     <lr-span-waterfall
       .spans=${spans.slice(0, 500)}
-      .strings=${{ spanProjectionLimit: 'Limited to {count} trace spans' }}
+      .strings=${{ spanWaterfallLimit: 'Limited to {shown} trace spans' }}
     ></lr-span-waterfall>
   `);
   const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;
@@ -801,7 +801,7 @@ it('formats visible and announced projection limits in the effective numbering s
     <lr-span-waterfall
       lang="ar-EG"
       .spans=${spans.slice(0, 500)}
-      .strings=${{ spanProjectionLimit: 'Limited to {count} spans' }}
+      .strings=${{ spanWaterfallLimit: 'Limited to {shown} spans' }}
     ></lr-span-waterfall>
   `);
   const sink = document.querySelector<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`)!;

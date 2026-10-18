@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Csak az első {count} teszteredmény látható.',
   toolTimelineLimit: 'Legfeljebb {count} eszközhívás látható.',
   toolSelectLimit: 'Csak az első {count} eszköz látható.',
+  testResultsInputTooLarge: 'A teszteredmények részletei meghaladják a megjelenítési korlátot.',
   toolCall: 'Eszközhívás',
   maximize: 'Teljes méret',
   promptStudioVariableName: '{index}. változó neve',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Csak az első {count} fájl látható.',
   taskListLimit: 'Csak az első {count} feladat látható.',
   evalDatasetLimit: 'Csak az első {count} példa látható.',
+  activityFeedInputLimit: 'Összesen {total} bejegyzésből csak a legújabb {count} marad meg.',
+  spanWaterfallLimit: '{shown} nyomkövetési szakasz látható, összesen: {total}.',
+  toolTimelineInputLimit: 'Csak a legújabb {count} eszközhívás marad meg az összesen {total} hívásból.',
 };
 
 registerLyraLocale('hu', strings);

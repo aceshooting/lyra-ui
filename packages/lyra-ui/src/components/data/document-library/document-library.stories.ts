@@ -212,3 +212,32 @@ export const SearchSizeTiers: Story = {
     </div>
   `,
 };
+
+/** Distinct tag facets stop at 500; the visible notice counts the remaining tags. */
+export const BoundedTagFacets: Story = {
+  render: () => html`<lr-document-library
+    .documents=${Array.from({ length: 600 }, (_, index) => ({ id: `document-${index}`, name: `Document ${index}`, tags: [`tag-${String(index).padStart(3, '0')}`] }))}
+  ></lr-document-library>`,
+};
+
+/** Generated logical rows demonstrate paging without allocating the inventory. */
+const millionDocumentSource: import('./document-library.class.js').DocumentLibrarySource = {
+  revision: 1,
+  async query({ page, pageSize, query, signal }) {
+    await new Promise(resolve => setTimeout(resolve, 40));
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    const term = query.searchTerm.trim();
+    const index = /^\d+$/.test(term) ? Number(term) : -1;
+    const total = term ? (index >= 0 && index < 1_000_000 ? 1 : 0) : 1_000_000;
+    const rows = Array.from({ length: Math.min(pageSize, Math.max(0, total - page * pageSize)) }, (_, offset) => {
+      const order = term ? index : query.sortDir === 'desc' ? 999_999 - page * pageSize - offset : page * pageSize + offset;
+      return { key: `document-${order}`, order, value: { id: `document-${order}`, name: `Document ${order}`, tags: ['published'] } };
+    });
+    return { total, rows, tags: { total: 1, values: [{ key: 'published', label: 'Published', count: 1_000_000 }], unavailableSelected: [] } };
+  },
+  async lookup(keys) { return keys.map(key => { const order = Number(key.slice(9)); return { key, order, value: { id: key, name: `Document ${order}`, tags: ['published'] } }; }); },
+  async locate(key, query) { const order = Number(key.slice(9)); return query.searchTerm.trim() ? (String(order) === query.searchTerm.trim() ? 0 : null) : query.sortDir === 'desc' ? 999_999 - order : order; },
+};
+export const MillionSource: Story = {
+  render: () => html`<p>Browse one million generated documents. Search by an exact document number, from 0 to 999999.</p><lr-document-library .dataSource=${millionDocumentSource}></lr-document-library>`,
+};

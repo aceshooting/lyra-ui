@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Δεν υπάρχουν ακόμη συνομιλίες',
   agentWorkspaceLabel: 'Χώρος εργασίας πράκτορα',
+  agentWorkspaceInputLimit: '{collection}: Διατηρούνται μόνο {count} από τις {total} καταχωρίσεις.',
   agentWorkspaceConversation: 'Συνομιλία',
   agentWorkspaceDetails: 'Λεπτομέρειες εκτέλεσης',
   agentWorkspaceRun: 'Εκτέλεση πράκτορα',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Επανάληψη αυτού του τμήματος',
   promptQueueLabel: 'Ερωτήματα σε αναμονή',
   promptQueueEmpty: 'Δεν υπάρχουν ερωτήματα σε αναμονή',
+  promptQueueInputLimit: 'Λόγω ορίου εισόδου παραλείφθηκαν ορισμένα στοιχεία: μηνύματα προτροπής σε αναμονή ή συνημμένα.',
+  promptQueueAttachmentLimit: 'Εμφανίζονται {shown} από τα {total} διατηρημένα συνημμένα.',
   promptQueueSendNow: 'Αποστολή τώρα',
   selectionToolbarLabel: 'Ενέργειες επιλογής',
   selectionAsk: 'Ερώτηση',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} μονάδα token',
     other: '{count} μονάδες token',
   },
+  threadListInputLimit: 'Λόγω ορίου εισόδου παραλείφθηκαν ορισμένα στοιχεία: νήματα συνομιλίας.',
+  promptInputInputLimit: 'Λόγω ορίου εισόδου παραλείφθηκαν ορισμένα στοιχεία: προτάσεις ή καταχωρίσεις καταλόγου.',
+  transcriptFeedInputLimit: 'Διατηρούνται μόνο οι πιο πρόσφατες {count} από {total} καταχωρίσεις.',
+  codeBlockHighlightLimit: 'Ο μεγάλος κώδικας εμφανίζεται χωρίς επισήμανση σύνταξης.',
 };
 
 registerLyraLocale('el', strings);

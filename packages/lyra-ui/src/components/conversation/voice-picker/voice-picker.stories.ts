@@ -334,3 +334,7 @@ export const FormLifecycle: Story = {
     `;
   },
 };
+
+export const InputLimit: Story = {
+  render: () => html`<lr-voice-picker label="Bounded catalog" .catalog=${Array.from({length:1025}, (_, i) => ({id:`row-${i}`,label:`Row ${i}`}))}></lr-voice-picker>`,
+};

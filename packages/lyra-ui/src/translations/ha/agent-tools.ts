@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Ana nuna sakamakon gwaji {count} na farko kawai.',
   toolTimelineLimit: 'Kiran kayan aiki da ake nunawa bai wuce {count} ba.',
   toolSelectLimit: 'Ana nuna kayan aiki {count} na farko kawai.',
+  testResultsInputTooLarge: 'Bayanan dalla-dalla na sakamakon gwaji sun wuce iyakar nunawa.',
   toolCall: 'Kiran kayan aiki',
   maximize: 'Faɗaɗa zuwa iyaka',
   promptStudioVariableName: 'Sunan canji {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Fayilolin {count} na farko ne kawai ake nunawa.',
   taskListLimit: 'Ayyukan {count} na farko ne kawai ake nunawa.',
   evalDatasetLimit: 'Ana nuna misalai {count} na farko kawai.',
+  activityFeedInputLimit: 'Sabbin shigarwa {count} daga cikin {total} kawai ake riƙewa.',
+  spanWaterfallLimit: 'Ana nuna sassan bin diddigi {shown} daga cikin {total}.',
+  toolTimelineInputLimit: 'Kiran kayan aiki {count} na baya-bayan nan kawai ake riƙewa daga cikin {total}.',
 };
 
 registerLyraLocale('ha', strings);

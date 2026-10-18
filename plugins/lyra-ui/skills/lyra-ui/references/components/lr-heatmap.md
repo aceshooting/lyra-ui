@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -69,6 +69,150 @@ turning the overlay off moves a focused cell button to the canvas application co
 moves a focused canvas to the matching remembered cell, the first interactive cell, or the stable
 base when no cell exists. A newer external focus destination is never reclaimed.
 
+Calendar mode can summarize a complete large event population through host-side daily aggregation.
+Combine repeated events into one `{ date, value }` record per day before assigning
+`data = { kind: 'calendar', days }`: duplicate day records use first-valid identity rather than
+summation. A 365-day contribution view can therefore cover one million events while retaining
+365 daily totals. Keep the full event count and aggregation provenance beside the visualization;
+the heatmap's day count describes day records. A million distinct dates exceed the limits on day
+count and date span below. Query another bounded date window when needed.
+
+**Complete matrix source:** `matrixSource: LyraHeatmapMatrixSource | null = null`
+(attribute: false) opts into provider-owned indexed storage and aggregation. It takes precedence
+over legacy matrix arrays and requires `data.kind === 'matrix'`; a source with calendar data shows
+a localized error. Set `matrixSource = null` to restore the current legacy input. The provider is
+retained by identity. Reassign even the same object, or call a keyless `requestUpdate()`, after
+revision/state changes. Named presentation changes reuse accepted tiles; locale/lifecycle changes
+revoke obsolete effects. Providers should honor abort signals; ignored aborts occupy their physical
+request permits until settlement.
+
+```ts
+import type {
+  LyraHeatmapMatrixSource, LyraHeatmapMatrixViewport, LyraHeatmapMatrixReducer,
+  LyraHeatmapTile, LyraHeatmapMatrixRangeSelectDetail,
+} from "@aceshooting/lyra-ui/components/data/heatmap/heatmap.class.js";
+import type { LyraSourceRequest, LyraSourceValue, LyraNumericDomain } from
+  "@aceshooting/lyra-ui/utilities/data-preparation.js";
+```
+
+The source supplies immutable `revision` (a nonempty string or finite number), safe nonnegative integer `rowCount`/`columnCount`
+(with a safe integer product), and `domain: LyraNumericDomain | null`. This domain describes all
+finite source values; `null` means none. A valid explicit `domain` property still overrides the
+paint scale while the summary reports the provider's complete domain. Signed finite values are
+valid; only `null` represents a missing exact value. Methods may return a value or PromiseLike:
+
+- `query(request)` receives `{ signal, rowStart, rowEnd, columnStart, columnEnd, maxCells }` and
+  returns readonly `LyraHeatmapTile[]`. The host must supply an aggregation index, pyramid or server;
+  the component does not scan raw source cells to create tiles.
+- `getCell(row, column, { signal })` returns `{ value: number | null, rowLabel: string,
+  columnLabel: string }` for that exact absolute coordinate. Labels are each at most 1,024 UTF-16
+  units; malformed or oversized replies fail visibly without truncation.
+
+`matrixViewport: LyraHeatmapMatrixViewport | null = null` (attribute: false) is the zero-based,
+half-open rectangle `{ rowStart, rowEnd, columnStart, columnEnd }`; `null` covers the full matrix.
+Explicit axes must be nonempty, ordered safe integers contained in the source. Invalid new
+rectangles fail visibly without clamping or fallback. On source shrink, an unchanged previously
+accepted viewport keeps its span up to the new dimensions and clamps its origin; a newly assigned
+rectangle is validated afresh. Empty dimensions render an empty state without provider reads.
+`matrixReducer: LyraHeatmapMatrixReducer = 'mean'` (`matrix-reducer`) chooses `'mean' | 'min' | 'max'`
+for tile color; unsupported values fail visibly. Reducer changes repaint accepted tiles.
+
+Each tile supplies the viewport fields plus `{ count, validCount, min, max, sum }`. Tiles must
+partition the requested rectangle exactly once, without gaps or overlaps. `count` equals rectangle
+area, `validCount` is a safe integer from zero to `count`, and all statistics are finite and
+consistent with the complete domain. An empty-valid tile has `min: null`, `max: null`, `sum: 0`;
+otherwise extrema are ordered and `sum / validCount` lies within them, allowing a normalized
+`32 * Number.EPSILON` floating tolerance. Admission checks a bounded partition and arithmetic
+consistency; the provider owns the truth of aggregation over unseen records.
+
+The square overview allocates from available inline size, with tile budget
+`T = min(normalized maxCells, max(1, floor(plotWidth) ** 2))`; zero-width layouts defer requests.
+The existing `maxCells` default 10,000 and hard ceiling 100,000 apply to tiles here. The component
+retains bounded current/replacement tiles and O(T) partition-validation storage, without geometry
+or occupancy arrays proportional to logical cell count. One physical tile query and only the
+latest queued replacement are allowed. Exact reads share two physical permits, with current and
+pending windows of at most 400 records each plus at most one separately selected record (801 total,
+at most 1,640,448 retained exact-label units). A pending window replaces the old pane atomically;
+obsolete pending buffers are released. Canvas limits remain 16,384 per side and 16,777,216 pixels.
+
+`revealSourceCell(row: number, col: number): Promise<boolean>` resolves and focuses an exact source
+coordinate without changing controlled selection or emitting activation. Invalid/out-of-range
+coordinates make no provider call; absent, failed, noninteractive or revoked targets resolve
+`false`. Revealing outside an explicit viewport silently pans a same-size clamped rectangle by
+updating `matrixViewport`; a null/full viewport stays full. Focus restoration respects intervening
+user movement. Arrow keys move exact coordinates using physical left/right even under RTL;
+Home/End reach row endpoints, Ctrl+Home/Ctrl+End source endpoints, and PageUp/PageDown move up to
+20 rows. Each action examines at most 32 excluded candidates. With `accessibleCells: true`,
+`source-exact-window` is a separate at-most-20×20 exact grid below the overview, with full logical
+ARIA counts and absolute one-based row/column indices; the overview canvas is hidden from assistive
+technology. Without it, the named canvas owns the exact cursor.
+
+Exact Enter/Space and singleton-tile pointer activation resolve `getCell` and emit the existing
+`lr-cell-activate` `{ row, col, value }` with absolute coordinates; missing `null` maps to `NaN`.
+`cellText`, `cellInteractive` and `cellColor` receive exact values and absolute coordinates, never
+aggregate means. Multi-cell tile pointer activation or Shift+Enter emits noncancelable
+`lr-matrix-range-select` with frozen `LyraHeatmapMatrixRangeSelectDetail`:
+`{ revision, rowStart, rowEnd, columnStart, columnEnd, count, validCount, min, max, sum }`.
+It proposes an aggregate without expanding `selectedCells` or synthesizing exact activation.
+`selectedCell`/bounded `selectedCells` stay controlled and programmatic assignments are silent;
+row/column, drag and Shift-range expansion remain legacy-only. Source geometry is proportional:
+`matrixGeometry` is `undefined` and source paints emit no `lr-matrix-geometry-change`.
+
+Source `exportData('csv')` exports the complete current accepted viewport's aggregate tile snapshot,
+with header `rowStart,rowEnd,columnStart,columnEnd,count,validCount,min,max,sum,reducer,value`.
+Coordinates are half-open and zero-based; numbers are unlocalized and missing extrema/reducer
+values are blank. It performs no provider reads and is not a raw-cell export. Loading, error or
+obsolete snapshots export `''`. PNG follows the current bounded overview and existing canvas
+readiness gates. Additional parts are `source-status`, `source-error`, `source-summary`, and
+`source-exact-window`; existing `base`, `canvas`, `cell`, `tooltip` and legend parts apply where
+rendered. The following dense matrix/calendar limits and geometry descriptions apply with
+`matrixSource` unset.
+
+**Exported matrix-source declarations:**
+
+Inherited viewport/tile fields are repeated to show the complete effective contracts. `HeatmapSourceCell` is the exact `{ value: number | null; rowLabel: string; columnLabel: string }` reply described above.
+
+`LyraHeatmapMatrixViewport {
+  readonly rowStart: number;
+  readonly rowEnd: number;
+  readonly columnStart: number;
+  readonly columnEnd: number;
+}`
+
+`LyraHeatmapTile extends LyraHeatmapMatrixViewport {
+  readonly count: number;
+  readonly validCount: number;
+  readonly min: number | null;
+  readonly max: number | null;
+  readonly sum: number;
+  readonly rowStart: number;
+  readonly rowEnd: number;
+  readonly columnStart: number;
+  readonly columnEnd: number;
+}`
+
+`LyraHeatmapMatrixRangeSelectDetail extends LyraHeatmapTile {
+  readonly revision: LyraSourceRevision;
+  readonly count: number;
+  readonly validCount: number;
+  readonly min: number | null;
+  readonly max: number | null;
+  readonly sum: number;
+  readonly rowStart: number;
+  readonly rowEnd: number;
+  readonly columnStart: number;
+  readonly columnEnd: number;
+}`
+
+`LyraHeatmapMatrixSource {
+  readonly revision: LyraSourceRevision;
+  readonly rowCount: number;
+  readonly columnCount: number;
+  readonly domain: LyraNumericDomain | null;
+  query(request: LyraSourceRequest & LyraHeatmapMatrixViewport & { readonly maxCells: number }): LyraSourceValue<readonly LyraHeatmapTile[]>;
+  getCell(row: number, column: number, request: LyraSourceRequest): LyraSourceValue<HeatmapSourceCell>;
+}`
+
 **Properties:**
 
 - `data: HeatmapData = { kind: 'matrix', rowLabels: [], colLabels: [], values: [] }` (attribute:
@@ -88,6 +232,11 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
     pins its width, while `'auto'` measures the widest rendered weekday label without shrinking
     below the built-in `28px` gutter or growing beyond 40% of the host. Unset preserves the original
     `28px` geometry; malformed values are ignored.
+- `maxCells: number = 10000` (attribute `max-cells`) — projection budget, normalized to 1–100,000.
+  Matrix projection keeps a rectangular prefix within that budget. Calendar input retains at most
+  that many days and scales its sparse span proportionally from the default 530 weeks, up to 5,300
+  weeks, with a minimum one-week span. The accessible cell overlay remains windowed to 400 buttons,
+  and canvas backing-store limits still apply.
 - `cellSize: number = 22` (attribute `cell-size` — default `22` in matrix mode, `11` in calendar
   mode when left unset; explicitly setting it now governs both modes' per-cell size alike, and it's
   ignored in either mode when `fitToWidth` is set)
@@ -540,10 +689,13 @@ is now literal.
 
 **Known gotchas:**
 
-- Matrix projection is capped at 10,000 renderable cells. Calendar input is capped at 10,000
-  records and 530 weeks, and the color-step/legend-stop/annotation projections are each capped at
-  256 entries. `[part="projection-limit"]` and the generated accessible summary disclose every
-  truncation. The semantic grid mounts at most 400 cell buttons while preserving full navigation.
+- Matrix and calendar projections use `maxCells` (10,000 by default); calendar span scales from
+  the default 530 weeks with that budget. Color-step/legend-stop/annotation projections each display
+  at most 256 entries. Their owned snapshots and `selectedCells` retain at most 10,000 entries and
+  50,000 cloned values; deeply nested records can reach the value budget first.
+  `[part="projection-limit"]` and the generated accessible summary disclose visual projection and
+  input loss; changed notices are announced politely. The semantic grid mounts at most 400 cell
+  buttons while preserving full navigation.
 - Calendar duplicates use a first-valid-wins ISO-date identity. Invalid dates are dropped. `data.columnX`
   and `data.rowY` results must be finite, nonnegative, monotonic and non-overlapping; an invalid,
   throwing or hostile result safely falls back to the normal coordinate for that position.

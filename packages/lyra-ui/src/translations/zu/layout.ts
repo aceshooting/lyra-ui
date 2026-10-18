@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} umyalo',
     other: '{count} imiyalo',
   },
+  commandPaletteInputLimit: 'Eminye imiyalo ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
 };
 
 registerLyraLocale('zu', strings);

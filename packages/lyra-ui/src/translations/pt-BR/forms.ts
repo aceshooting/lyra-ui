@@ -118,6 +118,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Caneta abaixada',
   signaturePadPenUp: 'Caneta levantada',
+  localePickerInputLimit: 'Somente as primeiras 512 entradas de idioma e região estão disponíveis.',
+  emojiPickerInputLimit: 'Alguns dados de emoji foram omitidos porque um limite de entrada foi atingido.',
 };
 
 registerLyraLocale('pt-BR', strings);

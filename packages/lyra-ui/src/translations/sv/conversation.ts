@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Inga konversationer ännu',
   agentWorkspaceLabel: 'Agentarbetsyta',
+  agentWorkspaceInputLimit: '{collection}: endast {count} av {total} poster bevaras.',
   agentWorkspaceConversation: 'Konversation',
   agentWorkspaceDetails: 'Körningsdetaljer',
   agentWorkspaceRun: 'Agentkörning',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Försök igen med den här delen',
   promptQueueLabel: 'Köade promptar',
   promptQueueEmpty: 'Inga promptar i kö',
+  promptQueueInputLimit: 'Vissa köade promptar eller bilagor utelämnades eftersom indatagränsen nåddes.',
+  promptQueueAttachmentLimit: 'Visar {shown} av {total} bevarade bilagor.',
   promptQueueSendNow: 'Skicka nu',
   selectionToolbarLabel: 'Åtgärder för markering',
   selectionAsk: 'Fråga',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} token',
     other: '{count} token',
   },
+  threadListInputLimit: 'Vissa konversationstrådar utelämnades eftersom indatagränsen nåddes.',
+  promptInputInputLimit: 'Vissa förslag eller katalogposter utelämnades eftersom indatagränsen nåddes.',
+  transcriptFeedInputLimit: 'Endast de senaste {count} av {total} poster behålls.',
+  codeBlockHighlightLimit: 'Lång kod visas utan syntaxmarkering.',
 };
 
 registerLyraLocale('sv', strings);

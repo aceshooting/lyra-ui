@@ -1,3 +1,6 @@
+import type { LyraPageSource, LyraSourceRecord } from '../../../data-sources.js';
+import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { finiteInteger } from '../../../internal/numbers.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -17,8 +20,8 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsInputTooLarge, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsSkipped } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'running';
@@ -37,6 +40,21 @@ export interface TestSuiteResult {
   id: string;
   name: string;
   tests: readonly TestCaseResult[];
+}
+
+export interface TestResultsSourceQuery { readonly statuses: readonly TestStatus[]; }
+export interface TestResultsSourceRow { readonly suiteId: string; readonly suiteName: string; readonly test: TestCaseResult; }
+export interface TestResultsSourceSummary { readonly total: number; readonly passed: number; readonly failed: number; readonly skipped: number; readonly running: number; }
+export type TestResultsSource = LyraPageSource<TestResultsSourceRow, TestResultsSourceQuery, TestResultsSourceSummary>;
+
+function sourceField(value: unknown, name: string): unknown {
+  if (!value || typeof value !== 'object') throw new TypeError('Invalid result');
+  const descriptor = Object.getOwnPropertyDescriptor(value, name);
+  if (descriptor && !('value' in descriptor)) throw new TypeError('Invalid result field');
+  return descriptor?.value;
+}
+function checkRowText(suiteId: string, suiteName: string, test: TestCaseResult): void {
+  if (suiteId.length + suiteName.length + test.id.length + test.name.length + (test.message?.length ?? 0) > 65_536) throw new RangeError('Result text limit');
 }
 
 const STATUSES: TestStatus[] = ['passed', 'failed', 'skipped', 'running'];
@@ -156,6 +174,10 @@ export interface LyraTestResultsEventMap {
  * @cssprop [--lr-test-results-running-color=var(--lr-color-brand)] - Running-state foreground.
  * @cssprop [--lr-test-results-spinner-size=var(--lr-size-1em)] - Diameter of the composed spinner
  *   in a running test row.
+ * @csspart source-status - Provider loading or failure message.
+ * @csspart source-retry - Retry the current failed provider request.
+ * @csspart source-pagination - Provider page controls.
+ * @csspart input-error - Oversized legacy result input message.
  * @status stable
  * @since 4.0.0
  */
@@ -178,17 +200,20 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
     open: LYRA_DEFAULT_open,
+    retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSkipped: LYRA_DEFAULT_statusSkipped,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
+    tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     testResultsCollapseTest: LYRA_DEFAULT_testResultsCollapseTest,
     testResultsCompleteAnnounce: LYRA_DEFAULT_testResultsCompleteAnnounce,
     testResultsExpandTest: LYRA_DEFAULT_testResultsExpandTest,
     testResultsFailed: LYRA_DEFAULT_testResultsFailed,
     testResultsFilterLabel: LYRA_DEFAULT_testResultsFilterLabel,
+    testResultsInputTooLarge: LYRA_DEFAULT_testResultsInputTooLarge,
     testResultsLabel: LYRA_DEFAULT_testResultsLabel,
     testResultsLimit: LYRA_DEFAULT_testResultsLimit,
     testResultsPassed: LYRA_DEFAULT_testResultsPassed,
@@ -218,6 +243,126 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
    *  test ids use deterministic first-wins identity. */
   @property({ attribute: false }) suites: readonly TestSuiteResult[] = [];
 
+  private _dataSource?: TestResultsSource;
+  private sourceEpoch = 0;
+  private sourceSyncing = false;
+  private sourceInputs?: readonly unknown[];
+  private sourceSize?: number;
+  private sourceFilter?: string;
+  private sourceExpanded = new Map<string, boolean>();
+  @state() private sourceVersion = 0;
+  private readonly sourcePages = new SourcePageController<TestResultsSourceRow, TestResultsSourceQuery, TestResultsSourceSummary>(this, {
+    normalizeRecord: (record, isCurrent) => this.normalizeSourceRecord(record, isCurrent),
+    normalizeSummary: value => {
+      const counts = Object.fromEntries(['total', ...STATUSES].map(key => {
+        const count = sourceField(value, key);
+        if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0) throw new TypeError('Invalid summary');
+        return [key, count];
+      })) as unknown as TestResultsSourceSummary;
+      const sum = STATUSES.reduce((total, status) => total + counts[status], 0);
+      if (!Number.isSafeInteger(sum) || sum !== counts.total) throw new TypeError('Inconsistent summary');
+      return Object.freeze(counts);
+    },
+    validateMetadata: (result, query) => {
+      const summary = result.summary!;
+      if (result.total !== (query.statuses.length ? query.statuses.reduce((sum, status) => sum + summary[status], 0) : summary.total)) throw new TypeError('Inconsistent total');
+      const counts = { passed: 0, failed: 0, skipped: 0, running: 0 };
+      for (const row of result.rows) {
+        const status = row.value.test.status;
+        if (query.statuses.length && !query.statuses.includes(status)) throw new TypeError('Unexpected status');
+        if (++counts[status] > summary[status]) throw new TypeError('Inconsistent status count');
+      }
+    },
+    onChange: () => { this.sourceVersion++; },
+  });
+
+  /** Complete result provider; undefined restores suites. Same-source assignment refreshes. */
+  @property({ attribute: false })
+  get dataSource(): TestResultsSource | undefined { return this._dataSource; }
+  set dataSource(value: TestResultsSource | undefined) {
+    const old = this._dataSource; this._dataSource = value; this.sourceEpoch++;
+    this.pendingCompletionRun = undefined;
+    this.requestUpdate('dataSource', old);
+  }
+  /** Zero-based provider page. */
+  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  /** Provider page size, normalized to 1..500; changes reset the page. */
+  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  /** Exact current filtered count, or null while unavailable. */
+  get sourceTotal(): number | null { return this.sourceMode ? this.sourcePages.state.result?.total ?? null : null; }
+  private get sourceMode(): boolean { return this.dataSource !== undefined; }
+
+  private normalizeSourceRecord(record: LyraSourceRecord<unknown>, isCurrent: () => boolean): LyraSourceRecord<TestResultsSourceRow> {
+    const field = (input: unknown, key: string): unknown => {
+      if (!isCurrent()) throw new Error('Obsolete source result');
+      const value = sourceField(input, key);
+      if (!isCurrent()) throw new Error('Obsolete source result');
+      return value;
+    };
+    const text = (value: unknown): string => { if (typeof value !== 'string') throw new TypeError('Invalid text'); return value; };
+    const suiteId = text(field(record.value, 'suiteId'));
+    const suiteName = text(field(record.value, 'suiteName'));
+    const raw = field(record.value, 'test');
+    const id = text(field(raw, 'id'));
+    const name = text(field(raw, 'name'));
+    const messageValue = field(raw, 'message');
+    const duration = field(raw, 'durationMs');
+    const test = Object.freeze({ id, name, status: normalizeTestStatus(field(raw, 'status')),
+      ...(messageValue === undefined ? {} : { message: text(messageValue) }),
+      ...(typeof duration === 'number' ? { durationMs: duration } : {}) });
+    checkRowText(suiteId, suiteName, test);
+    if (!suiteId.trim() || !id.trim() || record.key !== this.testKey(suiteId, id)) throw new TypeError('Invalid result identity');
+    return { key: record.key, order: record.order, value: Object.freeze({ suiteId, suiteName, test }) };
+  }
+
+  private syncSource(): void {
+    if (!this.sourcePages || this.sourceSyncing) return;
+    this.sourceSyncing = true;
+    try {
+      if (!this.sourceMode) {
+        if (this.sourceInputs) this.sourcePages.bind(undefined);
+        this.sourceInputs = undefined; this.sourceSize = undefined; this.sourceFilter = undefined;
+        return;
+      }
+      const source = this.dataSource!;
+      const statuses = [...new Set(this.statusFilter)];
+      if (statuses.some(status => !STATUSES.includes(status))) throw new TypeError('Invalid filter');
+      const filter = JSON.stringify(statuses);
+      const size = finiteInteger(this.sourcePageSize, 100, 1, 500);
+      let page = finiteInteger(this.sourcePage, 0, 0, Math.floor(Number.MAX_SAFE_INTEGER / size));
+      if ((this.sourceSize !== undefined && this.sourceSize !== size) || (this.sourceFilter !== undefined && this.sourceFilter !== filter)) { page = 0; this.sourcePage = 0; }
+      this.sourceSize = size; this.sourceFilter = filter;
+      const epoch = this.sourceEpoch;
+      const revision = source.revision;
+      if (this.dataSource !== source || this.sourceEpoch !== epoch) return;
+      const inputs = [source, revision, this.sourceEpoch, this.effectiveLocale, size, filter, page];
+      if (this.sourceInputs && inputs.every((value, index) => value === this.sourceInputs![index])) return;
+      this.cancelLegacy();
+      this.sourceInputs = inputs; this.sourceExpanded.clear();
+      this.sourcePages.bind({ source, revision, epoch: this.sourceEpoch, locale: this.effectiveLocale });
+      void this.sourcePages.request(Object.freeze({ statuses: Object.freeze(statuses) }), page, size);
+    } catch { this.sourcePages.bind(undefined); this.sourceInputs = undefined; this.sourceExpanded.clear(); }
+    finally { this.sourceSyncing = false; }
+  }
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === 'suites' && this.legacyGeneration !== undefined) {
+      this.cancelLegacy();
+      this.legacyNeedsNormalization = true;
+      if (!this.legacyIntentScheduled) {
+        this.legacyIntentScheduled = true;
+        queueMicrotask(() => {
+          this.legacyIntentScheduled = false;
+          if (this.legacyNeedsNormalization && !this.sourceMode && this.isConnected) this.requestUpdate('legacyNeedsNormalization');
+        });
+      }
+    }
+    if ((args[0] === 'runState' && this.runState !== 'complete') || args[0] === 'runId') this.pendingCompletionRun = undefined;
+    if (args[0] === undefined) this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
+    if (args[0] === undefined || ['dataSource', 'sourcePage', 'sourcePageSize', 'statusFilter'].includes(String(args[0]))) this.syncSource();
+    super.requestUpdate(...args);
+  }
+
   /** When non-empty, only tests whose status is in this set are shown. Empty means "show all". */
   @property({ attribute: false }) statusFilter: readonly TestStatus[] = [];
 
@@ -239,41 +384,55 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
+  private legacyGeneration = 0;
+  private legacyNeedsNormalization = false;
+  private legacyIntentScheduled = false;
+  private legacyPending = false;
+  private legacyError = false;
+  private legacyDone: Promise<void> = Promise.resolve();
+  private settleLegacy?: () => void;
+  private legacyTimer?: number;
+  private legacyRows: { suiteId: string; suiteName: string; test: TestCaseResult; key: string; order: number }[] = [];
+  private pendingCompletionRun: { id: string; source: TestResultsSource | undefined } | undefined;
   private normalizedSuitesCache: TestSuiteResult[] = [];
   private projectedSuitesCache: TestSuiteResult[] = [];
   private completeStatusCounts: Record<TestStatus, number> = { passed: 0, failed: 0, skipped: 0, running: 0 };
-  private normalizedTestKeys = new Set<string>();
   private detailSlotNames = new Set<string>();
   private detailSlotsDirty = true;
   private projectionTruncated = false;
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
   private limitAnnouncementInitialized = false;
+  private statusAnnouncementInitialized = false;
+  private previousStatusAnnouncement = '';
   private previouslyTruncated = false;
   private readonly idPrefix = nextId('test-results');
 
-  /** Text queued by `willUpdate` for the completion announcement, flushed once the live region
-   *  has rendered (it may not exist yet on the very first update). */
-  private pendingCompletionAnnouncement: string | null = null;
-
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated && !this.sourceMode) this.rebuildNormalizedSuites();
     this.limitAnnouncementInitialized = this.hasUpdated;
     this.previouslyTruncated = this.projectionTruncated;
   }
 
   override adoptedCallback(): void {
+    this.cancelLegacy(); this.pendingCompletionRun = undefined;
+    this.statusAnnouncementInitialized = false; this.previousStatusAnnouncement = '';
     super.adoptedCallback();
     this.announcements.adopted();
+    this.sourcePages.adopted();
+    this.sourceInputs = undefined; this.syncSource();
+    if (!this.sourceMode && this.isConnected) this.rebuildNormalizedSuites();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('suites')) {
-      this.rebuildNormalizedSuites();
-      const pruned = new Map([...this.manualExpanded].filter(([key]) => this.normalizedTestKeys.has(key)));
-      if (pruned.size !== this.manualExpanded.size) this.manualExpanded = pruned;
+    this.syncSource();
+    if (this.sourceMode && this.sourcePages.state.result && this.sourcePage !== this.sourcePages.state.page) {
+      this.sourceSyncing = true; this.sourcePage = this.sourcePages.state.page; this.sourceSyncing = false;
+      this.sourceInputs = this.sourceInputs ? [...this.sourceInputs.slice(0, -1), this.sourcePage] : undefined;
     }
-    if (changed.has('suites') || changed.has('statusFilter')) this.rebuildProjection();
+    if (!this.sourceMode && (changed.has('suites') || changed.has('dataSource') || this.legacyNeedsNormalization)) this.rebuildNormalizedSuites();
+    if (!this.sourceMode && (changed.has('suites') || changed.has('statusFilter'))) this.rebuildProjection();
     if (this.detailSlotsDirty) {
       this.rebuildDetailSlotNames();
       this.detailSlotsDirty = false;
@@ -287,90 +446,175 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         && this.runId !== null
         && previousRunId === this.runId
       ) {
-        const number = getNumberFormat(this.effectiveLocale);
-        this.pendingCompletionAnnouncement = this.localize('testResultsCompleteAnnounce', undefined, {
-          passed: number.format(this.countOf('passed')),
-          failed: number.format(this.countOf('failed')),
-          skipped: number.format(this.countOf('skipped')),
-        });
+        this.pendingCompletionRun = { id: this.runId, source: this.dataSource };
       }
     }
+  }
+
+  private cancelLegacy(): void {
+    this.legacyGeneration++;
+    if (this.legacyTimer !== undefined) this.ownerDocument.defaultView?.clearTimeout(this.legacyTimer);
+    this.legacyTimer = undefined; this.settleLegacy?.(); this.settleLegacy = undefined;
+    this.legacyPending = false;
   }
 
   private rebuildNormalizedSuites(): void {
-    const normalizedSuites: TestSuiteResult[] = [];
+    this.legacyNeedsNormalization = false;
+    this.cancelLegacy();
+    const generation = this.legacyGeneration;
+    const owner = this.ownerDocument;
+    const current = () => generation === this.legacyGeneration && this.ownerDocument === owner && !this.sourceMode && this.isConnected;
+    const input = this.suites;
+    this.legacyPending = true; this.legacyError = false;
+    this.normalizedSuitesCache = []; this.projectedSuitesCache = []; this.legacyRows = [];
+    this.legacyDone = new Promise(resolve => { this.settleLegacy = resolve; });
+    const rows: typeof this.legacyRows = [];
+    const suites: TestSuiteResult[] = [];
+    const keys = new Set<string>();
     const suiteIds = new Set<string>();
-    const normalizedTestKeys = new Set<string>();
-    const counts: Record<TestStatus, number> = { passed: 0, failed: 0, skipped: 0, running: 0 };
-    for (const suite of Array.isArray(this.suites) ? this.suites : []) {
-      if (!suite || typeof suite.id !== 'string' || suite.id.trim().length === 0 || suiteIds.has(suite.id)) continue;
-      suiteIds.add(suite.id);
-      const testIds = new Set<string>();
-      const tests: TestCaseResult[] = [];
-      for (const test of Array.isArray(suite.tests) ? suite.tests : []) {
-        if (!test || typeof test.id !== 'string' || test.id.trim().length === 0 || testIds.has(test.id)) continue;
-        testIds.add(test.id);
-        const status = normalizeTestStatus((test as { status?: unknown }).status);
-        const normalized: TestCaseResult = {
-          id: test.id,
-          name: typeof test.name === 'string' ? test.name : '',
-          status,
-          ...(typeof test.durationMs === 'number' ? { durationMs: test.durationMs } : {}),
-          ...(typeof test.message === 'string' ? { message: test.message } : {}),
-        };
-        tests.push(normalized);
-        normalizedTestKeys.add(this.testKey(suite.id, normalized.id));
-        counts[status]++;
-      }
-      if (tests.length > 0) {
-        normalizedSuites.push({
-          id: suite.id,
-          name: typeof suite.name === 'string' ? suite.name : '',
-          tests,
-        });
+    const counts = { passed: 0, failed: 0, skipped: 0, running: 0 };
+    const host = this;
+    function* normalize(): Generator<void> {
+      for (const suite of Array.isArray(input) ? input : []) {
+        yield;
+        if (!current()) return;
+        if (!suite) continue;
+        const suiteId = suite.id;
+        if (!current()) return;
+        if (typeof suiteId !== 'string') continue;
+        if (suiteId.length > 65_536) throw new RangeError('Result text limit');
+        if (!suiteId.trim() || suiteIds.has(suiteId)) continue;
+        const rawSuiteName = suite.name;
+        if (!current()) return;
+        const suiteName = typeof rawSuiteName === 'string' ? rawSuiteName : '';
+        if (suiteId.length + suiteName.length > 65_536) throw new RangeError('Result text limit');
+        suiteIds.add(suiteId);
+        const testIds = new Set<string>();
+        const tests: TestCaseResult[] = [];
+        const inputTests = suite.tests;
+        if (!current()) return;
+        for (const test of Array.isArray(inputTests) ? inputTests : []) {
+          yield;
+          if (!current()) return;
+          if (!test) continue;
+          const id = test.id;
+          if (!current()) return;
+          if (typeof id !== 'string') continue;
+          if (id.length > 65_536) throw new RangeError('Result text limit');
+          if (!id.trim() || testIds.has(id)) continue;
+          const status = normalizeTestStatus(test.status);
+          if (!current()) return;
+          const name = test.name;
+          if (!current()) return;
+          const message = test.message;
+          if (!current()) return;
+          const durationMs = test.durationMs;
+          if (!current()) return;
+          const normalized: TestCaseResult = { id, name: typeof name === 'string' ? name : '', status,
+            ...(typeof message === 'string' ? { message } : {}), ...(typeof durationMs === 'number' ? { durationMs } : {}) };
+          checkRowText(suiteId, suiteName, normalized);
+          testIds.add(id); tests.push(normalized);
+          const key = host.testKey(suiteId, id); keys.add(key); counts[status]++;
+          rows.push({ suiteId, suiteName, test: normalized, key, order: rows.length });
+        }
+        if (tests.length) suites.push({ id: suiteId, name: suiteName, tests });
       }
     }
-    this.normalizedSuitesCache = normalizedSuites;
-    this.normalizedTestKeys = normalizedTestKeys;
-    this.completeStatusCounts = counts;
+    const iterator = normalize();
+    const step = () => {
+      if (!current()) return;
+      try {
+        for (let position = 0; position < 500; position++) {
+          const next = iterator.next();
+          if (!current()) return;
+          if (next.done) {
+            this.normalizedSuitesCache = suites; this.legacyRows = rows;
+            this.completeStatusCounts = counts; this.legacyPending = false;
+            for (const key of this.manualExpanded.keys()) if (!keys.has(key)) this.manualExpanded.delete(key);
+            this.rebuildProjection(); this.settleLegacy?.(); this.settleLegacy = undefined;
+            this.requestUpdate('legacyPending'); return;
+          }
+        }
+        this.legacyTimer = owner.defaultView?.setTimeout(step, 0);
+      } catch {
+        if (!current()) return;
+        this.legacyPending = false; this.legacyError = true;
+        this.settleLegacy?.(); this.settleLegacy = undefined;
+        this.requestUpdate('legacyError');
+      }
+    };
+    step();
+  }
+
+  protected override async getUpdateComplete(): Promise<boolean> {
+    let result = await super.getUpdateComplete();
+    while (!this.sourceMode && (this.legacyPending || this.legacyNeedsNormalization) && this.isConnected) {
+      const done = this.legacyDone;
+      await done;
+      result = await super.getUpdateComplete();
+    }
+    return result;
+  }
+
+  override disconnectedCallback(): void {
+    this.cancelLegacy(); this.pendingCompletionRun = undefined;
+    this.statusAnnouncementInitialized = false; this.previousStatusAnnouncement = '';
+    this.sourceInputs = undefined; this.sourceExpanded.clear();
+    super.disconnectedCallback();
   }
 
   private rebuildProjection(): void {
-    const filteredStatuses = new Set(this.statusFilter);
-    const candidates = this.normalizedSuitesCache.flatMap((suite) =>
-      suite.tests
-        .filter((test) => filteredStatuses.size === 0 || filteredStatuses.has(test.status))
-        .map((test) => ({ suiteId: suite.id, test })));
-    const chosenKeys = new Set<string>();
-    const reserve = (predicate: (suiteId: string, test: TestCaseResult) => boolean): void => {
-      for (const { suiteId, test } of candidates) {
-        if (chosenKeys.size >= MAX_RENDERED_TESTS) break;
-        if (predicate(suiteId, test)) chosenKeys.add(this.testKey(suiteId, test.id));
+    const statuses = new Set(this.statusFilter);
+    const eligible = (row: typeof this.legacyRows[number]) => !statuses.size || statuses.has(row.test.status);
+    const chosen = new Map<string, typeof this.legacyRows[number]>();
+    for (const priority of [0, 1, 2]) {
+      for (const row of this.legacyRows) {
+        if (chosen.size >= MAX_RENDERED_TESTS) break;
+        if (eligible(row) && (priority === 2 || (priority === 0 ? this.manualExpanded.get(row.key) === true : row.test.status === 'failed'))) chosen.set(row.key, row);
       }
-    };
-    reserve((suiteId, test) => this.manualExpanded.get(this.testKey(suiteId, test.id)) === true);
-    reserve((_suiteId, test) => test.status === 'failed');
-    reserve(() => true);
-
-    this.projectedSuitesCache = this.normalizedSuitesCache
-      .map((suite) => ({
-        ...suite,
-        tests: suite.tests.filter((test) => chosenKeys.has(this.testKey(suite.id, test.id))),
-      }))
-      .filter((suite) => suite.tests.length > 0);
-    this.projectionTruncated = chosenKeys.size < candidates.length;
+    }
+    const selected = [...chosen.values()].sort((a, b) => a.order - b.order);
+    const suites: { id: string; name: string; tests: TestCaseResult[] }[] = [];
+    for (const row of selected) {
+      let suite = suites[suites.length - 1];
+      if (!suite || suite.id !== row.suiteId) { suite = { id: row.suiteId, name: row.suiteName, tests: [] }; suites.push(suite); }
+      suite.tests.push(row.test);
+    }
+    this.projectedSuitesCache = suites;
+    const total = STATUSES.reduce((sum, status) => sum + (!statuses.size || statuses.has(status) ? this.completeStatusCounts[status] : 0), 0);
+    this.projectionTruncated = chosen.size < total;
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.pendingCompletionAnnouncement !== null) {
-      const text = this.pendingCompletionAnnouncement;
-      this.pendingCompletionAnnouncement = null;
-      // A discrete, one-off lifecycle transition (a run finishing) rather than a rapid stream --
-      // force so it lands immediately instead of waiting out the live region's default throttle.
-      this.liveRegion?.announce(text, { force: true });
+    const status = this.sourceMode
+      ? this.sourcePages.state.pending ? this.localize('loading') : !this.sourcePages.state.result ? this.localize('tableLoadFailed') : ''
+      : this.legacyError ? this.localize('testResultsInputTooLarge') : this.legacyPending ? this.localize('loading') : '';
+    if (this.statusAnnouncementInitialized && status && status !== this.previousStatusAnnouncement) this.announcements.announcePolite(status);
+    this.statusAnnouncementInitialized = true; this.previousStatusAnnouncement = status;
+    const completion = this.pendingCompletionRun;
+    if (completion && (this.runState !== 'complete' || completion.id !== this.runId || completion.source !== this.dataSource)) this.pendingCompletionRun = undefined;
+    const counts = this.sourceMode ? this.sourcePages.state.result?.summary : !this.legacyPending && !this.legacyError ? this.completeStatusCounts : undefined;
+    if (completion && this.pendingCompletionRun === completion && counts) {
+      const owner = this.ownerDocument;
+      const epoch = this.sourceEpoch;
+      const generation = this.legacyGeneration;
+      const result = this.sourcePages.state.result;
+      const current = () => this.pendingCompletionRun === completion && this.isConnected && this.ownerDocument === owner
+        && this.runState === 'complete' && this.runId === completion.id && this.dataSource === completion.source
+        && this.sourceEpoch === epoch && this.legacyGeneration === generation && this.sourcePages.state.result === result;
+      const number = getNumberFormat(this.effectiveLocale);
+      if (current()) {
+        const text = this.localize('testResultsCompleteAnnounce', undefined, {
+          passed: number.format(counts.passed), failed: number.format(counts.failed), skipped: number.format(counts.skipped),
+        });
+        if (current()) {
+          this.pendingCompletionRun = undefined;
+          this.liveRegion?.announce(text, { force: true });
+        }
+      }
     }
-    if (this.limitAnnouncementInitialized && this.projectionTruncated && !this.previouslyTruncated) {
+    if (!this.sourceMode && this.limitAnnouncementInitialized && this.projectionTruncated && !this.previouslyTruncated) {
       this.announcements.announcePolite(this.localize('testResultsLimit', undefined, {
         count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_TESTS),
       }));
@@ -379,13 +623,6 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     this.previouslyTruncated = this.projectionTruncated;
   }
 
-  private countOf(status: TestStatus): number {
-    return this.completeStatusCounts[status];
-  }
-
-  /** All four status counts in one pass over every suite/test, for callers (namely
-   *  `renderSummary()`) that need every status's count together rather than one at a time via
-   *  repeated `countOf()` calls. */
   private computeStatusCounts(): Record<TestStatus, number> {
     return this.completeStatusCounts;
   }
@@ -411,7 +648,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   }
 
   private isExpanded(suiteId: string, test: TestCaseResult): boolean {
-    const manual = this.manualExpanded.get(this.testKey(suiteId, test.id));
+    const manual = (this.sourceMode ? this.sourceExpanded : this.manualExpanded).get(this.testKey(suiteId, test.id));
     if (manual !== undefined) return manual;
     return !this.withoutAutoExpandFailures && test.status === 'failed';
   }
@@ -424,18 +661,20 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     this.emit('lr-filter-change', { statuses: next });
   }
 
-  private toggleExpanded(suiteId: string, test: TestCaseResult): void {
+  private toggleExpanded(suiteId: string, test: TestCaseResult, current: () => boolean): void {
+    if (!current()) return;
     const expanded = !this.isExpanded(suiteId, test);
     if (this.emit('lr-toggle-request', { suiteId, testId: test.id, expanded }, { cancelable: true }).defaultPrevented) return;
-    const next = new Map(this.manualExpanded);
+    if (!current()) return;
+    const next = new Map(this.sourceMode ? this.sourceExpanded : this.manualExpanded);
     next.set(this.testKey(suiteId, test.id), expanded);
-    this.manualExpanded = next;
+    if (this.sourceMode) { this.sourceExpanded = next; this.sourceVersion++; } else this.manualExpanded = next;
     this.emit('lr-toggle', { suiteId, testId: test.id, expanded });
   }
 
   private onDetailSlotChange(): void {
     this.detailSlotsDirty = true;
-    this.requestUpdate();
+    this.requestUpdate('detailSlotsDirty');
   }
 
   private renderSummary(statusCounts: Record<TestStatus, number>): TemplateResult {
@@ -482,6 +721,11 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     // positional key would silently reattach one test's override to whichever test now sits at
     // that same index. DOM ids below stay positional (not test.id), since test.id can repeat
     // across suites or contain characters that aren't valid in an HTML id.
+    const state = this.sourcePages.state;
+    const generation = this.legacyGeneration;
+    const source = this.dataSource;
+    const owner = this.ownerDocument;
+    const current = () => this.isConnected && this.ownerDocument === owner && this.dataSource === source && (this.sourceMode ? (this.sourcePages.state === state && !!state.result) : generation === this.legacyGeneration && !this.legacyPending && !this.legacyError);
     const expanded = this.isExpanded(suiteId, test);
     const scopedSlot = this.scopedDetailSlot(suiteId, test.id);
     const canExpand = test.status === 'failed' || this.hasDetail(suiteId, test.id);
@@ -503,7 +747,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
           part="test-name"
           type="button"
           aria-describedby=${statusId}
-          @click=${() => this.emit('lr-test-select', { suiteId, testId: test.id })}
+          @click=${() => { if (current()) this.emit('lr-test-select', { suiteId, testId: test.id }); }}
         >
           ${test.name}
         </button>
@@ -520,7 +764,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
               aria-expanded=${expanded ? 'true' : 'false'}
               aria-controls=${failureId}
               aria-label=${toggleName}
-              @click=${() => this.toggleExpanded(suiteId, test)}
+              @click=${() => this.toggleExpanded(suiteId, test, current)}
             >
               ${expanded ? this.localize('collapse') : this.localize('expand')}
             </button>`
@@ -549,7 +793,32 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     `;
   }
 
+  private renderSource(): TemplateResult {
+    const state = this.sourcePages.state;
+    const source = this.dataSource;
+    const result = state.result;
+    const failed = !state.pending && !result;
+    const rows = result?.rows ?? [];
+    const label = overallSemanticLabel(this, this.localize('testResultsLabel'));
+    return html`<div part="base" role=${overallSemanticRole(this, 'group') ?? nothing} aria-label=${label ?? nothing} aria-busy=${state.pending ? 'true' : 'false'}>
+      ${result ? this.renderSummary(result.summary!) : html`<p part="source-status">${this.localize(failed ? 'tableLoadFailed' : 'loading')}</p>`}
+      ${failed ? html`<button part="source-retry" type="button" @click=${() => {
+        if (this.isConnected && this.dataSource === source && this.sourcePages.state === state) { this.sourceInputs = undefined; this.syncSource(); this.sourceVersion++; }
+      }}>${this.localize('retry')}</button>` : nothing}
+      ${rows.map((record, index) => html`${index === 0 || rows[index - 1]!.value.suiteId !== record.value.suiteId ? html`<div part="suite-header">${record.value.suiteName}</div>` : nothing}
+        <div role="list">${this.renderTest(record.value.suiteId, record.value.suiteName, record.value.test, index, 0)}</div>`)}
+      ${result && !rows.length ? html`<lr-empty part="empty" heading=${this.localize(result.summary!.total ? 'noMatches' : 'noData')}></lr-empty>` : nothing}
+      <lr-pagination part="source-pagination" format="compact" with-edges .page=${finiteInteger(this.sourcePage, 0, 0, Number.MAX_SAFE_INTEGER - 1) + 1}
+        .pageSize=${finiteInteger(this.sourcePageSize, 100, 1, 500)} .total=${this.sourceTotal ?? -1} .disabled=${!result}
+        .strings=${this.strings} @lr-page-change=${(event: CustomEvent<{ page: number }>) => {
+          event.stopPropagation(); if (this.sourcePages.state === state && result) this.sourcePage = event.detail.page - 1;
+        }} @lr-before-page-change=${(event: Event) => event.stopPropagation()} @lr-activate=${(event: Event) => event.stopPropagation()}></lr-pagination>
+    </div><lr-live-region mode="polite"></lr-live-region>`;
+  }
+
   override render(): TemplateResult {
+    if (this.sourceMode) return this.renderSource();
+    if (this.legacyPending || this.legacyError) return html`<div part=${this.legacyError ? 'input-error' : 'source-status'} aria-busy=${this.legacyPending ? 'true' : 'false'}>${this.localize(this.legacyError ? 'testResultsInputTooLarge' : 'loading')}</div><lr-live-region mode="polite"></lr-live-region>`;
     const ariaLabel = overallSemanticLabel(this, this.localize('testResultsLabel'));
     const visibleSuites = this.projectedSuitesCache.filter((suite) =>
       suite.tests.some((test) => this.statusFilter.length === 0 || this.statusFilter.includes(test.status)));

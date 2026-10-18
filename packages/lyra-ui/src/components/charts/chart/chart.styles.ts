@@ -34,7 +34,8 @@ export const styles = css`
     gap: var(--lr-space-2xs);
   }
   [part='feature-warning'],
-  [part='data-truncation'] {
+  [part='data-truncation'],
+  [part='limit'] {
     margin: 0;
     padding: var(--lr-space-xs);
     color: var(--lr-color-warning);

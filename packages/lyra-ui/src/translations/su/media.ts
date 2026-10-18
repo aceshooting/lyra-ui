@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Gambar {index} tina {total}',
   playWithContext: 'Puter {name}',
   pauseWithContext: 'Reureuhkeun {name}',
+  avPlayerWaveformUnavailable: 'Data wangun gelombang teu sayaga atawa teu cocog jeung média ieu.',
+  avPlayerTranscriptUnavailable: 'Data transkrip teu sayaga.',
   dropzoneReleaseToAdd: 'Leupaskeun pikeun nambahkeun berkas.',
   dropzoneRejectedType: 'Jenis berkas ieu teu ditarima.',
   attachmentAdd: 'Tambahkeun lampiran',

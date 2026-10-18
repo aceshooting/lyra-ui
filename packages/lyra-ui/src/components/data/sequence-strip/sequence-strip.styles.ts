@@ -1,6 +1,31 @@
 import { css } from 'lit';
+import { focusRing } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
+  [part='source-status'] { overflow-wrap: anywhere; color: var(--lr-color-text-quiet); }
+  [part='source-retry'], [part='source-exact'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font: inherit;
+    text-align: start;
+    color: var(--lr-color-text);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    margin-block-start: var(--lr-space-s);
+    cursor: pointer;
+  }
+  [part='source-retry']:hover, [part='source-exact']:hover {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  [part='source-retry']:active, [part='source-exact']:active {
+    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='source-retry']:focus-visible, [part='source-exact']:focus-visible { ${focusRing} }
   :host {
     display: block;
   }

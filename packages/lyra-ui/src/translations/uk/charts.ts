@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Коректних спостережень у повному розподілі: {validCount}; нижче відображених інтервалів: {belowCount}, вище: {aboveCount}; некоректних спостережень: {invalidCount}.',
+  histogramDistributionRange: 'Спостережуваний діапазон вибірки: від {min} до {max}.',
   chartCategory: 'Категорія',
   chartTotal: 'Усього',
   chartAxisTotal: '{axis} — усього',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, радіус {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'зростання',
-  chartTrendDecreasing: 'спадання',
-  chartTrendFlat: 'без змін',
-  chartSummary: '{label}: значень — {count}, діапазон від {min} до {max}, тенденція — {trend}',
   chartSeriesNoData: '{label}: немає даних',
   chartSummaryWithData: 'Діаграма типу {type}. {summaries}.',
   chartSummaryEmpty: 'Діаграма типу {type} без даних.',
-  chartSummarySeparator: '. ',
   chartData: 'Дані діаграми',
   chartRenderUnavailable: 'Відображення діаграми недоступне.',
+  chartPreparedSummaryZoom: 'Масштабування показує підготовлене зведення; уточнення за індексом недоступне.',
+  chartSpatialSummary: 'Повне джерело: {count} точок, x від {minX} до {maxX}, y від {minY} до {maxY}. Подання: {matchedCount} точок, x від {viewMinX} до {viewMaxX}, y від {viewMinY} до {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Радіус у повному джерелі: від {min} до {max}.',
+  chartSpatialDensityLegend: 'Щільність враховує всі ряди; видимість рядів впливає лише на накладені точки.',
+  chartSpatialPoint: '{series}: {id}, позиція в джерелі {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Область щільності: {count} точок, x від {minX} до {maxX}, y від {minY} до {maxY}.',
+  chartSpatialHidden: ' (ряд приховано)',
   chartDataSampled: 'Діаграма та згенерована таблиця даних показують вибірку з не більш як 1 000 записів. Щоб переглянути всі дані діаграми, надайте власну таблицю даних.',
   chartPlotSampled: 'Діаграма показує вибірку з не більш як 1 000 записів; таблиця даних містить усі дані.',
   chartZoomUnavailable: 'Масштабування недоступне, але основна діаграма працює.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} із {total})',
   chartMissingLibrary: 'Щоб відображати діаграми, потрібно встановити необов’язковий пакет "chart.js".',
   boxPlotMissingLibrary: 'Щоб відображати діаграми розмаху, потрібно встановити необов’язковий пакет для побудови діаграм розмаху.',
+  chartInputLimit: 'Частину даних діаграми пропущено через досягнення обмеження на вхідні дані. Надайте менший або попередньо агрегований набір даних, щоб подати пропущені значення.',
+  histogramInputLimit: 'Зберігаються лише 10 000 найновіших спостережень. Щоб подати більший розподіл, передайте в lr-chart частоти, заздалегідь згруповані за інтервалами.',
 };
 
 registerLyraLocale('uk', strings);

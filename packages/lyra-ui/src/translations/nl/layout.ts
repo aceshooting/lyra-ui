@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} opdracht',
     other: '{count} opdrachten',
   },
+  commandPaletteInputLimit: 'Sommige opdrachten zijn weggelaten omdat de invoerlimiet is bereikt.',
 };
 
 registerLyraLocale('nl', strings);

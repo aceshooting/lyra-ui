@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} έγκυρα δείγματα σε ολόκληρη την κατανομή· {belowCount} κάτω και {aboveCount} πάνω από τα εμφανιζόμενα διαστήματα· {invalidCount} μη έγκυρα δείγματα.',
+  histogramDistributionRange: 'Παρατηρημένο εύρος δειγμάτων: {min} έως {max}.',
   chartCategory: 'Κατηγορία',
   chartTotal: 'Σύνολο',
   chartAxisTotal: 'Σύνολο {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ακτίνα {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'αυξητική',
-  chartTrendDecreasing: 'φθίνουσα',
-  chartTrendFlat: 'σταθερή',
-  chartSummary: '{label}: {count} τιμές, εύρος {min} έως {max}, {trend} τάση',
   chartSeriesNoData: '{label}: δεν υπάρχουν δεδομένα',
   chartSummaryWithData: 'Γράφημα {type}. {summaries}.',
   chartSummaryEmpty: 'Γράφημα {type} χωρίς δεδομένα.',
-  chartSummarySeparator: '. ',
   chartData: 'Δεδομένα γραφήματος',
   chartRenderUnavailable: 'Η απόδοση του γραφήματος δεν είναι διαθέσιμη.',
+  chartPreparedSummaryZoom: 'Η μεγέθυνση εμφανίζει την προετοιμασμένη σύνοψη· δεν διατίθεται λεπτομερέστερη προβολή μέσω ευρετηρίου.',
+  chartSpatialSummary: 'Πλήρης πηγή: {count} σημεία, x {minX} έως {maxX}, y {minY} έως {maxY}. Προβολή: {matchedCount} σημεία, x {viewMinX} έως {viewMaxX}, y {viewMinY} έως {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Ακτίνα στην πλήρη πηγή: {min} έως {max}.',
+  chartSpatialDensityLegend: 'Η πυκνότητα περιλαμβάνει όλες τις σειρές· η ορατότητα των σειρών επηρεάζει μόνο τις επικαλύψεις σημείων.',
+  chartSpatialPoint: '{series}: {id}, θέση στην πηγή {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Περιοχή πυκνότητας: {count} σημεία, x {minX} έως {maxX}, y {minY} έως {maxY}.',
+  chartSpatialHidden: ' (η σειρά είναι κρυφή)',
   chartDataSampled: 'Το γράφημα και ο παραγόμενος πίνακας δεδομένων εμφανίζουν δείγμα έως 1.000 εγγραφών. Παρέχετε προσαρμοσμένο πίνακα δεδομένων για πρόσβαση σε όλα τα δεδομένα του γραφήματος.',
   chartPlotSampled: 'Το γράφημα εμφανίζει δείγμα έως 1.000 εγγραφών· ο πίνακας δεδομένων περιλαμβάνει όλα τα δεδομένα.',
   chartZoomUnavailable: 'Η μεγέθυνση δεν είναι διαθέσιμη, αλλά το βασικό γράφημα παραμένει διαθέσιμο.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} από {total})',
   chartMissingLibrary: 'Για την εμφάνιση γραφημάτων απαιτείται η εγκατάσταση του προαιρετικού πακέτου "chart.js".',
   boxPlotMissingLibrary: 'Για την εμφάνιση διαγραμμάτων κουτιού απαιτείται η εγκατάσταση του προαιρετικού πακέτου διαγραμμάτων κουτιού.',
+  chartInputLimit: 'Ορισμένα δεδομένα του γραφήματος παραλείφθηκαν επειδή συμπληρώθηκε ένα όριο εισόδου. Δώστε μικρότερο ή εκ των προτέρων συγκεντρωμένο σύνολο δεδομένων για να αναπαραστήσετε τις τιμές που παραλείφθηκαν.',
+  histogramInputLimit: 'Διατηρούνται μόνο τα πιο πρόσφατα 10.000 δείγματα. Δώστε στο lr-chart πλήθη ήδη ομαδοποιημένα σε διαστήματα για να αναπαραστήσετε μεγαλύτερη κατανομή.',
 };
 
 registerLyraLocale('el', strings);

@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './mind-map.js';
-import type { LyraTopic } from './mind-map.class.js';
+import type { LyraTopic, MindMapSource } from './mind-map.class.js';
 
 const meta: Meta = {
   title: 'Mind Map',
@@ -63,4 +63,37 @@ export const AboveRenderCap: Story = {
       ]}
     ></lr-mind-map>
   </div>`,
+};
+
+/** Input loss stays visible even when the retained hierarchy is collapsed. */
+export const InputLimit: Story = {
+  render: () => {
+    let root: LyraTopic = { id: 'leaf', label: 'Leaf' };
+    for (let level = 80; level >= 0; level--)
+      root = { id: `level-${level}`, label: `Level ${level}`, children: [root] };
+    return html`<lr-mind-map .topics=${[root]} expand-depth="0"></lr-mind-map>`;
+  },
+};
+
+/** The navigator reaches the complete preorder; the diagram uses its current bounded subtree. */
+export const SourceNavigation: Story = {
+  render: () => {
+    const count = 1_000_000;
+    let state = 0;
+    let expanded = true;
+    let selected = '';
+    const source: MindMapSource = { revision: 1, project: async request => {
+      if (request.action.type === 'toggle') expanded = request.action.expanded;
+      if (request.action.type === 'select') selected = request.action.key;
+      if (request.action.type === 'reveal') expanded = true;
+      return { state: String(++state), total: count, rows: {
+        count: expanded ? count : 1, keyAt: index => `topic-${index}`,
+        indexOfKey: (key: string | number) => Number(String(key).slice(6)),
+        itemAt: index => ({ key: `topic-${index}`, value: { id: `topic-${index}`, label: index ? `Topic ${index}` : 'All topics' },
+          parentKey: index ? 'topic-0' : null, level: index ? 2 : 1, position: index || 1, setSize: index ? count - 1 : 1,
+          childCount: index ? 0 : count - 1, expanded: index ? false : expanded, selected: selected === `topic-${index}` }),
+      }, ...(request.action.type === 'reveal' ? { focusIndex: Number(request.action.key.slice(6)) } : {}) };
+    } };
+    return html`<lr-mind-map .treeSource=${source}></lr-mind-map>`;
+  },
 };

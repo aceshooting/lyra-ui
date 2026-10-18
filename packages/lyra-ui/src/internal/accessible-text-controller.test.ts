@@ -227,3 +227,54 @@ it('wakes on a referenced label target only when reference tracking is requested
     container.remove();
   }
 });
+
+it('shares ancestor observation across controllers and releases disconnected subscribers', async () => {
+  const wrapper = document.createElement('div'); document.body.append(wrapper);
+  const observers = new Set<MutationObserver>();
+  const observe = MutationObserver.prototype.observe;
+  MutationObserver.prototype.observe = function(target, options) {
+    if (target === document.documentElement || target === document.body || target === wrapper) observers.add(this);
+    return observe.call(this, target, options);
+  };
+  let changes = 0;
+  const controllers: AccessibleTextController[] = [];
+  const turn = () => new Promise<void>(resolve => setTimeout(resolve, 0));
+  try {
+    for (let index = 0; index < 100; index++) {
+      const host = controllerHost(() => undefined); host.textContent = `Label ${index}`; wrapper.append(host);
+      const controller = new AccessibleTextController(host, [], () => changes++);
+      controllers.push(controller); controller.hostConnected();
+    }
+    await turn(); changes = 0;
+    expect(observers.size).equal(1);
+    wrapper.hidden = true; await turn(); expect(changes).equal(100);
+    for (const controller of controllers) controller.hostDisconnected();
+    const previous = changes; wrapper.hidden = false; await turn(); expect(changes).equal(previous);
+  } finally {
+    for (const controller of controllers) controller.hostDisconnected();
+    MutationObserver.prototype.observe = observe; wrapper.remove();
+  }
+});
+it('delivers queued ancestor visibility before a host rebind and synchronous reads', async () => {
+  const wrapper = document.createElement('div');
+  const label = document.createElement('span'); label.textContent = 'Forwarded'; wrapper.append(label);
+  const host = controllerHost(() => undefined); host.append(document.createElement('slot'));
+  wrapper.attachShadow({ mode: 'open' }).append(host); document.body.append(wrapper);
+  let cached = ''; let changes = 0;
+  const controller = new AccessibleTextController(host, [''], () => { changes++; cached = controller.text(); });
+  try {
+    controller.hostConnected(); cached = controller.text(); expect(cached).equal('Forwarded');
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    changes = 0;
+    const update = Promise.resolve().then(() => controller.hostUpdated());
+    wrapper.hidden = true;
+    await update; await new Promise<void>(resolve => setTimeout(resolve, 0));
+    expect(cached).equal(''); expect(changes).greaterThan(0);
+    wrapper.hidden = false;
+    controller.takeRecords();
+    expect(cached).equal('Forwarded');
+    controller.hostDisconnected(); const before = changes;
+    wrapper.hidden = true; await new Promise<void>(resolve => setTimeout(resolve, 0));
+    expect(changes).equal(before);
+  } finally { controller.hostDisconnected(); wrapper.remove(); }
+});

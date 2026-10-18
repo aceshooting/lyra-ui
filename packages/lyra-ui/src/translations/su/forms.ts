@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pulpén turun',
   signaturePadPenUp: 'Pulpén naék',
+  localePickerInputLimit: 'Ngan 512 éntri basa jeung wewengkon munggaran nu sadia.',
+  emojiPickerInputLimit: 'Sababaraha data emoji teu diasupkeun lantaran wates input geus kahontal.',
 };
 
 registerLyraLocale('su', strings);

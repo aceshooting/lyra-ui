@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'మొదటి {count} పరీక్ష ఫలితాలను మాత్రమే చూపిస్తున్నారు.',
   toolTimelineLimit: 'గరిష్ఠంగా {count} టూల్ కాల్‌లను మాత్రమే చూపిస్తున్నారు.',
   toolSelectLimit: 'మొదటి {count} టూల్‌లను మాత్రమే చూపిస్తున్నారు.',
+  testResultsInputTooLarge: 'పరీక్ష ఫలితాల వివరాలు ప్రదర్శన పరిమితిని మించాయి.',
   toolCall: 'టూల్ కాల్',
   maximize: 'పెద్దదిగా చూపించండి',
   promptStudioVariableName: 'వేరియబుల్ {index} పేరు',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'మొదటి {count} ఫైల్‌లు మాత్రమే చూపబడతాయి.',
   taskListLimit: 'మొదటి {count} టాస్క్‌లు మాత్రమే చూపబడతాయి.',
   evalDatasetLimit: 'మొదటి {count} ఉదాహరణలను మాత్రమే చూపిస్తున్నారు.',
+  activityFeedInputLimit: '{total} నమోదులలో అత్యంత కొత్త {count} మాత్రమే ఉంచబడతాయి.',
+  spanWaterfallLimit: 'మొత్తం {total} స్పాన్‌లలో {shown} చూపబడుతున్నాయి.',
+  toolTimelineInputLimit: 'మొత్తం {total} టూల్ కాల్‌లలో అత్యంత ఇటీవలి {count} మాత్రమే ఉంచబడతాయి.',
 };
 
 registerLyraLocale('te', strings);

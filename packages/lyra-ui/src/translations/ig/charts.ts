@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Atụ ziri ezi {validCount} n’ime nkesa niile; {belowCount} dị n’okpuru na {aboveCount} dị n’elu ìgwè oke uru ndị egosiri; atụ na-ezighi ezi {invalidCount}.',
+  histogramDistributionRange: 'Oke atụ ndị a hụrụ: {min} ruo {max}.',
   chartCategory: 'Otu',
   chartTotal: 'Ngụkọta',
   chartAxisTotal: 'Ngụkọta {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, radius {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'na-abawanye',
-  chartTrendDecreasing: 'na-ebelata',
-  chartTrendFlat: 'kwụ ọtọ',
-  chartSummary: '{label}: uru {count}, oke {min} ruo {max}, ọnọdụ {trend}',
   chartSeriesNoData: '{label}: enweghị data',
   chartSummaryWithData: 'Eserese {type}. {summaries}.',
   chartSummaryEmpty: 'Eserese {type} enweghị data.',
-  chartSummarySeparator: '. ',
   chartData: 'Data eserese',
   chartRenderUnavailable: 'Igosipụta eserese adịghị.',
+  chartPreparedSummaryZoom: 'Ịbawanye nlele na-egosi nchịkọta a kwadebere; enweghị nkọwa ka ukwuu site na ndeksi.',
+  chartSpatialSummary: 'Isi iyi dum: ntụpọ {count}, x {minX} ruo {maxX}, y {minY} ruo {maxY}. Nlele: ntụpọ {matchedCount}, x {viewMinX} ruo {viewMaxX}, y {viewMinY} ruo {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Redios n’isi iyi dum: {min} ruo {max}.',
+  chartSpatialDensityLegend: 'Njupụta gụnyere usoro niile; ịhụ usoro ma ọ bụ izochi ya na-emetụta naanị ntụpọ ndị a tụkwasịrị n’elu.',
+  chartSpatialPoint: '{series}: {id}, ọnọdụ n’isi iyi {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Mpaghara njupụta: ntụpọ {count}, x {minX} ruo {maxX}, y {minY} ruo {maxY}.',
+  chartSpatialHidden: ' (ezoro usoro)',
   chartDataSampled: 'Eserese ahụ na tebụl data e mepụtara na-egosi ihe nlele ruru ndekọ 1,000. Nye tebụl data nke gị iji nweta data eserese niile.',
   chartPlotSampled: 'Eserese ahụ na-egosi ihe nlele ruru ndekọ 1,000; tebụl data na-edepụta data niile.',
   chartZoomUnavailable: 'Enweghị ike ịbawanye nlele, mana eserese bụ isi ka dị.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} n’ime {total})',
   chartMissingLibrary: 'Akụkụ a chọrọ ka etinye ngwungwu nhọrọ "chart.js" iji gosipụta eserese.',
   boxPlotMissingLibrary: 'Akụkụ a chọrọ ka etinye ngwungwu eserese igbe nhọrọ iji gosipụta eserese igbe.',
+  chartInputLimit: 'A hapụrụ ụfọdụ data eserese n\'ihi na e ruru oke ntinye. Nye obere nchịkọta data ma ọ bụ nke a chịkọtara tupu oge eruo iji gosipụta uru ndị a hapụrụ.',
+  histogramInputLimit: 'Naanị atụ 10,000 kachasị ọhụrụ ka a na-edobe. Nye lr-chart ọnụọgụ ndị a kewara n\'ime ìgwè dịka oke uru ha tupu oge eruo iji gosipụta nkesa ka ukwuu.',
 };
 
 registerLyraLocale('ig', strings);

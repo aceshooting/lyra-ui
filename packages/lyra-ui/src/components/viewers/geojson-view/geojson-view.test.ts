@@ -1777,7 +1777,7 @@ describe('fetch lifecycle edge cases', () => {
     }
   });
 
-  it('reloads an already-loaded source after reconnecting', async () => {
+  it('retains an already-loaded source after reconnecting', async () => {
     const original = (globalThis as { fetch: typeof fetch }).fetch;
     let calls = 0;
     (globalThis as { fetch: typeof fetch }).fetch = (() => {
@@ -1800,7 +1800,9 @@ describe('fetch lifecycle edge cases', () => {
       const parent = el.parentElement!;
       el.remove();
       parent.append(el);
-      await waitUntil(() => calls === 2);
+      await el.updateComplete; await twoFrames();
+      expect(calls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="status"]') !== null).to.equal(true);
     } finally {
       (globalThis as { fetch: typeof fetch }).fetch = original;
     }

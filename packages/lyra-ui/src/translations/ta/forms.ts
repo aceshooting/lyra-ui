@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'பேனா கீழே',
   signaturePadPenUp: 'பேனா மேலே',
+  localePickerInputLimit: 'முதல் 512 மொழி மற்றும் வட்டாரப் பதிவுகள் மட்டுமே கிடைக்கின்றன.',
+  emojiPickerInputLimit: 'உள்ளீட்டு வரம்பை எட்டியதால் சில எமோஜித் தரவுகள் விடுபட்டுள்ளன.',
 };
 
 registerLyraLocale('ta', strings);

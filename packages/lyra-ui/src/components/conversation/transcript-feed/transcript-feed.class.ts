@@ -1,10 +1,10 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { captureComposedFocusRepair, applyComposedFocusRepair } from '../../../internal/focus-navigation.js';
@@ -13,7 +13,7 @@ import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } fr
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_transcriptFeedEmpty, LYRA_DEFAULT_transcriptFeedInterim, LYRA_DEFAULT_transcriptFeedLabel } from '../../../internal/default-strings/conversation.generated.js';
+import { LYRA_DEFAULT_transcriptFeedEmpty, LYRA_DEFAULT_transcriptFeedInputLimit, LYRA_DEFAULT_transcriptFeedInterim, LYRA_DEFAULT_transcriptFeedLabel } from '../../../internal/default-strings/conversation.generated.js';
 import { LYRA_DEFAULT_jumpToLatest } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -52,11 +52,14 @@ export interface LyraTranscriptFeedEventMap {
  * once through the shared light-DOM `polite` sink instead (`internal/announcer.ts`), the same route
  * `<lr-chat-viewport>` and `<lr-terminal>` take. The entries a feed is *mounted* with are existing
  * transcript rather than newly spoken captions, so the first render only records them; a caption is
- * announced when it becomes final on a later update, and never re-announced afterwards.
+ * announced when it becomes final on a later update. Announcement history keeps current final IDs
+ * and up to 10,000 recent final IDs; an older ID evicted from this history may be announced again.
  *
  * Live captions only: recorded-media transcript sync — clickable cues, seek-on-select — is a
  * separate concern from this component.
  *
+ * Entries retain the newest 10,000 records, subject to a 50,000-value deep snapshot budget;
+ * a localized limit notice discloses loss independently of the rendered-row window.
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
@@ -67,6 +70,7 @@ export interface LyraTranscriptFeedEventMap {
  * @event lr-follow-change - `detail: { following: boolean }` — a user scroll or jump-button click
  *   changed stick-to-bottom. Direct `follow` assignments and calling `scrollToBottom()` directly
  *   are controlled input and do not echo an event, matching `lr-terminal`'s identical contract.
+ * @csspart limit - Notice of input entries omitted by retention limits.
  * @csspart base - The scroll container.
  * @csspart log - The `role="log"` region wrapping final entries only.
  * @csspart interim-area - The wrapper around the interim (not-yet-final) entries, rendered as a sibling of `log`. Only rendered while at least one interim entry exists.
@@ -87,6 +91,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     ...super.defaultStrings,
     jumpToLatest: LYRA_DEFAULT_jumpToLatest,
     transcriptFeedEmpty: LYRA_DEFAULT_transcriptFeedEmpty,
+    transcriptFeedInputLimit: LYRA_DEFAULT_transcriptFeedInputLimit,
     transcriptFeedInterim: LYRA_DEFAULT_transcriptFeedInterim,
     transcriptFeedLabel: LYRA_DEFAULT_transcriptFeedLabel,
   };
@@ -185,6 +190,9 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const inputNotice = this.inputLimitMessage();
+    if (!this._isFirstUpdate && inputNotice && inputNotice !== this.lastInputNotice) this.announcements.announcePolite(inputNotice);
+    this.lastInputNotice = inputNotice;
     if (changed.has('entries')) {
       if (this.follow) this.scrollToBottom();
       this.announceFinalizedEntries();
@@ -197,6 +205,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
    *  `max-rendered-entries` cap scrolling a row out of the DOM neither suppresses its
    *  announcement nor lets it be announced a second time on the way back in. */
   private announceFinalizedEntries(): void {
+    const currentIds = new Set(this.normalizedEntries.map(entry => entry.id));
     const alreadyAnnounced = this.announcedFinalIds;
     const fresh: string[] = [];
     for (const entry of this.normalizedEntries) {
@@ -205,6 +214,11 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
         alreadyAnnounced.add(entry.id);
         fresh.push(entry.text);
       }
+    }
+    // Preserve currently retained captions and a bounded recent history for remove/re-add cycles.
+    for (const id of alreadyAnnounced) {
+      if (alreadyAnnounced.size <= 10000) break;
+      if (!currentIds.has(id)) alreadyAnnounced.delete(id);
     }
     const establishesBaseline =
       this._isFirstUpdate || this.sessionChanged || this.pendingSessionBaseline;
@@ -288,6 +302,12 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     `;
   }
 
+  private lastInputNotice = '';
+  private inputLimitMessage(): string {
+    const loss = publicCollectionTruncation(this, 'entries');
+    return loss ? this.localize('transcriptFeedInputLimit', undefined, { count: getNumberFormat(this.effectiveLocale).format(loss.retained), total: getNumberFormat(this.effectiveLocale).format(loss.source) }) : '';
+  }
+
   override render(): TemplateResult {
     const entries = this.renderedEntries;
     const finals = entries.filter((entry) => !entry.interim);
@@ -305,6 +325,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
         aria-label=${this.accessibleLabel ?? (this.label == null ? this.localize('transcriptFeedLabel') : this.label)}
         @scroll=${this.onScroll}
       >
+        ${this.inputLimitMessage() ? html`<p part="limit">${this.inputLimitMessage()}</p>` : nothing}
         ${empty
           ? html`<div part="empty"><slot name="empty">${this.localize('transcriptFeedEmpty')}</slot></div>`
           : html`

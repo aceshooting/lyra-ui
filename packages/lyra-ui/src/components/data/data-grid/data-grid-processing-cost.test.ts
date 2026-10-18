@@ -140,3 +140,18 @@ it('resolves one collator for a multi-candidate set comparison', () => {
   expect(result).to.equal(true);
   expect(optionReads).to.equal(1);
 });
+
+it('prepares text needles once for ten thousand rows', async () => {
+  const { filterRows } = await import('./data-grid-processing.js');
+  const rows = Array.from({ length: 10_000 }, () => ({ value: 'MATCH' }));
+  const original = String.prototype.toLocaleLowerCase;
+  let needles = 0;
+  try {
+    String.prototype.toLocaleLowerCase = function (locale) {
+      if (String(this) === 'needle') needles += 1;
+      return original.call(this, locale);
+    };
+    filterRows(rows, [{ field: 'value', id: 'value' }], [{ id: 'value', value: 'needle' }], 'en');
+  } finally { String.prototype.toLocaleLowerCase = original; }
+  expect(needles).equal(1);
+});

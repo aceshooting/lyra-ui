@@ -37,7 +37,7 @@ describe('chart accessible table updates', () => {
     await chart.updateComplete;
     expect(tableCalls).to.equal(0);
     expect(spokenCalls).to.equal(1);
-    expect(summaryCalls).to.equal(2);
+    expect(summaryCalls).to.equal(0);
     expect(chart.shadowRoot!.activeElement === canvas).to.equal(true);
     await waitUntil(() => chart.ownerDocument.querySelector(
       `[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`,

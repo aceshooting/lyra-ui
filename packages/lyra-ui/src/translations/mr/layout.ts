@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} आदेश',
     other: '{count} आदेश',
   },
+  commandPaletteInputLimit: 'इनपुट मर्यादा गाठल्यामुळे काही घटक वगळले आहेत: आदेश.',
 };
 
 registerLyraLocale('mr', strings);

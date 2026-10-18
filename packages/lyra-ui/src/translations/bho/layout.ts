@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} कमांड के बा',
     other: '{count} कमांड के बा',
   },
+  commandPaletteInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से कुछ कमांड छोड़ दिहल गइल बा।',
 };
 
 registerLyraLocale('bho', strings);

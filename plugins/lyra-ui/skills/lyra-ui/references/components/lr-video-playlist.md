@@ -34,6 +34,8 @@ visible but disabled while live children are unavailable; after hydration, each 
 title/poster/duration and native `inert` state become authoritative in a corrective update that
 reuses the server-rendered row nodes. Once live children have been observed, later removal does not
 make stale seed rows reappear.
+Live-child updates no longer scan the superseded seed metadata. Removing every adopted child
+keeps live-child ownership; it does not reactivate the original seed rows.
 
 **Methods:** `goTo(index)` selects a finite integer direct-child index; invalid, fractional, and
 inert-child indexes are no-ops. Calling it for the current index still emits `lr-video-change`, matching

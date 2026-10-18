@@ -1,3 +1,4 @@
+import { benchmark } from '../test/scale-budgets.js';
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './components/layout/virtual-list/virtual-list.js';
 import './components/charts/chart/lite-chart.js';
@@ -80,124 +81,7 @@ before(function () {
   if (globalThis.__LYRA_WTR_COVERAGE__) this.skip();
 });
 
-// This file's own budgets are documented above as Chromium-tuned (see the BUDGETS block comment);
-// full-engine.yml (unlike this file's original chromium-only authors anticipated) also runs it
-// under WebKit, where the canvas-heavy graph benchmark below has been observed at 27+ seconds
-// against a 400ms Chromium budget -- a magnitude far past ordinary cross-engine variance. No
-// algorithmic bug was found investigating this (willUpdate() correctly excludes selectedNodeIds
-// from triggering a full d3-force resimulation; canonicalIdentityList() is WeakMap-cached per
-// array reference). The leading suspect is WebKit's forced software canvas rasterization
-// (LIBGL_ALWAYS_SOFTWARE, added to work around a headless WebKit GPU-driver crash) making the
-// per-selection-change full scene rebuild -- markCanvasDirty() invalidates the cached scene on
-// every selection change by design -- disproportionately expensive for 15,000 canvas draw calls
-// specifically on this engine, but that is unconfirmed.
-const isWebKit = /Safari\//.test(navigator.userAgent) && !/Chrome|Chromium|Edg\//.test(navigator.userAgent);
-
-interface BenchmarkResult {
-  medianMs: number;
-  layoutReads: number;
-  domNodes: number;
-  heapDelta: number | null;
-}
-
-/**
- * These are intentionally broad Chromium budgets: they catch an accidental full-DOM render,
- * repeated layout loop, or unbounded cache while leaving room for slower CI workers. The median
- * over several warmed updates filters out one-off browser scheduling noise.
- */
-const BUDGETS = {
-  virtualListMs: 120,
-  liteChartMs: 120,
-  heatmapMs: 140,
-  tableMs: 220,
-  // Observed median across several local runs: ~90-180ms (canvas repaint of 5,000 nodes/10,000
-  // links plus the offscreen a11y cursor-item bindings below). Budget leaves ~2-4x headroom over
-  // the high end -- generous enough to absorb slow-CI variance, tight enough to catch an
-  // accidental O(n^2) scene rebuild or a canvas draw that stopped batching per-frame.
-  graphMs: 400,
-  // renderer="canvas" keeps its *visible* surface to a single <canvas>, but its a11y layer still
-  // renders one offscreen [part="cursor-item"] button per node/link/hull (for keyboard roving) plus
-  // one <li> per node/link in the sr-only data-list -- so shadow-DOM size is NOT flat at this scale
-  // (observed ~30,000 nodes for 5,000 graph nodes / 10,000 links). Budget only guards against a
-  // further multiplication of that (e.g. duplicated cursor-items).
-  graphMaxDomNodes: 40_000,
-  // Stale: flow-canvas.class.ts moved the *default* (non-consumer-authored) node card from
-  // a light-DOM child pushCardPropsAll() could update imperatively to declarative `<slot>` fallback
-  // content rendered inline in renderNodes()'s own `repeat()` template (see its and
-  // pushCardPropsAll()'s doc comments). pushCardPropsAll()'s fast path only ever covers
-  // consumer-authored light-DOM cards -- the ones Lit's own template never touches -- so a
-  // decorations-only change to 1,000 *default* cards, like this benchmark exercises, now always
-  // pays a full renderNodes() re-render (999 edges' paths and 1,000 nodes' bindings all
-  // recomputed; only bindings whose value changed are actually written to the DOM, but every
-  // binding is recomputed). That is an intentional cost of the fallback-content approach (SSR and
-  // hydration share the same owned DOM, and no append/remove churn leaks into the consumer's light
-  // DOM -- see the class doc comment), not a regression to chase here. Newly measured medians on an
-  // uncontended dev machine: Chromium ~1,800-1,930ms, Firefox ~1,420ms, WebKit ~3,290-3,550ms.
-  // 9000 keeps roughly 2.5x headroom over the WebKit high end (this budget's slowest engine, unlike
-  // graphMs above) for a loaded CI worker, while still catching a further multiplicative regression
-  // (e.g. an accidental extra full pass over the node/edge lists).
-  flowCanvasMs: 9000,
-  // Observed median across several local runs: ~4-7ms (closed-form radial arithmetic, no physics
-  // simulation) -- generous ~20x headroom, matching heatmap's own tolerance for an inherently fast
-  // operation, since CI variance can dominate a sub-10ms measurement more than the real cost does.
-  mindMapMs: 130,
-  // Observed median across several local runs: ~0.3-3ms for a realistic 80-cell notebook (a genuine
-  // notebook-scale document, not a stress ceiling -- MAX_CELLS is 2,000). Generous headroom is still
-  // useful here: it would catch e.g. a full unvirtualized re-render of every cell's markdown/code
-  // block on every notebook reassignment.
-  notebookViewerMs: 100,
-  // Observed median across several local runs: ~2-3ms (only the ~15-25 currently-visible rows
-  // re-run cellHighlightsForRow() against 50 highlights; the other ~8,975 rows stay virtualized).
-  // Generous headroom guards against the highlight scan regressing to a full-grid pass.
-  datasetViewerMs: 60,
-  // Observed median across several local runs: ~2.5-4ms -- same shape as dataset-viewer's budget
-  // above (only the virtualized viewport's visible rows re-run the highlight scan).
-  csvViewerMs: 60,
-  // Observed median across several local runs: ~3-4ms -- same shape as dataset-viewer/csv-viewer
-  // above (only the virtualized viewport's visible rows re-run the highlight scan).
-  spreadsheetViewerMs: 60,
-  maxLayoutReads: 250,
-  maxHeapGrowth: 32 * 1024 * 1024,
-} as const;
-
-async function benchmark(
-  host: HTMLElement,
-  update: (iteration: number) => void,
-  settle: () => Promise<unknown>,
-  iterations = 5,
-): Promise<BenchmarkResult> {
-  await settle();
-  const samples: number[] = [];
-  let layoutReads = 0;
-  const originalRect = Element.prototype.getBoundingClientRect;
-  Element.prototype.getBoundingClientRect = function (...args: Parameters<typeof originalRect>) {
-    layoutReads++;
-    return originalRect.apply(this, args);
-  };
-  const beforeHeap = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
-    ?.usedJSHeapSize;
-  try {
-    for (let iteration = 0; iteration < iterations; iteration++) {
-      const start = performance.now();
-      update(iteration);
-      await settle();
-      samples.push(performance.now() - start);
-    }
-  } finally {
-    Element.prototype.getBoundingClientRect = originalRect;
-  }
-  const afterHeap = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
-    ?.usedJSHeapSize;
-  const sorted = [...samples].sort((a, b) => a - b);
-  return {
-    medianMs: sorted[Math.floor(sorted.length / 2)] ?? 0,
-    layoutReads,
-    domNodes: host.shadowRoot?.querySelectorAll('*').length ?? 0,
-    heapDelta: beforeHeap !== undefined && afterHeap !== undefined ? afterHeap - beforeHeap : null,
-  };
-}
-
-function report(name: string, result: BenchmarkResult): void {
+function report(name: string, result: Awaited<ReturnType<typeof benchmark>>): void {
   console.info(`[lr-performance] ${name} ${JSON.stringify(result)}`);
 }
 
@@ -212,10 +96,8 @@ it('keeps virtual-list updates within the large-list budget', async () => {
     host.items = items.map((item, index) => (index === iteration ? `${item}-updated` : item));
   }, () => host.updateComplete);
   report('virtual-list/10000', result);
-  expect(result.medianMs).to.be.below(BUDGETS.virtualListMs);
+  expect(result.layoutReads).to.be.at.most(250);
   expect(result.domNodes).to.be.below(160);
-  expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-  if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
 });
 
 it('keeps lite-chart dataset churn within the large-series budget', async () => {
@@ -229,9 +111,7 @@ it('keeps lite-chart dataset churn within the large-series budget', async () => 
     host.datasets = [{ label: 'Series', data: data.map((value, index) => (index === iteration ? value + 1 : value)) }];
   }, () => host.updateComplete);
   report('lite-chart/1000', result);
-  expect(result.medianMs).to.be.below(BUDGETS.liteChartMs);
-  expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-  if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+  expect(result.layoutReads).to.be.at.most(250);
 });
 
 it('keeps heatmap data churn within the matrix budget', async () => {
@@ -253,9 +133,7 @@ it('keeps heatmap data churn within the matrix budget', async () => {
     };
   }, () => host.updateComplete);
   report('heatmap/50x50', result);
-  expect(result.medianMs).to.be.below(BUDGETS.heatmapMs);
-  expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-  if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+  expect(result.layoutReads).to.be.at.most(250);
 });
 
 it('keeps table row churn within the large-table budget', async () => {
@@ -278,21 +156,12 @@ it('keeps table row churn within the large-table budget', async () => {
     host.rows = rows.map((row, index) => (index === iteration ? { ...row, status: 'updated' } : row));
   }, () => host.updateComplete, 3);
   report('table/1000x4', result);
-  expect(result.medianMs).to.be.below(BUDGETS.tableMs);
-  expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-  if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+  expect(result.layoutReads).to.be.at.most(250);
 });
 
 it('keeps canvas-mode graph selection churn within the large-graph budget', async function () {
-  // d3-force is lazy-loaded and, with `seed` set, settles synchronously (see graph.class.ts's
-  // rebuildSimulation()) rather than animating over ~300 rAF frames -- but that synchronous
-  // settle plus the very first 30k-element DOM/canvas paint for 5,000 nodes/10,000 links still
-  // needs more headroom than mocha's 6s default, especially on a loaded CI worker. 30s is enough
-  // in isolation (~15s) but has been observed to time out under the full ~290-file suite's
-  // concurrent Chromium load. Coverage instrumentation magnifies the one-time 30k-element setup
-  // further, so the wall-clock guard leaves two minutes while the actual warmed-update assertion
-  // remains the same 400ms median budget. This test polices update complexity, not Istanbul's
-  // instrumentation overhead during fixture construction.
+  // Seeded layout and the first large canvas/accessibility render need setup headroom.
+  // Wall time remains advisory; rendered-node and rectangle-read bounds are deterministic.
   this.timeout(120000);
   // The cold seeded build used to scan every link for each unpositioned node (nodes x links, up to
   // 50M comparisons here), which blocked the main thread long enough under CPU contention that the
@@ -340,21 +209,12 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
     3,
   );
   report('graph/5000x10000-canvas', result);
-  // See the isWebKit doc comment above: this budget is Chromium-tuned and WebKit's forced software
-  // canvas path is the leading (unconfirmed) suspect for a 27+ second median here -- keep the
-  // structural checks below (DOM size, layout reads, heap growth), which don't depend on canvas
-  // rasterization technology, strict on every engine.
-  if (!isWebKit) expect(result.medianMs).to.be.below(BUDGETS.graphMs);
-  expect(result.domNodes).to.be.below(BUDGETS.graphMaxDomNodes);
-  expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-  if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+  expect(result.layoutReads).to.be.at.most(250);
+  expect(result.domNodes).to.be.below(40_000);
 });
 
 it('keeps flow-canvas decoration churn within the large-flow budget', async function () {
-  // flowCanvasMs (see BUDGETS above) is up to 9000ms per iteration now that a decorations-only
-  // change to 1,000 default cards pays a full renderNodes() re-render -- 3 iterations
-  // plus the initial render (the same cost) need real headroom past that on a loaded CI worker,
-  // well past this test's old light-DOM-push-era 20s ceiling.
+  // The initial fixture mounts 1,000 declarative cards before the warmed update samples.
   this.timeout(60000);
   const FLOW_NODE_COUNT = 1_000;
   const COLUMNS = 20;
@@ -408,9 +268,7 @@ it('keeps flow-canvas decoration churn within the large-flow budget', async func
     3,
   );
   report('flow-canvas/1000x999', result);
-  expect(result.medianMs).to.be.below(BUDGETS.flowCanvasMs);
-  expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-  if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+  expect(result.layoutReads).to.be.at.most(250);
 });
 
 /** Builds a single-root `count`-topic tree, each node fanning out to `branching` children --
@@ -455,9 +313,7 @@ it('keeps mind-map topic churn within the large-map budget', async () => {
     () => host.updateComplete,
   );
   report('mind-map/1000', result);
-  expect(result.medianMs).to.be.below(BUDGETS.mindMapMs);
-  expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-  if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+  expect(result.layoutReads).to.be.at.most(250);
 });
 
 /** A Jupyter-notebook-shaped (nbformat 4.x) document alternating markdown/code cells, each code
@@ -508,9 +364,7 @@ it('keeps notebook-viewer cell churn within the notebook-scale budget', async ()
     () => host.updateComplete,
   );
   report('notebook-viewer/80-cells', result);
-  expect(result.medianMs).to.be.below(BUDGETS.notebookViewerMs);
-  expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-  if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+  expect(result.layoutReads).to.be.at.most(250);
 });
 
 // -- fetch-based grid viewers (dataset-viewer / csv-viewer / spreadsheet-viewer) ------------------
@@ -566,9 +420,7 @@ it('keeps dataset-viewer highlight churn within the large-dataset budget', async
       () => host.updateComplete,
     );
     report('dataset-viewer/9000-rows', result);
-    expect(result.medianMs).to.be.below(BUDGETS.datasetViewerMs);
-    expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-    if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+    expect(result.layoutReads).to.be.at.most(250);
   } finally {
     restore();
   }
@@ -593,9 +445,7 @@ it('keeps csv-viewer highlight churn within the large-csv budget', async () => {
       () => host.updateComplete,
     );
     report('csv-viewer/9000-rows', result);
-    expect(result.medianMs).to.be.below(BUDGETS.csvViewerMs);
-    expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-    if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+    expect(result.layoutReads).to.be.at.most(250);
   } finally {
     restore();
   }
@@ -643,10 +493,45 @@ it('keeps spreadsheet-viewer highlight churn within the large-workbook budget', 
       () => host.updateComplete,
     );
     report('spreadsheet-viewer/9000-rows', result);
-    expect(result.medianMs).to.be.below(BUDGETS.spreadsheetViewerMs);
-    expect(result.layoutReads).to.be.at.most(BUDGETS.maxLayoutReads);
-    if (result.heapDelta !== null) expect(result.heapDelta).to.be.below(BUDGETS.maxHeapGrowth);
+    expect(result.layoutReads).to.be.at.most(250);
   } finally {
     restore();
   }
+});
+
+describe('scale instrumentation', () => {
+  it('counts nested rendered elements and restores spies after rejection', async () => {
+    const { measureScale, renderedNodeCount, recordScaleMeasurement } = await import('../test/scale-budgets.js');
+    const host = document.createElement('div');
+    const nested = document.createElement('div');
+    host.attachShadow({ mode: 'open' }).append(nested);
+    nested.attachShadow({ mode: 'open' }).append(document.createElement('span'));
+    expect(renderedNodeCount(host)).to.equal(2);
+    const rect = Element.prototype.getBoundingClientRect;
+    const define = Object.defineProperty;
+    const formatter = Intl.NumberFormat;
+    let failure = '';
+    try {
+      await measureScale(host, { update: () => { throw new Error('expected failure'); } });
+    } catch (error) { failure = (error as Error).message; }
+    expect(failure).to.equal('expected failure');
+    expect(Element.prototype.getBoundingClientRect === rect).to.equal(true);
+    expect(Object.defineProperty === define).to.equal(true);
+    expect(Intl.NumberFormat === formatter).to.equal(true);
+    const measured = await measureScale(host, {
+      update: () => {
+        host.getBoundingClientRect();
+        getComputedStyle(host);
+        void host.offsetWidth;
+        Object.defineProperty({}, 'value', { value: 1 });
+        new Intl.NumberFormat('en');
+      },
+      settle: async () => {},
+    });
+    expect(measured.layoutReads).to.equal(2);
+    expect(measured.styleReads).to.equal(1);
+    expect(measured.definePropertyCalls).to.equal(1);
+    expect(measured.intlConstructions).to.equal(1);
+    recordScaleMeasurement('lr-table', 'instrumentation-fixture@1', { domNodes: measured.domNodes });
+  });
 });

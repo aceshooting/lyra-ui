@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Suuraa {index} keessaa {total}',
   playWithContext: '{name} taphachiisi',
   pauseWithContext: '{name} dhaabi',
+  avPlayerWaveformUnavailable: 'Daataan bifa dambalii hin jiru yookaan miidiyaa kanaan wal hin simu.',
+  avPlayerTranscriptUnavailable: 'Daataan barreeffama sagalee hin jiru.',
   dropzoneReleaseToAdd: 'Faayila dabaluuf gadhiisi.',
   dropzoneRejectedType: 'Gosti faayila kanaa hin fudhatamu.',
   attachmentAdd: 'Faayila maxxanfame dabali',

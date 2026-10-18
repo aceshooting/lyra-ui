@@ -51,3 +51,19 @@ describe('bounded model-viewer search work', () => {
     expect(budget.consume('y')).to.be.true;
   });
 });
+
+it('prepared fields preserve matching and exactness across Unicode and work boundaries', () => {
+  for (const locale of ['en', 'tr']) {
+    for (const limit of [0, 1, 2, 5, 19, 100]) {
+      const direct = new ViewerSearchWorkBudget(limit);
+      const prepared = new ViewerSearchWorkBudget(limit);
+      for (const value of ['', 'A', '\u0130I', 'abc'.repeat(10)]) {
+        const expected = direct.includes(value, 'i', locale);
+        const text = prepared.prepare(value, locale);
+        expect(text?.includes('i') ?? false).to.equal(expected);
+        expect(prepared.complete).to.equal(direct.complete);
+        expect(prepared.exhausted).to.equal(direct.exhausted);
+      }
+    }
+  }
+});

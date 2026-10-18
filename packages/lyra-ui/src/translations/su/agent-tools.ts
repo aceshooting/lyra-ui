@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Ngan {count} hasil tés munggaran nu dipintonkeun.',
   toolTimelineLimit: 'Panglobana {count} panggilan tool nu dipintonkeun.',
   toolSelectLimit: 'Ngan {count} tool munggaran nu dipintonkeun.',
+  testResultsInputTooLarge: 'Rincian hasil tés ngaleuwihan wates tampilan.',
   toolCall: 'Panggilan tool',
   maximize: 'Gedékeun',
   promptStudioVariableName: 'Ngaran variabel {index}',
@@ -292,6 +293,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Ngan {count} file munggaran anu dipidangkeun.',
   taskListLimit: 'Ngan {count} tugas munggaran anu dipidangkeun.',
   evalDatasetLimit: 'Ngan {count} conto munggaran nu dipintonkeun.',
+  activityFeedInputLimit: 'Ngan {count} éntri panganyarna tina {total} nu disimpen.',
+  spanWaterfallLimit: 'Mintonkeun {shown} tina {total} span.',
+  toolTimelineInputLimit: 'Ngan {count} panggilan tool panganyarna tina {total} nu disimpen.',
 };
 
 registerLyraLocale('su', strings);

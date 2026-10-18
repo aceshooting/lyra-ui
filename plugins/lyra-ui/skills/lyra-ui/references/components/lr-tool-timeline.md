@@ -62,9 +62,17 @@ applied its controlled `entries` update (it never mutates `entries` itself). `re
 void` releases a held dialog after persistence fails, retaining the reviewer’s current argument edit
 so they can retry. Both are no-ops when no decision is held.
 
-At most 500 unique entries mount. Open disclosures and the entry under approval review reserve
-positions before later ordinary history is omitted; a localized `[part="limit"]` note exposes the
-bounded projection. Redaction is deferred until a disclosure opens and memoized while the entry's
+Assignment retains the newest 10,000 source entries (the array end is newest) in a bounded readonly
+outer snapshot. Source records and opaque `args`/`result` payloads retain identity, while a closed
+descriptor-safe projection copies the display fields once per admitted array. Reassign the
+collection to publish record changes; approval lookups reuse canonical identity indexes.
+
+After first-wins duplicate canonicalization, the newest 500 unique entries are selected before
+timestamp sorting. Open disclosures and the entry under approval review reserve positions within
+that same 500-row budget, displacing the oldest unreserved rows. Separate localized
+`[part="limit"]` notes disclose input retention and the rendered window; their counts use the
+effective locale. Initial truncation stays silent; a later transition into either limit is
+announced politely. Redaction is deferred until a disclosure opens and memoized while the entry's
 payload and path list are unchanged. It is bounded to 100 paths, 64 levels, 10,000 visited nodes,
 and 4,096 characters per path; crossing a ceiling masks the affected branch instead of exposing
 data or exhausting the page.
@@ -108,7 +116,8 @@ timeline.addEventListener("lr-tool-approval-decide-request", async (event) => {
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
-`entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`, `empty`, `limit`.
+`entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`, `empty`, `limit` (input-retention
+and rendered-window notices).
 Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
 repeated bare "Details" label.
 

@@ -63,6 +63,10 @@ const virtualCount = (list: LyraVirtualList): number => {
  * own scroll container already has; a consumer's own rule or inline style setting
  * `--lr-virtual-list-height` on the list still wins.
  *
+ * A slotted virtual list retains its normal first-10,000 `.items` admission policy. Supply a
+ * bounded window of the newest messages in chronological order, or use its indexed `.source` for a long
+ * transcript; this viewport reads the list count without copying or capping that source.
+ *
  * **Follow/release state machine.** While `follow` is engaged, content growth re-scrolls to the end.
  * Release happens only on a *user-intent* gesture (wheel, touchmove, scrollbar-drag, or
  * PageUp/ArrowUp/Home while the log region has focus) that leaves the view more than
@@ -88,6 +92,10 @@ const virtualCount = (list: LyraVirtualList): number => {
  * was considered and rejected because it changes the visible outcome (it would put the *bottom* of
  * the boundary row at the viewport's bottom edge, hiding the unread content the jump is meant to
  * reveal, not just changing how precisely it lands).
+ *
+ * Indexed transcript growth updates follow and unread counts even when physical scroll travel is
+ * capped. Refresh a mutated indexed source with the child list's `requestUpdate()`. Growth keeps
+ * user-released follow disengaged; reconnect reads the current count again.
  *
  * Renders no messages and computes no unread state itself -- the host supplies `unreadStartIndex`;
  * no virtualization of its own (`<lr-virtual-list>`); not a generic overflow surface
@@ -603,6 +611,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       if (!this.isConnected || this.ownerDocument.defaultView !== owner) return;
       this.updateUnreadDividerPosition();
       if (this.follow) this.performScrollToEnd('auto');
+      this.requestUpdate();
     });
     this.growthFrame = frame;
   }
@@ -704,7 +713,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const owner = this.ownerDocument.defaultView;
     const list = this.virtualListEl;
     const mode: 'virtual' | 'slotted' = list ? 'virtual' : 'slotted';
-    for (const node of this.messageElements) this.knownProjectedNodes.add(node);
     // `onSlotChange` calls this on *every* `slotchange`, including the very first one, which
     // always fires once during initial mount even though `firstUpdated()` already armed things a
     // moment earlier. A naive unconditional rebuild here would tear down and recreate the
@@ -722,6 +730,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     ) {
       return;
     }
+    for (const node of this.messageElements) this.knownProjectedNodes.add(node);
     this.teardownObservers();
     this.observerWindow = owner ?? undefined;
     this.armedMode = mode;
@@ -738,7 +747,10 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
           if (this.contentMutationObserver === observer) this.scheduleGrowthTick();
         });
         this.contentMutationObserver = observer;
-        observer.observe(spacer, { attributeFilter: ['style'] });
+        // Logical growth can leave the capped physical scroll extent unchanged.
+        observer.observe(spacer, { attributeFilter: ['style', 'data-item-count'] });
+        // Reconnect may have missed a count change while the observer was detached.
+        this.requestUpdate();
         if (this.follow) this.performScrollToEnd('auto');
       });
     } else {

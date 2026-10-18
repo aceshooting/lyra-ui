@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} gültige Messwerte in der gesamten Verteilung; {belowCount} unterhalb und {aboveCount} oberhalb der angezeigten Klassen; {invalidCount} ungültige Messwerte.',
+  histogramDistributionRange: 'Beobachteter Stichprobenbereich: {min} bis {max}.',
   chartCategory: 'Kategorie',
   chartTotal: 'Gesamt',
   chartAxisTotal: '{axis} gesamt',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x: {x}, y: {y}',
   chartBubblePointCoordinates: 'x: {x}, y: {y}, Radius: {radius}',
   chartLabeledPoint: '{label} – {coordinates}',
-  chartTrendIncreasing: 'steigend',
-  chartTrendDecreasing: 'fallend',
-  chartTrendFlat: 'gleichbleibend',
-  chartSummary: '{label}: {count} Werte, Bereich {min} bis {max}, Trend {trend}',
   chartSeriesNoData: '{label}: keine Daten',
   chartSummaryWithData: '{type}-Diagramm. {summaries}.',
   chartSummaryEmpty: '{type}-Diagramm ohne Daten.',
-  chartSummarySeparator: '. ',
   chartData: 'Diagrammdaten',
   chartRenderUnavailable: 'Die Diagrammdarstellung ist nicht verfügbar.',
+  chartPreparedSummaryZoom: 'Die Zoomfunktion zeigt die vorbereitete Zusammenfassung; eine Verfeinerung über einen Index ist nicht verfügbar.',
+  chartSpatialSummary: 'Gesamte Quelle: {count} Punkte, x {minX} bis {maxX}, y {minY} bis {maxY}. Ansicht: {matchedCount} Punkte, x {viewMinX} bis {viewMaxX}, y {viewMinY} bis {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Radius in der gesamten Quelle: {min} bis {max}.',
+  chartSpatialDensityLegend: 'Die Dichte umfasst alle Datenreihen; die Sichtbarkeit der Datenreihen wirkt sich nur auf überlagerte Punkte aus.',
+  chartSpatialPoint: '{series}: {id}, Position in der Quelle {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Dichteregion: {count} Punkte, x {minX} bis {maxX}, y {minY} bis {maxY}.',
+  chartSpatialHidden: ' (Datenreihe ausgeblendet)',
   chartDataSampled: 'Das Diagramm und die generierte Datentabelle zeigen eine Stichprobe von bis zu 1.000 Datensätzen. Stellen Sie eine eigene Datentabelle bereit, um auf alle Diagrammdaten zuzugreifen.',
   chartPlotSampled: 'Das Diagramm zeigt eine Stichprobe von bis zu 1.000 Datensätzen; die Datentabelle enthält alle Daten.',
   chartZoomUnavailable: 'Die Zoomfunktion ist nicht verfügbar, aber das Diagramm bleibt verfügbar.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} von {total})',
   chartMissingLibrary: 'Für diese Komponente muss das optionale Paket „chart.js“ installiert sein, um Diagramme darzustellen.',
   boxPlotMissingLibrary: 'Für diese Komponente muss das optionale Boxplot-Diagrammpaket installiert sein, um Boxplots darzustellen.',
+  chartInputLimit: 'Einige Diagrammdaten wurden ausgelassen, weil eine Eingabegrenze erreicht wurde. Übergeben Sie einen kleineren oder vorab aggregierten Datensatz, um die ausgelassenen Werte darzustellen.',
+  histogramInputLimit: 'Nur die neuesten 10.000 Messwerte werden beibehalten. Übergeben Sie vorab in Klassen zusammengefasste Häufigkeiten an lr-chart, um eine größere Verteilung darzustellen.',
 };
 
 registerLyraLocale('de', strings);

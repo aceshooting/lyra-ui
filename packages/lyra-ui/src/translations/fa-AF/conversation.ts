@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'هنوز گفت‌وگویی نیست',
   agentWorkspaceLabel: 'محیط کاری ایجنت',
+  agentWorkspaceInputLimit: '{collection}: از {total} ورودی، تنها {count} مورد نگهداری می‌شود.',
   agentWorkspaceConversation: 'گفت‌وگو',
   agentWorkspaceDetails: 'جزئیات اجرا',
   agentWorkspaceRun: 'اجرای ایجنت',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'تلاش دوباره برای این بخش',
   promptQueueLabel: 'درخواست‌های صف‌شده',
   promptQueueEmpty: 'درخواستی در صف نیست',
+  promptQueueInputLimit: 'برخی درخواست‌های در صف یا ضمایم به‌دلیل رسیدن به حد ورودی حذف شدند.',
+  promptQueueAttachmentLimit: 'از {total} ضمیمهٔ نگهداری‌شده، {shown} مورد نمایش داده می‌شود.',
   promptQueueSendNow: 'همین حالا بفرستید',
   selectionToolbarLabel: 'کارهای انتخاب',
   selectionAsk: 'پرسیدن',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} توکن',
     other: '{count} توکن',
   },
+  threadListInputLimit: 'برخی رشته‌های گفتگو به‌دلیل رسیدن به حد ورودی حذف شدند.',
+  promptInputInputLimit: 'برخی پیشنهادها یا ورودی‌های فهرست به‌دلیل رسیدن به حد ورودی حذف شدند.',
+  transcriptFeedInputLimit: 'تنها تازه‌ترین {count} مورد از {total} ورودی نگهداری می‌شوند.',
+  codeBlockHighlightLimit: 'کد طولانی بدون برجسته‌سازی نحوی نشان داده می‌شود.',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

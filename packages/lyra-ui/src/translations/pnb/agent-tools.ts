@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'صرف پہلے {count} ٹیسٹ نتیجے وکھائے گئے نیں۔',
   toolTimelineLimit: 'ودھ توں ودھ {count} ٹول کال وکھائیاں گئیاں نیں۔',
   toolSelectLimit: 'صرف پہلے {count} ٹول وکھائے گئے نیں۔',
+  testResultsInputTooLarge: 'ٹیسٹ نتیجیاں دی تفصیل وکھاؤن دی حد توں ودھ اے۔',
   toolCall: 'ٹول کال',
   maximize: 'ودھ توں ودھ کرو',
   promptStudioVariableName: 'متغیر {index} دا ناں',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'صرف پہلاں {count} فائلاں وکھائیاں جاندیاں نیں۔',
   taskListLimit: 'صرف پہلاں {count} کم وکھائے جاندے نیں۔',
   evalDatasetLimit: 'صرف پہلاں {count} مثالاں وکھائیاں گئیاں نیں۔',
+  activityFeedInputLimit: '{total} اندراجاں وچوں صرف سب توں نویں {count} رکھے جاندے نیں۔',
+  spanWaterfallLimit: '{total} اسپیناں وچوں {shown} وکھائے جا رہے نیں۔',
+  toolTimelineInputLimit: '{total} ٹول کالاں وچوں صرف سب توں نویاں {count} رکھیاں جاندیاں نیں۔',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

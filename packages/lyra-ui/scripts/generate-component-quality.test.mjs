@@ -49,6 +49,7 @@ test('projects compact qualification and dependency metadata without changing ma
     reviewer: null,
     reviewedAt: null,
     accessibility: 'automated',
+    scale: 'unmeasured',
     ledger: 'scripts/fixtures/component-qualification.json',
   });
   assert.deepEqual(projected.components[0].dependencies, {
@@ -70,6 +71,7 @@ test('new inventory entries fail visibly as pending instead of inheriting anothe
     reviewer: null,
     reviewedAt: null,
     accessibility: 'not-recorded',
+    scale: 'unmeasured',
     ledger: 'scripts/fixtures/component-qualification.json',
   });
   assert.deepEqual(projected.components[2].dependencies.direct, []);
@@ -177,6 +179,11 @@ test('quality generation uses current dependencies before qualification and is w
     packageJson: json('package.json', {}),
     qualityDocs: path.join(packageRoot, 'docs/component-quality.md'),
     integrationDocs: path.join(packageRoot, 'docs/component-integration.md'),
+    scaleBudgets: json('scripts/fixtures/scale-budgets.json', {
+      margin: 0.1,
+      measuredAt: '2026-10-17T12:00:00.000Z',
+      budgets: { 'lr-control': { 'update@10000': { renderedRows: 40 } } },
+    }),
   };
   const visualSources = partitionVisualManifest(visualManifest, {
     familyNames: ['utility'],
@@ -186,6 +193,15 @@ test('quality generation uses current dependencies before qualification and is w
   for (const [relative, contents] of Object.entries(visualSources)) write(relative, contents);
 
   const first = await buildQualityArtifacts({ paths, packageRoot });
+  const measuredScale = first.qualification.components.find(({ tag }) => tag === 'lr-control').dimensions.scale;
+  assert.equal(measuredScale?.status, 'measured');
+  assert.deepEqual(measuredScale.scenarios, ['update@10000']);
+  assert.equal(measuredScale.measuredAt, '2026-10-17T12:00:00.000Z');
+  assert.equal(first.qualification.components.find(({ tag }) => tag === 'lr-wrapper').dimensions.scale.status, 'unmeasured');
+  assert.equal(first.qualification.summary.scaleMeasured, 1);
+  assert.match(first.qualityDocs, /Scale counter budgets: \*\*1\*\* tags/);
+  assert.match(first.qualityDocs, /\| Scale \|/);
+  assert.equal(first.inventory.components.find(({ tag }) => tag === 'lr-control').qualification.scale, 'measured');
   for (const tag of ['lr-wrapper', 'lr-outer']) {
     const record = first.qualification.components.find((component) => component.tag === tag);
     assert.equal(record.dimensions.keyboard.applicability, 'applicable', `${tag} uses current composed interaction`);
@@ -207,4 +223,19 @@ test('quality generation uses current dependencies before qualification and is w
   const second = await buildQualityArtifacts({ paths, packageRoot });
   assert.deepEqual(qualityArtifactFindings(second, paths), []);
   assert.deepEqual(second, first);
+
+  json('scripts/fixtures/scale-budgets.json', { margin: 0.1, measuredAt: null, budgets: {} });
+  const unmeasured = await buildQualityArtifacts({ paths, packageRoot });
+  assert.equal(unmeasured.qualification.summary.scaleMeasured, 0);
+  assert.ok(unmeasured.qualification.components.every(({ dimensions }) => dimensions.scale.status === 'unmeasured'));
+  json('scripts/fixtures/scale-budgets.json', {
+    margin: 0.1, measuredAt: '2026-10-17T12:00:00.000Z',
+    budgets: { 'lr-missing-control': { 'update@10000': { renderedRows: 40 } } },
+  });
+  await assert.rejects(buildQualityArtifacts({ paths, packageRoot }), /Unknown scale component/);
+  json('scripts/fixtures/scale-budgets.json', {
+    margin: 0.1, measuredAt: '2026-10-17T12:00:00.000Z',
+    budgets: { 'lr-control': { 'update@10000': { elapsedMs: 10 } } },
+  });
+  await assert.rejects(buildQualityArtifacts({ paths, packageRoot }), /deterministic counter/);
 });

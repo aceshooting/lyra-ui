@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} コマンド',
   },
+  commandPaletteInputLimit: '入力上限に達したため、コマンドの一部が省略されました。',
 };
 
 registerLyraLocale('ja', strings);

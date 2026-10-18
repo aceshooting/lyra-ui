@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} ಆಜ್ಞೆ',
     other: '{count} ಆಜ್ಞೆಗಳು',
   },
+  commandPaletteInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಕೆಲವು ಅಂಶಗಳನ್ನು ಬಿಡಲಾಗಿದೆ: ಆಜ್ಞೆಗಳು.',
 };
 
 registerLyraLocale('kn', strings);

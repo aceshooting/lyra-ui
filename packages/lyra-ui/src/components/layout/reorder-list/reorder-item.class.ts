@@ -99,6 +99,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     validIdentity: false,
   };
   private contentObserver?: MutationObserver;
+  private contentLabel?: string;
 
   /** Required unique, nonempty stable identifier included in the parent list's emitted
    * `lr-reorder-request` order array. An owning list excludes an item with a missing,
@@ -178,7 +179,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
       'invalid-identity',
       !state.validIdentity
     );
-    this.requestUpdate();
+    this.requestUpdate('ownerState', previous);
   }
 
   private get moveUpDisabled(): boolean {
@@ -228,9 +229,14 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     return true;
   }
 
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.contentLabel = undefined;
+    super.requestUpdate(...args);
+  }
+
   private get resolvedItemLabel(): string {
     if (this.hostAccessibleLabel !== null) return this.hostAccessibleLabel;
-    return composedAccessibilityTextResult(this.childNodes, {
+    return this.contentLabel ??= composedAccessibilityTextResult(this.childNodes, {
       ancestorBoundary: this,
       maxCharacters: 256,
       maxDepth: 16,
@@ -241,10 +247,13 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
   }
 
   private refreshContentObserver(): void {
+    this.contentLabel = undefined;
     this.contentObserver?.disconnect();
+    this.contentObserver = undefined;
+    if (this.hostAccessibleLabel !== null) return;
     const Observer = this.ownerDocument.defaultView?.MutationObserver;
     if (!Observer || !this.isConnected) return;
-    this.contentObserver = new Observer(() => this.requestUpdate());
+    this.contentObserver = new Observer(() => { this.contentLabel = undefined; this.requestUpdate(); });
     this.contentObserver.observe(this, {
       attributes: true,
       childList: true,
@@ -260,6 +269,11 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
       ],
     });
   }
+
+  private onContentSlotChange = (): void => {
+    this.refreshContentObserver();
+    this.requestUpdate();
+  };
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -284,6 +298,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('hostAccessibleLabel')) this.refreshContentObserver();
     if (changed.has('value')) {
       (this.owner as Partial<ReorderIdentityOwner> | null)?.[reorderIdentityChange]?.(this);
     }
@@ -320,7 +335,7 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
           ${chevronIcon()}
         </lr-icon-button>
         <span part="content"
-          ><slot @slotchange=${this.refreshContentObserver}></slot
+          ><slot @slotchange=${this.onContentSlotChange}></slot
         ></span>
       </div>
     `;

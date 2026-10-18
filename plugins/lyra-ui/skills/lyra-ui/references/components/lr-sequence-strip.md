@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -42,7 +42,7 @@ refreshes do not move focus. A queued Arrow/Home/End focus is bound to the curre
 identity and connection generation, so a same-turn replacement or disconnect/reconnect cannot
 focus an unrelated cell that merely inherited the old numeric index.
 
-High-cardinality strips retain at most the first 10,000 assigned items and categories as detached,
+With `source` unset, high-cardinality strips retain at most the first 10,000 assigned items and categories as detached,
 frozen canonical snapshots; reassign either collection after changing it. At most 200 cells are
 rendered. **At or below that cap each cell is one item. Past it the strip becomes a span-preserving
 overview rather than a window:** the retained items are distributed over exactly 200 contiguous
@@ -57,6 +57,93 @@ item total and range count, and the same localized text is appended as a trailin
 generated `aria-label` so assistive technology learns the cells are ranges. The optional legend
 likewise mounts at most 200 categories and exposes `[part="legend-limit"]` as a rendered/total
 numeric disclosure.
+
+**Complete indexed source:** `source: LyraSequenceSource<SequenceStripItem> | null = null`
+(attribute: false) takes precedence over `items`, preserving the provider's identity. `null` or
+`undefined` restores the current legacy items; other invalid defined values fail visibly.
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named theme, strings and legend paints reuse accepted data; locale, disconnect/reconnect and
+adoption revoke obsolete requests/effects. Providers should honor abort signals; ignored aborts
+keep physical request permits occupied until settlement.
+
+```ts
+import type { LyraSequenceSource, LyraSequenceRangeSummary, SequenceStripItem } from
+  "@aceshooting/lyra-ui/components/data/sequence-strip/sequence-strip.class.js";
+import type { LyraSourceRequest, LyraSourceValue } from
+  "@aceshooting/lyra-ui/utilities/data-preparation.js";
+```
+
+`LyraSequenceSource<T>` supplies immutable `revision` (a nonempty string or finite number), safe
+nonnegative integer `length`, and
+`getItem(index, { signal }): LyraSourceValue<T | null>`,
+`findIndex(id, { signal }): LyraSourceValue<number | null>`, and
+`summarize({ signal, startIndex, endIndex, maxRanges }): LyraSourceValue<readonly
+LyraSequenceRangeSummary[]>`. The summary request spans `[0, length)` and asks for at most
+`min(length, 200)` ranges; an empty source needs no provider read. Each summary has
+`{ startIndex, endIndex, categoryCounts, markerCount, enabledCount }`: ascending, nonempty,
+half-open ranges must partition the complete logical sequence without gaps or overlap.
+`categoryCounts` is an own-data string-to-positive-safe-integer dictionary whose counts sum to
+the range length; marker/enabled counts are safe integers from zero to that length. The provider
+owns immutable snapshots, indexing and the truth of complete-source totals; admission verifies
+bounded shape and arithmetic consistency.
+
+At most 200 ranges, 200 distinct global category IDs and 40,000 category-count pairs are admitted.
+Summary category IDs are nonblank and at most 1,024 UTF-16 units. Exact `SequenceStripItem` records
+have own-data `id`, `categoryId`, optional `label`, optional boolean `marker`/`disabled`; the aggregate
+length of `id`/`categoryId`/`label` is at most 65,536 UTF-16 units. Malformed, accessor-backed or
+oversized records fail without clipped labels or compacted indices. The component retains bounded
+current/pending summaries and one exact record, with one physical summary request and one physical
+exact request; only the latest queued intent survives. String lookup and its subsequent exact read
+are sequential. There is no raw-item scan or complete source array in the component.
+
+Overview range widths are proportional to their actual lengths. Global category and marker counts
+include every range, and `selectedIndex` highlights its containing range. Source dominant-category
+ties use configured `categories` order, then lexical category ID; the legacy route retains its
+earliest-occurrence rule. A source range is disabled only when `enabledCount === 0`; mixed ranges
+report their enabled count. Overview activation still resolves the range's first exact item and
+emits the unchanged `lr-item-activate` `{ index, id, item }` with its original zero-based index and
+ID; a disabled or unavailable first item emits nothing. Hover and overview focus use the summary,
+including bounds, dominant category, marker count and enabled/total counts, without exact reads.
+`data-range-end` remains inclusive in rendered range attributes; provider bounds are half-open.
+
+`revealSourceItem(target: number | string): Promise<boolean>` resolves an original index or stable
+ID, updates the separate exact inspection cursor and focuses its control while focus ownership is
+still current. ID lookup uses `findIndex` then verifies the returned `getItem` ID. It does not
+change `selectedIndex` or emit activation. Disabled exact items remain inspectable and resolve
+`true`; absent, invalid, unavailable or revoked targets resolve `false`. The `source-exact` native
+button supports RTL-aware Left/Right and Home/End over the complete original index range, including
+missing/disabled positions; it does not scan for enabled items. Enter/Space or click activates only
+the current admitted enabled exact item. Pending/unavailable detail keeps a focusable localized
+inspector fallback. Controlled `selectedIndex` changes resolve exact detail silently. Source-only
+parts are `source-status`, `source-retry` and `source-exact`; `base`, `cell`, `marker`, `tooltip`,
+`bucket-summary`, `empty` and existing legend parts remain applicable. Initial errors are quiet;
+later status transitions use localized light-DOM announcements. No completion event is added.
+
+The following item-array limits and per-item disabled/tie rules apply with `source` unset.
+
+**Exported sequence-source declarations:**
+
+These declarations use the request/value types and granular class import shown above.
+
+`LyraSequenceSource<T> {
+  readonly revision: LyraSourceRevision;
+  readonly length: number;
+  getItem(index: number, request: LyraSourceRequest): LyraSourceValue<T | null>;
+  findIndex(id: string, request: LyraSourceRequest): LyraSourceValue<number | null>;
+  summarize(request: LyraSourceRequest & {
+    readonly startIndex: number;
+    readonly endIndex: number;
+    readonly maxRanges: number;
+  }): LyraSourceValue<readonly LyraSequenceRangeSummary[]>;
+}`
+
+`LyraSequenceRangeSummary {
+  readonly startIndex: number;
+  readonly endIndex: number;
+  readonly categoryCounts: Readonly<Record<string, number>>;
+  readonly markerCount: number;
+  readonly enabledCount: number;
+}`
 
 **Properties:**
 

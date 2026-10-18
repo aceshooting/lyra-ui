@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'ਪੈੱਨ ਹੇਠਾਂ',
   signaturePadPenUp: 'ਪੈੱਨ ਉੱਪਰ',
+  localePickerInputLimit: 'ਭਾਸ਼ਾ ਅਤੇ ਖੇਤਰ ਦੀਆਂ ਸਿਰਫ਼ ਪਹਿਲੀਆਂ 512 ਐਂਟਰੀਆਂ ਉਪਲਬਧ ਹਨ।',
+  emojiPickerInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਕੁਝ ਇਮੋਜੀ ਡਾਟਾ ਛੱਡ ਦਿੱਤਾ ਗਿਆ ਹੈ।',
 };
 
 registerLyraLocale('pa', strings);

@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pulpen mudhun',
   signaturePadPenUp: 'Pulpen munggah',
+  localePickerInputLimit: 'Mung 512 entri setelan basa lan wilayah sing kapisan sing kasedhiya.',
+  emojiPickerInputLimit: 'Sawetara data emoji ora dilebokake amarga wates input wis tekan.',
 };
 
 registerLyraLocale('jv', strings);

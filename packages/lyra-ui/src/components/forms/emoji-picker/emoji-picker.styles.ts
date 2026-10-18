@@ -7,6 +7,14 @@ import {
 } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
+
   :host {
     display: block;
     inline-size: 100%;

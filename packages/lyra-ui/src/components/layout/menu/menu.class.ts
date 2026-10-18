@@ -1,3 +1,4 @@
+import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { maxCssTime } from '../../../internal/css-motion-time.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -308,6 +309,16 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     uncheckRadioGroup: (item, group) => this.uncheckRadioGroupSiblings(item, group),
   };
   private readonly typeBuffer = new TypeAheadBuffer(this);
+  private readonly typeAheadLabels = new WeakMap<LyraMenuItem, { label: string; locale: string; folded: string }>();
+
+  private foldedTypeAheadLabel(item: LyraMenuItem, locale: string): string {
+    const label = item.getTextLabel();
+    const previous = this.typeAheadLabels.get(item);
+    if (previous?.label === label && previous.locale === locale) return previous.folded;
+    const folded = label.toLocaleLowerCase(locale);
+    this.typeAheadLabels.set(item, { label, locale, folded });
+    return folded;
+  }
 
   /** @internal Symbol-keyed so submenu overlay mechanics never become a second public menu API. */
   readonly [submenuPanelController] = this.createSubmenuController();
@@ -1244,7 +1255,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     const current =
       this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     const currentIndex = current ? navigable.indexOf(current) : -1;
-    const match = this.typeBuffer.match(navigable, currentIndex, item => item.getTextLabel(), this.effectiveLocale);
+    const locale = resolveIntlLocale(this.effectiveLocale);
+    let match: number | null = null;
+    for (let step = 1; step <= navigable.length; step++) {
+      const candidate = ((currentIndex + step) % navigable.length + navigable.length) % navigable.length;
+      if (this.foldedTypeAheadLabel(navigable[candidate]!, locale).startsWith(this.typeBuffer.text)) { match = candidate; break; }
+    }
     if (match !== null) this.setActiveItem(navigable[match]!);
   }
 

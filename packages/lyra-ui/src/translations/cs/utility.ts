@@ -74,6 +74,8 @@ const strings: LyraLocaleStrings = {
     many: '{count} dalšího návrhu',
     other: '{count} dalších návrhů',
   },
+  mentionInputLimit: 'Dostupných je pouze prvních 10 000 návrhů pro zmínky.',
+  diffViewHighlightLimit: 'Dlouhý kód se zobrazuje bez zvýraznění syntaxe.',
 };
 
 registerLyraLocale('cs', strings);

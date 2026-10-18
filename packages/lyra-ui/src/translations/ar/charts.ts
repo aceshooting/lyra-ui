@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'عينات صالحة في التوزيع الكامل: {validCount}؛ منها {belowCount} أدنى من الفئات المعروضة و{aboveCount} أعلى منها؛ عينات غير صالحة: {invalidCount}.',
+  histogramDistributionRange: 'نطاق العينات المرصود: من {min} إلى {max}.',
   chartCategory: 'الفئة',
   chartTotal: 'الإجمالي',
   chartAxisTotal: 'إجمالي {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'الإحداثي x: {x}، الإحداثي y: {y}',
   chartBubblePointCoordinates: 'الإحداثي x: {x}، الإحداثي y: {y}، نصف القطر: {radius}',
   chartLabeledPoint: '{label} — {coordinates}',
-  chartTrendIncreasing: 'متزايد',
-  chartTrendDecreasing: 'متناقص',
-  chartTrendFlat: 'مستقر',
-  chartSummary: '{label}: {count} قيمة، النطاق من {min} إلى {max}، الاتجاه {trend}',
   chartSeriesNoData: '{label}: لا توجد بيانات',
   chartSummaryWithData: 'مخطط {type}. {summaries}.',
   chartSummaryEmpty: 'مخطط {type} بلا بيانات.',
-  chartSummarySeparator: '. ',
   chartData: 'بيانات المخطط',
   chartRenderUnavailable: 'عرض الرسم البياني غير متاح.',
+  chartPreparedSummaryZoom: 'يعرض التكبير الملخص المُعدّ؛ ولا يتوفر تنقيح أكثر تفصيلًا باستخدام الفهرس.',
+  chartSpatialSummary: 'المصدر الكامل: {count} نقطة، x من {minX} إلى {maxX}، y من {minY} إلى {maxY}. العرض: {matchedCount} نقطة، x من {viewMinX} إلى {viewMaxX}، y من {viewMinY} إلى {viewMaxY}.',
+  chartSpatialRadiusDomain: 'نصف القطر في المصدر الكامل: من {min} إلى {max}.',
+  chartSpatialDensityLegend: 'تشمل الكثافة جميع السلاسل؛ وتؤثر رؤية السلسلة في طبقات النقاط المتراكبة فقط.',
+  chartSpatialPoint: '{series}: {id}، الموضع في المصدر {sourceIndex}، {coordinates}{hidden}',
+  chartSpatialBin: 'منطقة الكثافة: {count} نقطة، x من {minX} إلى {maxX}، y من {minY} إلى {maxY}.',
+  chartSpatialHidden: ' (السلسلة مخفية)',
   chartDataSampled: 'يعرض المخطط وجدول البيانات المُنشأ عينة تصل إلى 1,000 سجل. وفّر جدول بيانات مخصصًا للوصول إلى جميع بيانات المخطط.',
   chartPlotSampled: 'يعرض المخطط عينة تصل إلى 1,000 سجل، ويسرد جدول البيانات جميع البيانات.',
   chartZoomUnavailable: 'التكبير غير متاح، لكن المخطط الأساسي يبقى متاحًا.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} من {total})',
   chartMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت الحزمة الاختيارية "chart.js" لعرض المخططات.',
   boxPlotMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت حزمة المخطط الصندوقي الاختيارية لعرض المخططات الصندوقية.',
+  chartInputLimit: 'حُذفت بعض بيانات المخطط لبلوغ حد الإدخال. قدّم مجموعة بيانات أصغر أو مُجمّعة مسبقًا لتمثيل القيم المحذوفة.',
+  histogramInputLimit: 'يُحتفظ بأحدث 10,000 عينة فقط. قدّم أعدادًا مجمّعة مسبقًا في فئات إلى lr-chart لتمثيل توزيع أكبر.',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: 'さらに {count} 件の提案',
   },
+  mentionInputLimit: '最初の10,000件のメンション候補のみが利用できます。',
+  diffViewHighlightLimit: '長いコードはシンタックスハイライトなしで表示されます。',
 };
 
 registerLyraLocale('ja', strings);

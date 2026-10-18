@@ -260,3 +260,34 @@ export const SpatialExploration: Story = {
     .edges=${links} .nodeTypes=${nodeTypes}
   ></lr-knowledge-graph-explorer>`,
 };
+
+/** The outer source count stays visible when the composed graph receives a bounded model. */
+export const InputLimit: Story = {
+  render: () => html`<lr-knowledge-graph-explorer view="list" .nodes=${Array.from({ length: 10_001 }, (_, index) => ({
+    id: `node-${index}`, label: `Node ${index}`,
+  }))}></lr-knowledge-graph-explorer>`,
+};
+
+/** Million-record provider with exact-ID search and a complete node-type catalog. */
+export const SourceNavigation: Story = {
+  render: () => {
+    const total = 1_000_000;
+    const row = (id: string) => ({ key: `node:${id}`, order: Number(id), value: { kind: 'node' as const, value: { id, label: `Node ${id}`, type: 'person' } } });
+    const source: import('./knowledge-graph-explorer.class.js').KnowledgeGraphExplorerSource = {
+      revision: 1,
+      records: {
+        revision: 1,
+        query: async ({ query, page, pageSize }) => {
+          const exact = /^\d+$/.test(query.search) && Number(query.search) < total ? query.search : undefined;
+          const count = query.kind === 'edges' ? 0 : query.search ? exact === undefined ? 0 : 1 : total;
+          const start = page * pageSize;
+          return { rows: Array.from({ length: Math.max(0, Math.min(pageSize, count - start)) }, (_, offset) => row(exact ?? String(start + offset))), total: count, summary: { nodes: total, edges: 0 } };
+        },
+        lookup: async keys => keys.filter(key => /^node:\d+$/.test(key) && Number(key.slice(5)) < total).map(key => row(key.slice(5))),
+        locate: async (key, query) => !/^node:\d+$/.test(key) || Number(key.slice(5)) >= total ? null : query.search ? key.slice(5) === query.search ? 0 : null : Number(key.slice(5)),
+      },
+      scene: async request => ({ nodes: request.includeKeys.filter(key => key.startsWith('node:')).map(key => ({ key, value: row(key.slice(5)).value.value, position: { x: 0, y: 0 } })), edges: [], total: { nodes: total, edges: 0 }, coverage: 'neighborhood', worldBounds: null }),
+    };
+    return html`<lr-knowledge-graph-explorer view="list" .graphSource=${source} .nodeTypes=${[{ id: 'person', label: 'Person' }]}></lr-knowledge-graph-explorer>`;
+  },
+};

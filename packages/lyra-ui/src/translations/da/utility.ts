@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} forslag mere',
     other: '{count} flere forslag',
   },
+  mentionInputLimit: 'Kun de første 10.000 forslag til omtaler er tilgængelige.',
+  diffViewHighlightLimit: 'Lang kode vises uden syntaksfremhævning.',
 };
 
 registerLyraLocale('da', strings);

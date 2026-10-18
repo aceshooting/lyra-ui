@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
   commandPaletteResultCount: {
     other: '{count} pase',
   },
+  commandPaletteInputLimit: 'A yọ àwọn àṣẹ kan kúrò nítorí a ti dé ààlà ìwọlé.',
 };
 
 registerLyraLocale('yo', strings);

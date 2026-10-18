@@ -14,7 +14,7 @@ the collection setter instead of a same-reference early return. No component met
 
 | Metric | Interval |
 | --- | --- |
-| `assignmentMs` | Synchronous public property writes, with input allocation already complete. |
+| `assignmentMs` | Synchronous public property writes or DOM activation, with input allocation already complete. |
 | `updateMs` | Option-child updates where applicable, then the owner's Lit update and a microtask checkpoint. |
 | `settleMs` | Two task turns, each followed by pending component updates. |
 | `paintMs` | Two animation-frame callbacks after settling. This measures frame scheduling, not GPU time or a guaranteed presentation timestamp. |
@@ -67,3 +67,34 @@ filtering, the 1,000-record
 chart workloads, and both controls at 100 and 1,000 options. Stress includes these scenarios plus
 the million-record boundaries, the 10,000-record chart, and both 5,000-option catalogs. There is
 no million-option or million-row DOM workload.
+
+- **Document-library filtering:** 10,000 compact records alternate the public `searchTerm`
+  between two groups with 1,000 matches each. Independent precomputed pages verify all 100
+  mounted rows, sorted by name, while checking full input retention and filtered table membership.
+- **Eval-dataset selection:** 10,000 examples with one shared tag alternate actual clicks on the
+  first two table rows. Checks require the public selection event, selected row state, full input
+  retention, and the default 100-row page.
+- **Retrieval selection:** 10,000 chunks share one immutable source record and omit optional
+  metadata to minimize deep input work. Input count and admitted count are checked separately;
+  a release with stricter admission may retain a smaller prefix. Click the first visible
+  checkbox to alternate selection; check event chunk identity, public selected IDs, checked state,
+  a virtual-list count matching the reported retained chunks (9,999–10,000), and at most 40
+  mounted inspectors.
+- **Ingestion progress:** two preallocated 5,000-item arrays differ only in the first record's
+  progress (40/41); the other 4,999 record identities remain shared. Assignments check full
+  retention, visible document/stage/progress, and at most 40 mounted rows.
+
+All four list scenarios run in both profiles. Nested tables, virtual lists, and their rendered
+controls finish their Lit updates before validation. These workloads serialize public semantic
+counts; component-private mechanism counters belong to deterministic scale tests.
+`window.__benchmark.check(id)` performs setup and both alternating actions with the same semantic
+checks but without collecting timing metrics. Use it for compatibility smoke checks before a
+comparable baseline/candidate measurement. Input construction and page oracles stay outside actions.
+
+For a known retrieval admission boundary, semantic smoke accepts an explicit
+`check(id, { expectedRetained })` expectation and returns it alongside actual counts. This changes
+only smoke validation. Measured retrieval runs keep the same complete 10,000-row input and
+accept the narrow documented 9,999–10,000 admitted range; samples report the actual retained count.
+Before measuring, candidate semantic smoke must pass its default strict 10,000 expectation, while
+a baseline known to retain 9,999 uses that explicit smoke expectation. Other workloads require exact
+full retention. Retained counts remain visible in result samples and are never inferred from input size.

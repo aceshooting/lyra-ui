@@ -1,3 +1,8 @@
+import '@aceshooting/lyra-ui/components/lr-document-library.js';
+import '@aceshooting/lyra-ui/components/lr-eval-dataset.js';
+import '@aceshooting/lyra-ui/components/lr-retrieval-results.js';
+import '@aceshooting/lyra-ui/components/lr-ingestion-queue.js';
+import { makeListInputs } from './list-inputs.mjs';
 import '@aceshooting/lyra-ui/theme.css';
 import '@aceshooting/lyra-ui/components/lr-table.js';
 import '@aceshooting/lyra-ui/components/lr-select.js';
@@ -32,6 +37,10 @@ async function updates(state) {
   // microtask checkpoint, before reporting the first completed component update phase.
   if (state.options) await Promise.all(state.options.map((option) => option.updateComplete));
   await state.element.updateComplete;
+  for (const child of state.element.shadowRoot?.querySelectorAll('lr-table, lr-virtual-list') ?? []) {
+    await child.updateComplete;
+    for (const control of child.shadowRoot?.querySelectorAll('lr-checkbox, lr-progress-bar, lr-chunk-inspector') ?? []) await control.updateComplete;
+  }
   await Promise.resolve();
   await state.element.updateComplete;
 }
@@ -337,6 +346,97 @@ function optionState(descriptor) {
   return state;
 }
 
+function listState(descriptor) {
+  const inputs = makeListInputs();
+  const tag = descriptor.id.startsWith('document') ? 'lr-document-library'
+    : descriptor.id.startsWith('eval') ? 'lr-eval-dataset'
+    : descriptor.id.startsWith('retrieval') ? 'lr-retrieval-results' : 'lr-ingestion-queue';
+  const element = create(tag);
+  const state = { element, descriptor, variant: 0, selectionEvent: undefined, expectedRetained: undefined };
+  const table = () => element.shadowRoot.querySelector('lr-table');
+  const list = () => element.shadowRoot.querySelector('lr-virtual-list');
+  if (tag === 'lr-document-library') {
+    element.documents = inputs.documents;
+    element.sortKey = 'name';
+    element.sortDir = 'asc';
+    element.searchTerm = 'group2';
+    state.mutate = () => { state.variant = 1 - state.variant; element.searchTerm = ['group2', 'group7'][state.variant]; };
+    state.validate = () => {
+      const grid = table();
+      const rows = [...grid.shadowRoot.querySelectorAll('tbody tr[data-row-key]')];
+      const expected = inputs.documentPages[state.variant];
+      return { checks: [
+        ['list-retained-count', element.documents.length === descriptor.size && grid.rows.length === 1000],
+        ['list-render-bound', rows.length === 100],
+        ['list-visible-values', expected.every((document, index) => grid.rowElement(document.id) === rows[index] && rows[index]?.textContent.includes(document.name))],
+      ], counts: { sourceCount: descriptor.size, retainedCount: element.documents.length, renderedRowCount: rows.length, viewRowCount: grid.rows.length } };
+    };
+  } else if (tag === 'lr-eval-dataset') {
+    element.examples = inputs.examples;
+    element.searchable = false;
+    element.addEventListener('lr-example-select', event => { state.selectionEvent = event.detail.exampleId; });
+    state.mutate = () => {
+      state.variant = 1 - state.variant;
+      state.selectionEvent = undefined;
+      table().rowElement(inputs.examples[state.variant].id).click();
+    };
+    state.validate = () => {
+      const grid = table();
+      const target = inputs.examples[state.variant].id;
+      const rows = grid.shadowRoot.querySelectorAll('tbody tr[part="row"]');
+      return { checks: [
+        ['list-retained-count', element.examples.length === descriptor.size && grid.rows.length === descriptor.size],
+        ['list-render-bound', rows.length === 100],
+        ['list-selection-event', state.selectionEvent === target],
+        ['list-selection-state', grid.selectedRowKeys.has(target) && grid.rowElement(target)?.getAttribute('aria-selected') === 'true'],
+      ], counts: { sourceCount: descriptor.size, retainedCount: element.examples.length, renderedRowCount: rows.length, selectedCount: grid.selectedRowKeys.size } };
+    };
+  } else if (tag === 'lr-retrieval-results') {
+    element.sort = 'none';
+    element.virtualizeAt = 50;
+    element.chunks = inputs.chunks;
+    element.addEventListener('lr-selection-change', event => { state.selectionEvent = event.detail; });
+    // Toggle the first mounted checkbox; the same public action alternates selected/unselected.
+    state.mutate = () => {
+      state.variant = 1 - state.variant;
+      state.selectionEvent = undefined;
+      list().shadowRoot.querySelector('lr-checkbox[data-chunk-id="chunk-00000"]').shadowRoot.querySelector('[part~="base"]').click();
+    };
+    state.validate = () => {
+      const virtual = list();
+      const inspectors = virtual.shadowRoot.querySelectorAll('lr-chunk-inspector[data-chunk-id]');
+      const checkbox = virtual.shadowRoot.querySelector('lr-checkbox[data-chunk-id="chunk-00000"]');
+      const selected = state.variant === 1;
+      const ids = element.selectedChunkIds;
+      return { checks: [
+        ['list-retained-count', virtual.items.length === element.chunks.length && (state.expectedRetained === undefined
+          ? element.chunks.length >= descriptor.parameters.retainedMin && element.chunks.length <= descriptor.parameters.retainedMax
+          : element.chunks.length === state.expectedRetained)],
+        ['list-render-bound', inspectors.length > 0 && inspectors.length <= descriptor.parameters.renderBound],
+        ['list-selection-event', state.selectionEvent?.selectedChunkIds.length === Number(selected) && (!selected || state.selectionEvent.selectedChunkIds[0] === 'chunk-00000') && state.selectionEvent.chunks.length === Number(selected) && (!selected || state.selectionEvent.chunks[0].id === 'chunk-00000')],
+        ['list-selection-state', ids.length === Number(selected) && (!selected || ids[0] === 'chunk-00000') && checkbox?.checked === selected],
+      ], counts: { sourceCount: descriptor.size, retainedCount: element.chunks.length, renderedRowCount: inspectors.length, selectedCount: ids.length } };
+    };
+  } else {
+    element.items = inputs.ticks[0];
+    state.mutate = () => { state.variant = 1 - state.variant; element.items = inputs.ticks[state.variant]; };
+    state.validate = () => {
+      const virtual = list();
+      const rows = virtual.shadowRoot.querySelectorAll('[part="item"]');
+      const name = virtual.shadowRoot.querySelector('[part="item-name"]');
+      const stageLabel = virtual.shadowRoot.querySelector('[part="item-stage"]');
+      const progress = virtual.shadowRoot.querySelector('[part="item-progress"]');
+      return { checks: [
+        ['list-retained-count', element.items.length === descriptor.size && virtual.items.length === descriptor.size],
+        ['list-render-bound', rows.length > 0 && rows.length <= descriptor.parameters.renderBound],
+        ['list-visible-values', name?.textContent.trim() === 'Document 00000' && stageLabel?.textContent.trim().toLowerCase() === 'embedding'],
+        ['list-progress-value', progress?.value === 40 + state.variant],
+      ], counts: { sourceCount: descriptor.size, retainedCount: element.items.length, renderedRowCount: rows.length, progressValue: progress?.value ?? 0 } };
+    };
+  }
+  return state;
+}
+
 async function setup(descriptor) {
   active = undefined;
   stage.replaceChildren();
@@ -345,6 +445,7 @@ async function setup(descriptor) {
   else if (descriptor.family === 'table') state = tableState(descriptor);
   else if (descriptor.family === 'chart') state = chartState(descriptor);
   else if (descriptor.family === 'option') state = optionState(descriptor);
+  else if (descriptor.family === 'list') state = listState(descriptor);
   else {
     const element = create('div');
     element.textContent = 'Scheduling control';
@@ -393,4 +494,25 @@ async function run(id, options = {}) {
   } finally { busy = false; }
 }
 
-window.__benchmark = { ready: Promise.resolve(), scenarios: SCENARIOS, run };
+async function check(id, { expectedRetained } = {}) {
+  if (busy) return { status: 'failed', code: 'BUSY' };
+  const descriptor = descriptors.get(id);
+  if (!descriptor) return { status: 'failed', code: 'UNKNOWN_SCENARIO' };
+  if (expectedRetained !== undefined && (!Number.isSafeInteger(expectedRetained) || expectedRetained < 1 || expectedRetained > descriptor.size || descriptor.id !== 'retrieval-results-select-10000')) return { status: 'failed', code: 'INVALID_SAMPLE' };
+  busy = true;
+  try {
+    const state = await setup(descriptor);
+    state.expectedRetained = expectedRetained ?? descriptor.size;
+    const outcomes = [];
+    for (let index = 0; index < 2; index++) {
+      state.mutate();
+      await bounded(updates(state));
+      await bounded(settle(state));
+      await bounded(paint());
+      outcomes.push(state.validate());
+    }
+    return { status: outcomes.every(outcome => outcome.checks.every(([, passed]) => passed)) ? 'passed' : 'failed', expectedRetained: state.expectedRetained ?? descriptor.size, outcomes };
+  } finally { busy = false; active = undefined; stage.replaceChildren(); }
+}
+
+window.__benchmark = { ready: Promise.resolve(), scenarios: SCENARIOS, run, check };

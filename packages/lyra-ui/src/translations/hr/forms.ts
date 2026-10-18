@@ -118,6 +118,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Olovka dolje',
   signaturePadPenUp: 'Olovka gore',
+  localePickerInputLimit: 'Dostupno je samo prvih 512 stavki jezičnih i regionalnih postavki.',
+  emojiPickerInputLimit: 'Neki podaci emojija izostavljeni su jer je dosegnuto ograničenje ulaza.',
 };
 
 registerLyraLocale('hr', strings);

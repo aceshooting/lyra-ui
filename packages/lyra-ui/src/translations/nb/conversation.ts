@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Ingen samtaler ennå',
   agentWorkspaceLabel: 'Agentarbeidsområde',
+  agentWorkspaceInputLimit: '{collection}: bare {count} av {total} oppføringer beholdes.',
   agentWorkspaceConversation: 'Samtale',
   agentWorkspaceDetails: 'Kjøringsdetaljer',
   agentWorkspaceRun: 'Agentkjøring',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Prøv denne delen på nytt',
   promptQueueLabel: 'Ledetekster i kø',
   promptQueueEmpty: 'Ingen ledetekster i kø',
+  promptQueueInputLimit: 'Noen kølagte ledetekster eller vedlegg ble utelatt fordi en inndatagrense ble nådd.',
+  promptQueueAttachmentLimit: 'Viser {shown} av {total} beholdte vedlegg.',
   promptQueueSendNow: 'Send nå',
   selectionToolbarLabel: 'Handlinger for utvalg',
   selectionAsk: 'Spør',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} token',
     other: '{count} tokener',
   },
+  threadListInputLimit: 'Noen samtaletråder ble utelatt fordi en inndatagrense ble nådd.',
+  promptInputInputLimit: 'Noen forslag eller katalogoppføringer ble utelatt fordi en inndatagrense ble nådd.',
+  transcriptFeedInputLimit: 'Bare de nyeste {count} av {total} oppføringer beholdes.',
+  codeBlockHighlightLimit: 'Lang kode vises uten syntaksutheving.',
 };
 
 registerLyraLocale('nb', strings);

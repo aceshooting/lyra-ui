@@ -83,6 +83,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Još nema razgovora',
   agentWorkspaceLabel: 'Radni prostor agenta',
+  agentWorkspaceInputLimit: '{collection}: Zadržava se samo {count} od {total} zapisa.',
   agentWorkspaceConversation: 'Razgovor',
   agentWorkspaceDetails: 'Pojedinosti izvođenja',
   agentWorkspaceRun: 'Izvođenje agenta',
@@ -100,6 +101,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Ponovno pokušaj ovaj dio',
   promptQueueLabel: 'Upiti u redu čekanja',
   promptQueueEmpty: 'Nema upita u redu čekanja',
+  promptQueueInputLimit: 'Zbog ograničenja ulaza izostavljene su neke stavke: upiti u redu čekanja ili privici.',
+  promptQueueAttachmentLimit: 'Prikazuje se {shown} od {total} zadržanih privitaka.',
   promptQueueSendNow: 'Pošalji sada',
   selectionToolbarLabel: 'Radnje s odabirom',
   selectionAsk: 'Pitaj',
@@ -166,6 +169,10 @@ const strings: LyraLocaleStrings = {
     few: '{count} tokena',
     other: '{count} tokena',
   },
+  threadListInputLimit: 'Zbog ograničenja ulaza izostavljene su neke stavke: niti razgovora.',
+  promptInputInputLimit: 'Zbog ograničenja ulaza izostavljene su neke stavke: prijedlozi ili stavke kataloga.',
+  transcriptFeedInputLimit: 'Zadržava se samo najnovijih {count} od {total} zapisa.',
+  codeBlockHighlightLimit: 'Dugačak kôd prikazuje se bez isticanja sintakse.',
 };
 
 registerLyraLocale('hr', strings);

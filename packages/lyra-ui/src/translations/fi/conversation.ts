@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Ei vielä keskusteluja',
   agentWorkspaceLabel: 'Agentin työtila',
+  agentWorkspaceInputLimit: '{collection}: Vain {count} merkintää yhteensä {total} merkinnästä säilytetään.',
   agentWorkspaceConversation: 'Keskustelu',
   agentWorkspaceDetails: 'Ajon tiedot',
   agentWorkspaceRun: 'Agenttiajo',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Yritä tätä osaa uudelleen',
   promptQueueLabel: 'Jonossa olevat kehotteet',
   promptQueueEmpty: 'Ei kehotteita jonossa',
+  promptQueueInputLimit: 'Osa jonossa olevista kehotteista tai liitteistä jätettiin pois syöterajan täyttymisen vuoksi.',
+  promptQueueAttachmentLimit: 'Näytetään {shown} yhteensä {total} säilytetystä liitteestä.',
   promptQueueSendNow: 'Lähetä nyt',
   selectionToolbarLabel: 'Valinnan toiminnot',
   selectionAsk: 'Kysy',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} tokeni',
     other: '{count} tokenia',
   },
+  threadListInputLimit: 'Osa keskusteluketjuista jätettiin pois syöterajan täyttymisen vuoksi.',
+  promptInputInputLimit: 'Osa ehdotuksista tai luettelomerkinnöistä jätettiin pois syöterajan täyttymisen vuoksi.',
+  transcriptFeedInputLimit: 'Vain uusimmat {count} merkintää yhteensä {total} merkinnästä säilytetään.',
+  codeBlockHighlightLimit: 'Pitkä koodi näytetään ilman syntaksin korostusta.',
 };
 
 registerLyraLocale('fi', strings);

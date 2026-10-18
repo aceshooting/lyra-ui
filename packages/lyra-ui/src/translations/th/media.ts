@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'รูปภาพ {index} จาก {total}',
   playWithContext: 'เล่น {name}',
   pauseWithContext: 'หยุด {name} ชั่วคราว',
+  avPlayerWaveformUnavailable: 'ข้อมูลรูปคลื่นไม่พร้อมใช้งานหรือไม่ตรงกับสื่อนี้',
+  avPlayerTranscriptUnavailable: 'ข้อมูลบทถอดเสียงไม่พร้อมใช้งาน',
   dropzoneReleaseToAdd: 'ปล่อยเพื่อเพิ่มไฟล์',
   dropzoneRejectedType: 'ไม่รองรับไฟล์ชนิดนี้',
   attachmentAdd: 'เพิ่มไฟล์แนบ',

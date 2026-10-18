@@ -1,19 +1,25 @@
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
+import { ref } from 'lit/directives/ref.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import { styles } from './agent-trace.styles.js';
-import { normalizeLyraSpans, type LyraSpan } from '../trace-tree/span.js';
+import { projectLyraSpans, type LyraSpan } from '../trace-tree/span.js';
+import type { LyraTraceTree, TraceTreeSource } from '../trace-tree/trace-tree.class.js';
+export type { TraceTreeSource } from '../trace-tree/trace-tree.class.js';
 import type { LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_map, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_handoffFromToAgent, LYRA_DEFAULT_handoffToAgent, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraSpan } from '../trace-tree/span.js';
@@ -23,6 +29,7 @@ export type { LyraSpan } from '../trace-tree/span.js';
  * matches `<lr-trace-tree>`'s own internal kind iteration order so a kind lands in the same
  * visual position across both components.
  */
+const EMPTY_SPANS: readonly LyraSpan[] = Object.freeze([]);
 const KIND_ORDER: LyraSpan['kind'][] = ['agent', 'llm', 'tool', 'retriever', 'embedding', 'other'];
 
 /**
@@ -87,14 +94,19 @@ export interface LyraAgentTraceEventMap {
  * rendering never re-reads an admitted source row. Create a new collection and reassign it after
  * changes; mutating the assigned array does not update the view.
  *
+ * With treeSource defined, the child owns the complete provider preorder and global timing
+ * summary. The filter offers all six known kinds; the legacy handoff quick-jump list is omitted.
+ * No source rows are copied into spans or scanned to discover kinds or handoffs.
+ *
  * @customElement lr-agent-trace
  * @event lr-span-select - `detail: { spanId }` — a span was activated, from the tree or the handoff list.
  * @event lr-span-toggle - `detail: { spanId, expanded }` — a tree row was expanded or collapsed.
  * @event lr-span-visibility-change - `detail: { hiddenKinds }` — the span-kind filter changed.
  * @csspart base - The root wrapper.
- * @csspart filter - The composed `<lr-graph-legend>` filter row, only rendered while `spans` has at least one span.
+ * @csspart filter - The composed `<lr-graph-legend>` filter row; all six kinds in provider mode, otherwise the kinds present in `spans`.
  * @csspart handoffs - The handoff quick-jump list wrapper, only rendered while at least one visible span has `kind: 'agent'`.
  * @csspart handoff - One handoff quick-jump entry (a `<button>` wrapping an `<lr-handoff-divider>`); carries `data-active`.
+ * @csspart limit - Source admission limit notice when the composed tree has no projection notice.
  * @csspart tree - The composed `<lr-trace-tree>`.
  * @cssprop [--lr-agent-trace-handoff-active-bg=var(--lr-color-brand-quiet)] - Background of the active
  *   (`activeSpanId`) handoff quick-jump entry. Shadow Parts forbids an attribute selector after
@@ -109,17 +121,22 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     agentTraceFilterLabel: LYRA_DEFAULT_agentTraceFilterLabel,
+    collapse: LYRA_DEFAULT_collapse,
     copy: LYRA_DEFAULT_copy,
     date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
     handoffFromToAgent: LYRA_DEFAULT_handoffFromToAgent,
     handoffToAgent: LYRA_DEFAULT_handoffToAgent,
+    loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
+    open: LYRA_DEFAULT_open,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
     spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
     spanKindLlm: LYRA_DEFAULT_spanKindLlm,
     spanKindOther: LYRA_DEFAULT_spanKindOther,
     spanKindRetriever: LYRA_DEFAULT_spanKindRetriever,
     spanKindTool: LYRA_DEFAULT_spanKindTool,
+    spanProjectionLimit: LYRA_DEFAULT_spanProjectionLimit,
     tokensIn: LYRA_DEFAULT_tokensIn,
     tokensOut: LYRA_DEFAULT_tokensOut,
   };
@@ -138,10 +155,126 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     'lr-span-visibility-change',
   ]);
 
+  private _treeSource: TraceTreeSource | undefined = undefined;
+  private sourceVersion = 0;
+  private sourceTree?: LyraTraceTree;
+  private forwardedTree?: LyraTraceTree;
+  private forwardedKinds?: readonly LyraSpan['kind'][];
+
+  /** Immutable full-source preorder, forwarded to the single trace-tree child.
+   * Defined sources override legacy spans. Provider mode offers all six kind filters and omits
+   * the legacy handoff list; expansion, selection, global timing summary and bounded rows belong
+   * to the child. Reassign or requestUpdate() after changing the provider revision.
+   * @default undefined */
+  @property({ attribute: false })
+  get treeSource(): TraceTreeSource | undefined { return this._treeSource; }
+  set treeSource(value: TraceTreeSource | undefined) {
+    const previous = this._treeSource;
+    this._treeSource = value;
+    this.sourceVersion++;
+    const tree = this.sourceTree;
+    if (tree) tree.treeSource = value;
+    this.requestUpdate('treeSource', previous);
+  }
+
+  /** Reveals and focuses a full-source span using the child; false if absent or superseded. */
+  async revealSourceKey(key: string): Promise<boolean> {
+    const source = this.treeSource;
+    if (source === undefined) return false;
+    const version = this.sourceVersion;
+    const owner = this.ownerDocument;
+    const current = () => this.isConnected && this.ownerDocument === owner &&
+      this.treeSource === source && this.sourceVersion === version;
+    await this.updateComplete;
+    const tree = this.sourceTree;
+    if (!current() || !tree || tree.treeSource !== source) return false;
+    const revealed = await tree.revealSourceKey(key);
+    return current() && this.sourceTree === tree && tree.treeSource === source && revealed;
+  }
+
+  private forwardKinds(tree: LyraTraceTree): void {
+    if (this.forwardedTree !== tree || this.forwardedKinds !== this.hiddenKinds) {
+      this.forwardedTree = tree;
+      this.forwardedKinds = this.hiddenKinds;
+      tree.hiddenKinds = this.hiddenKinds;
+    }
+  }
+
+  private bindTree = (element?: Element): void => {
+    const tree = element as LyraTraceTree | undefined;
+    this.sourceTree = tree;
+    if (!tree) return;
+    const version = this.sourceVersion;
+    const source = this.treeSource;
+    this.forwardKinds(tree);
+    if (this.sourceTree !== tree || this.sourceVersion !== version || this.treeSource !== source) return;
+    if (tree.treeSource !== source) tree.treeSource = source;
+  };
+
+  override requestUpdate(name?: PropertyKey, oldValue?: unknown): void {
+    if (name === 'hiddenKinds' && this.sourceTree) this.forwardKinds(this.sourceTree);
+    if (name === undefined && this._treeSource !== undefined) {
+      this.sourceVersion++;
+      this.sourceTree?.requestUpdate();
+    }
+    super.requestUpdate(name, oldValue);
+  }
+
+  override disconnectedCallback(): void {
+    this.sourceVersion++;
+    super.disconnectedCallback();
+  }
+
   /** The full, unfiltered span array -- identical contract to `<lr-trace-tree>.spans`. Controlled
    *  and never mutated by this component; `activeSpanId` and its ancestor path reserve positions
-   *  inside the shared 500-row projection before kind filtering. */
+   *  inside the maxNodes projection (default 500) before kind filtering. */
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
+  /** Maximum projected rows, from 1 to 5000. Invalid or unset values use 500.
+   * Source admission keeps the first 10000 outer entries without cloning opaque metadata. */
+  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 500;
+  private get effectiveMaxNodes(): number {
+    return Math.max(1, Math.min(5000, finiteCount(this.maxNodes, 500)));
+  }
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
+  private sourceNotice = false;
+  private previousSourceNotice = false;
+  private noticeInitialized = false;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.noticeInitialized = this.hasUpdated;
+    this.previousSourceNotice = this.sourceNotice;
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    this.sourceVersion++;
+    this.announcements.adopted();
+  }
+
+  private limitMessage(): string {
+    return this.localize('spanProjectionLimit', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(this.effectiveMaxNodes),
+    });
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.treeSource !== undefined) return;
+    const version = this.sourceVersion;
+    const owner = this.ownerDocument;
+    const notice = this.sourceNotice;
+    const current = () => this.isConnected && this.ownerDocument === owner && this.sourceVersion === version &&
+      this.treeSource === undefined && this.sourceNotice === notice;
+    if (this.noticeInitialized && notice && !this.previousSourceNotice) {
+      const message = this.limitMessage();
+      if (!current()) return;
+      this.announcements.announcePolite(message);
+      if (!current()) return;
+    }
+    this.noticeInitialized = true;
+    this.previousSourceNotice = notice;
+  }
 
   /** Controlled selection, forwarded verbatim into the composed `<lr-trace-tree>`. Updated
    *  locally (and re-emitted as `lr-span-select`) whenever a span is activated from either the
@@ -168,9 +301,10 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
    *  embeddings. */
   @property({ type: Boolean, attribute: 'without-bars' }) withoutBars = false;
 
+  private projectionLimit = 0;
   private projectionSource?: readonly LyraSpan[];
   private projectionActiveSpanId: string | null = null;
-  private projectionCache?: ReturnType<typeof normalizeLyraSpans>;
+  private projectionCache?: ReturnType<typeof projectLyraSpans>;
   private filteredSource?: readonly LyraSpan[];
   private filteredKinds?: readonly LyraSpan['kind'][];
   private filteredCache: LyraSpan[] = [];
@@ -182,11 +316,12 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   private legendLabels: string[] = [];
   private legendTypes: LyraNodeTypeStyle[] = [];
 
-  private projectedSpans(): ReturnType<typeof normalizeLyraSpans> {
-    if (this.projectionSource !== this.spans || this.projectionActiveSpanId !== this.activeSpanId) {
+  private projectedSpans(): ReturnType<typeof projectLyraSpans> {
+    if (this.projectionSource !== this.spans || this.projectionActiveSpanId !== this.activeSpanId || this.projectionLimit !== this.effectiveMaxNodes) {
       this.projectionSource = this.spans;
       this.projectionActiveSpanId = this.activeSpanId;
-      this.projectionCache = normalizeLyraSpans(this.spans, this.activeSpanId);
+      this.projectionLimit = this.effectiveMaxNodes;
+      this.projectionCache = projectLyraSpans(this.spans, this.activeSpanId, this.effectiveMaxNodes);
     }
     return this.projectionCache!;
   }
@@ -237,7 +372,10 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
 
   private onVisibilityChange = (e: CustomEvent<LyraGraphLegendVisibilityDetail>): void => {
     e.stopPropagation();
+    const version = this.sourceVersion;
+    const source = this.treeSource;
     this.hiddenKinds = e.detail.hiddenTypes as LyraSpan['kind'][];
+    if (!this.isConnected || this.sourceVersion !== version || this.treeSource !== source) return;
     this.emit('lr-span-visibility-change', { hiddenKinds: [...this.hiddenKinds] });
   };
 
@@ -253,36 +391,50 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
    *  list. The original event is never stopped here, so it still reaches a host listener on this
    *  element unchanged. */
   private onTreeSpanSelect = (e: CustomEvent<{ spanId: string }>): void => {
+    if (!this.isConnected || e.currentTarget !== this.sourceTree || this.sourceTree.treeSource !== this.treeSource) return;
     this.activeSpanId = e.detail.spanId;
   };
 
   private selectSpan(id: string): void {
+    if (this.treeSource !== undefined || !this.isConnected) return;
     this.activeSpanId = id;
     this.emit('lr-span-select', { spanId: id });
   }
 
   private renderFilter(spans: readonly LyraSpan[]): TemplateResult | typeof nothing {
-    const kinds = this.presentKinds(spans);
+    const version = this.sourceVersion;
+    const hiddenKinds = this.hiddenKinds;
+    const kinds = this.treeSource !== undefined ? KIND_ORDER : this.presentKinds(spans);
     if (kinds.length === 0) return nothing;
     const labels = kinds.map((kind) => this.localize(KIND_LABEL_KEY[kind]));
+    const label = this.localize('agentTraceFilterLabel');
+    if (version !== this.sourceVersion || hiddenKinds !== this.hiddenKinds) return nothing;
     if (this.legendKinds !== kinds || labels.some((label, index) => label !== this.legendLabels[index])) {
       this.legendKinds = kinds;
       this.legendLabels = labels;
       this.legendTypes = kinds.map((kind, index) => ({ id: kind, label: labels[index]! }));
     }
+    const current = (event: Event) => this.isConnected && this.sourceVersion === version && this.hiddenKinds === hiddenKinds &&
+      (event.currentTarget as Element | null)?.getRootNode() === this.renderRoot;
     return html`
       <lr-graph-legend
         part="filter"
-        .label=${this.localize('agentTraceFilterLabel')}
+        .label=${label}
         .types=${this.legendTypes}
         .hiddenTypes=${this.hiddenKinds}
-        @lr-visibility-change-request=${this.onVisibilityChangeProposal}
-        @lr-visibility-change=${this.onVisibilityChange}
+        @lr-visibility-change-request=${(event: Event) => {
+          this.onVisibilityChangeProposal(event); if (!current(event)) event.preventDefault();
+        }}
+        @lr-visibility-change=${(event: CustomEvent<LyraGraphLegendVisibilityDetail>) => {
+          event.stopPropagation(); if (current(event)) this.onVisibilityChange(event);
+        }}
       ></lr-graph-legend>
     `;
   }
 
   private renderHandoff(span: LyraSpan, byId: ReadonlyMap<string, LyraSpan>): TemplateResult {
+    const version = this.sourceVersion;
+    const spans = this.spans;
     const fromAgent = this.handoffFromAgent(span, byId);
     const isActive = this.activeSpanId === span.id;
     return html`
@@ -292,7 +444,10 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
         aria-label=${this.handoffAccessibleLabel(span, fromAgent)}
         aria-current=${isActive ? 'true' : 'false'}
         ?data-active=${isActive}
-        @click=${() => this.selectSpan(span.id)}
+        @click=${(event: Event) => {
+          if (this.treeSource === undefined && this.sourceVersion === version && this.spans === spans &&
+            (event.currentTarget as Element | null)?.getRootNode() === this.renderRoot) this.selectSpan(span.id);
+        }}
       >
         <lr-handoff-divider aria-hidden="true" to-agent=${span.name} from-agent=${fromAgent}></lr-handoff-divider>
       </button>
@@ -306,22 +461,27 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   }
 
   override render(): TemplateResult {
-    const projection = this.projectedSpans();
-    const filteredSpans = this.filteredSpans(projection.spans);
+    const sourceMode = this.treeSource !== undefined;
+    const projection = sourceMode ? undefined : this.projectedSpans();
+    const filteredSpans = projection ? this.filteredSpans(projection.spans) : EMPTY_SPANS;
+    this.sourceNotice = !!projection && !!publicCollectionTruncation(this, 'spans') && !projection.truncated;
     return html`
       <div part="base">
-        ${this.renderFilter(projection.spans)} ${this.renderHandoffs(filteredSpans, projection.byId)}
+        ${this.renderFilter(projection?.spans ?? EMPTY_SPANS)} ${projection ? this.renderHandoffs(filteredSpans, projection.byId) : nothing}
         <lr-trace-tree
           part="tree"
-          .spans=${guard([this.spans], () => this.spans)}
-          .hiddenKinds=${this.hiddenKinds}
+          .maxNodes=${this.effectiveMaxNodes}
+          .spans=${sourceMode ? EMPTY_SPANS : guard([this.spans], () => this.spans)}
           .activeSpanId=${this.activeSpanId}
           .label=${this.label}
+          .strings=${this.strings}
           ?with-tokens=${this.withTokens}
           ?with-cost=${this.withCost}
           ?without-bars=${this.withoutBars}
           @lr-span-select=${this.onTreeSpanSelect}
+          ${ref(this.bindTree)}
         ></lr-trace-tree>
+        ${this.sourceNotice ? html`<p part="limit" role="note">${this.limitMessage()}</p>` : nothing}
       </div>
     `;
   }

@@ -69,6 +69,8 @@ const strings: LyraLocaleStrings = {
     two: '{count} הצעות נוספות',
     other: '{count} הצעות נוספות',
   },
+  mentionInputLimit: 'רק 10,000 ההצעות הראשונות לאזכור זמינות.',
+  diffViewHighlightLimit: 'קוד ארוך מוצג ללא הדגשת תחביר.',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

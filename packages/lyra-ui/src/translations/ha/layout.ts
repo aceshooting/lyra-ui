@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} umarni',
     other: '{count} umarni',
   },
+  commandPaletteInputLimit: 'An tsallake wasu umarni saboda an kai iyakar shigarwa.',
 };
 
 registerLyraLocale('ha', strings);

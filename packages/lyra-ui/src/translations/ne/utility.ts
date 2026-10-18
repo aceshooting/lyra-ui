@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} थप सुझाव',
     other: '{count} थप सुझावहरू',
   },
+  mentionInputLimit: 'उल्लेख गर्न सकिने पहिला 10,000 उम्मेदवारहरू मात्र उपलब्ध छन्।',
+  diffViewHighlightLimit: 'लामो कोड सिन्ट्याक्स हाइलाइटिङबिना देखाइन्छ।',
 };
 
 registerLyraLocale('ne', strings);

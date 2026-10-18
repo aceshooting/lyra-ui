@@ -97,13 +97,15 @@ function mayHaveNativeModal(doc: Document): boolean {
   let budget = 4_096;
   while (roots.length > 0) {
     const root = roots.pop()!;
-    try {
-      if (root.querySelector('dialog:modal')) return true;
-    } catch {
-      return false;
-    }
-    for (const element of root.querySelectorAll('*')) {
+    // Walk lazily: a NodeList would allocate every descendant before the budget could stop it.
+    const walker = doc.createTreeWalker(root, 1 /* SHOW_ELEMENT */);
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
       if (--budget < 0) return true;
+      const element = node as Element;
+      if (element.localName === 'dialog') {
+        try { if (element.matches(':modal')) return true; } catch { return false; }
+      }
       if (element.shadowRoot) roots.push(element.shadowRoot);
     }
   }

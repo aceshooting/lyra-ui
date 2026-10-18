@@ -19,6 +19,7 @@ interface ActiveCategory {
 interface ChartSyncGroup {
   readonly members: Set<ChartSyncController>;
   active?: ActiveCategory;
+  frame?: number;
 }
 const documents = new WeakMap<Document, Map<string, ChartSyncGroup>>();
 
@@ -81,18 +82,37 @@ export class ChartSyncController {
     // Pointer moves within one category re-publish it; every member already shows it.
     const active = this.group.active;
     if (this.shown && active?.owner === this && active.label === label && active.index === index) return;
-    const presentation = this.project(label, index);
-    if (!presentation) { this.clear(); return; }
-    this.group.active = { owner: this, label, index };
-    for (const member of [...this.group.members]) {
-      if (member === this) member.show(presentation);
-      else member.receive();
-    }
+    const group = this.group;
+    group.active = { owner: this, label, index };
+    if (group.frame !== undefined) return;
+    const view = this.document?.defaultView;
+    if (!view) return;
+    group.frame = view.requestAnimationFrame(() => {
+      group.frame = undefined;
+      const current = group.active;
+      if (!current) return;
+      const presentations = [...group.members].map(member => ({
+        member,
+        presentation: member.host.isConnected
+          ? member.project(current.label, member === current.owner ? current.index : undefined)
+          : undefined,
+      }));
+      if (!presentations.find(item => item.member === current.owner)?.presentation) {
+        current.owner.clear();
+        return;
+      }
+      const widths = presentations.map(({ presentation }) => presentation?.container.clientWidth ?? 0);
+      const placements = presentations.map(({ member, presentation }, index) => member.show(presentation, widths[index]));
+      const writes = placements.map(measure => measure?.());
+      for (const write of writes) write?.();
+    });
   }
 
   clear(): void {
     if (this.group?.active?.owner !== this) return;
     this.group.active = undefined;
+    if (this.group.frame !== undefined) this.document?.defaultView?.cancelAnimationFrame(this.group.frame);
+    this.group.frame = undefined;
     for (const member of [...this.group.members]) member.hide();
   }
 
@@ -137,7 +157,7 @@ export class ChartSyncController {
 
   private readonly onScroll = (event: Event): void => {
     // Nothing to move or clear while idle; scrolling must not repaint every synchronized chart.
-    if (!this.shown && !this.group?.active) return;
+    if (!this.shown && (!this.group?.active || this.group.frame !== undefined)) return;
     const target = event.target as Node | null;
     if (target && typeof target.nodeType === 'number' &&
       (target === this.document || this.includesComposed(target, this.host) || this.includesComposed(this.host, target))) {
@@ -165,10 +185,10 @@ export class ChartSyncController {
     const presentation = active && this.host.isConnected
       ? this.project(active.label, active.owner === this ? active.index : undefined)
       : undefined;
-    this.show(presentation);
+    this.show(presentation)?.()?.();
   }
 
-  private show(presentation: ChartSyncPresentation | undefined): void {
+  private show(presentation: ChartSyncPresentation | undefined, containerWidth = presentation?.container.clientWidth ?? 0): (() => (() => void)) | undefined {
     const wasShown = this.shown;
     this.hide(false);
     if (!presentation) {
@@ -178,7 +198,7 @@ export class ChartSyncController {
     // Projecting already highlighted the renderer, even if the overlay cannot be placed below.
     this.shown = true;
     const { container, x, top, height } = presentation;
-    if (![x, top, height].every(Number.isFinite) || height <= 0 || container.clientWidth <= 0) return;
+    if (![x, top, height].every(Number.isFinite) || height <= 0 || containerWidth <= 0) return;
     const doc = this.host.ownerDocument;
     const crosshair = doc.createElement('div');
     crosshair.setAttribute('part', 'sync-crosshair');
@@ -202,10 +222,20 @@ export class ChartSyncController {
       tooltip.append(line);
     }
     container.append(tooltip);
-    const inlineSize = Math.min(tooltip.getBoundingClientRect().width, container.clientWidth);
-    const blockSize = tooltip.getBoundingClientRect().height;
-    tooltip.style.left = `${Math.max(container.scrollLeft, Math.min(x, container.scrollLeft + container.clientWidth - inlineSize))}px`;
-    tooltip.style.top = `${Math.max(container.scrollTop, Math.min(top, container.scrollTop + container.clientHeight - blockSize))}px`;
     this.tooltip = tooltip;
+    return () => {
+      const rect = tooltip.getBoundingClientRect();
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      const left = container.scrollLeft;
+      const topEdge = container.scrollTop;
+      const inlineSize = Math.min(rect.width, width);
+      const xPosition = Math.max(left, Math.min(x, left + width - inlineSize));
+      const yPosition = Math.max(topEdge, Math.min(top, topEdge + height - rect.height));
+      return () => {
+        tooltip.style.left = `${xPosition}px`;
+        tooltip.style.top = `${yPosition}px`;
+      };
+    };
   }
 }

@@ -26,6 +26,11 @@ item's `title`/`description` routinely hold focusable content, so wrapping the r
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
 
+Every assigned item remains mounted; the timeline does not window large collections. Flow mode
+leaves untouched items' positioning styles alone. Time mode reuses item geometry between targeted
+resize notifications; allocation, timestamp placement, structural and orientation changes can
+remeasure the complete mounted list.
+
 Horizontal time layouts using `collision="overlap"` or `collision="stack"` allocate their block size
 from the actual item content and lane offsets. The height follows content growth, shrinkage, and
 changes in lane count. `--lr-timeline-time-extent` still controls only the main-axis distance, and

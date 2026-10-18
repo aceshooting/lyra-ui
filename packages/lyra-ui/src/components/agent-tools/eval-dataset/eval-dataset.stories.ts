@@ -116,3 +116,30 @@ export const RTL: Story = {
     </div>
   `,
 };
+
+/** Distinct tag facets stop at 500, keeping selected tags visible; the notice counts omitted tags. */
+export const BoundedTagFacets: Story = {
+  render: () => html`<lr-eval-dataset
+    .examples=${Array.from({ length: 600 }, (_, index) => ({ id: `example-${index}`, input: `Example ${index}`, tags: [`tag-${String(index).padStart(3, '0')}`] }))}
+  ></lr-eval-dataset>`,
+};
+
+const millionExampleSource: import('./eval-dataset.class.js').EvalDatasetSource = {
+  revision: 1,
+  async query({ page, pageSize, query, signal }) {
+    await new Promise(resolve => setTimeout(resolve, 40));
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    const term = query.search.trim(); const index = /^\d+$/.test(term) ? Number(term) : -1;
+    const total = term ? (index >= 0 && index < 1_000_000 ? 1 : 0) : 1_000_000;
+    const rows = Array.from({ length: Math.min(pageSize, Math.max(0, total - page * pageSize)) }, (_, offset) => {
+      const order = term ? index : query.sortDir === 'desc' ? 999_999 - page * pageSize - offset : page * pageSize + offset;
+      return { key: `example-${order}`, order, value: { id: `example-${order}`, input: `Example ${order}`, expectedOutput: `Answer ${order}`, tags: ['generated'] } };
+    });
+    return { total, rows, tags: { total: 1, values: [{ key: 'generated', label: 'Generated examples', count: 1_000_000 }], unavailableSelected: [] } };
+  },
+  async lookup(keys) { return keys.map(key => { const order = Number(key.slice(8)); return { key, order, value: { id: key, input: `Example ${order}` } }; }); },
+  async locate(key, query) { const order = Number(key.slice(8)); return query.search.trim() ? (String(order) === query.search.trim() ? 0 : null) : query.sortDir === 'desc' ? 999_999 - order : order; },
+};
+export const MillionSource: Story = {
+  render: () => html`<p>Browse one million generated examples. Search by an exact example number, from 0 to 999999.</p><lr-eval-dataset searchable .dataSource=${millionExampleSource}></lr-eval-dataset>`,
+};

@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} વધુ સૂચન',
     other: '{count} વધુ સૂચનો',
   },
+  mentionInputLimit: 'ઉલ્લેખ માટે ફક્ત પ્રથમ 10,000 સૂચનો ઉપલબ્ધ છે.',
+  diffViewHighlightLimit: 'લાંબો કોડ સિન્ટેક્સ હાઇલાઇટિંગ વિના બતાવવામાં આવે છે.',
 };
 
 registerLyraLocale('gu', strings);

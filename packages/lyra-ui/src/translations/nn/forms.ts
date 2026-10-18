@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Penn ned',
   signaturePadPenUp: 'Penn opp',
+  localePickerInputLimit: 'Berre dei første 512 språk- og områdeoppføringane er tilgjengelege.',
+  emojiPickerInputLimit: 'Nokre emojidata vart utelatne fordi ei inndatagrense vart nådd.',
 };
 
 registerLyraLocale('nn', strings);

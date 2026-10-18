@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Ba résultat ya test {count} ya liboso nde emonisami.',
   toolTimelineLimit: 'Ba appel ya outil {count} koleka te nde emonisami.',
   toolSelectLimit: 'Ba outil {count} ya liboso nde emonisami.',
+  testResultsInputTooLarge: 'Makambo ya mikemike ya ba résultats ya test eleki ndelo ya kolakisa.',
   toolCall: 'Appel ya outil',
   maximize: 'Kolisá kino na monene',
   promptStudioVariableName: 'Nkombo ya variable {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Kaka ba fichiers {count} ya liboso nde elakisami.',
   taskListLimit: 'Kaka misala ya liboso {count} nde elakisami.',
   evalDatasetLimit: 'Ba exemple {count} ya liboso nde emonisami.',
+  activityFeedInputLimit: 'Kaka makomi {count} ya sika koleka kati na {total} nde ebatelami.',
+  spanWaterfallLimit: 'Tozali kolakisa ba span {shown} na kati ya {total}.',
+  toolTimelineInputLimit: 'Tobombaka kaka ba appel ya outil {count} ya sika koleka na kati ya {total}.',
 };
 
 registerLyraLocale('ln', strings);

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
+import { prepareLyraWordCloud } from '../../../utilities/data-preparation.js';
 import { narrowStoryFrames } from '../../../../../../.storybook/narrow-story.js';
 
 const meta: Meta = {
@@ -11,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Words, palette colors, and explicit legend entries are copied into frozen bounded snapshots (10,000, 64, and 100 outer entries respectively, plus text budgets). Assign a new collection after changing it.',
+          'Words, palette colors, and explicit legend entries are copied into frozen bounded snapshots (10,000, 64, and 100 outer entries respectively, plus text budgets). Assign a new collection after changing it. The property-only preparedWords route instead accepts a whole-catalog bounded weighted summary with exact IDs.',
       },
     },
   },
@@ -192,4 +193,29 @@ export const ExtremeFiniteDomain: Story = {
   render: () => html`<lr-word-cloud .domain=${[-1e308, 1e308]} .words=${[
     { text: 'Midpoint', weight: 0 }, { text: 'Maximum', weight: 1e308 },
   ]}></lr-word-cloud>`,
+};
+
+/** Complete weighted-catalog preparation is caller-owned; selected labels retain exact IDs. */
+export const PreparedWords: Story = {
+  render: () => {
+    const container = document.createElement('div');
+    const cloud = document.createElement('lr-word-cloud');
+    cloud.style.blockSize = 'var(--lr-size-20rem)';
+    const selected = document.createElement('p');
+    selected.textContent = 'Activate a word to inspect its original catalog ID.';
+    cloud.addEventListener('lr-word-activate', event => {
+      const detail = (event as CustomEvent<{ id?: string; text: string }>).detail;
+      selected.textContent = `${detail.text}: ${detail.id ?? ''}`;
+    });
+    container.append(cloud, selected);
+    void prepareLyraWordCloud({ revision: 'catalog', count: 1_000_000,
+      read(start, count) {
+        return Array.from({ length: count }, (_, offset) => {
+          const index = start + offset;
+          return { id: `topic-${index}`, text: `Topic ${index}`, weight: index === 999_999 ? 1_000_000 : index % 100 };
+        });
+      },
+    }, { maxWords: 30, batchSize: 8192 }).then(prepared => { cloud.preparedWords = prepared; });
+    return container;
+  },
 };

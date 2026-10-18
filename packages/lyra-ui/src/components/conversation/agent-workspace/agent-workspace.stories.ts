@@ -198,3 +198,12 @@ export const ProgressiveMarkdown: Story = {
       { id: 'progressive-text', type: 'text', state: 'streaming', text: '# Answer\n\nA **settled paragraph**.\n\nThe response continues' },
     ] }]}></lr-agent-workspace>`,
 };
+
+export const RetainedTranscript: Story = {
+  parameters: { docs: { description: { story: 'Large append-ordered inputs retain their latest tail. The parent notice reports original admission loss even when named slots replace all fallback content.' } } },
+  render: () => html`<lr-agent-workspace style="block-size:24rem" without-composer
+    .messages=${Array.from({ length: 12000 }, (_, i) => ({ id: `m${i}`, role: 'assistant', text: `Message ${i}` }))}>
+    <div slot="messages">A host-owned virtual transcript replaces the built-in message preview.</div>
+    <div slot="details">Host-owned details replace the built-in detail components.</div>
+  </lr-agent-workspace>`,
+};

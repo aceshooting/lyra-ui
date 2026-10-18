@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Veljavni vzorci v celotni porazdelitvi: {validCount}; pod prikazanimi intervali: {belowCount}, nad njimi: {aboveCount}; neveljavni vzorci: {invalidCount}.',
+  histogramDistributionRange: 'Opazovani razpon vzorca: od {min} do {max}.',
   chartCategory: 'Kategorija',
   chartTotal: 'Skupaj',
   chartAxisTotal: '{axis} skupaj',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, polmer {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'naraščajoč',
-  chartTrendDecreasing: 'padajoč',
-  chartTrendFlat: 'nespremenjen',
-  chartSummary: '{label}: število vrednosti {count}, razpon od {min} do {max}, trend {trend}',
   chartSeriesNoData: '{label}: ni podatkov',
   chartSummaryWithData: 'Grafikon (vrsta: {type}). {summaries}.',
   chartSummaryEmpty: 'Grafikon (vrsta: {type}) brez podatkov.',
-  chartSummarySeparator: '. ',
   chartData: 'Podatki grafikona',
   chartRenderUnavailable: 'Izris grafikona ni na voljo.',
+  chartPreparedSummaryZoom: 'Povečava prikazuje pripravljeni povzetek; podrobnejši prikaz na podlagi indeksa ni na voljo.',
+  chartSpatialSummary: 'Celoten vir: {count} točk, x od {minX} do {maxX}, y od {minY} do {maxY}. Pogled: {matchedCount} točk, x od {viewMinX} do {viewMaxX}, y od {viewMinY} do {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Polmer v celotnem viru: od {min} do {max}.',
+  chartSpatialDensityLegend: 'Gostota vključuje vse nize; vidnost nizov vpliva samo na prekrivne točke.',
+  chartSpatialPoint: '{series}: {id}, položaj v viru {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Območje gostote: {count} točk, x od {minX} do {maxX}, y od {minY} do {maxY}.',
+  chartSpatialHidden: ' (niz skrit)',
   chartDataSampled: 'Grafikon in ustvarjena podatkovna tabela prikazujeta vzorec z največ 1.000 zapisi. Za dostop do vseh podatkov grafikona zagotovite lastno podatkovno tabelo.',
   chartPlotSampled: 'Grafikon prikazuje vzorec z največ 1.000 zapisi; podatkovna tabela navaja vse podatke.',
   chartZoomUnavailable: 'Povečava ni na voljo, osnovni grafikon pa ostaja na voljo.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} od {total})',
   chartMissingLibrary: 'Ta komponenta za izris grafikonov potrebuje nameščen izbirni paket »chart.js«.',
   boxPlotMissingLibrary: 'Ta komponenta za izris škatlastih diagramov potrebuje nameščen izbirni paket za škatlaste diagrame.',
+  chartInputLimit: 'Nekateri podatki grafikona so bili izpuščeni, ker je bila dosežena omejitev vnosa. Za prikaz izpuščenih vrednosti podajte manjši ali vnaprej združen nabor podatkov.',
+  histogramInputLimit: 'Ohrani se samo najnovejših 10.000 vzorcev. Za prikaz večje porazdelitve podajte v lr-chart vnaprej izračunano število vzorcev za vsak interval.',
 };
 
 registerLyraLocale('sl', strings);

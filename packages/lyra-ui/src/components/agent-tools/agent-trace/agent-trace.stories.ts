@@ -112,3 +112,29 @@ export const RetintedActiveHandoff: Story = {
       active-span-id="sub-agent"
     ></lr-agent-trace>`,
 };
+
+/** Raise the bounded projection budget while retaining the default when max-nodes is omitted. */
+export const RaisedNodeLimit: Story = {
+  render: () => html`<lr-agent-trace label="Larger collection" max-nodes="1000"
+    .spans=${Array.from({length:600},(_,index)=>({id:String(index),name:`Span ${index + 1}`,kind:'tool',status:'success',startMs:index,endMs:index+1}))}></lr-agent-trace>`,
+};
+
+export const MillionSource: Story = {
+  render: () => {
+    const count = 1_000_000;
+    const source: import('./agent-trace.class.js').TraceTreeSource = {
+      revision: 1,
+      async project(request) {
+        const visible = request.query.hiddenKinds.includes('tool') ? 0 : count;
+        return { state: String(visible), total: count, summary: { startMs: 0, endMs: count },
+          rows: { count: visible, keyAt: index => `span${index}`, indexOfKey: (key: string | number) => Number(String(key).slice(4)),
+            itemAt: index => ({ key: `span${index}`, value: { id: `span${index}`, name: `Tool ${index + 1}`,
+              kind: 'tool', status: 'success', startMs: index, endMs: index + 1 },
+              parentKey: null, level: 1, position: index + 1, setSize: count, childCount: 0, expanded: false, selected: false }),
+          }, ...(visible && request.action.type === 'reveal' ? { focusIndex: Number(request.action.key.slice(4)) } : {}),
+        };
+      },
+    };
+    return html`<lr-agent-trace label="Million-span trace" .treeSource=${source}></lr-agent-trace>`;
+  },
+};

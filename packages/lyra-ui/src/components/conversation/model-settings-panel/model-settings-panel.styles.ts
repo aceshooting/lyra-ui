@@ -92,4 +92,13 @@ export const styles = css`
     letter-spacing: var(--lr-size-0-04em);
     color: var(--lr-color-text-quiet);
   }
+
+  :host([layout='compact']) [part='limit'] { flex-basis: 100%; }
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
 `;

@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Қалам төмен',
   signaturePadPenUp: 'Қалам жоғары',
+  localePickerInputLimit: 'Тіл мен аймақ баптауларының алғашқы 512 жазбасы ғана қолжетімді.',
+  emojiPickerInputLimit: 'Енгізу шегіне жеткендіктен, эмодзи деректерінің бір бөлігі алынып тасталды.',
 };
 
 registerLyraLocale('kk', strings);

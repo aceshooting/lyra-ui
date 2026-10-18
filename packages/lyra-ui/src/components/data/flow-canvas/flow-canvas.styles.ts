@@ -16,6 +16,32 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
   }
+  [part='base'].source-mode {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 40%);
+  }
+  [part='source-navigator'] {
+    overflow: auto;
+    min-block-size: 0;
+    min-inline-size: 0;
+    padding: var(--lr-space-xs);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  [part='source-controls'], [part='source-record'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-xs); align-items: center; }
+  [part='source-records'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
+  [part='source-navigator'] :where(button, input, select), [part='source-status'] button {
+    font: inherit; color: inherit; background: var(--lr-color-surface);
+    min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius);
+    max-inline-size: 100%;
+  }
+  [part='source-navigator'] button, [part='source-status'] button { cursor: pointer; overflow-wrap: anywhere; }
+  [part='source-navigator'] button:where(:hover), [part='source-status'] button:where(:hover) { background: var(--lr-color-neutral-fill-quiet); }
+  [part='source-navigator'] :where(button, input, select):where(:focus-visible), [part='source-status'] button:where(:focus-visible) {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
+  }
+  .source-scene-status { position: absolute; inset-block-start: 0; inset-inline-start: 0; background: var(--lr-color-surface); }
+  [part='source-status'] { padding: var(--lr-space-xs); overflow-wrap: anywhere; }
   [part='viewport'] {
     position: relative;
     inline-size: 100%;
@@ -72,6 +98,8 @@ export const styles = css`
     margin-inline-start: auto;
   }
   [part='node'] {
+    content-visibility: auto;
+    contain-intrinsic-size: auto var(--lr-flow-canvas-node-fallback-inline-size, calc(var(--lr-size-10rem) + var(--lr-size-1rem))) auto var(--lr-flow-canvas-node-fallback-block-size, var(--lr-size-4rem));
     position: absolute;
     inset-block-start: 0;
     inset-inline-start: 0;
@@ -167,12 +195,17 @@ export const styles = css`
     stroke: var(--lr-color-surface);
     stroke-width: var(--lr-size-3px);
   }
-  [part='layout-limit'] {
+  .limits {
+    display: grid;
+    gap: var(--lr-space-2xs);
     position: absolute;
     inset-inline: var(--lr-space-s);
     inset-block-end: var(--lr-space-s);
     z-index: var(--lr-layer-content);
     max-inline-size: calc(100% - 2 * var(--lr-space-s));
+  }
+  [part='input-limit'],
+  [part='layout-limit'] {
     padding: var(--lr-space-2xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-warning);
     border-radius: var(--lr-radius);

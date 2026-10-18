@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} अधिक सुझाव',
     other: '{count} अधिक सुझाव',
   },
+  mentionInputLimit: 'मेंशन के लिए केवल पहले 10,000 सुझाव उपलब्ध हैं।',
+  diffViewHighlightLimit: 'लंबा कोड सिंटैक्स हाइलाइटिंग के बिना दिखाया जाता है।',
 };
 
 registerLyraLocale('hi', strings);

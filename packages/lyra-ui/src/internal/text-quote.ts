@@ -143,7 +143,7 @@ export interface TextQuoteScope {
 interface TextOffsetMapping {
   text: string;
   /** Packed `[sourceStart, sourceEnd, mappedStart, mappedEnd]` entries. */
-  expansions: Uint32Array;
+  expansions: Uint32Array | number[];
 }
 
 interface TrackedScopeRoot {
@@ -157,6 +157,8 @@ interface TrackedScopeRoot {
 }
 
 const scopeRoots = new WeakMap<TextQuoteScope, TrackedScopeRoot>();
+const incrementalScopeFreshness = new WeakMap<TextQuoteScope, () => boolean>();
+const incrementalScopeChanges = new WeakMap<TextQuoteScope, { owner: object; stableEnd: number; settledEnd: number }>();
 
 function trackScopeRoot(
   scope: TextQuoteScope,
@@ -528,22 +530,45 @@ function nextNodeWithin(root: Node, node: Node, descend: boolean): Node | null {
 /** Builds a scope by walking `root`'s text nodes in document order (skipping
  *  script/style/template/noscript), concatenating each node's normalized text. Callers pass their
  *  *content* element (e.g. markdown's `[part="content"]`) so toolbar chrome never enters the corpus. */
-export function scopeFromElement(
+interface ElementScopeScan {
+  scope: TextQuoteScope; segments: TextQuoteSegment[]; textChunks: string[];
+  textInterval: Text[]; textValues: string[];
+  textLength: number; textNodesVisited: number; traversalNodesVisited: number;
+  workCodeUnits: number; lastWasSpace: boolean;
+  segmentCount: number; intervalCount: number;
+  normalization: { stableText: string; tail: string; sourceStart: number; expansions: number[]; expansionCount: number };
+}
+
+export function scopeFromElement(root: Element, limitOverrides?: Partial<TextQuoteLimits>, skipElement?: (element: Element) => boolean): TextQuoteScope {
+  return scanElementScope(root, limitOverrides, skipElement).scope;
+}
+
+function scanElementScope(
   root: Element,
   limitOverrides?: Partial<TextQuoteLimits>,
   skipElement?: (element: Element) => boolean,
-): TextQuoteScope {
+  prefix?: ElementScopeScan,
+  start: Node | null = root.firstChild,
+  stop: Node | null = null,
+): ElementScopeScan {
   const limits = resolvedLimits(limitOverrides);
-  const segments: TextQuoteSegment[] = [];
+  const segments = prefix?.segments ?? [];
   const textChunks: string[] = [];
-  let textLength = 0;
-  let textNodesVisited = 0;
-  let traversalNodesVisited = 0;
-  let workCodeUnits = 0;
-  let lastWasSpace = false;
-  let truncated = false;
-  let node: Node | null = root.firstChild;
-  while (node) {
+  const textInterval = prefix?.textInterval ?? [];
+  const textValues = prefix?.textValues ?? [];
+  if (prefix) { segments.length = prefix.segmentCount; textInterval.length = textValues.length = prefix.intervalCount; }
+  let textLength = prefix?.textLength ?? 0;
+  let textNodesVisited = prefix?.textNodesVisited ?? 0;
+  let traversalNodesVisited = prefix?.traversalNodesVisited ?? 0;
+  let workCodeUnits = prefix?.workCodeUnits ?? 0;
+  let lastWasSpace = prefix?.lastWasSpace ?? false;
+  let truncated = prefix?.scope.truncated ?? false;
+  let node = start;
+  if (segments.length) {
+    const last = segments.at(-1)!;
+    segments[segments.length - 1] = { ...last, nextSibling: last.node.nextSibling };
+  }
+  while (node && node !== stop && !truncated) {
     if (traversalNodesVisited >= limits.maxTraversalNodes) {
       truncated = true;
       break;
@@ -562,6 +587,7 @@ export function scopeFromElement(
     }
     textNodesVisited++;
     const textNode = node as Text;
+    textInterval.push(textNode); textValues.push(textNode.data);
     const workRemaining = Math.max(0, limits.maxNormalizationWorkCodeUnits - workCodeUnits);
     if (workRemaining === 0) {
       truncated = true;
@@ -616,8 +642,115 @@ export function scopeFromElement(
     }
     node = next;
   }
-  const scope = normalizeScopeGlobally({ text: textChunks.join(''), segments, truncated });
-  return trackScopeRoot(scope, root, true, !scope.truncated, limits.maxTraversalNodes);
+  // Only the final grapheme can change NFC when more text arrives. All earlier text and
+  // offset entries are stable and remain shared until a retained DOM mutation resets the scan.
+  const previous = prefix?.normalization;
+  const expansions = previous?.expansions ?? [];
+  expansions.length = previous?.expansionCount ?? 0;
+  let stableText = previous?.stableText ?? '';
+  let sourceStart = previous?.sourceStart ?? 0;
+  const appended = (previous?.tail ?? '') + textChunks.join('');
+  let tail = '';
+  let pending: NormalizationCluster | undefined;
+  const appendCluster = (cluster: NormalizationCluster): void => {
+    const normalized = cluster.text.normalize('NFC');
+    if (normalized !== cluster.text) expansions.push(sourceStart + cluster.rawStart, sourceStart + cluster.rawEnd,
+      stableText.length, stableText.length + normalized.length);
+    stableText += normalized;
+  };
+  if (appended.normalize('NFC') === appended) {
+    let cut = appended.length;
+    let following: string | undefined;
+    while (cut > 0) {
+      const character = lastCodePoint(appended.slice(0, cut))!;
+      if (following !== undefined && !continuesPreviousGrapheme(character, following)) break;
+      cut -= character.length; following = character;
+    }
+    stableText += appended.slice(0, cut);
+    if (cut < appended.length) pending = { text: appended.slice(cut), rawStart: cut, rawEnd: appended.length };
+  } else {
+    for (const cluster of normalizationClusters(appended)) {
+      if (pending) appendCluster(pending);
+      pending = cluster;
+    }
+  }
+  if (pending) tail = pending.text;
+  const expansionCount = expansions.length;
+  const nextSourceStart = sourceStart + (pending?.rawStart ?? 0);
+  const finalText = stableText + tail.normalize('NFC');
+  if (pending && tail.normalize('NFC') !== tail) expansions.push(nextSourceStart, sourceStart + pending.rawEnd,
+    stableText.length, finalText.length);
+  const scope: TextQuoteScope = { text: finalText, segments, truncated };
+  if (expansions.length) scope.globalNormalization = { text: finalText, expansions };
+  const normalization = { stableText, tail, sourceStart: nextSourceStart, expansions, expansionCount };
+  if (scope.segments.length) scopeRoots.set(scope, { root, traversalLimit: limits.maxTraversalNodes,
+    textInterval, textValues, valid: true, includesRootPrefix: true,
+    includesRootSuffix: stop === null && !scope.truncated });
+  return { scope, segments, textChunks, textInterval, textValues, textLength, textNodesVisited,
+    traversalNodesVisited, workCodeUnits, lastWasSpace, segmentCount: segments.length, intervalCount: textInterval.length, normalization };
+}
+
+/** @internal Reuses normalized settled DOM prefixes; mutations inside that prefix reset the scan. */
+export class IncrementalTextQuoteScope {
+  private scan?: ElementScopeScan;
+  private lastRoot?: ChildNode;
+  private retainedRoots = new Set<Node>();
+  private dirty = false;
+  private generation = 0;
+  private scopeIdentity = {};
+  private mutationVersion = 0;
+  private observer: MutationObserver;
+  scannedNodes = 0;
+  constructor(private readonly root: Element, private readonly limits?: Partial<TextQuoteLimits>) {
+    const Observer = root.ownerDocument.defaultView?.MutationObserver ?? MutationObserver;
+    this.observer = new Observer(records => this.observe(records));
+    this.observer.observe(root, { childList: true, subtree: true, characterData: true });
+  }
+  private observe(records: readonly MutationRecord[]): void {
+    if (records.length) this.mutationVersion++;
+    for (const record of records) {
+      if (record.target === this.root) {
+        if ([...record.removedNodes].some(node => this.retainedRoots.has(node)) ||
+          record.nextSibling && this.retainedRoots.has(record.nextSibling)) this.dirty = true;
+      } else {
+        let node: Node | null = record.target;
+        while (node?.parentNode && node.parentNode !== this.root) node = node.parentNode;
+        if (node && this.retainedRoots.has(node)) this.dirty = true;
+      }
+    }
+  }
+  /** The optional boundary keeps a mutable trailing preview out of the retained prefix; it is rescanned in the returned scope. */
+  update(stop: ChildNode | null = null): TextQuoteScope {
+    this.observe(this.observer.takeRecords());
+    const generation = ++this.generation;
+    if (this.lastRoot && this.lastRoot.parentNode !== this.root) this.dirty = true;
+    const prefix = this.dirty ? undefined : this.scan;
+    if (!prefix) this.scopeIdentity = {};
+    const start = prefix && this.lastRoot ? this.lastRoot.nextSibling : this.root.firstChild;
+    const next = scanElementScope(this.root, this.limits, undefined, prefix, start, stop);
+    this.scannedNodes += next.traversalNodesVisited - (prefix?.traversalNodesVisited ?? 0);
+    this.scan = next; this.dirty = false;
+    if (!prefix) { this.retainedRoots.clear(); this.lastRoot = undefined; }
+    for (let node = start as ChildNode | null; node && node !== stop; node = node.nextSibling) {
+      this.retainedRoots.add(node); this.lastRoot = node;
+    }
+    while (this.lastRoot?.nodeType === Node.COMMENT_NODE) {
+      this.retainedRoots.delete(this.lastRoot);
+      this.lastRoot = this.lastRoot.previousSibling ?? undefined;
+    }
+    const complete = stop ? scanElementScope(this.root, this.limits, undefined, next, stop) : next;
+    this.scannedNodes += complete.traversalNodesVisited - next.traversalNodesVisited;
+    const mutationVersion = this.mutationVersion;
+    incrementalScopeFreshness.set(complete.scope, () => {
+      this.observe(this.observer.takeRecords());
+      return generation === this.generation && mutationVersion === this.mutationVersion;
+    });
+    incrementalScopeChanges.set(complete.scope, { owner: this.scopeIdentity, stableEnd: prefix?.normalization.stableText.length ?? 0, settledEnd: next.normalization.stableText.length });
+    return complete.scope;
+  }
+  disconnect(): void {
+    this.generation++; this.observer.disconnect(); this.scan = undefined; this.retainedRoots.clear(); this.lastRoot = undefined;
+  }
 }
 
 function firstTextNode(
@@ -989,13 +1122,14 @@ function scanOccurrences(
   foldedHaystack: FoldedText | undefined,
   maxMatches: number,
   scopeTruncated: boolean,
+  startAt = 0,
 ): TextQuoteMatches {
   // Grown geometrically: most quotes occur a handful of times, and a zero-filled ceiling-sized
   // buffer per uncached scan cost 80 KB each.
   let packed = new Uint32Array(Math.min(maxMatches, 32) * 2);
   let count = 0;
   let scanComplete = true;
-  let from = 0;
+  let from = startAt;
   for (;;) {
     const index = haystack.indexOf(needle, from);
     if (index === -1) break;
@@ -1196,6 +1330,8 @@ function segmentIsFresh(segment: TextQuoteSegment): boolean {
 }
 
 function scopeStructureIsFresh(scope: TextQuoteScope): boolean {
+  const incremental = incrementalScopeFreshness.get(scope);
+  if (incremental) return incremental();
   const tracked = scopeRoots.get(scope);
   if (tracked && !tracked.valid) return false;
   for (const segment of scope.segments) {
@@ -1326,6 +1462,7 @@ export class TextQuoteIndex {
   private cachedMatchCount = 0;
   private foldedScope?: FoldedText;
   private _scanCount = 0;
+  scannedCodeUnits = 0;
   private _scope: TextQuoteScope;
 
   constructor(
@@ -1344,8 +1481,52 @@ export class TextQuoteIndex {
   /** Rebinds offset-to-node materialization after a structurally different but semantically
    * identical DOM paint, preserving the folded corpus and occurrence cache. */
   rebindScope(scope: TextQuoteScope): boolean {
-    if (scope.text !== this._scope.text || scope.truncated !== this._scope.truncated) return false;
+    if (scope.text === this._scope.text && scope.truncated === this._scope.truncated) { this._scope = scope; return true; }
+    const change = incrementalScopeChanges.get(scope);
+    const previous = incrementalScopeChanges.get(this._scope);
+    if (!change || change.owner !== previous?.owner || change.stableEnd === 0) return false;
+    const stableEnd = Math.min(change.stableEnd, previous!.settledEnd);
+    const budget = this.createWorkBudget();
+    let foldedEnd = 0;
+    if (this.foldedScope) {
+      foldedEnd = foldedStartForRawOffset(this.foldedScope, stableEnd);
+      const suffix = foldText(scope.text.slice(stableEnd), this.locale);
+      const expansions = Array.isArray(this.foldedScope.expansions) ? this.foldedScope.expansions : Array.from(this.foldedScope.expansions);
+      while (expansions.length && expansions[expansions.length - 4]! >= stableEnd) expansions.length -= 4;
+      for (let i = 0; i < suffix.expansions.length; i += 4) expansions.push(
+        suffix.expansions[i]! + stableEnd, suffix.expansions[i + 1]! + stableEnd,
+        suffix.expansions[i + 2]! + foldedEnd, suffix.expansions[i + 3]! + foldedEnd);
+      this.foldedScope = { text: this.foldedScope.text.slice(0, foldedEnd) + suffix.text, expansions };
+    }
     this._scope = scope;
+    this.cachedMatchCount = 0;
+    for (const [key, cached] of this.occurrenceCache) {
+      const insensitive = key.startsWith('i:');
+      const needle = key.slice(2);
+      const folded = insensitive ? this.foldedScope : undefined;
+      const haystack = folded?.text ?? scope.text;
+      let from = Math.max(0, (insensitive ? foldedEnd : stableEnd) - needle.length + 1);
+      if (folded) from = foldedStartForRawOffset(folded, rawStartForFoldedOffset(folded, from));
+      if (!cached.scanComplete || !this.consumeWork(budget, haystack.length - from)) { this.occurrenceCache.delete(key); continue; }
+      const rawFrom = folded ? rawStartForFoldedOffset(folded, from) : from;
+      let retained = 0, upper = cached.length;
+      while (retained < upper) {
+        const middle = (retained + upper) >>> 1;
+        if (cached.at(middle)!.start < rawFrom) retained = middle + 1; else upper = middle;
+      }
+      this.scannedCodeUnits += haystack.length - from;
+      const suffix = scanOccurrences(haystack, needle, folded, this.limits.maxMatches - retained, scope.truncated, from);
+      if (retained === cached.length && suffix.length === 0 && cached.matchCountExact === suffix.matchCountExact) {
+        this.cachedMatchCount += cached.length; continue;
+      }
+      const packed = new Uint32Array((retained + suffix.length) * 2);
+      let count = 0;
+      for (let i = 0; i < retained; i++) { const match = cached.at(i)!; packed[count++] = match.start; packed[count++] = match.end; }
+      for (const match of suffix) { packed[count++] = match.start; packed[count++] = match.end; }
+      const merged = new PackedTextQuoteMatches(packed, suffix.matchCountExact, suffix.scanComplete);
+      if (this.cachedMatchCount + merged.length > MAX_CACHED_MATCHES) { this.occurrenceCache.delete(key); continue; }
+      this.occurrenceCache.set(key, merged); this.cachedMatchCount += merged.length;
+    }
     return true;
   }
 
@@ -1426,6 +1607,7 @@ export class TextQuoteIndex {
     }
     if (!this.consumeWork(budget, haystack.length)) return emptyMatches(false, false);
     this._scanCount++;
+    this.scannedCodeUnits += haystack.length;
     const result = scanOccurrences(
       haystack,
       searchableNeedle,

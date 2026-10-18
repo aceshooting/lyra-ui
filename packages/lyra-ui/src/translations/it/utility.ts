@@ -69,6 +69,8 @@ const strings: LyraLocaleStrings = {
     many: '{count} suggerimenti in più',
     other: '{count} suggerimenti in più',
   },
+  mentionInputLimit: 'Sono disponibili solo i primi 10.000 suggerimenti per le menzioni.',
+  diffViewHighlightLimit: 'Il codice lungo viene mostrato senza evidenziazione della sintassi.',
 };
 
 registerLyraLocale('it', strings);

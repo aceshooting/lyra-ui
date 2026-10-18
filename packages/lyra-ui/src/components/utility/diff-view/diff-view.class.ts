@@ -38,13 +38,17 @@ import {
   SHIKI_THEMES,
   type ShikiHighlighterCore,
   type ShikiLanguageInput,
-} from '../../conversation/code-block/code-loader.js';
+  type ShikiLanguageSource,
+  SHIKI_SOURCE_MAX_CODE_UNITS,
+  resolvedShikiLanguages,
+  ensureShikiLanguageLoaded,
+} from '../../conversation/code-block/shiki-types.js';
 import { styles } from './diff-view.styles.js';
 import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge } from '../../../internal/default-strings/utility.generated.js';
+import { LYRA_DEFAULT_copyDiff, LYRA_DEFAULT_diffViewHiddenLines, LYRA_DEFAULT_diffViewHighlightLimit, LYRA_DEFAULT_diffViewNewLabel, LYRA_DEFAULT_diffViewOldLabel, LYRA_DEFAULT_diffViewTooLarge } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const COPY_CONFIRM_MS = COPY_FEEDBACK_MS;
@@ -63,6 +67,7 @@ const splitLines = (text: string): string[] =>
 // Line count alone does not bound Hirschberg's O(k*l) work over the lines between the common head
 // and tail, or the strings handed to the highlighter. These ceilings apply even when maxLines is
 // explicitly relaxed.
+const MAX_DIFF_RENDERED_LINES = 10_000;
 const MAX_DIFF_CHARACTERS = 1_000_000;
 const MAX_DIFF_COMPARISONS = 4_000_000;
 const MAX_DIFF_LANGUAGES = 10_000;
@@ -82,11 +87,11 @@ interface DiffSearchMatch {
 
 /** Copies grammar-map entries through data descriptors so optional loading never invokes a
  * consumer accessor while it discovers the requested language. Grammar values stay opaque. */
-function projectLanguages(value: unknown): Record<string, ShikiLanguageInput> | undefined {
+function projectLanguages(value: unknown): Record<string, ShikiLanguageSource> | undefined {
   if (value === null || typeof value !== 'object') return undefined;
   try {
     if (Array.isArray(value)) return undefined;
-    const projected = Object.create(null) as Record<string, ShikiLanguageInput>;
+    const projected = Object.create(null) as Record<string, ShikiLanguageSource>;
     // Own-name discovery avoids Object.keys()/for-in's implicit enumerable-descriptor probe, so
     // one hostile Proxy descriptor cannot hide a later valid grammar. Structural reflection and
     // admitted enumerable grammars have separate limits: opaque/non-enumerable names never spend
@@ -105,7 +110,7 @@ function projectLanguages(value: unknown): Record<string, ShikiLanguageInput> | 
       )
         continue;
       Object.defineProperty(projected, key, {
-        value: descriptor.value as ShikiLanguageInput,
+        value: descriptor.value as ShikiLanguageSource,
         enumerable: true,
         configurable: false,
         writable: false,
@@ -190,7 +195,7 @@ class LyraDiffViewBase extends LyraElement<LyraDiffViewEventMap> {}
  *   line it first covers; emits `lr-highlight-activate`.
  * @csspart copy-button - The copy affordance, only rendered while `copyable`; pinned to the top
  *   while the view scrolls.
- * @csspart limit - The localized fallback rendered when either input exceeds `maxLines`.
+ * @csspart limit - The localized render-limit fallback or syntax-highlighting limit notice.
  * @csspart side - One column in `layout="split"` (`data-side="old"|"new"`).
  * @cssprop [--lr-diff-view-max-height=none] - Cap on `[part="base"]`'s block size, past which the
  *   view scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
@@ -236,6 +241,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
     diffViewHiddenLines: LYRA_DEFAULT_diffViewHiddenLines,
+    diffViewHighlightLimit: LYRA_DEFAULT_diffViewHighlightLimit,
     diffViewNewLabel: LYRA_DEFAULT_diffViewNewLabel,
     diffViewOldLabel: LYRA_DEFAULT_diffViewOldLabel,
     diffViewTooLarge: LYRA_DEFAULT_diffViewTooLarge,
@@ -297,9 +303,11 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   @property() language = '';
 
   /** Grammar definitions this instance can highlight, same shape as `lr-code-block-core`'s own
-   *  `languages`. */
+   *  `languages`. Values may be resolved grammars or lazy loader functions; only a requested
+   *  loader runs. If either input exceeds 8,192 UTF-16 code units, both sides retain their full
+   *  plain source and a localized `limit` notice replaces syntax highlighting. */
   @property({ attribute: false }) languages?: Readonly<
-    Record<string, ShikiLanguageInput>
+    Record<string, ShikiLanguageSource>
   >;
 
   /** How many unchanged lines to keep visible immediately before/after each change. Default
@@ -311,7 +319,10 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
 
   /** Maximum lines accepted on either input side before rendering a bounded fallback. Defaults
    *  to `5000`. `Infinity` relaxes this line-count limit; aggregate text and comparison work
-   *  remain bounded. */
+   *  remain bounded. All values also enforce a hard ceiling of 10,000 diff operations before
+   *  rendering (at most 10,000 unified lines or 20,000 split cells, including empty cells).
+   *  Above the ceiling a localized `limit` fallback replaces the diff. Rows use
+   *  `content-visibility: auto` to defer offscreen paint. */
   @property({ type: Number, attribute: 'max-lines' }) maxLines = 5000;
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. Feature-detectable capability
@@ -357,7 +368,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   private oldTextSnapshot = '';
   private newTextSnapshot = '';
   private languageSnapshot = '';
-  private languagesSnapshot?: Record<string, ShikiLanguageInput>;
+  private languagesSnapshot?: Record<string, ShikiLanguageSource>;
 
   // The O(n*m) LCS computation only needs rerunning when the compared texts or their ceiling
   // changes. A render triggered purely by copy feedback toggling reuses the same result.
@@ -401,6 +412,10 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
         characterCount > MAX_DIFF_CHARACTERS ||
         comparisons > MAX_DIFF_COMPARISONS;
       this.diffOps = this.diffTooLarge ? [] : computeLineDiff(oldLines, newLines);
+      if (this.diffOps.length > MAX_DIFF_RENDERED_LINES) {
+        this.diffTooLarge = true;
+        this.diffOps = [];
+      }
       this.opIndexMap = new Map(this.diffOps.map((op, index) => [op, index]));
       // Every op above is a fresh object literal, so a previously forced-visible/matched op can
       // never alias one in the new array -- both reset alongside it.
@@ -450,6 +465,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncHighlight();
     this.copyAnnouncementSink ??= acquireAnnouncementSink('polite', {
       document: this.ownerDocument,
       source: this,
@@ -460,6 +476,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   }
 
   override disconnectedCallback(): void {
+    this.highlightToken++;
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry)
     this.resetCopyFeedback();
     this.copyAnnouncementSink?.release();
@@ -469,6 +486,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   }
 
   override adoptedCallback(): void {
+    this.highlightToken++;
     super.adoptedCallback();
     // A disconnected node can be adopted without receiving another disconnect notification.
     this.resetCopyFeedback();
@@ -491,9 +509,13 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     this.copyStatus = 'rest';
   }
 
+  private get highlightLimited(): boolean {
+    return this.oldTextSnapshot.length > SHIKI_SOURCE_MAX_CODE_UNITS || this.newTextSnapshot.length > SHIKI_SOURCE_MAX_CODE_UNITS;
+  }
+
   private syncHighlight(): void {
     const token = ++this.highlightToken;
-    if (this.diffTooLarge) {
+    if (this.diffTooLarge || this.highlightLimited) {
       this.highlightedOldLines = null;
       this.highlightedNewLines = null;
       return;
@@ -505,18 +527,28 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
       this.highlightedNewLines = null;
       return;
     }
+    // The new diff operations must never reuse markup from the previous source while loading.
+    this.highlightedOldLines = null;
+    this.highlightedNewLines = null;
     let loading: Promise<ShikiHighlighterCore | null>;
     try {
-      loading = this.loadHighlighterCore(languages);
+      loading = this.loadHighlighterCore(resolvedShikiLanguages(languages));
     } catch {
       this.highlightedOldLines = null;
       this.highlightedNewLines = null;
       return;
     }
     void loading.then(
-      (hl) => {
-        if (token !== this.highlightToken) return; // superseded by a newer oldText/newText/language/languages change
+      async (hl) => {
+        if (token !== this.highlightToken || !this.isConnected) return; // superseded or disconnected
         if (!hl) {
+          this.highlightedOldLines = null;
+          this.highlightedNewLines = null;
+          return;
+        }
+        const loaded = await ensureShikiLanguageLoaded(hl, lang, languages[lang]!);
+        if (token !== this.highlightToken || !this.isConnected) return;
+        if (!loaded) {
           this.highlightedOldLines = null;
           this.highlightedNewLines = null;
           return;
@@ -539,6 +571,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
    *  `willUpdate` above: if this counted lines differently (e.g. plain `split('\n')` while the diff
    *  normalizes CRLF), every CRLF document would misindex `highlightedOldLines`/`-NewLines`. */
   private tokenizeLines(hl: ShikiHighlighterCore, text: string, lang: string): string[] | null {
+    if (text.length > SHIKI_SOURCE_MAX_CODE_UNITS) return null;
     try {
       const html = hl.codeToHtml(text, { lang, themes: SHIKI_THEMES });
       const DOMParserCtor = this.ownerDocument.defaultView?.DOMParser;
@@ -1054,6 +1087,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
                 : this.localize('copy')}
             </button>`
           : nothing}
+        ${this.highlightLimited && this.languageSnapshot ? html`<div part="limit" role="note">${this.localize('diffViewHighlightLimit')}</div>` : nothing}
         ${this.layout === 'split' ? this.renderSplit() : this.renderUnified()}
       </div>
       ${this.renderAnchorLiveRegion()}

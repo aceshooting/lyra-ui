@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,11 +19,87 @@
 A live, collapsible tracker for an agent's plan: ordered steps with per-step lifecycle status and one
 level of nested sub-steps, embedded in the transcript. `items` is controlled and never mutated by this
 component. Unlike `<lr-stepper>`'s single-`current` navigation, task-list has no selection and
-several steps may be `running` at once. By default it is a status report; `reorderable` adds
-controlled keyboard reorder requests without changing ownership of `items`. Status changes and
-confirmed moves are announced through an internal `<lr-live-region>`.
-The list renders at most 500 tasks across top-level rows and direct children; `[part="limit"]`
-explains when more were supplied. The summary still counts every top-level task.
+several steps may be `running` at once. By default it is a status report; with `treeSource` unset,
+`reorderable` adds controlled keyboard reorder requests without changing ownership of `items`.
+Legacy status changes and confirmed moves are announced through an internal `<lr-live-region>`.
+
+**Complete source tasks:** `treeSource: TaskListSource | undefined = undefined`
+(attribute: false) takes precedence over `items`; invalid defined sources fail visibly without
+falling back to the array. Only `undefined` restores current legacy items.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-task-list.js";
+import type { TaskListSource, TaskItem, TaskStatus } from
+  "@aceshooting/lyra-ui/components/agent-tools/task-list/task-list.class.js";
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraTaskSourceSummary } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`TaskListSource = LyraHierarchySource<TaskItem, LyraHierarchyQuery, LyraTaskSourceSummary>`.
+The exact shared hierarchy/request/row protocols and
+`LyraTaskSourceSummary` declaration are in [shared source contracts](../shared/events-and-types.md).
+The required summary has readonly `total` and `completed` safe nonnegative integers with
+`completed <= total <= projection.total`. Its counts describe all top-level tasks, independently
+of the current visible preorder and mounted rows. `projection.total` counts all logical tasks,
+including collapsed children; `projection.rows.count` counts the complete currently visible
+preorder and cannot exceed that total. The header uses the provider's summary, never counts
+from a loaded window; unavailable summaries do not paint a fabricated 0-of-0 header.
+
+The provider implements `project({ revision, locale, signal, query, state, action })`; query stays
+`{ search: '', hiddenKinds: [] }`. Revision is a nonempty string or finite number. Each immutable
+projection supplies a nonempty `state` token of at most 65,536 UTF-16 units,
+`total`, `rows`, required `summary` and optional `focusIndex`. Rows use either indexed
+`count`/`itemAt`/`keyAt`/`indexOfKey`, or ranged `count`/`read`/`indexOfKey`; ranged reads return
+exactly the requested in-bounds range. Keys resolve directly without a full-source scan.
+Provider preorder, parent keys, one-based `level`/`position`/`setSize`, `childCount`, `expanded`,
+`selected`, optional `disabled` and `selectionState` own topology and semantic metadata.
+Task rows must be level 1 with null parent, or level 2 with a nonempty parent and no children;
+deeper source rows fail visibly. The component never traverses `value.children` or opaque task
+metadata, and `row.key` must equal the nonblank `value.id`.
+
+Source values copy only own data fields `id`, `label`, `status` and optional `detail`.
+Accessor-backed fields reject; nonstring label/detail normalize to empty text and unknown status
+to `'pending'`. A normalized row's key, parent key, id, label and detail share a 65,536 UTF-16-unit
+budget. Retained rows, focused reserve and pending admission share a 2,000,000-unit payload
+ceiling. Four 100-row pages retain at most 400 rows plus one focused row; at most 301 rows mount,
+with at most two physical range reads. Projection work permits one physical call and only the
+latest queued intent; ignored aborts keep their physical permits until settlement. Provider
+storage and indexing remain caller-owned.
+
+The virtualized tree navigates the complete visible preorder, with global Home/End, Up/Down,
+RTL-aware expansion/parent keys and disabled-row handling. `revealSourceKey(key: string):
+Promise<boolean>` requests a provider reveal and focuses its returned `focusIndex`; it resolves
+false when no source is set, the key is invalid/absent/disabled, focus cannot be transferred, or
+the operation is obsolete. Reveal, refresh and row focus emit no task action or selection event.
+Row activation does not request provider selection. Provider expansion controls remain available,
+but emit no new task toggle event; the existing `lr-toggle-request`/`lr-toggle` pair controls only
+the outer panel. `reorderable` and `maxNodes` govern legacy items; source mode disables reorder,
+clears pending moves and never replays historical per-item status changes as fresh announcements.
+
+`heading`, `headingLevel`, `frame`, `size` and panel collapse remain local presentation. The
+header's existing cancelable toggle proposal/veto behavior remains; a superseded proposal cannot
+change a replacement view. Source rows retain status icons, text/detail and `detail-<id>` slots.
+Their native treeitem accessible names derive from the rendered status, label, detail and rich
+slot content, each once; the focus owner is `source-row`, rather than a legacy reorder row.
+Source parts are `source-list`, `source-row`, `source-label`, `source-toggle`, `source-status` and
+`source-error`. Localized loading, complete visible/logical counts, empty, projection failure and
+per-row retry states stay distinct. Initial status is quiet; later current source status/failure
+changes use light-DOM announcements without historical task-status replay.
+
+Reassign even the same source or call a keyless `requestUpdate()` after revision/state changes.
+Named presentation paints reuse accepted data unless revision or effective locale changes.
+Source/revision replacement, reveal/expansion supersession, disconnect and adoption revoke old
+rows, callbacks and effects; reconnect requests the current source. Retained controls cannot act
+on a replacement row that reuses the same key. Provider results and displayed records must remain
+immutable for their captured revision.
+
+**Legacy array admission:** with `treeSource` unset, the list renders at most `maxNodes` tasks
+(default 500) across top-level rows and direct children;
+`[part="limit"]` explains when source admission or rendering omits tasks. The summary counts every
+valid admitted top-level task. Initial limit notices are silent; a later transition into truncation is announced politely.
+Assignment examines the first 10,000 outer entries; direct-child arrays share a separate 10,000-position
+budget. Display fields are copied without invoking accessors or traversing opaque metadata. Reassign
+a new array after changing task data; unrelated updates and reconnects retain the assigned snapshot.
 
 **Properties:** `items: readonly TaskItem[] = []` (attribute: false) — `TaskItem { id: string; label: string;
 status: TaskStatus; detail?: string; children?: readonly TaskItem[] }` with `TaskStatus = 'pending' |
@@ -35,6 +111,8 @@ line; `children` is exactly **one** level of sub-steps — a child's own `childr
 rendering, summaries, announcements, and reorder validation. While `reorderable`, every retained
 top-level task and direct child must additionally have a globally unique `id`; duplicate data stays
 visible but fails closed, with no row keyboard stops or reorder requests.
+`maxNodes: number = 500` (attribute `max-nodes`) sets the rendered parent-plus-child budget,
+normalized to `1..5000`; unset or non-finite values restore 500.
 `reorderable: boolean = false` (reflected) enables Ctrl/Cmd+ArrowUp/ArrowDown on a focused task.
 It emits a request only; the host must assign a new reordered `items` array before the task visibly
 moves or an announcement is made. `heading?: string` — the visible section title; omission
@@ -62,7 +140,8 @@ that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.
 **Events:** cancelable `lr-toggle-request` (`detail: { expanded }`, the requested state), `lr-toggle` — the header was activated, expanding or collapsing the panel. `detail: {
 expanded }`. `lr-reorder` — Ctrl/Cmd+ArrowUp/ArrowDown requests moving the focused task within its
 own sibling list. `detail: { taskId, parentTaskId, fromIndex, toIndex }`; `parentTaskId` is `null`
-for a top-level task and indices are sibling-scoped. It fires only while `reorderable` with unique,
+for a top-level task and indices are sibling-scoped. It fires only with `treeSource` unset while
+`reorderable` with unique,
 nonempty ids.
 A boundary key is a silent no-op, so it never reparents a child; the component announces success only
 after the host's rendered array confirms the exact requested swap.
@@ -73,9 +152,9 @@ after the host's rendered array confirms the exact requested swap.
 otherwise, within the configured semantic heading), `label` (the `heading` text),
 `summary` (the visible "N of M completed" summary, top-level items only), `toggle` (the chevron
 indicator, not rendered while `without-collapse`), `body` (the list of items, `hidden` while collapsed),
-`item` (`role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
+`item` (legacy `role="listitem"`; carries `data-status`/`data-id`/`data-depth` and is focusable only for
 valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, `limit` (shown when the task
-render cap is exceeded), and `item-children` (the
+source or render cap is exceeded), and `item-children` (the
 nested `role="list"` wrapper around a top-level item's children).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.

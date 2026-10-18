@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} ಹೆಚ್ಚಿನ ಸಲಹೆ',
     other: '{count} ಹೆಚ್ಚಿನ ಸಲಹೆಗಳು',
   },
+  mentionInputLimit: 'ಉಲ್ಲೇಖಕ್ಕಾಗಿ ಮೊದಲ 10,000 ಸಲಹೆಗಳು ಮಾತ್ರ ಲಭ್ಯವಿವೆ.',
+  diffViewHighlightLimit: 'ಉದ್ದವಾದ ಕೋಡ್ ಅನ್ನು ಸಿಂಟ್ಯಾಕ್ಸ್ ಹೈಲೈಟಿಂಗ್ ಇಲ್ಲದೆ ತೋರಿಸಲಾಗುತ್ತದೆ.',
 };
 
 registerLyraLocale('kn', strings);

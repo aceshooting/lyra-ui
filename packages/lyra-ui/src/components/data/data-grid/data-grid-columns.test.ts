@@ -1360,7 +1360,7 @@ it("uses a 0px grid-template minimum for an unsized column that only declares a 
     <lr-data-grid label="People" .columns=${boundedColumns} .data=${rows}></lr-data-grid>
   `);
   expect(
-    element.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!.style
+    element.shadowRoot!.querySelector<HTMLElement>('[part="table"]')!.style
       .getPropertyValue("--data-grid-columns")
   ).to.contain("minmax(0px, 100px)");
 });

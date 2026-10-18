@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} command dey',
     other: '{count} command dem dey',
   },
+  commandPaletteInputLimit: 'Dem leave some command because input don reach im limit.',
 };
 
 registerLyraLocale('pcm', strings);

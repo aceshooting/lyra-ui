@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -44,9 +44,25 @@ rows, `disabled` prevents selection, and literal `label` overrides include expli
 A nonempty unknown, malformed or disabled selected value stays visible and invalid until cleared
 or replaced. It is never silently replaced or added as a selectable row.
 
-**SSR:** All three render declarative shadow DOM with catalog rows and the committed identifier
-without browser globals. Country flag emoji need no asset loader. Interactive selection requires
-hydration; use the same explicit catalog and locale on server and client for consistent options.
+A localized `catalogPickerInputLimit` notice in `part="limit"` reports original catalog positions
+omitted beyond the 1,024-position inspection ceiling. Invalid and duplicate positions inside the
+prefix still consume that allowance. This notice is separate from `select-option-overflow`, which
+counts admitted rows outside the popup's render window. Search covers only admitted entries;
+provide a narrower or replacement catalog to include omitted input. Rebinding the picker's retained
+catalog snapshot preserves the notice; a fresh below-limit catalog, `[]`, or restoring defaults
+clears it. Initial mounting and reconnecting are quiet; later changed input loss is politely
+announced. The message supports the usual per-instance `.strings` override.
+
+All four regional pickers mount only the committed option before first focus or opening, then
+reuse the initialized catalog until its inputs change. An explicit `requestUpdate()` refreshes
+consumer presentation overrides. Popup rendering is capped at 1,000 options, with omitted rows
+reported through `select-option-overflow`; source admission still accepts up to 1,024 rows.
+Built-in catalogs remain fully available. Enable `searchable` to filter admitted custom catalog
+entries outside the initial popup window; committed tail values remain represented.
+
+**SSR:** All three render declarative shadow DOM with the committed option and identifier, without
+browser globals. Country flag emoji need no asset loader. Interactive selection and the remaining
+catalog require hydration; use the same explicit catalog and locale on server and client.
 
 `label=''`, `hint=''`, `errorText=''` (`error-text`) and the `label`, `hint`, `error` slots supply
 field chrome. `accessibleLabel=null` (attribute `aria-label`) overrides the actual control's name;
@@ -88,8 +104,9 @@ and `LyraUnitChangeDetail` from their respective component modules. Reselecting 
 programmatic updates, catalog/locale changes and resets emit no selection events. Native `focus`
 and `blur` relay once; canceling `lr-invalid` suppresses native validation UI.
 
-**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `select-trigger`,
-`select-display-input`, `select-listbox`, `select-option`, `select-option-sub`, `select-group-label`
+**CSS parts:** `form-control`, `form-control-label`, `hint`, `error`, `limit` (original catalog
+input-loss notice), `select-trigger`,
+`select-display-input`, `select-listbox`, `select-option`, `select-option-overflow`, `select-option-sub`, `select-group-label`
 and `select-clear-button`; country additionally exposes `flag`. The three field slots are the only content slots; supply options through
 the catalog property. Shared form-control and surface tokens apply, including RTL and dark themes.
 

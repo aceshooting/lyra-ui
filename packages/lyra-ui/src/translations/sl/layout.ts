@@ -62,6 +62,7 @@ const strings: LyraLocaleStrings = {
     few: '{count} ukazi',
     other: '{count} ukazov',
   },
+  commandPaletteInputLimit: 'Nekateri ukazi so bili izpuščeni, ker je bila dosežena omejitev vnosa.',
 };
 
 registerLyraLocale('sl', strings);

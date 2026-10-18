@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} کمانڈ',
     other: '{count} کمانڈز',
   },
+  commandPaletteInputLimit: 'ان پٹ کی حد تک پہنچنے کی وجہ سے کچھ کمانڈز چھوڑ دی گئی ہیں۔',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

@@ -114,7 +114,8 @@ function trackSnapshot(
  * `repeat="one"` restarts the current video and `repeat="all"` wraps the final video to the first.
  * `items` can seed deterministic playlist-row metadata for server rendering. Seeded rows are
  * visible but disabled until the browser can adopt the indexed direct video children; live child
- * metadata is authoritative after that corrective update.
+ * metadata is authoritative after that corrective update. Later interactions do not inspect the
+ * obsolete seed, even when all adopted children are subsequently removed.
  *
  * A child marked `inert` is unavailable: it never becomes the active video,
  * `next()`/`previous()`/automatic advancement step past it, and its playlist row renders `disabled` so the
@@ -845,7 +846,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       : explicitHostLabel === ''
         ? ''
         : this.localize('videoPlaylistLabel');
-    const seededItems = Array.isArray(this.items)
+    const seededItems = !this.liveChildrenReady && Array.isArray(this.items)
       ? this.items.filter((item): item is LyraVideoPlaylistItem =>
           item !== null && typeof item === 'object')
       : [];

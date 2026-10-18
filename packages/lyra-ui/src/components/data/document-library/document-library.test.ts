@@ -415,7 +415,7 @@ it("toggles sort direction on a repeated header activation and re-sorts rows (un
   )) as LyraDocumentLibrary;
   const table = el.shadowRoot!.querySelector("lr-table") as HTMLElement;
   const nameHeader = table.shadowRoot!.querySelector(
-    '[data-col-key="name"]'
+    'th[data-col-key="name"]'
   ) as HTMLElement;
 
   const sortListener = oneEvent(el, "lr-sort");

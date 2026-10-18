@@ -1,12 +1,18 @@
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveListMove, isRovingTargetAvailable } from '../../../internal/list-navigation.js';
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, publicCollectionTruncation, snapshotEventDetail } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { live } from 'lit/directives/live.js';
+import { ref } from 'lit/directives/ref.js';
+import { setSourcePageScope } from '../../../internal/source-page-scope.js';
+import { tag } from '../../../internal/prefix.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
-import type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
+import type { KnowledgeBaseSource, KnowledgeSource, LyraKnowledgeBase } from '../knowledge-base/knowledge-base.class.js';
 export type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
-import type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
+import type { IngestionQueueSource, IngestionQueueItem, LyraIngestionQueue } from '../ingestion-queue/ingestion-queue.class.js';
 export type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 import { styles } from './knowledge-base-admin.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
@@ -14,10 +20,11 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_knowledgeBaseAdminIngestionTab, LYRA_DEFAULT_knowledgeBaseAdminLabel, LYRA_DEFAULT_knowledgeBaseAdminSourcesTab } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_knowledgeBaseAdminIngestionTab, LYRA_DEFAULT_knowledgeBaseAdminInputLimit, LYRA_DEFAULT_knowledgeBaseAdminLabel, LYRA_DEFAULT_knowledgeBaseAdminSourcesTab } from '../../../internal/default-strings/retrieval.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type KnowledgeBaseAdminTab = 'sources' | 'ingestion';
+const EMPTY_ROWS = Object.freeze([]);
 
 export interface LyraKnowledgeBaseAdminEventMap {
   'lr-tab-change': CustomEvent<{ activeTab: KnowledgeBaseAdminTab }>;
@@ -38,6 +45,13 @@ export interface LyraKnowledgeBaseAdminEventMap {
  *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
+ * Original input omissions are disclosed in input-limit before forwarding the retained collection.
+ *
+ * Optional dataSource and ingestionSource are opaque provider identities. Only the active child
+ * receives its provider; changing tabs remounts that child at its default page. Same-reference
+ * provider assignment and requestUpdate() refresh only the active child. Undefined restores the
+ * corresponding legacy collection and its admission-loss notice. Provider rows and totals remain
+ * owned by the children; the shell neither queries nor caches them.
  *
  * @customElement lr-knowledge-base-admin
  * @slot settings - Optional host-owned ingestion, chunking, embedding, or permissions controls.
@@ -59,6 +73,7 @@ export interface LyraKnowledgeBaseAdminEventMap {
  * @event lr-source-delete - Forwarded source deletion request. `detail: { sourceId }`.
  * @event lr-ingestion-retry - Forwarded ingestion retry request.
  * @event lr-ingestion-cancel - Forwarded ingestion cancel request.
+ * @csspart input-limit - Original collection admission-loss notice.
  * @csspart base - The root admin wrapper.
  * @csspart heading - The visible heading.
  * @csspart tabs - The tablist.
@@ -79,6 +94,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     knowledgeBaseAdminIngestionTab: LYRA_DEFAULT_knowledgeBaseAdminIngestionTab,
+    knowledgeBaseAdminInputLimit: LYRA_DEFAULT_knowledgeBaseAdminInputLimit,
     knowledgeBaseAdminLabel: LYRA_DEFAULT_knowledgeBaseAdminLabel,
     knowledgeBaseAdminSourcesTab: LYRA_DEFAULT_knowledgeBaseAdminSourcesTab,
   };
@@ -87,7 +103,61 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['sources', 'ingestionItems']);
 
+  protected static override readonly identityCollectionObjectProperties = Object.freeze(['dataSource', 'ingestionSource']);
+
   static override styles = [LyraElement.styles, styles];
+
+  private _dataSource?: KnowledgeBaseSource;
+  private _ingestionSource?: IngestionQueueSource;
+  private forwardGeneration = 0;
+  private readonly bindSourcePageScope = (child: Element | undefined): void => {
+    if (child instanceof HTMLElement) setSourcePageScope(child, this);
+  };
+
+  /** Opaque inventory provider, forwarded only while Sources is active. Undefined restores sources.
+   * Same-reference assignment refreshes the active child once. */
+  @property({ attribute: false, hasChanged: () => true })
+  get dataSource(): KnowledgeBaseSource | undefined { return this._dataSource; }
+  set dataSource(value: KnowledgeBaseSource | undefined) {
+    const old = this._dataSource; this._dataSource = value;
+    if (this.activeView === 'sources') {
+      this.forwardGeneration = (this.forwardGeneration ?? 0) + 1;
+      const child = this.activeChild() as LyraKnowledgeBase | undefined;
+      if (child) child.dataSource = value;
+    }
+    this.requestUpdate('dataSource', old);
+  }
+
+  /** Opaque queue provider, forwarded only while Ingestion is active. Undefined restores ingestionItems.
+   * Same-reference assignment refreshes the active child once. */
+  @property({ attribute: false, hasChanged: () => true })
+  get ingestionSource(): IngestionQueueSource | undefined { return this._ingestionSource; }
+  set ingestionSource(value: IngestionQueueSource | undefined) {
+    const old = this._ingestionSource; this._ingestionSource = value;
+    if (this.activeView === 'ingestion') {
+      this.forwardGeneration = (this.forwardGeneration ?? 0) + 1;
+      const child = this.activeChild() as LyraIngestionQueue | undefined;
+      if (child) child.dataSource = value;
+    }
+    this.requestUpdate('ingestionSource', old);
+  }
+
+  private get activeView(): KnowledgeBaseAdminTab {
+    return this.activeTab === 'ingestion' && !this.withoutIngestion ? 'ingestion' : 'sources';
+  }
+  private activeChild(): LyraKnowledgeBase | LyraIngestionQueue | undefined {
+    if (!this.isConnected) return undefined;
+    return this.shadowRoot?.querySelector<LyraKnowledgeBase | LyraIngestionQueue>(tag(this.activeView === 'sources' ? 'knowledge-base' : 'ingestion-queue')) ?? undefined;
+  }
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) {
+      this.forwardGeneration = (this.forwardGeneration ?? 0) + 1;
+      this.activeChild()?.requestUpdate();
+    } else if ((args[0] === 'activeTab' && this.activeTab !== args[1]) || (args[0] === 'withoutIngestion' && this.withoutIngestion !== args[1])) {
+      this.forwardGeneration = (this.forwardGeneration ?? 0) + 1;
+    }
+    super.requestUpdate(...args);
+  }
 
   /** Knowledge-base source connectors. */
   @property({ attribute: false }) sources: readonly KnowledgeSource[] = [];
@@ -143,8 +213,41 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     this.emit('lr-tab-change', { activeTab: 'sources' });
   }
 
+  private lastInputNotice = '';
+  private inputNoticeMounted = false;
+  private readonly inputAnnouncements = new AnnouncementSinkController(this);
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) super.requestUpdate();
+  }
+
+  override disconnectedCallback(): void {
+    this.forwardGeneration++;
+    super.disconnectedCallback();
+    this.inputNoticeMounted = false;
+  }
+  override adoptedCallback(): void {
+    this.forwardGeneration++;
+    super.adoptedCallback();
+    this.inputAnnouncements.adopted();
+  }
+  private inputLimitMessage(): string {
+    const property = this.activeView === 'ingestion' ? 'ingestionItems' : 'sources';
+    if (property === 'sources' ? this.dataSource !== undefined : this.ingestionSource !== undefined) return '';
+    const loss = publicCollectionTruncation(this, property);
+    const format = getNumberFormat(this.effectiveLocale);
+    return loss ? this.localize('knowledgeBaseAdminInputLimit', undefined, {
+      collection: this.localize(property === 'sources' ? 'knowledgeBaseAdminSourcesTab' : 'knowledgeBaseAdminIngestionTab'),
+      count: format.format(loss.retained), total: format.format(loss.source),
+    }) : '';
+  }
+
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    const notice = this.inputLimitMessage();
+    if (this.inputNoticeMounted && notice && notice !== this.lastInputNotice) this.inputAnnouncements.announcePolite(notice);
+    this.lastInputNotice = notice;
+    this.inputNoticeMounted = true;
     if (!this.focusSourcesAfterUpdate) return;
     this.focusSourcesAfterUpdate = false;
     this.shadowRoot
@@ -181,13 +284,18 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     });
   }
 
-  private forward<T>(
+  private forward(
     event: Event,
     name: keyof LyraKnowledgeBaseAdminEventMap,
-    detail: T
+    current: () => boolean,
+    readDetail: () => unknown,
   ): void {
     event.stopPropagation();
-    this.emit(name as never, detail as never);
+    if (!current()) return;
+    const detail = readDetail();
+    if (!current()) return;
+    const snapshot = snapshotEventDetail(detail, this.ownerDocument.defaultView);
+    if (current()) this.emit(name as never, snapshot as never);
   }
 
   override render(): TemplateResult {
@@ -202,10 +310,14 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
       this.activeTab === 'ingestion' && !this.withoutIngestion
         ? 'ingestion'
         : 'sources';
+    const generation = this.forwardGeneration; const owner = this.ownerDocument;
+    const current = (event: Event) => () => this.isConnected && this.ownerDocument === owner && this.forwardGeneration === generation && this.activeView === tab && event.currentTarget === this.activeChild();
+    const notice = this.inputLimitMessage();
     const level = resolveHeadingLevel(this.headingLevel);
     const childLevel = level ? (String(Math.min(6, +level + 1)) as LyraHeadingLevel) : 'none';
     return html`<section part="base">
       <div part="heading" role=${level ? 'heading' : nothing} aria-level=${level ?? nothing}>${visibleLabel}</div>
+      ${notice ? html`<p part="input-limit" role="note">${notice}</p>` : nothing}
       <div part="tabs" role="tablist" aria-label=${tablistLabel}>
         <button
           part="tab"
@@ -247,16 +359,18 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
       >
         ${tab === 'sources'
           ? html`<lr-knowledge-base
-              .sources=${this.sources}
+              ${ref(this.bindSourcePageScope)}
+              .dataSource=${live(this.dataSource)}
+              .sources=${this.dataSource === undefined ? this.sources : EMPTY_ROWS}
               .headingLevel=${childLevel}
               @lr-source-create=${(event: Event) =>
-                this.forward(event, 'lr-source-create', undefined)}
+                this.forward(event, 'lr-source-create', current(event), () => undefined)}
               @lr-source-sync=${(event: CustomEvent<{ sourceId: string }>) =>
-                this.forward(event, 'lr-source-sync', event.detail)}
+                this.forward(event, 'lr-source-sync', current(event), () => event.detail)}
               @lr-source-pause=${(event: CustomEvent<{ sourceId: string }>) =>
-                this.forward(event, 'lr-source-pause', event.detail)}
+                this.forward(event, 'lr-source-pause', current(event), () => event.detail)}
               @lr-source-delete=${(event: CustomEvent<{ sourceId: string }>) =>
-                this.forward(event, 'lr-source-delete', event.detail)}
+                this.forward(event, 'lr-source-delete', current(event), () => event.detail)}
             ></lr-knowledge-base>`
           : nothing}
       </div>
@@ -271,13 +385,15 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
           >
             ${tab === 'ingestion'
               ? html`<lr-ingestion-queue
-                  .items=${this.ingestionItems}
+                  ${ref(this.bindSourcePageScope)}
+                  .dataSource=${live(this.ingestionSource)}
+                  .items=${this.ingestionSource === undefined ? this.ingestionItems : EMPTY_ROWS}
                   @lr-retry=${(
                     event: CustomEvent<RetryEventDetail & { itemId: string }>
-                  ) => this.forward(event, 'lr-ingestion-retry', event.detail)}
+                  ) => this.forward(event, 'lr-ingestion-retry', current(event), () => event.detail)}
                   @lr-cancel=${(
                     event: CustomEvent<CancelEventDetail & { itemId: string }>
-                  ) => this.forward(event, 'lr-ingestion-cancel', event.detail)}
+                  ) => this.forward(event, 'lr-ingestion-cancel', current(event), () => event.detail)}
                 ></lr-ingestion-queue>`
               : nothing}
           </div>`}

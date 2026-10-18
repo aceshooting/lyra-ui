@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './task-list.js';
 import '../tool-call-chip/tool-call-chip.js';
-import type { TaskItem } from './task-list.class.js';
+import type { TaskItem, TaskListSource } from './task-list.class.js';
 
 const meta: Meta = {
   title: 'TaskList',
@@ -31,7 +31,7 @@ const items: TaskItem[] = [
   { id: 'step-3', label: 'Write summary', status: 'pending' },
 ];
 
-function moveTasks(tasks: TaskItem[], fromIndex: number, toIndex: number): TaskItem[] {
+function moveTasks(tasks: readonly TaskItem[], fromIndex: number, toIndex: number): TaskItem[] {
   const next = [...tasks];
   const [moved] = next.splice(fromIndex, 1);
   if (!moved) return next;
@@ -203,4 +203,29 @@ export const Narrow320: Story = {
       ></lr-task-list>
     </div>
   `,
+};
+
+/** Raise the bounded projection budget while retaining the default when max-nodes is omitted. */
+export const RaisedNodeLimit: Story = {
+  render: () => html`<lr-task-list heading="Larger collection" max-nodes="1000"
+    .items=${Array.from({length:600},(_,index)=>({id:String(index),label:`Task ${index + 1}`,status:'pending'}))}></lr-task-list>`,
+};
+
+/** Provider navigation retains only the current bounded window of a generated plan. */
+export const ProviderPlan: Story = {
+  render: () => {
+    const count = 1_000_000;
+    const treeSource: TaskListSource = { revision: 1, async project(request) {
+      return { state: 'plan', total: count, summary: { total: count / 2, completed: 100_000 },
+        rows: { count, keyAt: index => `task${index}`,
+          indexOfKey: (key: string | number) => /^task\d+$/.test(String(key)) ? Number(String(key).slice(4)) : -1,
+          itemAt: index => ({ key: `task${index}`, value: { id: `task${index}`, label: `Task ${index + 1}`, status: 'pending' },
+            parentKey: index % 2 ? `task${index - 1}` : null, level: index % 2 ? 2 : 1,
+            position: index % 2 ? 1 : index / 2 + 1, setSize: index % 2 ? 1 : count / 2,
+            childCount: index % 2 ? 0 : 1, expanded: true, selected: false }),
+        }, ...(request.action.type === 'reveal' ? { focusIndex: Number(request.action.key.slice(4)) } : {}),
+      };
+    } };
+    return html`<lr-task-list heading="Generated plan" .treeSource=${treeSource}></lr-task-list>`;
+  },
 };

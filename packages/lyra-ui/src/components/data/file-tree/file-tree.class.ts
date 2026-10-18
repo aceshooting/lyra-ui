@@ -1,4 +1,9 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../../../data-sources.js';
+import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
+import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
+import { hierarchySourceStyles } from '../../../internal/hierarchy-source.styles.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { type PropertyValues, html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -12,11 +17,10 @@ import type { LyraTree, LyraTreeNodeData, TreeBadge } from '../tree/tree.class.j
 // Value import (not `import type`) -- revealPath() below needs the real constructor at runtime
 // for its `instanceof` check.
 import { LyraTreeItem } from '../tree/tree-item.class.js';
-import { TREE_MAX_RENDER_NODES } from '../tree/tree-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel, LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_item, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -232,6 +236,9 @@ function isLazyUnloaded(node: FileTreeNode): boolean {
   return isDirectory(node) && node.hasChildren === true && node.children === undefined;
 }
 
+/** Provider-owned immutable preorder used when treeSource is defined. */
+export type FileTreeSource = LyraHierarchySource<FileTreeNode, LyraHierarchyQuery>;
+
 export interface LyraFileTreeEventMap {
   'lr-file-select': CustomEvent<Readonly<{ filePath: string; node: FileTreeNode }>>;
   'lr-file-open': CustomEvent<Readonly<{ filePath: string; node: FileTreeNode }>>;
@@ -254,6 +261,15 @@ export interface LyraFileTreeEventMap {
  * host would have to discard. A consumer that genuinely needs orderable rows composes `<lr-tree>`
  * directly, where the capability already lives.
  *
+ * Provider mode uses treeSource's immutable preorder and ignores nested value.children.
+ * Legacy DOM selection/lazy events and bulk expand/collapse remain legacy-only; source reordering is unavailable.
+ * @csspart source-list - The bounded source viewport.
+ * @csspart source-row - A mounted semantic tree row.
+ * @csspart source-toggle - A source branch or retry button.
+ * @csspart source-label - Source row display content.
+ * @csspart source-status - Source loading/count/empty status.
+ * @csspart source-error - Localized provider or row failure.
+ * Source-mode file event records contain displayed metadata without children.
  * @customElement lr-file-tree
  * @event lr-file-select - `detail: { filePath, node }` — a row was activated.
  * @event lr-file-open - `detail: { filePath, node }` — Enter/click on an already-selected file row
@@ -273,6 +289,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     copy: LYRA_DEFAULT_copy,
     date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
+    expand: LYRA_DEFAULT_expand,
     fileTreeDiffSummary: LYRA_DEFAULT_fileTreeDiffSummary,
     fileTreeLabel: LYRA_DEFAULT_fileTreeLabel,
     gitStatusAdded: LYRA_DEFAULT_gitStatusAdded,
@@ -282,16 +299,91 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     gitStatusModified: LYRA_DEFAULT_gitStatusModified,
     gitStatusRenamed: LYRA_DEFAULT_gitStatusRenamed,
     gitStatusUntracked: LYRA_DEFAULT_gitStatusUntracked,
+    item: LYRA_DEFAULT_item,
+    loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     navigation: LYRA_DEFAULT_navigation,
+    noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
+    retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     treeLimit: LYRA_DEFAULT_treeLimit,
+    treeSourceError: LYRA_DEFAULT_treeSourceError,
+    treeSourceSummary: LYRA_DEFAULT_treeSourceSummary,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, hierarchySourceStyles];
+
+  private sourceModeEpoch = 0;
+  private _treeSource: FileTreeSource | undefined = undefined;
+  private sourceMode = false;
+  private sourcePaintVersion = 0;
+  private sourceAnnouncement?: string;
+  private readonly sourceAnnouncer = new AnnouncementSinkController(this);
+  private readonly hierarchy = new HierarchySourceController<FileTreeNode>(this, {
+    normalize: (value, key, childCount) => this.normalizeSourceValue(value, key, childCount),
+    onChange: () => { const previous = this.sourcePaintVersion++; this.requestUpdate('sourcePaintVersion', previous); },
+    accepted: (action, row, _state, isCurrent) => { if (action.type !== 'select' || !row) return;
+      this.sourceSelectedWrite = action.key;
+      this.selectedPath = action.key;
+      const detail = Object.freeze({ filePath: action.key, node: row.value });
+      this.emit('lr-file-select', detail);
+      if (isCurrent() && row.selected && row.childCount === 0 && row.value.kind !== 'directory') this.emit('lr-file-open', detail); },
+  });
+
+  /** Immutable provider preorder. Wins over legacy inputs while defined; unset restores them.
+   * At most 301 rows mount, with four 100-row pages and one focused row retained.
+   * Reassign or call requestUpdate() after changing the provider revision.
+   * @default undefined */
+  @property({ attribute: false })
+  get treeSource(): FileTreeSource | undefined { return this._treeSource; }
+  set treeSource(value: FileTreeSource | undefined) {
+    const previous = this._treeSource;
+    this._treeSource = value; this.sourceModeEpoch++;
+    this.hierarchy?.update(value, this.effectiveLocale, true);
+    this.requestUpdate('treeSource', previous);
+  }
+
+  /** Reveals a provider key and focuses its current visible row; false when absent or obsolete. */
+  revealSourceKey(key: string): Promise<boolean> {
+    return this.treeSource === undefined ? Promise.resolve(false) : this.hierarchy.reveal(key);
+  }
+
+  private normalizeSourceValue(value: unknown, key: string, childCount: number): FileTreeNode {
+    const path = hierarchyKey(hierarchyField(value, 'path'));
+    if (path !== key) throw new TypeError('Hierarchy domain key mismatch');
+    const kind = hierarchyField(value, 'kind');
+    const status = hierarchyField(value, 'gitStatus');
+    const additions = hierarchyField(value, 'additions');
+    const deletions = hierarchyField(value, 'deletions');
+    const name = hierarchyText(hierarchyField(value, 'name'), baseName(path));
+    const mimeType = hierarchyText(hierarchyField(value, 'mimeType'));
+    if (name.length + mimeType.length > 65_536) throw new RangeError('Hierarchy display value exceeds its row budget');
+    return Object.freeze({ path, name,
+      kind: kind === 'directory' || childCount > 0 ? 'directory' : 'file', mimeType,
+      ...(typeof status === 'string' && Object.hasOwn(GIT_STATUS_KEY, status) ? { gitStatus: status as FileTreeNode['gitStatus'] } : {}),
+      ...(typeof additions === 'number' && Number.isSafeInteger(additions) && additions >= 0 ? { additions } : {}),
+      ...(typeof deletions === 'number' && Number.isSafeInteger(deletions) && deletions >= 0 ? { deletions } : {}),
+    });
+  }
+
+  private announceSource(): void {
+    const status = this.hierarchy.error ? this.localize('treeSourceError') : this.hierarchy.loading ? this.localize('loading') : this.sourceSummary();
+    if (this.sourceAnnouncement !== undefined && status !== this.sourceAnnouncement) this.sourceAnnouncer.announce(status);
+    this.sourceAnnouncement = status;
+    if (this.hierarchy.rowsObserved) this.sourceAnnouncer.transition('source-rows', this.hierarchy.rowError ? 'error' : 'ready',
+      this.hierarchy.rowError ? this.localize('treeSourceError') : '');
+  }
+  private sourceSummary(): string {
+    const projection = this.hierarchy.projection;
+    return projection ? this.localize('treeSourceSummary', undefined, {
+      visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count),
+      total: getNumberFormat(this.effectiveLocale).format(projection.total),
+    }) : '';
+  }
+
 
   private _nodes: readonly FileTreeNode[] = [];
   private nodesTruncated = false;
@@ -300,7 +392,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   /** Clone-owned, cycle-safe readonly node snapshot. Empty/blank paths are omitted and duplicate
    * paths use the first valid node; projection inspects at most 10,000 source positions across 64
    * descendant levels. An unreadable optional field rejects only its node, without reserving the
-   * path against a later valid occurrence. The composed `<lr-tree>` holds at most 1,000 rows, so
+   * path against a later valid occurrence. The composed `<lr-tree>` holds at most maxNodes rows (default 1000), so
    * a larger listing projects each collapsed directory as a single row whose children load from
    * this snapshot when it expands; `dataTruncated` reports anything still omitted. Reassign after
    * changes. */
@@ -321,12 +413,27 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
 
   /** Whether any supplied node is not shown: omitted while normalizing `nodes` (malformed,
    *  duplicate, cyclic, over-depth, or over-budget entries) or beyond the composed `<lr-tree>`'s
-   *  1,000-row budget for the directories currently expanded. */
+   *  configured row budget for the directories currently expanded. */
   get dataTruncated(): boolean {
     const tree = this.renderRoot?.querySelector?.(tag('tree')) as LyraTree | null | undefined;
     return this.nodesTruncated || Boolean(tree?.dataTruncated);
   }
-  @property({ attribute: 'selected-path' }) selectedPath: string | null = null;
+  private _selectedPath: string | null = null;
+  @property({ attribute: 'selected-path' })
+  get selectedPath(): string | null { return this._selectedPath; }
+  set selectedPath(value: string | null) {
+    const previous = this._selectedPath;
+    if (previous === value) return;
+    this._selectedPath = value;
+    if (this.treeSource !== undefined && this.sourceSelectedWrite !== value) this.hierarchy?.cancelPending();
+    this.requestUpdate('selectedPath', previous);
+  }
+  /** Maximum projected rows, from 1 to 10000. Invalid or unset values use 1000.
+   * Source admission remains bounded to 10000 positions across 64 descendant levels. */
+  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 1000;
+  private get effectiveMaxNodes(): number {
+    return Math.max(1, Math.min(10000, finiteCount(this.maxNodes, 1000)));
+  }
   /** Accessible-name override for the internal `<lr-tree>`; falls back to the localized default
    *  when unset. An explicitly empty string renders as an empty label rather than falling back. */
   @property() label?: string;
@@ -339,7 +446,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
 
   /** Whether every normalized node fits the composed tree's row budget at once. */
   private get projectsAllNodes(): boolean {
-    return this.nodesByPath.size <= TREE_MAX_RENDER_NODES;
+    return this.nodesByPath.size <= this.effectiveMaxNodes;
   }
 
   /** Methods may update several directories before Lit renders; index the current snapshot now. */
@@ -405,8 +512,74 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     };
   }
 
+  private sourceSelectedWrite: string | null | undefined;
+  private sourceControlledPath: string | null = null;
+  private sourceControlledEpoch = -1;
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    this.hierarchy.update(this.treeSource, this.effectiveLocale);
+    if (this.treeSource === undefined) { this.sourceMode = false; this.sourceAnnouncement = undefined; return; }
+    const entering = !this.sourceMode; this.sourceMode = true;
+    const reset = this.sourceControlledEpoch !== this.hierarchy.epoch;
+    this.sourceControlledEpoch = this.hierarchy.epoch;
+    if (changed.has('selectedPath') || entering || reset) {
+      const next = this.selectedPath;
+      const previous = this.sourceControlledPath;
+      this.sourceControlledPath = next;
+      if (!reset && next === this.sourceSelectedWrite) { this.sourceSelectedWrite = undefined; return; }
+      this.sourceSelectedWrite = undefined;
+      const key = next ?? previous;
+      if (key !== null) void this.applyControlledSelection(key, next !== null);
+    }
+  }
+  private async applyControlledSelection(key: string, selected: boolean): Promise<void> {
+    try { hierarchyKey(key); } catch { return; }
+    const epoch = this.hierarchy.epoch;
+    const source = this.treeSource;
+    const owner = this.ownerDocument;
+    await this.updateComplete;
+    await this.hierarchy.whenReady();
+    if (!this.isConnected || this.ownerDocument !== owner || this.hierarchy.epoch !== epoch || this.treeSource !== source || source === undefined || this.selectedPath !== (selected ? key : null)) return;
+    void this.hierarchy.project({ type: 'select', key, selected, scope: 'item' });
+  }
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.treeSource !== undefined) this.announceSource();
+  }
+  override adoptedCallback(): void { super.adoptedCallback(); this.sourceModeEpoch++; this.sourceAnnouncement = undefined; this.hierarchy.adopted(); }
+  override disconnectedCallback(): void { super.disconnectedCallback(); this.sourceModeEpoch++; this.sourceAnnouncement = undefined; }
+
+  private projectionKey?: readonly unknown[];
+  private projectedItems: LyraTreeNodeData[] = [];
+  private projectedSelection: string | null = null;
+
+  override requestUpdate(name?: PropertyKey, oldValue?: unknown): void {
+    if (name === undefined) {
+      this.projectionKey = undefined;
+      if (this._treeSource !== undefined) this.hierarchy?.update(this._treeSource, this.effectiveLocale, true);
+    }
+    super.requestUpdate(name, oldValue);
+  }
+
   private get treeItems(): LyraTreeNodeData[] {
-    return this.nodes.map((n) => this.toTreeItem(n));
+    const key = [this.nodes, this.effectiveLocale, this.strings, this.effectiveMaxNodes];
+    if (!this.projectionKey || key.some((value, index) => value !== this.projectionKey![index])) {
+      this.projectionKey = key;
+      this.projectedItems = this.nodes.map(node => this.toTreeItem(node));
+    } else if (this.projectedSelection !== this.selectedPath) {
+      const affected = new Set<string>();
+      for (const selected of [this.projectedSelection, this.selectedPath]) {
+        for (let path = selected ?? undefined; path !== undefined; path = this.parentPathByPath.get(path)) affected.add(path);
+      }
+      const patch = (items: readonly LyraTreeNodeData[]): LyraTreeNodeData[] => items.map(item => {
+        if (!affected.has(item.id)) return item;
+        return {...item, selected: item.id === this.selectedPath,
+          ...(item.children ? {children: patch(item.children)} : {})};
+      });
+      this.projectedItems = patch(this.projectedItems);
+    }
+    this.projectedSelection = this.selectedPath;
+    return this.projectedItems;
   }
 
   private onNodeSelect = (e: Event): void => {
@@ -498,6 +671,10 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   /** Expands every ancestor of `path` and focuses its row. Resolves `false` when `path` isn't
    *  present in `nodes` (including a still-unloaded lazy descendant). */
   async revealPath(path: string): Promise<boolean> {
+    if (this.treeSource !== undefined) return this.revealSourceKey(path);
+    const epoch = this.sourceModeEpoch;
+    const owner = this.ownerDocument;
+    const current = () => this.isConnected && this.ownerDocument === owner && this.sourceModeEpoch === epoch && this.treeSource === undefined;
     const treeEl = this.renderRoot.querySelector(tag('tree')) as LyraTree | null;
     if (!treeEl) return false;
     const chain = this.ancestorChain(path);
@@ -507,7 +684,9 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
       for (const id of chain.slice(0, -1)) this.expandedPaths.add(id);
       this.requestUpdate();
       await this.updateComplete;
+      if (!current()) return false;
       await treeEl.updateComplete;
+      if (!current()) return false;
     }
     let container: LyraTree | LyraTreeItem = treeEl;
     let node: LyraTreeItem | null = null;
@@ -522,16 +701,19 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
       if (id !== chain[chain.length - 1] && !node.expanded) {
         node.expand();
         await node.updateComplete;
+        if (!current()) return false;
       }
       container = node;
     }
     // The owner must bind newly expanded rows before their focus can update its roving tab stop.
     await treeEl.updateComplete;
+    if (!current()) return false;
     node?.focus();
     return true;
   }
 
   expandAll(): Promise<void> | void {
+    if (this.treeSource !== undefined) return;
     const expandTree = (): Promise<void> | undefined =>
       (this.renderRoot.querySelector(tag('tree')) as LyraTree | null)?.expandAll();
     if (this.projectsAllNodes) return expandTree();
@@ -545,14 +727,24 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   }
 
   collapseAll(): void {
+    if (this.treeSource !== undefined) return;
     (this.renderRoot.querySelector(tag('tree')) as LyraTree | null)?.collapseAll();
   }
 
   override render(): TemplateResult {
+    if (this.treeSource !== undefined) return hierarchySourceView(this.hierarchy, {
+      label: this.getAttribute('aria-label') ?? this.label ?? this.localize('fileTreeLabel'), rtl: this.effectiveDirection === 'rtl', multiple: false,
+      loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
+      retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'), summary: this.sourceSummary(),
+      name: value => value.name || value.path, content: value => { const display = this.toTreeItem(value); return html`${display.icon ?? nothing}${display.label}${display.description}${display.badges?.map(badge => html`<span aria-label=${badge.label || nothing}>${badge.text}</span>`)}`; },
+      select: (row: LyraHierarchyRow<FileTreeNode>) => { void this.hierarchy.project({ type: 'select', key: row.key, selected: true, scope: 'item' }, true, row); },
+    });
+
     const hostLabel = this.getAttribute('aria-label');
     return html`
       <div part="base">
         <lr-tree
+          .maxNodes=${this.effectiveMaxNodes}
           .data=${this.treeItems}
           label=${hostLabel ?? (this.label == null ? this.localize('fileTreeLabel') : this.label)}
           @lr-node-select=${this.onNodeSelect}

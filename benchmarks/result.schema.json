@@ -117,7 +117,13 @@
                   "option-catalog-count",
                   "option-labels-current",
                   "option-selected-label",
-                  "option-stays-closed"
+                  "option-stays-closed",
+                  "list-retained-count",
+                  "list-render-bound",
+                  "list-visible-values",
+                  "list-selection-event",
+                  "list-selection-state",
+                  "list-progress-value"
                 ]
               },
               "passed": {
@@ -179,6 +185,14 @@
               "minimum": 0
             },
             "viewRowCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "selectedCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "progressValue": {
               "type": "integer",
               "minimum": 0
             }
@@ -404,6 +418,10 @@
           "uniqueItems": true,
           "items": {
             "enum": [
+              "document-library-filter-10000",
+              "eval-dataset-select-10000",
+              "retrieval-results-select-10000",
+              "ingestion-queue-progress-5000",
               "noop-control",
               "table-assign-1000",
               "table-assign-10000",
@@ -498,6 +516,10 @@
               "properties": {
                 "id": {
                   "enum": [
+                    "document-library-filter-10000",
+                    "eval-dataset-select-10000",
+                    "retrieval-results-select-10000",
+                    "ingestion-queue-progress-5000",
                     "noop-control",
                     "table-assign-1000",
                     "table-assign-10000",
@@ -583,6 +605,60 @@
                 "warmupStatus"
               ],
               "oneOf": [
+                {
+                  "properties": {
+                    "id": {
+                      "const": "document-library-filter-10000"
+                    },
+                    "parameters": {
+                      "const": {
+                        "inputCount": 10000,
+                        "renderBound": 100
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "id": {
+                      "const": "eval-dataset-select-10000"
+                    },
+                    "parameters": {
+                      "const": {
+                        "inputCount": 10000,
+                        "renderBound": 100
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "id": {
+                      "const": "retrieval-results-select-10000"
+                    },
+                    "parameters": {
+                      "const": {
+                        "inputCount": 10000,
+                        "renderBound": 40,
+                        "retainedMin": 9999,
+                        "retainedMax": 10000
+                      }
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "id": {
+                      "const": "ingestion-queue-progress-5000"
+                    },
+                    "parameters": {
+                      "const": {
+                        "inputCount": 5000,
+                        "renderBound": 40
+                      }
+                    }
+                  }
+                },
                 {
                   "properties": {
                     "id": {

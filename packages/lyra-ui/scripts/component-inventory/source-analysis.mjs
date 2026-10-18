@@ -445,6 +445,7 @@ export function retainedComponentQualityMetadata(previous) {
         reviewer: null,
         reviewedAt: null,
         accessibility: 'not-recorded',
+        scale: 'unmeasured',
         ledger: 'scripts/fixtures/component-qualification.json',
       }
     ),

@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '전체 분포의 유효한 샘플은 {validCount}개입니다. 표시된 구간보다 아래에 {belowCount}개, 위에 {aboveCount}개가 있습니다. 유효하지 않은 샘플은 {invalidCount}개입니다.',
+  histogramDistributionRange: '관측된 표본 범위: {min}~{max}.',
   chartCategory: '카테고리',
   chartTotal: '합계',
   chartAxisTotal: '{axis} 합계',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x: {x}, y: {y}',
   chartBubblePointCoordinates: 'x: {x}, y: {y}, 반경: {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: '증가 중',
-  chartTrendDecreasing: '감소 중',
-  chartTrendFlat: '변화 없음',
-  chartSummary: '{label}: 값 {count}개, 범위 {min}~{max}, 추세 {trend}',
   chartSeriesNoData: '{label}: 데이터 없음',
   chartSummaryWithData: '{type} 차트. {summaries}.',
   chartSummaryEmpty: '데이터가 없는 {type} 차트입니다.',
-  chartSummarySeparator: '. ',
   chartData: '차트',
   chartRenderUnavailable: '차트 렌더링을 사용할 수 없습니다.',
+  chartPreparedSummaryZoom: '확대/축소 시 준비된 요약이 표시됩니다. 인덱스를 통한 세부 데이터 조회는 사용할 수 없습니다.',
+  chartSpatialSummary: '전체 원본: 점 {count}개, x {minX}~{maxX}, y {minY}~{maxY}. 보기: 점 {matchedCount}개, x {viewMinX}~{viewMaxX}, y {viewMinY}~{viewMaxY}.',
+  chartSpatialRadiusDomain: '전체 원본의 반지름: {min}~{max}.',
+  chartSpatialDensityLegend: '밀도에는 모든 계열이 포함됩니다. 계열 표시 여부는 겹쳐 표시되는 점에만 영향을 줍니다.',
+  chartSpatialPoint: '{series}: {id}, 원본 위치 {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: '밀도 영역: 점 {count}개, x {minX}~{maxX}, y {minY}~{maxY}.',
+  chartSpatialHidden: ' (계열 숨김)',
   chartDataSampled: '차트와 생성된 데이터 표에는 최대 1,000개의 레코드 샘플이 표시됩니다. 모든 차트 데이터에 접근하려면 사용자 지정 데이터 표를 제공하세요.',
   chartPlotSampled: '차트에는 최대 1,000개의 레코드 샘플이 표시되며, 데이터 표에는 모든 데이터가 나열됩니다.',
   chartZoomUnavailable: '핵심 차트는 계속 사용할 수 있지만 확대/축소 기능은 사용할 수 없습니다.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content}({total}개 중 {index}번째)',
   chartMissingLibrary: '차트를 렌더링하려면 선택적 "chart.js" 패키지를 설치해야 합니다.',
   boxPlotMissingLibrary: '박스 플롯을 렌더링하려면 선택적 박스 플롯 차트 패키지를 설치해야 합니다.',
+  chartInputLimit: '입력 한도에 도달하여 일부 차트 데이터가 생략되었습니다. 생략된 값을 나타내려면 더 작거나 미리 집계된 데이터 세트를 제공하세요.',
+  histogramInputLimit: '최신 샘플 10,000개만 유지됩니다. 더 큰 분포를 나타내려면 구간별로 미리 집계한 개수를 lr-chart에 제공하세요.',
 };
 
 registerLyraLocale('ko', strings);

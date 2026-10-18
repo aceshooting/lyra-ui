@@ -766,3 +766,54 @@ describe('DocumentAnchorTarget mixin', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('shares document selection listeners and one scheduled frame across one thousand bindings', async () => {
+  const el = await fixture<StubAnchorTarget>(litHtml`<lr-anchor-target-test-stub></lr-anchor-target-test-stub>`);
+  const originalAdd = document.addEventListener;
+  const originalFrame = window.requestAnimationFrame;
+  const watched = new Set(['selectionchange', 'pointerdown', 'pointerup', 'pointercancel']);
+  let listeners = 0; let frames = 0;
+  const hosts: StubAnchorTarget[] = [];
+  document.addEventListener = function (...args: Parameters<Document['addEventListener']>) {
+    if (watched.has(args[0])) listeners++;
+    return originalAdd.apply(this, args);
+  };
+  window.requestAnimationFrame = callback => { frames++; return originalFrame.call(window, callback); };
+  try {
+    for (let index = 0; index < 1000; index++) {
+      const host = index === 0 ? el : document.createElement('lr-anchor-target-test-stub') as StubAnchorTarget;
+      const root = document.createElement('div'); root.textContent = 'Selectable'; host.append(root); hosts.push(host);
+      (host as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(root);
+    }
+    expect(listeners).equal(4);
+    document.dispatchEvent(new Event('selectionchange'));
+    expect(frames).equal(1);
+  } finally {
+    for (const host of hosts) (host as unknown as { unbindTextSelection(): void }).unbindTextSelection();
+    document.addEventListener = originalAdd; window.requestAnimationFrame = originalFrame;
+  }
+});
+it('routes a document selection to its owning root and releases pending delivery on disconnect', async () => {
+  const wrapper = await fixture<HTMLElement>(litHtml`<div><lr-anchor-target-test-stub></lr-anchor-target-test-stub><lr-anchor-target-test-stub></lr-anchor-target-test-stub></div>`);
+  const hosts = [...wrapper.children] as StubAnchorTarget[]; await Promise.all(hosts.map(host => host.updateComplete));
+  const roots = hosts.map(host => host.shadowRoot!.querySelector('[part="content"]')!);
+  hosts.forEach((host, index) => (host as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(roots[index]!));
+  let first = 0; let second = 0;
+  hosts[0]!.addEventListener('lr-text-select', () => first++); hosts[1]!.addEventListener('lr-text-select', () => second++);
+  const range = document.createRange(); range.selectNodeContents(roots[1]!.firstChild!);
+  const restore = installComposedSelection(range, hosts[1]!.shadowRoot!);
+  try {
+    document.dispatchEvent(new Event('selectionchange'));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    expect(first).equal(0); expect(second).equal(1);
+    range.setEnd(roots[1]!.firstChild!, 3);
+    document.dispatchEvent(new Event('selectionchange')); hosts[1]!.remove();
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    expect(second).equal(1);
+    wrapper.append(hosts[1]!);
+    (hosts[1] as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(roots[1]!);
+    document.dispatchEvent(new Event('selectionchange'));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    expect(second).equal(2);
+  } finally { restore(); }
+});

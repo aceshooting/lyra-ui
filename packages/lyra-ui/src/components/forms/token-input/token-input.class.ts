@@ -1,3 +1,7 @@
+import { ref } from 'lit/directives/ref.js';
+import { repeat } from 'lit/directives/repeat.js';
+import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
@@ -43,7 +47,7 @@ import {
 } from '../../../internal/form-associated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_selectSelectedOverflow, LYRA_DEFAULT_tokenInputEditWithContext, LYRA_DEFAULT_tokenInputRequired } from '../../../internal/default-strings/forms.generated.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_removeWithContext } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -169,6 +173,7 @@ const stringArrayConverter = {
  * @csspart form-control - Outer control wrapper.
  * @csspart form-control-label - Label.
  * @csspart input-wrapper - Token and input row.
+ * @csspart token-overflow - Count of tokens omitted by `max-tokens-visible`.
  * @csspart token - Individual token.
  * @csspart token-label - The token's text, as the roving-focus edit trigger. Rendered only while
  *   `editable` is set. Effective disablement removes every token label's tabindex, exposes
@@ -246,6 +251,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     ...super.defaultStrings,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
+    selectSelectedOverflow: LYRA_DEFAULT_selectSelectedOverflow,
     tokenInputEditWithContext: LYRA_DEFAULT_tokenInputEditWithContext,
     tokenInputRequired: LYRA_DEFAULT_tokenInputRequired,
   };
@@ -323,6 +329,60 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
    *  `delimiter=""` — disables both, so a token may contain the delimiter verbatim. Defaults to `,`. */
   @property({ attribute: 'delimiter', converter: delimiterConverter })
   delimiter: string | null = ',';
+  /** Maximum mounted tokens; 0 (default) leaves all tokens visible. The active/editor token stays
+   * in the window and remaining tokens appear as a localized +N count. Values are nonnegative
+   * integers; invalid values restore the unlimited default. Form values always include all tokens. */
+  @property({ type: Number, attribute: 'max-tokens-visible' }) maxTokensVisible = 0;
+
+  private tokenIndices = new WeakMap<Element, number>();
+  private tokenElement(index: number): HTMLElement | undefined {
+    return [...this.renderRoot.querySelectorAll<HTMLElement>('[part="token"]')].find(element => this.tokenIndices.get(element) === index);
+  }
+  private tokenEntriesFor?: readonly string[];
+  private tokenEntries: Array<{ token: string; index: number; key: string }> = [];
+  private renderedTokenValues: readonly string[] = [];
+  private get visibleTokenEntries() {
+    if (this.tokenEntriesFor !== this.value) {
+      this.tokenEntriesFor = this.value;
+      const occurrences = new Map<string, number>();
+      this.tokenEntries = this.value.map((token, index) => {
+        const count = occurrences.get(token) ?? 0; occurrences.set(token, count + 1);
+        return { token, index, key: `${token.length}:${token}:${count}` };
+      });
+    }
+    const limit = finiteCount(this.maxTokensVisible, 0);
+    if (!limit || this.tokenEntries.length <= limit) return this.tokenEntries;
+    const retained = new Set<number>();
+    const focused = shadowFocusTarget(this)?.closest<HTMLElement>('[part="token"]');
+    const focusedIndex = focused ? this.tokenIndices.get(focused) ?? -1 : -1;
+    for (const index of [this.editingIndex, this.focusTokenPending, this.tokenFocusRepairPending?.index ?? -1,
+      this.editable ? this.activeTokenIndex : -1, focusedIndex]) {
+      if (index >= 0 && index < this.value.length && retained.size < limit) retained.add(index);
+    }
+    for (let index = 0; index < limit && retained.size < limit; index++) retained.add(index);
+    return [...retained].sort((a, b) => a - b).map(index => this.tokenEntries[index]!);
+  }
+
+  private tokenEventIndex(event: Event): number {
+    const token = event.composedPath().find(target => (target as Element).nodeType === 1 && (target as Element).getAttribute('part') === 'token') as HTMLElement | undefined;
+    return token ? this.tokenIndices.get(token) ?? -1 : -1;
+  }
+  private onTokenClick = (event: MouseEvent): void => {
+    const index = this.tokenEventIndex(event); if (index < 0) return;
+    const target = event.composedPath().find(target => (target as Element).nodeType === 1 &&
+      ((target as Element).getAttribute('part') === 'remove' || (target as Element).getAttribute('part') === 'token-label')) as Element | undefined;
+    if (target?.getAttribute('part') === 'remove') this.removeToken(index);
+    else if (target) this.startEdit(index);
+  };
+  private onTokenFocus = (event: FocusEvent): void => {
+    const index = this.tokenEventIndex(event);
+    if (index >= 0 && this.rovingIndex !== index) this.rovingIndex = index;
+  };
+  private onTokenKey = (event: KeyboardEvent): void => {
+    if ((event.target as Element).getAttribute('part') !== 'token-label') return;
+    const index = this.tokenEventIndex(event); if (index >= 0) this.onTokenKeyDown(event, index);
+  };
+
   @state() private draft = '';
   @state() private touched = false;
   /** Index of the token whose inline editor is open, or `-1` when none is. */
@@ -774,21 +834,14 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
    * guard prevents this deferred move from overriding a newer explicit focus destination. */
   private captureTokenFocusRepair(next: readonly string[]): void {
     this.tokenFocusRepairPending = undefined;
-    const tokens = [
-      ...(this.renderRoot?.querySelectorAll<HTMLElement>('[part~="token"]') ??
-        []),
-    ];
-    // A controlled listener can synchronously echo the already-updated value before Lit removes
-    // the old token DOM. Compare with that rendered list, not with the previous property value, so
-    // the second setter cannot erase the still-required repair.
-    if (next.length >= tokens.length) return;
     const active = shadowFocusTarget(this) as HTMLElement | null;
     const token = typeof active?.closest === 'function'
       ? active.closest<HTMLElement>('[part~="token"]')
       : null;
     if (!active || !token) return;
-    const index = tokens.indexOf(token);
-    if (index < 0) return;
+    const index = this.tokenIndices.get(token) ?? -1;
+    if (!Number.isInteger(index) || index < 0) return;
+    if (next.length >= this.renderedTokenValues.length && next[index] === this.renderedTokenValues[index]) return;
     const repair = captureComposedFocusRepair(this, active);
     if (!repair) return;
     const targetIndex = Math.min(index, Math.max(0, next.length - 1));
@@ -1083,8 +1136,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     if (this.focusTokenPending >= 0) {
       const index = this.focusTokenPending;
       this.focusTokenPending = -1;
-      const labels = this.renderRoot?.querySelectorAll('[part="token-label"]');
-      const label = labels?.[index] as HTMLElement | undefined;
+      const label = this.tokenElement(index)?.querySelector<HTMLElement>('[part="token-label"]');
       label?.focus();
       // WebKit does not consistently scroll a newly programmatically-focused shadow descendant
       // inside this capped block-axis scrollport. Make the keyboard destination explicit while
@@ -1094,10 +1146,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     const pending = this.tokenFocusRepairPending;
     this.tokenFocusRepairPending = undefined;
     if (pending) {
-      const tokens = [
-        ...this.renderRoot.querySelectorAll<HTMLElement>('[part~="token"]'),
-      ];
-      const token = tokens[pending.index];
+      const token = this.tokenElement(pending.index);
       const target =
         (pending.surface === 'remove'
           ? token?.querySelector<HTMLElement>('[part~="remove"]')
@@ -1110,7 +1159,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
       }
     }
   }
-  private renderRemoveButton(token: string, index: number): TemplateResult {
+  private renderRemoveButton(token: string): TemplateResult {
     return html`<button
       part="remove"
       type="button"
@@ -1119,14 +1168,14 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
       })}
       ?disabled=${this.effectiveDisabled}
       aria-disabled=${this.readonly ? 'true' : nothing}
-      @click=${() => this.removeToken(index)}
+
     >
       ${closeIcon()}
     </button>`;
   }
   private renderEditableToken(token: string, index: number): TemplateResult {
     if (this.editingIndex === index) {
-      return html`<span part="token"
+      return html`<span part="token" ${ref(element => { if (element) this.tokenIndices.set(element, index); })}
         ><input
           part="token-editor"
           .value=${this.editDraft}
@@ -1143,10 +1192,10 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
           @keydown=${this.onEditKeyDown}
           @focus=${this.onEditFocus}
           @blur=${this.onEditBlur}
-        />${this.renderRemoveButton(token, index)}</span
+        />${this.renderRemoveButton(token)}</span
       >`;
     }
-    return html`<span part="token"
+    return html`<span part="token" ${ref(element => { if (element) this.tokenIndices.set(element, index); })}
       ><span
         part="token-label"
         role="button"
@@ -1159,16 +1208,15 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
         aria-label=${this.localize('tokenInputEditWithContext', undefined, {
           label: token,
         })}
-        @click=${() => this.startEdit(index)}
-        @focus=${() => {
-          if (this.rovingIndex !== index) this.rovingIndex = index;
-        }}
-        @keydown=${(event: KeyboardEvent) => this.onTokenKeyDown(event, index)}
+
         >${token}</span
-      >${this.renderRemoveButton(token, index)}</span
+      >${this.renderRemoveButton(token)}</span
     >`;
   }
   override render(): TemplateResult {
+    const entries = this.visibleTokenEntries;
+    this.renderedTokenValues = this.value;
+    const overflow = this.value.length - entries.length;
     const hasLabel = this.slotPresence.has('label') || (this.label ?? '').length > 0;
     const hasAccessibleLabel =
       this.hasAttribute('aria-label') || Boolean(this.accessibleLabel);
@@ -1188,6 +1236,9 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
       ></label>
       <div
         part="input-wrapper"
+        @click=${this.onTokenClick}
+        @focusin=${this.onTokenFocus}
+        @keydown=${this.onTokenKey}
         role="group"
         aria-labelledby=${!hasAccessibleLabel && hasLabel
           ? this.labelId
@@ -1197,13 +1248,14 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
         <span part="start" ?hidden=${!this.slotPresence.has('start')}
           ><slot name="start"></slot
         ></span>
-        ${this.value.map((token, index) =>
+        ${repeat(entries, entry => entry.key, ({ token, index }) =>
           this.editable
             ? this.renderEditableToken(token, index)
-            : html`<span part="token"
-                ><span>${token}</span>${this.renderRemoveButton(token, index)}</span
+            : html`<span part="token" ${ref(element => { if (element) this.tokenIndices.set(element, index); })}
+                ><span>${token}</span>${this.renderRemoveButton(token)}</span
               >`
         )}
+        ${overflow > 0 ? html`<span part="token-overflow">${this.localize('selectSelectedOverflow', undefined, { n: getNumberFormat(this.effectiveLocale).format(overflow) })}</span>` : nothing}
         <input
           id="input"
           part="input"

@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Obrázek {index} z {total}',
   playWithContext: 'Přehrát {name}',
   pauseWithContext: 'Pozastavit {name}',
+  avPlayerWaveformUnavailable: 'Data průběhu vlny nejsou k dispozici nebo neodpovídají tomuto médiu.',
+  avPlayerTranscriptUnavailable: 'Data přepisu nejsou k dispozici.',
   dropzoneReleaseToAdd: 'Uvolněním přidáte soubor.',
   dropzoneRejectedType: 'Tento typ souboru není povolen.',
   attachmentAdd: 'Přidat přílohu',

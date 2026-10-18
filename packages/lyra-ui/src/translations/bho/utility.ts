@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} अउरी सुझाव बा',
     other: '{count} अउरी सुझाव बा',
   },
+  mentionInputLimit: 'खाली पहिलका 10,000 गो मेंशन सुझाव उपलब्ध बा।',
+  diffViewHighlightLimit: 'लमहर कोड बिना सिंटैक्स हाइलाइटिंग के देखावल जात बा।',
 };
 
 registerLyraLocale('bho', strings);

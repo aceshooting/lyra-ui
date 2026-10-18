@@ -1,5 +1,5 @@
 import { getNumberFormat } from './internal/intl-cache.js';
-import { snapshotSelectionCatalog, type SelectionCatalogRow } from './internal/selection-catalog.js';
+import { snapshotSelectionCatalog, normalizeSelectionValue, type SelectionCatalogRow } from './internal/selection-catalog.js';
 
 // ECMA-402, Table 2: single units sanctioned for use in ECMAScript.
 // https://tc39.es/ecma402/#table-sanctioned-single-unit-identifiers
@@ -47,7 +47,7 @@ function unitNamesFor(locale: string, code: string): readonly [string, string] {
 
 /** Resolve localized singular names and symbols without converting a measurement. */
 export function resolveUnitNames(units: LyraUnitCatalog, locale: string): readonly SelectionCatalogRow[] {
-  const entries = snapshotSelectionCatalog(units, (code) => code.trim()) ?? [];
+  const entries = snapshotSelectionCatalog(units, normalizeSelectionValue) ?? [];
   return Object.freeze(entries.map((entry) => {
     const [name, symbol] = unitNamesFor(locale, entry.code);
     const label = entry.label ?? name;

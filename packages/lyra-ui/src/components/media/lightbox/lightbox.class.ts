@@ -2,6 +2,7 @@ import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { live } from 'lit/directives/live.js';
 import { property, query, state } from 'lit/decorators.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -14,13 +15,15 @@ import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './lightbox.styles.js';
+import { LightboxSourceController } from './lightbox-source.js';
+import type { LyraIndexedView, LyraSourceRecord, LyraSourceRevision } from '../../../data-sources.js';
 import '../pan-zoom/pan-zoom.class.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraImageFit } from '../../../internal/image-fit.js';
@@ -36,6 +39,12 @@ export interface LyraLightboxImage {
   readonly alt?: string;
   /** Optional visible caption for this image, rendered in `part="caption"` below the stage. */
   readonly caption?: string;
+}
+
+/** Host-owned access to the complete ordered image collection. */
+export interface LyraLightboxSource {
+  readonly revision: LyraSourceRevision;
+  readonly images: LyraIndexedView<LyraSourceRecord<LyraLightboxImage>>;
 }
 
 const MAX_LIGHTBOX_IMAGES = 10_000;
@@ -157,7 +166,7 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * reason `unmount`, and `lr-after-hide`; removal cannot be vetoed.
  *
  * **Scope for v1 (deliberate, not oversights):** no default slot / no arbitrary slotted content
- * per image (data-driven via `images` only); no dot-style indicators (a textual counter scales
+ * per image (data-driven via `images` or `imageSource`); no dot-style indicators (a textual counter scales
  * better to photo-set sizes); no visual open/close animation (`show()`/`hide()` still expose the
  * shared before/after lifecycle contract); no
  * click-on-image-to-navigate (the image is already meaningfully interactive -- it focuses the
@@ -182,7 +191,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @event lr-after-hide - Fired after a successful `hide()`/`close()` has rendered closed.
  * @event lr-index-change - Fired for `next()`/`previous()`/`goTo()` navigation, including the
  *   built-in button and keyboard paths, and when a shrinking `images` moves the shown image. Not
- *   fired when a consumer sets `index` directly. `detail: { index }` is always the rendered
+ *   fired when a consumer sets `index` directly. Source mode uses the complete logical count
+ *   and emits the requested index before asynchronous image resolution. `detail: { index }` is always the rendered
  *   integer index.
  * @event lr-zoom-change - Not emitted by `LyraLightbox` itself -- see the interface doc above.
  *   `detail: { zoom }`.
@@ -204,6 +214,9 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  *   `closable`, a full-screen lightbox has no other built-in chrome, so this is not optional.
  * @csspart stage - Houses the embedded `<lr-pan-zoom>` plus the floating
  *   `previous-button`/`next-button`.
+ * @csspart source-loading - Source-mode loading message.
+ * @csspart source-error - Source descriptor or image loading error.
+ * @csspart source-retry - Retry the current source image after an error.
  * @csspart frame - The embedded `<lr-pan-zoom>` element itself.
  * @csspart frame-viewport - The embedded pan-zoom's scrollable viewport.
  * @csspart frame-content - The embedded pan-zoom's transformed content wrapper.
@@ -227,10 +240,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     close: LYRA_DEFAULT_close,
+    imageViewerFailedToLoad: LYRA_DEFAULT_imageViewerFailedToLoad,
     lightboxImagePosition: LYRA_DEFAULT_lightboxImagePosition,
     lightboxLabel: LYRA_DEFAULT_lightboxLabel,
+    loading: LYRA_DEFAULT_loading,
     next: LYRA_DEFAULT_next,
     previous: LYRA_DEFAULT_previous,
+    retry: LYRA_DEFAULT_retry,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -244,6 +260,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.hostDescription.adopted();
+    this.sourceController.adopted();
   }
 
   private _open = false;
@@ -266,6 +283,44 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     else void this.close('api');
   }
 
+  protected static override readonly identityCollectionObjectProperties = Object.freeze(['imageSource']);
+  private _imageSource?: LyraLightboxSource;
+  private navigationIntent = 0;
+  private sourceBindingCurrent = true;
+  @state() private sourceState = 0;
+  private readonly sourceController = new LightboxSourceController(this, () => { this.sourceState++; });
+
+  /** Optional host-owned full image collection. Takes precedence over images; undefined restores
+   * legacy input. Reassign, including the same source, or call requestUpdate() after mutation.
+   * Only the current image loads; at most three descriptors are retained. Each key/src/alt/caption
+   * is limited to 65,536 UTF-16 units. Invalid defined sources fail closed with a retry action.
+   * index remains the requested logical index while its image loads. */
+  @property({ attribute: false, noAccessor: true, hasChanged: () => true })
+  get imageSource(): LyraLightboxSource | undefined { return this._imageSource; }
+  set imageSource(value: LyraLightboxSource | undefined) {
+    const previous = this._imageSource;
+    this.navigationIntent++;
+    this.sourceBindingCurrent = false;
+    this._imageSource = value;
+    this.sourceController?.refresh();
+    if (this.frameEl) this.frameEl.src = '';
+    this.requestUpdate('imageSource', previous);
+  }
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined && this._imageSource !== undefined) {
+      this.navigationIntent++;
+      this.sourceBindingCurrent = false;
+      this.sourceController?.refresh();
+      if (this.frameEl) this.frameEl.src = '';
+    }
+    super.requestUpdate(...args);
+  }
+
+  private imageCount(): number {
+    return this.imageSource === undefined ? this.images.length : this.sourceController.count;
+  }
+
   private _images: readonly LyraLightboxImage[] = EMPTY_LIGHTBOX_IMAGES;
   private _imagesSource?: unknown;
   private _fit: LyraImageFit = 'actual';
@@ -284,9 +339,24 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.requestUpdate('images', old);
   }
 
-  /** The currently displayed image. Clamped defensively for rendering (out-of-range/negative/
-   *  non-integer never throws) and re-synced onto this property when `images` shrinks. */
-  @property({ type: Number, reflect: true }) index = 0;
+  private _index = 0;
+  /** The current logical image index. Clamped defensively for rendering (out-of-range/negative/
+   * non-integer never throws) and re-synced when the active collection shrinks.
+   * Source mode retains the requested index while loading.
+   * @default 0
+   */
+  @property({ type: Number, reflect: true, noAccessor: true })
+  get index(): number { return this._index; }
+  set index(value: number) {
+    this.navigationIntent++;
+    const previous = this._index;
+    this._index = value;
+    if (value !== previous && this.imageSource !== undefined) {
+      this.sourceController?.select(this.currentIndex());
+      if (this.frameEl) this.frameEl.src = '';
+    }
+    this.requestUpdate('index', previous);
+  }
 
   /** Wraps prev/next past the ends. Mirrors `<lr-carousel>`'s `loop` 1:1. */
   @property({ type: Boolean, reflect: true }) loop = false;
@@ -348,9 +418,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   });
   private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal);
   private announcementSink?: AnnouncementSink;
+  private sourceErrorAnnounced = false;
+  private sourceHasRendered = false;
+  private lastSourceImage?: LyraLightboxImage;
   private announcementBaseline?: {
     index: number;
     images: readonly LyraLightboxImage[];
+    source?: LyraLightboxSource;
   };
   private connectionGeneration = 0;
   private transitionGeneration = 0;
@@ -361,7 +435,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   /** Clamped, always-valid index for rendering -- never throws on an out-of-range, negative,
    *  non-integer, or non-finite `index`. */
   private currentIndex(): number {
-    const count = this.images.length;
+    const count = this.imageCount();
     if (count === 0) return 0;
     return finiteCount(this.index, 0, count - 1);
   }
@@ -372,15 +446,16 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private changeTo(index: number): void {
-    const count = this.images.length;
+    const count = this.imageCount();
     if (count === 0 || !Number.isFinite(index)) return;
     const requested = finiteInteger(index, 0);
     const next = this.loop
       ? ((requested % count) + count) % count
       : Math.min(count - 1, Math.max(0, requested));
     if (next === this.currentIndex()) return;
+    const intent = this.navigationIntent + 1;
     this.index = next;
-    this.emit('lr-index-change', { index: next });
+    if (this.navigationIntent === intent) this.emit('lr-index-change', { index: next });
   }
 
   /** Advances to the next image, respecting `loop`. */
@@ -488,7 +563,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private updateLiveRegion(): void {
-    const count = this.images.length;
+    const count = this.imageCount();
     const formatter = getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 0,
       useGrouping: false,
@@ -506,15 +581,25 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.announcementBaseline = {
       index: this.currentIndex(),
       images: this.images,
+      source: this.imageSource,
     };
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('images') || changed.has('index')) {
+    this.sourceBindingCurrent = this.sourceController.update(this.imageSource, this.effectiveLocale);
+    if (this.sourceBindingCurrent && (changed.has('images') || changed.has('index') || changed.has('imageSource') || changed.has('sourceState'))) {
       const index = changed.has('index') ? undefined : this.index;
+      const intent = this.navigationIntent + 1;
       this.syncImages();
-      if (index !== undefined && this.index !== index) this.emit('lr-index-change', { index: this.index });
+      if (index !== undefined && this.index !== index && this.navigationIntent === intent && this.sourceBindingCurrent)
+        this.emit('lr-index-change', { index: this.index });
+    }
+    if (this.sourceBindingCurrent && this.imageSource !== undefined) this.sourceController.select(this.currentIndex());
+    if (!this.sourceBindingCurrent) {
+      // A provider callback can replace the binding inside this update. Lit folds writes made
+      // during willUpdate into the current cycle, so schedule a named paint for the newest input.
+      queueDocumentMicrotask(this.ownerDocument, () => { if (this.isConnected) this.sourceState++; });
     }
     // Purely derived from already-current state (images/the just-synced index/strings/locale)
     // with no DOM measurement involved, so this belongs here, not in updated(): setting `liveText`
@@ -522,7 +607,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     // the one that just finished, which Lit's dev-mode console flags ("scheduled an update ...
     // after an update completed") -- mirrors lr-multi-split's/lr-virtual-list's identical
     // willUpdate()-not-updated() fix for their own derived-property writes.
-    if (changed.has('index') || changed.has('images') || changed.has('strings') || changed.has('locale')) {
+    if (this.sourceBindingCurrent && (changed.has('index') || changed.has('images') || changed.has('imageSource') || changed.has('sourceState') || changed.has('strings') || changed.has('locale'))) {
       this.updateLiveRegion();
     }
     if (changed.has('open')) {
@@ -544,17 +629,26 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     // detached stays silent even when its Lit update flushes only after reattachment.
     const isConnectionBaseline =
       this.announcementBaseline?.index === this.currentIndex() &&
-      this.announcementBaseline.images === this.images;
+      this.announcementBaseline.images === this.images &&
+      this.announcementBaseline.source === this.imageSource;
     if (
       !isConnectionBaseline &&
+      this.sourceBindingCurrent &&
       this.open &&
       this.liveText !== '' &&
       isAccessibilityVisible(this) &&
-      (changed.has('index') || changed.has('images'))
+      (changed.has('index') || changed.has('images') || changed.has('imageSource'))
     ) {
       this.announcementSink?.announce(this.liveText);
     }
-    if (this.isConnected) this.captureAnnouncementBaseline();
+    const sourceError = this.sourceBindingCurrent && this.imageSource !== undefined && this.sourceController.state === 'error';
+    if (!sourceError) this.sourceErrorAnnounced = false;
+    if (sourceError && !this.sourceErrorAnnounced && this.sourceHasRendered && this.open && isAccessibilityVisible(this)) {
+      this.sourceErrorAnnounced = true;
+      this.announcementSink?.announce(this.localize('imageViewerFailedToLoad'));
+    }
+    this.sourceHasRendered = true;
+    if (this.isConnected && this.sourceBindingCurrent) this.captureAnnouncementBaseline();
     if (changed.has('open') && this.open) {
       this.modalSurface.show();
       this.overlay?.focusInitial();
@@ -574,6 +668,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       ];
       currentSourceChanged = oldCurrent?.src !== this.images[this.currentIndex()]?.src;
     }
+    const sourceImage = this.imageSource === undefined ? undefined : this.sourceController.image;
+    currentSourceChanged ||= changed.has('imageSource') || (sourceImage !== undefined && sourceImage !== this.lastSourceImage);
+    this.lastSourceImage = sourceImage;
     if (this.open && (changed.has('index') || currentSourceChanged)) {
       this.frameEl?.resetView();
     }
@@ -617,6 +714,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.announcementSink?.release();
     this.announcementSink = undefined;
     this.announcementBaseline = undefined;
+    this.sourceErrorAnnounced = false;
+    this.sourceHasRendered = false;
+    this.lastSourceImage = undefined;
     super.disconnectedCallback();
     this.modalSurface.disconnect();
     this.overlay?.suspend();
@@ -712,14 +812,16 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       this.goTo(0);
     } else if (event.key === 'End') {
       event.preventDefault();
-      this.goTo(this.images.length - 1);
+      this.goTo(this.imageCount() - 1);
     }
   };
 
   override render(): TemplateResult {
-    const count = this.images.length;
+    const count = this.imageCount();
     const current = this.currentIndex();
-    const image = count > 0 ? this.images[current] : undefined;
+    const image = this.imageSource === undefined
+      ? (count > 0 ? this.images[current] : undefined) : this.sourceController.image;
+    const sourceState = this.imageSource === undefined ? undefined : this.sourceController.state;
     const label = this.accessibleLabel ?? this.localize('lightboxLabel');
     const hasCaption = Boolean(image?.caption);
     const formatter = getNumberFormat(this.effectiveLocale, {
@@ -754,7 +856,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
             ${closeIcon()}
           </button>
         </div>
-        <div part="stage">
+        <div part="stage" aria-busy=${sourceState === 'loading' ? 'true' : 'false'}>
+          ${sourceState === 'loading' ? html`<p part="source-loading">${this.localize('loading')}</p>` : nothing}
+          ${sourceState === 'error' ? html`<div part="source-error">${this.localize('imageViewerFailedToLoad')}<button part="source-retry" type="button" @click=${() => this.sourceController.retry(this.currentIndex())}>${this.localize('retry')}</button></div>` : nothing}
           ${count > 1
             ? html`
                 <button
@@ -771,7 +875,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
           <lr-pan-zoom
             part="frame"
             exportparts="viewport:frame-viewport,content:frame-content,controls:frame-controls"
-            src=${image?.src ?? ''}
+            .src=${live(image?.src ?? '')}
             alt=${image?.alt ?? ''}
             .fit=${this.fit}
             .minZoom=${this.minZoom}

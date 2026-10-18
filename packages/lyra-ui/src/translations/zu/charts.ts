@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Amasampula asebenzayo angu-{validCount} ekusatshalalisweni okuphelele; angu-{belowCount} angaphansi nangu-{aboveCount} angaphezulu kwemikhawulo yezikhawu ezibonisiwe; amasampula angasebenzi angu-{invalidCount}.',
+  histogramDistributionRange: 'Ibanga lesampula elibonwe: {min} kuya ku-{max}.',
   chartCategory: 'Isigaba',
   chartTotal: 'Isamba',
   chartAxisTotal: 'isamba se-{axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, irediyasi {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'iyakhula',
-  chartTrendDecreasing: 'iyehla',
-  chartTrendFlat: 'ayishintshi',
-  chartSummary: '{label}: amanani angu-{count}, ibanga elisuka ku-{min} liye ku-{max}, ukuthambekela {trend}',
   chartSeriesNoData: '{label}: ayikho idatha',
   chartSummaryWithData: 'Ishadi le-{type}. {summaries}.',
   chartSummaryEmpty: 'Ishadi le-{type} alinayo idatha.',
-  chartSummarySeparator: '. ',
   chartData: 'Idatha yeshadi',
   chartRenderUnavailable: 'Ukuboniswa kweshadi akutholakali.',
+  chartPreparedSummaryZoom: 'Ukusondeza kubonisa isifinyezo esilungiselelwe; imininingwane eyengeziwe ngenkomba ayitholakali.',
+  chartSpatialSummary: 'Umthombo ophelele: amaphuzu angu-{count}, x {minX} kuya ku-{maxX}, y {minY} kuya ku-{maxY}. Ukubuka: amaphuzu angu-{matchedCount}, x {viewMinX} kuya ku-{viewMaxX}, y {viewMinY} kuya ku-{viewMaxY}.',
+  chartSpatialRadiusDomain: 'Irediyasi emthonjeni ophelele: {min} kuya ku-{max}.',
+  chartSpatialDensityLegend: 'Ukuminyana kuhlanganisa lonke uchungechunge; ukubonakala kochungechunge kuthinta izendlalelo zamaphuzu kuphela.',
+  chartSpatialPoint: '{series}: {id}, indawo emthonjeni {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Indawo yokuminyana: amaphuzu angu-{count}, x {minX} kuya ku-{maxX}, y {minY} kuya ku-{maxY}.',
+  chartSpatialHidden: ' (uchungechunge lufihliwe)',
   chartDataSampled: 'Ishadi kanye nethebula ledatha elakhiwe kubonisa isampula yamarekhodi afinyelela ku-1,000. Nikeza ithebula ledatha langokwezifiso ukuze ufinyelele kuyo yonke idatha yeshadi.',
   chartPlotSampled: 'Ishadi libonisa isampula yamarekhodi afinyelela ku-1,000; ithebula ledatha libala yonke idatha.',
   chartZoomUnavailable: 'Ukusondeza akutholakali, kodwa ishadi eliyinhloko lisatholakala.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} kokungu-{total})',
   chartMissingLibrary: 'Le ngxenye idinga iphakheji yokuzikhethela ethi "chart.js" ukuze ibonise amashadi.',
   boxPlotMissingLibrary: 'Le ngxenye idinga iphakheji yeshadi lesakhiwo sebhokisi ukuze ibonise izakhiwo zamabhokisi.',
+  chartInputLimit: 'Enye idatha yeshadi ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka. Nikeza isethi yedatha encane noma ehlanganiswe kusengaphambili ukuze imele amanani ashiyiwe.',
+  histogramInputLimit: 'Kugcinwa amasampula amasha kakhulu angu-10,000 kuphela. Nikeza lr-chart izibalo eseziqoqwe ngezikhawu kusengaphambili ukuze imele ukusatshalaliswa okukhulu.',
 };
 
 registerLyraLocale('zu', strings);

@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} buyrugʻi',
     other: '{count} ta buyruq',
   },
+  commandPaletteInputLimit: 'Kiritish chegarasiga yetilgani sababli ayrim buyruqlar tushirib qoldirildi.',
 };
 
 registerLyraLocale('uz', strings);

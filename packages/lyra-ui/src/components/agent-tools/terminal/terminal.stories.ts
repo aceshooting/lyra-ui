@@ -98,3 +98,15 @@ export const HostDownload: Story = {
   render: () => html`<lr-terminal downloadable .content=${SAMPLE}
     @lr-download-request=${(event: Event) => event.preventDefault()}></lr-terminal>`,
 };
+
+export const BoundedOutput: Story = {
+  render: () => {
+    const terminal = createRef<LyraTerminal>();
+    const status = createRef<HTMLOutputElement>();
+    return html`<button @click=${() => terminal.value?.write('x'.repeat(20001))}>Write an oversized line</button>
+      <output ${ref(status)}></output>
+      <lr-terminal ${ref(terminal)} @lr-overflow=${(event: CustomEvent) => {
+        if (status.value) status.value.textContent = JSON.stringify(event.detail);
+      }}></lr-terminal>`;
+  },
+};

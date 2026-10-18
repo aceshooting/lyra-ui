@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'የመጀመሪያዎቹ {count} የሙከራ ውጤቶች ብቻ ይታያሉ።',
   toolTimelineLimit: 'ቢበዛ {count} የመሣሪያ ጥሪዎች ይታያሉ።',
   toolSelectLimit: 'የመጀመሪያዎቹ {count} መሣሪያዎች ብቻ ይታያሉ።',
+  testResultsInputTooLarge: 'የሙከራ ውጤቶች ዝርዝር ከማሳያው ገደብ ይበልጣል።',
   toolCall: 'የመሣሪያ ጥሪ',
   maximize: 'አሳድግ',
   promptStudioVariableName: 'የተለዋዋጭ {index} ስም',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'የመጀመሪያዎቹ {count} ፋይሎች ብቻ ናቸው የሚታዩት።',
   taskListLimit: 'የመጀመሪያዎቹ {count} ተግባራት ብቻ ናቸው የሚታዩት።',
   evalDatasetLimit: 'የመጀመሪያዎቹ {count} ምሳሌዎች ብቻ ይታያሉ።',
+  activityFeedInputLimit: 'ከ{total} ግቤቶች የቅርብ ጊዜዎቹ {count} ብቻ ይቀመጣሉ።',
+  spanWaterfallLimit: 'ከ{total} የክትትል ክፍሎች {shown} ይታያሉ።',
+  toolTimelineInputLimit: 'ከ{total} የመሣሪያ ጥሪዎች ውስጥ የቅርብ ጊዜ {count} ጥሪዎች ብቻ ይቀመጣሉ።',
 };
 
 registerLyraLocale('am', strings);

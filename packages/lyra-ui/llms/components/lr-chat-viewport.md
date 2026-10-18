@@ -22,6 +22,12 @@ children (typically `lr-chat-message`s — _slotted mode_), or exactly one `lr-v
 (_virtual mode_, detected by its `scrollToIndex()`/`scrollContainer` API, so custom prefixes and
 other realms work). In virtual mode this component defers all scrolling to the slotted list's own
 `scrollToIndex()` and follows its content extent (`items` or `source`) as rows are appended or grow.
+The viewport owns no message array. A slotted virtual-list's `items` binding retains its first
+10,000 identities; provide a bounded newest chronological window or an indexed `source` to expose
+a larger or latest stream.
+Logical count changes update following and unread counts even after the virtual list reaches
+its capped native scroll extent. Reconnecting refreshes the unread count, while growth preserves
+an explicitly released follow state.
 Follow/release state machine: while `follow` is engaged, content growth re-scrolls to the end;
 release happens only on a user-intent gesture (wheel, touchmove, scrollbar-drag, or
 PageUp/ArrowUp/Home/Shift+Space while the log region has focus) that leaves the

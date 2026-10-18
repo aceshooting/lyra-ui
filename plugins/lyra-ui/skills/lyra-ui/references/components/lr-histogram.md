@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 17 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,7 +22,7 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 **Properties:**
 - `bins: number = 10` — finite values are floored and clamped to 0–1,000 before allocation;
   non-finite values produce no buckets
-- `values: number[] = []` (attribute: false)
+- `values: readonly number[] = []` (attribute: false)
 - `seriesLabel: string = ''` (attribute `series-label`) — dataset label used for the
   legend/tooltip/table; empty falls back to localized "Frequency". Inherited `label` keeps its
   chart-wide accessible-name meaning.
@@ -34,9 +34,10 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   bucket range strings, so different bin boundaries do not match unless their labels are exactly
   equal. Horizontal or continuous-x raw configurations do not participate.
 - `labels`/`datasets`/`type` are **derived, read-only** (installed as getter/setter pairs on the
-  prototype; direct writes are silently ignored) — `labels`/`datasets` are computed from
-  `values`/`bins` (memoized per instance, keyed by reference equality on `values` plus the
-  normalized `bins`), and `type` always reads back `'bar'` regardless of any assignment. This
+  prototype; direct writes are silently ignored) — on the legacy raw route, `labels`/`datasets`
+  are computed from `values`/`bins` (memoized per instance, keyed by reference equality on `values`
+  plus the normalized `bins`). A supplied `distribution` takes precedence and supplies the exact
+  bin categories/counts instead. `type` always reads back `'bar'` regardless of any assignment. This
   specialist owns its controller because a non-bar type would contradict the derived distribution.
 - All other `LyraChart` properties are inherited and usable: `description`, `grid`, `axes`, `size`, `indexAxis`
   (`index-axis`), `hiddenDatasets`, `hiddenDatums`, `legendPosition` (`legend-position`),
@@ -46,14 +47,54 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   `tooltipFooterFormatter`, `area`, `zoomable`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `withoutZeroBaseline` (`without-zero-baseline`),
   `stacked`, `stackedAxes`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `withDataTable`
-  (`with-data-table`), `dataTableToggle` (`data-table-toggle`), `chartArea` (readonly).
+  (`with-data-table`), `dataTableToggle` (`data-table-toggle`), `maxRecords` (`max-records`, default
+  `1000`, range 2–1,000), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()`, and `renderChart()` are inherited; `appendSamples(values,
 maxSamples?)` appends finite raw samples and keeps a rolling window of the newest `maxSamples`
 (at most 10,000, also the default; an assigned `values` array longer than that keeps its newest
-10,000 samples, with a development-mode warning).
+10,000 samples, with a localized `limit` notice). The bounded immutable window reuses existing
+canonical samples without re-admission. Use `distribution` below to represent a larger whole-source distribution.
+Appends inspect newest positions first and stop once the retained window is full. Invalid-heavy
+batches yield after 10,000 inspected positions and may finish asynchronously. Concurrent appends
+apply in call order; assigning `values` or disconnecting cancels unfinished batches. Pending input
+arrays remain caller-owned and must stay unchanged until their batch is applied or canceled.
+Unreadable positions are treated as invalid and do not block later queued appends.
 `appendData()` remains a working compatibility adapter (no longer deprecated); prefer
 `appendSamples()` for new code.
+
+**Prepared whole-source distribution:**
+
+- `distribution: LyraHistogramDistribution | null = null` (attribute: false) — exact bounded
+  bins, normally from `prepareLyraHistogram`, imported from
+  `@aceshooting/lyra-ui/utilities/data-preparation.js` with its `LyraHistogramDistribution` type.
+  A supplied distribution takes precedence over `values`, `bins` and inherited `preparedData`.
+  Inherited `preparedData` alone is incompatible with histogram bin semantics and fails visibly.
+- Own data properties supply a revision, conserving safe nonnegative source/valid/invalid counts,
+  observed `domain` (null only without valid observations), strict finite increasing `edges`,
+  exact `binCounts`, `belowCount` and `aboveCount`. There are at most 1,000 bins and 1,001 edges;
+  valid empty input may have no edges. Every occupied interval and represented extremum must
+  agree with the observed domain and counts. Accessors, sparse arrays and malformed descriptors
+  are rejected without invoking getters. All bins must fit effective `maxRecords` (2–1,000) and
+  the inherited rectangular accessible-table and metadata budgets; no bins are sampled or merged.
+- Plot, table, CSV and `binnedBuckets()` expose the exact in-range bins. Bins are half-open except
+  the final upper edge, which is inclusive. Below/above observations stay in the full summary,
+  together with whole-source valid/invalid counts and observed range; they are not invented bars.
+  Existing point/datum activation keeps the bin index and frequency. No
+  `lr-source-category-select` or `lr-source-point-select` is emitted for bins.
+- Assignment or explicit keyless `requestUpdate()` recaptures mutable descriptors, including
+  same-reference assignments and coalesced updates. Locale and series-label changes rebuild
+  bounded labels. Replacing a same-locale catalog requires explicit `requestUpdate()`.
+  Distribution assignment cancels unfinished raw appends; raw append methods are inactive while
+  it is supplied. Clearing it restores the previous raw values without stale queued commits.
+  Disconnect retains the existing cancellation and peer lifecycle.
+
+The component retains bounded owned copies and the property retains the caller's descriptor until
+replaced or cleared. It never reads raw samples to render this route. `prepareLyraHistogram` scans
+all positions in bounded yielding chunks and accepts an `AbortSignal`; its source reader execution
+and cancellation remain host-owned. Invalid or overbudget distributions use the inherited visible
+localized error; valid empty/all-invalid distributions remain valid. No new events or parts are
+added; `limit` and the accessible description carry the full distribution summary.
 
 **Events:** `lr-zoom`, `lr-datum-activate`, `lr-point-activate`, `lr-datum-visibility-change-request`
 (cancelable), `lr-datum-visibility-change`, `lr-legend-visibility-change-request` (cancelable), and
@@ -70,7 +111,7 @@ bar controller and dataset legend even with `legend-mode="datum"`.
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,
 `sync-crosshair` (inherited decorative category line during synchronization; the native canvas
 tooltip has no CSS part),
-`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `feature-warning`, `center`, `error` (neutral visible message
+`reset-zoom-button`, `description`, `notices`, `data-table`, `data-table-toggle`, `data-truncation`, `limit`, `feature-warning`, `center`, `error` (neutral visible message
 rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load; the
 failure transition is announced through the shared document-level light-DOM assertive sink —
 inherited from `LyraChart`, unaffected by the binning logic).
@@ -113,7 +154,8 @@ their semantics, defaults, and gotchas.
 - non-finite samples in `values` are dropped before bucketing rather than corrupting bucket-index
   math; a constant domain produces one truthful single-value bucket, including at numeric extremes.
 - raw `config.options` and plugins remain available, but `config.type` and `config.data` are ignored:
-  the histogram owns its bar controller and derives all categories from `values`/`bins`.
+  the histogram owns its bar controller and derives categories from `values`/`bins` on the legacy
+  raw route, or from `distribution` when provided, which takes precedence.
 - `values`/`bins`/`seriesLabel` changes join the inherited connected-and-visible redraw path. There is no
   second post-update refresh, so a same-tick disconnect cannot recreate Chart.js on a detached
   canvas and off-screen sample updates do not repaint it.

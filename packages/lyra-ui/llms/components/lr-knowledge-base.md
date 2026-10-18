@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 29 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 30 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,9 +22,113 @@ Controlled source list for a retrieval knowledge base: sync status, indexing hea
 per-row create/sync/pause/delete requests. Composes `lr-table`, `lr-badge`, `lr-stat`, and a per-row
 `lr-dropdown` containing `lr-menu`. Never syncs or indexes anything itself.
 
+**Full-source inventory:** `dataSource: KnowledgeBaseSource | undefined = undefined`
+(attribute: false) takes precedence over `sources`. Only `undefined` restores the current legacy
+array; invalid defined providers, including untyped null, fail visibly. The provider stays
+caller-owned by identity, with an immutable revision and records for that revision.
+`sourcePage: number = 0` (`source-page`) is zero-based; `sourcePageSize: number = 100`
+(`source-page-size`) normalizes to 1–500. Readonly `sourceTotal: number | null` is the accepted
+global total, or null outside source mode and while the current provider page is pending or failed.
+Page indices truncate/clamp to a safe nonnegative offset; nonfinite page/size inputs use 0/100.
+Page-size and accepted sort changes reset page zero. An out-of-range page receives at most one
+corrective last-page request; controlled page writes and correction emit no user page event.
+The table's compact server pagination navigates global pages; its internal one-based page-change
+event is consumed to update `sourcePage`.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-knowledge-base.js";
+import type { KnowledgeBaseSource, KnowledgeBaseSourceQuery, KnowledgeBaseSourceSummary,
+  KnowledgeSource } from
+  "@aceshooting/lyra-ui/components/retrieval/knowledge-base/knowledge-base.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+
+declare const provider: KnowledgeBaseSource;
+const inventory = document.querySelector('lr-knowledge-base')!;
+inventory.dataSource = provider;
+```
+
+**Exported source declarations:**
+
+`KnowledgeBaseSource = LyraPageSource<KnowledgeSource, KnowledgeBaseSourceQuery, KnowledgeBaseSourceSummary>`.
+
+`KnowledgeBaseSourceQuery {
+  readonly sortKey: string | null;
+  readonly sortDir: 'asc' | 'desc';
+}`
+
+`KnowledgeBaseSourceSummary {
+  readonly total: number;
+  readonly synced: number;
+  readonly syncing: number;
+  readonly attention: number;
+}`
+
+`query({ revision, locale, signal, page, pageSize, query })` returns a promise for
+`{ rows, total, summary }`; each row is `{ key, order, value: KnowledgeSource }`.
+The revision is a nonempty string or finite number. Counts/orders are safe nonnegative integers,
+`key === value.id` is nonblank, and keys/orders are unique within a page. Rows must exactly fill
+the requested in-bounds page, including its short final page; rejected or duplicate records fail
+the response rather than being omitted. `order` is stable canonical source order, independent
+of query sorting. The shared page-source contract also requires `lookup(keys, context)` and
+`locate(key, query, context)`; this component uses only `query` and exposes no selection/lookup UI.
+Query ordering describes the complete inventory; the component does not sort or filter an
+accepted page locally.
+
+The required summary describes the complete inventory on every page, even with `withoutSummary`.
+`summary.total` must equal the response `total`; every count is at most total, and
+`synced + syncing <= total`. Attention counts each source with sync status `'error'` or indexing
+health `'degraded'`/`'failed'`, and may overlap synced or syncing. For example, total 10, synced 8,
+syncing 2 and attention 4 is valid. Loaded-page category counts cannot exceed the corresponding
+global counts. Empty total requires all counts zero. Missing, malformed or inconsistent summaries
+fail visibly; page rows never supply a substitute global summary. These checks detect local
+contradictions but cannot verify unseen provider records.
+
+Only the current page, at most 500 projected rows, is retained; historic pages and the complete
+inventory are not cached. There is one physical page request plus the latest queued intent;
+an aborted provider call keeps its permit until it settles, including when it ignores abort.
+Providers should settle promptly after cancellation. The fixed display fields are `id`, `name`,
+`type`, `syncStatus`, `indexingHealth`, `permission`, `documentCount`, `lastSyncedAt` and
+`errorMessage`, read as own data properties without enumerating extra fields. Accessor-backed,
+oversized or invalid required fields fail the page. Their text shares a 65,536 UTF-16-unit budget
+per row; individual page metadata strings are at most 65,536 units and share a 2,000,000-unit
+page metadata budget. Source enums must match the declared unions and optional `documentCount`
+must be a safe nonnegative integer. Blank string names retain the untitled-source presentation;
+invalid string dates retain “never synced”, while valid Date values are copied into owned dates.
+
+The source-only sortable headers are `name`, `sync`, `health` and `permission`; `actions` stays
+unsortable. Query sort state starts at `{ sortKey: null, sortDir: 'asc' }`. The table's original
+cancelable `lr-sort-request { phase: 'request', sortKey, sortDir }` and accepted
+`lr-sort { phase: 'commit', sortKey, sortDir }` bubble once with their frozen readonly detail.
+A veto prevents a query change. Only a current accepted commit updates the global server order
+and resets page zero; synchronous source/page replacement prevents an obsolete commit from
+changing the replacement view. These headers remain unsortable in the legacy route.
+
+Pending and failed pages clear accepted rows/counts and show localized `source-status`, including
+with `withoutSummary`; they do not paint invented zeros, stale stats or successful-empty copy.
+A successful empty result keeps the toolbar and existing empty state. Current page failures use
+the nested table's error/retry surface; `error`, `errorHeading`, `errorDescription` and the `error`
+slot keep their existing precedence. The canonical cancelable `lr-retry-request` is proposed once;
+a veto prevents both refresh and error clearing. An accepted current provider-failure retry clears
+the host error and retries that page; an external-error-only retry just clears the host error.
+Retained old retry controls cannot refresh a replacement source. Initial failure is quiet;
+later page failures have one localized light-DOM announcement owned by the table.
+
+Open row menus belong to the particular admitted row and current page. Page/sort/revision/source
+replacement, refresh, disconnect and adoption close/release them; retained callbacks cannot act
+on a replacement record that happens to reuse the same ID. Existing sync/pause/delete requests
+retain original source IDs and remain host-owned actions. Create remains independent of a loaded
+row and available unless `withoutCreate` is set. Reassign even the same provider,
+or call a keyless `requestUpdate()`, after revision/state changes. Ordinary named presentation
+updates reuse admitted data unless revision or effective locale has changed. Reconnect requests
+the current source anew; obsolete replies and controls cannot publish rows or actions.
+
+The following array normalization and unknown-enum fallback rules apply with `dataSource` unset;
+row presentation, action enablement and host error contracts apply to both routes.
+
 **Properties:**
 
-- `sources: KnowledgeSource[] = []` (attribute: false) — `KnowledgeSource { id: string; name: string;
+- `sources: readonly KnowledgeSource[] = []` (attribute: false) — `KnowledgeSource { id: string; name: string;
 type?: string; syncStatus: KnowledgeSourceSyncStatus; indexingHealth?: KnowledgeSourceIndexingHealth;
 permission?: KnowledgeSourcePermission; documentCount?: number; lastSyncedAt?: Date | string;
 errorMessage?: string }` (all four types exported here), where
@@ -33,7 +137,8 @@ errorMessage?: string }` (all four types exported here), where
   as `'unknown'`), and `KnowledgeSourcePermission = 'owner' | 'editor' | 'viewer' | 'restricted'`.
   `type` is a free-form connector kind (`'drive'`, `'notion'`, `'upload'`, `'url'`, …) rendered
   as-is. `lastSyncedAt` follows this library's `Date | string` timestamp convention (a `Date` or an
-  ISO-8601 string); absent/unparseable renders "never synced". A `syncStatus`, `indexingHealth` or
+  ISO-8601 string); absent/unparseable renders "never synced". With `dataSource` unset, a
+  `syncStatus`, `indexingHealth` or
   `permission` outside these unions renders a neutral localized "Unknown" badge, offers no "Sync now",
   and is left out of the synced/syncing/needs-attention counts. `errorMessage` shows only while
   `syncStatus === 'error'`. `id`/`name` follow `DocumentRef`'s spirit, but a source is a _connector
@@ -55,8 +160,8 @@ errorMessage?: string }` (all four types exported here), where
 - `errorDescription: string = ''` (attribute `error-description`) — failed-load supporting copy,
   forwarded to the nested table
 
-Source ids must be nonblank and unique. Malformed rows and later duplicates are omitted first-wins
-before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
+With `dataSource` unset, source ids must be nonblank and unique. Malformed rows and later duplicates
+are omitted first-wins before summary totals, empty state, table rows, or source actions. A retained source whose `name` is
 missing, blank, or nonstring uses the localized “untitled source” label in both the row and its action
 names. Row action triggers stay mounted; their three menu items mount only while the dropdown is
 open and clear after it closes.
@@ -70,15 +175,17 @@ re-emitted them under the `lr-source-*` names, so a host listening on the admin 
 change; a host listening directly on `<lr-knowledge-base>` renames its four listeners.
 `lr-retry-request` (`detail: null`, cancelable) proposes a retry when the nested table's built-in
 retry button is activated. Preventing it keeps both the parent and table in the error state.
-Without a veto, the default action clears `error`. This component contains the nested table request
-and re-proposes its own canonical request, so hosts receive the parent event once.
+Without a veto, the default action clears `error` and, for a current provider failure, retries its
+page. This component contains the nested table request and re-proposes its own canonical request,
+so hosts receive the parent event once.
 
 **Slots:** `error` — replaces the nested table's built-in failed-load state, including its retry
-button, while `error` is set.
+button, while the host error or a current provider failure is shown.
 
 **CSS parts:** `base`, `toolbar` (heading + "Add source" row), `heading` (the heading text),
 `create-button` (omitted while `without-create` is set), `summary` (omitted while `without-summary`
-is set or `sources` is empty), `summary-stat`, `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
+is set or the accepted current collection is empty; provider pending/failure uses `source-status`),
+`summary-stat`, `source-status` (localized provider loading/failed-summary status), `table`, `name-cell`, `source-name`, `source-type` (omitted when `type` is
 unset), `sync-cell`, `sync-badge`, `sync-timestamp`, `sync-error`, `health-cell`, `health-badge`,
 `document-count` (omitted when unset), `permission-badge` (omitted when `permission` is unset),
 `actions-menu`, `actions-trigger` (the kebab `<button>`), `error-row`, `error-cell`, `error` (the

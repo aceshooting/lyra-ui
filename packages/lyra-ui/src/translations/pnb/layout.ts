@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} کمانڈ',
     other: '{count} کمانڈاں',
   },
+  commandPaletteInputLimit: 'اِن پُٹ دی حد پوری ہون کارن کجھ کمانڈ چھڈ دتیاں گئیاں نیں۔',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

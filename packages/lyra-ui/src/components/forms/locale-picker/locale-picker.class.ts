@@ -1,3 +1,5 @@
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { guard } from 'lit/directives/guard.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
@@ -54,7 +56,7 @@ import { revealRow } from '../../../internal/reveal-row.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_localePickerEmpty, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_localePickerSearchLabel } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_localePickerEmpty, LYRA_DEFAULT_localePickerInputLimit, LYRA_DEFAULT_localePickerLabel, LYRA_DEFAULT_localePickerRequired, LYRA_DEFAULT_localePickerSearchLabel } from '../../../internal/default-strings/forms.generated.js';
 import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -199,6 +201,8 @@ export interface LyraLocalePickerEventMap {
  * relationships track target replacement, missing IDs, removal/reinsertion, reconnect, and adoption.
  * Removed label/hint/error-text content is safely omitted without changing null property readback.
  *
+ * Explicit locale catalogs retain the first 512 source entries; unset discovery remains live. Input loss is disclosed through the limit part.
+ *
  * @customElement lr-locale-picker
  * @event lr-change-request - Cancelable before selection, popup, and global locale changes. Same detail as `lr-change`.
  * @event {Event} input - Native event after an accepted selection commits, before `lr-input`.
@@ -216,6 +220,7 @@ export interface LyraLocalePickerEventMap {
  * @slot label - Custom label content.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
+ * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
  * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to
  *   the accessible name — once `label` is non-empty).
@@ -307,6 +312,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     loading: LYRA_DEFAULT_loading,
     localePickerEmpty: LYRA_DEFAULT_localePickerEmpty,
+    localePickerInputLimit: LYRA_DEFAULT_localePickerInputLimit,
     localePickerLabel: LYRA_DEFAULT_localePickerLabel,
     localePickerRequired: LYRA_DEFAULT_localePickerRequired,
     localePickerSearchLabel: LYRA_DEFAULT_localePickerSearchLabel,
@@ -353,11 +359,14 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
    *  entirely, including `[]` as an authoritative empty catalog. If the catalog changes while
    *  the listbox is open, an active row beyond the new end is rehomed to the last remaining row. */
   private _locales?: LyraLocaleCatalog;
+  /** Explicit catalogs retain the first 512 source entries and disclose loss through the limit part.
+   *  Unset uses the live locale registry; an empty array opts out of discovery. */
   @property({ attribute: false })
   get locales(): LyraLocaleCatalog | undefined { return this._locales; }
   set locales(next: LyraLocaleCatalog | undefined) {
     this.cancelLocaleLoad();
     const previous = this._locales;
+    this.inputLimited = Array.isArray(next) && next.length > MAX_LOCALE_ENTRIES;
     this._locales = next === undefined ? undefined : snapshotLocaleCatalog(next);
     this.requestUpdate('locales', previous);
   }
@@ -898,6 +907,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     return rows;
   }
   private entriesCache?: { raw: unknown; tick: number; rows: NormalizedLocaleEntry[] };
+  private searchKeys?: { rows: NormalizedLocaleEntry[]; locale: string; values: { local: string[]; invariant: string[] }[] };
   private visibleCache?: { rows: NormalizedLocaleEntry[]; query: string; locale: string; result: NormalizedLocaleEntry[] };
 
   private normalizeSearch(text: string, locale: string): string {
@@ -913,25 +923,27 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     if (!query) return rows;
     const cached = this.visibleCache;
     if (cached && cached.rows === rows && cached.query === this.searchQuery && cached.locale === locale) return cached.result;
-    let names: Intl.DisplayNames | undefined;
-    try { names = getDisplayNames(locale, { type: 'language' }); }
-    catch { /* Tags, native names and caller labels remain available without Intl language names. */ }
-    // English names are additional search data; visible language names retain the UI locale.
-    let englishNames: Intl.DisplayNames | undefined;
-    try { englishNames = getDisplayNames('en', { type: 'language' }); }
-    catch { /* Native, custom and localized labels remain available without English aliases. */ }
+    let keys = this.searchKeys;
+    if (!keys || keys.rows !== rows || keys.locale !== locale) {
+      let names: Intl.DisplayNames | undefined;
+      let englishNames: Intl.DisplayNames | undefined;
+      try { names = getDisplayNames(locale, { type: 'language' }); } catch { /* Optional aliases. */ }
+      try { englishNames = getDisplayNames('en', { type: 'language' }); } catch { /* Optional aliases. */ }
+      keys = { rows, locale, values: rows.map(row => {
+        let localizedName = '';
+        let englishName = '';
+        try { localizedName = names?.of(row.tag) ?? ''; } catch { /* Literal tag remains searchable. */ }
+        try { englishName = englishNames?.of(row.tag) ?? ''; } catch { /* Literal tag remains searchable. */ }
+        return {
+          local: [row.label, localeNativeName(row.tag), localizedName].map(text => this.normalizeSearch(text, locale)),
+          invariant: [row.tag, englishName].map(text => this.normalizeSearch(text, 'en')),
+        };
+      }) };
+      this.searchKeys = keys;
+    }
     const invariantQuery = this.normalizeSearch(this.searchQuery, 'en');
-    const result = rows.filter(row => {
-      let localizedName = '';
-      try { localizedName = names?.of(row.tag) ?? ''; }
-      catch { /* A custom malformed tag remains searchable by its literal tag and label. */ }
-      let englishName = '';
-      try { englishName = englishNames?.of(row.tag) ?? ''; }
-      catch { /* Malformed tags still match their literal tag and caller label. */ }
-      return [row.label, localeNativeName(row.tag), localizedName]
-        .some(text => this.normalizeSearch(text, locale).includes(query)) ||
-        [row.tag, englishName].some(text => this.normalizeSearch(text, 'en').includes(invariantQuery));
-    });
+    const result = rows.filter((_, index) => keys.values[index]!.local.some(text => text.includes(query)) ||
+      keys.values[index]!.invariant.some(text => text.includes(invariantQuery)));
     this.visibleCache = { rows, query: this.searchQuery, locale, result };
     return result;
   }
@@ -972,8 +984,15 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     return this._value || this.effectiveLocale;
   }
 
+  private entryIndex?: { rows: NormalizedLocaleEntry[]; byTag: Map<string, NormalizedLocaleEntry> };
   private entryFor(tag: string): NormalizedLocaleEntry | undefined {
-    return this.normalizedEntries.find((e) => e.tag === tag);
+    const rows = this.normalizedEntries;
+    if (this.entryIndex?.rows !== rows) {
+      const byTag = new Map<string, NormalizedLocaleEntry>();
+      for (const row of rows) if (!byTag.has(row.tag)) byTag.set(row.tag, row);
+      this.entryIndex = { rows, byTag };
+    }
+    return this.entryIndex.byTag.get(tag);
   }
 
   /** A tag with no row falls back to its derived endonym rather than to a "not in catalog" badge,
@@ -1079,9 +1098,18 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     this.listboxHidden = true;
   }
 
+  @state() private inputLimited = false;
+  private readonly limitAnnouncements = new AnnouncementSinkController(this);
+  private limitMounted = false;
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.limitMounted && changed.has('inputLimited') && this.inputLimited) this.limitAnnouncements.announcePolite(this.localize('localePickerInputLimit'));
+    this.limitMounted = true;
     this.syncExternalDescription();
+    const activeId = this.open && this.activeIndex >= 0 ? `${this.listId}-opt-${this.activeIndex}` : '';
+    const previous = this.renderRoot.querySelector('[part="option"][data-active]');
+    if (previous?.id !== activeId) previous?.removeAttribute('data-active');
+    if (activeId) this.renderRoot.querySelector(`[id="${activeId}"]`)?.setAttribute('data-active', '');
     const reposition =
       changed.has('open') ||
       (this.open &&
@@ -1435,6 +1463,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
       .filter(Boolean)
       .join(' ');
     return html`
+      ${this.inputLimited ? html`<p part="limit">${this.localize('localePickerInputLimit')}</p>` : nothing}
       <div part="form-control">
         <label part="form-control-label" for=${this.controlId} ?hidden=${!hasLabel}>
           ${this.label}<slot name="label"></slot>
@@ -1507,10 +1536,10 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
               @blur=${this.onTriggerBlur}
             >
             <div id=${`${this.listId}-matches`} role="listbox" aria-label=${this.localize('localePickerLabel')}>
-              ${this.renderRows(rows, activeId)}
+              ${this.listboxHidden ? nothing : guard([rows, this.value, this.withoutFlags, this.optionDisplay, this.effectiveLocale, this.strings], () => this.renderRows(rows, activeId))}
             </div>
             ${rows.length ? nothing : html`<div part="empty" id=${`${this.listId}-empty`}>${this.localize('localePickerEmpty')}</div>`}
-          ` : this.renderRows(rows, activeId)}
+          ` : this.listboxHidden ? nothing : guard([rows, this.value, this.withoutFlags, this.optionDisplay, this.effectiveLocale, this.strings], () => this.renderRows(rows, activeId))}
         </div>
         ${this.loadingTag !== undefined || this.loadFailureTag !== undefined ? html`
           <div id="locale-picker-load-status" part="load-status">

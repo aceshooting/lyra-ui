@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'Platné vzorky v celém rozdělení: {validCount}; pod zobrazenými intervaly: {belowCount}, nad nimi: {aboveCount}; neplatné vzorky: {invalidCount}.',
+  histogramDistributionRange: 'Pozorovaný rozsah vzorků: {min} až {max}.',
   chartCategory: 'Kategorie',
   chartTotal: 'Celkem',
   chartAxisTotal: '{axis} celkem',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, poloměr {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'rostoucí',
-  chartTrendDecreasing: 'klesající',
-  chartTrendFlat: 'ustálený',
-  chartSummary: '{label}: počet hodnot {count}, rozsah {min} až {max}, trend {trend}',
   chartSeriesNoData: '{label}: žádná data',
   chartSummaryWithData: '{type} graf. {summaries}.',
   chartSummaryEmpty: '{type} graf bez dat.',
-  chartSummarySeparator: '. ',
   chartData: 'Data grafu',
   chartRenderUnavailable: 'Vykreslení grafu není k dispozici.',
+  chartPreparedSummaryZoom: 'Přiblížení zobrazuje připravený souhrn; podrobnější data pomocí indexu nejsou k dispozici.',
+  chartSpatialSummary: 'Celý zdroj: {count} bodů, x {minX} až {maxX}, y {minY} až {maxY}. Výřez: {matchedCount} bodů, x {viewMinX} až {viewMaxX}, y {viewMinY} až {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Poloměr v celém zdroji: {min} až {max}.',
+  chartSpatialDensityLegend: 'Hustota zahrnuje všechny řady; viditelnost řad ovlivňuje pouze překryvné vrstvy bodů.',
+  chartSpatialPoint: '{series}: {id}, pozice ve zdroji {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Oblast hustoty: {count} bodů, x {minX} až {maxX}, y {minY} až {maxY}.',
+  chartSpatialHidden: ' (řada skryta)',
   chartDataSampled: 'Graf a vygenerovaná tabulka dat zobrazují vzorek nejvýše 1 000 záznamů. Pro přístup ke všem datům grafu zadejte vlastní tabulku dat.',
   chartPlotSampled: 'Graf zobrazuje vzorek nejvýše 1 000 záznamů; tabulka dat obsahuje všechna data.',
   chartZoomUnavailable: 'Přiblížení není k dispozici, základní graf však zůstává dostupný.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} z {total})',
   chartMissingLibrary: 'Tato komponenta vyžaduje k vykreslení grafů nainstalovaný volitelný balíček „chart.js“.',
   boxPlotMissingLibrary: 'Tato komponenta vyžaduje k vykreslení krabicových grafů nainstalovaný volitelný balíček pro krabicové grafy.',
+  chartInputLimit: 'Některá data grafu byla vynechána kvůli dosažení limitu vstupu. Pro zobrazení vynechaných hodnot zadejte menší nebo předem agregovanou datovou sadu.',
+  histogramInputLimit: 'Uchovává se pouze nejnovějších 10 000 vzorků. Pro zobrazení většího rozdělení zadejte do lr-chart četnosti předem seskupené do intervalů.',
 };
 
 registerLyraLocale('cs', strings);

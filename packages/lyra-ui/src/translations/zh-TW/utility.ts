@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '還有 {count} 個建議',
   },
+  mentionInputLimit: '僅提供前 10,000 個提及候選項目。',
+  diffViewHighlightLimit: '較長的程式碼會以不含語法醒目提示的方式顯示。',
 };
 
 registerLyraLocale('zh-TW', strings);

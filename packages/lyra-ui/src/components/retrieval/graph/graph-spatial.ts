@@ -1,59 +1,13 @@
 /** Perspective geometry for the graph's spatial view. Coordinates remain in three dimensions
  * until clipping and projection; no renderer or DOM state is needed by these helpers. */
 import { finiteRange } from '../../../internal/numbers.js';
-import { getOwnDataDescriptor } from '../../../internal/data-descriptors.js';
+import { normalizeGraphCamera } from './graph-spatial-model.js';
+export { normalizeGraphCamera, spatialNodePosition } from './graph-spatial-model.js';
 import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphEdge, type LyraGraphNode, type LyraGraphPosition } from './graph-model.js';
 
-const WORLD_LIMIT = 1_000_000;
-const CAMERA_LIMIT = WORLD_LIMIT * 10;
 const EDGE_SEGMENTS = 16;
 const FIELD_OF_VIEW = Math.PI / 4;
 const NO_POSITION: LyraGraphPosition = Object.freeze({ x: 0, y: 0, z: 0 });
-
-function own(value: unknown, key: string): unknown {
-  if (value === null || typeof value !== 'object') return undefined;
-  const descriptor = getOwnDataDescriptor(value, key);
-  return typeof descriptor === 'object' ? descriptor.value : undefined;
-}
-
-function coordinate(value: unknown, fallback: number): number {
-  return finiteRange(typeof value === 'number' ? value : NaN, fallback, -WORLD_LIMIT, WORLD_LIMIT);
-}
-
-function positionValue(value: unknown): LyraGraphPosition | undefined {
-  const x = own(value, 'x');
-  const y = own(value, 'y');
-  const z = own(value, 'z');
-  if (![x, y, z].every((entry) => typeof entry === 'number' && Number.isFinite(entry))) return undefined;
-  return Object.freeze({ x: coordinate(x, 0), y: coordinate(y, 0), z: coordinate(z, 0) });
-}
-
-/** Copies only own numeric data fields; accessors and inherited coordinates are never read. */
-export function normalizeGraphCamera(value: unknown, fallback: LyraGraphCamera): LyraGraphCamera {
-  const yaw = own(value, 'yaw');
-  const pitch = own(value, 'pitch');
-  const distance = own(value, 'distance');
-  return Object.freeze({
-    yaw: finiteRange(typeof yaw === 'number' ? yaw : NaN, fallback.yaw, -CAMERA_LIMIT, CAMERA_LIMIT) % (Math.PI * 2),
-    pitch: finiteRange(typeof pitch === 'number' ? pitch : NaN, fallback.pitch, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01),
-    distance: finiteRange(typeof distance === 'number' ? distance : NaN, fallback.distance, 0.01, CAMERA_LIMIT),
-    target: positionValue(own(value, 'target')) ?? Object.freeze({ ...fallback.target }),
-  });
-}
-
-/** Stable-id spherical placement supplies actual depth without a simulation or input mutation. */
-export function spatialNodePosition(node: LyraGraphNode): LyraGraphPosition {
-  const explicit = positionValue(own(node, 'position'));
-  if (explicit) return explicit;
-  let hash = 2166136261;
-  for (const character of node.id) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
-  const fraction = (hash >>> 0) / 4294967296;
-  const latitude = fraction * 2 - 1;
-  const angle = ((Math.imul(hash, 2246822519) >>> 0) / 4294967296) * Math.PI * 2;
-  const radius = 120 + ((hash >>> 8) % 81);
-  const ring = Math.sqrt(Math.max(0, 1 - latitude * latitude));
-  return Object.freeze({ x: radius * ring * Math.cos(angle), y: radius * latitude, z: radius * ring * Math.sin(angle) });
-}
 
 export interface SpatialViewport { readonly width: number; readonly height: number }
 export interface SpatialWorldNode {
@@ -72,6 +26,7 @@ export interface SpatialSegment {
   readonly depth: number;
   readonly last: boolean;
   readonly middle: boolean;
+  readonly labelPoint?: SpatialProjectedPoint;
   readonly dangling: boolean;
   readonly offset: number;
 }
@@ -127,9 +82,53 @@ function interpolate(a: LyraGraphPosition, b: LyraGraphPosition, t: number): Lyr
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t };
 }
 
-/** Fixed subdivisions interleave edge depth with node depth instead of painting all links behind
- * all nodes. Clipping in camera space precedes division, including an edge crossing the eye. */
-export function projectSpatialScene(nodes: readonly SpatialWorldNode[], edges: readonly LyraGraphEdge[], camera: LyraGraphCamera, viewport: SpatialViewport): SpatialScene {
+/** Reusable numeric scratch storage; projected scene objects remain independently owned. */
+export class SpatialProjectionWorkspace {
+  private bytes = new Uint8Array(0);
+  private source = new Uint32Array(0);
+  private target = new Uint32Array(0);
+  private readonly counts = new Uint32Array(256);
+
+  order(primitives: SpatialPrimitive[]): SpatialPrimitive[] {
+    const length = primitives.length;
+    // Direct helper callers can bypass camera normalization. Preserve their former ordering
+    // for out-of-domain depths; admitted component projections always use the linear path.
+    if (primitives.some(entry => !Number.isFinite(entry.depth) || entry.depth <= 0))
+      return primitives.sort((a, b) => b.depth - a.depth || (a.kind === b.kind ? 0 : a.kind === 'link' ? -1 : 1));
+    if (this.source.length < length) {
+      const capacity = 2 ** Math.ceil(Math.log2(Math.max(1, length)));
+      this.source = new Uint32Array(capacity);
+      this.target = new Uint32Array(capacity);
+      this.bytes = new Uint8Array(capacity * 8);
+    }
+    const depths = new DataView(this.bytes.buffer);
+    // Equal-depth links paint before nodes; preserve input order within either kind.
+    let index = 0;
+    for (let i = 0; i < length; i++) if (primitives[i]!.kind === 'link') this.source[index++] = i;
+    for (let i = 0; i < length; i++) if (primitives[i]!.kind === 'node') this.source[index++] = i;
+    for (let i = 0; i < length; i++) depths.setFloat64(i * 8, primitives[i]!.depth, true);
+    // Camera-space clipping guarantees positive finite depths. Their IEEE encoding orders
+    // exactly like their numeric value, avoiding comparison sorting and depth quantization.
+    for (let byte = 0; byte < 8; byte++) {
+      this.counts.fill(0);
+      for (let i = 0; i < length; i++) this.counts[this.bytes[this.source[i]! * 8 + byte]!]!++;
+      let offset = 0;
+      for (let value = 255; value >= 0; value--) {
+        const count = this.counts[value]!; this.counts[value] = offset; offset += count;
+      }
+      for (let i = 0; i < length; i++) {
+        const entry = this.source[i]!;
+        this.target[this.counts[this.bytes[entry * 8 + byte]!]!++] = entry;
+      }
+      [this.source, this.target] = [this.target, this.source];
+    }
+    return Array.from({ length }, (_, i) => primitives[this.source[i]!]!);
+  }
+}
+
+/** Depth-changing links are subdivided to interleave with nodes; coplanar straight links need
+ * one segment. Clipping in camera space precedes division, including an edge crossing the eye. */
+export function projectSpatialScene(nodes: readonly SpatialWorldNode[], edges: readonly LyraGraphEdge[], camera: LyraGraphCamera, viewport: SpatialViewport, workspace = new SpatialProjectionWorkspace()): SpatialScene {
   const byId = new Map(nodes.map((node) => [node.node.id, node]));
   const projected: SpatialProjectedNode[] = [];
   const segments: SpatialSegment[] = [];
@@ -148,28 +147,33 @@ export function projectSpatialScene(nodes: readonly SpatialWorldNode[], edges: r
     const target = byId.get(edge.target);
     const self = edge.source === edge.target;
     const end = target?.position ?? { x: source.position.x + 28, y: source.position.y - 28, z: source.position.z };
+    const sourceDepth = cameraPoint(source.position, camera).z;
+    const targetDepth = cameraPoint(end, camera).z;
+    const count = self ? EDGE_SEGMENTS : Math.max(1, Math.min(EDGE_SEGMENTS,
+      Math.ceil(Math.abs(sourceDepth - targetDepth) / Math.max(1, Math.min(sourceDepth, targetDepth) / EDGE_SEGMENTS))));
+    const at = (t: number) => self ? {
+      x: source.position.x + Math.sin(t * Math.PI * 2) * source.radius * 1.6,
+      y: source.position.y - (1 - Math.cos(t * Math.PI * 2)) * source.radius * 1.6,
+      z: source.position.z,
+    } : interpolate(source.position, end, t);
+    const midpoint = projectSpatialPoint(at(0.5), camera, viewport);
     let offset = 0;
-    for (let index = 0; index < EDGE_SEGMENTS; index++) {
-      const at = (t: number) => self ? {
-        x: source.position.x + Math.sin(t * Math.PI * 2) * source.radius * 1.6,
-        y: source.position.y - (1 - Math.cos(t * Math.PI * 2)) * source.radius * 1.6,
-        z: source.position.z,
-      } : interpolate(source.position, end, t);
-      let a = cameraPoint(at(index / EDGE_SEGMENTS), camera);
-      let b = cameraPoint(at((index + 1) / EDGE_SEGMENTS), camera);
+    for (let index = 0; index < count; index++) {
+      let a = cameraPoint(at(index / count), camera);
+      let b = cameraPoint(at((index + 1) / count), camera);
       const near = nearPlane(camera);
       if (a.z < near && b.z < near) continue;
       if (a.z < near) a = interpolate(a, b, (near - a.z) / (b.z - a.z));
       if (b.z < near) b = interpolate(b, a, (near - b.z) / (a.z - b.z));
       const entry: SpatialSegment = { edge, id: graphLinkIdentity(edge), a: perspective(a, viewport), b: perspective(b, viewport),
-        depth: (a.z + b.z) / 2, last: index === EDGE_SEGMENTS - 1, middle: index === EDGE_SEGMENTS / 2, dangling: !target, offset };
+        depth: (a.z + b.z) / 2, last: index === count - 1, middle: index === Math.floor(count / 2) && midpoint !== undefined,
+        labelPoint: index === Math.floor(count / 2) ? midpoint : undefined, dangling: !target, offset };
       offset += Math.hypot(entry.b.x - entry.a.x, entry.b.y - entry.a.y);
       segments.push(entry);
       primitives.push({ kind: 'link', value: entry, depth: entry.depth });
     }
   }
-  primitives.sort((a, b) => b.depth - a.depth || (a.kind === b.kind ? 0 : a.kind === 'link' ? -1 : 1));
-  return { nodes: projected, segments, primitives };
+  return { nodes: projected, segments, primitives: workspace.order(primitives) };
 }
 
 /** Frontmost projected geometry wins. Reciprocal interpolation recovers perspective-correct
@@ -199,6 +203,57 @@ export function pickSpatialScene(scene: SpatialScene, x: number, y: number): Spa
     }
   }
   return result;
+}
+
+/** Screen-space broad phase owned by one controller projection. Rebuild after geometry changes. */
+export class SpatialHitIndex {
+  private readonly cells = new Map<string, { nodes: number[]; segments: number[] }>();
+  private readonly wide = { nodes: [] as number[], segments: [] as number[] };
+
+  constructor(private readonly scene: SpatialScene) {
+    scene.nodes.forEach((node, index) => {
+      const radius = Math.max(16, node.screenRadius * Math.SQRT2);
+      this.insert('nodes', index, node.x - radius, node.y - radius, node.x + radius, node.y + radius);
+    });
+    scene.segments.forEach((segment, index) => {
+      if (segment.dangling) return;
+      const radius = Math.max(6, finiteRange(segment.edge.width ?? 1.5, 1.5, 0, 1000) / 2);
+      this.insert('segments', index, Math.min(segment.a.x, segment.b.x) - radius,
+        Math.min(segment.a.y, segment.b.y) - radius, Math.max(segment.a.x, segment.b.x) + radius,
+        Math.max(segment.a.y, segment.b.y) + radius);
+    });
+  }
+
+  private insert(kind: 'nodes' | 'segments', index: number, left: number, top: number, right: number, bottom: number): void {
+    const x1 = Math.floor(left / 64), y1 = Math.floor(top / 64);
+    const x2 = Math.floor(right / 64), y2 = Math.floor(bottom / 64);
+    // Near-plane geometry can cover an enormous rectangle; never expand it into an unbounded grid.
+    if (![x1, y1, x2, y2].every(Number.isFinite) || (x2 - x1 + 1) * (y2 - y1 + 1) > 64) {
+      this.wide[kind].push(index); return;
+    }
+    for (let x = x1; x <= x2; x++) for (let y = y1; y <= y2; y++) {
+      const key = `${x},${y}`;
+      let cell = this.cells.get(key);
+      if (!cell) { cell = { nodes: [], segments: [] }; this.cells.set(key, cell); }
+      cell[kind].push(index);
+    }
+  }
+
+  hit(x: number, y: number): SpatialHit | undefined {
+    const cell = this.cells.get(`${Math.floor(x / 64)},${Math.floor(y / 64)}`);
+    const merge = (a: readonly number[], b: readonly number[]): number[] => {
+      const indexes: number[] = [];
+      let i = 0, j = 0;
+      while (i < a.length || j < b.length)
+        indexes.push(j >= b.length || (i < a.length && a[i]! < b[j]!) ? a[i++]! : b[j++]!);
+      return indexes;
+    };
+    return pickSpatialScene({
+      nodes: merge(cell?.nodes ?? [], this.wide.nodes).map(index => this.scene.nodes[index]!),
+      segments: merge(cell?.segments ?? [], this.wide.segments).map(index => this.scene.segments[index]!),
+      primitives: [],
+    }, x, y);
+  }
 }
 
 /** Move the orbit target along the camera's right/down basis, leaving its facing unchanged. */

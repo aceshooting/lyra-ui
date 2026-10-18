@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Még nincsenek beszélgetések',
   agentWorkspaceLabel: 'Ügynök munkaterülete',
+  agentWorkspaceInputLimit: '{collection}: Összesen {total} bejegyzésből csak {count} marad meg.',
   agentWorkspaceConversation: 'Beszélgetés',
   agentWorkspaceDetails: 'Futtatás részletei',
   agentWorkspaceRun: 'Ügynökfuttatás',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'A rész újrapróbálása',
   promptQueueLabel: 'Sorban álló promptok',
   promptQueueEmpty: 'Nincsenek sorban álló promptok',
+  promptQueueInputLimit: 'A bemeneti korlát elérése miatt egyes várakozó promptok vagy mellékletek kimaradtak.',
+  promptQueueAttachmentLimit: 'A {total} megtartott mellékletből {shown} látható.',
   promptQueueSendNow: 'Küldés most',
   selectionToolbarLabel: 'Kijelölési műveletek',
   selectionAsk: 'Kérdezés',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} token',
     other: '{count} token',
   },
+  threadListInputLimit: 'A bemeneti korlát elérése miatt egyes beszélgetésszálak kimaradtak.',
+  promptInputInputLimit: 'A bemeneti korlát elérése miatt egyes javaslatok vagy katalógusbejegyzések kimaradtak.',
+  transcriptFeedInputLimit: 'Összesen {total} bejegyzésből csak a legújabb {count} marad meg.',
+  codeBlockHighlightLimit: 'A hosszú kód szintaxiskiemelés nélkül jelenik meg.',
 };
 
 registerLyraLocale('hu', strings);

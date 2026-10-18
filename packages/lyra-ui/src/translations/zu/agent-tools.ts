@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Kuboniswa kuphela imiphumela yokuhlola engu-{count} yokuqala.',
   toolTimelineLimit: 'Amakholi amathuluzi angaphezu kuka-{count} awaboniswa.',
   toolSelectLimit: 'Kuboniswa amathuluzi angu-{count} okuqala kuphela.',
+  testResultsInputTooLarge: 'Imininingwane yemiphumela yokuhlola yeqa umkhawulo wokubonisa.',
   toolCall: 'Ikholi yethuluzi',
   maximize: 'Khulisa',
   promptStudioVariableName: 'Igama lokuguquguqukayo {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Amafayela okuqala angu-{count} kuphela abonisiwe.',
   taskListLimit: 'Kuboniswa kuphela imisebenzi yokuqala engu-{count}.',
   evalDatasetLimit: 'Kuboniswa izibonelo ezingu-{count} zokuqala kuphela.',
+  activityFeedInputLimit: 'Kugcinwa okufakiwe okusha kakhulu okungu-{count} kokungu-{total} kuphela.',
+  spanWaterfallLimit: 'Kuboniswa izingxenye zokulandelela ezingu-{shown} kwezingu-{total}.',
+  toolTimelineInputLimit: 'Kugcinwa kuphela amakholi ethuluzi akamuva angu-{count} kwangu-{total}.',
 };
 
 registerLyraLocale('zu', strings);

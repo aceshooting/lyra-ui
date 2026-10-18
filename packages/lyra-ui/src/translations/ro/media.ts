@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: 'Imaginea {index} din {total}',
   playWithContext: 'Redă {name}',
   pauseWithContext: 'Pune pe pauză {name}',
+  avPlayerWaveformUnavailable: 'Datele formei de undă nu sunt disponibile sau nu corespund acestui conținut media.',
+  avPlayerTranscriptUnavailable: 'Datele transcrierii nu sunt disponibile.',
   dropzoneReleaseToAdd: 'Eliberează pentru a adăuga fișierul.',
   dropzoneRejectedType: 'Acest tip de fișier nu este acceptat.',
   attachmentAdd: 'Adaugă un fișier atașat',

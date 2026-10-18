@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Toll lent',
   signaturePadPenUp: 'Toll fent',
+  localePickerInputLimit: 'Csak az első 512 nyelvi és területi beállítás érhető el.',
+  emojiPickerInputLimit: 'A bemeneti korlát elérése miatt egyes emojiadatok kimaradtak.',
 };
 
 registerLyraLocale('hu', strings);

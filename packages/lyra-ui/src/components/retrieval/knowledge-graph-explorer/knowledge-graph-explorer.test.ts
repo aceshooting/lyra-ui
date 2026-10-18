@@ -230,12 +230,16 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(group().getAttribute('role')).to.equal('group');
   });
 
-  it('registers every composed custom element', async () => {
+  it('registers composed custom elements before use', async () => {
     // Importing a *.class.js module alone never calls defineElement() -- only the barrel (*.js)
-    // does; this proves the registration entry point actually pulls every composed child in.
-    await fixture(
+    // does; the path child is registered when path data first needs it.
+    const el = await fixture<LyraKnowledgeGraphExplorer>(
       html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
     );
+    expect(customElements.get('lr-path-strip') === undefined).to.equal(true);
+    el.path = [{ kind: 'node', node: { id: 'a', label: 'A' } }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-path-strip') !== null).to.equal(true);
     for (const tag of [
       'lr-graph',
       'lr-graph-legend',

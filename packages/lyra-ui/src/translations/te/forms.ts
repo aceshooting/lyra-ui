@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'పెన్ను కింద',
   signaturePadPenUp: 'పెన్ను పైన',
+  localePickerInputLimit: 'మొదటి 512 భాష మరియు ప్రాంత నమోదులు మాత్రమే అందుబాటులో ఉన్నాయి.',
+  emojiPickerInputLimit: 'ఇన్‌పుట్ పరిమితిని చేరుకున్నందున కొంత ఎమోజీ డేటా వదిలివేయబడింది.',
 };
 
 registerLyraLocale('te', strings);

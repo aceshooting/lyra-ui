@@ -1,3 +1,4 @@
+import { capOptionRows } from '../../../internal/option-selection.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { renderFormControlHintError } from '../../../internal/form-control-template.js';
@@ -444,6 +445,9 @@ export type LyraComboboxSourceErrorEvent =
 /**
  * `<lr-combobox>` — a filterable single/multi select that combines a text
  * input with a listbox. Mirrors the core `<wa-combobox>` API under `lr-`.
+ *
+ * Programmatic option `selected` writes update the option immediately and reconcile parent
+ * selection once in the next microtask, without emitting parent value-change events.
  *
  * Options are `<lr-option value>` children. Emits native-style `change`/`input`
  * (like Web Awesome) plus `lr-show`/`lr-hide`/`lr-clear`.
@@ -1126,7 +1130,7 @@ export class LyraCombobox<
   /** A structured selection assigned before local options or async rows became available. */
   private pendingSelectedRowValues?: string[];
   /** The rows of the latest render, indexed by each option's `data-index` for the delegated click. */
-  private _renderedRows: ComboboxSourceRow[] = [];
+  private _renderedRows: readonly ComboboxSourceRow[] = [];
 
   private internals: ElementInternals;
   private _open = false;
@@ -1593,6 +1597,7 @@ export class LyraCombobox<
   private previousSelection: readonly string[] = [];
 
   private setValue(next: string | string[] | null | undefined, dirty: boolean, preferred?: LyraOption): void {
+    this.pendingSelectedWrites.clear();
     const old = this._selected;
     this.previousSelection = old;
     this.singleSelectedOption = preferred;
@@ -1642,7 +1647,8 @@ export class LyraCombobox<
   }
 
   /** Maximum number of suggestion rows **rendered into the DOM at all** before the rest collapse
-   *  behind the overflow indicator (the current selection is always kept visible regardless). This
+   *  behind the overflow indicator. Selected and active rows share an absolute 1,000-row ceiling;
+   *  the active row has priority, so oversized selections cannot all remain mounted. This
    *  is a performance ceiling, not a visible-height affordance: rows past it do not exist and
    *  cannot be scrolled to. Use `visibleOptions` to bound the popup's height while keeping every
    *  row reachable, and `maxOptionsVisible` for the selected-tag cap. Sanitized to a finite,
@@ -1694,7 +1700,10 @@ export class LyraCombobox<
   get selectedRows(): ComboboxSourceRow[] {
     return this.resolveSelectedRowSlots()
       .filter((row): row is ComboboxSourceRow => row != null)
-      .map((row) => ({ ...row }));
+      .map((row) => {
+        const option = this.sourceOptionsByRow.get(row);
+        return { ...row, ...(option ? this.adornmentsFor(option) : {}) };
+      });
   }
 
   /** Same lookup as `selectedRows`, but keeps one slot per `_selected` entry -- `undefined` where
@@ -1731,7 +1740,7 @@ export class LyraCombobox<
     if (values.size === 0) return rows;
     for (const option of options) {
       const value = option.value;
-      if (values.has(value) && !rows.has(value)) rows.set(value, this.rowForOption(option));
+      if (values.has(value) && !rows.has(value)) rows.set(value, this.rowForOption(option, false));
     }
     return rows;
   }
@@ -2085,6 +2094,7 @@ export class LyraCombobox<
   }
 
   override disconnectedCallback(): void {
+    this.pendingSelectedWrites.clear();
     this.listboxHidden = true;
     this.releaseExternalDescription();
     this.popupController.cancel();
@@ -2229,6 +2239,62 @@ export class LyraCombobox<
     }
   }
 
+  private callbackRefreshEpoch = 0;
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === undefined) this.callbackRefreshEpoch = (this.callbackRefreshEpoch ?? 0) + 1;
+    super.requestUpdate(...args);
+  }
+  private optionMemo = new Map<string, { inputs: readonly unknown[]; value: unknown }>();
+  private memoOption<T>(key: string, inputs: readonly unknown[], compute: () => T): T {
+    const previous = this.optionMemo.get(key);
+    if (previous && previous.inputs.length === inputs.length && previous.inputs.every((input, index) => Object.is(input, inputs[index]))) return previous.value as T;
+    const value = compute(); this.optionMemo.set(key, { inputs, value }); return value;
+  }
+  private get optionIndex() {
+    return this.memoOption('index', [this.options], () => {
+      const values = new Map<string, LyraOption>();
+      for (const option of this.options) if (!values.has(option.value)) values.set(option.value, option);
+      return { values, members: new Set(this.options) };
+    });
+  }
+  private get asyncIndex() {
+    return this.memoOption('asyncIndex', [this.asyncRows], () => {
+      const values = new Map<string, ComboboxSourceRow>();
+      for (const row of this.asyncRows) if (!values.has(row.value)) values.set(row.value, row);
+      return values;
+    });
+  }
+  private get searchCorpus() {
+    return this.memoOption('corpus', [this.options, this.effectiveLocale], () => this.options.map(option => ({
+      label: option.label.toLocaleLowerCase(this.effectiveLocale),
+      search: option.searchText.toLocaleLowerCase(this.effectiveLocale),
+      value: option.value.toLocaleLowerCase(this.effectiveLocale),
+    })));
+  }
+  private pendingSelectedWrites = new Map<LyraOption, { selected: boolean; value: string }>();
+  private selectedWritesQueued = false;
+  private flushSelectedWrites(): void {
+    this.selectedWritesQueued = false;
+    const writes = [...this.pendingSelectedWrites]; this.pendingSelectedWrites.clear();
+    if (!this.isConnected || writes.length === 0) return;
+    if (this.multiple) {
+      const values = new Set(this._selected);
+      for (const [option, write] of writes) {
+        if (!this.optionIndex.members.has(option)) continue;
+        if (write.selected) values.add(write.value); else values.delete(write.value);
+      }
+      this.setValue([...values], true);
+    } else {
+      let value = this._selected[0]; let option = this.singleSelectedOption;
+      for (const [candidate, write] of writes) {
+        if (!this.optionIndex.members.has(candidate)) continue;
+        if (write.selected) { value = write.value; option = candidate; }
+        else if (candidate === option) { value = undefined; option = undefined; }
+      }
+      this.setValue(value === undefined ? [] : value, true, option);
+    }
+  }
+
   private optionRefreshPending = false;
 
   private onOptionChange = (e: Event): void => {
@@ -2243,20 +2309,12 @@ export class LyraCombobox<
     // target's own listeners run before this slot listener.
     e.stopPropagation();
     const option = e.composedPath().find(isLyraOptionElement);
-    if (isOptionSelectedWrite(e) && isLyraOptionElement(option) && this.options.includes(option)) {
-      if (this.multiple) {
-        const next = option.selected
-          ? this._selected.includes(option.value) ? this._selected : [...this._selected, option.value]
-          : this._selected.filter((value) => value !== option.value);
-        this.assignValue(next);
-      } else {
-        this._valueDirty = true;
-        this._restoredStateActive = false;
-        // An unselected source option does not own a custom/unmatched committed value.
-        if (!option.selected && this.singleSelectedOption !== option) return;
-        // `[]`, not `''`, for the deselected branch: `''` is now a real candidate value (an option
-        // may declare it), so only an explicit empty array unambiguously means "clear".
-        this.setValue(option.selected ? option.value : [], true, option.selected ? option : undefined);
+    if (isOptionSelectedWrite(e) && isLyraOptionElement(option) && this.optionIndex.members.has(option)) {
+      this._valueDirty = true; this._restoredStateActive = false;
+      this.pendingSelectedWrites.delete(option);
+      this.pendingSelectedWrites.set(option, { selected: option.selected, value: option.value });
+      if (!this.selectedWritesQueued) {
+        this.selectedWritesQueued = true; queueMicrotask(() => this.flushSelectedWrites());
       }
       return;
     }
@@ -2265,7 +2323,7 @@ export class LyraCombobox<
       if (cached && cached.markup !== this.adornmentMarkup(option)) this.adornmentClones.delete(option);
     }
     // Many options notify together during mounting or a catalog metadata refresh. Reconcile the
-    // complete catalog once per microtask batch; explicit selected writes above remain immediate.
+    // complete catalog once per microtask batch; live selected writes use their own batched reconciliation.
     if (this.optionRefreshPending) return;
     this.optionRefreshPending = true;
     // Touch the `options` array reference so Lit's change-detection sees a
@@ -2284,8 +2342,8 @@ export class LyraCombobox<
 
   private reflectSelected(): void {
     const value = this._selected[0];
-    if (!this.singleSelectedOption || !this.options.includes(this.singleSelectedOption) || this.singleSelectedOption.value !== value) {
-      this.singleSelectedOption = this.options.find((option) => option.value === value);
+    if (!this.singleSelectedOption || !this.optionIndex.members.has(this.singleSelectedOption) || this.singleSelectedOption.value !== value) {
+      this.singleSelectedOption = value === undefined ? undefined : this.optionIndex.values.get(value);
     }
     const selected = new Set(this._selected);
     for (const option of this.options) {
@@ -2326,8 +2384,8 @@ export class LyraCombobox<
     return (
       (!this.source && !this.multiple && this.singleSelectedOption?.value === value ? nonBlank(this.singleSelectedOption.label) : undefined) ??
       nonBlank(this._selectedLabelCache.get(value)) ??
-      nonBlank(this.options.find((o) => o.value === value)?.label) ??
-      nonBlank(this.asyncRows.find((r) => r.value === value)?.label) ??
+      nonBlank(this.optionIndex.values.get(value)?.label) ??
+      nonBlank(this.asyncIndex.get(value)?.label) ??
       (this.loading || (this.source && !this.sourceEverSettled)
         ? this.statusText('loading', this.loadingText)
         : undefined) ??
@@ -2363,8 +2421,8 @@ export class LyraCombobox<
     return !(
       (!this.source && !this.multiple && this.singleSelectedOption?.value === value) ||
       this._selectedLabelCache.has(value) ||
-      this.options.some((option) => option.value === value) ||
-      this.asyncRows.some((row) => row.value === value)
+      this.optionIndex.values.has(value) ||
+      this.asyncIndex.has(value)
     );
   }
 
@@ -2411,8 +2469,8 @@ export class LyraCombobox<
     return resolved;
   }
 
-  private rowForOption(option: LyraOption): ComboboxSourceRow {
-    const adornments = this.adornmentsFor(option);
+  private rowForOption(option: LyraOption, withAdornments = true): ComboboxSourceRow {
+    const adornments = withAdornments ? this.adornmentsFor(option) : {};
     const row: ComboboxSourceRow = {
       value: option.value,
       label: option.label || option.value,
@@ -2506,21 +2564,10 @@ export class LyraCombobox<
     if (!inputValue) return undefined;
     const locale = this.effectiveLocale;
     const folded = inputValue.toLocaleLowerCase(locale);
-    const rows = this.source
-      ? this.asyncRows
-      : this.options.map((option) => ({
-          value: option.value,
-          label: option.label,
-        }));
-    if (
-      rows.some(
-        (row) =>
-          row.value.toLocaleLowerCase(locale) === folded ||
-          row.label.toLocaleLowerCase(locale) === folded
-      )
-    ) {
-      return undefined;
-    }
+    const exact = this.source
+      ? this.memoOption('asyncExact', [this.asyncRows, locale], () => new Set(this.asyncRows.flatMap(row => [row.value.toLocaleLowerCase(locale), row.label.toLocaleLowerCase(locale)]))).has(folded)
+      : this.searchCorpus.some(row => row.value === folded || row.label === folded);
+    if (exact) return undefined;
     return {
       value: inputValue,
       label: this.localize('comboboxCreate', undefined, { value: inputValue }),
@@ -2529,51 +2576,49 @@ export class LyraCombobox<
   }
 
   /** Cap source identities before projecting local option data and cloning adornments. */
-  private capRows<T extends { value: string }>(all: readonly T[]): { rows: T[]; overflow: number } {
-    if (all.length <= this.maxRender) {
-      return { rows: [...all], overflow: 0 };
-    }
-    const originalIndex = new Map(all.map((r, i) => [r, i]));
-    const capped = all.slice(0, this.maxRender);
-    const cappedValues = new Set(capped.map((r) => r.value));
-    let appendedOutOfCap = false;
-    for (const v of this.committed) {
-      if (!cappedValues.has(v)) {
-        const selectedRow = all.find((r) => r.value === v);
-        if (selectedRow) {
-          capped.push(selectedRow);
-          appendedOutOfCap = true;
-        }
-      }
-    }
-    if (appendedOutOfCap) {
-      // A preserved out-of-cap selection was just tacked onto the very end,
-      // regardless of its own `group` -- stable-sort back by each row's
-      // original position so it lands among its own group's other rows
-      // instead of forcing renderRows() to emit that group's label a second
-      // time after whatever group happens to trail the cap.
-      capped.sort((a, b) => originalIndex.get(a)! - originalIndex.get(b)!);
-    }
-    return { rows: capped, overflow: all.length - capped.length };
+  private capRows<T extends { value: string }>(all: readonly T[], activeValue?: string): { rows: readonly T[]; overflow: number } {
+    return this.memoOption('capRows', [all, this.maxRender, this._selected, this.multiple, activeValue], () => {
+      const selected = new Set(this.committed);
+      const retained = all.filter(row => selected.has(row.value));
+      const active = activeValue === undefined ? undefined : all.find(row => row.value === activeValue);
+      return capOptionRows(all, this.maxRender, active ? [active, ...retained] : retained);
+    });
   }
 
   /** Filtered suggestions capped to `maxRender`, keeping the current selection visible. */
-  private get renderedRows(): { rows: ComboboxSourceRow[]; overflow: number } {
+  private lastRenderedRows: readonly ComboboxSourceRow[] = [];
+  private get renderedRows(): { rows: readonly ComboboxSourceRow[]; overflow: number } {
+    const active = this.lastRenderedRows.filter(row => !row.disabled)[this.activeIndex]?.value;
+    const result = this.memoOption('renderedRows', [this.callbackRefreshEpoch, this.options, this.asyncRows, this.source, this.query,
+      this._selected, this.multiple, this.maxRender, this._sourceTotal, this.withUnknownOption,
+      this.allowCreate, this.filter, this.getUnknownLabel, this.loading, this.sourceEverSettled,
+      this.effectiveLocale, this.strings, active], () => this.computeRenderedRows(active));
+    this.lastRenderedRows = result.rows;
+    return result;
+  }
+
+  private computeRenderedRows(active?: string): { rows: readonly ComboboxSourceRow[]; overflow: number } {
     let rows: ComboboxSourceRow[];
     let overflow: number;
     if (this.source) {
-      ({ rows, overflow } = this.capRows(this.asyncRows));
+      const capped = this.capRows(this.asyncRows, active);
+      rows = [...capped.rows]; overflow = capped.overflow;
       overflow += Math.max(0, this._sourceTotal - this.asyncRows.length);
     } else {
-      const capped = this.capRows(this.filtered);
+      const capped = this.capRows(this.filtered, active);
       rows = capped.rows.map((option) => this.rowForOption(option));
       overflow = capped.overflow;
     }
+    rows = [...rows];
     const create = this.createRow;
     // Synthetic committed values and the create action do not consume the suggestion cap.
     rows.push(...this.unknownRows);
     if (create) rows.push(create);
-    return { rows, overflow };
+    const selected = new Set(this.committed);
+    const retained = rows.filter(row => selected.has(row.value));
+    const activeRow = rows.find(row => row.value === active);
+    const bounded = capOptionRows(rows, MAX_RENDER_ROWS, activeRow ? [activeRow, ...retained] : retained);
+    return { rows: bounded.rows, overflow: overflow + bounded.overflow };
   }
 
   /** Keeps the roving index inside the current source-agnostic enabled-row set without turning an
@@ -2601,12 +2646,12 @@ export class LyraCombobox<
     const effective =
       q && q === selectedLabel.toLocaleLowerCase(locale) ? '' : q;
     if (!effective) return this.options;
-    const fn: OptionFilter =
-      this.filter ??
-      ((o, query) =>
-        o.label.toLocaleLowerCase(locale).includes(query) ||
-        o.searchText.toLocaleLowerCase(locale).includes(query));
-    return this.options.filter((o) => fn(o, effective));
+    return this.memoOption('filtered', [this.options, this.filter, effective, locale, this.callbackRefreshEpoch], () => {
+      const filter = this.filter;
+      if (filter) return this.options.filter(option => filter(option, effective));
+      const corpus = this.searchCorpus;
+      return this.options.filter((_option, index) => corpus[index]!.label.includes(effective) || corpus[index]!.search.includes(effective));
+    });
   }
 
   private get displayValue(): string {
@@ -2848,7 +2893,11 @@ export class LyraCombobox<
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     this.syncExternalDescription();
-    this.syncVisibleOptionsCap();
+    if (changed.has('visibleOptions') || changed.has('open') || changed.has('query') ||
+        changed.has('options') || changed.has('asyncRows') || changed.has('maxRender') ||
+        changed.has('value') || changed.has('listboxPositioned') || changed.has('strings') ||
+        changed.has('lang') || changed.has('size') || changed.has('filter') ||
+        changed.has('allowCreate') || changed.has('withUnknownOption')) this.syncVisibleOptionsCap();
     // A vetoed transition already put `open` back during willUpdate(), so `changed` still names it
     // while nothing about the state actually moved: tearing down and rebuilding the popup
     // machinery here would undo the veto it was meant to honour.
@@ -2927,7 +2976,7 @@ export class LyraCombobox<
         }
         return true;
       },
-      conceal: () => { this.listboxHidden = true; },
+      conceal: () => { this.listboxHidden = true; this.listboxRendered = false; },
     });
   }
 
@@ -3388,7 +3437,7 @@ export class LyraCombobox<
   };
 
   private renderRows(
-    rows: ComboboxSourceRow[],
+    rows: readonly ComboboxSourceRow[],
     activeId: string
   ): TemplateResult[] {
     const out: TemplateResult[] = [];

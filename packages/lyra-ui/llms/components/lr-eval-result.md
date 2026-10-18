@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,6 +30,85 @@ The table uses `label` or the localized purpose-specific evaluation-runs name. A
 on `<lr-eval-result>` remains the overall host name and is not cloned onto the independently
 interactive table; use `label` to distinguish several comparison grids on one page.
 
+**Full-source comparison runs:** `dataSource: EvalResultSource | undefined = undefined`
+(attribute: false) takes precedence over `runs`; invalid defined providers fail visibly.
+Setting `undefined` restores current legacy runs. `sourcePage: number = 0` (`source-page`) is
+zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500. Readonly
+`sourceTotal: number | null` is the accepted current-query total, or null while unavailable/without
+a source. Page-size and accepted sort changes reset page zero. An out-of-range page receives at
+most one corrective last-page request.
+
+```ts
+import type { EvalResultSource, EvalResultSourceQuery, EvalRunResult } from
+  "@aceshooting/lyra-ui/components/agent-tools/eval-result/eval-result.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`EvalResultSource` is `LyraPageSource<EvalRunResult, EvalResultSourceQuery>`. The immutable provider
+revision is a nonempty string or finite number. `query({ revision, locale, signal, page, pageSize,
+query })` returns `{ rows, total }`; query is `{ sortKey: string | null, sortDir: 'asc' | 'desc' }`,
+initially null/asc. Each record is `{ key, order, value }`, with `key === value.id`, nonblank original
+ID and safe canonical source `order`; page keys/orders are unique and rows exactly fill the
+requested in-bounds page. `lookup(keys, context)` returns complete globally present requested
+records, omitting absent IDs; `locate(key, query, context)` supplies the shared page-source
+contract but ordinary comparison paging does not use it. Provider order/sorting applies globally,
+without sorting a partial page locally.
+
+Source mode forwards the table's original cancelable `lr-sort-request`
+`{ phase: 'request', sortKey, sortDir }` and accepted `lr-sort`
+`{ phase: 'commit', sortKey, sortDir }` once. Veto prevents a source order change; only a current
+commit updates the server query and resets page zero. These sort events remain contained in the
+legacy route. Existing columns define the sorting choices rather than a new sort property API.
+
+`selectedRunId` and `baselineRunId` stay fully controlled and are never rewritten. A null ID means
+the first global row of the current query, not the first row of whichever page is displayed.
+Starting on a nonzero page can therefore request a size-one page-zero primer before the requested
+page; only its fallback key is retained and its row/total never becomes the displayed page.
+Paging preserves that fallback; sort/locale/source refresh recomputes it. Explicit selected and
+baseline IDs resolve off-page through one deduplicated lookup of at most two keys. A missing
+explicit ID does not fall back to the first row; an absent selection suppresses review/diff, while
+missing baseline retains the existing selected-output comparison behavior. Empty-source success
+and failed lookup remain distinct. Controlled ID changes and fallback resolution emit no activation.
+Same-revision paging/sorting and locale-only formatting retain explicit comparison records;
+source revision/rebind/lifecycle changes revoke old pair data before it can drive review/diff.
+
+The current page holds at most 500 rows and the selected/baseline cache at most two records;
+pending replacement work is separately bounded by those same limits. There is no full runs array
+or secondary corpus. Page, selected-pair and locate work share the source's existing fixed
+lanes: one physical call per lane plus only the latest queued intent. The primer uses the same
+page lane, and ignored aborts keep physical permits until settlement. Fixed own-data fields
+`id`, `label`, optional `model`/`promptVersion` and `output` share a 65,536 UTF-16-unit row budget;
+a missing streaming output becomes `''`. Oversized/accessor-backed rows reject without clipping.
+Keys are at most 65,536 units and share the page helper's 2,000,000-unit key admission budget.
+
+Source `scores`/`review` dictionaries remain complete opaque provider references. Custom column
+cell/style/title/value callbacks and footers receive borrowed original provider records; built-in
+identity/diff/review uses closed frozen projections. Source `lr-run-activate { runId, run }`
+freezes the event envelope/run shell while preserving the complete scores/review identities,
+without deeply cloning or freezing those maps. Legacy activation retains its whole-detail deep
+snapshot and existing exhaustion-to-null behavior. Built-in review reads only configured
+`rubricKeys`, bounded to 10,000 combined scalar/category entries and 65,536 UTF-16 text units;
+it never JSON-serializes the complete source review dictionary. Existing review events retain
+original run IDs and their current selected-pair ownership. Disabled review stays inactive while
+the comparison grid remains usable.
+
+Initial source loading uses `source-status`. Current page errors/retry use the composed table;
+selected/baseline or review-projection failure uses `selection-status`/`selection-retry` and retries
+the pair without refetching the page. Initial failure is quiet; later page failures are announced
+by the table and pair failures by the parent, without duplicated announcements. Reassign even the
+same source, or call a keyless `requestUpdate()`, after revision/state changes. Named presentation
+updates reuse accepted records. Source/lifecycle replacement and obsolete page/pair changes revoke
+old controls, callbacks and review effects. The following run-array normalization/fallback details
+apply to the legacy route; columns/rubric/presentation contracts apply to both.
+
+**Exported source query declaration:**
+
+`EvalResultSourceQuery {
+  readonly sortKey: string | null;
+  readonly sortDir: 'asc' | 'desc';
+}`
+
 **Properties:**
 
 - `runs: EvalRunResult[] = []` (attribute: false) — `EvalRunResult { id: string; label: string;
@@ -47,9 +126,10 @@ model?: string; promptVersion?: string; output: string; scores?: RubricValue; re
 - `label: string = ''` — accessible name for the independently interactive comparison grid;
   falls back to the localized evaluation-runs name when unset
 - `selectedRunId: string | null = null` (attribute `selected-run-id`) — the run open for review and the diff's
-  **new** side; falls back to `runs[0]?.id` when empty
+  **new** side; null falls back to the first legacy run, or the first global current-query run
+  in source mode
 - `baselineRunId: string | null = null` (attribute `baseline-run-id`) — the run compared against and the
-  diff's **old** side; falls back to `runs[0]?.id` when empty
+  diff's **old** side; null uses the same first-run fallback described above
 - `reviewSkippable: boolean = false` (attribute `review-skippable`) — shows a Skip control on the
   review form (forwarded to `lr-rubric-form.skippable`)
 - `disabled: boolean = false` (reflected) — disables the review form's controls only; the comparison
@@ -60,5 +140,5 @@ string; value: RubricValue }`), `lr-review-validity-change` (`detail: { runId: s
 boolean; errors: Record<string, string> }`), `lr-review-submit` (`detail: { runId: string; value:
 RubricValue }`), `lr-review-skip` (`detail: { runId: string }`).
 
-**CSS parts:** `base`, `empty`, `grid`, `diff`, `diff-view`,
+**CSS parts:** `base`, `empty`, `grid`, `source-status`, `selection-status`, `selection-retry`, `diff`, `diff-view`,
 `diff-labels`, `diff-label-old`, `diff-label-new`, `review`.

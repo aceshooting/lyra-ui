@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'A teljes eloszlásban {validCount} érvényes minta van; {belowCount} a megjelenített osztályközök alatt, {aboveCount} felettük; {invalidCount} érvénytelen minta.',
+  histogramDistributionRange: 'A megfigyelt minták tartománya: {min}–{max}.',
   chartCategory: 'Kategória',
   chartTotal: 'Összesen',
   chartAxisTotal: 'Összesen ({axis})',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, sugár {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'növekvő',
-  chartTrendDecreasing: 'csökkenő',
-  chartTrendFlat: 'stagnáló',
-  chartSummary: '{label}: {count} érték, tartomány: {min} – {max}, trend: {trend}',
   chartSeriesNoData: '{label}: nincs adat',
   chartSummaryWithData: 'Diagram ({type}). {summaries}.',
   chartSummaryEmpty: 'Diagram ({type}) adatok nélkül.',
-  chartSummarySeparator: '. ',
   chartData: 'Diagramadatok',
   chartRenderUnavailable: 'A diagram megjelenítése nem érhető el.',
+  chartPreparedSummaryZoom: 'A nagyítás az előkészített összefoglalót jeleníti meg; index alapján nem érhető el részletesebb megjelenítés.',
+  chartSpatialSummary: 'Teljes forrás: {count} pont, x {minX}–{maxX}, y {minY}–{maxY}. Nézet: {matchedCount} pont, x {viewMinX}–{viewMaxX}, y {viewMinY}–{viewMaxY}.',
+  chartSpatialRadiusDomain: 'Sugár a teljes forrásban: {min}–{max}.',
+  chartSpatialDensityLegend: 'A sűrűség minden adatsort tartalmaz; az adatsorok láthatósága csak a rájuk rajzolt pontokat befolyásolja.',
+  chartSpatialPoint: '{series}: {id}, forrásbeli pozíció {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Sűrűségi régió: {count} pont, x {minX}–{maxX}, y {minY}–{maxY}.',
+  chartSpatialHidden: ' (adatsor elrejtve)',
   chartDataSampled: 'A diagram és a generált adattábla legfeljebb 1000 rekordból álló mintát mutatnak. Az összes diagramadat eléréséhez adjon meg egyéni adattáblát.',
   chartPlotSampled: 'A diagram legfeljebb 1000 rekordból álló mintát mutat; az adattábla az összes adatot tartalmazza.',
   chartZoomUnavailable: 'A nagyítás nem érhető el, de az alapdiagram továbbra is elérhető.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index}/{total})',
   chartMissingLibrary: 'A diagramok megjelenítéséhez ennek az összetevőnek szüksége van az opcionális „chart.js” csomagra.',
   boxPlotMissingLibrary: 'A dobozdiagramok megjelenítéséhez ennek az összetevőnek szüksége van az opcionális dobozdiagram-csomagra.',
+  chartInputLimit: 'A bemeneti korlát elérése miatt egyes diagramadatok kimaradtak. A kimaradt értékek megjelenítéséhez adjon meg kisebb vagy előzetesen összesített adathalmazt.',
+  histogramInputLimit: 'Csak a legújabb 10 000 minta marad meg. Nagyobb eloszlás megjelenítéséhez adjon át előzetesen osztályközökbe csoportosított darabszámokat az lr-chart számára.',
 };
 
 registerLyraLocale('hu', strings);

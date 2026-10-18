@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'Matokeo {count} ya kwanza ya jaribio pekee ndiyo yanaonyeshwa.',
   toolTimelineLimit: 'Hadi miito {count} ya zana ndiyo inayoonyeshwa.',
   toolSelectLimit: 'Zana {count} za kwanza pekee ndizo zinazoonyeshwa.',
+  testResultsInputTooLarge: 'Maelezo ya matokeo ya majaribio yanazidi kikomo cha uonyeshaji.',
   toolCall: 'Wito wa zana',
   maximize: 'Panua kabisa',
   promptStudioVariableName: 'Jina la kigezo {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'Faili {count} za kwanza pekee ndizo zinazoonyeshwa.',
   taskListLimit: 'Kazi {count} za kwanza pekee ndizo zinazoonyeshwa.',
   evalDatasetLimit: 'Mifano {count} ya kwanza pekee ndiyo inayoonyeshwa.',
+  activityFeedInputLimit: 'Ni maingizo mapya zaidi {count} kati ya {total} pekee yanayohifadhiwa.',
+  spanWaterfallLimit: 'Inaonyesha vipindi {shown} kati ya {total} vya ufuatiliaji.',
+  toolTimelineInputLimit: 'Ni miito {count} ya hivi karibuni zaidi pekee kati ya miito {total} ya zana inayohifadhiwa.',
 };
 
 registerLyraLocale('sw', strings);

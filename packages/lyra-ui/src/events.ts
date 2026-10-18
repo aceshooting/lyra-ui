@@ -1787,6 +1787,12 @@ export type LyraMapViewChangeEvent = LyraMapEventMap['lr-map-view-change'];
 export type LyraMatrixGeometryChangeEvent = LyraHeatmapEventMap['lr-matrix-geometry-change'];
 
 /**
+ * `lr-matrix-range-select` — dispatched by `<lr-heatmap>`; detail
+ * `LyraHeatmapEventMap['lr-matrix-range-select']`.
+ */
+export type LyraMatrixRangeSelectEvent = LyraHeatmapEventMap['lr-matrix-range-select'];
+
+/**
  * `lr-maximize-change-request` — dispatched by `<lr-tool-result-dialog>`; detail
  * `LyraToolResultDialogEventMap['lr-maximize-change-request']`.
  */
@@ -2036,6 +2042,11 @@ export type LyraOpenEvent =
  * `LyraOptionEventMap['lr-option-change']`.
  */
 export type LyraOptionChangeEvent = LyraOptionEventMap['lr-option-change'];
+
+/**
+ * `lr-overflow` — dispatched by `<lr-terminal>`; detail `LyraTerminalEventMap['lr-overflow']`.
+ */
+export type LyraOverflowEvent = LyraTerminalEventMap['lr-overflow'];
 
 /**
  * `lr-overflow-activate` — dispatched by `<lr-avatar-group>`; detail
@@ -2829,12 +2840,15 @@ export type LyraSlideChangeEvent =
   | LyraPptxViewerEventMap['lr-slide-change'];
 
 /**
- * `lr-sort` — dispatched by 3 components: `<lr-document-library>`, `<lr-eval-dataset>`,
- * `<lr-table>`; detail union of 3, e.g. `LyraDocumentLibraryEventMap['lr-sort']`.
+ * `lr-sort` — dispatched by 5 components: `<lr-document-library>`, `<lr-eval-dataset>`,
+ * `<lr-eval-result>`, `<lr-knowledge-base>`, `<lr-table>`; detail union of 5, e.g.
+ * `LyraDocumentLibraryEventMap['lr-sort']`.
  */
 export type LyraSortEvent =
   | LyraDocumentLibraryEventMap['lr-sort']
   | LyraEvalDatasetEventMap['lr-sort']
+  | LyraEvalResultEventMap['lr-sort']
+  | LyraKnowledgeBaseEventMap['lr-sort']
   | LyraTableEventMap['lr-sort'];
 
 /**
@@ -2844,13 +2858,26 @@ export type LyraSortEvent =
 export type LyraSortChangeEvent = LyraDataGridEventMap['lr-sort-change'];
 
 /**
- * `lr-sort-request` — dispatched by 3 components: `<lr-data-grid>`, `<lr-document-library>`,
- * `<lr-table>`; detail union of 3, e.g. `LyraDataGridEventMap['lr-sort-request']`.
+ * `lr-sort-request` — dispatched by 5 components: `<lr-data-grid>`, `<lr-document-library>`,
+ * `<lr-eval-result>`, `<lr-knowledge-base>`, `<lr-table>`; detail union of 5, e.g.
+ * `LyraDataGridEventMap['lr-sort-request']`.
  */
 export type LyraSortRequestEvent =
   | LyraDataGridEventMap['lr-sort-request']
   | LyraDocumentLibraryEventMap['lr-sort-request']
+  | LyraEvalResultEventMap['lr-sort-request']
+  | LyraKnowledgeBaseEventMap['lr-sort-request']
   | LyraTableEventMap['lr-sort-request'];
+
+/**
+ * `lr-source-category-select` — dispatched by 11 components: `<lr-bar-chart>`,
+ * `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`,
+ * `<lr-lite-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`,
+ * `<lr-scatter-chart>`; detail union of 2, e.g. `LyraChartEventMap['lr-source-category-select']`.
+ */
+export type LyraSourceCategorySelectEvent =
+  | LyraChartEventMap['lr-source-category-select']
+  | LyraLiteChartEventMap['lr-source-category-select'];
 
 /**
  * `lr-source-create` — dispatched by 2 components: `<lr-knowledge-base-admin>`,
@@ -2884,6 +2911,22 @@ export type LyraSourceErrorEvent = LyraComboboxEventMap['lr-source-error'];
 export type LyraSourcePauseEvent =
   | LyraKnowledgeBaseAdminEventMap['lr-source-pause']
   | LyraKnowledgeBaseEventMap['lr-source-pause'];
+
+/**
+ * `lr-source-point-select` — dispatched by 11 components: `<lr-bar-chart>`, `<lr-bubble-chart>`,
+ * `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-lite-chart>`,
+ * `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`; detail
+ * union of 2, e.g. `LyraChartEventMap['lr-source-point-select']`.
+ */
+export type LyraSourcePointSelectEvent =
+  | LyraChartEventMap['lr-source-point-select']
+  | LyraLiteChartEventMap['lr-source-point-select'];
+
+/**
+ * `lr-source-selection-change` — dispatched by `<lr-tree>`; detail
+ * `LyraTreeEventMap['lr-source-selection-change']`.
+ */
+export type LyraSourceSelectionChangeEvent = LyraTreeEventMap['lr-source-selection-change'];
 
 /**
  * `lr-source-sync` — dispatched by 2 components: `<lr-knowledge-base-admin>`,
@@ -2924,6 +2967,24 @@ export type LyraSpanToggleEvent =
  * `LyraAgentTraceEventMap['lr-span-visibility-change']`.
  */
 export type LyraSpanVisibilityChangeEvent = LyraAgentTraceEventMap['lr-span-visibility-change'];
+
+/**
+ * `lr-spatial-bin-select` — dispatched by 11 components: `<lr-bar-chart>`, `<lr-bubble-chart>`,
+ * `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-embedding-explorer>`, `<lr-histogram>`,
+ * `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`,
+ * `<lr-scatter-chart>`; detail union of 2, e.g. `LyraChartEventMap['lr-spatial-bin-select']`.
+ */
+export type LyraSpatialBinSelectEvent =
+  | LyraChartEventMap['lr-spatial-bin-select']
+  | LyraEmbeddingExplorerEventMap['lr-spatial-bin-select'];
+
+/**
+ * `lr-spatial-point-select` — dispatched by 10 components: `<lr-bar-chart>`, `<lr-bubble-chart>`,
+ * `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`,
+ * `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`; detail
+ * `LyraChartEventMap['lr-spatial-point-select']`.
+ */
+export type LyraSpatialPointSelectEvent = LyraChartEventMap['lr-spatial-point-select'];
 
 /**
  * `lr-stage-chunk-action` — dispatched by `<lr-retrieval-trace>`; detail
@@ -3600,6 +3661,7 @@ export interface LyraGlobalEventMap {
   'lr-map-marker-activate': LyraMapMarkerActivateEvent;
   'lr-map-view-change': LyraMapViewChangeEvent;
   'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;
+  'lr-matrix-range-select': LyraMatrixRangeSelectEvent;
   'lr-maximize-change-request': LyraMaximizeChangeRequestEvent;
   'lr-mcp-log': LyraMcpLogEvent;
   'lr-mcp-open-link': LyraMcpOpenLinkEvent;
@@ -3638,6 +3700,7 @@ export interface LyraGlobalEventMap {
   'lr-node-toggle': LyraNodeToggleEvent;
   'lr-open': LyraOpenEvent;
   'lr-option-change': LyraOptionChangeEvent;
+  'lr-overflow': LyraOverflowEvent;
   'lr-overflow-activate': LyraOverflowActivateEvent;
   'lr-overflow-toggle': LyraOverflowToggleEvent;
   'lr-page-change': LyraPageChangeEvent;
@@ -3743,15 +3806,20 @@ export interface LyraGlobalEventMap {
   'lr-sort': LyraSortEvent;
   'lr-sort-change': LyraSortChangeEvent;
   'lr-sort-request': LyraSortRequestEvent;
+  'lr-source-category-select': LyraSourceCategorySelectEvent;
   'lr-source-create': LyraSourceCreateEvent;
   'lr-source-delete': LyraSourceDeleteEvent;
   'lr-source-error': LyraSourceErrorEvent;
   'lr-source-pause': LyraSourcePauseEvent;
+  'lr-source-point-select': LyraSourcePointSelectEvent;
+  'lr-source-selection-change': LyraSourceSelectionChangeEvent;
   'lr-source-sync': LyraSourceSyncEvent;
   'lr-sources-change': LyraSourcesChangeEvent;
   'lr-span-select': LyraSpanSelectEvent;
   'lr-span-toggle': LyraSpanToggleEvent;
   'lr-span-visibility-change': LyraSpanVisibilityChangeEvent;
+  'lr-spatial-bin-select': LyraSpatialBinSelectEvent;
+  'lr-spatial-point-select': LyraSpatialPointSelectEvent;
   'lr-stage-chunk-action': LyraStageChunkActionEvent;
   'lr-stage-select': LyraStageSelectEvent;
   'lr-stage-toggle': LyraStageToggleEvent;

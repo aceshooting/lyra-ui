@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} കൂടുതൽ നിർദ്ദേശം',
     other: '{count} കൂടുതൽ നിർദ്ദേശങ്ങൾ',
   },
+  mentionInputLimit: 'പരാമർശത്തിനുള്ള ആദ്യത്തെ 10,000 നിർദ്ദേശങ്ങൾ മാത്രമേ ലഭ്യമാകൂ.',
+  diffViewHighlightLimit: 'നീളമുള്ള കോഡ് സിന്റാക്സ് ഹൈലൈറ്റിംഗ് ഇല്ലാതെ കാണിക്കുന്നു.',
 };
 
 registerLyraLocale('ml', strings);

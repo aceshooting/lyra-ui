@@ -59,6 +59,8 @@ const strings: LyraLocaleStrings = {
   mentionMoreResults: {
     other: '{count} awọn aba diẹ sii',
   },
+  mentionInputLimit: 'Àwọn àṣàyàn 10,000 àkọ́kọ́ tí a lè mẹ́nu kàn nìkan ló wà.',
+  diffViewHighlightLimit: 'A ń ṣàfihàn kóòdù gígùn láì lo àwọ̀ láti fi ìlànà ìkọ̀wé kóòdù hàn.',
 };
 
 registerLyraLocale('yo', strings);

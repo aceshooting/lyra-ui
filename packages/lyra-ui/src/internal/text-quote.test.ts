@@ -2071,3 +2071,143 @@ describe('corpus normalization fast path', () => {
     }
   });
 });
+
+import * as quoteHelpers from './text-quote.js';
+it('extends an append-only text scope without revisiting a thousand retained text nodes', () => {
+  const root = document.createElement('div');
+  root.innerHTML = '<p>prefix </p>'.repeat(1000);
+  const Constructor = (quoteHelpers as unknown as { IncrementalTextQuoteScope: new (root: Element) => { update(): TextQuoteScope; scannedNodes: number; disconnect(): void } }).IncrementalTextQuoteScope;
+  expect(typeof Constructor).equal('function');
+  const builder = new Constructor(root);
+  try {
+    const first = builder.update(); const scanned = builder.scannedNodes;
+    root.insertAdjacentHTML('beforeend', '<p>suffix </p>'.repeat(1000));
+    const second = builder.update();
+    expect(second.text).equal(scopeFromElement(root).text);
+    expect(second.text.startsWith(first.text)).equal(true);
+    expect(builder.scannedNodes - scanned).equal(2000);
+    root.querySelector('p')!.textContent = 'edited ';
+    expect(builder.update().text).equal(scopeFromElement(root).text);
+    root.replaceChildren(document.createTextNode('e'));
+    builder.update(); root.append(document.createTextNode('\u0301'));
+    expect(builder.update().text).equal(scopeFromElement(root).text);
+  } finally { builder.disconnect(); }
+});
+it('retains only settled text while rescanning a mutable preview and fails closed on stale ranges', () => {
+  const root = document.createElement('div'); root.innerHTML = '<p>stable </p><p>tail</p>';
+  const builder = new quoteHelpers.IncrementalTextQuoteScope(root);
+  try {
+    const preview = root.lastElementChild!;
+    expect(builder.update(preview).text).equal(scopeFromElement(root).text);
+    preview.textContent = 'changed';
+    expect(builder.update(preview).text).equal(scopeFromElement(root).text);
+    const stale = builder.update(preview);
+    root.firstElementChild!.textContent = 'edited ';
+    expect(toRanges(stale, 'stable').length).equal(0);
+    expect(builder.update(preview).text).equal(scopeFromElement(root).text);
+    preview.insertAdjacentHTML('beforebegin', '<p>new settled </p>');
+    expect(builder.update(preview).text).equal(scopeFromElement(root).text);
+  } finally { builder.disconnect(); }
+});
+it('extends settled text across trailing template markers without revisiting the prefix', () => {
+  const root = document.createElement('div'); root.innerHTML = '<p>stable </p><!--template-end--><p>tail</p>';
+  const builder = new quoteHelpers.IncrementalTextQuoteScope(root);
+  try {
+    const preview = root.lastElementChild!; const marker = preview.previousSibling!;
+    builder.update(preview); const scanned = builder.scannedNodes;
+    const added = document.createElement('p'); added.textContent = 'new ';
+    root.insertBefore(added, marker);
+    expect(builder.update(preview).text).equal(scopeFromElement(root).text);
+    expect(builder.scannedNodes - scanned).equal(5);
+  } finally { builder.disconnect(); }
+});
+it('bounds normalization and prefix copying when extending a settled quote corpus', () => {
+  const root = document.createElement('div'); root.innerHTML = '<p>prefix </p>'.repeat(1000);
+  const builder = new quoteHelpers.IncrementalTextQuoteScope(root);
+  const normalize = String.prototype.normalize;
+  const slice = Array.prototype.slice;
+  let normalizedUnits = 0, copiedEntries = 0;
+  try {
+    builder.update();
+    const state = (builder as unknown as { scan: { segments: unknown[]; textChunks: unknown[]; textInterval: unknown[]; textValues: unknown[] } }).scan;
+    const retained = new Set([state.segments, state.textChunks, state.textInterval, state.textValues]);
+    String.prototype.normalize = function(form) { normalizedUnits += this.length; return normalize.call(this, form); };
+    Array.prototype.slice = function(start?: number, end?: number) { if (retained.has(this)) copiedEntries += this.length; return slice.call(this, start, end); };
+    root.insertAdjacentHTML('beforeend', '<p>new suffix</p>');
+    const scope = builder.update();
+    expect(scope.text.endsWith('new suffix')).equal(true);
+    expect(normalizedUnits).at.most(100);
+    expect(copiedEntries).equal(0);
+  } finally { String.prototype.normalize = normalize; Array.prototype.slice = slice; builder.disconnect(); }
+});
+it('extends cached quote occurrences over only the changed suffix', () => {
+  const root = document.createElement('div'); root.innerHTML = '<p>prefix </p>'.repeat(1000);
+  const builder = new quoteHelpers.IncrementalTextQuoteScope(root);
+  try {
+    const index = createTextQuoteIndex(builder.update());
+    index.resolve({ quote: 'prefix' }); index.search('PREFIX');
+    root.insertAdjacentHTML('beforeend', '<p>new suffix</p>');
+    const scope = builder.update();
+    expect(index.rebindScope(scope)).equal(true);
+    const budget = index.createWorkBudget(100);
+    expect(index.resolve({ quote: 'prefix' }, budget)?.start).equal(0);
+    expect(index.search('PREFIX', budget).length).equal(1000);
+    expect(budget.remainingCodeUnits).greaterThan(0);
+  } finally { builder.disconnect(); }
+});
+it('keeps incremental NFC, folded queries and mutable previews equivalent to a fresh scope', () => {
+  for (const chunks of [['e', '\u0301', ' fin'], ['\u1100', '\u1161', '\u11a8', ' fin'], ['a\u0315', '\u0300', ' fin'], ['I', '\u0301', ' fin'], ['\u0130', ' fin'], ['ΟΣ', ' ', 'τέλος']]) {
+    const root = document.createElement('div'); root.innerHTML = '<p>prefix </p>';
+    const preview = document.createElement('p'); root.append(preview);
+    const builder = new quoteHelpers.IncrementalTextQuoteScope(root);
+    try {
+      let index = createTextQuoteIndex(builder.update(preview), 'lt');
+      for (const chunk of chunks) {
+        const text = document.createTextNode(chunk); root.insertBefore(text, preview);
+        preview.textContent = 'temporary';
+        const scope = builder.update(preview);
+        if (!index.rebindScope(scope)) index = createTextQuoteIndex(scope, 'lt');
+        const fresh = scopeFromElement(root); const expected = createTextQuoteIndex(fresh, 'lt');
+        expect(scope.text).equal(fresh.text);
+        for (const query of ['prefix', 'temporary', 'é', '각', 'ì', 'i', 'fin']) {
+          expect([...index.search(query)]).deep.equal([...expected.search(query)]);
+        }
+        preview.textContent = 'changed';
+        const changed = builder.update(preview);
+        expect(changed.text).equal(scopeFromElement(root).text);
+        expect(toRanges(scope, 'prefix').length).equal(0);
+      }
+    } finally { builder.disconnect(); }
+  }
+});
+it('rejects append reuse across a missed retained-prefix reset', () => {
+  const root = document.createElement('div'); root.innerHTML = '<p>original prefix</p>';
+  const builder = new quoteHelpers.IncrementalTextQuoteScope(root);
+  try {
+    const index = createTextQuoteIndex(builder.update()); index.search('original');
+    root.firstElementChild!.textContent = 'replacement'; builder.update();
+    root.insertAdjacentHTML('beforeend', '<p> suffix</p>');
+    expect(index.rebindScope(builder.update())).equal(false);
+  } finally { builder.disconnect(); }
+});
+it('drops obsolete preview matches when the index skips intermediate appends', () => {
+  const root = document.createElement('div'); root.innerHTML = '<p>prefix </p><p>temporary</p>';
+  const preview = root.lastElementChild!;
+  const builder = new quoteHelpers.IncrementalTextQuoteScope(root);
+  try {
+    const index = createTextQuoteIndex(builder.update(preview)); expect(index.search('tem').length).equal(1);
+    preview.insertAdjacentHTML('beforebegin', '<p>new </p>'); preview.textContent = 'moving'; builder.update(preview);
+    preview.insertAdjacentHTML('beforebegin', '<p>more </p>'); preview.textContent = 'tail';
+    expect(index.rebindScope(builder.update(preview))).equal(true);
+    expect(index.search('tem').length).equal(0); expect(index.search('new').length).equal(1);
+  } finally { builder.disconnect(); }
+});
+it('retains a folded match when suffix overlap lands inside a case expansion', () => {
+  const root = document.createElement('div'); root.textContent = 'İaX';
+  const builder = new quoteHelpers.IncrementalTextQuoteScope(root);
+  try {
+    const index = createTextQuoteIndex(builder.update(), 'en'); expect(index.search('i\u0307a').length).equal(1);
+    root.append(document.createTextNode('Y')); expect(index.rebindScope(builder.update())).equal(true);
+    expect([...index.search('i\u0307a')]).deep.equal([...createTextQuoteIndex(scopeFromElement(root), 'en').search('i\u0307a')]);
+  } finally { builder.disconnect(); }
+});

@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} ƙarin shawara',
     other: '{count} ƙarin shawarwari',
   },
+  mentionInputLimit: 'Shawarwarin ambaton suna 10,000 na farko kawai ake samu.',
+  diffViewHighlightLimit: 'Ana nuna doguwar lambar tushe ba tare da bambanta sassan tsarinta da launi ba.',
 };
 
 registerLyraLocale('ha', strings);

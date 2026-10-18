@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} geldige meetwaarden in de volledige verdeling; {belowCount} onder en {aboveCount} boven de weergegeven klassen; {invalidCount} ongeldige meetwaarden.',
+  histogramDistributionRange: 'Waargenomen steekproefbereik: {min} tot {max}.',
   chartCategory: 'Categorie',
   chartTotal: 'Totaal',
   chartAxisTotal: 'Totaal {axis}',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, straal {radius}',
   chartLabeledPoint: '{label}: coördinaten {coordinates}',
-  chartTrendIncreasing: 'stijgend',
-  chartTrendDecreasing: 'dalend',
-  chartTrendFlat: 'vlak',
-  chartSummary: '{label}: {count} waarden, bereik {min} tot {max}, trend: {trend}',
   chartSeriesNoData: '{label}: geen gegevens',
   chartSummaryWithData: '{type}grafiek. {summaries}.',
   chartSummaryEmpty: '{type}grafiek zonder gegevens.',
-  chartSummarySeparator: '. ',
   chartData: 'Grafiekgegevens',
   chartRenderUnavailable: 'De grafiekweergave is niet beschikbaar.',
+  chartPreparedSummaryZoom: 'Zoomen toont de voorbereide samenvatting; verfijning via een index is niet beschikbaar.',
+  chartSpatialSummary: 'Volledige bron: {count} punten, x {minX} tot {maxX}, y {minY} tot {maxY}. Weergave: {matchedCount} punten, x {viewMinX} tot {viewMaxX}, y {viewMinY} tot {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Straal in de volledige bron: {min} tot {max}.',
+  chartSpatialDensityLegend: 'De dichtheid omvat alle reeksen; de zichtbaarheid van reeksen beïnvloedt alleen de puntoverlays.',
+  chartSpatialPoint: '{series}: {id}, bronpositie {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Dichtheidsgebied: {count} punten, x {minX} tot {maxX}, y {minY} tot {maxY}.',
+  chartSpatialHidden: ' (reeks verborgen)',
   chartDataSampled: 'De grafiek en de gegenereerde gegevenstabel tonen een steekproef van maximaal 1.000 records. Geef een aangepaste gegevenstabel op om alle grafiekgegevens te bekijken.',
   chartPlotSampled: 'De grafiek toont een steekproef van maximaal 1.000 records; de gegevenstabel bevat alle gegevens.',
   chartZoomUnavailable: 'Zoomen is niet beschikbaar, maar de basisgrafiek blijft beschikbaar.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} van {total})',
   chartMissingLibrary: 'Voor het weergeven van grafieken moet het optionele pakket "chart.js" zijn geïnstalleerd.',
   boxPlotMissingLibrary: 'Voor het weergeven van boxplots moet het optionele boxplotpakket zijn geïnstalleerd.',
+  chartInputLimit: 'Sommige grafiekgegevens zijn weggelaten omdat een invoerlimiet is bereikt. Geef een kleinere of vooraf geaggregeerde gegevensset op om de weggelaten waarden weer te geven.',
+  histogramInputLimit: 'Alleen de nieuwste 10.000 meetwaarden worden bewaard. Geef vooraf in klassen gegroepeerde aantallen door aan lr-chart om een grotere verdeling weer te geven.',
 };
 
 registerLyraLocale('nl', strings);

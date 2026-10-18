@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Kalem aşağıda',
   signaturePadPenUp: 'Kalem yukarıda',
+  localePickerInputLimit: 'Yalnızca ilk 512 dil ve bölge girdisi kullanılabilir.',
+  emojiPickerInputLimit: 'Girdi sınırına ulaşıldığı için bazı emoji verileri atlandı.',
 };
 
 registerLyraLocale('tr', strings);

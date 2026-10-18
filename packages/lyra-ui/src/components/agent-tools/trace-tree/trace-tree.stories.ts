@@ -139,3 +139,35 @@ export const RetintedActiveRow: Story = {
       active-span-id="llm"
     ></lr-trace-tree>`,
 };
+
+/** Raise the bounded projection budget while retaining the default when max-nodes is omitted. */
+export const RaisedNodeLimit: Story = {
+  render: () => html`<lr-trace-tree label="Larger collection" max-nodes="1000"
+    .spans=${Array.from({length:600},(_,index)=>({id:String(index),name:`Span ${index + 1}`,kind:'tool',status:'success',startMs:index,endMs:index+1}))}></lr-trace-tree>`,
+};
+
+/** The provider creates only requested rows; no million-element backing array is needed. */
+export const MillionSource: Story = {
+  render: () => {
+    const count = 1_000_000;
+    const source: import('./trace-tree.class.js').TraceTreeSource = {
+      revision: 1,
+      async project(request) {
+        return {
+          state: 'all-spans', total: count, summary: { startMs: 0, endMs: count },
+          rows: {
+            count, keyAt: index => `span${index}`, indexOfKey: (key: string | number) => Number(String(key).slice(4)),
+            itemAt: index => ({
+              key: `span${index}`, value: { id: `span${index}`, name: `Span ${index + 1}`, kind: 'tool',
+                status: 'success', startMs: index, endMs: index + 1 },
+              parentKey: null, level: 1, position: index + 1, setSize: count, childCount: 0,
+              expanded: false, selected: false,
+            }),
+          },
+          ...(request.action.type === 'reveal' ? { focusIndex: Number(request.action.key.slice(4)) } : {}),
+        };
+      },
+    };
+    return html`<lr-trace-tree label="Million spans" .treeSource=${source}></lr-trace-tree>`;
+  },
+};

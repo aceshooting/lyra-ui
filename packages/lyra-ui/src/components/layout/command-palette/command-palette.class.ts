@@ -3,7 +3,7 @@ import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
-import { collectionSupport } from '../../../internal/collection-snapshot.js';
+import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { html, nothing, svg, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -25,7 +25,7 @@ import { closeIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResultCount, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_commandPaletteEmpty, LYRA_DEFAULT_commandPaletteInputLimit, LYRA_DEFAULT_commandPaletteLabel, LYRA_DEFAULT_commandPalettePlaceholder, LYRA_DEFAULT_commandPaletteResultCount, LYRA_DEFAULT_commandPaletteResults } from '../../../internal/default-strings/layout.generated.js';
 import { LYRA_DEFAULT_clear } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -270,6 +270,7 @@ export interface LyraCommandPaletteEventMap {
  * @csspart clear-button - The button that clears the search field, replacing the native
  *   search-cancel glyph suppressed by this field's own reset; rendered only while it has a value.
  * @csspart list - Command list.
+ * @csspart limit - Original command input-loss notice.
  * @csspart list-spacer - Virtual result extent inside the scrolling list.
  * @csspart command-group - A labeled ARIA group containing visible command options.
  * @csspart group - A group heading, rendered before the first command of each `group`.
@@ -316,6 +317,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
     commandPaletteEmpty: LYRA_DEFAULT_commandPaletteEmpty,
+    commandPaletteInputLimit: LYRA_DEFAULT_commandPaletteInputLimit,
     commandPaletteLabel: LYRA_DEFAULT_commandPaletteLabel,
     commandPalettePlaceholder: LYRA_DEFAULT_commandPalettePlaceholder,
     commandPaletteResultCount: LYRA_DEFAULT_commandPaletteResultCount,
@@ -413,6 +415,14 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private openRequestTarget?: boolean;
   private panelPressed = false;
   private readonly announcements = new AnnouncementSinkController(this);
+  private readonly inputLimitAnnouncements = new AnnouncementSinkController(this);
+  private get inputLimitMessage(): string {
+    return publicCollectionTruncation(this, 'commands') ? this.localize('commandPaletteInputLimit') : '';
+  }
+  private syncInputLimitAnnouncement(): void {
+    const loss = publicCollectionTruncation(this, 'commands');
+    this.inputLimitAnnouncements.transition('input-limit', loss ? `${loss.source}:${loss.retained}:${loss.kept}` : '', this.inputLimitMessage, this.open ? 'polite' : undefined);
+  }
   private announcedResultText?: string;
   private completedInitialUpdate = false;
 
@@ -451,6 +461,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     return this.haystacks;
   }
 
+  private activeLookup?: { rows: CanonicalCommand[]; indexes: Map<string, number> };
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('open')) {
@@ -466,11 +477,10 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       }
     }
     const rows = this.filtered;
-    let nextIndex = this.activeCommandId
-      ? rows.findIndex(
-          (command) => command.commandId === this.activeCommandId
-        )
-      : -1;
+    if (this.activeLookup?.rows !== rows) this.activeLookup = {
+      rows, indexes: new Map(rows.map((command, index) => [command.commandId, index])),
+    };
+    let nextIndex = this.activeCommandId ? this.activeLookup.indexes.get(this.activeCommandId) ?? -1 : -1;
     if (nextIndex < 0 || rows[nextIndex]?.disabled) {
       const start = Math.min(
         Math.max(this.activeIndex, 0),
@@ -488,6 +498,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   // lr-dialog's/lr-tool-select-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncInputLimitAnnouncement();
     if (changed.has('open') && this.open) {
       this.enterTopLayer();
       this.overlay?.focusInitial();
@@ -608,6 +619,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     super.connectedCallback();
     const view = this.ownerDocument.defaultView;
     this.runtimeWindow = view ?? undefined;
+    this.shortcutIsMac = detectPlatform(view?.navigator) === 'mac';
     if (view) {
       registerHotkeyOwner(view, this, event => this.isConnected && this.matchesShortcut(event));
       view.addEventListener('keydown', this.onGlobalKeyDown);
@@ -633,6 +645,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       this.listResizeObserver = undefined;
     }
     if (this.hasUpdated) {
+      this.syncInputLimitAnnouncement();
       this.observeList(
         this.renderRoot.querySelector<HTMLElement>('[part="list"]') ?? undefined
       );
@@ -681,6 +694,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.announcements.adopted();
+    this.inputLimitAnnouncements.adopted();
   }
 
   private enterTopLayer(): void {
@@ -757,15 +771,40 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.requestUpdate('open', old);
   }
 
+  private pendingRegistrations: LyraCommand[] = [];
+  private registrationBase?: readonly LyraCommand[];
+  private registrationQueued = false;
+  /** Adds commands in one microtask batch; assign commands directly for an immediate bulk update. */
   registerCommand(command: LyraCommand): () => void {
-    this.commands = [...this.commands, command];
+    if (this.registrationBase !== this.commands) {
+      this.pendingRegistrations = [];
+      this.registrationBase = this.commands;
+    }
+    this.pendingRegistrations.push(command);
+    if (!this.registrationQueued) {
+      this.registrationQueued = true;
+      queueMicrotask(() => {
+        this.registrationQueued = false;
+        const pending = this.pendingRegistrations;
+        this.pendingRegistrations = [];
+        if (this.commands === this.registrationBase && pending.length) this.commands = [...this.commands, ...pending];
+        this.registrationBase = undefined;
+      });
+    }
     return () => {
-      this.commands = this.commands.filter((item) => item !== command);
+      this.pendingRegistrations = this.pendingRegistrations.filter(item => item !== command);
+      if (this.commands.includes(command)) {
+        const pendingTargetsCurrent = this.registrationBase === this.commands;
+        this.commands = this.commands.filter(item => item !== command);
+        if (pendingTargetsCurrent) this.registrationBase = this.commands;
+      }
     };
   }
+  private shortcutIsMac = false;
+  private shortcutMemo?: { source: string; parsed: ReturnType<typeof parseHotkey> };
   private matchesShortcut(event: KeyboardEvent): boolean {
-    return matchesHotkey(parseHotkey(this.hotkey), event,
-      detectPlatform((this.runtimeWindow ?? this.ownerDocument.defaultView)?.navigator) === 'mac');
+    if (!this.shortcutMemo || this.shortcutMemo.source !== this.hotkey) this.shortcutMemo = { source: this.hotkey, parsed: parseHotkey(this.hotkey) };
+    return matchesHotkey(this.shortcutMemo.parsed, event, this.shortcutIsMac);
   }
   private onGlobalKeyDown = (event: KeyboardEvent): void => {
     if (isIgnorableKeyEvent(event)) return;
@@ -1078,6 +1117,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
               </button>`
             : nothing}
         </div>
+        ${this.inputLimitMessage ? html`<p part="limit">${this.inputLimitMessage}</p>` : nothing}
         <div
           part="list"
           id=${this.listId}

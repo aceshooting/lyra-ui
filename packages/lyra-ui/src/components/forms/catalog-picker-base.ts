@@ -1,3 +1,5 @@
+import { MAX_RENDERED_OPTION_ROWS } from '../../internal/option-selection.js';
+import { guard } from 'lit/directives/guard.js';
 import { noChange, nothing, type PropertyValues, type ReactiveController, type TemplateResult } from 'lit';
 import { html, unsafeStatic } from 'lit/static-html.js';
 import { property } from 'lit/decorators.js';
@@ -5,6 +7,7 @@ import { LyraElement } from '../../internal/lyra-element.js';
 import { FormAssociated, isBarredFromValidation, type FormSubmissionValue } from '../../internal/form-associated.js';
 import { resolveValidityAnchor, SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../internal/aria-controls.js';
+import { AnnouncementSinkController } from '../../internal/announcer.js';
 import { collectionSupport } from '../../internal/collection-snapshot.js';
 import { autocorrectConverter, spellcheckConverter } from '../../internal/converters.js';
 import { dispatchNativeEvent, relayNativeEvent } from '../../internal/native-event-relay.js';
@@ -14,7 +17,7 @@ import { SlotPresenceController } from '../../internal/slot-presence-controller.
 import { tag } from '../../internal/prefix.js';
 import { resolveEffectivePositioningStrategy } from '../../internal/positioning-strategy.js';
 import { hasCustomState } from '../../internal/custom-states.js';
-import { normalizeSelectionValue, type SelectionCatalogEntry, type SelectionCatalogRow } from '../../internal/selection-catalog.js';
+import { normalizeSelectionValue, selectionCatalogTruncation, type SelectionCatalogEntry, type SelectionCatalogRow } from '../../internal/selection-catalog.js';
 import type { PlaceStrategy } from '../../internal/positioner.js';
 import type { LyraSize } from '../../internal/variants.js';
 import type { LyraSelect } from './select/select.class.js';
@@ -38,7 +41,6 @@ export interface LyraCatalogPickerEventMap {
 
 type PickerControl = LyraSelect<false> | LyraCombobox<false>;
 class CatalogPickerElement extends LyraElement<LyraCatalogPickerEventMap> {}
-const resolvedRows = new WeakMap<readonly SelectionCatalogEntry[], Map<string, readonly SelectionCatalogRow[]>>();
 const pickerSpellcheckConverter = {
   ...spellcheckConverter,
   fromAttribute: (value: string | null): boolean => value === null ? false : spellcheckConverter.fromAttribute!(value, Boolean),
@@ -109,6 +111,30 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   /** Native filter input, or null in compact mode. Dispatch native input after direct value edits to refilter. */
   get input(): HTMLInputElement | null { return this.searchable ? this.combobox?.input ?? null : null; }
 
+  private readonly resolvedRows = new WeakMap<readonly SelectionCatalogEntry[], Map<string, readonly SelectionCatalogRow[]>>();
+  private optionsMounted = false;
+  private readonly inputLimitAnnouncements = new AnnouncementSinkController(this);
+  private get inputLimitMessage(): string {
+    return selectionCatalogTruncation(this.entries) ? this.localize('catalogPickerInputLimit') : '';
+  }
+  private rowPresentationEpoch = 0;
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    const name = args[0];
+    if (name === undefined && this.hasUpdated) this.resolvedRows.delete(this.entries);
+    if (name === undefined || !['value', 'defaultValue', 'label', 'hint', 'errorText', 'placeholder',
+      'accessibleLabel', 'required', 'disabled', 'size', 'clearable', 'topLayer', 'name'].includes(String(name))) {
+      this.rowPresentationEpoch = (this.rowPresentationEpoch ?? 0) + 1;
+    }
+    super.requestUpdate(...args);
+  }
+  private readonly mountOptions = (): void => {
+    if (this.optionsMounted) return;
+    this.optionsMounted = true;
+    this.requestUpdate('optionsMounted', false);
+  };
+  private readonly onControlShow = (event: Event): void => {
+    if (event.target === this.control) this.mountOptions();
+  };
   private readonly slots = new SlotPresenceController(this);
   private labelLease?: ResolvedAriaRelationshipLease;
   private descriptionLease?: ResolvedAriaRelationshipLease;
@@ -131,8 +157,8 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   private get rows(): readonly SelectionCatalogRow[] {
     const entries = this.entries;
     const locale = this.effectiveLocale;
-    let byLocale = resolvedRows.get(entries);
-    if (!byLocale) resolvedRows.set(entries, (byLocale = new Map()));
+    let byLocale = this.resolvedRows.get(entries);
+    if (!byLocale) this.resolvedRows.set(entries, (byLocale = new Map()));
     let rows = byLocale.get(locale);
     if (!rows) byLocale.set(locale, (rows = this.resolveRows()));
     return rows;
@@ -182,6 +208,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   };
   private readonly onControlFocus = (event: FocusEvent): void => {
     if (event.target !== this.control) return;
+    if (event.type === 'focus') this.mountOptions();
     event.stopPropagation();
     if (!this.replacingControl) relayNativeEvent(this, event);
   };
@@ -247,6 +274,8 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    const loss = selectionCatalogTruncation(this.entries);
+    this.inputLimitAnnouncements.transition('input-limit', loss ? `${loss.source}:${loss.retained}:${loss.omitted}` : '', this.inputLimitMessage, 'polite');
     const child = this.control;
     if (this.restoreFocus) this.focusReplacement = child;
     this.restoreFocus = false;
@@ -275,7 +304,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     });
   }
   override connectedCallback(): void { super.connectedCallback(); this.requestUpdate(); }
-  override adoptedCallback(): void { super.adoptedCallback(); this.requestUpdate(); }
+  override adoptedCallback(): void { super.adoptedCallback(); this.inputLimitAnnouncements.adopted(); this.requestUpdate(); }
   override formResetCallback(): void { super.formResetCallback(); this.clearTransientState(); this.projectValidation(); }
   override formStateRestoreCallback(state: FormSubmissionValue, reason: 'autocomplete' | 'restore'): void {
     super.formStateRestoreCallback(state, reason);
@@ -301,10 +330,11 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     const optionTag = unsafeStatic(tag('option'));
     const hasLabel = Boolean(this.label) || this.slots.has('label');
     const current = this.rows.find((row) => row.code === this.value);
+    const optionRows = this.optionsMounted ? this.rows : current ? [current] : [];
     const exportParts = [
       'form-control,form-control-label',
       this.usingCombobox ? 'combobox:select-trigger,combobox-input:select-display-input' : 'trigger:select-trigger,display-input:select-display-input',
-      'listbox:select-listbox,option:select-option,option-sub:select-option-sub,group-label:select-group-label,clear-button:select-clear-button,flag,hint,error',
+      'listbox:select-listbox,option:select-option,option-overflow:select-option-overflow,option-sub:select-option-sub,group-label:select-group-label,clear-button:select-clear-button,flag,hint,error',
     ].join(',');
     return html`<${controlTag}
       exportparts=${exportParts}
@@ -316,7 +346,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
       aria-label=${this.accessibleLabel ?? (hasLabel ? nothing : this.pickerLabel)}
       .required=${this.required} .disabled=${this.effectiveDisabled} .size=${this.size}
       .clearable=${this.clearable} .topLayer=${this.topLayer}
-      .maxRender=${this.usingCombobox ? this.rows.length || 1 : noChange}
+      .maxRender=${Math.min(this.rows.length || 1, MAX_RENDERED_OPTION_ROWS)}
       .autocomplete=${this.usingCombobox ? this.autocomplete : noChange}
       .inputMode=${this.usingCombobox ? this.inputMode : noChange} .enterKeyHint=${this.usingCombobox ? this.enterKeyHint : noChange}
       .spellcheck=${this.usingCombobox ? this.spellcheck : noChange}
@@ -325,18 +355,18 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
       @input=${this.onControlEvent} @lr-input=${this.onControlEvent} @lr-filter=${this.onControlEvent}
       @change=${this.onControlEvent} @lr-change=${this.onControlEvent}
       @focus=${this.onControlFocus} @blur=${this.onControlFocus} @focusout=${this.onControlFocusOut}
-      @keydown=${this.onControlKeyDown}
-    >${this.rows.map((row) => {
+      @keydown=${this.onControlKeyDown} @lr-show=${this.onControlShow}
+    >${guard([optionRows, this.rowPresentationEpoch], () => optionRows.map((row) => {
       const { label, sub } = this.optionDisplay(row);
       return html`<${optionTag} .value=${row.code} .label=${label} .sub=${sub}
         .searchText=${row.searchText} .group=${row.group ?? ''} .disabled=${Boolean(row.disabled)}>
         ${this.renderStart(row)}${label}</${optionTag}>`;
-    })}
+    }))}
       ${current ? this.renderStart(current) : nothing}
       ${current?.disabled ? html`<span slot="end">${this.localize('notInCatalog')}</span>` : nothing}
       ${this.slots.has('label') ? html`<slot name="label" slot="label"></slot>` : nothing}
       ${this.slots.has('hint') ? html`<slot name="hint" slot="hint"></slot>` : nothing}
       ${this.slots.has('error') ? html`<slot name="error" slot="error"></slot>` : nothing}
-    </${controlTag}>`;
+    </${controlTag}>${this.inputLimitMessage ? html`<p part="limit">${this.inputLimitMessage}</p>` : nothing}`;
   }
 }

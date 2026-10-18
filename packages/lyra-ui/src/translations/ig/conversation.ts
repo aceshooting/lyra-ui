@@ -80,6 +80,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Enweghị mkparịta ụka ugbu a',
   agentWorkspaceLabel: 'Ebe ọrụ onye nnọchiteanya',
+  agentWorkspaceInputLimit: '{collection}: Naanị ndekọ {count} n\'ime {total} ka a na-edobe.',
   agentWorkspaceConversation: 'Mkparịta ụka',
   agentWorkspaceDetails: 'Nkọwa ọrụ',
   agentWorkspaceRun: 'Ọrụ onye nnọchiteanya',
@@ -97,6 +98,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Nwaa akụkụ a ọzọ',
   promptQueueLabel: 'Arịrịọ nọ n’ahịrị',
   promptQueueEmpty: 'Enweghị arịrịọ nọ n’ahịrị',
+  promptQueueInputLimit: 'A hapụrụ ụfọdụ arịrịọ nọ n\'ahịrị nchere ma ọ bụ mgbakwunye n\'ihi na e ruru oke ntinye.',
+  promptQueueAttachmentLimit: 'A na-egosi {shown} n\'ime mgbakwunye {total} e debere.',
   promptQueueSendNow: 'Zipu ugbu a',
   selectionToolbarLabel: 'Omume nhọrọ',
   selectionAsk: 'Jụọ',
@@ -161,6 +164,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: 'Token {count}',
   },
+  threadListInputLimit: 'A hapụrụ ụfọdụ eriri mkparịta ụka n\'ihi na e ruru oke ntinye.',
+  promptInputInputLimit: 'A hapụrụ ụfọdụ aro ma ọ bụ ndekọ katalọgụ n\'ihi na e ruru oke ntinye.',
+  transcriptFeedInputLimit: 'Naanị ndekọ {count} kachasị ọhụrụ n\'ime {total} ka a na-edobe.',
+  codeBlockHighlightLimit: 'A na-egosi koodu dị ogologo na-enweghị iji agba mee ka sintaksị ya pụta ìhè.',
 };
 
 registerLyraLocale('ig', strings);

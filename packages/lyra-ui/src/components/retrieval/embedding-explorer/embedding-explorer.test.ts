@@ -831,6 +831,7 @@ describe('lr-embedding-explorer point count past the render cap', () => {
         .points=${manyPoints(20_000).map((point) => ({ ...point, cluster: 'c' }))}
       ></lr-embedding-explorer>`
     )) as LyraEmbeddingExplorer;
+    await waitUntil(() => el.points.length > 0, 'large input sample did not finish');
     await el.updateComplete;
     const ids = [...el.shadowRoot!.querySelectorAll('[part="point"]')].map((node) =>
       Number(node.getAttribute('data-id')!.slice(2))

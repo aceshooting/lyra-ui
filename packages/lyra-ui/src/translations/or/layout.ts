@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: '{count} ନିର୍ଦ୍ଦେଶ |',
     other: '{count} ନିର୍ଦ୍ଦେଶଗୁଡ଼ିକ |',
   },
+  commandPaletteInputLimit: 'ଇନପୁଟ୍ ସୀମା ପୂରଣ ହେବାରୁ କିଛି କମାଣ୍ଡ୍ ବାଦ ଦିଆଯାଇଛି।',
 };
 
 registerLyraLocale('or', strings);

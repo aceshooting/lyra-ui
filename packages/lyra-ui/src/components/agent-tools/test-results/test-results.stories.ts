@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import './test-results.js';
-import { testResultDetailSlotName, type TestSuiteResult } from './test-results.class.js';
+import { testResultDetailSlotName, type TestSuiteResult, type TestResultsSource, type TestStatus } from './test-results.class.js';
 
 const meta: Meta = {
   title: 'Test Results',
@@ -178,4 +178,30 @@ export const RunningIndicatorSize: Story = {
       .suites=${mixedSuites}
     ></lr-test-results>
   `,
+};
+
+/** Pages are generated on demand; the host never constructs a million-element array. */
+const millionSource: TestResultsSource = {
+  revision: 1,
+  async query({ page, pageSize, query }) {
+    const statuses: TestStatus[] = ['passed', 'skipped', 'running', 'failed'];
+    const offsets = statuses.map((status, index) => !query.statuses.length || query.statuses.includes(status) ? index : -1).filter(index => index >= 0);
+    const total = 250_000 * offsets.length;
+    return { total, summary: { total: 1_000_000, passed: 250_000, skipped: 250_000, running: 250_000, failed: 250_000 },
+      rows: Array.from({ length: Math.min(pageSize, Math.max(0, total - page * pageSize)) }, (_, offset) => {
+        const position = page * pageSize + offset;
+        const index = Math.floor(position / offsets.length) * 4 + offsets[position % offsets.length]!;
+        const id = `test-${index}`;
+        return { key: JSON.stringify(['suite', id]), order: index, value: { suiteId: 'suite', suiteName: 'Complete run',
+          test: { id, name: `Test ${index}`, status: statuses[index % 4]!, message: `Result ${index}` } } };
+      }),
+    };
+  },
+  async lookup() { return []; },
+  async locate() { return null; },
+};
+
+export const MillionTestProvider: Story = {
+  parameters: { docs: { description: { story: 'Browse every test through bounded provider pages and authoritative full-run counts. Legacy suites retain an O(n) canonical corpus, normalized in yielding chunks, with a 1,000-row priority window. Host-authored detail slot content remains the host’s responsibility.' } } },
+  render: () => html`<lr-test-results .dataSource=${millionSource}></lr-test-results>`,
 };

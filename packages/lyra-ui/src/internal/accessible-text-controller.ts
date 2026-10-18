@@ -1,6 +1,8 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import {
   type AccessibleTextReferences,
+  type AccessibleTextAncestors,
+  releaseAccessibleTextAncestors,
   accessibleTextRecordsMatter,
   bindAccessibleTextObserver,
   composedAccessibilityText,
@@ -20,7 +22,9 @@ export class AccessibleTextController implements ReactiveController {
   private readonly references?: AccessibleTextReferences;
   private slotRoot?: ShadowRoot;
   private preserveNextBinding = false;
+  private readonly ancestors: AccessibleTextAncestors;
   private drainedRecords = false;
+  private drainingAncestors?: MutationRecord[];
   private readonly onSlotChange = (event: Event): void => {
     // Forwarded slotchange events retain the forwarding slot as their target. Its name
     // belongs to the outer host; the slot in our own root determines which content changed.
@@ -38,7 +42,16 @@ export class AccessibleTextController implements ReactiveController {
     private readonly extraAttributes: readonly string[] = [],
     private enabled = true,
     trackReferences = false,
+    observeAncestors: boolean | (() => boolean) = true,
   ) {
+    this.ancestors = {
+      releases: [],
+      get enabled() { return typeof observeAncestors === 'function' ? observeAncestors() : observeAncestors; },
+      changed: records => {
+        if (this.drainingAncestors) this.drainingAncestors.push(...records);
+        else this.changed(records);
+      },
+    };
     if (trackReferences) this.references = { releases: [], changed: () => this.changed() };
     this.visibilityFrame = new OwnedFrame(host);
     this.visibilityTimer = new OwnedTimeout(host);
@@ -81,6 +94,7 @@ export class AccessibleTextController implements ReactiveController {
     this.observer?.disconnect();
     this.observer = undefined;
     this.upgrades.disconnect();
+    releaseAccessibleTextAncestors(this.ancestors);
     if (this.references) releaseAccessibleTextReferences(this.references);
   }
 
@@ -103,23 +117,37 @@ export class AccessibleTextController implements ReactiveController {
       this.observer?.disconnect();
       this.observer = undefined;
       this.upgrades.disconnect();
+      releaseAccessibleTextAncestors(this.ancestors);
       if (this.references) releaseAccessibleTextReferences(this.references);
     }
   }
 
   /** Rebind after a render path or assigned content changes. */
   bind(): void {
-    bindAccessibleTextObserver(this.observer, this.host, this.extraAttributes, this.upgrades, this.references);
+    const pending = this.takeAncestorRecords();
+    bindAccessibleTextObserver(this.observer, this.host, this.extraAttributes, this.upgrades, this.references, this.ancestors);
     this.drainedRecords = false;
+    if (pending.length && this.active && this.enabled) this.notify(pending);
   }
 
   /** Preserve observation for one render known not to change content or its exposure. Pending
    * mutations and a newly attached shadow root still require a fresh binding. */
   preserveBindingForNextUpdate(): void { this.preserveNextBinding = true; }
 
+  private takeAncestorRecords(): MutationRecord[] {
+    if (this.drainingAncestors || !this.active || !this.enabled) return [];
+    const records: MutationRecord[] = [];
+    this.drainingAncestors = records;
+    try { for (const release of [...this.ancestors.releases]) release.flush(); }
+    finally { this.drainingAncestors = undefined; }
+    return records;
+  }
+
   /** Drains pending records for synchronous label getters. */
   takeRecords(): MutationRecord[] {
-    const records = this.observer?.takeRecords() ?? [];
+    const ancestorRecords = this.takeAncestorRecords();
+    const records = [...(this.observer?.takeRecords() ?? []), ...ancestorRecords];
+    if (ancestorRecords.length) this.notify(ancestorRecords);
     if (records.length > 0) this.drainedRecords = true;
     return records;
   }
@@ -147,6 +175,7 @@ export class AccessibleTextController implements ReactiveController {
     this.cancelVisibilityRefresh();
     this.observer?.disconnect();
     this.upgrades.disconnect();
+    releaseAccessibleTextAncestors(this.ancestors);
     if (this.references) releaseAccessibleTextReferences(this.references);
     const Observer = this.host.ownerDocument.defaultView?.MutationObserver;
     this.observer = Observer

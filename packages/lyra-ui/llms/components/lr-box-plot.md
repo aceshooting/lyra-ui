@@ -19,6 +19,14 @@
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 
+A bounded set of group summaries can cover every observation in a much larger population: four
+groups can, for example, summarize one million observations. Compute each group's five numbers on
+the host or server, and keep its sample count, quantile definition, and exact or approximate
+provenance in the surrounding description or data table. Raw observation access and quantile
+computation remain with the host; the component consumes the summaries. Distinct group counts
+still obey the collection and rendering bounds below. Query a bounded group window or use a
+paged data browser to traverse a large group catalogue.
+
 If the browser cannot acquire a 2D canvas context, a localized visible message replaces the plot
 and the generated or slotted data table becomes visible. No failed Chart.js instance is retained.
 Changing the data or calling `refreshTheme()` retries rendering, so the plot recovers when the

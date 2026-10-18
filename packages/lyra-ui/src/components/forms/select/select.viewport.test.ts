@@ -132,6 +132,7 @@ it('lr-select reveals grouped RTL rows under CSS zoom using only the listbox scr
     select.topLayer = true;
     select.style.inlineSize = '270px';
     Array.from(select.children).forEach((option, index) => option.setAttribute('group', `Group ${Math.floor(index / 10)}`));
+    await select.show();
     await waitUntil(() => select.shadowRoot!.querySelectorAll('[role="group"]').length === 3);
     await focusByKeyboard(select);
     if (!select.open) { await sendKeys({ press: 'ArrowDown' }); await waitUntil(() => select.open); }

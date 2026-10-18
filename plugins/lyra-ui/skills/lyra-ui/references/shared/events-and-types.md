@@ -113,9 +113,478 @@ transcript-feed is the current scroll-follow state; `map.legendOpen` is disclosu
 component's own steppers; its presence-based `true` default accepts the literal HTML value
 `"false"`. These true-default properties remain intentional and accept that literal value.
 
+### Large collection sources
+
+Use `@aceshooting/lyra-ui/data-sources.js` for the type-only collection protocols, and
+`@aceshooting/lyra-ui/utilities/data-preparation.js` for staged numeric preparation. Import the
+specific component's registration separately and check its documented source property before
+binding a provider. A protocol declaration does not imply that every component accepts it.
+Legacy arrays, rolling windows, file previews and display caps retain their documented limits;
+a capped prefix does not provide access to a million-record source.
+
+The host owns each source and its indexes, storage and query work. Keep its revision, counts,
+records and returned projections immutable for a request snapshot. Revisions are nonempty strings
+or finite numbers; counts, offsets and record orders are nonnegative safe integers. Nonempty keys
+identify logical records, and `order` is canonical source order independent of query sorting.
+A provider can generate or fetch a requested window without allocating an array for the entire collection.
+Arbitrary work inside a host callback remains the host's responsibility.
+
+For components that document these protocols, replace the source, reassign the same source, or
+call keyless `requestUpdate()` to refresh. A changed revision becomes observable at that explicit
+update; it is not polled. Source replacement, rebind, refresh, disconnect and document adoption
+invalidate pending work and source-derived caches. Providers should settle promptly on
+`context.signal` cancellation. Cancellation is advisory: a late reply must still belong to the
+current source identity, revision and request before it can update the view. Page/query changes
+invalidate their dependent work; unrelated presentation updates do not imply a full-source read.
+
+Choose the access shape that matches the host's data:
+
+- `LyraRangeSource<T>` reads exactly the requested in-bounds range. `LyraIndexedView<T>` also
+  accepts the existing `LyraVirtualListIndexedSource<T>` for direct indexed access. Key lookup is
+  optional for a generic range; `LyraHierarchyView<T>` requires direct key lookup so navigation
+  does not scan the collection.
+- `LyraPageSource<T, Q, Summary>` supplies globally queried pages, stable-key lookup and absolute
+  query positions. `page` is zero-based; `locate` returns a zero-based index or `null`.
+  `total` describes every query match, not loaded rows; group ranges describe the globally
+  ordered query and facets describe the full source catalogue. A declared `Summary` is required
+  in each result, while the default `undefined` summary can be omitted.
+- `LyraTabularSource` has separate column metadata and zero-based body rows, using either
+  `cellAt` or bounded rectangular `readCells`. `LyraWorkbookSource` names sheets separately.
+  Search results use a bounded hit list, `total: null` when the global total is unknown, and
+  `exhaustive: true` only when every matching hit is included. A header hit has `row: -1`.
+- `LyraHierarchySource<T, Q, Summary>` returns an immutable visible-preorder projection with
+  an opaque `state` token. `rows.count` is the visible logical count; `total` also includes
+  collapsed nodes. Row `level`/`position` are one-based and `setSize` is the exact sibling
+  count. Optional search and copy capabilities address the full requested source/scope, rather
+  than only mounted rows.
+- `LyraGraphSource<N, E>` separates full record paging from bounded scenes and optional overview
+  bins. Global node/edge totals, scene coverage and displayed counts have distinct meanings;
+  a neighborhood or aggregate scene is not a complete graph layout.
+
+Numeric helpers inspect all source positions in bounded chunks. Preparation has total O(n)
+source-read work per pass, plus reducer work, even though each chunk and the retained result are
+bounded. The default `batchSize` is 2,048 and its maximum is 8,192; it must be a positive safe
+integer, with larger safe integers clamped. Helpers yield between chunks and check aborts around
+asynchronous work and before publication. Each read must return an actual array of exactly the
+requested size. Sparse holes are invalid positions; explicit own `undefined` may be classified by
+a generic category selector. Observed count/revision changes, malformed replies, callback errors
+and finite-sum overflow reject preparation. Payload immutability and replayability remain host
+obligations. Results and nested result containers are frozen; source storage is not copied
+wholesale or frozen. Scratch storage is bounded by a chunk and the output budgets. Series handles
+retain their readers for exact lookup; other helper results contain no reader handles. Output
+budget options require positive safe integers (series points require at least four), with larger
+safe integers clamped to their documented maxima.
+
+`counts.sourceCount` always counts original positions, `validCount` accepted observations, and
+`invalidCount` the remainder. Displayed samples, categories, bins, words and waveform buckets
+are separate summary sizes. An empty/all-invalid numeric domain is `null`. Preparation limits
+do not change a component's own accepted input budget; check the component's documented route
+before passing a prepared result.
+
+- `prepareLyraSeriesData` scans each series once. Finite x/y pairs contribute full domains and
+  counts; null/nonfinite/missing coordinates are invalid and remain gaps. The overview retains
+  first/last valid points and index-partition y extrema in source order, preserving original x
+  and `sourceIndex`. `breakBefore` is true on the first sample and whenever invalid positions
+  occur between retained samples, including omitted segments. This overview can omit valid
+  segments and is not an exact reconstruction. `maxPointsPerSeries` defaults to 500, requires
+  at least 4 and clamps to 1,000. Requested capacity across all series must fit 9,000 samples;
+  excess series/capacity rejects. Inputs must share a revision and have unique IDs; the series
+  list must be nonempty, although a reader may have zero positions. IDs are nonblank and at
+  most 256 UTF-16 code units, labels at most 1,024, with 65,536 combined metadata units.
+  The result intentionally retains readers and their backing storage: `getPoint` reads exactly
+  one original position, returning a valid pair or `null`, and rejects unknown/out-of-range
+  references. The helper does not implement optional `queryRange`; hosts may provide indexed
+  refinement for `[startIndex, endIndex)` separately.
+- `prepareLyraCategoryData` scans once into at most 1,000 declared unique categories and one
+  result series, using the same ID/label/metadata limits as series preparation. `count` ignores
+  `valueOf` entirely; `sum` and `mean` require an own synchronous numeric `valueOf` callback.
+  Null/non-string/empty/over-256-unit category IDs and nonfinite amounts are invalid.
+  Unknown remaining IDs map to `otherCategoryId` only when that ID names a declared category;
+  otherwise they are invalid.
+  Other is a real aggregate with its own `categoryCounts`, not a sampled remainder. Means divide
+  each category's accepted sum by its accepted count; empty categories have value zero. Selectors
+  return scalar values and their computation cost is host-owned. The helper does not build an
+  unbounded category-frequency map or accept `host-defined` as a reducer option.
+- `prepareLyraHistogram` uses one pass for explicit finite strictly increasing edges, or two
+  replayable passes for automatic `binCount` edges. There are at most 1,000 bins. Bins are
+  half-open except the inclusive final upper edge, and `sum(binCounts) + belowCount + aboveCount`
+  equals `validCount`. Every finite observation contributes, including explicit-edge outliers;
+  the observed `domain` includes those outliers. Constant data gets a finite nonzero display
+  interval while its observed domain stays unchanged. Empty/all-invalid automatic results have
+  no edges or bins; explicit edges remain with zero bin counts. Unrepresentable distinct edges
+  reject.
+- `prepareLyraWordCloud` selects exact global top-K from an already aggregated weighted catalog,
+  with `maxWords` default/maximum 150. Ties favor earlier source positions. IDs must be globally
+  unique by host contract; bounded duplicate detection covers only retained candidates. Blank
+  or over-256-unit IDs/text and negative/nonfinite weights are invalid. `totalWeight` includes
+  every valid observation; `retainedWeight` covers only selected words. Chosen text exceeding
+  16,384 UTF-16 units rejects; lower `maxWords` to reduce the result. The bounded heap adds
+  O(n log K) reducer work; this helper does not tokenize or compute arbitrary word frequencies.
+- `prepareLyraWaveform` scans once into positional interval maxima, with `maxBuckets`
+  default/maximum 65,536. Finite amplitudes clamp to [0, 1]; invalid positions keep their time
+  slots and contribute no peak. Each `[startIndex, endIndex)` interval covers original positions.
+  `sampleCount` equals `sourceCount`. `firstAmplitude`/`lastAmplitude` refer to original
+  endpoints, with `null` for invalid/absent endpoints. `duration` must be finite, nonnegative
+  and describe the summarized media interval.
+
+For example, a replayable reader can generate a million logical values while allocating only
+the requested chunk. The resulting histogram is a full-source distribution with 100 displayed
+bins; it is not a million-element array.
+
+```ts
+import { prepareLyraHistogram } from '@aceshooting/lyra-ui/utilities/data-preparation.js';
+import type { LyraIndexedInput } from '@aceshooting/lyra-ui/utilities/data-preparation.js';
+
+const input: LyraIndexedInput<number> = {
+  revision: 'measurements-1',
+  count: 1_000_000,
+  read(start, count, { signal }) {
+    signal.throwIfAborted();
+    return Array.from({ length: count }, (_, offset) => (start + offset) % 100);
+  },
+};
+const abort = new AbortController();
+const distribution = await prepareLyraHistogram(input, {
+  binCount: 100,
+  signal: abort.signal,
+});
+console.log(distribution.counts.sourceCount, distribution.binCounts.length);
+```
+
 ## Exported TypeScript contracts
 
 These named interfaces and helper signatures are available to typed integrations. They are grouped by capability so the component sections above can stay focused.
+
+- **`data-sources-contracts`** — Public collection contracts from `data-sources.js`. These are type-only protocols; each component documents which source inputs it accepts. Inherited fields are repeated to show the complete effective request/row shape.
+
+  `LyraSourceRevision = string | number`
+  `LyraSourceContext {
+  readonly revision: LyraSourceRevision;
+  readonly locale: string;
+  readonly signal: AbortSignal;
+}`
+  `LyraSourceRecord<T> {
+  readonly key: string;
+  readonly value: T;
+  readonly order: number;
+}`
+  `LyraSourceSearchRequest extends LyraSourceContext {
+  readonly revision: LyraSourceRevision;
+  readonly locale: string;
+  readonly signal: AbortSignal;
+  readonly query: string;
+  readonly limit: number;
+}`
+  `LyraSourceSearchResult<Hit> {
+  readonly hits: readonly Hit[];
+  readonly total: number | null;
+  readonly exhaustive: boolean;
+}`
+  `LyraSourceRangeRequest extends LyraSourceContext {
+  readonly revision: LyraSourceRevision;
+  readonly locale: string;
+  readonly signal: AbortSignal;
+  readonly offset: number;
+  readonly limit: number;
+}`
+  `LyraRangeSource<T> {
+  readonly count: number;
+  read(request: LyraSourceRangeRequest): Promise<readonly T[]>;
+  indexOfKey?(key: string, context: LyraSourceContext): Promise<number | null>;
+}`
+  `LyraIndexedView<T> = LyraVirtualListIndexedSource<T> | LyraRangeSource<T>`
+  `LyraHierarchyView<T> =
+  | (LyraVirtualListIndexedSource<T> & {
+      keyAt(index: number): string;
+      indexOfKey(key: string | number): number;
+    })
+  | (LyraRangeSource<T> & {
+      indexOfKey(key: string, context: LyraSourceContext): Promise<number | null>;
+    })`
+  `LyraSourceSummary<S> = [S] extends [undefined]
+  ? { readonly summary?: undefined }
+  : { readonly summary: S }`
+  `LyraSourceCell = string | number | boolean | null | undefined`
+  `LyraTabularColumn { readonly key: string; readonly label: string; }`
+  `LyraTabularHit {
+  readonly row: number;
+  readonly column: number;
+}`
+  `LyraTabularReadRequest extends LyraSourceContext {
+  readonly revision: LyraSourceRevision;
+  readonly locale: string;
+  readonly signal: AbortSignal;
+  readonly row: number;
+  readonly rowCount: number;
+  readonly column: number;
+  readonly columnCount: number;
+}`
+  `LyraTabularSourceBase {
+  readonly revision: LyraSourceRevision;
+  readonly rowCount: number;
+  readonly columnCount: number;
+  columnAt(index: number): LyraTabularColumn;
+  rowKeyAt?(index: number): string;
+  indexOfRowKey?(key: string): number;
+  search?(request: LyraSourceSearchRequest): Promise<LyraSourceSearchResult<LyraTabularHit>>;
+}`
+  `LyraTabularSource = LyraTabularSourceBase & (
+  | { cellAt(row: number, column: number): LyraSourceCell; readCells?: never }
+  | { cellAt?: never; readCells(request: LyraTabularReadRequest): Promise<readonly (readonly LyraSourceCell[])[]> }
+)`
+  `LyraWorkbookHit extends LyraTabularHit {
+  readonly row: number;
+  readonly column: number;
+  readonly sheetKey: string;
+}`
+  `LyraWorkbookSource {
+  readonly revision: LyraSourceRevision;
+  readonly sheets: readonly {
+    readonly key: string;
+    readonly name: string;
+    readonly data: LyraTabularSource;
+  }[];
+  search?(request: LyraSourceSearchRequest): Promise<LyraSourceSearchResult<LyraWorkbookHit>>;
+}`
+  `LyraSourceFacet {
+  readonly values: readonly { readonly key: string; readonly label: string; readonly count?: number }[];
+  readonly total: number;
+  readonly unavailableSelected: readonly string[];
+}`
+  `LyraSourceGroup {
+  readonly key: string;
+  readonly label: string;
+  readonly startIndex: number;
+  readonly itemCount: number;
+}`
+  `LyraPageRequest<Q> extends LyraSourceContext {
+  readonly revision: LyraSourceRevision;
+  readonly locale: string;
+  readonly signal: AbortSignal;
+  readonly page: number;
+  readonly pageSize: number;
+  readonly query: Q;
+}`
+  `LyraPageResult<T, Summary = undefined> = {
+  readonly rows: readonly LyraSourceRecord<T>[];
+  readonly total: number;
+  readonly groups?: readonly LyraSourceGroup[];
+  readonly tags?: LyraSourceFacet;
+} & LyraSourceSummary<Summary>`
+  `LyraPageSource<T, Q, Summary = undefined> {
+  readonly revision: LyraSourceRevision;
+  query(request: LyraPageRequest<Q>): Promise<LyraPageResult<T, Summary>>;
+  lookup(keys: readonly string[], context: LyraSourceContext): Promise<readonly LyraSourceRecord<T>[]>;
+  locate(key: string, query: Q, context: LyraSourceContext): Promise<number | null>;
+}`
+  `LyraHierarchyRow<T> {
+  readonly key: string;
+  readonly value: T;
+  readonly parentKey: string | null;
+  readonly level: number;
+  readonly position: number;
+  readonly setSize: number;
+  readonly childCount: number;
+  readonly expanded: boolean;
+  readonly selected: boolean;
+  readonly disabled?: boolean;
+  readonly selectionState?: 'none' | 'partial' | 'all';
+}`
+  `LyraHierarchyAction =
+  | { readonly type: 'reset' }
+  | { readonly type: 'toggle'; readonly key: string; readonly expanded: boolean }
+  | { readonly type: 'reveal'; readonly key: string }
+  | { readonly type: 'select'; readonly key: string; readonly selected: boolean; readonly scope: 'item' | 'subtree' }`
+  `LyraHierarchyRequest<Q> extends LyraSourceContext {
+  readonly revision: LyraSourceRevision;
+  readonly locale: string;
+  readonly signal: AbortSignal;
+  readonly query: Q;
+  readonly state: string | null;
+  readonly action: LyraHierarchyAction;
+}`
+  `LyraHierarchyProjection<T, Summary = undefined> = {
+  readonly state: string;
+  readonly total: number;
+  readonly rows: LyraHierarchyView<LyraHierarchyRow<T>>;
+  readonly focusIndex?: number;
+} & LyraSourceSummary<Summary>`
+  `LyraHierarchySource<T, Q, Summary = undefined> {
+  readonly revision: LyraSourceRevision;
+  project(request: LyraHierarchyRequest<Q>): Promise<LyraHierarchyProjection<T, Summary>>;
+  search?(request: LyraSourceSearchRequest): Promise<LyraSourceSearchResult<{ readonly key: string }>>;
+  copy?(request: LyraSourceContext & {
+    readonly key: string | null;
+    readonly scope: 'node' | 'subtree' | 'document';
+    readonly maxBytes: number;
+  }): Promise<string>;
+}`
+  `LyraInspectionNode {
+  readonly name: string;
+  readonly kind: 'object' | 'array' | 'scalar' | 'element' | 'attribute' | 'text' | 'comment' | 'processing-instruction';
+  readonly value?: string;
+  readonly path: string;
+}`
+  `LyraHierarchyQuery {
+  readonly search: string;
+  readonly hiddenKinds: readonly string[];
+}`
+  `LyraTraceSourceSummary { readonly startMs: number; readonly endMs: number; }`
+  `LyraTaskSourceSummary { readonly total: number; readonly completed: number; }`
+  `LyraSourceBounds { readonly x: number; readonly y: number; readonly width: number; readonly height: number; }`
+  `LyraGraphSourceQuery {
+  readonly kind: 'nodes' | 'edges';
+  readonly search: string;
+  readonly centerKey: string | null;
+  readonly direction: 'in' | 'out' | 'both';
+  readonly nodeTypes: readonly string[];
+}`
+  `LyraGraphRecord<N, E> =
+  | { readonly kind: 'node'; readonly value: N }
+  | { readonly kind: 'edge'; readonly value: E }`
+  `LyraGraphSourceSummary { readonly nodes: number; readonly edges: number; }`
+  `LyraGraphSceneRequest extends LyraSourceContext {
+  readonly revision: LyraSourceRevision;
+  readonly locale: string;
+  readonly signal: AbortSignal;
+  readonly mode: 'neighborhood' | 'viewport';
+  readonly centerKey: string | null;
+  readonly bounds: LyraSourceBounds | null;
+  readonly nodeLimit: number;
+  readonly edgeLimit: number;
+  readonly includeKeys: readonly string[];
+}`
+  `LyraGraphScene<N, E> {
+  readonly nodes: readonly { readonly key: string; readonly value: N; readonly position?: { readonly x: number; readonly y: number; readonly z?: number } }[];
+  readonly edges: readonly { readonly key: string; readonly value: E; readonly source: string; readonly target: string }[];
+  readonly total: LyraGraphSourceSummary;
+  readonly coverage: 'complete' | 'neighborhood' | 'aggregate';
+  readonly worldBounds: LyraSourceBounds | null;
+}`
+  `LyraGraphOverview {
+  readonly bounds: LyraSourceBounds;
+  readonly bins: readonly { readonly bounds: LyraSourceBounds; readonly count: number }[];
+}`
+  `LyraGraphSource<N, E> {
+  readonly revision: LyraSourceRevision;
+  readonly records: LyraPageSource<LyraGraphRecord<N, E>, LyraGraphSourceQuery, LyraGraphSourceSummary>;
+  scene(request: LyraGraphSceneRequest): Promise<LyraGraphScene<N, E>>;
+  overview?(request: LyraSourceContext & { readonly limit: number }): Promise<LyraGraphOverview>;
+}`
+
+- **`utilities-data-preparation-contracts`** — Public staged numeric helpers and result contracts from `utilities/data-preparation.js`. Preparation reads the full immutable source in bounded chunks; retained summaries are distinct from source counts. Inherited fields are repeated for reference. Defaulted options may be omitted.
+
+  `LyraSourceValue<T> = T | PromiseLike<T>`
+  `LyraSourceRequest { readonly signal: AbortSignal; }`
+  `LyraIndexedInput<T> {
+  readonly revision: LyraSourceRevision;
+  readonly count: number;
+  read(start: number, count: number, request: LyraSourceRequest): LyraSourceValue<readonly T[]>;
+}`
+  `LyraPreparationOptions {
+  readonly signal?: AbortSignal;
+  readonly batchSize?: number;
+}`
+  `LyraObservationCounts {
+  readonly sourceCount: number;
+  readonly validCount: number;
+  readonly invalidCount: number;
+}`
+  `LyraNumericDomain { readonly min: number; readonly max: number; }`
+  `LyraSeriesObservation { readonly x: number; readonly y: number | null; }`
+  `LyraSeriesSample extends LyraSeriesObservation {
+  readonly x: number;
+  readonly y: number | null;
+  readonly sourceIndex: number;
+  readonly breakBefore: boolean;
+}`
+  `LyraPreparedSeries {
+  readonly id: string;
+  readonly label: string;
+  readonly counts: LyraObservationCounts;
+  readonly xDomain: LyraNumericDomain | null;
+  readonly yDomain: LyraNumericDomain | null;
+  readonly samples: readonly LyraSeriesSample[];
+}`
+  `LyraSeriesRangeRequest extends LyraSourceRequest {
+  readonly signal: AbortSignal;
+  readonly seriesId: string;
+  readonly startIndex: number;
+  readonly endIndex: number;
+  readonly maxPoints: number;
+}`
+  `LyraSeriesPointRef { readonly seriesId: string; readonly sourceIndex: number; }`
+  `LyraPreparedSeriesData {
+  readonly kind: 'series';
+  readonly revision: LyraSourceRevision;
+  readonly series: readonly LyraPreparedSeries[];
+  getPoint(ref: LyraSeriesPointRef, request: LyraSourceRequest): LyraSourceValue<LyraSeriesObservation | null>;
+  queryRange?(request: LyraSeriesRangeRequest): LyraSourceValue<readonly LyraSeriesSample[]>;
+}`
+  `LyraPreparedCategoryData {
+  readonly kind: 'categories';
+  readonly revision: LyraSourceRevision;
+  readonly counts: LyraObservationCounts;
+  readonly categories: readonly { readonly id: string; readonly label: string }[];
+  readonly categoryCounts: readonly number[];
+  readonly series: readonly { readonly id: string; readonly label: string; readonly values: readonly number[] }[];
+  readonly aggregation: 'count' | 'sum' | 'mean' | 'host-defined';
+}`
+  `LyraHistogramDistribution {
+  readonly revision: LyraSourceRevision;
+  readonly counts: LyraObservationCounts;
+  readonly domain: LyraNumericDomain | null;
+  readonly edges: readonly number[];
+  readonly binCounts: readonly number[];
+  readonly belowCount: number;
+  readonly aboveCount: number;
+}`
+  `LyraWeightedWord { readonly id: string; readonly text: string; readonly weight: number; }`
+  `LyraPreparedWordCloud {
+  readonly revision: LyraSourceRevision;
+  readonly counts: LyraObservationCounts;
+  readonly totalWeight: number;
+  readonly retainedWeight: number;
+  readonly words: readonly LyraWeightedWord[];
+}`
+  `LyraPreparedWaveform {
+  readonly revision: LyraSourceRevision;
+  readonly counts: LyraObservationCounts;
+  readonly sampleCount: number;
+  readonly duration: number;
+  readonly buckets: readonly { readonly startIndex: number; readonly endIndex: number; readonly maxAmplitude: number }[];
+  readonly firstAmplitude: number | null;
+  readonly lastAmplitude: number | null;
+}`
+  `prepareLyraSeriesData(
+  series: readonly { readonly id: string; readonly label: string; readonly input: LyraIndexedInput<LyraSeriesObservation> }[],
+  options: LyraPreparationOptions & { readonly maxPointsPerSeries?: number } = {},
+): Promise<LyraPreparedSeriesData>`
+  `prepareLyraCategoryData<T>(
+  input: LyraIndexedInput<T>,
+  options: LyraPreparationOptions & {
+    readonly categories: readonly { readonly id: string; readonly label: string }[];
+    readonly seriesId: string;
+    readonly seriesLabel: string;
+    readonly categoryOf: (value: T, sourceIndex: number) => string | null;
+    readonly otherCategoryId?: string;
+  } & (
+    | { readonly aggregation: 'count'; readonly valueOf?: (value: T, sourceIndex: number) => unknown }
+    | { readonly aggregation: 'sum' | 'mean'; readonly valueOf: (value: T, sourceIndex: number) => number | null }
+  ),
+): Promise<LyraPreparedCategoryData>`
+  `prepareLyraHistogram(
+  input: LyraIndexedInput<number>,
+  options: LyraPreparationOptions & ({ readonly edges: readonly number[] } | { readonly binCount: number }),
+): Promise<LyraHistogramDistribution>`
+  `prepareLyraWordCloud(
+  input: LyraIndexedInput<LyraWeightedWord>,
+  options: LyraPreparationOptions & { readonly maxWords?: number } = {},
+): Promise<LyraPreparedWordCloud>`
+  `prepareLyraWaveform(
+  input: LyraIndexedInput<number>,
+  options: LyraPreparationOptions & { readonly duration: number; readonly maxBuckets?: number },
+): Promise<LyraPreparedWaveform>`
 
 - **`ai-adapters-a2ui-contracts`** — AI adapter and runtime contracts.
   `A2UiAdapterLimits {

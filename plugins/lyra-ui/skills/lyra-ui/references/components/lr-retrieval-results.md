@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecated event** `lr-select` since `26.0.0`; use event `@lr-selection-change`; removal not before `28.0.0` — lr-selection-change is the library's one name for a changed selection (detail chunkIds is selectedChunkIds); the alias fires right after it for one major.
 - **Optional peers** none
-- **Themeable via** 29 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,6 +21,98 @@ canonicalization, optional source grouping, multi-selection, pagination/infinite
 compact/expanded switch. Each row wraps exactly one chunk in an internal `lr-chunk-inspector` (fed
 a single-element array), reusing its score bar, tier coloring, title+page rendering, and expandable
 text verbatim. Large sets window through an internal `lr-virtual-list`.
+
+With `dataSource` unset, assignment retains the first 10,000 chunks in a bounded readonly outer snapshot. Admitted record
+identities feed a descriptor-safe copy of the closed display schema, including source fields and
+score breakdowns; `metadata` remains opaque and a locator receives its own bounded snapshot. This
+avoids applying the shared 50,000-value deep-copy budget to arbitrary nested provider data. Replace
+the collection to publish record changes. Canonical records, id/order indexes, and the sorted/grouped
+projection are reused across selection and presentation changes. Replace a custom grouping callback
+when its behavior changes, or issue a keyless `requestUpdate()` to refresh its projection.
+
+A localized `[part="limit"]` note reports retained and assigned-source counts above the input
+ceiling, using the effective locale. Initial truncation is silent; a later transition into input
+truncation is announced politely. Virtualization continues to window the admitted result set.
+
+**Full-source paging:** `dataSource: RetrievalResultsSource | undefined = undefined`
+(attribute: false) supplies the complete logical collection while retaining only bounded pages.
+A defined source takes display precedence over `chunks`; an invalid defined source fails visibly.
+Setting `undefined` restores the current legacy chunks. `sourcePage: number = 0` (`source-page`)
+is zero-based; `sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500.
+Readonly `sourceTotal: number | null` reports the exact current-query total after success, or
+`null` before success and without a source. Query/page-size changes reset page zero. A total shrink
+receives at most one corrective request for the last valid page.
+
+```ts
+import type { RetrievalResultsSource, RetrievalResultsSourceQuery } from
+  "@aceshooting/lyra-ui/components/retrieval/retrieval-results/retrieval-results.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`RetrievalResultsSource` is `LyraPageSource<RetrievalChunk, RetrievalResultsSourceQuery>`.
+The immutable provider `revision` is a nonempty string or finite number. `query({ revision,
+locale, signal, page, pageSize, query })` returns `{ rows, total, groups? }`, where each row is
+`{ key, order, value }`, `value` is a complete `RetrievalChunk`, and `order` is its stable canonical
+source order. Counts/orders are safe nonnegative integers; page keys/orders are unique and the
+returned row count must exactly fill the requested in-bounds page. `lookup(keys, context)` returns
+canonical records for globally present requested IDs, omitting absent ones;
+`locate(key, query, context)` returns an absolute current-query index or `null`.
+
+The forwarded query is `{ sort, withoutDedupe, grouping, groupBy, groupLabel, groupOrder }`.
+The provider applies sorting, deduplication and grouping to the complete collection before paging;
+local callbacks never compute a global group from a partial page. Grouped responses require
+`groups: [{ key, label, startIndex, itemCount }]` with globally positioned, nonoverlapping intervals
+covering the page. At most 500 records and 500 intersecting groups are admitted. Each record's
+required rendered strings share a 65,536 UTF-16-unit limit; locator paths have at most 500 segments.
+Malformed or oversized pages fail without silently clipping full chunk text. Keys/group text are
+bounded to 65,536 units each and share a 2,000,000-unit admission budget.
+
+With `withoutDedupe: false`, page `key` must equal canonical `value.id`. With `withoutDedupe: true`,
+distinct occurrence keys may show repeated canonical IDs, while selection still uses `value.id`.
+Canonical `lookup` must always return `key === value.id`; page occurrence keys never become selected
+IDs. Provider order is preserved in the visible page.
+
+Up to 10,000 explicit `selectedChunkIds` resolve globally in sequential batches of at most 500;
+blanks/duplicates normalize before lookup. Off-page IDs remain selected while unresolved, and only
+a successful global absence proof removes an ID. Complete canonical records are ordered by
+provider `order`, independently of page/query order. The selected-record cache and pending user
+transaction survive paging, query changes and page retry. Selection failure exposes a separate
+retry without emitting a partial selection. External assignment and reconnect/adoption
+reconciliation are silent. A user toggle emits `lr-selection-change` and its guarded deprecated
+`lr-select` alias only after the current complete selection resolves.
+
+Source selection event arrays and closed projected record fields are frozen; each record's
+`metadata` remains an opaque reference to the provider-owned value. The component neither deeply
+clones nor freezes that metadata graph. Legacy selection events retain their whole-detail detached,
+deeply frozen snapshot and its existing bounded failure behavior, including `null` on exhaustion.
+This source identity policy applies to both selection event names. `lr-chunk-open` retains its
+existing detail. Source mode suppresses `lr-load-more` and ignores legacy `hasMore`.
+
+The source remains host-owned by identity. Reassign even the same provider, or call a keyless
+`requestUpdate()`, to refresh its revision/cache. Named presentation changes reuse accepted data.
+Source replacement, refresh, disconnect and adoption revoke obsolete effects. Each page, selection
+and locate lane allows one physically unsettled provider call and only the latest queued intent;
+ignored aborts retain their permit until settlement. Only the current page/groups, explicit
+selected-record cache and bounded in-progress results are retained, with no full-source corpus.
+`activeChunkId` uses global `locate` once per active/query binding; subsequent manual paging wins
+until that binding changes. Expansion is bounded to the current page. Source-only parts are
+`source-status`, `source-retry`, `source-pagination`, `source-selection-status` and
+`source-selection-retry`, alongside existing row/chunk/metadata parts.
+
+The following array processing and sort/group fallback rules describe the legacy route;
+presentation properties also apply to provider rows.
+
+**Exported source query declaration:**
+
+`RetrievalResultsSourceQuery {
+  readonly sort: 'score' | 'none';
+  readonly withoutDedupe: boolean;
+  readonly grouping: RetrievalResultsGrouping;
+  readonly groupBy: LyraRetrievalResults['groupBy'];
+  readonly groupLabel: LyraRetrievalResults['groupLabel'];
+  readonly groupOrder: LyraRetrievalResults['groupOrder'];
+}`
 
 **Properties:**
 
@@ -35,13 +127,14 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   Nothing is ever guessed from `metadata` — a chunk with no `locator` simply leaves `anchor`/`page`
   unset
 - `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
-  ids, duplicates, and ids absent from the canonical chunk model are pruned. The component updates
+  ids, duplicates, and ids absent from the canonical chunk model are pruned in the legacy route;
+  source mode resolves presence globally as described above. The component updates
   its own copy on toggle _then_ emits `lr-selection-change`; reassign to control
 - `withoutSelection: boolean = false` (attribute `without-selection`, reflected) — omits the per-row
   `lr-checkbox`.
 - `withoutDedupe: boolean = false` (attribute `without-dedupe`, reflected) — retained for
-  compatibility and has no effect; malformed, blank, and later duplicate chunk ids are always omitted
-  first-wins so identity never becomes ambiguous.
+  compatibility in the legacy route, where malformed, blank, and later duplicate chunk ids are
+  always omitted first-wins. Source mode supports distinct occurrence keys as described above.
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
 - `grouping: 'source' | 'custom' | 'none' = 'none'` — `'source'` buckets rows under a header per
   `source.id` (the header text is that source's `name`, or a localized "untitled source" when it has
@@ -71,7 +164,8 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   to each row and to the virtual list (which scrolls the matching row into view)
 - `loading: boolean = false` (reflected)
 - `hasMore: boolean = false` (attribute `has-more`, reflected) — while virtualized, forwarded to the
-  virtual list so scroll-near-bottom fires `lr-load-more`; otherwise shows the built-in footer button
+  virtual list so scroll-near-bottom fires `lr-load-more`; otherwise shows the built-in footer button.
+  Inactive with `dataSource` set
 - `errorText: string = ''` (attribute `error-text`; spelled plain `error` before 9.0.0) — non-empty
   replaces the whole result view with a neutral visible message. Caller-supplied text is not
   localized (app/network data, not library copy). A new non-empty value is announced through a
@@ -131,7 +225,8 @@ virtualized — `::part(row)` reaches it either way), `group-header` (exported f
 on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none or while
 `presentation="compact"`; at most 32 entries, each value formatted within the same bounds as a
 `lr-retrieval-search` filter value), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
-`metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`.
+`metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`, `limit` (the
+input-retention notice).
 
 The per-row `lr-chunk-inspector`'s own parts are forwarded onward under a `chunk-` prefix —
 `chunk`, `chunk-current`, `chunk-score`, `chunk-score-current`, `chunk-score-bar`,

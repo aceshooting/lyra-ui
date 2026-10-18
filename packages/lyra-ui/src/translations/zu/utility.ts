@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} isiphakamiso esengeziwe',
     other: '{count} iziphakamiso ezengeziwe',
   },
+  mentionInputLimit: 'Kutholakala iziphakamiso zokuqala ezingu-10,000 zokubalula kuphela.',
+  diffViewHighlightLimit: 'Ikhodi ende iboniswa ngaphandle kokugqamisa i-syntax.',
 };
 
 registerLyraLocale('zu', strings);

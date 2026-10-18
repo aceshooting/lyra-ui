@@ -74,6 +74,8 @@ const strings: LyraLocaleStrings = {
     many: 'Ещё {count} подсказок',
     other: 'Ещё {count} подсказки',
   },
+  mentionInputLimit: 'Доступны только первые 10 000 кандидатов для упоминания.',
+  diffViewHighlightLimit: 'Длинный код отображается без подсветки синтаксиса.',
 };
 
 registerLyraLocale('ru', strings);

@@ -1,4 +1,4 @@
-import type { Feature } from 'geojson';
+import type { Feature, Geometry } from 'geojson';
 import {
   resolveOptionalPeerCapability,
   unwrapOptionalPeerDefault,
@@ -7,7 +7,21 @@ import {
 export interface MapLibreGeoJsonSource {
   setData(data: unknown): void;
   /** maplibre-gl 3+ incremental update. Optional because older peers lack it. */
-  updateData?(diff: MapLibreGeoJsonDiff): void;
+  updateData?(diff: MapLibreSourceDataDiff): void;
+}
+
+/** Consumer-authored incremental GeoJSON changes, forwarded to the active map engine. */
+export interface MapLibreSourceDataDiff {
+  readonly removeAll?: boolean;
+  readonly remove?: readonly (string | number)[];
+  readonly add?: readonly Feature[];
+  readonly update?: readonly {
+    readonly id: string | number;
+    readonly newGeometry?: Geometry;
+    readonly removeAllProperties?: boolean;
+    readonly removeProperties?: readonly string[];
+    readonly addOrUpdateProperties?: readonly { readonly key: string; readonly value: unknown }[];
+  }[];
 }
 
 /** The subset of maplibre-gl's GeoJSON diff this component emits. */

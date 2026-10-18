@@ -269,4 +269,12 @@ export const styles = css`
       font-weight: var(--lr-font-weight-semibold);
     }
   }
+
+  [part='limit'] {
+    margin: 0;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
+  }
 `;

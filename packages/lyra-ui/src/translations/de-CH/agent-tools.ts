@@ -9,6 +9,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   toolParamMissingProperty: 'Für den erforderlichen Schlüssel «{key}» gibt es keine passende Schema-Eigenschaft.',
   noMatchesQuery: 'Keine Tools passen zu «{query}».',
+  toolTimelineInputLimit: 'Nur die neusten {count} von {total} Tool-Aufrufen werden beibehalten.',
 };
 
 registerLyraLocaleDelta('de-CH', 'de', strings, { dir: 'ltr' });

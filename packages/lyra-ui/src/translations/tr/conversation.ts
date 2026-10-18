@@ -81,6 +81,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Henüz sohbet yok',
   agentWorkspaceLabel: 'Aracı çalışma alanı',
+  agentWorkspaceInputLimit: '{collection}: {total} kaydın yalnızca {count} tanesi saklanıyor.',
   agentWorkspaceConversation: 'Sohbet',
   agentWorkspaceDetails: 'Çalıştırma ayrıntıları',
   agentWorkspaceRun: 'Aracı çalıştırması',
@@ -98,6 +99,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Bu bölümü yeniden dene',
   promptQueueLabel: 'Sıraya alınan istemler',
   promptQueueEmpty: 'Sırada istem yok',
+  promptQueueInputLimit: 'Girdi sınırına ulaşıldığı için sıradaki bazı istemler veya ekler atlandı.',
+  promptQueueAttachmentLimit: 'Saklanan {total} ekin {shown} tanesi gösteriliyor.',
   promptQueueSendNow: 'Şimdi gönder',
   selectionToolbarLabel: 'Seçim işlemleri',
   selectionAsk: 'Sor',
@@ -163,6 +166,10 @@ const strings: LyraLocaleStrings = {
     one: '{count} belirteç',
     other: '{count} belirteç',
   },
+  threadListInputLimit: 'Girdi sınırına ulaşıldığı için bazı konuşma dizileri atlandı.',
+  promptInputInputLimit: 'Girdi sınırına ulaşıldığı için bazı öneriler veya katalog kayıtları atlandı.',
+  transcriptFeedInputLimit: '{total} kayıttan yalnızca en yeni {count} tanesi saklanır.',
+  codeBlockHighlightLimit: 'Uzun kod, sözdizimi vurgulaması olmadan gösterilir.',
 };
 
 registerLyraLocale('tr', strings);

@@ -74,6 +74,8 @@ const strings: LyraLocaleStrings = {
     many: 'Jeszcze {count} sugestii',
     other: 'Jeszcze {count} sugestii',
   },
+  mentionInputLimit: 'Dostępnych jest tylko pierwszych 10 000 kandydatów do wzmianki.',
+  diffViewHighlightLimit: 'Długi kod jest wyświetlany bez podświetlania składni.',
 };
 
 registerLyraLocale('pl', strings);

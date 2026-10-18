@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,8 +34,15 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
   are omitted and updates require a new collection assignment. `src` is passed to the embedded
   frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
+- `imageSource: LyraLightboxSource | undefined = undefined` (attribute: false) — identity-owned
+  access to the complete ordered collection, taking precedence over `images` while defined.
+  Invalid defined sources show a localized error and retry action; they never fall back to the
+  legacy array. Setting `undefined` restores the current `images` input. Reassign the source,
+  including the same object, or call a keyless `requestUpdate()` after changing its revision or
+  mutable provider state. Unrelated named display updates do not refresh the source.
 - `index: number = 0` (reflected) — clamped defensively for rendering and re-synced (emitting
-  `lr-index-change`) when `images` shrinks.
+  `lr-index-change`) when the active collection shrinks. In source mode, it retains the requested
+  logical index while its descriptor and image load.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `withoutCounter: boolean = false` (attribute `without-counter`, **not reflected**) — hides the
@@ -63,8 +70,35 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
 without changing state. `goTo()` ignores a non-finite
 index without changing state or emitting `lr-index-change`. A finite fractional index is truncated
 toward zero before clamping or loop wrapping, so `lr-index-change.detail.index` is always the
-actual rendered integer index; `reason` defaults to `'api'` and is forwarded as the close event's
+accepted logical integer index, including while a source image is loading; `reason` defaults to
+`'api'` and is forwarded as the close event's
 detail.
+
+**Full image collections:** `LyraLightboxSource` has `revision` and
+`images: LyraIndexedView<LyraSourceRecord<LyraLightboxImage>>`, using the types from
+`@aceshooting/lyra-ui/data-sources.js`. The host supplies a nonnegative safe-integer `images.count`
+and either synchronous indexed access or asynchronous bounded range reads. Each record supplies
+a stable global `key`, canonical nonnegative safe-integer `order`, and image `value`. Keep the view
+stable within a revision; publish a new revision and refresh when its contents change. Navigation,
+clamping, looping and the localized counter use the full logical count, so first, middle and final
+images remain reachable in a million-image host collection without copying it into `images`.
+Current navigation emits `lr-index-change` for the logical destination before its image finishes
+loading; direct consumer `index` writes stay event-silent. Source mode adds no new event.
+
+Only the current image loads, after resolving its descriptor. The component retains at most three
+descriptors in one-record pages, with one range read physically pending and no neighbour prefetch.
+Supplied record and image fields must be own data properties; accessors are rejected without
+invocation. Each key, `src`, `alt` and `caption` admits at most 65,536 UTF-16 units; oversized or
+malformed values fail visibly instead of being clipped. URLs pass `safeMediaSrc()` before loading.
+The host owns provider storage and response allocations; actual image decode/pixel memory belongs
+to the browser and is not bounded by the descriptor cache.
+
+Source loading clears the old image/caption, marks the stage busy and leaves logical navigation
+available. Descriptor or image-load failure shows localized retry chrome; a valid empty collection
+is a separate state. Replacing a source, navigating, refreshing, disconnecting or changing owner
+document revokes obsolete work, so a late completion cannot display an old image. The same
+pan/zoom frame stays mounted and retains focus. The provider should honor the request's abort
+signal; stale-result protection does not make an abort-ignoring provider settle promptly.
 
 **Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
 conditionally cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`):
@@ -76,7 +110,7 @@ object. Use
 `lr-after-hide` follows the closed render. Removal while open cannot be vetoed and reports reason
 `unmount`. `lr-index-change` (`detail: { index }`, fired
 for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
-`goTo()` — and when a shrinking `images` moves the shown image; **not** when a consumer sets
+`goTo()` — and when a shrinking active collection normalizes the index; **not** when a consumer sets
 `index` directly); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
 
@@ -93,7 +127,9 @@ including a consumer-driven one, appends the localized position to the document'
 embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
 `previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its
-`id` is the panel's `aria-describedby` target).
+`id` is the panel's `aria-describedby` target), `source-loading`, `source-error`, and `source-retry`
+(the current source image's retry button). `stage` exposes `aria-busy="true"` while source
+descriptor or native image loading is pending.
 
 **Themeable custom properties:** `--lr-lightbox-overlay-color` (default
 `var(--lr-color-overlay-strong)` — the backdrop scrim), `--lr-lightbox-control-bg` (default
@@ -118,6 +154,6 @@ photo content.
   measured by the lightbox, so stale load events cannot apply a previous image's size. The fit
   policy covers the painted image only; the lightbox's DOM caption, toolbar, legend-like actions,
   and tooltip content remain outside that image surface.
-- scope for v1: no per-image slotted content (data-driven via `images` only), no dot indicators, no
+- scope for v1: no per-image slotted content (data-driven via `images` or `imageSource`), no dot indicators, no
   visual open/close animation, no click-image-to-navigate, no touch-swipe. Lifecycle phases are
   still observable through the before/after events and methods above.

@@ -105,3 +105,9 @@ export const StateThemeHooks: Story = {
 export const EarlyYear: Story = {
   render: () => html`<lr-calendar view-date="0099-07-01" .events=${[{ date: '0099-07-15', title: 'Historical event' }]}></lr-calendar>`,
 };
+
+export const InputLimit: Story = {
+  render: () => html`<lr-calendar view="agenda" view-date="2026-07-01" .events=${Array.from({ length: 10001 }, (_, index) => ({
+    date: `2026-07-${String(1 + index % 28).padStart(2, '0')}`, title: `Event ${index + 1}`,
+  }))}></lr-calendar>`,
+};

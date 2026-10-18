@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './json-viewer.js';
+import type { JsonViewerTreeSource } from './json-viewer.class.js';
 import type { LyraJsonViewer } from './json-viewer.js';
 import type { LyraClipboardWriteSuccess } from '../copy-button/copy-button.js';
 
@@ -142,4 +143,78 @@ export const BackwardSearch: Story = {
         .querySelector<LyraJsonViewer>('lr-json-viewer')!.searchPrevious()}>Previous match</button>
     </div>
   `,
+};
+
+export const RaisedNodeLimit: Story = {
+  render: () => html`<lr-json-viewer max-nodes="10000" expand-depth="1" .data=${Array.from({ length: 6000 }, (_, index) => ({ index }))}></lr-json-viewer>`,
+};
+
+
+function millionInspectionSource(deep = false): JsonViewerTreeSource {
+  const count = 1_000_000;
+  const indexOf = (key: string | number) => {
+    const text = String(key);
+    if (!/^n\d+$/.test(text)) return -1;
+    const index = Number(text.slice(1));
+    return Number.isSafeInteger(index) && index >= 0 && index < count ? index : -1;
+  };
+  return {
+    revision: 1,
+    async project(request) {
+      const focusIndex = request.action.type === 'reveal' ? indexOf(request.action.key) : -1;
+      let closed = deep && request.state !== null ? Number(request.state) : -1;
+      if (request.action.type === 'reset' || focusIndex >= 0) closed = -1;
+      if (deep && request.action.type === 'toggle') closed = request.action.expanded ? -1 : indexOf(request.action.key);
+      const visible = closed < 0 ? count : closed + 1;
+      return { state: String(closed), total: count, rows: { count: visible,
+        keyAt: (index: number) => `n${index}`, indexOfKey: (key: string | number) => { const index = indexOf(key); return index < visible ? index : -1; },
+        itemAt: (index: number) => ({ key: `n${index}`,
+          value: { name: deep ? 'child' : String(index), path: `n${index}`, kind: deep && index < count - 1 ? 'object' as const : 'scalar' as const,
+            value: String(index) },
+          parentKey: deep && index > 0 ? `n${index - 1}` : null,
+          level: deep ? index + 1 : 1, position: deep ? 1 : index + 1, setSize: deep ? 1 : count,
+          childCount: deep && index < count - 1 ? 1 : 0, expanded: deep && index !== closed, selected: false,
+        }),
+      }, ...(focusIndex >= 0 ? { focusIndex } : {}) };
+    },
+    async search(request) {
+      const index = /^\d+$/.test(request.query) ? Number(request.query) : -1;
+      const hits = Number.isSafeInteger(index) && index >= 0 && index < count ? [{ key: `n${index}` }] : [];
+      return { hits, total: hits.length, exhaustive: true };
+    },
+    async copy(request) {
+      const index = request.key === null ? 0 : indexOf(request.key);
+      if (index < 0) throw new RangeError('Unknown node');
+      let text: string;
+      if (deep) text = '{"child":'.repeat(count - index - 1) + String(count - 1) + '}'.repeat(count - index - 1);
+      else if (request.scope === 'document') {
+        text = '[';
+        for (let current = 0; current < count; current++) text += `${current ? ',' : ''}${current}`;
+        text += ']';
+      } else text = String(index);
+      if (text.length > request.maxBytes) throw new RangeError('Complete copy exceeds its budget');
+      return text;
+    },
+  };
+}
+
+export const MillionNodeSource: Story = {
+  parameters: { docs: { description: { story: 'A complete million-node indexed provider. Search a numeric node value globally; Next reveals its exact compact key. Copy requests complete provider text, never the mounted window.' } } },
+  render: () => {
+    const provider = millionInspectionSource();
+    return html`<div style="max-width: 32rem">
+      <lr-json-viewer .treeSource=${provider} copyable max-height="20rem" aria-label="Million JSON nodes"></lr-json-viewer>
+      <button @click=${(event: Event) => void (event.currentTarget as HTMLElement).parentElement!.querySelector<LyraJsonViewer>('lr-json-viewer')!.revealSourceKey('n999999')}>Final node</button>
+      <button @click=${async (event: Event) => {
+        const viewer = (event.currentTarget as HTMLElement).parentElement!.querySelector<LyraJsonViewer>('lr-json-viewer')!;
+        await viewer.runSearch('999999'); await viewer.searchNext();
+      }}>Search final node</button>
+    </div>`;
+  },
+};
+
+export const MillionDeepSource: Story = {
+  parameters: { docs: { description: { story: 'One million expanded logical levels use compact n-index keys. Logical aria-level remains exact while visual indentation is bounded; revealSourceKey does not build an ancestor-path array.' } } },
+  render: () => html`<div style="max-width: 320px"><lr-json-viewer .treeSource=${millionInspectionSource(true)} max-height="16rem" aria-label="Deep JSON hierarchy"></lr-json-viewer>
+    <button @click=${(event: Event) => void (event.currentTarget as HTMLElement).parentElement!.querySelector<LyraJsonViewer>('lr-json-viewer')!.revealSourceKey('n999999')}>Deepest node</button></div>`,
 };

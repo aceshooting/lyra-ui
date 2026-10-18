@@ -64,6 +64,7 @@ const strings: LyraLocaleStrings = {
     many: '{count} أمرًا',
     other: '{count} أمر',
   },
+  commandPaletteInputLimit: 'حُذف بعض الأوامر لبلوغ حد الإدخال.',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

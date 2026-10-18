@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Nie ma jeszcze rozmów',
   agentWorkspaceLabel: 'Obszar roboczy agenta',
+  agentWorkspaceInputLimit: '{collection}: zachowano tylko {count} z {total} wpisów.',
   agentWorkspaceConversation: 'Rozmowa',
   agentWorkspaceDetails: 'Szczegóły uruchomienia',
   agentWorkspaceRun: 'Uruchomienie agenta',
@@ -102,6 +103,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Ponów tę część',
   promptQueueLabel: 'Polecenia w kolejce',
   promptQueueEmpty: 'Brak poleceń w kolejce',
+  promptQueueInputLimit: 'Pominięto niektóre polecenia w kolejce lub załączniki, ponieważ osiągnięto limit danych wejściowych.',
+  promptQueueAttachmentLimit: 'Wyświetlono {shown} z {total} zachowanych załączników.',
   promptQueueSendNow: 'Wyślij teraz',
   selectionToolbarLabel: 'Działania dotyczące zaznaczenia',
   selectionAsk: 'Zapytaj',
@@ -169,6 +172,10 @@ const strings: LyraLocaleStrings = {
     many: '{count} tokenów',
     other: '{count} tokena',
   },
+  threadListInputLimit: 'Pominięto niektóre wątki rozmów, ponieważ osiągnięto limit danych wejściowych.',
+  promptInputInputLimit: 'Pominięto niektóre sugestie lub wpisy katalogu, ponieważ osiągnięto limit danych wejściowych.',
+  transcriptFeedInputLimit: 'Zachowywanych jest tylko {count} najnowszych spośród {total} wpisów.',
+  codeBlockHighlightLimit: 'Długi kod jest wyświetlany bez podświetlania składni.',
 };
 
 registerLyraLocale('pl', strings);

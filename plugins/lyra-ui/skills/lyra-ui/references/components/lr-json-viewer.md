@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,22 +33,96 @@ Removing `query` clears matches while retaining null property readback. Before a
 `searchPrevious()` selects the final match; later next/previous navigation wraps. Navigation may
 reopen the selected match’s ancestors while unrelated manual collapse remains intact.
 
+**Complete provider hierarchy:** `treeSource: JsonViewerTreeSource | undefined = undefined`
+(attribute: false) supplies a complete logical hierarchy without flattening it or copying it into
+`data`. A defined provider takes display precedence; invalid defined input shows a localized source
+error. Setting `undefined` restores the current `data`. `maxNodes` and `expandDepth` govern only
+the legacy `data` route; `maxHeight` also constrains the source scroller.
+
+```ts
+import type { JsonViewerTreeSource } from
+  "@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js";
+import type {
+  LyraHierarchyProjection, LyraHierarchyRow, LyraInspectionNode,
+  LyraSourceSearchRequest, LyraSourceSearchResult,
+} from "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`JsonViewerTreeSource` is `LyraHierarchySource<LyraInspectionNode, LyraHierarchyQuery>`.
+Its immutable `revision` is a nonempty string or finite number identifying provider state. `project(request)` receives revision, locale,
+abort signal, previous opaque `state` (initially `null`), `{ search: query, hiddenKinds: [] }`, and
+an action such as `reset`, `toggle` or `reveal`. It returns `{ state, total, rows, focusIndex? }`:
+`total` counts every logical node, including collapsed nodes; `rows.count` is the complete visible
+preorder, with `rows.count <= total`. Counts are safe nonnegative integers. The nonempty opaque
+state token is at most 65,536 UTF-16 units. `rows` supports indexed `itemAt`/`keyAt`/`indexOfKey`,
+or asynchronous `read` with required `indexOfKey`; there is no full-tree lookup scan.
+
+Each `LyraHierarchyRow<LyraInspectionNode>` supplies a globally unique nonblank `key`, `parentKey`,
+one-based logical `level`/`position`, exact sibling `setSize`, `childCount`, `expanded`, `selected`,
+and optional `disabled`/`selectionState`. Its closed own-data `value` supplies string `name`,
+string `path` equal to the row key, optional string `value`, and a `kind` from
+`'object' | 'array' | 'scalar' | 'element' | 'attribute' | 'text' | 'comment' | 'processing-instruction'`.
+Keys and each inspection string are at most 65,536 UTF-16 units. The admitted row cache, staging,
+one separately retained focused row and opaque state share a 2,000,000-unit payload budget;
+oversized rows/pages fail visibly instead of clipping a result. The source view mounts at most
+301 rows and caches four 100-row pages, plus at most one focused row. Range reads request at most
+100 rows with at most two physical reads pending; projection calls serialize with only the latest
+replacement queued. Global key uniqueness and immutable snapshot consistency remain provider-owned.
+
+`revealSourceKey(key: string): Promise<boolean>` asks the provider to open ancestors and focus its
+exact returned row. It resolves `false` for absent, failed, canceled or obsolete targets. Compact
+keys support deeply nested sources without allocating a full ancestor path; logical ARIA depth
+and sibling positions remain exact while visual indentation clamps at 32 levels. Provider
+projections own expansion. Reassign even the same source object, or call a keyless
+`requestUpdate()`, after changing its revision/state. Locale changes, reconnect and adoption refresh
+the projection; named presentation updates reuse accepted data. Replacement, refresh, query changes
+and lifecycle cancellation revoke older search, reveal and copy effects. Providers should honor
+abort signals; ignored aborts retain their physical request permits until settlement.
+
+Source `query`/`runSearch()` uses optional provider `search({ revision, locale, signal, query,
+limit })`, which returns `{ hits: [{ key }], total, exhaustive }`. Search covers the complete
+logical hierarchy, counts matching nodes rather than separate key/value occurrences, and retains
+at most 10,000 hits regardless of `maxNodes`; query length is at most 4,096 UTF-16 units. Search-hit
+keys share a separate 2,000,000-unit budget. `exhaustive` means every global hit was returned;
+`total` is the known global total or `null`. `lr-search-change` retains
+`{ query, matchCount, matchCountExact, activeIndex }`; unavailable, partial, invalid and over-budget
+results never claim exactness. The initial cursor is `-1`. `searchNext()`/`searchPrevious()` reveal
+retained hit keys without rerunning global search. `search-status` discloses unavailable/partial
+search, and clearing the query clears its hits and cursor.
+
+Source copy controls require both `copyable` and a callable provider `copy`. The request includes
+revision, locale, abort signal, `key`, `scope` and `maxBytes`: scalar rows use `'node'`, containers
+`'subtree'`, and the toolbar uses `'document'` with `key: null`. The provider must return complete
+text within 25 MiB UTF-8; the component never serializes loaded rows as a substitute. Provider or
+byte-budget failures show localized copy failure without clipboard events. A current platform
+write retains the frozen `lr-copy`/`lr-copy-error` outcome and clipboard-only `lr-error` contract.
+Source-only parts are `source-list`, `source-row`, `source-toggle`, `source-label`, `source-status`,
+`source-error`, and `search-status`; `base`, `tree`, `toolbar`, `key`, `value`, and `copy-button`
+also apply. The flat source rows own logical treeitem semantics.
+
 **Properties:**
 
 - `data: unknown` (attribute `false` — property-only, not settable via an HTML attribute)
+- `maxNodes: number = 5000` (attribute `max-nodes`) — the shared admission, search and render
+  node budget for `data`; effective range 1–50,000. Finite fractions truncate and values clamp to that range;
+  non-finite inputs use 5,000. Changing it re-admits the retained original `data`, so raising the
+  budget does not require reassigning `data`. The depth ceiling remains 100, and the existing
+  localized `limit` part discloses traversal truncation.
 - `expandDepth?: number` (attribute `expand-depth`) — nodes at or beyond this nesting depth
   (root = `0`) start collapsed, so only the levels above it start expanded; omitted/`undefined`
   means nothing auto-collapses
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
-  viewer scrolls internally past this height instead of growing the page. Values that do not parse
+  viewer scrolls internally past this height instead of growing the page. Source mode otherwise
+  uses a `var(--lr-size-20rem)` height ceiling. Values that do not parse
   as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   `--lr-json-viewer-max-height` in control
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
-- `query: string = ''` — case-insensitive substring match against keys/values; matches are
-  highlighted and their ancestors auto-expanded
+- `query: string = ''` — with `treeSource` unset, case-insensitive substring match against
+  keys/values; matches are highlighted and their ancestors auto-expanded. Source matching is
+  provider-owned as described above
 
-**Methods:** `runSearch(query)` sets the declarative `query` property and awaits the recompute,
+**Search methods:** `runSearch(query)` sets the declarative `query` property and awaits the recompute,
 resolving the match count. `searchNext()`/`searchPrevious()`
 advance/step back a match cursor
 (wrapping), reveal that selected match even when one of its ancestors was explicitly collapsed,
@@ -56,7 +130,7 @@ mark it as the active `aria-current` result, announce its position, and scroll i
 they resolve `false` when there are no matches. `clearSearch()` resets `query` to `''`, clearing all
 matches and the cursor.
 
-**Events:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
+**Events with `treeSource` unset:** `lr-copy` (`detail: LyraClipboardWriteSuccess`, `{ ok: true; text: string }`) — fired by
 the top-level copy button or a per-node one only after the owning browsing context's clipboard write
 fulfills. `lr-error` (no detail) and `lr-copy-error` (`detail: LyraClipboardWriteFailure`) fire when
 serialization or clipboard writing fails; the detailed frozen outcome carries `ok: false`, the
@@ -71,7 +145,7 @@ fired whenever the search query, match count, or active-match cursor changes, fr
 property write. `matchCountExact` is `false` when the bounded traversal only proves a lower bound;
 the rendered count uses an “at least” prefix in the same case.
 
-**Slots:** none — the tree is rendered entirely from `data`.
+**Slots:** none — the tree is rendered from `data` or `treeSource`.
 
 **CSS parts:** `base` (root scroll container, respects `max-height`), `toolbar` (wrapper around the
 top-level copy button, only rendered when `copyable`), `tree` (wrapper around the rendered node

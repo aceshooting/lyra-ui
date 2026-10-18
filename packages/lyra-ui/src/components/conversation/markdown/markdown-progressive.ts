@@ -21,7 +21,9 @@ export interface MarkdownProgressiveRender {
   codeBlocks: MarkdownCodeBlockRecord[];
   pendingKeys: PendingHighlight[];
 }
-export interface MarkdownProgressiveBlock extends MarkdownProgressiveRender {
+export interface MarkdownProgressiveBlock extends Omit<MarkdownProgressiveRender, 'rawHtml' | 'pendingKeys'> {
+  pendingKeys: Array<Pick<PendingHighlight, 'key'>>;
+  definitions: Definitions;
   source: string;
   start: number;
   end: number;
@@ -34,13 +36,13 @@ export interface MarkdownProgressiveOptions {
   parser: MarkdownParserCapabilities;
   gfm: boolean;
   tabSize: number;
-  render(source: string, rawSource: string, links: Definitions, state: MarkdownLexicalState, slugger: Slugger, prefix: readonly MarkdownCodeBlockRecord[]): MarkdownProgressiveRender;
+  render(source: string, rawSource: string, links: Definitions, state: MarkdownLexicalState, slugger: Slugger, prefixCount: number): MarkdownProgressiveRender;
 }
 export interface MarkdownProgressiveStats {
   frames: number; lexedUnits: number; committedUnits: number; groupRenders: number;
   recomputes: number; stalls: number; highlightDispatches: number;
 }
-interface Candidate { start: number; end: number; eofOnly: boolean }
+interface Candidate { start: number; end: number; evidenceEnd: number; eofOnly: boolean }
 
 /** Tests effective per-render configuration, never mutating the parser's defaults. */
 export function markdownProgressiveEligible(parser: MarkdownParserCapabilities, gfm: boolean): boolean {
@@ -200,6 +202,31 @@ export class MarkdownProgressiveSession {
   readonly blocks: MarkdownProgressiveBlock[] = [];
   readonly stats: MarkdownProgressiveStats = { frames: 0, lexedUnits: 0, committedUnits: 0, groupRenders: 0, recomputes: 0, stalls: 0, highlightDispatches: 0 };
   private normalized: NormalizedSource;
+  private changedFrom: number | undefined;
+  private projectionFrom = 0;
+  private readonly projectedRecords: MarkdownCodeBlockRecord[] = [];
+  private readonly projectedHeadings: MarkdownHeadingItem[] = [];
+  private readonly recordEnds: number[] = [];
+  private readonly headingEnds: number[] = [];
+  private changed(index: number): void {
+    this.changedFrom = Math.min(this.changedFrom ?? index, index);
+    this.projectionFrom = Math.min(this.projectionFrom, index);
+  }
+  takeChangedFrom(): number | undefined { const index = this.changedFrom; this.changedFrom = undefined; return index; }
+  private project(): void {
+    if (this.projectionFrom === Infinity) return;
+    const start = this.projectionFrom;
+    this.projectedRecords.length = this.recordEnds[start - 1] ?? 0;
+    this.projectedHeadings.length = this.headingEnds[start - 1] ?? 0;
+    for (let index = start; index < this.blocks.length; index++) {
+      const block = this.blocks[index]!;
+      this.projectedRecords.push(...block.codeBlocks); this.projectedHeadings.push(...block.headings);
+      this.recordEnds[index] = this.projectedRecords.length; this.headingEnds[index] = this.projectedHeadings.length;
+    }
+    this.recordEnds.length = this.headingEnds.length = this.blocks.length;
+    this.projectionFrom = Infinity;
+  }
+  recordOffset(index: number): number { this.project(); return this.recordEnds[index - 1] ?? 0; }
   private committedEnd = 0;
   private definitions: Definitions = Object.create(null) as Definitions;
   private committedDefinitions: Definitions = Object.create(null) as Definitions;
@@ -229,14 +256,29 @@ export class MarkdownProgressiveSession {
     this.normalized = new NormalizedSource(options.tabSize);
     this.replayEnds = replay?.map((block) => block.end) ?? [];
   }
-  get source(): string { return this.normalized.raw; }
+  private suspendedSource?: string;
+  /** Drops transient scan buffers after final rendering; retained blocks support stable re-entry. */
+  suspend(): void {
+    this.suspendedSource = this.source;
+    this.normalized = new NormalizedSource(this.options.tabSize);
+    this.plan = []; this.planIndex = 0; this.memo.clear(); this.highlightQueue.clear();
+    this.fenceScan = undefined;
+    this.lastLexEnd = this.lastCompleteEnd = -1;
+  }
+  private restoreSource(): void {
+    if (this.suspendedSource === undefined) return;
+    const source = this.suspendedSource; this.suspendedSource = undefined;
+    this.normalized.append(source, this.eof);
+  }
+  get source(): string { return this.suspendedSource ?? this.normalized.raw; }
   get end(): number { return this.committedEnd; }
   get failed(): boolean { return this.frozen; }
-  get records(): MarkdownCodeBlockRecord[] { return this.blocks.flatMap((block) => block.codeBlocks); }
-  get headings(): MarkdownHeadingItem[] { return this.blocks.flatMap((block) => block.headings); }
+  get records(): MarkdownCodeBlockRecord[] { this.project(); return this.projectedRecords; }
+  get headings(): MarkdownHeadingItem[] { this.project(); return this.projectedHeadings; }
   get pending(): boolean { return !this.frozen && (!this.waitForInput && this.planIndex < this.plan.length || this.recomputeFrom !== undefined || this.highlightQueue.size > 0); }
 
   update(source: string): void {
+    this.restoreSource();
     if (source === this.source) return;
     if (!source.startsWith(this.source)) {
       const previousDefinitions = JSON.stringify(this.definitions);
@@ -246,7 +288,7 @@ export class MarkdownProgressiveSession {
         if (source.startsWith(this.source.slice(0, middle))) low = middle; else high = middle;
       }
       const keep = this.blocks.findIndex((block) => block.evidenceEnd > low);
-      if (keep >= 0) this.blocks.length = keep;
+      if (keep >= 0) { this.blocks.length = keep; this.changed(keep); }
       this.committedEnd = this.blocks.at(-1)?.end ?? 0;
       this.sluggerDirty = true;
       this.normalized = new NormalizedSource(this.options.tabSize);
@@ -258,12 +300,10 @@ export class MarkdownProgressiveSession {
       this.frozen = false;
       this.lastLexEnd = this.lastCompleteEnd = -1;
       this.normalized.append(source);
-      if (this.committedEnd) {
-        const lexer = this.lexer();
-        lexer.blockTokens(this.normalized.text.slice(0, this.committedEnd), lexer.tokens);
-        Object.assign(this.definitions, lexer.tokens.links);
-        Object.assign(this.committedDefinitions, lexer.tokens.links);
+      for (const block of this.blocks) for (const [label, value] of Object.entries(block.definitions)) {
+        if (!(label in this.definitions)) this.definitions[label] = value;
       }
+      Object.assign(this.committedDefinitions, this.definitions);
       if (previousDefinitions !== JSON.stringify(this.definitions)) {
         this.blocks.forEach((block, index) => { if (block.source.includes('[')) this.invalidate(index); });
       }
@@ -277,8 +317,9 @@ export class MarkdownProgressiveSession {
   }
 
   resume(): void {
+    this.restoreSource();
     const eofIndex = this.blocks.findIndex((block) => block.eofOnly);
-    if (eofIndex >= 0) this.blocks.length = eofIndex;
+    if (eofIndex >= 0) { this.blocks.length = eofIndex; this.changed(eofIndex); }
     this.committedEnd = this.blocks.at(-1)?.end ?? 0;
     if (eofIndex >= 0) {
       const previousDefinitions = JSON.stringify(this.definitions);
@@ -407,10 +448,10 @@ export class MarkdownProgressiveSession {
       if (held) { definitionBoundary = rawStart; break; }
       if (!eof && !followed && !closed) break;
       const groupEnd = start + (after > index + 1 ? tokenEnds[after - 1]! : tokenEnd);
-      plan.push({ start: groupStart, end: groupEnd, eofOnly: !followed && !closed });
+      plan.push({ start: groupStart, end: groupEnd, evidenceEnd: closed ? groupEnd : start + (tokenEnds[after] ?? tail.length), eofOnly: !followed && !closed });
       groupStart = groupEnd;
     }
-    if (eof && groupStart < source.length) plan.push({ start: groupStart, end: source.length, eofOnly: true });
+    if (eof && groupStart < source.length) plan.push({ start: groupStart, end: source.length, evidenceEnd: source.length, eofOnly: true });
     // Definitions in the unsettled suffix are provisional: a title may begin on its next line.
     // Only a definition inside a committed group wins permanently over later duplicates.
     const nextLinks = { ...this.committedDefinitions };
@@ -435,6 +476,7 @@ export class MarkdownProgressiveSession {
   }
 
   step(eof = false, unlimited = false, untilEnd = Infinity): void {
+    this.restoreSource();
     if (this.frozen) return;
     this.stats.frames++;
     if (eof) {
@@ -473,9 +515,11 @@ export class MarkdownProgressiveSession {
           this.slugger = replay;
           continue;
         }
-        const prefix = this.blocks.slice(0, index).flatMap((block) => block.codeBlocks);
+        const prefix = this.recordOffset(index);
         const result = this.options.render(old.source, this.rawSlice(old.start, old.end), this.definitions, state, slugger, prefix);
-        this.blocks[index] = { ...old, ...result, seedState: { ...state } };
+        const { rawHtml: _rawHtml, pendingKeys, ...retained } = result;
+        this.blocks[index] = { ...old, ...retained, pendingKeys: pendingKeys.map(({ key }) => ({ key })), seedState: { ...state } };
+        this.changed(index);
         rendered++;
         this.stats.groupRenders++;
         this.stats.recomputes++;
@@ -502,7 +546,7 @@ export class MarkdownProgressiveSession {
           let cached = this.memo.get(key);
           if (!cached) {
             const slugger = sluggerBefore.clone();
-            const result = this.options.render(source, this.rawSlice(first.start, last.end), this.definitions, state, slugger, this.records);
+            const result = this.options.render(source, this.rawSlice(first.start, last.end), this.definitions, state, slugger, this.records.length);
             cached = { result, slugger };
             this.memo.set(key, cached);
             rendered++;
@@ -510,11 +554,15 @@ export class MarkdownProgressiveSession {
           }
           const balanced = markdownHtmlBalanced(cached.result.rawHtml);
           if (!eof && !balanced && source.length < MARKDOWN_PROGRESSIVE_HOLD_MAX) { lastIndex++; continue; }
+          const { rawHtml: _rawHtml, pendingKeys, ...retained } = cached.result;
           const block: MarkdownProgressiveBlock = {
-            ...cached.result, source, start: first.start, end: last.end, evidenceEnd: this.source.length,
+            ...retained, pendingKeys: pendingKeys.map(({ key }) => ({ key })), definitions: Object.create(null) as Definitions,
+            source, start: first.start, end: last.end,
+            evidenceEnd: this.normalized.rawOffset(Math.max(...this.plan.slice(this.planIndex, lastIndex + 1).map(candidate => candidate.evidenceEnd))),
             eofOnly: this.plan.slice(this.planIndex, lastIndex + 1).some((candidate) => candidate.eofOnly),
             balanced, seedState: { ...state },
           };
+          this.changed(this.blocks.length);
           this.blocks.push(block);
           this.slugger = cached.slugger;
           // Only held candidates need a memo. Committed groups retain their HTML and heading
@@ -523,13 +571,14 @@ export class MarkdownProgressiveSession {
           const definitionLexer = this.lexer();
           definitionLexer.blockTokens(source, definitionLexer.tokens);
           this.stats.lexedUnits += source.length;
+          block.definitions = { ...definitionLexer.tokens.links };
           for (const [label, value] of Object.entries(definitionLexer.tokens.links)) {
             if (!(label in this.committedDefinitions)) this.committedDefinitions[label] = value;
           }
           this.committedEnd = last.end;
           committed += source.length;
           this.stats.committedUnits += source.length;
-          for (const pending of block.pendingKeys) if (pending.code.length <= MARKDOWN_PROGRESSIVE_HIGHLIGHT_MAX) this.highlightQueue.set(pending.key, pending);
+          for (const pending of pendingKeys) if (pending.code.length <= MARKDOWN_PROGRESSIVE_HIGHLIGHT_MAX) this.highlightQueue.set(pending.key, pending);
           this.planIndex = lastIndex + 1;
           if (this.planIndex === this.plan.length) this.lastCompleteEnd = -1;
           this.waitForInput = false;

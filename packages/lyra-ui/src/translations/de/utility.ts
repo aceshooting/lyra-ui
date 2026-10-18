@@ -64,6 +64,8 @@ const strings: LyraLocaleStrings = {
     one: '{count} weiterer Vorschlag',
     other: '{count} weitere Vorschläge',
   },
+  mentionInputLimit: 'Nur die ersten 10.000 Vorschläge für Erwähnungen sind verfügbar.',
+  diffViewHighlightLimit: 'Langer Code wird ohne Syntaxhervorhebung angezeigt.',
 };
 
 registerLyraLocale('de', strings);

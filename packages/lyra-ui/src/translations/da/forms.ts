@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pen nede',
   signaturePadPenUp: 'Pen oppe',
+  localePickerInputLimit: 'Kun de første 512 poster med sprog- og områdeindstillinger er tilgængelige.',
+  emojiPickerInputLimit: 'Nogle emojidata blev udeladt, fordi en grænse for input blev nået.',
 };
 
 registerLyraLocale('da', strings);

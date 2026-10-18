@@ -115,6 +115,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'पेन खाली',
   signaturePadPenUp: 'पेन वर',
+  localePickerInputLimit: 'फक्त पहिल्या 512 भाषा आणि प्रदेश सेटिंग्जच्या नोंदी उपलब्ध आहेत.',
+  emojiPickerInputLimit: 'इनपुट मर्यादा गाठल्यामुळे काही इमोजी डेटा वगळला आहे.',
 };
 
 registerLyraLocale('mr', strings);

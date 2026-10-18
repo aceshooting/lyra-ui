@@ -46,7 +46,9 @@ indexOfKey?(key): number }`. When set it takes precedence over `items`. The inde
   target an indexed source: the list never performs a count-sized fallback scan; invalid or
   out-of-range results mean no match. An array source receives the same clone-owned frozen sequence
   and row-identity contract as `items`; an indexed-source object passes through by identity and is
-  not capped, so use one beyond 10,000 rows. `groups` keeps at most 10,000 entries and 50,000 nested values.
+  not capped, so use one beyond 10,000 rows. After changing an indexed count or callback closure,
+  call `requestUpdate()` to refresh the source and active-key lookup; this also works when a
+  named property update is pending. `groups` keeps at most 10,000 entries and 50,000 nested values.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
   one row's content, typically returning a `lit-html` `TemplateResult`. JS-only. The returned value
   is stamped inside `<lr-virtual-list>`'s own shadow root, not the caller's light DOM, so
@@ -189,17 +191,24 @@ In auto-height mode, estimate-based jumps are corrected as row and group-marker 
 That correction is bound to the source, key function, and target identity and is canceled on a new
 target, data replacement, manual scroll intent, or disconnect, so late observations cannot pull a
 newer view back to stale content.
-`offsetForIndex(index)` returns the pixel top row `index` renders at, in the same coordinate space as
-the scroll container's `scrollTop`; under an external `scrollElement` that space is unchanged — it
+`offsetForIndex(index)` returns the logical pixel top of row `index`; under an external
+`scrollElement` that space is unchanged — it
 measures from the top of the list itself, not from the top of the external scroller's content, and
 the component converts between the two. It is clamped to `0…count`, so `offsetForIndex(count)`
-is the total content height and an empty list is always `0`. `indexAtOffset(px)` is its inverse — the
+is the logical total content height and an empty list is always `0`. `indexAtOffset(px)` is its inverse — the
 row whose box contains that offset, clamped at both ends, `-1` for an empty list — so
-`indexAtOffset(offsetForIndex(i)) === i` and `indexAtOffset(scrollContainer.scrollTop)` is the row at
-the top of the viewport. In `row-height="auto"` mode both are estimate-based for any row that (or
+`indexAtOffset(offsetForIndex(i)) === i`. Native `scrollTop` shares this logical space only while
+scrollbar scaling is inactive. In `row-height="auto"` mode both are estimate-based for any row that (or
 above which) has not been measured yet, and converge as those `ResizeObserver` measurements land;
 fixed numeric `row-height` offsets are exact from the first render. Both read the most recent render,
 so `await el.updateComplete` after assigning `items` or `source` before querying.
+
+Above 8,000,000 logical pixels, the list scales native scrollbar travel below browser layout limits.
+Visible row heights and adjacent spacing remain unchanged. Position methods, `active-item-id` and
+`lr-virtual-scroll` use logical pixels; native `scrollContainer.scrollTop` uses compressed scrollbar
+space. Scaling emits a one-time development warning and also applies with an external
+`scrollElement`. Use the component's position methods for large indexed sources instead of assigning
+logical offsets to native `scrollTop`.
 
 **Getters:** `scrollContainer: HTMLElement | undefined` — the real scroll container (`[part="base"]`),
 `undefined` before the first render; for a host that needs the live scroll position or wants to scroll
@@ -235,8 +244,8 @@ changes, this reports _sub-row_ movement, which is what scroll-linked layout nee
 **CSS parts:** `base` (the scrollable container, `role="list"` — or `role="rowgroup"` in
 `item-role="row"` mode — `tabindex="0"`; under an external `scrollElement` it stops scrolling, drops
 that `tabindex` and its hover outline, and sizes itself to the list's full virtual extent instead of
-`--lr-virtual-list-height`), `spacer` (the full-content-height inner element
-establishing true scroll extent; `role="presentation"` in `item-role="row"` mode), `row` (one
+`--lr-virtual-list-height`), `spacer` (the inner element establishing the physical scroll extent,
+compressed for very large sources; `role="presentation"` in `item-role="row"` mode), `row` (one
 rendered row's absolutely-positioned wrapper, `role="listitem"` — or `role="row"` with
 `aria-rowindex` in `item-role="row"` mode), `group` (a `groups` entry's positioned marker; not
 rendered for an entry whose `label` is the empty string), `sticky-group` (the pinned copy of the

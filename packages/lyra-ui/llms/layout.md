@@ -1601,6 +1601,10 @@ controls; making it invalid disables them. Identity edits do not emit a reorder 
 value attribute from a standalone item renders it as absent while preserving `null` readback; an
 explicit empty string remains supplied and later valid values recover.
 
+Movement boundaries reconcile once after an accepted internal move; native slot changes and item
+identity changes remain authoritative. An explicit item `aria-label` avoids content-name
+observation; otherwise the item refreshes its cached accessible name when slotted content changes.
+
 ### `lr-reorder-list`
 
 **Properties:**
@@ -1933,7 +1937,9 @@ indexOfKey?(key): number }`. When set it takes precedence over `items`. The inde
   target an indexed source: the list never performs a count-sized fallback scan; invalid or
   out-of-range results mean no match. An array source receives the same clone-owned frozen sequence
   and row-identity contract as `items`; an indexed-source object passes through by identity and is
-  not capped, so use one beyond 10,000 rows. `groups` keeps at most 10,000 entries and 50,000 nested values.
+  not capped, so use one beyond 10,000 rows. After changing an indexed count or callback closure,
+  call `requestUpdate()` to refresh the source and active-key lookup; this also works when a
+  named property update is pending. `groups` keeps at most 10,000 entries and 50,000 nested values.
 - `renderItem: (item: unknown, index: number) => unknown = () => nothing` (attribute: false) — renders
   one row's content, typically returning a `lit-html` `TemplateResult`. JS-only. The returned value
   is stamped inside `<lr-virtual-list>`'s own shadow root, not the caller's light DOM, so
@@ -2076,17 +2082,24 @@ In auto-height mode, estimate-based jumps are corrected as row and group-marker 
 That correction is bound to the source, key function, and target identity and is canceled on a new
 target, data replacement, manual scroll intent, or disconnect, so late observations cannot pull a
 newer view back to stale content.
-`offsetForIndex(index)` returns the pixel top row `index` renders at, in the same coordinate space as
-the scroll container's `scrollTop`; under an external `scrollElement` that space is unchanged — it
+`offsetForIndex(index)` returns the logical pixel top of row `index`; under an external
+`scrollElement` that space is unchanged — it
 measures from the top of the list itself, not from the top of the external scroller's content, and
 the component converts between the two. It is clamped to `0…count`, so `offsetForIndex(count)`
-is the total content height and an empty list is always `0`. `indexAtOffset(px)` is its inverse — the
+is the logical total content height and an empty list is always `0`. `indexAtOffset(px)` is its inverse — the
 row whose box contains that offset, clamped at both ends, `-1` for an empty list — so
-`indexAtOffset(offsetForIndex(i)) === i` and `indexAtOffset(scrollContainer.scrollTop)` is the row at
-the top of the viewport. In `row-height="auto"` mode both are estimate-based for any row that (or
+`indexAtOffset(offsetForIndex(i)) === i`. Native `scrollTop` shares this logical space only while
+scrollbar scaling is inactive. In `row-height="auto"` mode both are estimate-based for any row that (or
 above which) has not been measured yet, and converge as those `ResizeObserver` measurements land;
 fixed numeric `row-height` offsets are exact from the first render. Both read the most recent render,
 so `await el.updateComplete` after assigning `items` or `source` before querying.
+
+Above 8,000,000 logical pixels, the list scales native scrollbar travel below browser layout limits.
+Visible row heights and adjacent spacing remain unchanged. Position methods, `active-item-id` and
+`lr-virtual-scroll` use logical pixels; native `scrollContainer.scrollTop` uses compressed scrollbar
+space. Scaling emits a one-time development warning and also applies with an external
+`scrollElement`. Use the component's position methods for large indexed sources instead of assigning
+logical offsets to native `scrollTop`.
 
 **Getters:** `scrollContainer: HTMLElement | undefined` — the real scroll container (`[part="base"]`),
 `undefined` before the first render; for a host that needs the live scroll position or wants to scroll
@@ -2122,8 +2135,8 @@ changes, this reports _sub-row_ movement, which is what scroll-linked layout nee
 **CSS parts:** `base` (the scrollable container, `role="list"` — or `role="rowgroup"` in
 `item-role="row"` mode — `tabindex="0"`; under an external `scrollElement` it stops scrolling, drops
 that `tabindex` and its hover outline, and sizes itself to the list's full virtual extent instead of
-`--lr-virtual-list-height`), `spacer` (the full-content-height inner element
-establishing true scroll extent; `role="presentation"` in `item-role="row"` mode), `row` (one
+`--lr-virtual-list-height`), `spacer` (the inner element establishing the physical scroll extent,
+compressed for very large sources; `role="presentation"` in `item-role="row"` mode), `row` (one
 rendered row's absolutely-positioned wrapper, `role="listitem"` — or `role="row"` with
 `aria-rowindex` in `item-role="row"` mode), `group` (a `groups` entry's positioned marker; not
 rendered for an entry whose `label` is the empty string), `sticky-group` (the pinned copy of the
@@ -4113,6 +4126,14 @@ Valid string keywords still participate in search alongside the command's label,
 group. Unsafe keyword entries are skipped without invoking accessors, and selection returns the
 original command object.
 
+`commands` admits the first 10,000 input positions; invalid or duplicate records inside that prefix
+do not extend the admission window. In the open dialog, `part="limit"` shows the localized
+`commandPaletteInputLimit` notice when the original assignment lost entries. This is independent
+of the search-result count and the virtual result window. Rebinding the retained snapshot
+preserves the notice while refreshing live command records; a fresh input below the limit clears
+it. Initial mounting and reconnecting are quiet. Later changed input loss is politely announced
+while open; changes made while closed remain quiet, and the notice appears on the next opening.
+
 **Properties:**
 
 - `open: boolean = false` (reflected) — after the initial silent render, property and attribute
@@ -4145,7 +4166,11 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
 **Methods:** `openPalette()` (after an accepted open, clears the query and resets the active row;
 no-op if already open),
 `close()`, `show()`/`hide()` (aliases of `openPalette()`/`close('api')`, the surface every Lyra
-overlay exposes), `registerCommand(command)` — appends to `commands` and returns an unregister function.
+overlay exposes), `registerCommand(command)` — queues an addition to `commands` and returns an
+unregister function. Calls in the same turn are admitted together in a microtask; await
+`updateComplete` after that turn before inspecting rendered commands. The disposer also cancels a
+pending registration. Assign `commands` for an immediate bulk update; replacing it before a queued
+batch flush supersedes that older batch.
 
 **Keyboard:** ArrowUp/ArrowDown move the active option, skipping `disabled` rows and clamping (not
 cycling) at the ends; Home/End jump to the first/last enabled row and PageUp/PageDown by one visible
@@ -4178,7 +4203,8 @@ replacing the native search-cancel glyph the component resets; rendered only whi
 value), `list` (the `role="listbox"`), `group` (a group
 heading), `command-group` (a labeled ARIA group of commands), `command` (a `role="option"` button),
 `icon` (a command's leading icon glyph; only rendered when the command has one), `label`,
-`description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`.
+`description`, `shortcut`, `list-spacer` (the virtual result extent), `empty`, `limit` (original
+command input-loss notice).
 
 The palette dialog paints with the shared overlay-surface family, like `lr-dialog`:
 `--lr-overlay-surface` (default `var(--lr-color-surface-container-highest)`), `--lr-overlay-border`,

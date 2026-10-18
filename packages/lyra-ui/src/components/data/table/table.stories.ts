@@ -29,7 +29,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A bounded sort/select-aware grid. Column inspection stops after the first 10,000 source positions; columns, rows, selected keys, and expanded keys are detached at assignment and capped at 10,000 retained entries. A localized `row-limit` notice appears when assigned rows exceed that cap. Malformed and whitespace-only controlled keys are omitted while valid off-page keys remain available for server pagination. Key reads expose immutable ReadonlySet facades, and consumers reassign collections after changes. Unique nonempty column and row keys are first-wins before render, counts, focus, actions, and events. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted. Built-in filter/loading/empty/error/more/column-toggle copy localizes only while its optional override is omitted; supplied strings, including empty strings, render verbatim. `error` reports a failed load without discarding grid context — the header, filter, and pagination chrome stay mounted, unlike the no-rows empty states; `loading` beats `error` beats every empty branch.',
+          'A bounded sort/select-aware grid. Column inspection stops after the first 10,000 source positions; columns are capped at 10,000 source positions; rows, selected keys, and expanded keys are detached at assignment and capped by maxRows (10,000 by default, up to 100,000). Set maxRows before supplying rows, or reassign a new row collection after changing the cap. A localized `row-limit` notice appears when assigned rows exceed that cap. Malformed and whitespace-only controlled keys are omitted while valid off-page keys remain available for server pagination. Key reads expose immutable ReadonlySet facades, and consumers reassign collections after changes. Unique nonempty column and row keys are first-wins before render, counts, focus, actions, and events. A bare table projects at most 100 rows per page; sortable headers emit a cancelable lr-sort-request followed by lr-sort only when accepted. Built-in filter/loading/empty/error/more/column-toggle copy localizes only while its optional override is omitted; supplied strings, including empty strings, render verbatim. `error` reports a failed load without discarding grid context — the header, filter, and pagination chrome stay mounted, unlike the no-rows empty states; `loading` beats `error` beats every empty branch.',
       },
     },
   },
@@ -1000,4 +1000,19 @@ export const StickyRowActionsMenu: Story = {
       ] as TableColumn<DemoRow>[]}
       .rows=${rows}></lr-table>
   `,
+};
+
+
+/** The admission ceiling is independent of the bounded DOM page size. */
+export const RaisedRowLimit: StoryObj = {
+  render: () => html`<lr-table
+    caption="Extended client collection"
+    max-rows="20000"
+    page-size="100"
+    .rowKey=${(row: DemoRow) => row.id}
+    .columns=${columns}
+    .rows=${Array.from({ length: 12_000 }, (_, index) => ({
+      id: String(index), name: `Record ${index + 1}`, score: index % 100,
+    }))}
+  ></lr-table>`,
 };

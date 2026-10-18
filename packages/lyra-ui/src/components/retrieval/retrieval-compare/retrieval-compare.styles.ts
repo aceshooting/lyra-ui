@@ -120,4 +120,32 @@ export const styles = css`
     border-radius: 0;
     background: transparent;
   }
+  [part='pagination'] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    margin-block: var(--lr-space-s);
+  }
+  [part='page-button'] {
+    ${iconHitTarget}
+    padding: var(--lr-space-2xs) var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font: inherit;
+    cursor: pointer;
+  }
+  [part='page-button']:hover:where(:not(:disabled)) { background: var(--lr-color-surface-raised); }
+  [part='page-button']:active:where(:not(:disabled)) { background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='page-button']:focus-visible { ${focusRing} }
+  [part='page-button']:disabled { opacity: var(--lr-opacity-disabled); cursor: default; }
+  [part='page-status'],
+  [part='input-limit'],
+  [part='result-limit'] {
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    margin-block: var(--lr-space-xs);
+  }
 `;

@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'শুধু প্রথম {count}টি পরীক্ষার ফল দেখানো হচ্ছে।',
   toolTimelineLimit: 'সর্বোচ্চ {count}টি টুল কল দেখানো হচ্ছে।',
   toolSelectLimit: 'শুধু প্রথম {count}টি টুল দেখানো হচ্ছে।',
+  testResultsInputTooLarge: 'পরীক্ষার ফলাফলের বিবরণ প্রদর্শনের সীমা অতিক্রম করেছে।',
   toolCall: 'টুল কল',
   maximize: 'সর্বোচ্চ বড় করুন',
   promptStudioVariableName: 'ভেরিয়েবল {index}-এর নাম',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'শুধুমাত্র প্রথম {count}টি ফাইল দেখানো হয়েছে৷',
   taskListLimit: 'শুধুমাত্র প্রথম {count}টি কাজ দেখানো হয়েছে।',
   evalDatasetLimit: 'শুধু প্রথম {count}টি উদাহরণ দেখানো হচ্ছে।',
+  activityFeedInputLimit: '{total}টি এন্ট্রির মধ্যে শুধু সবচেয়ে সাম্প্রতিক {count}টি রাখা হয়।',
+  spanWaterfallLimit: 'মোট {total}টি স্প্যানের মধ্যে {shown}টি দেখানো হচ্ছে।',
+  toolTimelineInputLimit: 'মোট {total}টি টুল কলের মধ্যে শুধু সর্বশেষ {count}টি রাখা হয়।',
 };
 
 registerLyraLocale('bn', strings);

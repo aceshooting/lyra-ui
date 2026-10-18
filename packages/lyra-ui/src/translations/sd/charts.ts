@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'مڪمل ورڇ ۾ {validCount} صحيح نمونا؛ ڏيکاريل وقفن جي حدن کان هيٺ {belowCount} ۽ مٿي {aboveCount}؛ {invalidCount} غلط نمونا.',
+  histogramDistributionRange: 'ڏٺل نموني جي حد: {min} کان {max} تائين.',
   chartCategory: 'زمرو',
   chartTotal: 'ڪل',
   chartAxisTotal: '{axis} جو ڪل',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}، y {y}',
   chartBubblePointCoordinates: 'x {x}، y {y}، ريڊيس {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'وڌندڙ',
-  chartTrendDecreasing: 'گهٽجندڙ',
-  chartTrendFlat: 'بي تبديلي',
-  chartSummary: '{label}: {count} قدر، حد {min} کان {max} تائين، رجحان {trend}',
   chartSeriesNoData: '{label}: ڪا ڄاڻ ناهي',
   chartSummaryWithData: '{type} چارٽ. {summaries}.',
   chartSummaryEmpty: 'بنا ڄاڻ وارو {type} چارٽ.',
-  chartSummarySeparator: '. ',
   chartData: 'چارٽ جي ڄاڻ',
   chartRenderUnavailable: 'چارٽ ڏيکارڻ دستياب ناهي.',
+  chartPreparedSummaryZoom: 'زوم تيار ڪيل خلاصو ڏيکاري ٿو؛ انڊيڪس ذريعي وڌيڪ تفصيل موجود ناهي.',
+  chartSpatialSummary: 'سڄو ماخذ: {count} نقطا، x {minX} کان {maxX}، y {minY} کان {maxY}. ڏيک: {matchedCount} نقطا، x {viewMinX} کان {viewMaxX}، y {viewMinY} کان {viewMaxY}.',
+  chartSpatialRadiusDomain: 'سڄي ماخذ ۾ ريڊيس: {min} کان {max}.',
+  chartSpatialDensityLegend: 'گهاٽائي ۾ سڀ سلسلا شامل آهن؛ سلسلن جي نظر اچڻ سان رڳو نقطن جون اوورلي تهون متاثر ٿين ٿيون.',
+  chartSpatialPoint: '{series}: {id}، ماخذ ۾ جاءِ {sourceIndex}، {coordinates}{hidden}',
+  chartSpatialBin: 'گهاٽائي وارو علائقو: {count} نقطا، x {minX} کان {maxX}، y {minY} کان {maxY}.',
+  chartSpatialHidden: ' (سلسلو لڪل)',
   chartDataSampled: 'چارٽ ۽ تيار ڪيل ڊيٽا جدول ۾ وڌ ۾ وڌ 1,000 رڪارڊن جو نمونو ڏيکاريل آهي. چارٽ جي سموري ڄاڻ لاءِ ڪسٽم ڊيٽا جدول ڏيو.',
   chartPlotSampled: 'چارٽ ۾ وڌ ۾ وڌ 1,000 رڪارڊن جو نمونو ڏيکاريل آهي؛ ڊيٽا جدول ۾ سموري ڄاڻ آهي.',
   chartZoomUnavailable: 'زوم موجود ناهي، پر بنيادي چارٽ موجود آهي.',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total} مان {index})',
   chartMissingLibrary: 'چارٽ ڏيکارڻ لاءِ هن جزو کي اختياري "chart.js" پيڪيج گهربل آهي.',
   boxPlotMissingLibrary: 'باڪس پلاٽ ڏيکارڻ لاءِ هن جزو کي اختياري باڪس پلاٽ چارٽ پيڪيج گهربل آهي.',
+  chartInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب چارٽ جي ڪجهه ڊيٽا ڇڏي وئي آهي. ڇڏيل قدرن کي ڏيکارڻ لاءِ ننڍو يا اڳواٽ گڏ ڪري مختصر ڪيل ڊيٽا سيٽ ڏيو.',
+  histogramInputLimit: 'صرف سڀ کان نوان 10,000 نمونا رکيا وڃن ٿا. وڏي ورڇ ڏيکارڻ لاءِ اڳواٽ وقفن ۾ ورهايل ڳڻپون lr-chart کي ڏيو.',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

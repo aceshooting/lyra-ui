@@ -8,6 +8,9 @@ export const styles = [
       display: block;
       --_lr-task-list-spin: var(--lr-transition-ambient);
     }
+    .source-task { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--lr-space-2xs) var(--lr-space-xs); min-inline-size: 0; }
+    .source-task [part="item-detail"], .source-task slot { grid-column: 2; }
+    [part="source-label"] { flex: 1; min-inline-size: 0; }
     /* Card chrome behind inline var() fallbacks, same convention as the dense size tier below:
        each fallback is the pre-existing token, so an unset list paints exactly as before while a
        transcript can retune the nested card without a ::part(base) override. */
@@ -175,20 +178,20 @@ export const styles = [
     [part="status-icon"] svg {
       display: block;
     }
-    [part="item"][data-status="running"] [part="status-icon"] {
+    :is([part="item"], .source-task)[data-status="running"] [part="status-icon"] {
       color: var(--lr-task-list-running-color, var(--lr-color-brand));
     }
-    [part="item"][data-status="running"] [part="status-icon"] svg {
+    :is([part="item"], .source-task)[data-status="running"] [part="status-icon"] svg {
       animation: var(--_lr-motion-animation, lr-task-list-spin
         var(--lr-task-list-spin, var(--_lr-task-list-spin)) infinite);
     }
-    [part="item"][data-status="success"] [part="status-icon"] {
+    :is([part="item"], .source-task)[data-status="success"] [part="status-icon"] {
       color: var(--lr-task-list-success-color, var(--lr-color-success));
     }
-    [part="item"][data-status="incomplete"] [part="status-icon"] {
+    :is([part="item"], .source-task)[data-status="incomplete"] [part="status-icon"] {
       color: var(--lr-task-list-incomplete-color, var(--lr-color-text-quiet));
     }
-    [part="item"][data-status="error"] [part="status-icon"] {
+    :is([part="item"], .source-task)[data-status="error"] [part="status-icon"] {
       color: var(--lr-task-list-error-color, var(--lr-color-danger));
     }
     [part="item-label"] {
@@ -215,7 +218,7 @@ export const styles = [
       [part="toggle"] {
         transition: none !important;
       }
-      [part="item"][data-status="running"] [part="status-icon"] svg {
+      :is([part="item"], .source-task)[data-status="running"] [part="status-icon"] svg {
         animation: none !important;
       }
     }

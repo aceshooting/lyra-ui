@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,6 +19,70 @@
 One entity's relationship rows: relation, direction, neighbor, with per-row navigate and
 expand-in-graph affordances. Never computes neighbors itself (the host derives rows from its own
 graph data) and never mutates a graph.
+
+With `graphSource` unset, the `limit` part reports retained/source relationship-row counts when input admission omits
+rows. Virtualization covers the retained rows; it does not recover omitted source rows.
+
+**Full-source neighborhood:** `graphSource: NeighborListSource | undefined = undefined`
+(attribute: false) takes precedence over `rows`; invalid defined providers fail visibly.
+Setting `undefined` restores the latest legacy rows. `NeighborListSource` aliases the public
+`GraphSource` contract. This adapter queries its `records` only; it never requests a graph scene,
+scans adjacency or copies the complete neighborhood.
+
+```ts
+import type { NeighborListSource, NeighborSourceDirection } from
+  "@aceshooting/lyra-ui/components/retrieval/neighbor-list/neighbor-list.class.js";
+import type { LyraGraphSourceQuery, LyraGraphSourceSummary } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`centerKey: string | null = null` (attribute: false) is a canonical `'node:' + originalId` key;
+null shows a localized choose-center state with no query. Nonblank canonical node keys are at most
+65,536 UTF-16 units. `sourceDirection: NeighborSourceDirection = 'both'` (`source-direction`)
+accepts `'in' | 'out' | 'both'`. Property-only
+`sourceNodeTypes: readonly string[] = []` accepts at most 500 input entries, then deduplicates/sorts
+nonblank type IDs, each at
+most 65,536 UTF-16 units and together at most 2,000,000 units. Invalid scopes fail visibly.
+Scope/page-size changes reset page zero.
+
+`sourcePage: number = 0` (`source-page`) is zero-based;
+`sourcePageSize: number = 100` (`source-page-size`) normalizes to 1–500. Readonly
+`sourceTotal: number | null` reports the authoritative matching neighborhood count after success,
+or `null` without a source/center or while unavailable. A total shrink receives at most one
+corrective last-page request. Pager navigation reaches the complete matching domain with at most
+500 current native-button rows, independent of the legacy `virtualizeAt` threshold.
+
+Source and `records` revisions must agree and remain immutable (nonempty string or finite number).
+`records.query({ revision, locale, signal, page, pageSize, query })` receives
+`{ kind: 'nodes', search: '', centerKey, direction: sourceDirection, nodeTypes: sourceNodeTypes }`.
+It returns `{ rows, total, summary: { nodes, edges } }`; all counts are safe nonnegative integers,
+with `total <= summary.nodes`. Each row is `{ key, order, value: { kind: 'node', value: node } }`,
+where `key === 'node:' + node.id`, `order` is a safe canonical source ordinal, and page keys/orders
+are unique. Returned rows exactly fill the requested in-bounds page. Closed own-data node
+snapshots retain only `id`, optional `label`, `accessibleLabel` and `type`; strings are at most
+65,536 units each and the page's projected text shares a 2,000,000-unit bound. Malformed/oversized
+pages fail atomically. Group/facet metadata is not accepted. The provider owns full-source
+indexing, order, neighborhood membership and summary truth beyond bounded consistency checks.
+
+Source mode presents node neighbors without invented relation, per-row direction or group headers;
+`groupByRelation` and legacy relation/direction/type-degree chrome do not apply. `expandable`
+retains the native expand button. Activation emits unchanged `lr-entity-select { entityId }` and
+`lr-node-expand { nodeId }` with original entity IDs, excluding the canonical `'node:'` prefix.
+
+`revealSourceKey(key: string): Promise<boolean>` uses `records.locate(key, query, context)` to
+find a matching global node, loads its page and focuses its exact row. It emits no select/expand
+event. Invalid, absent, failed, superseded or disconnected requests resolve `false`; a same-page
+reveal preserves live row/expand actions without another page query. Global lookup is required by
+the records contract, but ordinary paging/reveal does not enumerate other pages or request scenes.
+
+Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
+Named presentation updates reuse accepted data. Replacement, scope/page changes, disconnect and
+adoption revoke obsolete controls/reveals. Page/lookup/locate lanes allow one physical provider
+call each and only the latest queued intent; ignored aborts occupy their permits until settlement.
+Bounded current/in-progress pages are retained, with no complete neighbor index. `source-status`,
+`source-retry` and `source-summary` expose localized choose/loading/error/empty and shown/global
+count states. Existing `base`, `row`, `node-label` and `expand-button` parts apply to source rows.
+The following relationship-array rules describe the legacy route.
 
 **Properties:**
 
@@ -46,7 +110,7 @@ name and detail shape as `lr-graph`'s own event, so one host handler serves both
 name), `row` (`role="listitem"`; above `virtualizeAt` this is the internal virtual-list's own row
 wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `relation`,
 `node-label`, `node-meta` (secondary type/degree text, when present), `expand-button` (only when
-`expandable`), `empty` (shown when `rows` is empty). Every part presents identically either side of
+`expandable`), `limit` (input-admission notice), `empty` (shown when `rows` is empty). Every part presents identically either side of
 `virtualizeAt`.
 
 **Themeable custom properties:** shared tokens only.

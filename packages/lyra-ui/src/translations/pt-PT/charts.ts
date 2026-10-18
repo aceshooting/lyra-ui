@@ -5,6 +5,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: '{validCount} amostras válidas na distribuição completa; {belowCount} abaixo e {aboveCount} acima dos intervalos apresentados; {invalidCount} amostras inválidas.',
+  histogramDistributionRange: 'Intervalo observado da amostra: {min} a {max}.',
   chartCategory: 'Categoria',
   chartTotal: 'Total',
   chartAxisTotal: 'Total de {axis}',
@@ -14,16 +16,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x: {x}, y: {y}',
   chartBubblePointCoordinates: 'x: {x}, y: {y}, raio: {radius}',
   chartLabeledPoint: '{label} — {coordinates}',
-  chartTrendIncreasing: 'de alta',
-  chartTrendDecreasing: 'de baixa',
-  chartTrendFlat: 'estável',
-  chartSummary: '{label}: {count} valores, intervalo de {min} a {max}, tendência {trend}',
   chartSeriesNoData: '{label}: sem dados',
   chartSummaryWithData: 'Gráfico de {type}. {summaries}.',
   chartSummaryEmpty: 'Gráfico de {type} sem dados.',
-  chartSummarySeparator: '. ',
   chartData: 'Dados do gráfico',
   chartRenderUnavailable: 'A apresentação do gráfico não está disponível.',
+  chartPreparedSummaryZoom: 'O zoom apresenta o resumo preparado; o refinamento por índice não está disponível.',
+  chartSpatialSummary: 'Origem completa: {count} pontos, x {minX} a {maxX}, y {minY} a {maxY}. Vista: {matchedCount} pontos, x {viewMinX} a {viewMaxX}, y {viewMinY} a {viewMaxY}.',
+  chartSpatialRadiusDomain: 'Raio na origem completa: {min} a {max}.',
+  chartSpatialDensityLegend: 'A densidade inclui todas as séries; a visibilidade das séries afeta apenas as sobreposições de pontos.',
+  chartSpatialPoint: '{series}: {id}, posição na origem {sourceIndex}, {coordinates}{hidden}',
+  chartSpatialBin: 'Região de densidade: {count} pontos, x {minX} a {maxX}, y {minY} a {maxY}.',
+  chartSpatialHidden: ' (série oculta)',
   chartDataSampled: 'O gráfico e a tabela de dados gerada mostram uma amostra de até 1.000 registos. Forneça uma tabela de dados personalizada para aceder a todos os dados do gráfico.',
   chartPlotSampled: 'O gráfico mostra uma amostra de até 1.000 registos; a tabela de dados lista todos os dados.',
   chartZoomUnavailable: 'O zoom não está disponível, mas o gráfico principal continua disponível.',
@@ -56,6 +60,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({index} de {total})',
   chartMissingLibrary: 'Este componente precisa do pacote opcional "chart.js" instalado para renderizar gráficos.',
   boxPlotMissingLibrary: 'Este componente precisa do pacote opcional de diagrama de caixa instalado para renderizar diagramas de caixa.',
+  chartInputLimit: 'Alguns dados do gráfico foram omitidos por ter sido atingido um limite de entrada. Forneça um conjunto de dados mais pequeno ou previamente agregado para representar os valores omitidos.',
+  histogramInputLimit: 'Apenas são mantidas as 10 000 amostras mais recentes. Forneça contagens previamente agrupadas em intervalos ao lr-chart para representar uma distribuição maior.',
 };
 
 registerLyraLocale('pt-PT', strings);

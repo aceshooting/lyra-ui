@@ -1,3 +1,4 @@
+import '../../layout/virtual-list/virtual-list.js';
 /** @deprecated Import @aceshooting/lyra-ui/components/lr-json-viewer.js to register this component. */
 export * from './json-viewer.class.js';
 import { LyraJsonViewer } from './json-viewer.class.js';

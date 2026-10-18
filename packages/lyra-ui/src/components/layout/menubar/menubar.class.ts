@@ -1,3 +1,4 @@
+import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -74,6 +75,16 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
   private overlayHandle?: OverlayHandle;
   private itemObserver?: MutationObserver;
   private readonly typeBuffer = new TypeAheadBuffer(this);
+  private readonly typeAheadLabels = new WeakMap<LyraMenubarItem, { label: string; locale: string; folded: string }>();
+
+  private foldedTypeAheadLabel(item: LyraMenubarItem, locale: string): string {
+    const label = item.textLabel;
+    const previous = this.typeAheadLabels.get(item);
+    if (previous?.label === label && previous.locale === locale) return previous.folded;
+    const folded = label.toLocaleLowerCase(locale);
+    this.typeAheadLabels.set(item, { label, locale, folded });
+    return folded;
+  }
   private focusedItem: LyraMenubarItem | null = null;
   private readonly owner: MenubarItemOwner = {
     menuStateChanged: (item, open) => this.menuStateChanged(item as LyraMenubarItem, open),
@@ -284,7 +295,12 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
       return;
     } else if (this.typeBuffer.accepts(event)) {
       this.typeBuffer.add(event.key, this.effectiveLocale);
-      const match = this.typeBuffer.match(navigable, index, item => item.textLabel, this.effectiveLocale);
+      const locale = resolveIntlLocale(this.effectiveLocale);
+      let match: number | null = null;
+      for (let step = 1; step <= navigable.length; step++) {
+        const candidate = ((index + step) % navigable.length + navigable.length) % navigable.length;
+        if (this.foldedTypeAheadLabel(navigable[candidate]!, locale).startsWith(this.typeBuffer.text)) { match = candidate; break; }
+      }
       if (match !== null) next = navigable[match];
     }
     if (next) { event.preventDefault(); this.move(next); }

@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     one: 'دستور {count}',
     other: 'دستورات {count}',
   },
+  commandPaletteInputLimit: 'برخی فرمان‌ها به‌دلیل رسیدن به محدودیت ورودی حذف شدند.',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

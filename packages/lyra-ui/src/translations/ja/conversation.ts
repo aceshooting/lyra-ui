@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'まだ会話がありません',
   agentWorkspaceLabel: 'エージェントワークスペース',
+  agentWorkspaceInputLimit: '{collection}：{total}件の項目のうち、{count}件のみ保持されます。',
   agentWorkspaceConversation: '会話',
   agentWorkspaceDetails: '実行の詳細',
   agentWorkspaceRun: 'エージェントの実行',
@@ -96,6 +97,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'このパートを再試行',
   promptQueueLabel: 'キュー内のプロンプト',
   promptQueueEmpty: 'キューにプロンプトがありません',
+  promptQueueInputLimit: '入力上限に達したため、待機中のプロンプトまたは添付ファイルの一部が省略されました。',
+  promptQueueAttachmentLimit: '保持された{total}件の添付ファイルのうち、{shown}件を表示しています。',
   promptQueueSendNow: 'すぐに送信',
   selectionToolbarLabel: '選択範囲の操作',
   selectionAsk: '質問',
@@ -160,6 +163,10 @@ const strings: LyraLocaleStrings = {
   generationStatusTokens: {
     other: '{count} トークン',
   },
+  threadListInputLimit: '入力上限に達したため、会話スレッドの一部が省略されました。',
+  promptInputInputLimit: '入力上限に達したため、候補またはカタログ項目の一部が省略されました。',
+  transcriptFeedInputLimit: '{total}件の項目のうち、最新の{count}件のみが保持されます。',
+  codeBlockHighlightLimit: '長いコードはシンタックスハイライトなしで表示されます。',
 };
 
 registerLyraLocale('ja', strings);

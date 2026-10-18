@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{total} tadan {index}-rasm',
   playWithContext: '{name}ni ijro etish',
   pauseWithContext: '{name}ni toʻxtatib turish',
+  avPlayerWaveformUnavailable: 'Toʻlqin shakli maʼlumotlari mavjud emas yoki bu mediaga mos kelmaydi.',
+  avPlayerTranscriptUnavailable: 'Transkript maʼlumotlari mavjud emas.',
   dropzoneReleaseToAdd: 'Faylni qoʻshish uchun qoʻyib yuboring.',
   dropzoneRejectedType: 'Bu fayl turi qabul qilinmaydi.',
   attachmentAdd: 'Ilova qoʻshish',

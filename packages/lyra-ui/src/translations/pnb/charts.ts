@@ -6,6 +6,8 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  histogramDistributionSummary: 'پوری ونڈ وچ {validCount} درست نمونے؛ وکھائے وقفیاں دیاں حداں توں تھلے {belowCount} تے اُتے {aboveCount}؛ {invalidCount} غلط نمونے۔',
+  histogramDistributionRange: 'ویکھے گئے نمونے دی حد: {min} توں {max}۔',
   chartCategory: 'زمرہ',
   chartTotal: 'کل',
   chartAxisTotal: '{axis} دا کل',
@@ -15,16 +17,18 @@ const strings: LyraLocaleStrings = {
   chartPointCoordinates: 'x {x}، y {y}',
   chartBubblePointCoordinates: 'x {x}، y {y}، رداس {radius}',
   chartLabeledPoint: '{label}: {coordinates}',
-  chartTrendIncreasing: 'ودھدا ہویا',
-  chartTrendDecreasing: 'گھٹدا ہویا',
-  chartTrendFlat: 'ہموار',
-  chartSummary: '{label}: {count} قدراں، حد {min} توں {max}، {trend} رجحان',
   chartSeriesNoData: '{label}: کوئی ڈیٹا نئیں',
   chartSummaryWithData: '{type} چارٹ۔ {summaries}۔',
   chartSummaryEmpty: 'خالی {type} چارٹ۔',
-  chartSummarySeparator: '. ',
   chartData: 'چارٹ ڈیٹا',
   chartRenderUnavailable: 'چارٹ وکھانا دستیاب نئیں۔',
+  chartPreparedSummaryZoom: 'زوم تیار کیتا خلاصہ وکھاندا اے؛ انڈیکس راہیں ہور تفصیل دستیاب نئیں۔',
+  chartSpatialSummary: 'پورا ماخذ: {count} نقطے، x {minX} توں {maxX}، y {minY} توں {maxY}۔ منظر: {matchedCount} نقطے، x {viewMinX} توں {viewMaxX}، y {viewMinY} توں {viewMaxY}۔',
+  chartSpatialRadiusDomain: 'پورے ماخذ دا رداس: {min} توں {max}۔',
+  chartSpatialDensityLegend: 'کثافت وچ سارے سلسلے شامل نیں؛ سلسلے دا نظر آؤنا صرف نقطیاں دیاں اوورلے تہواں نوں متاثر کردا اے۔',
+  chartSpatialPoint: '{series}: {id}، ماخذ وچ جگہ {sourceIndex}، {coordinates}{hidden}',
+  chartSpatialBin: 'کثافت دا علاقہ: {count} نقطے، x {minX} توں {maxX}، y {minY} توں {maxY}۔',
+  chartSpatialHidden: ' (سلسلہ لُکیا ہویا)',
   chartDataSampled: 'چارٹ تے تیار کیتے ڈیٹا ٹیبل وچ 1,000 تک ریکارڈاں دا نمونہ اے۔ سارے چارٹ ڈیٹا تک پہنچن لئی اپنی مرضی دا ڈیٹا ٹیبل دیو۔',
   chartPlotSampled: 'چارٹ وچ 1,000 تک ریکارڈاں دا نمونہ اے؛ ڈیٹا ٹیبل وچ سارا ڈیٹا اے۔',
   chartZoomUnavailable: 'زوم دستیاب نئیں، پر بنیادی چارٹ موجود اے۔',
@@ -57,6 +61,8 @@ const strings: LyraLocaleStrings = {
   liteChartCustomMarkSummary: '{content} ({total} وچوں {index})',
   chartMissingLibrary: 'چارٹ وکھاؤن لئی ایس جزو نوں اختیاری "chart.js" پیکیج چاہیدا اے۔',
   boxPlotMissingLibrary: 'باکس پلاٹ وکھاؤن لئی ایس جزو نوں اختیاری باکس پلاٹ چارٹ پیکیج چاہیدا اے۔',
+  chartInputLimit: 'اِن پُٹ دی حد پوری ہون کارن چارٹ دا کجھ ڈیٹا چھڈ دتا گیا اے۔ چھڈیاں قدراں نوں وکھاؤن لئی چھوٹا یا پہلاں توں خلاصہ کیتا ڈیٹاسیٹ دیو۔',
+  histogramInputLimit: 'صرف سب توں نویں 10,000 نمونے رکھے جاندے نیں۔ وڈی ونڈ وکھاؤن لئی پہلاں توں وقفیاں وچ ونڈیاں گنتیاں lr-chart نوں دیو۔',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

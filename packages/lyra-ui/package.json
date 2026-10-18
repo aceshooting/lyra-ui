@@ -95,6 +95,10 @@
       "types": "./dist/hydration.d.ts",
       "default": "./dist/hydration.js"
     },
+    "./data-sources.js": {
+      "types": "./dist/data-sources.d.ts",
+      "default": "./dist/data-sources.js"
+    },
     "./all.js": {
       "types": "./dist/all.d.ts",
       "default": "./dist/all.js"
@@ -1740,6 +1744,8 @@
     "./utilities/announcer.js": "./dist/utilities/announcer.js",
     "./utilities/catalog.js": "./dist/utilities/catalog.js",
     "./utilities/css-length.js": "./dist/utilities/css-length.js",
+    "./utilities/data-preparation.js": "./dist/utilities/data-preparation.js",
+    "./utilities/data-spatial.js": "./dist/utilities/data-spatial.js",
     "./utilities/defined.js": "./dist/utilities/defined.js",
     "./utilities/deprecated-aliases.js": "./dist/utilities/deprecated-aliases.js",
     "./utilities/form-associated.js": "./dist/utilities/form-associated.js",
@@ -2685,7 +2691,7 @@
     "test:default-strings": "node scripts/check-default-strings.test.mjs",
     "check:duplication": "node scripts/check-duplication.mjs",
     "test:duplication": "node --test scripts/check-duplication.test.mjs",
-    "test:tooling": "node --test scripts/init-agents.test.mjs && node --test scripts/published-history-memo.test.mjs && node --test scripts/theme-bootstrap-restore.test.mjs && node --test scripts/manifest-style-reachability.test.mjs && node scripts/build-llms.test.mjs && node --test scripts/build-testing-event-registry.test.mjs && node --test scripts/create-component.test.mjs && node --test scripts/full-engine-shard.test.mjs && node --test scripts/coverage-shard-runner.test.mjs && node --test scripts/coverage-realms.test.mjs && node --test scripts/write-coverage-floors.test.mjs && node --test scripts/lint-ci-shard.test.mjs && node --test scripts/web-test-runner-config.test.mjs && node scripts/component-families.test.mjs && node scripts/maplibre-peer-range.test.mjs && node scripts/migrate-wa.test.mjs && node --test scripts/lyra-rename-ledger.test.mjs && node scripts/visual-regression-compare.test.mjs && node --test scripts/visual-regression-shard.test.mjs && node scripts/visual-regression-config.test.mjs && node --test scripts/check-source-policy.test.mjs scripts/check-test-assertions.test.mjs && node scripts/bundle-budgets.test.mjs && node scripts/compact-build-js.test.mjs && node scripts/compact-build-css.test.mjs && node scripts/compact-build-declarations.test.mjs && node --test scripts/lib/helpers.test.mjs scripts/prune-build-declarations.test.mjs scripts/side-effects-patterns.test.mjs scripts/strip-test-only-build-exports.test.mjs && node --test scripts/normalize-mixin-declarations.test.mjs && node --test scripts/check-palette-freshness.test.mjs && node --test scripts/is-main-module.test.mjs && node scripts/manifest-compact.test.mjs && node --test scripts/viewer-fixture-generators.test.mjs && node --test scripts/strip-css-comments.test.mjs && node scripts/editor-web-types.test.mjs && node scripts/check-migration-coverage.test.mjs && node --test scripts/generate-theme-bootstrap.test.mjs && node --test scripts/theme-token-grammar.test.mjs && node --test scripts/style-axes-model.test.mjs && node --test scripts/option-presets.test.mjs && node --test scripts/chart-options.test.mjs && node --test scripts/lint-parallel.test.mjs && node --test scripts/check-localization-catalogs.test.mjs && node --test scripts/check-build-artifacts.test.mjs",
+    "test:tooling": "node --test scripts/init-agents.test.mjs && node --test scripts/published-history-memo.test.mjs && node --test scripts/theme-bootstrap-restore.test.mjs && node --test scripts/manifest-style-reachability.test.mjs && node scripts/build-llms.test.mjs && node --test scripts/build-testing-event-registry.test.mjs && node --test scripts/create-component.test.mjs && node --test scripts/full-engine-shard.test.mjs && node --test scripts/coverage-shard-runner.test.mjs && node --test scripts/coverage-realms.test.mjs && node --test scripts/write-coverage-floors.test.mjs && node --test scripts/lint-ci-shard.test.mjs && node --test scripts/web-test-runner-config.test.mjs && node scripts/component-families.test.mjs && node scripts/maplibre-peer-range.test.mjs && node scripts/migrate-wa.test.mjs && node --test scripts/lyra-rename-ledger.test.mjs && node scripts/visual-regression-compare.test.mjs && node --test scripts/visual-regression-shard.test.mjs && node scripts/visual-regression-config.test.mjs && node --test scripts/check-source-policy.test.mjs scripts/check-test-assertions.test.mjs && node scripts/bundle-budgets.test.mjs && node scripts/compact-build-js.test.mjs && node scripts/compact-build-css.test.mjs && node scripts/compact-build-declarations.test.mjs && node --test scripts/lib/helpers.test.mjs scripts/prune-build-declarations.test.mjs scripts/side-effects-patterns.test.mjs scripts/strip-test-only-build-exports.test.mjs && node --test scripts/normalize-mixin-declarations.test.mjs && node --test scripts/check-palette-freshness.test.mjs && node --test scripts/is-main-module.test.mjs && node scripts/manifest-compact.test.mjs && node --test scripts/viewer-fixture-generators.test.mjs && node --test scripts/strip-css-comments.test.mjs && node scripts/editor-web-types.test.mjs && node scripts/check-migration-coverage.test.mjs && node --test scripts/generate-theme-bootstrap.test.mjs && node --test scripts/theme-token-grammar.test.mjs && node --test scripts/style-axes-model.test.mjs && node --test scripts/option-presets.test.mjs && node --test scripts/chart-options.test.mjs && node --test scripts/lint-parallel.test.mjs && node --test scripts/check-localization-catalogs.test.mjs && node --test scripts/check-build-artifacts.test.mjs && node --test scripts/check-scale-budgets.test.mjs",
     "framework-types": "node scripts/generate-framework-types.mjs",
     "check:framework-types": "node scripts/check-framework-types.mjs",
     "test:framework-types": "node scripts/generate-framework-types.test.mjs",
@@ -2775,7 +2781,10 @@
     "test:optional-looks": "node --test scripts/optional-looks.test.mjs",
     "visual-manifest": "node scripts/generate-visual-manifest.mjs --write",
     "check:visual-manifest": "node scripts/generate-visual-manifest.mjs --check",
-    "test:visual-manifest-source": "node --test scripts/visual-manifest-source.test.mjs scripts/generate-visual-manifest.test.mjs"
+    "test:visual-manifest-source": "node --test scripts/visual-manifest-source.test.mjs scripts/generate-visual-manifest.test.mjs",
+    "test:scale": "wtr --group scale",
+    "check:scale-budgets": "node scripts/check-scale-budgets.mjs",
+    "scale-budgets": "node scripts/check-scale-budgets.mjs --write-budgets"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.8.0",

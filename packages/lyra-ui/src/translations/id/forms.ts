@@ -112,6 +112,8 @@ const strings: LyraLocaleStrings = {
   },
   signaturePadPenDown: 'Pena turun',
   signaturePadPenUp: 'Pena naik',
+  localePickerInputLimit: 'Hanya 512 entri bahasa dan wilayah pertama yang tersedia.',
+  emojiPickerInputLimit: 'Sebagian data emoji dihilangkan karena batas masukan tercapai.',
 };
 
 registerLyraLocale('id', strings);

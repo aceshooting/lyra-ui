@@ -6,6 +6,12 @@ export interface InheritedAttributeSubscription {
   readonly changed: (records: MutationRecord[]) => void;
 }
 
+/** Callable teardown with an explicit pending-record delivery boundary. */
+export interface InheritedAttributeRelease {
+  (): void;
+  flush(): void;
+}
+
 interface RootHub {
   readonly observer: MutationObserver;
   readonly subscribers: Set<InheritedAttributeSubscription>;
@@ -16,6 +22,7 @@ const hubs = new WeakMap<Node, RootHub>();
 
 function deliver(hub: RootHub, records: MutationRecord[]): void {
   for (const subscriber of [...hub.subscribers]) {
+    if (!hub.subscribers.has(subscriber)) continue;
     const relevant = records.filter((record) =>
       record.type === 'attributes'
         ? subscriber.attributes.includes(record.attributeName ?? '')
@@ -54,7 +61,7 @@ export function subscribeInheritedAttributes(
   root: Node,
   Observer: typeof MutationObserver | undefined,
   subscription: InheritedAttributeSubscription,
-): (() => void) | undefined {
+): InheritedAttributeRelease | undefined {
   if (!Observer) return undefined;
   const target = root.nodeType === 9 ? (root as Document).documentElement : root;
   if (!target) return undefined;
@@ -81,7 +88,7 @@ export function subscribeInheritedAttributes(
     }
     return undefined;
   }
-  return () => {
+  const release = () => {
     if (!hub?.subscribers.delete(subscription)) return;
     const owner = hub;
     let pending: MutationRecord[] = [];
@@ -93,4 +100,12 @@ export function subscribeInheritedAttributes(
       hubs.delete(root);
     }
   };
+  return Object.assign(release, {
+    flush(): void {
+      if (!hub?.subscribers.has(subscription)) return;
+      let pending: MutationRecord[] = [];
+      safely(() => { pending = hub.observer.takeRecords(); });
+      if (pending.length) deliver(hub, pending);
+    },
+  });
 }

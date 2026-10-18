@@ -1361,6 +1361,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.hotkeyPlatform = undefined;
     this.hotkeyWindow = this.ownerDocument.defaultView ?? undefined;
     if (this.hotkeyWindow) {
       registerHotkeyOwner(this.hotkeyWindow, this, this.acceptsHotkey);
@@ -1803,10 +1804,29 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     else this.toggleCollapse();
   }
 
+  private hotkeyMemo?: { value: unknown; parsed: ReturnType<typeof parseHotkey> };
+  private hotkeyPlatform?: { view: Window | null; mac: boolean };
+
+  private get parsedHotkey(): ReturnType<typeof parseHotkey> {
+    const value = this.hotkey;
+    if (this.hotkeyMemo && this.hotkeyMemo.value === value) return this.hotkeyMemo.parsed;
+    const parsed = parseHotkey(value);
+    this.hotkeyMemo = { value, parsed };
+    return parsed;
+  }
+
+  private get hotkeyIsMac(): boolean {
+    const view = this.ownerDocument.defaultView;
+    if (this.hotkeyPlatform && this.hotkeyPlatform.view === view) return this.hotkeyPlatform.mac;
+    const mac = detectPlatform(view?.navigator) === 'mac';
+    this.hotkeyPlatform = { view, mac };
+    return mac;
+  }
+
   private acceptsHotkey = (event: KeyboardEvent): boolean => {
-    const parsed = parseHotkey(this.hotkey);
+    const parsed = this.parsedHotkey;
     return this.isConnected && !this.forced && parsed !== null && hasNonShiftModifier(parsed) &&
-      matchesHotkey(parsed, event, detectPlatform(this.hotkeyWindow?.navigator) === 'mac') &&
+      matchesHotkey(parsed, event, this.hotkeyIsMac) &&
       !isEditableKeyEventTarget(event) && isAccessibilityVisible(this);
   };
 
@@ -1819,9 +1839,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   };
 
   private get resolvedHotkeyShortcuts(): string | null {
-    const parsed = parseHotkey(this.hotkey);
+    const parsed = this.parsedHotkey;
     return hotkeyAriaKeyShortcuts(parsed && hasNonShiftModifier(parsed) ? parsed : null,
-      detectPlatform(this.ownerDocument.defaultView?.navigator) === 'mac');
+      this.hotkeyIsMac);
   }
 
   private syncBuiltInKeyShortcuts(): void {

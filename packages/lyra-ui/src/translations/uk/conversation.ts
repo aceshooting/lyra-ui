@@ -85,6 +85,7 @@ const strings: LyraLocaleStrings = {
   },
   threadListEmpty: 'Розмов ще немає',
   agentWorkspaceLabel: 'Робочий простір агента',
+  agentWorkspaceInputLimit: '{collection}: зберігається лише {count} із {total} записів.',
   agentWorkspaceConversation: 'Розмова',
   agentWorkspaceDetails: 'Відомості про запуск',
   agentWorkspaceRun: 'Запуск агента',
@@ -102,6 +103,8 @@ const strings: LyraLocaleStrings = {
   messagePartRetry: 'Повторити обробку цієї частини',
   promptQueueLabel: 'Запити в черзі',
   promptQueueEmpty: 'Запитів у черзі немає',
+  promptQueueInputLimit: 'Деякі запити в черзі або вкладення пропущено через досягнення обмеження вхідних даних.',
+  promptQueueAttachmentLimit: 'Показано {shown} із {total} збережених вкладень.',
   promptQueueSendNow: 'Надіслати зараз',
   selectionToolbarLabel: 'Дії з вибраним',
   selectionAsk: 'Запитати',
@@ -169,6 +172,10 @@ const strings: LyraLocaleStrings = {
     many: '{count} токенів',
     other: '{count} токена',
   },
+  threadListInputLimit: 'Деякі гілки розмов пропущено через досягнення обмеження вхідних даних.',
+  promptInputInputLimit: 'Деякі пропозиції або записи каталогу пропущено через досягнення обмеження вхідних даних.',
+  transcriptFeedInputLimit: 'Зберігаються лише {count} найновіших записів із {total}.',
+  codeBlockHighlightLimit: 'Довгий код показується без підсвічування синтаксису.',
 };
 
 registerLyraLocale('uk', strings);

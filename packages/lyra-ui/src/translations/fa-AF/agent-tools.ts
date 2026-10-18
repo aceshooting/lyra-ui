@@ -77,6 +77,7 @@ const strings: LyraLocaleStrings = {
   testResultsLimit: 'تنها نخستین {count} نتیجهٔ آزمایش نمایش داده می‌شود.',
   toolTimelineLimit: 'حداکثر {count} فراخوانی ابزار نمایش داده می‌شود.',
   toolSelectLimit: 'تنها نخستین {count} ابزار نمایش داده می‌شود.',
+  testResultsInputTooLarge: 'جزئیات نتایج آزمایش از حد نمایش بیشتر است.',
   toolCall: 'فراخوانی ابزار',
   maximize: 'بزرگ‌کردن',
   promptStudioVariableName: 'نام متغیر {index}',
@@ -294,6 +295,9 @@ const strings: LyraLocaleStrings = {
   commitCardFilesLimit: 'فقط فایل های اول {count} نشان داده شده اند.',
   taskListLimit: 'فقط وظایف اول {count} نشان داده شده است.',
   evalDatasetLimit: 'تنها نخستین {count} نمونه نمایش داده می‌شود.',
+  activityFeedInputLimit: 'تنها تازه‌ترین {count} مورد از {total} ورودی نگهداری می‌شوند.',
+  spanWaterfallLimit: 'از {total} بازهٔ ردیابی، {shown} مورد نشان داده می‌شود.',
+  toolTimelineInputLimit: 'از {total} فراخوانی ابزار، تنها تازه‌ترین {count} مورد نگهداری می‌شود.',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

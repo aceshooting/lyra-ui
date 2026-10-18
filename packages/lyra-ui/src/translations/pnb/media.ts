@@ -14,6 +14,8 @@ const strings: LyraLocaleStrings = {
   lightboxImagePosition: '{total} وچوں تصویر {index}',
   playWithContext: '{name} چلاؤ',
   pauseWithContext: '{name} روکو',
+  avPlayerWaveformUnavailable: 'ویوفارم ڈیٹا دستیاب نئیں یا ایس میڈیا نال میل نئیں کھاندا۔',
+  avPlayerTranscriptUnavailable: 'نقل دا ڈیٹا دستیاب نئیں۔',
   dropzoneReleaseToAdd: 'فائل شامل کرن لئی چھڈ دیو۔',
   dropzoneRejectedType: 'ایہہ فائل دی قسم قبول نئیں۔',
   attachmentAdd: 'منسلکہ شامل کرو',

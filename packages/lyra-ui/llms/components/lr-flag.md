@@ -52,6 +52,9 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 
 Exported authoring types are `LyraFlagShape`, `LyraFlagFidelity`, and `LyraFlagUrlResolver`.
 
+Concurrent flags resolving the same country and fidelity share pending resolver work within the
+current resolver generation. Settled or failed requests do not prevent later retries.
+
 **Events:** none.
 
 **Slots:** `fallback` — rendered in place of the flag when `country`/`language` cannot resolve to a
@@ -107,8 +110,8 @@ exported:
 itself (`'fr'` → `français`, `'pt-BR'` → `português (Brasil)`). That is what a language switcher
 should list, so a reader who understands none of the current UI language can still find their own.
 It derives from `Intl.DisplayNames`, so no name table ships with the library and results follow the
-browser's own ICU data; the underlying instance comes from a shared memoized cache, since a picker
-does one lookup per offered locale on every render pass. A tag with no display name resolves to the
+browser's own ICU data. The underlying formatter and resolved native names are cached, so repeated
+catalog renders reuse prior results. A tag with no display name resolves to the
 tag itself, and so does a structurally invalid one — `Intl.DisplayNames` throws a `RangeError` on
 those rather than falling back, and a language picker should degrade to showing the raw tag rather
 than tearing down the render. Pair it with `languageToCountry()` for the flag half of the same row.

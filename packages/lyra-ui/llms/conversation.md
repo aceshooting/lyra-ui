@@ -140,14 +140,15 @@ uses for its own `[part="body"]`.
   the header also removes authored style elements and their CSS text to prevent visual copy
   deception. Trusted mode provides no such guarantee.
 - `withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`) — turns off
-  fenced-code syntax highlighting. Unset (the default), every fenced block is upgraded via the
+  fenced-code syntax highlighting. Unset (the default), eligible fenced blocks are upgraded via the
   optional `shiki` peer once it is available; set it to keep plain output even when `shiki` is
   installed. In progressive mode, a block can be highlighted after it settles; the mutable tail
   remains unhighlighted.
-- `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — same shape and purpose as
-  `<lr-code-block>`'s own `languages`: a fine-grained, explicit language-grammar bundle scoping
-  shiki's build output to just those grammars instead of its full ~200-language bundle. Forwarded
-  verbatim to `loadShikiHighlighterCore()`. Unset (the default) uses the default full-bundle loader
+- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — explicit
+  grammars, supplied either resolved or as lazy loaders such as
+  `{ json: () => import('shiki/langs/json.mjs') }`. Only a matching fenced language invokes its
+  loader. Languages absent from the map, or an unset map, use the full loader's built-in fallback.
+  Replace the map identity when changing its grammars
 - `headingAnchors: boolean = false` (attribute `heading-anchors`) — stamps a computed
   GitHub-slugger-style slug as `id` on every rendered heading.
 - `math: boolean = false` — renders `$inline$` and `$$block$$` TeX via the optional `katex` peer,
@@ -173,6 +174,16 @@ pass. It reuses that index across navigation and painting. Host-highlight admiss
 10,000 unique nonempty records after inspecting at most 10,001 inputs; rendering selects at most
 1,000 candidates and paints at most 100, with an active entry anywhere in the admitted snapshot
 placed first and preserved inside both ceilings.
+
+Syntax highlighting admits the first 100 distinct language/code pairs in a document, or across a
+progressive session. Each eligible block is limited to 8,192 UTF-16 code units, including its
+terminal newline. Later or larger blocks remain readable plain code. Both Markdown tags share a
+content-addressed cache, partitioned by the supplied `languages` map identity, with at most 100
+entries and 2 MiB of retained key/output storage (two bytes per UTF-16 code unit); each entry is
+limited to 512 KiB. Matching authored grammars share cached output across the full and core tags;
+full-tag fallback languages do not populate the core tag's cache. When highlighted output exceeds
+the byte budget, evicted blocks may remain plain instead of repeatedly tokenizing. Plain streaming
+defers highlighting until completion; progressive streaming highlights settled blocks.
 
 **Methods:**
 
@@ -390,10 +401,10 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
 
 A build-lean sibling of `<lr-markdown>` above, for a consumer whose `languages` map already covers
 every language it will ever render — mirrors `<lr-code-block-core>`'s relationship to
-`<lr-code-block>`. Where `<lr-markdown>` unconditionally calls `loadShikiHighlighter()` — the
-default ~200-language dynamic-import table loader, whose bundled lookup table a bundler can't
-statically narrow away —
-this component's own module never imports or calls that function at all; it only ever calls
+`<lr-code-block>`. The full `<lr-markdown>` module references `loadShikiHighlighter()` for languages
+absent from its explicit map. That loader includes the default ~200-language dynamic-import table,
+whose bundled lookup table a bundler cannot statically narrow away.
+This component's own module never imports or calls that function; it only calls
 `loadShikiHighlighterCore(languages)`, so a consumer importing this entry point instead of
 `markdown.js` gets a build genuinely free of shiki's full language table.
 
@@ -427,7 +438,7 @@ instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'e
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
 `codeBlockHeader: boolean = false` (attribute `code-block-header`),
 `withoutSyntaxHighlighting: boolean = false` (attribute `without-syntax-highlighting`),
-`languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) —
+`languages: Readonly<Record<string, ShikiLanguageSource>> = {}` (attribute: false) —
 required, unlike `<lr-markdown>`'s optional `languages?:`; empty (the default) means every fenced
 block stays unhighlighted permanently. Each value is either an already-resolved grammar or a lazy
 loader (`() => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`, e.g.
@@ -442,6 +453,7 @@ The same 1,000,000-code-unit/20,000-node corpus ceiling, 4,096-code-unit quote-f
 4,000,000-code-unit work ceiling, 10,000-record admission ceiling, 1,000-candidate window, and
 100-painted-highlight limit documented for `<lr-markdown>` apply here too, including active-first
 retention from anywhere in the admitted snapshot.
+The same syntax-highlighting admission, source-size and cache bounds documented above also apply.
 
 **Methods:** `renderMarkdown(): void` — immediately reruns the current content through the parse,
 sanitize, highlight, and fallback pipeline after changing this instance's `marked` configuration;
@@ -1392,7 +1404,11 @@ focus move.
 - `catalog?: LyraCatalog<LyraModelCatalogEntry>` (attribute: false) — the full model list. Omit (or
   leave empty) to fall back to plain free-text entry. Ids use the shared unique, nonempty,
   first-wins catalog rule above. The array is clone-owned, bounded, and frozen; reassign a new
-  catalog array after changing its rows.
+  catalog array after changing its rows. Admission retains the first 1,024 source rows within the
+  shared 50,000-value deep snapshot budget; normalization examines that admitted prefix. The
+  localized `limit` part reports omitted input through `catalogPickerInputLimit`. A synthetic row
+  for a committed value outside the catalog can still be appended. Closed listboxes contain no
+  option rows after their exit transition; trigger labels and free-text behavior remain available.
 - `allowCustom: boolean = false` (attribute `allow-custom`, reflected) — let the user type/commit a
   value that isn't in `catalog`, even when `catalog` is non-empty.
 - `label: string = ''` — optional visible title above the control, rendered alongside the `label`
@@ -1524,7 +1540,7 @@ constraint validation — its own `disabled` or `readonly`, or an ancestor `<fie
 reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`, matching native `:invalid`. `required`/`optional` keep publishing.
 
-**CSS parts:** `form-control` (the complete label, control, hint, error, and listbox frame),
+**CSS parts:** `limit` (input-loss notice), `form-control` (the complete label, control, hint, error, and listbox frame),
 `form-control-label` (the `<label>` element containing the `label` property and slot), `trigger` (closed-dropdown mode's
 `<button role="combobox">`, also its positioning anchor), `combobox` (free-text mode's input
 container, also its positioning anchor), `combobox-input` (the free-text `<input>`),
@@ -1662,7 +1678,7 @@ streaming.
 - `contentMode: StreamingTextContentMode = 'auto'` (attribute `content-mode`, reflected) — `auto`
   uses `looksLikeMarkdown`; `plain` and `markdown` force their named paths. Invalid values render as
   `auto` without installing a stale memoized decision.
-- `languages?: Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to
+- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to
   the composed `<lr-markdown>`'s own `languages`, the same fine-grained language-grammar scoping
   `<lr-code-block>`/`<lr-markdown>` support. Unset leaves the composed element's own default
   untouched.
@@ -1842,7 +1858,7 @@ Direction behaves exactly as described for `<lr-streaming-text>` (**Direction** 
 `llms/components/lr-streaming-text.md`; `contentMode: StreamingTextContentMode = 'auto'` (attribute
 `content-mode`, reflected) — `auto`
 uses `looksLikeMarkdown`, `plain`/`markdown` force their named paths; `languages?:
-Readonly<Record<string, ShikiLanguageInput>>` (property only) — forwarded verbatim to the composed
+Readonly<Record<string, ShikiLanguageSource>>` (property only) — forwarded verbatim to the composed
 `<lr-markdown-core>`'s own `languages` instead of `<lr-markdown>`'s (defaulting the composed
 element's own `languages` to `{}` when unset, unlike the full variant's `undefined`). The rest of
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
@@ -2044,6 +2060,12 @@ resumes normal rendering. Highlighted gutter labels and locale-formatted line nu
 `.strings` and inherited or explicit locale changes. Unrelated updates retain the existing
 highlighted markup.
 
+Syntax highlighting accepts source up to 8,192 UTF-16 code units, inclusive. Larger source remains
+fully readable as plain text; when `language` is set, a localized `[part="limit"]` notice explains
+the fallback, and no loading skeleton appears. Changing `highlightLines`, `highlights`, or
+`activeHighlightId` patches the existing line state without tokenizing the source again. Moving
+through an activatable gutter reuses the source lines and updates the previous and next tab stops.
+
 **Properties:**
 
 - `code: string = ''` — the raw source text
@@ -2080,16 +2102,21 @@ highlighted markup.
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract.
-- `languages?: Record<string, ShikiLanguageInput>` (attribute: false) — a map of language id to an
-  already-imported shiki grammar module (e.g. `{ bash: bashGrammar }` from a module-scope
-  `import bash from 'shiki/langs/bash.mjs'`). When `language` matches a key here, highlighting is
-  seeded from exactly that pre-supplied grammar via a fine-grained `createHighlighterCore()`
+- `languages?: Readonly<Record<string, ShikiLanguageSource>>` (attribute: false) — a map of language
+  id to a resolved shiki grammar (e.g. `{ bash: bashGrammar }` from a module-scope
+  `import bash from 'shiki/langs/bash.mjs'`) or a lazy loader, e.g.
+  `{ bash: () => import('@shikijs/langs/bash') }`. Only a requested loader runs. When `language`
+  matches a key here, highlighting uses that grammar via a fine-grained `createHighlighterCore()`
   highlighter, bypassing the default ~200-language dynamic-import path (`loadShikiHighlighter()`)
   for that language — an additive, opt-in escape hatch for a build scoped to just the languages a
   consumer actually needs. A `language` absent from this map (or `languages` left unset) falls back
   to the default dynamic-import path unchanged. For a TypeScript annotation, use
-  `import type { ShikiLanguageInput } from '@aceshooting/lyra-ui/components/lr-code-block.js'`;
-  the type-only granular import emits no registration side effect.
+  `import type { ShikiLanguageSource, ShikiLanguageLoader } from
+  '@aceshooting/lyra-ui/components/lr-code-block.js'`; `ShikiLanguageSource` is
+  `ShikiLanguageInput | ShikiLanguageLoader`, and a loader returns
+  `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`. `ShikiLanguageInput` remains
+  exported for resolved-grammar annotations. The type-only granular import emits no registration
+  side effect.
   The map key need not be the grammar module's own registered name or one of its declared
   aliases — Lyra derives the Shiki `langAlias` mapping this needs automatically, so a key such as
   `tsx` reusing a differently-named grammar (e.g. TypeScript's own module, to avoid bundling a
@@ -2130,7 +2157,7 @@ control in each appearance), `copy-button-control` (the copy control's own nativ
 `header-actions` (the wrapper around the `header-actions` slot; it carries the `hidden` attribute
 and computes to `display: none` whenever nothing is assigned, so an empty slot contributes no
 header gap — a rule that sets `display` on it must qualify itself with `:not([hidden])`),
-`toggle`, `body`, `pre`,
+`toggle`, `body`, `pre`, `limit` (the syntax-highlighting ceiling notice),
 `code`, `line-highlight` (a line marked by `highlightLines` or a `line-range` entry in `highlights`),
 `line-button` (a gutter line-number button, only rendered while `activatableLines` and `lineNumbers`
 are both set)
@@ -2248,12 +2275,13 @@ one deliberate exception to every other color being a `--lr-*` token.
 ## `lr-code-block-core`
 
 A build-lean sibling of `<lr-code-block>` above, for a consumer whose `languages` map already
-covers every language it will ever render. Where `<lr-code-block>` unconditionally calls
+covers every language it will ever render. Where `<lr-code-block>` can call
 `loadShikiHighlighter()` — the default ~200-language dynamic-import table loader, whose bundled
 lookup table a bundler can't statically narrow away even when a consumer never actually uses it —
 this component's own module never imports or calls that function at all. It only ever calls
 `loadShikiHighlighterCore(languages)` (shiki's "fine-grained bundle" recipe: `createHighlighterCore()`
-plus an explicit oniguruma engine, seeded with _only_ the grammars in `languages`), so a consumer
+plus an explicit oniguruma engine, seeded with the resolved grammars in `languages`; a lazy grammar
+is loaded only when requested), so a consumer
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
 
@@ -2273,7 +2301,10 @@ same as `<lr-code-block>`'s own plain-text fallback. Everything else — `code`/
 `filename`/`withoutCopyButton`/`collapsible`/`collapsed`/`maxHeight`, the copy button, the collapse header
 toggle, the loading-skeleton behavior while the fine-grained highlighter resolves — matches
 `<lr-code-block>` exactly, including its CSS parts, themeable custom properties, and stylesheet
-(this component reuses `code-block.styles.ts` directly).
+(this component reuses `code-block.styles.ts` directly). Its inclusive syntax-highlighting ceiling
+of 8,192 UTF-16 code units also matches: larger source stays fully readable as plain text with a
+localized `limit` notice when `language` is set, without a loading skeleton. Highlight changes
+patch existing lines without retokenizing, and gutter navigation reuses the source lines.
 
 **Properties:**
 
@@ -2307,10 +2338,11 @@ toggle, the loading-skeleton behavior while the fine-grained highlighter resolve
   entry, if any, currently treated as active (`data-active` on its lines).
 - `anchorKinds: LyraAnchor['kind'][] = ['line-range']` — readonly, for the shared anchor-target
   contract, identical to `<lr-code-block>`.
-- `languages: Record<string, ShikiLanguageSource> = {}` (attribute: false) — grammar definitions this
+- `languages: Readonly<Record<string, ShikiLanguageSource>> = {}` (attribute: false) — grammar definitions this
   instance can highlight, e.g. `{ json: jsonGrammar }` (import from `shiki/langs/<name>.mjs`), or a
   lazy loader per key, e.g. `{ bash: () => import('@shikijs/langs/bash') }` — called at most once
-  per key, memoized, the first time a fenced block actually requests that language. Empty
+  per highlighter/key pair, memoized, the first time this code block requests that language;
+  unused loaders do not run. Empty
   (the default) never highlights at all — every `language` renders the plain-text fallback, and so
   does a key whose lazy loader rejects.
   If `languages` changes while highlighting is loading, only results for the current map can update
@@ -2336,7 +2368,7 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 **Slots:** `header-actions` — identical to `<lr-code-block>`'s own slot.
 
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `copy-button-text`,
-`copy-button-icon`, `copy-button-control`, `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button` —
+`copy-button-icon`, `copy-button-control`, `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button`, `limit` —
 identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>` — `--lr-code-block-max-height`
@@ -2429,6 +2461,13 @@ of `catalog`/`allowCustom` and `temperatureMin`/`temperatureMax`/`temperatureSte
   reach either, since a form-associated control's own `disabled` IDL property/attribute is never
   mutated by fieldset cascading.
 
+The panel snapshots `catalog` before forwarding it to the model picker. Its own deep input budget
+can omit rows before the child reaches its catalog ceiling. A localized `catalogPickerInputLimit`
+notice in the panel's `part="limit"` discloses that outer loss from the original assignment,
+independently of the child's notice. Rebinding the retained snapshot preserves it; a fresh input
+below the limit clears it. Initial mounting and reconnecting are quiet; later changed input loss
+is politely announced.
+
 **Events:** `lr-change` — `detail: { model: string; inCatalog: boolean; temperature: number }`.
 Fires whenever _either_ child control's own `lr-change` fires, and always carries the full current
 settings snapshot, not just whichever field actually changed. `inCatalog` is recomputed fresh from
@@ -2440,7 +2479,8 @@ assigned directly instead of via the child's own event. The nested selector's na
 **Slots:** none — this is a fixed two-control composition, not a generic layout shell.
 
 **CSS parts:** `base`, `model-row`, `model-select`, `model-label` (forwarded visible internal
-selector label), `temperature-row`, `temperature-label`, `temperature-value`
+selector label), `temperature-row`, `temperature-label`, `temperature-value`, `limit` (outer catalog
+input-loss notice)
 
 **Themeable custom properties:** `--lr-model-settings-panel-max-inline-size` — the card's own width
 ceiling (default `var(--lr-size-28rem)`). Set a length to retune it, or `none` for a full-width
@@ -2827,6 +2867,12 @@ with in-place upgrades keyed by `id`, and a stick-to-bottom auto-scroll with rel
 `follow`/`lr-follow-change` contract `<lr-terminal>` uses. Live captions only — recorded-media
 transcript sync is a separate concern.
 
+`entries` retains the newest 10,000 records within the shared 50,000-value deep snapshot budget.
+The visible `limit` part discloses omitted input through `transcriptFeedInputLimit`, with `count`
+and `total` placeholders. Final-caption replay suppression keeps up to 10,000 recent IDs, always
+preserving currently retained captions. An ID evicted from that history may be announced if later
+reintroduced.
+
 Activating the focused jump action resumes follow and transfers focus to the scroll base when the
 action disappears, unless a newer outside focus move takes precedence.
 
@@ -2869,7 +2915,8 @@ state or the built-in jump action re-engages it. Direct `follow` assignments and
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
 (`dir="auto"`), `timestamp` (only while `with-timestamps`), `interim` (present alongside `entry` on
 an interim row), `interim-area` (the wrapper holding interim rows, rendered only while at least one
-interim entry exists), `jump-button` (shown only while `follow` is `false`), and `empty`.
+interim entry exists), `jump-button` (shown only while `follow` is `false`), `empty`, and `limit`
+(input-loss notice).
 
 ## `lr-handoff-divider`
 
@@ -2898,6 +2945,12 @@ children (typically `lr-chat-message`s — _slotted mode_), or exactly one `lr-v
 (_virtual mode_, detected by its `scrollToIndex()`/`scrollContainer` API, so custom prefixes and
 other realms work). In virtual mode this component defers all scrolling to the slotted list's own
 `scrollToIndex()` and follows its content extent (`items` or `source`) as rows are appended or grow.
+The viewport owns no message array. A slotted virtual-list's `items` binding retains its first
+10,000 identities; provide a bounded newest chronological window or an indexed `source` to expose
+a larger or latest stream.
+Logical count changes update following and unread counts even after the virtual list reaches
+its capped native scroll extent. Reconnecting refreshes the unread count, while growth preserves
+an explicitly released follow state.
 Follow/release state machine: while `follow` is engaged, content growth re-scrolls to the end;
 release happens only on a user-intent gesture (wheel, touchmove, scrollbar-drag, or
 PageUp/ArrowUp/Home/Shift+Space while the log region has focus) that leaves the
@@ -3060,6 +3113,16 @@ row actions in that mode. No thread CRUD or persistence — every mutation
 (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is a controlled event carrying the _requested_ new
 state; the host mutates `threads`.
 
+With `dataSource` unset, `threads` retains the first 10,000 identities. Structural group headings do not consume that
+allowance; every admitted thread remains addressable through the internal virtual list.
+Use the full-source provider route below for larger sidebar collections.
+
+A localized `threadListInputLimit` notice in `part="limit"` discloses entries omitted from the
+original assignment. It describes input admission independently of search matches and the visible
+virtual window. Rebinding the retained snapshot preserves the notice; a fresh input below the
+limit clears it. Initial mounting and reconnecting are quiet; later changed input loss is
+politely announced.
+
 A conversation row with `slot=""` belongs to the default slot exactly like a row with no slot
 attribute, including after reconnect. Named slots retain their distinct roles.
 
@@ -3069,6 +3132,77 @@ the complete item model at a virtual-window edge and mounts the next available r
 focus. Home/End always resolve the first/last thread from that complete model, even when focus
 starts in a middle window; group records, collapsed-group contents, and unavailable endpoint rows
 are skipped rather than becoming false boundaries.
+
+**Full-source paging:** `dataSource: ThreadListSource | undefined = undefined` (attribute:
+false) takes display precedence over `threads` and the default slot. An invalid defined provider
+fails visibly; setting `undefined` restores the current legacy data/slotted precedence.
+`sourcePage: number = 0` (`source-page`) is zero-based, and `sourcePageSize: number = 100`
+(`source-page-size`) normalizes to 1–500. Readonly `sourceTotal: number | null` is the exact global
+current-query record count before group collapse, or `null` before success and without a source.
+Query/page-size changes reset page zero; collapse changes preserve the current record page.
+An out-of-range page receives at most one corrective last-page request.
+
+```ts
+import type { ThreadListSource, ThreadListSourceQuery } from
+  "@aceshooting/lyra-ui/components/conversation/thread-list/thread-list.class.js";
+import type { LyraPageSource, LyraPageResult, LyraSourceRecord } from
+  "@aceshooting/lyra-ui/data-sources.js";
+```
+
+`ThreadListSource` is `LyraPageSource<LyraChatThread, ThreadListSourceQuery>`. The provider has an
+immutable `revision` (nonempty string or finite number), `query({ revision, locale, signal, page,
+pageSize, query })`, `lookup(keys, context)`, and `locate(key, query, context)`. Query returns
+`{ rows, total, groups? }`; records have `{ key, order, value }`, where `key === value.id`, `order`
+is a safe stable canonical source ordinal and `value` is a complete `LyraChatThread`. Counts are
+safe nonnegative integers; page keys/orders must be unique and the response must contain exactly
+the requested in-bounds row count. Lookup returns complete globally present requested records,
+omitting absent keys; locate returns the absolute current-query record index or `null`.
+
+The forwarded `ThreadListSourceQuery` contains `{ search, withArchived, grouping,
+collapsedGroupIds, filter, groupBy, getGroupLabel, groupOrder }`. The provider applies search,
+filtering, ordering and grouping globally before paging. Grouped responses require
+`groups: [{ key, label, startIndex, itemCount }]`: global nonoverlapping intervals covering the
+page, including the header of a group that began on an earlier page. At most 500 records plus
+500 structural headings are modeled. Collapsed rows retain their original record positions and
+actionable heading; collapse does not redefine the global total or page boundaries. Complete-group
+callbacks/adornments are not computed from partial pages. Row rendering hooks continue to receive
+the original provider record identity. Per-record display strings share a 65,536 UTF-16-unit bound;
+keys/group text are each at most 65,536 units and share a 2,000,000-unit admission budget.
+Malformed or oversized pages show a localized failure without clipping records.
+
+`activeConversationId` uses global `locate` once per active/query binding, then scrolls the bounded
+page's matching row into view. Manual paging preserves the controlled active ID without repeatedly
+jumping back; clearing/restoring that ID locates again. Arrow/Home/End navigation addresses the
+current page's virtual item model; global paging and active-ID lookup reach other logical pages.
+Source `lr-filter-change` reports the provider's full matching `total`, not the loaded row count.
+Existing controlled thread-action IDs and group-toggle/veto contracts remain unchanged.
+
+The provider remains host-owned by identity. Reassign even the same object, or call a keyless
+`requestUpdate()`, after revision/state changes. Named presentation changes reuse the accepted
+page. Replacement, refresh, disconnect and adoption revoke obsolete requests/actions/reveals.
+Each page/lookup/locate lane allows one physically unsettled provider call and only the latest
+queued intent; an ignored abort holds its physical permit until settlement. Only bounded current
+and in-progress pages are modeled, without a full-source search corpus or thread index. Provider
+storage/indexing and complete-source consistency remain host obligations.
+
+Loading uses `source-status`; `source-pagination` contains the global pager. Provider errors reuse
+the existing localized `error` surface/slot and cancelable `lr-retry-request`; its default retries
+the current provider page and clears the host error, while `preventDefault()` vetoes it. Existing
+row and group parts remain applicable. The following array admission and local grouping details
+apply with `dataSource` unset; row presentation/actions apply to provider rows as well.
+
+**Exported source query declaration:**
+
+`ThreadListSourceQuery {
+  readonly search: string;
+  readonly withArchived: boolean;
+  readonly grouping: ThreadListGrouping;
+  readonly collapsedGroupIds: readonly string[];
+  readonly filter: LyraThreadList['filter'];
+  readonly groupBy: LyraThreadList['groupBy'];
+  readonly getGroupLabel: LyraThreadList['getGroupLabel'];
+  readonly groupOrder: LyraThreadList['groupOrder'];
+}`
 
 **Exported types:** `LyraChatThread { id: string; title: string; excerpt?: string; timestamp?: Date |
 string | number; pinned?: boolean; archived?: boolean }`; `ThreadRowAction = 'pin' | 'archive' |
@@ -3223,6 +3357,7 @@ was activated, only rendered while `error` is set; the default action clears `er
 **CSS parts:** `base`, `search`/`search-input` (the search field wrapper and `<input
 type="search">`), `clear-button` (clears the search field; rendered only while it has a value,
 mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list region), `empty`,
+`limit` (original thread input-loss notice),
 `error` (the built-in `<lr-empty>` host rendered while `error` is set, with `error-base`/
 `error-icon`/`error-heading`/`error-description`/`error-actions` exported from its own parts, plus
 `retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
@@ -3722,6 +3857,11 @@ voice list; omit (or leave empty) to fall back to plain free-text entry; replaci
 internal preview before the rendered candidate changes. Ids use the shared unique, nonempty,
 first-wins catalog rule documented under `lr-model-select`, including preview lookup. Assignments
 become bounded clone-owned frozen snapshots; create and reassign a new array after row changes.
+Admission retains the first 1,024 source rows within the shared 50,000-value deep snapshot budget;
+normalization examines that admitted prefix. The localized `limit` part reports omitted input
+through `catalogPickerInputLimit`. A synthetic row for a committed value outside the catalog can
+still be appended. Closed listboxes contain no option rows after their exit transition; trigger
+labels and free-text behavior remain available.
 `allowCustom: boolean = false` (attribute
 `allow-custom`, reflected) — let the user type/commit a value that isn't in `catalog`.
 `withoutPreview: boolean = false` (attribute `without-preview`, reflected) — renders no preview
@@ -3799,7 +3939,7 @@ constraint validation (own `disabled` or `readonly`, or an ancestor `<fieldset d
 reports no violation and publishes neither `:state(invalid)` nor
 `:state(user-invalid)`.
 
-**CSS parts:** `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
+**CSS parts:** `limit` (input-loss notice), `form-control` (the complete field frame), `form-control-label`, `trigger` (closed-dropdown mode), `combobox`/`combobox-input`
 (free-text mode), `provider-badge`, `listbox`, `option`, `option-icon` (an object-shaped catalog
 row's optional decorative leading icon), `option-label`, `option-meta` (the quiet
 `language · description` second line), `option-badge` (the "not in catalog" badge on a synthetic
@@ -3927,11 +4067,13 @@ metadata?: Record<string, unknown> }`. Each entry renders as an `lr-chat-message
   `role`/`status`/`timestamp` come straight across. A nonempty `parts` array renders in order through
   `lr-message-parts` and takes precedence over the legacy `text` shortcut; otherwise `text` renders
   as sanitized Markdown through `lr-markdown`. Replace the whole region with the `messages` slot for
-  richer bodies. Empty ids and later duplicates are omitted first-wins before the latest 500 valid
-  identities are chosen, so malformed tail rows cannot evict earlier valid messages. Host owns
-  ordering, updates, and persistence
+  richer bodies. Within the admitted input tail, empty ids and later duplicates are omitted
+  first-wins before the latest 500 valid identities are chosen. Host owns ordering, updates, and
+  persistence
 - `follow: boolean = true` (reflected) — forwarded to the internal `lr-chat-viewport`
-- `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — forwarded to the viewport
+- `unreadStartIndex: number | null = null` (attribute `unread-start-index`) — an index in the
+  original assigned message array, translated into the retained rendered message window while
+  preserving positions occupied by invalid or duplicate records
 
 **Properties (details pane):**
 
@@ -4043,12 +4185,17 @@ directly, or exactly one `lr-virtual-list` when the slot itself owns virtualizat
 built-in run/tool/retrieval/grounding/context details pane while keeping the responsive shell),
 `composer` (replaces the built-in plain-frame `lr-chat-composer`; supplied content keeps its own
 frame), `header-actions` (model selection, settings, export controls).
+Supplying `messages` or `details` suppresses evaluation and mounting of that region's built-in
+fallback; removing the slot content restores it. Messages and tool calls retain a bounded newest
+tail, while retrieval, context, and citation inputs retain a bounded prefix. Localized
+`input-limit` notes disclose the original collection count when admission drops entries. Initial
+and reconnect notices are quiet; a later changed omission is politely announced.
 
 **CSS parts:** `base`, `header`, `heading`, `header-actions`, `body`, `conversation`, `viewport` (the
 composed `lr-chat-viewport`), `messages`, `messages-empty`, `details`, `details-content`, `section`
-(one run/tools/retrieval/grounding/context section), `section-heading`, `composer`, `composer-input`,
-`message`
-(the composed `lr-chat-composer`).
+(one run/tools/retrieval/grounding/context section), `section-heading`, `composer`,
+`composer-input` (the composed `lr-chat-composer`), `message`, `input-limit` (original collection
+admission-loss notes).
 
 **Themeable custom properties:** shared tokens only.
 
@@ -4309,6 +4456,13 @@ Every array-valued property above is a clone-owned, bounded, frozen readonly sna
 nested source children and queued attachments. Mutating a previously assigned collection has no
 effect; create and reassign a new array after changes.
 
+The outer snapshot can omit `modelCatalog`, `voiceCatalog`, `mentionItems`, or `commandItems`
+before the corresponding child reaches its own input ceiling. The prompt's `part="limit"` uses
+`promptInputInputLimit` to disclose that original assignment loss, including when no valid child
+catalog remains to render. Rebinding a retained snapshot preserves the notice; a fresh input below
+the limit clears it. Initial mounting and reconnecting are quiet; later changed input loss is
+politely announced.
+
 `LyraPromptSuggestion` extends `LyraMentionItem { suggestionId, label, description?, icon?, disabled? }`
 with optional `insertText` (defaults to `label`). The selected occurrence's original, pre-filter `index`
 is preserved in the event detail. `LyraPromptInputAttachment` replaces `DocumentRef.id` with
@@ -4346,7 +4500,7 @@ host can play its own TTS preview (call `preventDefault()`) for catalog entries 
 replaces the built-in composer action.
 
 **CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
-`composer`, `start`, `chips`, `footer`.
+`composer`, `start`, `chips`, `footer`, `limit` (outer suggestion or catalog input-loss notice).
 
 **Themeable custom properties:** `--lr-prompt-input-control-width` (default `--lr-size-12rem`) is
 the preferred width of each generated model, voice, and source control before wrapping.
@@ -4368,6 +4522,10 @@ import "@aceshooting/lyra-ui/components/lr-prompt-input.js";
 
 Controlled editable queue of follow-up turns. Reordering, editing, and removal emit a complete
 proposed queue; send-now emits the complete selected item.
+Admission inspects at most 10,000 item positions and 10,000 attachment positions across one
+assignment, including invalid positions. Internal pages contain at most 20 rows, with localized
+first/previous/next/last controls reaching every admitted item. Each row previews at most 50
+retained attachment names. Separate notices distinguish input loss from the attachment preview.
 
 When a focused row action requests removal and the host applies the proposed queue, focus moves to
 the equivalent action on the nearest surviving row. If the queue becomes empty, its stable region
@@ -4394,14 +4552,18 @@ Supported item and attachment fields are read once when `items` is assigned; cre
 new collection after changes, because changing an assigned record or reassigning the same mutated
 array does not update the view. Rows or attachments without valid direct data are ignored. Duplicate IDs are resolved
 after validation, so the first valid item wins. `metadata` is opaque and retains identity in
-proposed queue/send-now payloads, while emitted items are new frozen snapshots.
+proposed queue/send-now payloads. Proposals contain the complete admitted queue in a frozen array;
+unchanged frozen exported rows and attachment arrays are reused, including after the host accepts
+a proposal. Send-now includes all retained attachments. Draft text survives page navigation.
 
 **Events:** `lr-queue-change` (`PromptQueueChangeDetail = { items, reason, itemId }`, with
 `reason: 'edit' | 'remove' | 'reorder'`), `lr-send-now` (`{ item }`). The queue is controlled:
 these events propose complete next values without mutating `items`.
 
 **CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `attachments`, `attachment`,
-`actions`, `action`, `empty`.
+`actions`, `action`, `empty`, `input-limit`, `attachment-limit`, `pagination`, `page-status`,
+`page-button`. Initial input-limit notes are quiet; later changed omissions and user page changes
+are politely announced.
 
 **Slots:** none. **Optional peer deps:** none.
 
@@ -4486,6 +4648,10 @@ import "@aceshooting/lyra-ui/components/lr-selection-toolbar.js";
 
 Provider-neutral realtime voice shell composing connection state, `lr-audio-visualizer`,
 `lr-push-to-talk`, and `lr-transcript-feed`. Transport/authentication/playback remain host-owned.
+When the shell's own admission drops older entries, its `input-limit` note reports the original
+assigned count and retained count. The child transcript's smaller rendered window remains a
+separate limit. Initial and reconnect notes are quiet; later changed omissions are politely
+announced.
 
 **Properties:** `state: RealtimeConnectionState = 'disconnected'` (reflected), where the closed set
 is `'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error'`; `voiceState:
@@ -4518,7 +4684,7 @@ The composed transcript's internal `lr-follow-change` event is contained and is 
 session shell's public event surface.
 
 **CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
-`interrupt`, `capture`, `transcript`, `error`.
+`interrupt`, `capture`, `transcript`, `error`, `input-limit`.
 
 Visible status and error text remain ordinary, non-live content. After the initial baseline,
 non-error `state` transitions are appended to the shared polite light-DOM announcement sink and a
@@ -4676,14 +4842,16 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/lr-code-block.js`.
   `ShikiLanguageInput = ShikiLanguageRegistration | readonly ShikiLanguageRegistration[]`
-  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-code-block.js` or
+  `@aceshooting/lyra-ui/components/lr-code-block-core.js`.
   `ShikiLanguageLoader = () => Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`
-  Called at most once per key, memoized, the first time a fenced block requests that language. May
+  Called at most once per highlighter/key pair, memoized, the first time that language is requested. May
   return either a grammar directly or an ES module namespace/default-export wrapper around one,
   matching a plain `() => import('@shikijs/langs/<name>')` call site verbatim.
-  Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js`.
+  Import: `@aceshooting/lyra-ui/components/lr-code-block.js` or
+  `@aceshooting/lyra-ui/components/lr-code-block-core.js`.
   `ShikiLanguageSource = ShikiLanguageInput | ShikiLanguageLoader`
-  One `languages` map entry on `<lr-code-block-core>`/`<lr-markdown-core>`: either an
+  One `languages` map entry for full or core code-block and Markdown consumers: either an
   already-resolved grammar (seeded eagerly into the `HighlighterCore` at creation) or a lazy
   `ShikiLanguageLoader`.
   Import: `@aceshooting/lyra-ui/components/lr-code-block-core.js` (also

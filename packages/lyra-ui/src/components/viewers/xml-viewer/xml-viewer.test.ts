@@ -663,7 +663,7 @@ describe('copy', () => {
     const frame = document.createElement('iframe');
     document.body.append(frame);
     const frameDocument = frame.contentDocument!;
-    const frameWindow = frame.contentWindow!;
+    const frameWindow = frame.contentWindow! as Window & typeof globalThis;
     const ownerlessDocument = document.implementation.createHTMLDocument('ownerless');
     const mainClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     const frameClipboard = Object.getOwnPropertyDescriptor(frameWindow.navigator, 'clipboard');

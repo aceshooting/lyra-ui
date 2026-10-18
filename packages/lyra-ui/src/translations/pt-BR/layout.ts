@@ -61,6 +61,7 @@ const strings: LyraLocaleStrings = {
     many: '{count} comandos',
     other: '{count} comandos',
   },
+  commandPaletteInputLimit: 'Alguns comandos foram omitidos porque um limite de entrada foi atingido.',
 };
 
 registerLyraLocale('pt-BR', strings);
