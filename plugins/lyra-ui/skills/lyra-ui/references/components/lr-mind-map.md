@@ -129,6 +129,10 @@ keyboard descent).
 render-cap notice, present above 500 legacy visible nodes and always in source mode),
 `input-limit` (legacy input-admission notice), `live-region` (visually hidden
 announcement region), `empty` (shown when legacy `topics` is empty).
+Source-mode parts: `source-diagram` (the bounded connected subtree), `source-list` (the global
+virtualized navigator), `source-row` (a hierarchy row with global position metadata),
+`source-toggle` (expand, collapse or retry action), `source-label` (topic label), `source-status`
+(loading, empty and global-count status), and `source-error` (failure and retry status).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
 ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of

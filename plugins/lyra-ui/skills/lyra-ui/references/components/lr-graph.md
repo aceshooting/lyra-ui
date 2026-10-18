@@ -20,6 +20,27 @@ A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d
 orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
 list of all admitted graph items. The 3D and list views require no optional peer.
 
+**Complete graph provider:** `graphSource: GraphSource | undefined = undefined` (attribute: false)
+takes precedence over `nodes` and `edges`; an invalid defined source fails visibly. Setting
+`undefined` restores the current legacy arrays. `GraphSource` is
+`LyraGraphSource<LyraGraphNode, LyraGraphEdge & { readonly id: string }>`; see the
+[shared graph-source protocol](../shared/events-and-types.md). Record keys are `node:<id>` or
+`edge:<id>`, and source edges require explicit IDs. Reassign the source, even the same object,
+or call `requestUpdate()` to refresh. The global record navigator remains available beside a
+bounded diagram of at most 500 nodes and 1,000 edges, with up to 32 reserved active/focused keys.
+Provider totals describe the complete source; scene coverage is disclosed separately, and
+`fit()` frames only the current scene.
+
+`sourcePage: number = 0` (attribute `source-page`) is the zero-based global record page;
+`sourcePageSize: number = 100` (attribute `source-page-size`) normalizes to 1–500, and changing
+its effective size resets page zero. Readonly `sourceTotal: number | null` reports the exact
+active node/edge query total after a successful current response, or `0` for an empty composed
+filter; otherwise `null` without a current response.
+`revealSourceKey(key: string): Promise<boolean>` clears query filters, uses provider `locate`,
+and reveals and focuses a canonical row without selecting or activating it. It returns false
+when the source/key is invalid or absent, the target row cannot be found after paging, or work
+is superseded.
+
 Spatial rendering and layered layout load only when selected. After changing `view` to a spatial
 view or selecting `layout="layered"`, await `updateComplete` to include that module's loading;
 the existing asynchronous d3 data-readiness contract is unchanged. Node and edge snapshots retain
@@ -258,6 +279,10 @@ the offscreen keyboard-roving items), `spatial-toolbar` (3D/list view and camera
 interaction surface), `spatial-instructions` (camera keyboard instructions), `spatial-list` (the
 visible paginated fallback), `spatial-list-item` (each activatable node, edge or community),
 `spatial-page-count` (localized total and page status), and `spatial-pagination` (page controls).
+Source-mode parts: `source-navigator` (global query, record list and pagination), `source-row`
+(a mounted record activation button), `source-row-active` (the navigator's roving tab stop),
+`source-status` (loading, unavailable-record or error text), and `source-coverage` (full-source
+totals and current diagram coverage).
 
 **Themeable custom properties:** `--lr-canvas-reserved-height` (default
 `var(--lr-size-24rem)`) sets the host block size and is shared with the optional pre-upgrade

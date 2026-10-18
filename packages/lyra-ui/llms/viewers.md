@@ -2458,6 +2458,12 @@ only while the viewer and its composed ancestors are exposed to the accessibilit
 The spinner always includes visible localized loading text alongside its decorative ring; the text
 remains understandable without CSS or animation and the ring stops under reduced motion.
 
+With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
+logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse
+or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
+(localized projection or row failure).
+`search-status` discloses unavailable or partial global provider search.
+
 **Themeable custom properties:** `--lr-xml-viewer-max-height` (default `none`) — maximum block size
 of the scrollable body; also settable via the `max-height` property.
 `--lr-xml-viewer-active-match-color` (default `var(--lr-color-warning)`) — the solid outline on the

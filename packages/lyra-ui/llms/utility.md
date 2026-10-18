@@ -621,6 +621,12 @@ clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); 
 `copyable`), `limit` (the localized notice rendered below the tree when the depth/node traversal
 budget truncates rendering or search — absent entirely for any document within budget)
 
+With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
+logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse
+or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
+(localized projection or row failure).
+`search-status` discloses unavailable or partial global provider search.
+
 Collapsed arrays retain their exact safe `.length`. A broad object whose key count itself exceeds
 the traversal budget uses an “at least” preview rather than presenting the retained prefix as a
 false total. Per-row copy actions remain visible by default on coarse-pointer/no-hover devices;

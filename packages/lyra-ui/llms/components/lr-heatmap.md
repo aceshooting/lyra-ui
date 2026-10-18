@@ -604,6 +604,10 @@ bar between them, while `legendStops` is supplied), `legend-stop` (one per `lege
 closes the legend row, present in both the gradient and the `legendStops` branch),
 `legend-annotation` (one per labeled `annotations` entry)
 
+With `matrixSource` set, additional CSS parts are `source-summary` (complete matrix and displayed viewport summary),
+`source-status` (loading text), `source-error` (localized failure), and `source-exact-window`
+(the bounded exact grid rendered when `accessibleCells` is true).
+
 **Themeable custom properties:** `--lr-heatmap-scale-lo` (default `var(--lr-color-brand-quiet)`),
 `--lr-heatmap-scale-hi` (default `var(--lr-color-brand)`) — the sequential color-ramp endpoints
 (matrix mode) or quartile-bucket ramp endpoints (calendar mode), resolved via `getComputedStyle` each

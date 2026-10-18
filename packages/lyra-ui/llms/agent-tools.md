@@ -1704,6 +1704,11 @@ when `spans` is empty), `limit` (the actual shown/source count for projection or
 The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
 paint width would otherwise be only a few pixels.
 
+With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
+logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse
+or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
+(localized projection or row failure).
+
 The terminal axis tick is end-aligned so its label remains inside the allocated chart width, and an
 interior tick label that would overprint a neighbour is hidden (the terminal label is kept). Roving
 keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span
@@ -1875,6 +1880,11 @@ indicator, not rendered while `without-collapse`), `body` (the list of items, `h
 valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, `limit` (shown when the task
 source or render cap is exceeded), and `item-children` (the
 nested `role="list"` wrapper around a top-level item's children).
+
+With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
+logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse
+or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
+(localized projection or row failure).
 
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
@@ -2195,6 +2205,11 @@ state at once; `revealSourceKey(key)` is the provider navigation method describe
 `duration`, `tokens-in`, `tokens-out` (when `with-tokens`), `cost` (when `with-cost`), `bar-track`,
 `bar`, `empty` (shown when `spans` is empty), `limit` (source or projection truncation notice), and
 `live-region`.
+
+With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
+logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse
+or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
+(localized projection or row failure).
 
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row, and the base
@@ -2536,6 +2551,9 @@ adjacent localized status word carries the meaning. Running rows use the decorat
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
 `data-status`), `test-status`, `test-name`, `test-duration`, `test-expand-toggle`, `failure`
 (hidden while collapsed), `failure-message`, `limit`, `input-error` (rejected legacy snapshot), and `empty`.
+
+With `dataSource` set, additional CSS parts are `source-status` (provider loading or failure text), `source-retry` (retry
+the current failed provider request), and `source-pagination` (provider page controls).
 
 **Themeable custom properties:** `--lr-test-results-filter-active-bg` (default
 `var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default

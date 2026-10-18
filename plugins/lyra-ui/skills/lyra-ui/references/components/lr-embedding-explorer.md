@@ -126,6 +126,8 @@ cancel unfinished work, and reconnect resumes from the current source.
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
 `limit` (the "showing N of M" sampling notice), `empty`.
+Spatial-source parts: `bin` (a focusable density region, separate from representative point
+overlays) and `error` (invalid or unavailable spatial-source feedback).
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`

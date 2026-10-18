@@ -227,6 +227,9 @@ on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none
 `lr-retrieval-search` filter value), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
 `metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`, `limit` (the
 input-retention notice).
+Source-mode parts: `source-status` (page loading or failure text), `source-retry` (page retry),
+`source-pagination` (provider page navigation), `source-selection-status` (canonical selected-record
+lookup loading or failure), and `source-selection-retry` (retrying that lookup).
 
 The per-row `lr-chunk-inspector`'s own parts are forwarded onward under a `chunk-` prefix —
 `chunk`, `chunk-current`, `chunk-score`, `chunk-score-current`, `chunk-score-bar`,

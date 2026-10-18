@@ -106,6 +106,10 @@ the bin width, with no fraction digits once the width reaches 10 and no forced t
 The inherited datum-visibility events apply only to radial controllers; the histogram keeps its
 bar controller and dataset legend even with `legend-mode="datum"`.
 
+The inherited `lr-spatial-bin-select` and `lr-spatial-point-select` events are not emitted by
+this fixed-bar specialist: inherited spatial `preparedData` alone is rejected, and `distribution`
+supplies bin categories rather than a spatial route.
+
 **Slots:** default JSON configuration script, `data-table`, `center`.
 
 **CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-item-hidden`, `legend-swatch`,

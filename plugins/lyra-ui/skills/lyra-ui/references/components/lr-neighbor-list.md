@@ -112,6 +112,9 @@ wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `r
 `node-label`, `node-meta` (secondary type/degree text, when present), `expand-button` (only when
 `expandable`), `limit` (input-admission notice), `empty` (shown when `rows` is empty). Every part presents identically either side of
 `virtualizeAt`.
+Source-mode parts: `source-status` (loading, failure, empty or missing-center feedback),
+`source-summary` (exact neighborhood total and current page count), and `source-retry`
+(the current failed request's retry action).
 
 **Themeable custom properties:** shared tokens only.
 

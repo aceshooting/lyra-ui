@@ -157,6 +157,11 @@ valid `reorderable` data), `status-icon`, `item-label`, `item-detail`, `limit` (
 source or render cap is exceeded), and `item-children` (the
 nested `role="list"` wrapper around a top-level item's children).
 
+With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
+logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse
+or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
+(localized projection or row failure).
+
 **Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
 `1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
 icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (default

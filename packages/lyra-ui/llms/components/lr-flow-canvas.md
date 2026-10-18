@@ -281,6 +281,11 @@ fallback-card parts `node-card`, `node-card-base`, `node-card-surface`, `node-ca
 normalizes to a safe part token also exposes `node-type-{value}`. A selected node wrapper carries
 `data-selected`; its hidden `node-control` exposes the state as `aria-pressed`.
 
+With `graphSource` set, additional CSS parts are `source-navigator` (complete-source record navigation), `source-controls`
+(query and page controls), `source-records` (the bounded current page), `source-record` (one record
+with incident-edge or endpoint actions), `source-status` (record/scene loading, failure and count
+text), and `source-coverage` (accepted scene coverage relative to complete node/edge totals).
+
 `live-region` is a visually hidden, `aria-hidden` mirror of the latest item/gesture message. The
 actual messages are flushed to the document's shared light-DOM polite sink; mount is silent, and
 identical repeated messages are appended as separate announcements.

@@ -3375,6 +3375,9 @@ their corresponding render-hook output; inherited fonts, layout values, and them
 reach callback-rendered descendants through these parts). `row-excerpt` wraps `renderExcerpt`
 output, which is slotted into the row item's own `excerpt` slot.
 
+With `dataSource` set, additional CSS parts are `source-status` (provider loading text) and `source-pagination` (the
+provider page-navigation host).
+
 Data mode additionally forwards each row `<lr-conversation-item>`'s own parts under a `row-item-`
 prefix: `row-item-base`, `row-item-base-menu-open`, `row-item-active-indicator`, `row-item-select-button`, `row-item-start`, `row-item-content`,
 `row-item-label`, `row-item-label-input`, `row-item-rename-button`, `row-item-excerpt`,

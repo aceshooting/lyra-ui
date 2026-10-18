@@ -27,6 +27,27 @@ A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d
 orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
 list of all admitted graph items. The 3D and list views require no optional peer.
 
+**Complete graph provider:** `graphSource: GraphSource | undefined = undefined` (attribute: false)
+takes precedence over `nodes` and `edges`; an invalid defined source fails visibly. Setting
+`undefined` restores the current legacy arrays. `GraphSource` is
+`LyraGraphSource<LyraGraphNode, LyraGraphEdge & { readonly id: string }>`; see the
+[shared graph-source protocol](shared/events-and-types.md). Record keys are `node:<id>` or
+`edge:<id>`, and source edges require explicit IDs. Reassign the source, even the same object,
+or call `requestUpdate()` to refresh. The global record navigator remains available beside a
+bounded diagram of at most 500 nodes and 1,000 edges, with up to 32 reserved active/focused keys.
+Provider totals describe the complete source; scene coverage is disclosed separately, and
+`fit()` frames only the current scene.
+
+`sourcePage: number = 0` (attribute `source-page`) is the zero-based global record page;
+`sourcePageSize: number = 100` (attribute `source-page-size`) normalizes to 1–500, and changing
+its effective size resets page zero. Readonly `sourceTotal: number | null` reports the exact
+active node/edge query total after a successful current response, or `0` for an empty composed
+filter; otherwise `null` without a current response.
+`revealSourceKey(key: string): Promise<boolean>` clears query filters, uses provider `locate`,
+and reveals and focuses a canonical row without selecting or activating it. It returns false
+when the source/key is invalid or absent, the target row cannot be found after paging, or work
+is superseded.
+
 Spatial rendering and layered layout load only when selected. After changing `view` to a spatial
 view or selecting `layout="layered"`, await `updateComplete` to include that module's loading;
 the existing asynchronous d3 data-readiness contract is unchanged. Node and edge snapshots retain
@@ -265,6 +286,10 @@ the offscreen keyboard-roving items), `spatial-toolbar` (3D/list view and camera
 interaction surface), `spatial-instructions` (camera keyboard instructions), `spatial-list` (the
 visible paginated fallback), `spatial-list-item` (each activatable node, edge or community),
 `spatial-page-count` (localized total and page status), and `spatial-pagination` (page controls).
+Source-mode parts: `source-navigator` (global query, record list and pagination), `source-row`
+(a mounted record activation button), `source-row-active` (the navigator's roving tab stop),
+`source-status` (loading, unavailable-record or error text), and `source-coverage` (full-source
+totals and current diagram coverage).
 
 **Themeable custom properties:** `--lr-canvas-reserved-height` (default
 `var(--lr-size-24rem)`) sets the host block size and is shared with the optional pre-upgrade
@@ -863,6 +888,9 @@ wrapper, re-exported under the same name), `direction` (`aria-hidden` glyph), `r
 `node-label`, `node-meta` (secondary type/degree text, when present), `expand-button` (only when
 `expandable`), `limit` (input-admission notice), `empty` (shown when `rows` is empty). Every part presents identically either side of
 `virtualizeAt`.
+Source-mode parts: `source-status` (loading, failure, empty or missing-center feedback),
+`source-summary` (exact neighborhood total and current page count), and `source-retry`
+(the current failed request's retry action).
 
 **Themeable custom properties:** shared tokens only.
 
@@ -1462,6 +1490,10 @@ keyboard descent).
 render-cap notice, present above 500 legacy visible nodes and always in source mode),
 `input-limit` (legacy input-admission notice), `live-region` (visually hidden
 announcement region), `empty` (shown when legacy `topics` is empty).
+Source-mode parts: `source-diagram` (the bounded connected subtree), `source-list` (the global
+virtualized navigator), `source-row` (a hierarchy row with global position metadata),
+`source-toggle` (expand, collapse or retry action), `source-label` (topic label), `source-status`
+(loading, empty and global-count status), and `source-error` (failure and retry status).
 
 **Themeable custom properties:** `--lr-mind-map-ring-gap` (default `6rem`, radius step per depth
 ring, read on each relayout: connect, resize, `dir`/`lang`, data or expansion change). `--lr-mind-map-node-hover-halo` (default `var(--lr-color-brand-quiet)`) — stroke color of
@@ -2554,6 +2586,9 @@ shown/total notice when more than 50 nodes match), `input-limit` (outer node/edg
 `details-limit` (a localized shown/total notice when `entityDetails` is too large to keep), `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
+Source-mode parts: `source-status` (filter error or all-types-hidden feedback) and `source-clear`
+(the action that clears hidden types). `detail-neighbors` is the details neighborhood;
+its provider binding is active only while source-mode details are open.
 
 **Themeable custom properties:** `--lr-canvas-reserved-height` (default
 `var(--lr-size-24rem)`) sets the explorer's host block size and matches its pre-upgrade
@@ -2906,6 +2941,9 @@ on a selected `row-body`), `metadata` (a `<dl>`; omitted when the chunk has none
 `lr-retrieval-search` filter value), `metadata-entry`, `metadata-term` (the `<dt>` carrying a metadata key),
 `metadata-value` (the `<dd>` carrying its value), `load-more-row`, `load-more`, `limit` (the
 input-retention notice).
+Source-mode parts: `source-status` (page loading or failure text), `source-retry` (page retry),
+`source-pagination` (provider page navigation), `source-selection-status` (canonical selected-record
+lookup loading or failure), and `source-selection-retry` (retrying that lookup).
 
 The per-row `lr-chunk-inspector`'s own parts are forwarded onward under a `chunk-` prefix —
 `chunk`, `chunk-current`, `chunk-score`, `chunk-score-current`, `chunk-score-bar`,
@@ -3302,6 +3340,8 @@ cancel unfinished work, and reconnect resumes from the current source.
 
 **CSS parts:** `base`, `plot`, `point`, `legend`, `legend-item`, `legend-swatch`, `legend-label`,
 `limit` (the "showing N of M" sampling notice), `empty`.
+Spatial-source parts: `bin` (a focusable density region, separate from representative point
+overlays) and `error` (invalid or unavailable spatial-source feedback).
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`

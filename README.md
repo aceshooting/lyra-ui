@@ -292,7 +292,7 @@ main `$lyra-ui` skill remains the exact API reference.
 
 ## Status
 
-`@aceshooting/lyra-ui` source is versioned at `29.0.2`; `@aceshooting/lyra-flags` source at `2.3.0`
+`@aceshooting/lyra-ui` source is versioned at `29.1.0`; `@aceshooting/lyra-flags` source at `2.3.0`
 — see each package's own `CHANGELOG.md` for release history. Published npm versions can lag these
 source versions while a release is being qualified. `lyra-ide` and `lyra-translations` version in
 lockstep with `lyra-ui`; `lyra-flags`, `lyra-docs` and `lyra-map` version independently with

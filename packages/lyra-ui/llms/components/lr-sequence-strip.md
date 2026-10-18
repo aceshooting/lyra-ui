@@ -228,6 +228,9 @@ only while the strip is past its 200-cell cap; it replaced 15.x's `window-range`
 projection window this component no longer has), and `legend-limit`
 (bounded legend/total).
 
+With `source` set, additional CSS parts are `source-status` (loading or failure text), `source-retry` (retry the current
+source failure), and `source-exact` (the exact-item inspection and activation button).
+
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
 block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
 `[part="marker"]` fill, and of the marker legend row's bar), `--lr-sequence-strip-legend-swatch-size`

@@ -2767,6 +2767,10 @@ bar between them, while `legendStops` is supplied), `legend-stop` (one per `lege
 closes the legend row, present in both the gradient and the `legendStops` branch),
 `legend-annotation` (one per labeled `annotations` entry)
 
+With `matrixSource` set, additional CSS parts are `source-summary` (complete matrix and displayed viewport summary),
+`source-status` (loading text), `source-error` (localized failure), and `source-exact-window`
+(the bounded exact grid rendered when `accessibleCells` is true).
+
 **Themeable custom properties:** `--lr-heatmap-scale-lo` (default `var(--lr-color-brand-quiet)`),
 `--lr-heatmap-scale-hi` (default `var(--lr-color-brand)`) — the sequential color-ramp endpoints
 (matrix mode) or quartile-bucket ramp endpoints (calendar mode), resolved via `getComputedStyle` each
@@ -3129,6 +3133,9 @@ instead: a neutral chip carrying the same bottom bar a `marker: true` cell paint
 only while the strip is past its 200-cell cap; it replaced 15.x's `window-range`, which disclosed a
 projection window this component no longer has), and `legend-limit`
 (bounded legend/total).
+
+With `source` set, additional CSS parts are `source-status` (loading or failure text), `source-retry` (retry the current
+source failure), and `source-exact` (the exact-item inspection and activation button).
 
 **Themeable custom properties:** `--lr-sequence-strip-height` (default `1.5rem` — the strip's
 block-size), `--lr-sequence-strip-marker-color` (default `var(--lr-color-text)` — the
@@ -3889,6 +3896,11 @@ fallback-card parts `node-card`, `node-card-base`, `node-card-surface`, `node-ca
 `node-card-handle`, `node-card-handle-input`, and `node-card-handle-output`. A node whose `type`
 normalizes to a safe part token also exposes `node-type-{value}`. A selected node wrapper carries
 `data-selected`; its hidden `node-control` exposes the state as `aria-pressed`.
+
+With `graphSource` set, additional CSS parts are `source-navigator` (complete-source record navigation), `source-controls`
+(query and page controls), `source-records` (the bounded current page), `source-record` (one record
+with incident-edge or endpoint actions), `source-status` (record/scene loading, failure and count
+text), and `source-coverage` (accepted scene coverage relative to complete node/edge totals).
 
 `live-region` is a visually hidden, `aria-hidden` mirror of the latest item/gesture message. The
 actual messages are flushed to the document's shared light-DOM polite sink; mount is silent, and

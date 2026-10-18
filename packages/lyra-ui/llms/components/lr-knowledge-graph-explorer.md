@@ -253,6 +253,9 @@ shown/total notice when more than 50 nodes match), `input-limit` (outer node/edg
 `details-limit` (a localized shown/total notice when `entityDetails` is too large to keep), `pinned` (only while
 `pinnedNodeIds` is non-empty), `pinned-heading`, `graph` (the composed `lr-graph`), `path` (only
 while `path` is non-empty), `detail-popover`, `detail-card`.
+Source-mode parts: `source-status` (filter error or all-types-hidden feedback) and `source-clear`
+(the action that clears hidden types). `detail-neighbors` is the details neighborhood;
+its provider binding is active only while source-mode details are open.
 
 **Themeable custom properties:** `--lr-canvas-reserved-height` (default
 `var(--lr-size-24rem)`) sets the explorer's host block size and matches its pre-upgrade

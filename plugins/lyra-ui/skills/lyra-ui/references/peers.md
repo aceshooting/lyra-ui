@@ -39,7 +39,7 @@ for the page.
 |---|---|---|
 | `@aceshooting/lyra-flags` | `^2.3.0` | _(loaded by a shared internal module)_ |
 | `@aceshooting/lyra-map` | `^1.1.0` | `lr-geojson-viewer`, `lr-map` |
-| `@aceshooting/lyra-translations` | `^29.0.2` | _(not referenced by any component)_ |
+| `@aceshooting/lyra-translations` | `^29.1.0` | _(not referenced by any component)_ |
 | `@aiden0z/pptx-renderer` | `^1.3.0` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.0.0` | `lr-box-plot` |
 | `chart.js` | `^4.0.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |

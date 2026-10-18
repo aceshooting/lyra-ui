@@ -133,6 +133,11 @@ when `spans` is empty), `limit` (the actual shown/source count for projection or
 The interactive `bar` keeps a 24px minimum target in both axes even when its duration-derived
 paint width would otherwise be only a few pixels.
 
+With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
+logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse
+or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
+(localized projection or row failure).
+
 The terminal axis tick is end-aligned so its label remains inside the allocated chart width, and an
 interior tick label that would overprint a neighbour is hidden (the terminal label is kept). Roving
 keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span

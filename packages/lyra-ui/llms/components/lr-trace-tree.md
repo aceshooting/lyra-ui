@@ -140,6 +140,11 @@ state at once; `revealSourceKey(key)` is the provider navigation method describe
 `bar`, `empty` (shown when `spans` is empty), `limit` (source or projection truncation notice), and
 `live-region`.
 
+With `treeSource` set, additional CSS parts are `source-list` (bounded provider virtual viewport), `source-row` (flat
+logical tree item and focus owner), `source-label` (row content), `source-toggle` (expand/collapse
+or retry button), `source-status` (loading, full-source count or empty text), and `source-error`
+(localized projection or row failure).
+
 **Themeable custom properties:** `--lr-trace-tree-row-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row, and the base
 its hover/press mixes from — and
