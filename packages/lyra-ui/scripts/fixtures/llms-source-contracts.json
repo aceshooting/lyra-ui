@@ -1567,10 +1567,10 @@
       }
     },
     {
-      "module": "src/components/agent-tools/eval-result/eval-result.class.ts",
+      "module": "src/components/agent-tools/eval-result/eval-run-result.ts",
       "exportName": "EvalRunResult",
       "kind": "interface",
-      "fingerprint": "72cfc3e88043c61fe2ce",
+      "fingerprint": "3461731d9fec276b212b",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/eval-result/eval-result-register.ts",
@@ -2670,10 +2670,10 @@
       }
     },
     {
-      "module": "src/components/agent-tools/trace-tree/span.ts",
+      "module": "src/components/agent-tools/trace-tree/span-shared.ts",
       "exportName": "LyraSpan",
       "kind": "interface",
-      "fingerprint": "7cd9c7747749d41370db",
+      "fingerprint": "0f1c590b9a08c6e571a2",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/agent-trace/agent-trace.class.ts",
@@ -2702,7 +2702,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "LyraSpanProjection",
       "kind": "interface",
-      "fingerprint": "412db081a0ce01747f5e",
+      "fingerprint": "8f1ab6486890f0168df0",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2721,10 +2721,10 @@
       }
     },
     {
-      "module": "src/components/agent-tools/trace-tree/span.ts",
+      "module": "src/components/agent-tools/trace-tree/span-shared.ts",
       "exportName": "normalizeLyraSpanKind",
       "kind": "function",
-      "fingerprint": "80bca7023703a8c5c84b",
+      "fingerprint": "5f75f2d29f8fe0a497aa",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2746,7 +2746,7 @@
       "module": "src/components/agent-tools/trace-tree/span.ts",
       "exportName": "normalizeLyraSpans",
       "kind": "function",
-      "fingerprint": "28c45c63ee3ce63221c2",
+      "fingerprint": "ade5f6557cc3d225c91b",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -2765,10 +2765,10 @@
       }
     },
     {
-      "module": "src/components/agent-tools/trace-tree/span.ts",
+      "module": "src/components/agent-tools/trace-tree/span-shared.ts",
       "exportName": "normalizeLyraSpanStatus",
       "kind": "function",
-      "fingerprint": "ed7ee8f51ba393255f1d",
+      "fingerprint": "2b723b2e8db7b1052afd",
       "routes": [
         "src/all.ts",
         "src/components/agent-tools/index.ts",
@@ -3543,7 +3543,7 @@
       "module": "src/components/charts/chart/histogram-buckets.ts",
       "exportName": "binnedBuckets",
       "kind": "function",
-      "fingerprint": "95220c31de135c9db90d",
+      "fingerprint": "44caa33e4f2fcd04dd7d",
       "routes": [
         "src/components/charts/chart/histogram.class.ts",
         "src/components/charts/chart/histogram.ts",
@@ -5907,7 +5907,7 @@
       "module": "src/components/data/flow-canvas/flow-types.ts",
       "exportName": "FlowStructureSnapshot",
       "kind": "interface",
-      "fingerprint": "1eaf8c4cbd95bec7df4b",
+      "fingerprint": "34979edf4539834c3043",
       "routes": [
         "src/all.ts",
         "src/components/data/flow-canvas/flow-canvas.class.ts",
@@ -6460,7 +6460,7 @@
       "module": "src/components/data/sequence-strip/sequence-strip.class.ts",
       "exportName": "LyraSequenceStripActivateDetail",
       "kind": "interface",
-      "fingerprint": "428dc2494c8ccfb03723",
+      "fingerprint": "21e4ade43395e59ce3de",
       "routes": [
         "src/all.ts",
         "src/components/data/index.ts",
@@ -6501,7 +6501,7 @@
       }
     },
     {
-      "module": "src/components/data/sequence-strip/sequence-strip.class.ts",
+      "module": "src/components/data/sequence-strip/sequence-strip-item.ts",
       "exportName": "SequenceStripItem",
       "kind": "interface",
       "fingerprint": "22c60edbe179b99a5f43",
@@ -9789,7 +9789,7 @@
       }
     },
     {
-      "module": "src/components/media/lightbox/lightbox.class.ts",
+      "module": "src/components/media/lightbox/lightbox-types.ts",
       "exportName": "LyraLightboxImage",
       "kind": "interface",
       "fingerprint": "70c46365e506d8bb87a0",
@@ -9814,7 +9814,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "22339f4cde29bfb057d5",
+      "fingerprint": "0bfa0d1dbea386419bc8",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9846,7 +9846,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreGeoJsonSource",
       "kind": "interface",
-      "fingerprint": "0c2c862cc0b6e27c586b",
+      "fingerprint": "439a56705b1c892aac76",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9862,7 +9862,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "a394ed8808cff1727010",
+      "fingerprint": "f1f7ddd434c6ad3a20fb",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9878,7 +9878,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "9c478c061471918a276b",
+      "fingerprint": "34ab9a9713d1f4bdb702",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9894,7 +9894,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "0c81fe2a476f832161dc",
+      "fingerprint": "b1cd8a230426e06e7bb4",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -11824,7 +11824,7 @@
       "module": "src/components/retrieval/retrieval-trace/retrieval-trace.class.ts",
       "exportName": "RetrievalStage",
       "kind": "interface",
-      "fingerprint": "04f01a3dfce6f47017f2",
+      "fingerprint": "3ce78758eefea943a51c",
       "routes": [
         "src/all.ts",
         "src/components/lr-retrieval-trace.ts",
@@ -14145,7 +14145,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "5c885357f39f27f3dda8",
+      "fingerprint": "67babe1b500b6dea32cb",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15052,7 +15052,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "9055ac7324cef4a7ae52",
+      "fingerprint": "ce0d3895c3c86fd221ca",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15186,7 +15186,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "30eb70837cbed7443200",
+      "fingerprint": "899b7fb89666b373c8fc",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15770,7 +15770,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "622224dda8726be6092c",
+      "fingerprint": "23c1e5cdc5b929844dcc",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15786,7 +15786,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "1b54c1347fe78f2a350c",
+      "fingerprint": "e2f097ca8f9124f6e674",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15802,7 +15802,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "44fca5ed93603769b365",
+      "fingerprint": "59224b9582f770535faa",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16329,7 +16329,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "c525be6d0dedcca0fa40",
+      "fingerprint": "c7c7fd547ce7e6a2661c",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16346,7 +16346,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "13542c6a0ca48b0a419b",
+      "fingerprint": "133fafd62bdfec63ef18",
       "routes": [
         "src/vue.ts"
       ],
@@ -16755,7 +16755,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "d60ac47f710aa8fabb96",
+      "fingerprint": "c5c659cdc089b5605a8c",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16780,7 +16780,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "0a19a6a1374a65177711",
+      "fingerprint": "d2653251fff43839fac5",
       "routes": [
         "src/localization.ts"
       ],
@@ -18192,7 +18192,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadModularMap",
       "kind": "function",
-      "fingerprint": "656b7ad0acd3c89cb878",
+      "fingerprint": "0a70aa5d48732d54367d",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18231,7 +18231,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "ModularMapModule",
       "kind": "interface",
-      "fingerprint": "c9c6a14552f1bbe02e61",
+      "fingerprint": "9c1b7ed4ac32131f72e0",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18241,6 +18241,2096 @@
         "kind": "utility",
         "name": "components-media-map-map-loader-contracts",
         "declaration": "ModularMapModule"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/eval-dataset/eval-dataset.class.ts",
+      "exportName": "EvalDatasetSourceQuery",
+      "kind": "interface",
+      "fingerprint": "265784c5ba822898aa03",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/eval-dataset/eval-dataset.class.ts",
+        "src/components/agent-tools/eval-dataset/eval-dataset.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/lr-eval-dataset.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-eval-dataset",
+        "declaration": "EvalDatasetSourceQuery"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/eval-result/eval-result.class.ts",
+      "exportName": "EvalResultSourceQuery",
+      "kind": "interface",
+      "fingerprint": "dd6133dab2fc9bece248",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/eval-result/eval-result-register.ts",
+        "src/components/agent-tools/eval-result/eval-result.class.ts",
+        "src/components/agent-tools/eval-result/eval-result.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/lr-eval-result.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-eval-result",
+        "declaration": "EvalResultSourceQuery"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/terminal/terminal.class.ts",
+      "exportName": "LyraTerminalOverflowDetail",
+      "kind": "interface",
+      "fingerprint": "2c1dfa0bcd7081ec11b6",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/terminal/terminal.class.ts",
+        "src/components/agent-tools/terminal/terminal.ts",
+        "src/components/lr-terminal.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-terminal",
+        "declaration": "LyraTerminalOverflowDetail"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/test-results/test-results.class.ts",
+      "exportName": "TestResultsSourceQuery",
+      "kind": "interface",
+      "fingerprint": "225fbab1eca7f3b8d40f",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/test-results/test-results.class.ts",
+        "src/components/agent-tools/test-results/test-results.ts",
+        "src/components/lr-test-results.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-test-results",
+        "declaration": "TestResultsSourceQuery"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/test-results/test-results.class.ts",
+      "exportName": "TestResultsSourceRow",
+      "kind": "interface",
+      "fingerprint": "20a9fb0e14eff2629a39",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/test-results/test-results.class.ts",
+        "src/components/agent-tools/test-results/test-results.ts",
+        "src/components/lr-test-results.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-test-results",
+        "declaration": "TestResultsSourceRow"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/test-results/test-results.class.ts",
+      "exportName": "TestResultsSourceSummary",
+      "kind": "interface",
+      "fingerprint": "430e7765ec71f3777382",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/test-results/test-results.class.ts",
+        "src/components/agent-tools/test-results/test-results.ts",
+        "src/components/lr-test-results.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-test-results",
+        "declaration": "TestResultsSourceSummary"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/chart-prepared-data.ts",
+      "exportName": "LyraChartSourceCategorySelectDetail",
+      "kind": "interface",
+      "fingerprint": "e5bf21cf9e1af3aeb479",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bar-chart.class.ts",
+        "src/components/charts/chart/bar-chart.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/doughnut-chart.class.ts",
+        "src/components/charts/chart/doughnut-chart.ts",
+        "src/components/charts/chart/line-chart.class.ts",
+        "src/components/charts/chart/line-chart.ts",
+        "src/components/charts/chart/lite-chart.class.ts",
+        "src/components/charts/chart/lite-chart.ts",
+        "src/components/charts/chart/pie-chart.class.ts",
+        "src/components/charts/chart/pie-chart.ts",
+        "src/components/charts/chart/polar-area-chart.class.ts",
+        "src/components/charts/chart/polar-area-chart.ts",
+        "src/components/charts/chart/radar-chart.class.ts",
+        "src/components/charts/chart/radar-chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bar-chart.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-doughnut-chart.ts",
+        "src/components/lr-line-chart.ts",
+        "src/components/lr-lite-chart.ts",
+        "src/components/lr-pie-chart.ts",
+        "src/components/lr-polar-area-chart.ts",
+        "src/components/lr-radar-chart.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraChartSourceCategorySelectDetail"
+      }
+    },
+    {
+      "module": "src/components/charts/chart/chart-prepared-data.ts",
+      "exportName": "LyraChartSourcePointSelectDetail",
+      "kind": "interface",
+      "fingerprint": "6e9fa20648fd6f083e7c",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bar-chart.class.ts",
+        "src/components/charts/chart/bar-chart.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/doughnut-chart.class.ts",
+        "src/components/charts/chart/doughnut-chart.ts",
+        "src/components/charts/chart/line-chart.class.ts",
+        "src/components/charts/chart/line-chart.ts",
+        "src/components/charts/chart/lite-chart.class.ts",
+        "src/components/charts/chart/lite-chart.ts",
+        "src/components/charts/chart/pie-chart.class.ts",
+        "src/components/charts/chart/pie-chart.ts",
+        "src/components/charts/chart/polar-area-chart.class.ts",
+        "src/components/charts/chart/polar-area-chart.ts",
+        "src/components/charts/chart/radar-chart.class.ts",
+        "src/components/charts/chart/radar-chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bar-chart.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-doughnut-chart.ts",
+        "src/components/lr-line-chart.ts",
+        "src/components/lr-lite-chart.ts",
+        "src/components/lr-pie-chart.ts",
+        "src/components/lr-polar-area-chart.ts",
+        "src/components/lr-radar-chart.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraChartSourcePointSelectDetail"
+      }
+    },
+    {
+      "module": "src/components/conversation/thread-list/thread-list.class.ts",
+      "exportName": "ThreadListSourceQuery",
+      "kind": "interface",
+      "fingerprint": "25b97b3dd36bf852f472",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/index.ts",
+        "src/components/conversation/thread-list/thread-list.class.ts",
+        "src/components/conversation/thread-list/thread-list.ts",
+        "src/components/lr-thread-list.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-thread-list",
+        "declaration": "ThreadListSourceQuery"
+      }
+    },
+    {
+      "module": "src/components/data/document-library/document-library.class.ts",
+      "exportName": "DocumentLibrarySourceQuery",
+      "kind": "interface",
+      "fingerprint": "5808c87a28a24a47ed47",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/document-library/document-library.class.ts",
+        "src/components/data/document-library/document-library.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-document-library.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-document-library",
+        "declaration": "DocumentLibrarySourceQuery"
+      }
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap-matrix-source.ts",
+      "exportName": "HeatmapSourceCell",
+      "kind": "interface",
+      "fingerprint": "c32ce126ac6530d8c147",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-heatmap",
+        "declaration": "HeatmapSourceCell"
+      }
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap-matrix-source.ts",
+      "exportName": "LyraHeatmapMatrixRangeSelectDetail",
+      "kind": "interface",
+      "fingerprint": "0e7619f9b9a8e37f4d86",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/heatmap/heatmap.class.ts",
+        "src/components/data/heatmap/heatmap.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-heatmap.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-heatmap",
+        "declaration": "LyraHeatmapMatrixRangeSelectDetail"
+      }
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap-matrix-source.ts",
+      "exportName": "LyraHeatmapMatrixSource",
+      "kind": "interface",
+      "fingerprint": "b4dfb553fad84dfe7f38",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/heatmap/heatmap.class.ts",
+        "src/components/data/heatmap/heatmap.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-heatmap.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-heatmap",
+        "declaration": "LyraHeatmapMatrixSource"
+      }
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap-matrix-source.ts",
+      "exportName": "LyraHeatmapMatrixViewport",
+      "kind": "interface",
+      "fingerprint": "5b0bd1dd12cf84a2e633",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/heatmap/heatmap.class.ts",
+        "src/components/data/heatmap/heatmap.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-heatmap.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-heatmap",
+        "declaration": "LyraHeatmapMatrixViewport"
+      }
+    },
+    {
+      "module": "src/components/data/heatmap/heatmap-matrix-source.ts",
+      "exportName": "LyraHeatmapTile",
+      "kind": "interface",
+      "fingerprint": "065bfbe06b4b4081dc7c",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/heatmap/heatmap.class.ts",
+        "src/components/data/heatmap/heatmap.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-heatmap.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-heatmap",
+        "declaration": "LyraHeatmapTile"
+      }
+    },
+    {
+      "module": "src/components/data/sequence-strip/sequence-strip-source.ts",
+      "exportName": "LyraSequenceRangeSummary",
+      "kind": "interface",
+      "fingerprint": "41f45ee5d2bb3eb969d3",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/index.ts",
+        "src/components/data/sequence-strip/sequence-strip.class.ts",
+        "src/components/data/sequence-strip/sequence-strip.ts",
+        "src/components/lr-sequence-strip.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-sequence-strip",
+        "declaration": "LyraSequenceRangeSummary"
+      }
+    },
+    {
+      "module": "src/components/data/sequence-strip/sequence-strip-source.ts",
+      "exportName": "LyraSequenceSource",
+      "kind": "interface",
+      "fingerprint": "192923445959c849069b",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/index.ts",
+        "src/components/data/sequence-strip/sequence-strip.class.ts",
+        "src/components/data/sequence-strip/sequence-strip.ts",
+        "src/components/lr-sequence-strip.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-sequence-strip",
+        "declaration": "LyraSequenceSource"
+      }
+    },
+    {
+      "module": "src/components/media/av-player/av-cue-source.ts",
+      "exportName": "LyraAvActiveCue",
+      "kind": "interface",
+      "fingerprint": "87f6ae0d5e12966d834f",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-av-player.ts",
+        "src/components/media/av-player/av-player.class.ts",
+        "src/components/media/av-player/av-player.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-av-player",
+        "declaration": "LyraAvActiveCue"
+      }
+    },
+    {
+      "module": "src/components/media/av-player/av-cue-source.ts",
+      "exportName": "LyraAvCueSearch",
+      "kind": "interface",
+      "fingerprint": "4943162345997ce156cc",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-av-player.ts",
+        "src/components/media/av-player/av-player.class.ts",
+        "src/components/media/av-player/av-player.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-av-player",
+        "declaration": "LyraAvCueSearch"
+      }
+    },
+    {
+      "module": "src/components/media/av-player/av-cue-source.ts",
+      "exportName": "LyraAvCueSource",
+      "kind": "interface",
+      "fingerprint": "67b497444c5bdfbe257f",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-av-player.ts",
+        "src/components/media/av-player/av-player.class.ts",
+        "src/components/media/av-player/av-player.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-av-player",
+        "declaration": "LyraAvCueSource"
+      }
+    },
+    {
+      "module": "src/components/media/lightbox/lightbox-types.ts",
+      "exportName": "LyraLightboxSource",
+      "kind": "interface",
+      "fingerprint": "0b551953675fb1088eec",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-lightbox.ts",
+        "src/components/media/index.ts",
+        "src/components/media/lightbox/lightbox.class.ts",
+        "src/components/media/lightbox/lightbox.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "declaration",
+        "name": "LyraLightboxSource"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-loader.ts",
+      "exportName": "MapLibreSourceDataDiff",
+      "kind": "interface",
+      "fingerprint": "c2e5c4fdd9d25247786a",
+      "routes": [
+        "src/all.ts",
+        "src/components/media/map/map-loader.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-loader-contracts",
+        "declaration": "MapLibreSourceDataDiff"
+      }
+    },
+    {
+      "module": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
+      "exportName": "IngestionQueueSourceQuery",
+      "kind": "interface",
+      "fingerprint": "9d4ae12c586290950b43",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-ingestion-queue.ts",
+        "src/components/retrieval/index.ts",
+        "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
+        "src/components/retrieval/ingestion-queue/ingestion-queue.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "declaration",
+        "name": "IngestionQueueSourceQuery"
+      }
+    },
+    {
+      "module": "src/components/retrieval/knowledge-base/knowledge-base.class.ts",
+      "exportName": "KnowledgeBaseSourceQuery",
+      "kind": "interface",
+      "fingerprint": "dd6133dab2fc9bece248",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-knowledge-base.ts",
+        "src/components/retrieval/index.ts",
+        "src/components/retrieval/knowledge-base/knowledge-base.class.ts",
+        "src/components/retrieval/knowledge-base/knowledge-base.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-knowledge-base",
+        "declaration": "KnowledgeBaseSourceQuery"
+      }
+    },
+    {
+      "module": "src/components/retrieval/knowledge-base/knowledge-base.class.ts",
+      "exportName": "KnowledgeBaseSourceSummary",
+      "kind": "interface",
+      "fingerprint": "c3762272d2caf820e20e",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-knowledge-base.ts",
+        "src/components/retrieval/index.ts",
+        "src/components/retrieval/knowledge-base/knowledge-base.class.ts",
+        "src/components/retrieval/knowledge-base/knowledge-base.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-knowledge-base",
+        "declaration": "KnowledgeBaseSourceSummary"
+      }
+    },
+    {
+      "module": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
+      "exportName": "RetrievalResultsSourceQuery",
+      "kind": "interface",
+      "fingerprint": "4cccfc83796d52ec34e1",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-retrieval-results.ts",
+        "src/components/retrieval/index.ts",
+        "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
+        "src/components/retrieval/retrieval-results/retrieval-results.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-retrieval-results",
+        "declaration": "RetrievalResultsSourceQuery"
+      }
+    },
+    {
+      "module": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
+      "exportName": "SpreadsheetViewerWorkbook",
+      "kind": "interface",
+      "fingerprint": "357ffdd8bff9c040228d",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "declaration",
+        "name": "SpreadsheetViewerWorkbook"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraGraphOverview",
+      "kind": "interface",
+      "fingerprint": "e66ec8912d298dbcce03",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraGraphOverview"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraGraphScene",
+      "kind": "interface",
+      "fingerprint": "02ece43327044403640a",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraGraphScene"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraGraphSceneRequest",
+      "kind": "interface",
+      "fingerprint": "1f073112bccabb3f3025",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraGraphSceneRequest"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraGraphSource",
+      "kind": "interface",
+      "fingerprint": "72c11fe0cf983f7c2822",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraGraphSource"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraGraphSourceQuery",
+      "kind": "interface",
+      "fingerprint": "af906cb878a2b307d560",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraGraphSourceQuery"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraGraphSourceSummary",
+      "kind": "interface",
+      "fingerprint": "70042068d32aa6aced4b",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraGraphSourceSummary"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraHierarchyQuery",
+      "kind": "interface",
+      "fingerprint": "b11df129192cd9932cee",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraHierarchyQuery"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraHierarchyRequest",
+      "kind": "interface",
+      "fingerprint": "1069e093a5acb6d6f359",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraHierarchyRequest"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraHierarchyRow",
+      "kind": "interface",
+      "fingerprint": "0998aefa61ec86ffcb24",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraHierarchyRow"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraHierarchySource",
+      "kind": "interface",
+      "fingerprint": "d50606404dcfa5de92ac",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraHierarchySource"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraInspectionNode",
+      "kind": "interface",
+      "fingerprint": "e145e0536da1d04d77c4",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraInspectionNode"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraPageRequest",
+      "kind": "interface",
+      "fingerprint": "86915cdf0030c9e5a9af",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraPageRequest"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraPageSource",
+      "kind": "interface",
+      "fingerprint": "77bd24fc3f06bedd4d74",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraPageSource"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraRangeSource",
+      "kind": "interface",
+      "fingerprint": "6db914df1bf732333d52",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraRangeSource"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraSourceBounds",
+      "kind": "interface",
+      "fingerprint": "27acd962d6c8ea141dc1",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraSourceBounds"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraSourceContext",
+      "kind": "interface",
+      "fingerprint": "788ec1e4ba674efbc7f9",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraSourceContext"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraSourceFacet",
+      "kind": "interface",
+      "fingerprint": "cb97489b9346ea3f5fd3",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraSourceFacet"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraSourceGroup",
+      "kind": "interface",
+      "fingerprint": "e2fe36e7459365d230c1",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraSourceGroup"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraSourceRangeRequest",
+      "kind": "interface",
+      "fingerprint": "a7fc58ab2db6c4829604",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraSourceRangeRequest"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraSourceRecord",
+      "kind": "interface",
+      "fingerprint": "0049207feae16e1069bf",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraSourceRecord"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraSourceSearchRequest",
+      "kind": "interface",
+      "fingerprint": "dbf7570def522457f90d",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-csv-viewer.ts",
+        "src/components/lr-dataset-viewer.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.class.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraSourceSearchRequest"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraSourceSearchResult",
+      "kind": "interface",
+      "fingerprint": "be4fb0a515b72386f7ed",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-csv-viewer.ts",
+        "src/components/lr-dataset-viewer.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.class.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraSourceSearchResult"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraTabularColumn",
+      "kind": "interface",
+      "fingerprint": "d2f98e03e45a0df62839",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-csv-viewer.ts",
+        "src/components/lr-dataset-viewer.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.class.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraTabularColumn"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraTabularHit",
+      "kind": "interface",
+      "fingerprint": "6c97a2849a0f743e49e4",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-csv-viewer.ts",
+        "src/components/lr-dataset-viewer.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.class.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraTabularHit"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraTabularReadRequest",
+      "kind": "interface",
+      "fingerprint": "8ce28fa24c6ae3972d17",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-csv-viewer.ts",
+        "src/components/lr-dataset-viewer.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.class.ts",
+        "src/components/viewers/csv-viewer/csv-viewer.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
+        "src/components/viewers/dataset-viewer/dataset-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraTabularReadRequest"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraTabularSourceBase",
+      "kind": "interface",
+      "fingerprint": "4b20272089a7de93e41c",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraTabularSourceBase"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraTaskSourceSummary",
+      "kind": "interface",
+      "fingerprint": "07d4a1956a03ae20c8fe",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraTaskSourceSummary"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraTraceSourceSummary",
+      "kind": "interface",
+      "fingerprint": "cf9294722e67cc48cad1",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraTraceSourceSummary"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraWorkbookHit",
+      "kind": "interface",
+      "fingerprint": "2b5ea06e410b891e9c8d",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-spreadsheet-viewer.ts",
+        "src/components/viewers/index.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
+        "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraWorkbookHit"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraWorkbookSource",
+      "kind": "interface",
+      "fingerprint": "72244d11b794376efa83",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraWorkbookSource"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraHistogramDistribution",
+      "kind": "interface",
+      "fingerprint": "9ee9eea646e286f415be",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/histogram.class.ts",
+        "src/components/charts/chart/histogram.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-histogram.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraHistogramDistribution"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraIndexedInput",
+      "kind": "interface",
+      "fingerprint": "c85e3ad5b88cc315db25",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraIndexedInput"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraNumericDomain",
+      "kind": "interface",
+      "fingerprint": "cd11390ac8c2781933e4",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraNumericDomain"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraObservationCounts",
+      "kind": "interface",
+      "fingerprint": "96532c0f35c070c6c351",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraObservationCounts"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraPreparationOptions",
+      "kind": "interface",
+      "fingerprint": "43f9271ce06389a4e4f4",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraPreparationOptions"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraPreparedCategoryData",
+      "kind": "interface",
+      "fingerprint": "52944664d80f01c36e1e",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bar-chart.class.ts",
+        "src/components/charts/chart/bar-chart.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/doughnut-chart.class.ts",
+        "src/components/charts/chart/doughnut-chart.ts",
+        "src/components/charts/chart/line-chart.class.ts",
+        "src/components/charts/chart/line-chart.ts",
+        "src/components/charts/chart/lite-chart.class.ts",
+        "src/components/charts/chart/lite-chart.ts",
+        "src/components/charts/chart/pie-chart.class.ts",
+        "src/components/charts/chart/pie-chart.ts",
+        "src/components/charts/chart/polar-area-chart.class.ts",
+        "src/components/charts/chart/polar-area-chart.ts",
+        "src/components/charts/chart/radar-chart.class.ts",
+        "src/components/charts/chart/radar-chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bar-chart.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-doughnut-chart.ts",
+        "src/components/lr-line-chart.ts",
+        "src/components/lr-lite-chart.ts",
+        "src/components/lr-pie-chart.ts",
+        "src/components/lr-polar-area-chart.ts",
+        "src/components/lr-radar-chart.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraPreparedCategoryData"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraPreparedSeriesData",
+      "kind": "interface",
+      "fingerprint": "44c03d3b1f9d0d63ef21",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bar-chart.class.ts",
+        "src/components/charts/chart/bar-chart.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/doughnut-chart.class.ts",
+        "src/components/charts/chart/doughnut-chart.ts",
+        "src/components/charts/chart/line-chart.class.ts",
+        "src/components/charts/chart/line-chart.ts",
+        "src/components/charts/chart/lite-chart.class.ts",
+        "src/components/charts/chart/lite-chart.ts",
+        "src/components/charts/chart/pie-chart.class.ts",
+        "src/components/charts/chart/pie-chart.ts",
+        "src/components/charts/chart/polar-area-chart.class.ts",
+        "src/components/charts/chart/polar-area-chart.ts",
+        "src/components/charts/chart/radar-chart.class.ts",
+        "src/components/charts/chart/radar-chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/data/index.ts",
+        "src/components/data/sparkline/sparkline.class.ts",
+        "src/components/data/sparkline/sparkline.ts",
+        "src/components/lr-bar-chart.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-doughnut-chart.ts",
+        "src/components/lr-line-chart.ts",
+        "src/components/lr-lite-chart.ts",
+        "src/components/lr-pie-chart.ts",
+        "src/components/lr-polar-area-chart.ts",
+        "src/components/lr-radar-chart.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/components/lr-sparkline.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraPreparedSeriesData"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraPreparedSeries",
+      "kind": "interface",
+      "fingerprint": "88d4b0253b471a546faf",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraPreparedSeries"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraPreparedWaveform",
+      "kind": "interface",
+      "fingerprint": "d5c6a150216c1a0520aa",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-av-player.ts",
+        "src/components/media/av-player/av-player.class.ts",
+        "src/components/media/av-player/av-player.ts",
+        "src/components/media/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraPreparedWaveform"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraPreparedWordCloud",
+      "kind": "interface",
+      "fingerprint": "45a285c2ec19ee9df91a",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/index.ts",
+        "src/components/data/word-cloud/word-cloud.class.ts",
+        "src/components/data/word-cloud/word-cloud.ts",
+        "src/components/lr-word-cloud.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraPreparedWordCloud"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraSeriesObservation",
+      "kind": "interface",
+      "fingerprint": "1539181f3603e648e228",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraSeriesObservation"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraSeriesPointRef",
+      "kind": "interface",
+      "fingerprint": "6eb02a3cdd4bb9821da0",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bar-chart.class.ts",
+        "src/components/charts/chart/bar-chart.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/doughnut-chart.class.ts",
+        "src/components/charts/chart/doughnut-chart.ts",
+        "src/components/charts/chart/line-chart.class.ts",
+        "src/components/charts/chart/line-chart.ts",
+        "src/components/charts/chart/lite-chart.class.ts",
+        "src/components/charts/chart/lite-chart.ts",
+        "src/components/charts/chart/pie-chart.class.ts",
+        "src/components/charts/chart/pie-chart.ts",
+        "src/components/charts/chart/polar-area-chart.class.ts",
+        "src/components/charts/chart/polar-area-chart.ts",
+        "src/components/charts/chart/radar-chart.class.ts",
+        "src/components/charts/chart/radar-chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bar-chart.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-doughnut-chart.ts",
+        "src/components/lr-line-chart.ts",
+        "src/components/lr-lite-chart.ts",
+        "src/components/lr-pie-chart.ts",
+        "src/components/lr-polar-area-chart.ts",
+        "src/components/lr-radar-chart.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraSeriesPointRef"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraSeriesRangeRequest",
+      "kind": "interface",
+      "fingerprint": "4499f4228b10b3e19a05",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraSeriesRangeRequest"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraSeriesSample",
+      "kind": "interface",
+      "fingerprint": "00d5bc31649b27f002a1",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraSeriesSample"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraSourceRequest",
+      "kind": "interface",
+      "fingerprint": "0eec5a3365d515153736",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraSourceRequest"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "LyraWeightedWord",
+      "kind": "interface",
+      "fingerprint": "f42fe9ecbc5353c047ca",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/index.ts",
+        "src/components/data/word-cloud/word-cloud.class.ts",
+        "src/components/data/word-cloud/word-cloud.ts",
+        "src/components/lr-word-cloud.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "LyraWeightedWord"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "prepareLyraCategoryData",
+      "kind": "function",
+      "fingerprint": "fa5dc3615e4784876cd2",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "prepareLyraCategoryData"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "prepareLyraHistogram",
+      "kind": "function",
+      "fingerprint": "44849b3f893013d702fc",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "prepareLyraHistogram"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "prepareLyraSeriesData",
+      "kind": "function",
+      "fingerprint": "90c594f9d33f56e57244",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "prepareLyraSeriesData"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "prepareLyraWaveform",
+      "kind": "function",
+      "fingerprint": "58b32e17302fb98863b7",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "prepareLyraWaveform"
+      }
+    },
+    {
+      "module": "src/utilities/data-preparation.ts",
+      "exportName": "prepareLyraWordCloud",
+      "kind": "function",
+      "fingerprint": "167ee86d83446052f821",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-preparation.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "utilities-data-preparation-contracts",
+        "declaration": "prepareLyraWordCloud"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraChartSpatialPointSelectDetail",
+      "kind": "interface",
+      "fingerprint": "cb8f8a446b0a5dd9cf1e",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraChartSpatialPointSelectDetail"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraSpatialBin",
+      "kind": "interface",
+      "fingerprint": "e5e2768250b4fb717af7",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-embedding-explorer.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraSpatialBin"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraSpatialBinSelectDetail",
+      "kind": "interface",
+      "fingerprint": "b622ce8f74ddaa212a06",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-embedding-explorer.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-embedding-explorer",
+        "declaration": "LyraSpatialBinSelectDetail"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraSpatialBounds",
+      "kind": "interface",
+      "fingerprint": "ca324e4a67ed6556dd89",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-embedding-explorer.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraSpatialBounds"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraSpatialChartPoint",
+      "kind": "interface",
+      "fingerprint": "c7512d2c614afa120a19",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraSpatialChartPoint"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraSpatialChartSeries",
+      "kind": "interface",
+      "fingerprint": "59e4bdb71e0a3f8b6f72",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraSpatialChartSeries"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraSpatialChartSource",
+      "kind": "interface",
+      "fingerprint": "82cae664fa2267d466b9",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart/bubble-chart.class.ts",
+        "src/components/charts/chart/bubble-chart.ts",
+        "src/components/charts/chart/chart.class.ts",
+        "src/components/charts/chart/chart.ts",
+        "src/components/charts/chart/scatter-chart.class.ts",
+        "src/components/charts/chart/scatter-chart.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-bubble-chart.ts",
+        "src/components/lr-chart.ts",
+        "src/components/lr-scatter-chart.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraSpatialChartSource"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraSpatialPoint",
+      "kind": "interface",
+      "fingerprint": "5d031eed8d2a79253395",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-embedding-explorer.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraSpatialPoint"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraSpatialPointSource",
+      "kind": "interface",
+      "fingerprint": "bb7df3b7b5496a91eb24",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-embedding-explorer.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraSpatialPointSource"
+      }
+    },
+    {
+      "module": "src/utilities/data-spatial.ts",
+      "exportName": "LyraSpatialQuery",
+      "kind": "interface",
+      "fingerprint": "7195fc0dcbfc6e25b100",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-embedding-explorer.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/utilities/data-spatial.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-chart",
+        "declaration": "LyraSpatialQuery"
       }
     }
   ],
