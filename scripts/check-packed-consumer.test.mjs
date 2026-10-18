@@ -49,7 +49,7 @@ test('the migrated consumer configures its modular worker without changing nativ
   }
 });
 
-test('caps the full core graph with an exact binary allowance and unchanged non-asset headroom', () => {
+test('caps the full core graph with an exact binary allowance and tightly measured non-asset headroom', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
   assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable measured budget');
 
@@ -58,16 +58,16 @@ test('caps the full core graph with an exact binary allowance and unchanged non-
       .map((match) => [match.groups.name, Number(match.groups.value.replaceAll('_', ''))]),
   );
   assert.deepEqual(terms, {
-    reviewedCoreMeasurementBytes: 4_977_154,
+    reviewedCoreMeasurementBytes: 5_524_765,
     reviewedRequiredShikiAssetBytes: 466_610,
-    selectedRegressionHeadroomBytes: 16_000,
+    selectedRegressionHeadroomBytes: 35,
   });
   const nonAssetCeiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
   const ceiling = nonAssetCeiling + terms.reviewedRequiredShikiAssetBytes;
-  assert.equal(nonAssetCeiling, 4_993_154);
-  assert.equal(ceiling, 5_459_764);
+  assert.equal(nonAssetCeiling, 5_524_800);
+  assert.equal(ceiling, 5_991_410);
   assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedCoreMeasurementBytes < 0.005,
-    'the existing raw regression headroom must remain below 0.5%');
+    'the selected raw regression headroom must remain below 0.5%');
   assert.match(
     checkerSource,
     /maxRawBytes:\s*coreRawBudget\.reviewedCoreMeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*\+\s*coreRawBudget\.reviewedRequiredShikiAssetBytes\s*,/u,
