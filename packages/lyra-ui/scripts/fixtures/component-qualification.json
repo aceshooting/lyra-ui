@@ -30634,18 +30634,6 @@
           "status": "automated",
           "evidence": [
             {
-              "file": "src/components/forms/locale-picker/locale-picker-loader.test.ts",
-              "test": "keeps keyboard selection pending and makes loading and failure states accessible",
-              "target": "el",
-              "state": "open"
-            },
-            {
-              "file": "src/components/forms/locale-picker/locale-picker-loader.test.ts",
-              "test": "keeps keyboard selection pending and makes loading and failure states accessible",
-              "target": "el",
-              "state": "open"
-            },
-            {
               "file": "src/components/forms/locale-picker/locale-picker.test.ts",
               "test": "falls back to the derived native name when a locale entry has an explicit blank label",
               "target": "el",
@@ -30668,6 +30656,18 @@
               "test": "renders a 36px flag-only trigger with an accessible current language in ${direction}",
               "target": "el",
               "state": "open"
+            },
+            {
+              "file": "src/components/forms/locale-picker/locale-picker-loader.test.ts",
+              "test": "keeps keyboard selection pending and makes loading and failure states accessible",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/locale-picker/locale-picker-loader.test.ts",
+              "test": "keeps keyboard selection pending and makes loading and failure states accessible",
+              "target": "el",
+              "state": "populated"
             },
             {
               "file": "src/components/forms/locale-picker/locale-picker-option-display.test.ts",

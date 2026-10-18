@@ -185,6 +185,12 @@ export class SourceWindowController<T> implements ReactiveController {
       if ((page.state === 'queued' || page.state === 'loading') && !wanted.has(page.start)) this.drop(page);
       if (transaction !== this.windowVersion || !this.current(binding, generation, owner)) return;
     }
+    // Reserve every retained wanted page before a missing page can evict an older cache entry.
+    // Otherwise an overlapping window whose first page is absent can discard all its ready rows.
+    for (const offset of wanted) {
+      const existing = this.pages.get(offset);
+      if (existing) { this.pages.delete(offset); this.pages.set(offset, existing); }
+    }
     for (const offset of wanted) {
       this.page(offset, false, transaction);
       if (transaction !== this.windowVersion || !this.current(binding, generation, owner)) return;

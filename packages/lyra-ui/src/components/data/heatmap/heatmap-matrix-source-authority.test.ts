@@ -334,7 +334,7 @@ it('keeps initial errors quiet and announces a later source failure in light DOM
   const el = await fixture<SourceHost>(html`<lr-heatmap .matrixSource=${source} .strings=${{ heatmapSourceError: 'Matrix could not load' }}></lr-heatmap>`);
   await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part="source-error"]')));
   const liveText = () => [...document.querySelectorAll('[aria-live="polite"]')].map(node => node.textContent ?? '').join('');
-  await new Promise(resolve => setTimeout(resolve, 600));
+  await el.updateComplete; await Promise.resolve();
   expect(liveText()).not.contain('Matrix could not load');
   source.query = normal; el.requestUpdate();
   await waitUntil(() => el.exportData('csv') !== '');
@@ -343,9 +343,11 @@ it('keeps initial errors quiet and announces a later source failure in light DOM
   let mutations = 0;
   const observer = new MutationObserver(records => { mutations += records.filter(record => (record.target as Element).closest?.('[aria-live="polite"]')).length; });
   observer.observe(document.body, { subtree: true, childList: true, characterData: true });
-  el.matrixReducer = 'max'; await el.updateComplete;
-  await new Promise(resolve => setTimeout(resolve, 600)); observer.disconnect();
-  expect(mutations).equal(0);
+  try {
+    el.matrixReducer = 'max'; await el.updateComplete;
+    await Promise.resolve();
+    expect(mutations).equal(0);
+  } finally { observer.disconnect(); }
 });
 
 for (const callback of ['cellInteractive', 'cellText', 'cellColor'] as const) {

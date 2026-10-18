@@ -40,6 +40,31 @@ function range(reads: number[]): LyraRangeSource<Row> {
 }
 
 describe('SourceWindowController', () => {
+
+  it('retains overlapping wanted pages when the first demanded page is missing', async () => {
+    const test = setup(100, 400, 4);
+    const reads: number[] = [];
+    test.bind(range(reads));
+    const pages = (test.control as unknown as { pages: Map<number, unknown> }).pages;
+    try {
+      for (const index of [200, 300, 400, 0]) {
+        expect(await test.control.ensure(index)).to.equal(true);
+      }
+      expect([...pages.keys()]).to.deep.equal([200, 300, 400, 0]);
+      const retained = new Map([200, 300, 400].map(index => [index, pages.get(index)]));
+      reads.length = 0;
+      test.control.requestRange(100, 500);
+      for (const index of [100, 200, 300, 400]) {
+        expect(await test.control.ensure(index)).to.equal(true);
+      }
+      expect(reads, 'only the missing page requires a provider read').to.deep.equal([100]);
+      expect([...pages.keys()].sort((a, b) => a - b)).to.deep.equal([100, 200, 300, 400]);
+      for (const [index, page] of retained) {
+        expect(pages.get(index) === page, `wanted page ${index} keeps its retained rows`).to.equal(true);
+      }
+      expect(test.control.source.indexOfKey!('key-0')).to.equal(-1);
+    } finally { test.disconnect(); }
+  });
   it('bounds indexed and ranged keys in UTF-16 units, including direct unallocated keys', async () => {
     const exact = `k${'😀'.repeat(32_767)}x`;
     const oversized = `k${'😀'.repeat(32_768)}`;

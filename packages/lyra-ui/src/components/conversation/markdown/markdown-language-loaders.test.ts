@@ -1,5 +1,5 @@
 import { expect, nextFrame, waitUntil } from '@open-wc/testing';
-import './markdown.js';
+import { preloadMarkdown } from './markdown.js';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import type { ShikiLanguageInput } from '../code-block/shiki-types.js';
 import { markdownHighlightKey, type PendingHighlight } from './markdown-shared.js';
@@ -36,10 +36,10 @@ it('preserves unset concrete grammar identity and isolates shared output after l
 });
 
 it('retains tokenizer override dispatch and discards pending output after changing only loaders', async () => {
+  await preloadMarkdown();
   const el = document.createElement('lr-markdown');
   const languages = { json: { name: 'json', scopeName: 'source.json' } };
   el.languages = languages;
-  el.content = '```json\n{"loaderOverride": true}\n```';
   const pending: { resolve(value: string): void; current(): boolean; languages: Readonly<Record<string, ShikiLanguageInput>> | undefined }[] = [];
   const tokenizer = el as unknown as {
     tokenizePendingHighlight(pending: PendingHighlight, languages: Readonly<Record<string, ShikiLanguageInput>> | undefined, current: () => boolean): Promise<string>;
@@ -49,9 +49,14 @@ it('retains tokenizer override dispatch and discards pending output after changi
   });
   document.body.append(el);
   try {
+    // A warm cache renders during connection; settle initial updates before adding code.
+    await el.updateComplete;
+    el.content = '```json\n{"loaderOverride": true}\n```';
+    await el.updateComplete;
     await waitUntil(() => pending.length === 1);
     expect(pending[0]!.languages).equal(languages);
     el.languageLoaders = { extra: async () => languages.json };
+    await el.updateComplete;
     await waitUntil(() => pending.length === 2);
     expect(pending[1]!.languages).equal(languages);
     expect(pending[0]!.current()).equal(false);

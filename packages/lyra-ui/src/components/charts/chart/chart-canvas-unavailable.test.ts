@@ -74,13 +74,23 @@ for (const tag of ['lr-chart', 'lr-box-plot']) {
     const runtime = el as unknown as {
       chart?: { destroy(): void };
       chartJsModule: { Chart: new (...args: unknown[]) => object };
+      lastObservedInlineSize?: number;
+      samplingWidth?: number;
+      resizeDrawFrame?: number;
       draw(): void;
     };
     let destroyed = 0;
     let updates = 0;
     try {
       document.body.append(el);
-      await waitUntil(() => runtime.chart !== undefined, 'Initial chart should render', { timeout: 5000 });
+      await waitUntil(() => {
+        if (!runtime.chart || el.isUpdatePending) return false;
+        if (tag !== 'lr-chart') return true;
+        // Initial allocation can schedule a redraw after the peer first becomes available.
+        const width = runtime.lastObservedInlineSize;
+        return typeof width === 'number' && Number.isFinite(width) && width > 0 &&
+          runtime.samplingWidth === Math.floor(width) && runtime.resizeDrawFrame === undefined;
+      }, 'Initial chart allocation should settle', { timeout: 5000 });
       runtime.chart!.destroy();
       runtime.chart = undefined;
       runtime.chartJsModule = { Chart: class {

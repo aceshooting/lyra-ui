@@ -1107,6 +1107,7 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await waitForPart(el, 'canvas');
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    await waitUntil(() => canvas.style.width === '90px', 'the initially visible canvas did not paint');
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
 
     (el as unknown as { visible: boolean }).visible = false;

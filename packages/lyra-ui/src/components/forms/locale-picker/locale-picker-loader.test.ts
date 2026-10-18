@@ -17,7 +17,7 @@ const pending = () => {
 const pick = (el: Picker, tag: string) => el.shadowRoot!
   .querySelector<HTMLElement>(`[part="option"][data-value="${tag}"]`)!.click();
 const trigger = (el: Picker) => el.shadowRoot!.querySelector<HTMLElement>('[part="trigger"]')!;
-const create = () => fixture<Picker>(html`<lr-locale-picker open locale="en" value="en" without-flags .locales=${['en', 'fr', 'de']} .strings=${{ loading: 'Please wait', statusError: 'Cannot load', retry: 'Try again' }}></lr-locale-picker>`);
+const create = (open = true) => fixture<Picker>(html`<lr-locale-picker ?open=${open} locale="en" value="en" without-flags .locales=${['en', 'fr', 'de']} .strings=${{ loading: 'Please wait', statusError: 'Cannot load', retry: 'Try again' }}></lr-locale-picker>`);
 let previousLocale: string;
 beforeEach(() => { previousLocale = getLyraLocale(); setLyraLocale('en'); });
 afterEach(() => { setLyraLocale(previousLocale); });
@@ -198,8 +198,9 @@ it('prevents nested selection during the request callback from starting a second
 
 
 it('keeps keyboard selection pending and makes loading and failure states accessible', async () => {
-  const el = await create();
-  el.open = false; await el.updateComplete;
+  const el = await create(false);
+  expect(el.open).to.equal(false);
+  expect(el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!.hidden).to.equal(true);
   const load = pending();
   el.localeLoader = () => load.promise;
   await focusByKeyboard(trigger(el));

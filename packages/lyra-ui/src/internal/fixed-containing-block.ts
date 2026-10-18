@@ -47,7 +47,7 @@ function isNonNoneCssValue(value: string | undefined): boolean {
 }
 
 /** Engine discriminator for the separately verified inline-origin and will-change differences. */
-export function usesWebKitContainingBlockRules(): boolean {
+function usesWebKitContainingBlockRules(): boolean {
   return typeof CSS !== 'undefined' && CSS.supports?.('-webkit-backdrop-filter', 'none') === true;
 }
 

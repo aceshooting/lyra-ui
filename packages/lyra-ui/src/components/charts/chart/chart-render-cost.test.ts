@@ -442,9 +442,33 @@ describe('chart synchronization idle cost', () => {
       timeout: 5000,
     });
     await waitUntil(
-      () => [owner!, recipient!].every(chart =>
-        (chart as unknown as { chartSync: { enabled: boolean } }).chartSync.enabled),
-      'chart synchronization did not initialize',
+      () => [owner!, recipient!].every(chart => {
+        const allocation = chart as unknown as {
+          chartSync: { enabled: boolean };
+          lastObservedInlineSize?: number;
+          samplingWidth: number;
+          resizeDrawFrame?: number;
+        };
+        const width = allocation.lastObservedInlineSize;
+        if (!allocation.chartSync.enabled || chart.isUpdatePending ||
+          typeof width !== 'number' || !Number.isFinite(width) || width <= 0 ||
+          allocation.samplingWidth !== Math.floor(width) || allocation.resizeDrawFrame !== undefined) return false;
+        // Initial sampling updates can clear a published category; wait before the single move.
+        const runtime = peer(chart) as (RuntimeProbe & {
+          width: number;
+          height: number;
+          chartArea?: { width: number; height: number };
+        }) | undefined;
+        const bounds = chart.shadowRoot?.querySelector('canvas')?.getBoundingClientRect();
+        const point = runtime?.getDatasetMeta(0).data[2] as { x: number; y: number; skip?: boolean } | undefined;
+        const area = runtime?.chartArea;
+        return !!runtime && !!bounds && !!point && !!area && !point.skip &&
+          [bounds.width, bounds.height, runtime.width, runtime.height, area.width, area.height]
+            .every(value => Number.isFinite(value) && value > 0) &&
+          Number.isFinite(point.x) && Number.isFinite(point.y) &&
+          point.x >= 0 && point.x <= runtime.width && point.y >= 0 && point.y <= runtime.height;
+      }),
+      'Chart synchronization and initial allocation should settle',
       { timeout: 5000 },
     );
     await Promise.all([owner!.updateComplete, recipient!.updateComplete]);

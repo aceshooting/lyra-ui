@@ -1,10 +1,21 @@
-import { expect, nextFrame } from '@open-wc/testing';
+import { expect, nextFrame, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import './markdown.js';
 import './markdown-core.js';
 import type { LyraMarkdown } from './markdown.class.js';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import { markdownHighlightKey, type PendingHighlight } from './markdown-shared.js';
+
+async function settleProgressiveHighlightRepaint(el: LyraMarkdown): Promise<void> {
+  const seam = el as unknown as {
+    progressiveSession?: { pending: boolean };
+    highlightRepaintTimer?: unknown;
+  };
+  await waitUntil(() => seam.progressiveSession?.pending === false &&
+    !el.isUpdatePending && seam.highlightRepaintTimer === undefined,
+  'progressive Markdown and highlight repaint did not settle');
+  await el.updateComplete;
+}
 
 for (const tag of ['lr-markdown', 'lr-markdown-core'] as const) {
   it(`${tag} appends plain streaming text without replacing the retained prefix`, async () => {
@@ -143,15 +154,17 @@ it('coalesces progressive highlight repaint requests and cancels them on disconn
   el.highlights = [{ id: 'stable', anchor: { kind: 'text-quote', quote: 'Stable' } }];
   document.body.append(el);
   try {
-    await loadMarkdownDeps(); await el.updateComplete; await new Promise(resolve => setTimeout(resolve, 130));
+    await loadMarkdownDeps(); await el.updateComplete; await settleProgressiveHighlightRepaint(el);
     const seam = el as unknown as { repaintHighlights(): void; updated(changed: Map<string, unknown>): void };
     let paints = 0; const original = seam.repaintHighlights.bind(el);
     seam.repaintHighlights = () => { paints++; original(); };
     for (let index = 0; index < 20; index++) seam.updated(new Map([['streamingTail', null]]));
     expect(paints).equal(0);
+    // wait-reason: observe the real 100ms debounce window to reject extra paints after the burst.
     await new Promise(resolve => setTimeout(resolve, 130)); expect(paints).equal(1);
     recordScaleMeasurement('lr-markdown', 'n=1000 paragraphs20 highlight requests', { paints });
     seam.updated(new Map([['streamingTail', null]])); el.remove();
+    // wait-reason: pass the scheduled 100ms deadline to prove disconnect cancelled the repaint.
     await new Promise(resolve => setTimeout(resolve, 130)); expect(paints).equal(1);
   } finally { el.remove(); }
 });
@@ -212,10 +225,10 @@ it('extends the rendered progressive highlight index without rescanning settled 
   el.content = '# Needle\n\n' + 'paragraph\n\n'.repeat(1000) + 'tail';
   el.highlights = [{ id: 'needle', anchor: { kind: 'text-quote', quote: 'Needle' } }]; document.body.append(el);
   try {
-    await loadMarkdownDeps(); await el.updateComplete; await new Promise(resolve => setTimeout(resolve, 130));
+    await loadMarkdownDeps(); await el.updateComplete; await settleProgressiveHighlightRepaint(el);
     const seam = el as unknown as { textQuoteIndexCache: { index: { scannedCodeUnits: number } } };
     const previous = seam.textQuoteIndexCache.index, units = previous.scannedCodeUnits;
-    el.content += '\n\n# Added\n\nnext'; await el.updateComplete; await new Promise(resolve => setTimeout(resolve, 130));
+    el.content += '\n\n# Added\n\nnext'; await el.updateComplete; await settleProgressiveHighlightRepaint(el);
     expect(seam.textQuoteIndexCache.index === previous).equal(true);
     expect(previous.scannedCodeUnits - units).at.most(100);
     recordScaleMeasurement('lr-markdown', 'n=1000 paragraphs append highlight search', { scannedCodeUnits: previous.scannedCodeUnits - units });
