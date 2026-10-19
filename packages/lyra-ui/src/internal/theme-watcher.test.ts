@@ -1285,6 +1285,40 @@ describe('ThemeWatcher', () => {
 });
 
 describe('ThemeWatcher shared observation', () => {
+  it("observes only stylesheet-carrier attributes in a host's own shadow root until a nested watcher needs ancestry", async () => {
+    const OriginalObserver = window.MutationObserver;
+    const filters = new Map<Node, readonly string[] | undefined>();
+    window.MutationObserver = class extends OriginalObserver {
+      override observe(target: Node, options?: MutationObserverInit) {
+        filters.set(target, options?.attributes ? options.attributeFilter ?? ['*'] : []);
+        super.observe(target, options);
+      }
+    };
+    const outer = await makeHost();
+    const shadow = outer.host.attachShadow({ mode: 'open' });
+    new ThemeWatcher(outer.host, () => {});
+    try {
+      outer.connect();
+      expect(filters.get(shadow)).to.not.include('style');
+      expect(filters.get(shadow)).to.not.include('class');
+      expect(filters.get(shadow)).to.include('media');
+      const inner = shadow.appendChild(document.createElement('div'));
+      const controllers: ReactiveController[] = [];
+      const innerHost = Object.assign(inner, {
+        addController: (c: ReactiveController) => controllers.push(c),
+        removeController() {}, requestUpdate() {}, updateComplete: Promise.resolve(true),
+      });
+      new ThemeWatcher(innerHost, () => {});
+      controllers.forEach((c) => c.hostConnected?.());
+      expect(filters.get(shadow)).to.include('style');
+      controllers.forEach((c) => c.hostDisconnected?.());
+      expect(filters.get(shadow)).to.not.include('style');
+    } finally {
+      window.MutationObserver = OriginalObserver;
+      outer.disconnect();
+    }
+  });
+
   it('shares one MutationObserver per observed root across every watcher of a realm', async () => {
     const OriginalObserver = window.MutationObserver;
     let constructed = 0;

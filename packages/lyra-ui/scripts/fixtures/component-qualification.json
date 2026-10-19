@@ -15225,7 +15225,8 @@
           "src/components/forms/currency-picker/currency-picker-scale.test.ts",
           "src/components/forms/currency-picker/currency-picker.interactions.test.ts",
           "src/components/forms/currency-picker/currency-picker.search.test.ts",
-          "src/components/forms/currency-picker/currency-picker.test.ts"
+          "src/components/forms/currency-picker/currency-picker.test.ts",
+          "src/components/forms/currency-picker/currency-presentation.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -57127,6 +57128,7 @@
           "applicability": "applicable",
           "status": "measured",
           "scenarios": [
+            "n=1000 append one call",
             "n=10001 twenty approval checks"
           ],
           "measuredAt": "2026-10-18T09:18:08.025Z",

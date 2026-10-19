@@ -1428,6 +1428,9 @@
       }
     },
     "lr-tool-timeline": {
+      "n=1000 append one call": {
+        "rebuilt": 3
+      },
       "n=10001 twenty approval checks": {
         "reads": 0,
         "rendered": 550,

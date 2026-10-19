@@ -56,3 +56,32 @@ it('announces a newly exceeded input boundary once and keeps the initial boundar
   expect(initial.shadowRoot!.textContent).to.include(expected);
   expect(sinkTexts().filter(text => text === expected).length).to.equal(before + 1);
 });
+
+it('reuses unchanged canonical entries when one call is appended at n=1000', async () => {
+  const entries = Array.from({ length: 1000 }, (_, i) => ({ id: `t${i}`, name: 'tool', args: { i }, status: 'success' as const, startedAt: i }));
+  const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`);
+  const seam = el as unknown as { canonicalEntries(): Map<string, object> };
+  const key = JSON.stringify([null, 't0']);
+  const before = new Map(seam.canonicalEntries());
+  const changed = { ...entries[1]!, status: 'error' as const };
+  el.entries = [entries[0]!, changed, ...entries.slice(2), { id: 't1000', name: 'tool', args: {}, status: 'running' as const, startedAt: 1000 }];
+  await el.updateComplete;
+  const after = seam.canonicalEntries();
+  let rebuilt = 0;
+  for (const [identity, entry] of after) if (before.get(identity) !== entry) rebuilt++;
+  recordScaleMeasurement('lr-tool-timeline', 'n=1000 append one call', { rebuilt });
+  expect(after.get(key) === before.get(key)).to.equal(true);
+  expect(rebuilt).to.equal(2);
+  expect((after.get(JSON.stringify([null, 't1'])) as { status: string }).status).to.equal('error');
+  expect(after.size).to.equal(1001);
+});
+
+it('publishes an in-place source record change when the collection is replaced', async () => {
+  const row = { id: 't', name: 'tool', args: {}, status: 'running' as 'running' | 'success' };
+  const el = await fixture<LyraToolTimeline>(html`<lr-tool-timeline .entries=${[row]}></lr-tool-timeline>`);
+  row.status = 'success';
+  el.entries = [row];
+  await el.updateComplete;
+  const seam = el as unknown as { canonicalEntries(): Map<string, { status: string }> };
+  expect(seam.canonicalEntries().get(JSON.stringify([null, 't']))!.status).to.equal('success');
+});

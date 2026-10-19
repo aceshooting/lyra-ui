@@ -211,6 +211,16 @@ export function getNumberFormat(locale: string | undefined, options?: Intl.Numbe
   );
 }
 
+/**
+ * A fresh `Intl.NumberFormat` that bypasses the shared cache, through the same safe locale and
+ * option boundary. For callers that memoize what they derive: a catalog resolving one formatter
+ * per entry would otherwise evict every other component's shared formatter.
+ */
+export function createNumberFormat(locale: string | undefined, options?: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const safeLocale = resolveIntlLocale(locale);
+  return new Intl.NumberFormat(safeLocale, captureFormatterOptions(safeLocale, options, numberOptions).options);
+}
+
 /** A shared `Intl.DateTimeFormat` for the given locale and options. */
 export function getDateTimeFormat(locale: string | undefined, options?: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   return getFormatter(

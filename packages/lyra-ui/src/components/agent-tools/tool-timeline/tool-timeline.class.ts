@@ -130,96 +130,66 @@ let approvalDialogRegistration: Promise<unknown> | undefined;
 const MAX_RENDERED_ENTRIES = 500;
 const TOOL_STATUSES: ReadonlySet<ToolStatus> = new Set<ToolStatus>(TOOL_CALL_STATUSES);
 
-function descriptorValue(value: object, property: PropertyKey): ReturnType<typeof getOwnDataDescriptor> {
-  return getOwnDataDescriptor(value, property);
-}
+const ENTRY_FIELDS = [
+  'id', 'name', 'displayName', 'args', 'status', 'result', 'error', 'sourceKey', 'icon',
+  'startedAt', 'endedAt', 'retryCount', 'redactedFields', 'needsApproval', 'approved',
+] as const;
+
+/** The last projection of each source record, keyed by the field values it was built from. A
+ * replaced collection re-reads every record, since a record may have changed in place, but an
+ * unchanged record keeps its canonical identity and every cache keyed on it. */
+const projections = new WeakMap<object, {
+  readonly values: readonly unknown[];
+  readonly entry: CanonicalToolTimelineEntry | undefined;
+}>();
 
 function projectToolTimelineEntry(value: unknown): CanonicalToolTimelineEntry | undefined {
   try {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
-    const idDescriptor = descriptorValue(value, 'id');
-    const nameDescriptor = descriptorValue(value, 'name');
-    const displayNameDescriptor = descriptorValue(value, 'displayName');
-    const argsDescriptor = descriptorValue(value, 'args');
-    const statusDescriptor = descriptorValue(value, 'status');
-    const resultDescriptor = descriptorValue(value, 'result');
-    const errorDescriptor = descriptorValue(value, 'error');
-    const sourceKeyDescriptor = descriptorValue(value, 'sourceKey');
-    const iconDescriptor = descriptorValue(value, 'icon');
-    const startedAtDescriptor = descriptorValue(value, 'startedAt');
-    const endedAtDescriptor = descriptorValue(value, 'endedAt');
-    const retryCountDescriptor = descriptorValue(value, 'retryCount');
-    const redactedFieldsDescriptor = descriptorValue(value, 'redactedFields');
-    const needsApprovalDescriptor = descriptorValue(value, 'needsApproval');
-    const approvedDescriptor = descriptorValue(value, 'approved');
-    if (
-      [
-        idDescriptor,
-        nameDescriptor,
-        displayNameDescriptor,
-        argsDescriptor,
-        statusDescriptor,
-        resultDescriptor,
-        errorDescriptor,
-        sourceKeyDescriptor,
-        iconDescriptor,
-        startedAtDescriptor,
-        endedAtDescriptor,
-        retryCountDescriptor,
-        redactedFieldsDescriptor,
-        needsApprovalDescriptor,
-        approvedDescriptor,
-      ].some((descriptor) => descriptor === UNSAFE_OWN_DATA_DESCRIPTOR)
-    )
-      return undefined;
-    const valueOf = (descriptor: ReturnType<typeof getOwnDataDescriptor>): unknown | undefined => {
-      if (
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-      )
-        return undefined;
-      return descriptor.value;
-    };
-    const id = valueOf(idDescriptor);
-    if (typeof id !== 'string' || id.trim().length === 0) return undefined;
-    const redactedFieldsValue = valueOf(redactedFieldsDescriptor);
-    const redactedFields = redactedFieldsValue === undefined
-      ? EMPTY_REDACTION_PATHS
-      : projectedRedactionFields(redactedFieldsValue);
-    if (redactedFields === undefined) return undefined;
-    const name = valueOf(nameDescriptor);
-    const displayName = valueOf(displayNameDescriptor);
-    const status = valueOf(statusDescriptor);
-    const result = valueOf(resultDescriptor);
-    const error = valueOf(errorDescriptor);
-    const sourceKey = valueOf(sourceKeyDescriptor);
-    const icon = valueOf(iconDescriptor);
-    const startedAt = valueOf(startedAtDescriptor);
-    const endedAt = valueOf(endedAtDescriptor);
-    const retryCount = valueOf(retryCountDescriptor);
-    const needsApproval = valueOf(needsApprovalDescriptor);
-    const approved = valueOf(approvedDescriptor);
-    return Object.freeze({
-      source: value as ToolTimelineEntry,
-      id,
-      name: typeof name === 'string' ? name : '',
-      ...(typeof displayName === 'string' ? { displayName } : {}),
-      args: valueOf(argsDescriptor),
-      status: TOOL_STATUSES.has(status as ToolStatus) ? status as ToolStatus : 'pending',
-      ...(result === undefined ? {} : { result }),
-      ...(typeof error === 'string' ? { error } : {}),
-      ...(typeof sourceKey === 'string' ? { sourceKey } : {}),
-      ...(typeof icon === 'string' ? { icon } : {}),
-      ...(typeof startedAt === 'number' ? { startedAt } : {}),
-      ...(typeof endedAt === 'number' ? { endedAt } : {}),
-      ...(typeof retryCount === 'number' ? { retryCount } : {}),
-      redactedFields,
-      ...(typeof needsApproval === 'boolean' ? { needsApproval } : {}),
-      ...(typeof approved === 'boolean' ? { approved } : {}),
-    });
+    const values: unknown[] = [];
+    for (const field of ENTRY_FIELDS) {
+      const descriptor = getOwnDataDescriptor(value, field);
+      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+      values.push(descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value);
+    }
+    const previous = projections.get(value);
+    if (previous && previous.values.every((field, index) => Object.is(field, values[index]))) return previous.entry;
+    const entry = buildToolTimelineEntry(value as ToolTimelineEntry, values);
+    projections.set(value, { values, entry });
+    return entry;
   } catch {
     return undefined;
   }
+}
+
+function buildToolTimelineEntry(source: ToolTimelineEntry, values: readonly unknown[]): CanonicalToolTimelineEntry | undefined {
+  const [
+    id, name, displayName, args, status, result, error, sourceKey, icon,
+    startedAt, endedAt, retryCount, redactedFieldsValue, needsApproval, approved,
+  ] = values;
+  if (typeof id !== 'string' || id.trim().length === 0) return undefined;
+  const redactedFields = redactedFieldsValue === undefined
+    ? EMPTY_REDACTION_PATHS
+    : projectedRedactionFields(redactedFieldsValue);
+  if (redactedFields === undefined) return undefined;
+  return Object.freeze({
+    source,
+    id,
+    name: typeof name === 'string' ? name : '',
+    ...(typeof displayName === 'string' ? { displayName } : {}),
+    args,
+    status: TOOL_STATUSES.has(status as ToolStatus) ? status as ToolStatus : 'pending',
+    ...(result === undefined ? {} : { result }),
+    ...(typeof error === 'string' ? { error } : {}),
+    ...(typeof sourceKey === 'string' ? { sourceKey } : {}),
+    ...(typeof icon === 'string' ? { icon } : {}),
+    ...(typeof startedAt === 'number' ? { startedAt } : {}),
+    ...(typeof endedAt === 'number' ? { endedAt } : {}),
+    ...(typeof retryCount === 'number' ? { retryCount } : {}),
+    redactedFields,
+    ...(typeof needsApproval === 'boolean' ? { needsApproval } : {}),
+    ...(typeof approved === 'boolean' ? { approved } : {}),
+  });
 }
 
 function entrySourceKey(entry: CanonicalToolTimelineEntry): string | undefined {

@@ -1,4 +1,4 @@
-import { getNumberFormat } from './internal/intl-cache.js';
+import { createNumberFormat } from './internal/intl-cache.js';
 import { snapshotSelectionCatalog, normalizeSelectionValue, type SelectionCatalogRow } from './internal/selection-catalog.js';
 
 // ECMA-402, Table 2: single units sanctioned for use in ECMAScript.
@@ -26,14 +26,14 @@ export type LyraUnitCatalog = readonly string[] | readonly LyraUnitEntry[];
 
 const unitNames = new Map<string, readonly [name: string, symbol: string]>();
 
-/** One long and one short formatter per unit, resolved once per locale and unit: 45 units overflow the shared 64-entry cache. */
+/** One long and one short formatter per unit, resolved once per locale and unit outside the shared 64-entry cache, which 45 units would flush. */
 function unitNamesFor(locale: string, code: string): readonly [string, string] {
   const key = `${locale}\u0000${code}`;
   let names = unitNames.get(key);
   if (!names) {
     let name = code;
     let symbol = code;
-    const part = (unitDisplay: 'long' | 'short') => getNumberFormat(locale, { style: 'unit', unit: code, unitDisplay })
+    const part = (unitDisplay: 'long' | 'short') => createNumberFormat(locale, { style: 'unit', unit: code, unitDisplay })
       .formatToParts(1).filter((entry) => entry.type === 'unit').map((entry) => entry.value).join('') || code;
     try {
       name = part('long');
