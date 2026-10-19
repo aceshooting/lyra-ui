@@ -903,3 +903,16 @@ it('shares one root observer between resolved relationships in the same root', a
   for (const lease of leases) lease.release();
   root.host.remove();
 });
+
+it('waits for the first render root before resolving a host description target', () => {
+  const host = Object.assign(controllerHost(() => undefined), { createRenderRoot: () => host, renderRoot: undefined as unknown });
+  document.body.append(host);
+  try {
+    const description = new HostDescriptionController(host, () => (host.renderRoot as ParentNode).querySelector('button'));
+    expect(() => description.adopted()).to.not.throw();
+    host.renderRoot = host.attachShadow({ mode: 'open' });
+    expect(() => description.refresh()).to.not.throw();
+  } finally {
+    host.remove();
+  }
+});

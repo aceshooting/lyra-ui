@@ -384,3 +384,106 @@ describe('installHappyDomCascadeLayerShim', () => {
     }
   });
 });
+
+/** Runs `body` with `owner[key]` replaced by `descriptor` (or removed), then restores the original. */
+function withOverridden(owner: object, key: string, descriptor: PropertyDescriptor | undefined, body: () => void): void {
+  const original = Object.getOwnPropertyDescriptor(owner, key);
+  if (descriptor) Object.defineProperty(owner, key, { configurable: true, ...descriptor });
+  else delete (owner as Record<string, unknown>)[key];
+  try {
+    body();
+  } finally {
+    if (original) Object.defineProperty(owner, key, original);
+    else delete (owner as Record<string, unknown>)[key];
+  }
+}
+
+describe('Happy DOM shims installed over missing native APIs', () => {
+  it('installs a working attachInternals stub when the engine has none', () => {
+    withOverridden(HTMLElement.prototype, 'attachInternals', undefined, () => {
+      installHappyDomFormAssociatedShims();
+      const internals = document.createElement('div').attachInternals();
+      expect(internals.checkValidity()).to.equal(true);
+      expect(internals.willValidate).to.equal(true);
+    });
+  });
+
+  it('turns the TypeError of a sibling or detached shadow root into null, with the real ShadowRoot', () => {
+    const getter = Object.getOwnPropertyDescriptor(ShadowRoot.prototype, 'activeElement')!;
+    withOverridden(ShadowRoot.prototype, 'activeElement', {
+      get(this: ShadowRoot) {
+        if (this.host.isConnected) return getter.get!.call(this);
+        throw new TypeError('detached');
+      },
+    }, () => {
+      const restore = installHappyDomShadowFocusShim();
+      try {
+        const detached = document.createElement('div').attachShadow({ mode: 'open' });
+        expect(detached.activeElement).to.equal(null);
+      } finally {
+        restore();
+      }
+    });
+  });
+
+  it('supplies a live styleSheets collection on shadow roots that lack one', () => {
+    withOverridden(ShadowRoot.prototype, 'styleSheets', undefined, () => {
+      installHappyDomShims();
+      const host = document.createElement('div');
+      const root = host.attachShadow({ mode: 'open' });
+      document.body.append(host);
+      try {
+        expect(root.styleSheets.length).to.equal(0);
+        root.innerHTML = '<style>a{color:red}</style><style>b{color:blue}</style>';
+        expect(root.styleSheets).to.equal(root.styleSheets);
+        expect(root.styleSheets.length).to.equal(2);
+        expect(root.styleSheets[1]).to.equal(root.styleSheets.item(1));
+        expect([...root.styleSheets].length).to.equal(2);
+      } finally {
+        host.remove();
+      }
+    });
+  });
+
+  it('adds case-insensitive dir hints once when the engine lacks them', () => {
+    const view = document.defaultView!;
+    const nativeComputed = view.getComputedStyle;
+    const before = new Set(document.head.querySelectorAll('style'));
+    withOverridden(navigator, 'userAgent', { get: () => 'Mozilla/5.0 HappyDOM/20' }, () => {
+      view.getComputedStyle = (() => ({ direction: 'ltr' })) as unknown as typeof view.getComputedStyle;
+      try {
+        installHappyDomShims();
+        installHappyDomShims();
+      } finally {
+        view.getComputedStyle = nativeComputed;
+      }
+    });
+    const added = [...document.head.querySelectorAll('style')].filter(style => !before.has(style));
+    try {
+      expect(added.length).to.equal(1);
+      expect(added[0]!.textContent).to.include('[dir="RtL"]').and.to.include('direction:rtl');
+    } finally {
+      added.forEach(style => style.remove());
+    }
+  });
+
+  it('skips the cascade-layer shim when the layer probe itself throws', () => {
+    const holder = globalThis as unknown as { CSSStyleSheet: unknown };
+    const original = holder.CSSStyleSheet;
+    const probeProto = { replaceSync(): void {} };
+    const Throwing = function () { throw new Error('unsupported'); } as unknown as { prototype: object };
+    Throwing.prototype = probeProto;
+    holder.CSSStyleSheet = Throwing;
+    try {
+      const before = probeProto.replaceSync;
+      installHappyDomCascadeLayerShim()();
+      expect(probeProto.replaceSync).to.equal(before);
+    } finally {
+      holder.CSSStyleSheet = original;
+    }
+  });
+
+  it('keeps layer-like text inside strings and comments within a layer block', () => {
+    expect(flattenCascadeLayers('@layer a{q{content:"}"} /* } */ r{s:t}}')).to.equal('q{content:"}"} /* } */ r{s:t}');
+  });
+});

@@ -1072,6 +1072,32 @@ function serializeInlineScriptData(value: string | readonly string[]): string {
     .replace(new RegExp(PARAGRAPH_SEPARATOR, 'g'), '\\u2029');
 }
 
+const BOOTSTRAP_FUNCTIONS = [applyStoredStyleBeforePaint, applyStoredThemeBeforePaint, styleTokenAllowed, readStyleOwnership, resolveStyleStartup, styleMaterial] as const;
+
+function bootstrapParts(options: LyraThemeBootstrapOptions): { storageKey: string; model: string } {
+  const storageKey = options.storageKey ?? STORAGE_KEY;
+  const inputs = STYLE_SLOTTED.map(name => {
+    const flags = Number(STYLE_DENSITY.includes(name))
+      | (Number(STYLE_FOLLOW.includes(name)) << 1)
+      | (Number(ALL_RAMP_PROPERTIES.includes(name)) << 2);
+    return `${flags}${name.slice(11)}`;
+  }).join(' ');
+  const model = JSON.stringify({ restore: options.restore === 'mode' ? 'mode' : 'all', defaults: STYLE_DEFAULTS, inputs, surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES });
+  return { storageKey, model };
+}
+
+/**
+ * Runs the pre-paint bootstrap as the module functions themselves instead of the serialized string,
+ * so tests exercise (and coverage measures) the shipped logic. Stripped from the published build.
+ */
+export function applyLyraThemeBootstrapForTesting(options: LyraThemeBootstrapOptions = {}): void {
+  const { storageKey, model } = bootstrapParts(options);
+  const [, ...helpers] = BOOTSTRAP_FUNCTIONS;
+  applyStoredStyleBeforePaint(storageKey, MODE_ATTRIBUTES, ...(helpers as unknown as [
+    typeof applyStoredThemeBeforePaint, typeof styleTokenAllowed, typeof readStyleOwnership, typeof resolveStyleStartup, typeof styleMaterial,
+  ]), JSON.parse(model));
+}
+
 /**
  * Creates a self-contained IIFE body, safe to inline into a `<script>` tag placed before any
  * stylesheet in `<head>`, that applies a persisted `{ mode, accent, surface, tokens? }` theme before
@@ -1098,17 +1124,10 @@ function serializeInlineScriptData(value: string | readonly string[]): string {
 export function createLyraThemeBootstrap(
   options: LyraThemeBootstrapOptions = {},
 ): string {
-  const storageKey = options.storageKey ?? STORAGE_KEY;
-  const inputs = STYLE_SLOTTED.map(name => {
-    const flags = Number(STYLE_DENSITY.includes(name))
-      | (Number(STYLE_FOLLOW.includes(name)) << 1)
-      | (Number(ALL_RAMP_PROPERTIES.includes(name)) << 2);
-    return `${flags}${name.slice(11)}`;
-  }).join(' ');
-  const model = JSON.stringify({ restore: options.restore === 'mode' ? 'mode' : 'all', defaults: STYLE_DEFAULTS, inputs, surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES });
+  const { storageKey, model } = bootstrapParts(options);
   // These self-contained helpers do not recurse. Their module bindings stay named and hoisted;
   // only the serialized function expressions omit names unused by the standalone script.
-  const functions = [applyStoredStyleBeforePaint, applyStoredThemeBeforePaint, styleTokenAllowed, readStyleOwnership, resolveStyleStartup, styleMaterial]
+  const functions = BOOTSTRAP_FUNCTIONS
     .map(helper => helper.toString().replace(/^function\s+[\w$]+/, 'function'));
   return `(${functions[0]})(${serializeInlineScriptData(storageKey)},${serializeInlineScriptData(MODE_ATTRIBUTES)},${functions.slice(1).join(',')},${model});`;
 }

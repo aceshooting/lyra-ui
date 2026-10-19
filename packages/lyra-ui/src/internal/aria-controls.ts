@@ -963,6 +963,10 @@ export class HostDescriptionController implements ReactiveController {
 
   refresh(): void {
     if (!this.host.isConnected) return;
+    // Before the first update Lit has not created the render root, so a target resolved through it
+    // would throw (an element adopted into another document before it renders). hostUpdated retries.
+    const lit = this.host as { createRenderRoot?: unknown; renderRoot?: unknown };
+    if (typeof lit.createRenderRoot === 'function' && lit.renderRoot === undefined) return;
     const target = this.target();
     // Keep the host lease while the attribute is absent so a later author write is observed.
     if (this.external) this.external.update(target);

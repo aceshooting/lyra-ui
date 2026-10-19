@@ -1839,3 +1839,33 @@ it("resolves a host aria-describedby onto its button owner", async () => {
   host.removeAttribute("aria-describedby");
   await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
 });
+
+it("survives adoption into another document before its first render", async () => {
+  const errors: unknown[] = [];
+  const onError = (event: ErrorEvent) => { errors.push(event.error); event.preventDefault(); };
+  window.addEventListener("error", onError);
+  try {
+    const item = document.createElement("lr-conversation-item") as LyraConversationItem;
+    item.label = "Moved";
+    const other = document.implementation.createHTMLDocument("other");
+    expect(() => other.adoptNode(item)).to.not.throw();
+    const frame = document.createElement("iframe");
+    document.body.append(frame);
+    try {
+      const inFrame = document.createElement("lr-conversation-item") as LyraConversationItem;
+      inFrame.setAttribute("aria-describedby", "missing");
+      frame.contentDocument!.body.append(inFrame);
+      await inFrame.updateComplete;
+      expect(inFrame.shadowRoot!.querySelector('[part="select-button"]')).to.exist;
+      document.body.append(item);
+      await item.updateComplete;
+      expect(selectButtonEl(item).textContent).to.include("Moved");
+    } finally {
+      frame.remove();
+      item.remove();
+    }
+  } finally {
+    window.removeEventListener("error", onError);
+  }
+  expect(errors.map(String)).to.deep.equal([]);
+});

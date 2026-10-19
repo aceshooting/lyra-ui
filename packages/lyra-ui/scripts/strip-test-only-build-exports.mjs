@@ -9,6 +9,7 @@ const TEST_ONLY_EXPORTS = Object.freeze({
   'internal/converters': ['trueDefaultBooleanFromAttributeConverter'],
   'internal/deprecated-aliases': ['invertAlias'],
   'internal/dompurify-loader': ['__setDompurifyImporterForTesting'],
+  'theme/theme': ['applyLyraThemeBootstrapForTesting'],
   'internal/text-quote': ['resolveTextQuote', 'findTextQuoteMatches'],
 });
 
