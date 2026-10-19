@@ -16750,6 +16750,7 @@
           "src/components/overlays/dialog/confirm.test.ts",
           "src/components/overlays/dialog/dialog-close-composition.test.ts",
           "src/components/overlays/dialog/dialog-remediation.test.ts",
+          "src/components/overlays/dialog/dialog-tooltip-tab.test.ts",
           "src/components/overlays/dialog/dialog.test.ts",
           "src/components/overlays/dialog/native-modal.test.ts"
         ],
