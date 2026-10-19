@@ -510,17 +510,16 @@ describe('provider copy clipboard failures', () => {
     }
   }
 
-  it('reports an unsupported outcome when the clipboard API is absent', async () => {
-    const { events, outcome } = await copyWith(undefined);
-    expect(events).to.deep.equal(['error', 'copy-error']);
-    expect(outcome).to.include({ ok: false, reason: 'unsupported', text: 'provider-document' });
-  });
-
-  it('reports a denied outcome when the clipboard write is refused', async () => {
-    const { events, outcome } = await copyWith({
-      writeText: () => Promise.reject(Object.assign(new Error('blocked'), { name: 'NotAllowedError' })),
+  const cases = [
+    { name: 'unsupported when the clipboard API is absent', clipboard: undefined, expected: { ok: false, reason: 'unsupported', text: 'provider-document' } },
+    { name: 'denied when the clipboard write is refused', expected: { ok: false, reason: 'denied' },
+      clipboard: { writeText: () => Promise.reject(Object.assign(new Error('blocked'), { name: 'NotAllowedError' })) } },
+  ];
+  for (const { name, clipboard, expected } of cases) {
+    it(`reports a ${name}`, async () => {
+      const { events, outcome } = await copyWith(clipboard);
+      expect(events).to.deep.equal(['error', 'copy-error']);
+      expect(outcome).to.include(expected);
     });
-    expect(events).to.deep.equal(['error', 'copy-error']);
-    expect(outcome).to.include({ ok: false, reason: 'denied' });
-  });
+  }
 });

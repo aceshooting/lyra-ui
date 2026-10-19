@@ -2117,24 +2117,6 @@ it('moves the active command with Home, End, PageDown and PageUp', async () => {
   el.close();
 });
 
-it('treats an array whose descriptor lookup throws as an empty command list', async () => {
-  const hostile = new Proxy([], {
-    getOwnPropertyDescriptor(): never {
-      throw new Error('hostile descriptor');
-    },
-  }) as unknown as LyraCommandPalette['commands'];
-  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
-  el.commands = hostile;
-  el.openPalette();
-  await el.updateComplete;
-  expect(el.open).to.be.true;
-  expect(el.shadowRoot!.querySelectorAll('[part="command"]').length).to.equal(0);
-  el.commands = [{ commandId: 'recovered', label: 'Recovered' }];
-  await el.updateComplete;
-  expect(el.shadowRoot!.querySelectorAll('[part="command"]').length).to.equal(1);
-  el.close();
-});
-
 it('opens from a property set before the first update', async () => {
   const el = document.createElement('lr-command-palette') as LyraCommandPalette;
   el.commands = [{ commandId: 'early', label: 'Early' }];
@@ -2157,12 +2139,21 @@ function revokedProxy<T extends object>(target: T): T {
   return proxy;
 }
 
-it('degrades revoked proxies in the command list, a command, or its keywords without throwing', async () => {
+it('degrades hostile or revoked proxies in the command list, a command, or its keywords without throwing', async () => {
   const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
-  el.commands = revokedProxy<unknown[]>([]) as LyraCommandPalette['commands'];
+  const rows = () => el.shadowRoot!.querySelectorAll('[part="command"]');
+  el.commands = new Proxy([], {
+    getOwnPropertyDescriptor(): never {
+      throw new Error('hostile descriptor');
+    },
+  }) as unknown as LyraCommandPalette['commands'];
   el.show();
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelectorAll('[part="command"]').length).to.equal(0);
+  expect(el.open).to.be.true;
+  expect(rows().length, 'an array whose descriptor lookup throws is an empty list').to.equal(0);
+  el.commands = revokedProxy<unknown[]>([]) as LyraCommandPalette['commands'];
+  await el.updateComplete;
+  expect(rows().length).to.equal(0);
 
   el.commands = [
     revokedProxy({ commandId: 'dead', label: 'Dead' }) as unknown as LyraCommandPalette['commands'][number],

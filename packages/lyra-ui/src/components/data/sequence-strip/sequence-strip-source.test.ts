@@ -338,7 +338,7 @@ describe('sequence source range-cell keyboard', () => {
   });
   const cellsOf = (el: LyraSequenceStrip) => [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
 
-  it('arrow keys skip a disabled range and Enter activates the focused enabled range', async () => {
+  it('arrow keys skip a disabled range, Enter activates the focused enabled range and never a disabled one', async () => {
     const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .source=${rangedSource()}></lr-sequence-strip>`);
     await waitUntil(() => cellsOf(el).length === 3);
     expect(cellsOf(el)[1]!.getAttribute('aria-disabled')).to.equal('true');
@@ -348,6 +348,11 @@ describe('sequence source range-cell keyboard', () => {
     const activated = new Promise<CustomEvent>(resolve => el.addEventListener('lr-item-activate', e => resolve(e as CustomEvent), { once: true }));
     await sendKeys({ press: 'Enter' });
     expect((await activated).detail.index).to.equal(2);
+    let activations = 0;
+    el.addEventListener('lr-item-activate', () => { activations += 1; });
+    cellsOf(el)[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(activations, 'a disabled range does not activate').to.equal(0);
   });
 
   it('mirrors the arrow keys under RTL', async () => {
@@ -356,16 +361,5 @@ describe('sequence source range-cell keyboard', () => {
     await focusByKeyboard(cellsOf(el)[2]!);
     await sendKeys({ press: 'ArrowRight' });
     await waitUntil(() => el.shadowRoot!.activeElement === cellsOf(el)[0]);
-    expect(el.shadowRoot!.activeElement === cellsOf(el)[0]).to.equal(true);
-  });
-
-  it('does not activate a disabled range from the keyboard', async () => {
-    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .source=${rangedSource()}></lr-sequence-strip>`);
-    await waitUntil(() => cellsOf(el).length === 3);
-    let activations = 0;
-    el.addEventListener('lr-item-activate', () => { activations += 1; });
-    cellsOf(el)[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-    await el.updateComplete;
-    expect(activations).to.equal(0);
   });
 });

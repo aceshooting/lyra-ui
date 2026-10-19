@@ -277,12 +277,7 @@ describe('spatial keyboard traversal', () => {
       expect(await at('ArrowUp')).to.equal('point:middle');
       expect(await at('ArrowDown')).to.equal('bin:999999');
       expect(await at('Home', 'End')).to.equal('bin:1');
+      expect(await at('a'), 'an unrelated key does not move the cursor').to.equal('bin:1');
     });
   }
-
-  it('ignores an unrelated key without moving the keyboard cursor', async () => {
-    const { at } = await traverse('ltr');
-    expect(await at('Home', 'ArrowDown')).to.equal('bin:999999');
-    expect(await at('a')).to.equal('bin:999999');
-  });
 });

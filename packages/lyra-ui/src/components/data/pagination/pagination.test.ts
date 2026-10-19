@@ -964,33 +964,24 @@ describe("indeterminate mode (total=\"-1\")", () => {
     expect(nextButton.disabled).to.equal(true);
   });
 
-  it("rejects a typed jump past the known last page when has-next is false", async () => {
+  it("rejects a typed jump past the known last page when has-next is false but accepts one backwards", async () => {
     const el = await pagination(
       html`<lr-pagination total="-1" page="4" .hasNext=${false}></lr-pagination>`
     );
-    let changes = 0;
-    el.addEventListener("lr-page-change", () => {
-      changes += 1;
-    });
+    const pages: number[] = [];
+    el.addEventListener("lr-page-change", (e) => pages.push((e as CustomEvent<{ page: number }>).detail.page));
     const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
-    input.value = "9";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    await el.updateComplete;
-    expect(changes).to.equal(0);
+    const type = async (value: string) => {
+      input.value = value;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await el.updateComplete;
+    };
+    await type("9");
+    expect(pages).to.deep.equal([]);
     expect(el.page).to.equal(4);
-  });
-
-  it("still accepts a typed jump backwards when has-next is false", async () => {
-    const el = await pagination(
-      html`<lr-pagination total="-1" page="4" .hasNext=${false}></lr-pagination>`
-    );
-    const changed = oneEvent(el, "lr-page-change");
-    const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
-    input.value = "2";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(((await changed) as CustomEvent<{ page: number }>).detail.page).to.equal(2);
+    await type("2");
+    expect(pages).to.deep.equal([2]);
   });
 
   it("does not strand focus when a page request is accepted with an unknown total", async () => {

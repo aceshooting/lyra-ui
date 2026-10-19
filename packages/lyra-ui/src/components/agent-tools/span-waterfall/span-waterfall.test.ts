@@ -286,17 +286,13 @@ describe('lr-span-waterfall', () => {
     const tabStop = () => el.shadowRoot!.querySelector('[data-id][tabindex="0"]')?.getAttribute('data-id');
     expect(tabStop()).to.equal('root');
 
-    const end = new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true, composed: true });
-    base.dispatchEvent(end);
-    await el.updateComplete;
-    expect(end.defaultPrevented).to.equal(true);
-    expect(tabStop()).to.equal('llm');
-
-    const home = new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true, composed: true });
-    base.dispatchEvent(home);
-    await el.updateComplete;
-    expect(home.defaultPrevented).to.equal(true);
-    expect(tabStop()).to.equal('root');
+    for (const [key, expected] of [['End', 'llm'], ['Home', 'root']] as const) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, composed: true });
+      base.dispatchEvent(event);
+      await el.updateComplete;
+      expect(event.defaultPrevented, key).to.equal(true);
+      expect(tabStop(), key).to.equal(expected);
+    }
   });
 
   it('repairs roving focus when a changed view hides the first sorted span', async () => {
