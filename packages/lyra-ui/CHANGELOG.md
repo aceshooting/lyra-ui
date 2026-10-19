@@ -1,5 +1,13 @@
 # Changelog
 
+## 29.2.1
+
+### Patch Changes
+
+- b7262ed: The `lr-map` guide now documents that, on WebKit, a paint change made directly on the `map` engine instance can stay unpresented until another frame is requested (a MapLibre and WebKit behavior, reproducible without `lr-map`), and that calling the engine's `triggerRepaint()` once afterwards presents it.
+- 0ef480e: The README and `llms.txt` now explain why pnpm 12.14 and later list `@aceshooting/lyra-ui` under "Agent skills awaiting approval" after an install: the package ships its agent skills. Nothing runs at install time and `npx lyra-ui init-agents` works either way; `pnpm approve @aceshooting/lyra-ui` (or `pnpm approve '!@aceshooting/lyra-ui'`) records the decision once.
+- @aceshooting/lyra-translations@29.2.1
+
 ## 29.2.0
 
 ### Minor Changes
