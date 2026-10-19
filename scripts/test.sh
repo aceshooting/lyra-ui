@@ -28,9 +28,9 @@
 #   TEST_SH_ENGINE_SHARDS=4 ./scripts/test.sh  # split each engine lane into exactly 4 parallel shards
 #                                              # (clamped to the host's page budget)
 #
-# Unset, each engine runs as one whole-suite lane and coverage runs serially. TEST_SH_ENGINE_SHARDS
-# opts into sharding (matching a CI shard's numbering), clamped to every core but two at two cores
-# per browser page, with coverage shards filling the remaining budget. Sharding is the ONLY safe way to spend
+# Unset, the engine shard count and concurrent coverage shards are sized to the host: every core
+# but two at two cores per browser page (--serial keeps one shard). Set TEST_SH_ENGINE_SHARDS to
+# match a CI shard's numbering. Sharding is the ONLY safe way to spend
 # spare cores here. Raising a lane's own WTR_CONCURRENCY instead was measured to break
 # native pointer capture isolation in Firefox and pointer/paint timing in WebKit. Firefox requires
 # one page per process; WebKit retains its bounded four-page allocation.
@@ -208,9 +208,9 @@ COVERAGE_SHARDS=4
 
 # Shards MULTIPLY, they do not divide. In CI each shard owns its own runner, so its
 # WTR_CONCURRENCY is all that machine runs; here every shard is another process on the SAME host,
-# so the page count is shards x the sum of both engine allocations. An explicit request is clamped
-# to the budget rather than failing, so it still runs at a size the machine can actually honor,
-# and coverage shards then run concurrently in whatever budget the engine shards leave.
+# so the page count is shards x the sum of both engine allocations. Unset, the shard count is
+# whatever the page budget leaves after coverage; an explicit request is clamped to the budget
+# rather than failing, so it still runs at a size the machine can actually honor.
 if [[ -n "${TEST_SH_ENGINE_SHARDS:-}" ]]; then
   ENGINE_SHARDS="$TEST_SH_ENGINE_SHARDS"
   if [[ ! "$ENGINE_SHARDS" =~ ^[1-9][0-9]*$ ]]; then
@@ -223,13 +223,14 @@ if [[ -n "${TEST_SH_ENGINE_SHARDS:-}" ]]; then
     echo "TEST_SH_ENGINE_SHARDS=$ENGINE_SHARDS would run $((ENGINE_SHARDS * PER_SHARD_PAGES)) concurrent browser pages within a ${PAGE_BUDGET}-page budget; clamping to $max_shards to avoid timing-sensitive failures." >&2
     ENGINE_SHARDS="$max_shards"
   fi
-else
-  # Unset keeps the measured-stable shape: two whole-suite engine lanes and serial coverage. Filling
-  # the budget by default was measured to time out scale tests on a shared 60-core host.
+elif [[ "$SERIAL" == "1" ]]; then
   ENGINE_SHARDS=1
+else
+  ENGINE_SHARDS="$(( (PAGE_BUDGET - COVERAGE_SHARDS) / PER_SHARD_PAGES ))"
+  (( ENGINE_SHARDS < 1 )) && ENGINE_SHARDS=1
 fi
 COVERAGE_PARALLEL=1
-if [[ "$SERIAL" != "1" && -n "${TEST_SH_ENGINE_SHARDS:-}" ]]; then
+if [[ "$SERIAL" != "1" ]]; then
   COVERAGE_PARALLEL="$(( PAGE_BUDGET - ENGINE_SHARDS * PER_SHARD_PAGES ))"
   (( COVERAGE_PARALLEL > COVERAGE_SHARDS )) && COVERAGE_PARALLEL="$COVERAGE_SHARDS"
   (( COVERAGE_PARALLEL < 1 )) && COVERAGE_PARALLEL=1

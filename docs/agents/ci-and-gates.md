@@ -296,13 +296,13 @@ order (the `chromium` lane is `check:component-quality:built` -> `test:ssr` -> `
 and a failing lane's log is printed in full at the end.
 
 The `firefox`/`webkit` lanes run `test:full-engine-shard` with `WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1`
-(the complete suite in one process) and coverage runs serially by default: filling a large host
-with shards by default was measured to time out scale tests on a shared 60-core machine.
-`TEST_SH_ENGINE_SHARDS=<n>` opts into `n` shard lanes, mirroring `full-engine.yml`, so a failing CI
-shard reproduces as the same-numbered local one. The request is clamped to every core but two at two
-cores (and 1 GiB of available memory) per browser page, and the four coverage shards then run
-concurrently in the remaining budget and are merged as in CI (`--serial` keeps one of each);
-raising `WTR_LANE_CONCURRENCY` instead reintroduces the hover/paint flakiness above. **Shards multiply here and divide in CI:** locally every shard is another process
+(the complete suite in one process) when the host affords one engine shard. The sweep budgets every
+core but two at two cores (and 1 GiB of available memory) per browser page; unset, it splits each
+engine into as many shard lanes as that budget leaves after the four coverage shards, which run
+concurrently and are merged as in CI (`--serial` keeps one of each). `TEST_SH_ENGINE_SHARDS=<n>`
+pins `n` shard lanes, mirroring `full-engine.yml`, so a failing CI shard reproduces as the
+same-numbered local one; raising `WTR_LANE_CONCURRENCY` instead reintroduces the hover/paint
+flakiness above. **Shards multiply here and divide in CI:** locally every shard is another process
 on the same host, so the page count is `shards x (Firefox pages + WebKit pages)`; an over-large
 request is clamped to the budget with a warning rather than failing.
 

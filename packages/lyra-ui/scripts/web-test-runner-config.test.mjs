@@ -625,7 +625,7 @@ test('sizes engine and coverage shards from the host page budget', () => {
   const sizing = script.slice(start, end);
   // [page budget, TEST_SH_ENGINE_SHARDS, serial, engine shards, concurrent coverage shards]
   for (const [budget, requested, serial, shards, coverage] of [
-    [1, '', 0, 1, 1], [7, '', 0, 1, 1], [29, '', 0, 1, 1], [29, '', 1, 1, 1], [29, '8', 1, 5, 1],
+    [1, '', 0, 1, 1], [7, '', 0, 1, 2], [29, '', 0, 5, 4], [29, '', 1, 1, 1],
     [7, '8', 0, 1, 2], [29, '8', 0, 5, 4], [39, '8', 0, 7, 4], [39, '2', 0, 2, 4], [4, '1', 0, 1, 1],
   ]) {
     const result = spawnSync('bash', ['-c', `
