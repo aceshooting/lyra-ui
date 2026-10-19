@@ -10,7 +10,7 @@ interface Sample {
 
 async function mount(dir: 'ltr' | 'rtl') {
   const region = await fixture<HTMLDivElement>(html`
-    <div
+    <div data-lr-theme-scope
       dir=${dir}
       style="width: 390px; max-width: 100%; overflow: auto; box-sizing: border-box; --lr-positioning-strategy: fixed; --lr-transition-fast: 300ms; --lr-duration-fast: 300ms"
     >

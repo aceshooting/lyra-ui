@@ -31,6 +31,7 @@ function declarationName(node) {
 }
 
 function assertNoOwnerReferences(file, source, names) {
+  const internal = new Set();
   const parsed = parseSync(file, source, { sourceType: 'module', lang: 'ts' });
   const fatal = parsed.errors.filter((error) => error.severity !== 'Warning');
   if (fatal.length) throw new Error(`${file}: cannot inspect test-only source references`);
@@ -40,6 +41,9 @@ function assertNoOwnerReferences(file, source, names) {
       statement.type === 'ExportNamedDeclaration' && declarationName(statement.declaration ?? {}) === name);
     if (declarations.length !== 1) throw new Error(`${file}: expected exactly one source export ${name}`);
     excluded.push({ start: declarations[0].start, end: declarations[0].end });
+    const doc = parsed.comments.findLast((comment) => comment.end <= declarations[0].start);
+    if (doc?.type === 'Block' && /^\s*$/u.test(source.slice(doc.end, declarations[0].start)) &&
+      /(?:^|\s)@internal(?:\s|$)/u.test(doc.value)) internal.add(name);
   }
   let visible = source;
   for (const { start, end } of excluded.sort((left, right) => right.start - left.start)) {
@@ -50,9 +54,10 @@ function assertNoOwnerReferences(file, source, names) {
       throw new Error(`${name} is still referenced by owning production source ${file}`);
     }
   }
+  return internal;
 }
 
-function stripExportPlan(file, source, names) {
+function stripExportPlan(file, source, names, internal = new Set()) {
   const parsed = parseSync(file, source, { sourceType: 'module', lang: file.endsWith('.d.ts') ? 'dts' : 'js' });
   const fatal = parsed.errors.filter((error) => error.severity !== 'Warning');
   if (fatal.length) throw new Error(`${file}: cannot inspect test-only exports`);
@@ -68,9 +73,8 @@ function stripExportPlan(file, source, names) {
   }
   for (const name of names) {
     const count = removals.filter((removal) => removal.name === name).length;
-    // `stripInternal` already drops an `@internal` declaration from emitted types; the JavaScript
-    // output still has to contain exactly one, so a misspelled entry cannot pass unnoticed.
-    if (count === 0 && file.endsWith('.d.ts')) continue;
+    // `stripInternal` already drops a source-documented `@internal` declaration from emitted types.
+    if (count === 0 && file.endsWith('.d.ts') && internal.has(name)) continue;
     if (count !== 1) throw new Error(`${file}: expected exactly one test-only export ${name}`);
   }
   let updated = source;
@@ -86,7 +90,7 @@ export function stripTestOnlyBuildExports(packageDir, inventory = TEST_ONLY_EXPO
   const writes = [];
   for (const [module, names] of Object.entries(inventory)) {
     const sourcePath = join(packageDir, 'src', `${module}.ts`);
-    assertNoOwnerReferences(sourcePath, readFileSync(sourcePath, 'utf8'), names);
+    const internal = assertNoOwnerReferences(sourcePath, readFileSync(sourcePath, 'utf8'), names);
     for (const name of names) {
       const reference = new RegExp(`\\b${name}\\b`, 'u');
       for (const file of sources) {
@@ -99,7 +103,7 @@ export function stripTestOnlyBuildExports(packageDir, inventory = TEST_ONLY_EXPO
     for (const extension of ['.js', '.d.ts']) {
       const file = join(packageDir, 'dist', `${module}${extension}`);
       const body = readFileSync(file, 'utf8');
-      writes.push([file, stripExportPlan(file, body, names)]);
+      writes.push([file, stripExportPlan(file, body, names, internal)]);
     }
   }
   for (const [file, body] of writes) writeFileSync(file, body);
