@@ -6,6 +6,7 @@ import { lockScroll } from './scroll-lock.js';
 import {
   acquireOverlayRoutingSuspension,
   activateOverlayStack,
+  composedContains,
   observeOverlayStack,
   type OverlayStackEntrySnapshot,
   type OverlayStackSnapshot,
@@ -378,11 +379,20 @@ function applyTopmostInert(state: ModalDocumentState): void {
     inertOutsideAllowedPaths(state, allowed, desired);
   } else if (modalIndex !== -1) {
     const allowed = new Map<ParentNode, Set<Element>>();
+    const interactiveRoots: HTMLElement[] = [];
     for (const entry of state.snapshot.entries.slice(modalIndex)) {
       if (!entry.host.isConnected) continue;
-      addAllowedPath(allowed, modalAllowedRoot(entry, state.document), state.document);
+      // A nonmodal popup (a keyboard-opened tooltip) rendered inside an already-allowed root adds
+      // nothing: allowing only its own path would inert every sibling control around it.
+      if (interactiveRoots.some((root) => composedContains(root, entry.host))) continue;
+      const modalRoot = modalAllowedRoot(entry, state.document);
+      addAllowedPath(allowed, modalRoot, state.document);
+      interactiveRoots.push(modalRoot);
       for (const root of entry.auxiliaryRoots?.() ?? []) {
-        if (root.isConnected && root.ownerDocument === state.document) addAllowedPath(allowed, root, state.document);
+        if (root.isConnected && root.ownerDocument === state.document) {
+          addAllowedPath(allowed, root, state.document);
+          interactiveRoots.push(root);
+        }
       }
     }
     // Native modal dialogs can open above this stack. Its own explicit inert attribute must not

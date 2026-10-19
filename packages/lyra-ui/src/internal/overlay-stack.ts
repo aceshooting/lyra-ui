@@ -532,7 +532,26 @@ function deactivateActiveEntry(
   // leave that focus alone rather than pull it into an unrelated overlay beneath. A focus-trapping
   // overlay beneath still reclaims focus, since keeping focus inside it is its contract.
   const next = entry.state.stack[entry.state.stack.length - 1];
-  if (next && (heldFocus || next.options.trapFocus)) focusEntry(next);
+  if (!next) return deferredResourceRelease;
+  if (heldFocus) {
+    focusEntry(next);
+  } else if (next.options.trapFocus) {
+    const doc = entry.state.document;
+    const active = deepActiveElement(doc);
+    if (!entry.options.host.isConnected || (active && active !== doc.body && active !== doc.documentElement)) {
+      focusEntry(next);
+    } else {
+      // Focus is momentarily nowhere while the closing host is still attached: a keyboard-opened
+      // hint closing on the trigger's blur runs before the browser lands focus on the next
+      // control. Reclaiming now would yank focus to the trap's first stop and defeat that Tab;
+      // wait out the move, then reclaim only if focus really was lost.
+      setTimeout(() => {
+        if (next.active && next.registered && entry.state.stack[entry.state.stack.length - 1] === next) {
+          focusEntry(next);
+        }
+      }, 0);
+    }
+  }
   return deferredResourceRelease;
 }
 
