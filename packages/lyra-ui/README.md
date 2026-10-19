@@ -91,12 +91,8 @@ directory (Claude Code: `.claude/skills/`), as symlinks into `node_modules` so u
 (`--copy`, `--dry-run`, `--agents claude,opencode|all`, `--force`), and adds a short marked block to
 `AGENTS.md` (and `CLAUDE.md` if present). Re-running is safe. Prefer a marketplace? `/plugin marketplace add
 aceshooting/lyra-ui` then `/plugin install lyra-ui@aceshooting` (Claude Code), or `codex plugin marketplace
-add aceshooting/lyra-ui` then `codex plugin add lyra-ui@aceshooting` (Codex).
-
-pnpm 12.14 and later list `@aceshooting/lyra-ui` under "Agent skills awaiting approval" after an
-install, because the package ships these skills. Nothing runs at install time and `init-agents` works
-either way; record your decision once with `pnpm approve @aceshooting/lyra-ui` (or deny it with
-`pnpm approve '!@aceshooting/lyra-ui'`), which pnpm saves in `pnpm-workspace.yaml`.
+add aceshooting/lyra-ui` then `codex plugin add lyra-ui@aceshooting` (Codex). pnpm's "Agent skills awaiting
+approval" notice is safe: `pnpm approve @aceshooting/lyra-ui`.
 
 ## Install
 

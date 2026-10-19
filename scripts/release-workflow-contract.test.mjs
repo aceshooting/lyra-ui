@@ -274,3 +274,52 @@ test('both bootstrap eligibility checks fail closed on registry and package ambi
     rmSync(fixture, { recursive: true, force: true });
   }
 });
+
+test('publishing fails unless the registry serves the released tarball bytes', () => {
+  const workflow = read('.github/workflows/publish.yml');
+  const step = workflow.indexOf('      - name: Confirm the registry serves the published tarball\n');
+  assert.ok(step >= 0);
+  assert.match(workflow.slice(step, step + 400), /if: \$\{\{ github\.event_name == 'release' \|\| inputs\.dry_run != true \}\}/);
+  const start = workflow.indexOf('        run: |\n', step) + '        run: |\n'.length;
+  const lines = [];
+  for (const line of workflow.slice(start).split('\n')) {
+    if (line.startsWith('          ')) lines.push(line.slice(10));
+    else if (line === '') lines.push('');
+    else break;
+  }
+  const source = lines.join('\n');
+  const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-registry-confirm-'));
+  try {
+    const tarball = path.join(fixture, 'fixture.tgz');
+    writeFileSync(tarball, 'released bytes');
+    const released = `sha512-${createHash('sha512').update('released bytes').digest('base64')}`;
+    const bin = path.join(fixture, 'bin');
+    spawnSync('mkdir', ['-p', bin]);
+    const writeExecutable = (name, script) => {
+      const file = path.join(bin, name);
+      writeFileSync(file, script);
+      chmodSync(file, 0o755);
+    };
+    writeExecutable('curl', '#!/usr/bin/env bash\nprintf \'%s\' "$REGISTRY_BODY"\n');
+    writeExecutable('sleep', '#!/usr/bin/env bash\nexit 0\n');
+    const run = (body) => spawnSync('bash', ['-c', source], {
+      encoding: 'utf8',
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, TAG: 'lyra-ui@1.2.3', TARBALL: tarball, REGISTRY_BODY: body },
+    });
+
+    const served = run(JSON.stringify({ dist: { integrity: released } }));
+    assert.equal(served.status, 0, served.stderr);
+    assert.match(served.stdout, /npm serves @aceshooting\/lyra-ui@1\.2\.3 with the released integrity/);
+
+    const other = run(JSON.stringify({ dist: { integrity: 'sha512-other' } }));
+    assert.equal(other.status, 1);
+    assert.match(other.stdout, /not the released sha512-/);
+
+    // A staged version never appears in the registry: the step must fail instead of finishing green.
+    const staged = run('{"error":"Not found"}');
+    assert.equal(staged.status, 1);
+    assert.match(staged.stdout, /still not served by the npm registry 20 minutes after publish\. It is most likely staged/);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});

@@ -227,7 +227,9 @@ async function main(argv) {
   }
   console.log(`\n${git(['status', '--short']).trimEnd()}`);
   console.log(
-    '\nReview the diff, then commit and push to main:\n' +
+    '\nConfirm the version-stamped build still fits every size budget before committing:\n' +
+      '  pnpm release:budgets\n' +
+      'Review the diff, then commit and push to main:\n' +
       `  git add -A && git commit -m "${releaseCommitSubject(released)}"\n` +
       'After CI, Test All Browsers, and the Full browser-engine suite pass on that commit, run:\n' +
       '  gh workflow run release.yml --ref main',

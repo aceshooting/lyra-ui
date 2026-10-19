@@ -43,6 +43,7 @@
     "check:release-tooling": "node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/sync-playwright-images.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs && node scripts/sync-package-manager-docs.mjs --check",
     "release-qualification": "node scripts/generate-release-qualification.mjs --write",
     "release:prepare": "node scripts/release-prepare.mjs",
+    "release:budgets": "pnpm --filter @aceshooting/lyra-ui run check:bundle-size && pnpm --filter @aceshooting/lyra-ui run check:package-size && node scripts/check-packed-consumer.mjs --skip-attw",
     "migrate-wa": "pnpm --filter @aceshooting/lyra-ui run migrate-wa",
     "test:migrate-wa": "pnpm --filter @aceshooting/lyra-ui run test:migrate-wa",
     "lint:parallel": "pnpm --filter @aceshooting/lyra-ui run lint:parallel",

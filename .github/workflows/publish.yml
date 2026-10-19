@@ -252,6 +252,35 @@ jobs:
           fi
           npm publish "$TARBALL" --access public --provenance
 
+      # `npm publish` also succeeds when npm only stages the version (a trusted publisher without
+      # "Allow npm publish" needs a 2FA promotion), so require the registry to serve these bytes.
+      - name: Confirm the registry serves the published tarball
+        if: ${{ github.event_name == 'release' || inputs.dry_run != true }}
+        env:
+          TAG: ${{ needs.verify.outputs.tag }}
+          TARBALL: ${{ steps.release_asset.outputs.path }}
+        run: |
+          set -euo pipefail
+          package="${TAG%@*}"
+          version="${TAG##*@}"
+          expected="sha512-$(openssl dgst -sha512 -binary "$TARBALL" | openssl base64 -A)"
+          url="https://registry.npmjs.org/%40aceshooting%2F${package}/${version}"
+          for attempt in $(seq 1 40); do
+            integrity="$(curl --silent --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 "$url" \
+              | node -e 'let s="";process.stdin.on("data",(c)=>s+=c).on("end",()=>{try{console.log(JSON.parse(s).dist?.integrity??"")}catch{console.log("")}})')"
+            if [[ "$integrity" == "$expected" ]]; then
+              echo "npm serves @aceshooting/${package}@${version} with the released integrity."
+              exit 0
+            fi
+            if [[ -n "$integrity" ]]; then
+              echo "::error::npm serves @aceshooting/${package}@${version} with integrity ${integrity}, not the released ${expected}."
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "::error::@aceshooting/${package}@${version} is still not served by the npm registry 20 minutes after publish. It is most likely staged: promote it on npmjs.com, and tick \"Allow npm publish\" on the package's trusted publisher (or add a missing one) for future releases."
+          exit 1
+
   dispatch-freshness:
     needs: [verify, publish]
     if: ${{ needs.publish.result == 'success' && (github.event_name == 'release' || inputs.dry_run != true) && (startsWith(needs.verify.outputs.tag, 'lyra-ui@') || startsWith(needs.verify.outputs.tag, 'lyra-flags@')) }}

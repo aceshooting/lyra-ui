@@ -97,7 +97,8 @@ Qualification ledger and evidence rules: **[docs/agents/component-qualification.
   run for this release; never run it concurrently), commit the verified dependency update, then
   `pnpm release:prepare`. No dependency changes after release qualification
   ([detail](docs/agents/ci-and-gates.md#release-integrity)).
-- Release flow: `pnpm release:prepare`, review, commit `chore(release): <pkg>@<version>`, push to
+- Release flow: `pnpm release:prepare`, `pnpm release:budgets` (version-stamped size budgets), review,
+  commit `chore(release): <pkg>@<version>`, push to
   main; push CI, all Test All Browsers aggregates and all full-engine shards must pass on that exact
   commit; then `gh workflow run release.yml --ref main` tags, releases and dispatches `publish.yml`
   (approve `npm-publish` per package; lyra-ui, lyra-ide and lyra-translations version together,
