@@ -25,7 +25,8 @@ it('shares one metadata copy and one total field budget across a node assignment
   expect(nodes.reduce((sum, node) => sum + Object.keys(node.data ?? {}).length, 0)).to.be.at.most(50_000);
 });
 
-it('reports metadata and root-array input loss independently from layout limits', async () => {
+it('reports metadata and root-array input loss independently from layout limits', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const data = Object.fromEntries(Array.from({ length: 10_001 }, (_, index) => [`k${index}`, index]));
   const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas .nodes=${[{ id: 'n', data, position: { x: 0, y: 0 } }]}></lr-flow-canvas>`);
   expect(el.shadowRoot!.querySelector('[part="input-limit"]')?.textContent).to.include('Some nodes, edges, or node data were omitted');

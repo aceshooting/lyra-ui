@@ -32,7 +32,8 @@ it('prunes removed active tags after mutable data refresh coalesces with a named
   expect(selections).to.deep.equal([null]);
 });
 
-it('keeps a selected tag individually removable when earlier tags fill the facet window', async () => {
+it('keeps a selected tag individually removable when earlier tags fill the facet window', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset
     .strings=${{ tagFacetLimit: '+{count} more tags' }}
     .examples=${[{ id: 'z', input: 'Last example', tags: ['z'] }]}

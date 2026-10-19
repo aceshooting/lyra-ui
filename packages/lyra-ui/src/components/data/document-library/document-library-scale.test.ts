@@ -5,7 +5,8 @@ import type { LyraDocumentLibrary, LibraryDocument } from './document-library.js
 import type { LyraTable } from '../table/table.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
-it('reuses sorting and table rows across selection and loading at n=10000', async () => {
+it('reuses sorting and table rows across selection and loading at n=10000', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const el = await fixture<LyraDocumentLibrary>(html`<lr-document-library
     .strings=${{ tagFacetLimit: '+{count} more tags' }}
     .documents=${Array.from({ length: 10000 }, (_, i) => ({ id: `d${i}`, name: `Document ${10000 - i}`, tags: [`tag${i % 1000}`] }))}

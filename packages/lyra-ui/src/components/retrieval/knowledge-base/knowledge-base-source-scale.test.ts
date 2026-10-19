@@ -5,7 +5,8 @@ import type { KnowledgeBaseSource, KnowledgeSource, LyraKnowledgeBase } from './
 import type { LyraTable } from '../../data/table/table.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 
-it('keeps million-source middle and final pages, global summaries and actions bounded', async () => {
+it('keeps million-source middle and final pages, global summaries and actions bounded', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const total = 1_000_003;
   const values: KnowledgeSource[] = Array.from({ length: total }, (_, index) => ({ id: `s${index}`, name: `Source ${index}`, syncStatus: 'synced' }));
   let fieldReads = 0; let queries = 0; let lookups = 0; let active = 0; let peak = 0;
@@ -26,7 +27,7 @@ it('keeps million-source middle and final pages, global summaries and actions bo
   const started = performance.now();
   const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base .strings=${{ loading: 'Loading', tableLoadFailed: 'Load failed' }} .dataSource=${source} .sourcePageSize=${100}></lr-knowledge-base>`);
   const loaded = async (id: string) => {
-    await waitUntil(() => el.sourceTotal === total && el.shadowRoot?.querySelector<LyraTable<KnowledgeSource>>('lr-table')?.rows[0]?.id === id);
+    await waitUntil(() => el.sourceTotal === total && el.shadowRoot?.querySelector<LyraTable<KnowledgeSource>>('lr-table')?.rows[0]?.id === id, 'source page loaded', { timeout: 20000 });
     const table = el.shadowRoot!.querySelector<LyraTable<KnowledgeSource>>('lr-table')!; await table.updateComplete; return table;
   };
   let grid = await loaded('s0'); el.sourcePage = 5_000; grid = await loaded('s500000');

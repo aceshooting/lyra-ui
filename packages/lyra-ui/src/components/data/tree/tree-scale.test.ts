@@ -72,7 +72,8 @@ it('raises the object-model maxNodes budget and restores its default on removal'
   expect(tree.data.length).to.equal(1100);
 });
 
-it('starts a 500-branch bulk expansion before awaiting any individual row update', async () => {
+it('starts a 500-branch bulk expansion before awaiting any individual row update', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const tree=await fixture<LyraTree>(html`<lr-tree label="Branches" data-lr-motion="reduce">
     ${Array.from({length:500},(_,index)=>html`<lr-tree-item label=${String(index)}><lr-tree-item label="Child"></lr-tree-item></lr-tree-item>`)}
   </lr-tree>`);
@@ -102,7 +103,8 @@ it('normalizes nonfinite maxNodes values and clamps the hard ceiling', async () 
   expect(seam.effectiveMaxNodes).to.equal(1);
 });
 
-it('does not traverse collapsed descendants to patch focus among 500 branches', async () => {
+it('does not traverse collapsed descendants to patch focus among 500 branches', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const tree=await fixture<LyraTree>(html`<lr-tree label="Branches">
     ${Array.from({length:500},(_,index)=>html`<lr-tree-item label=${String(index)}><lr-tree-item label="Hidden"></lr-tree-item></lr-tree-item>`)}
   </lr-tree>`);

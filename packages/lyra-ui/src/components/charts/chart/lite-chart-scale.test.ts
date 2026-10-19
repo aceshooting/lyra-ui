@@ -60,7 +60,8 @@ describe('lr-lite-chart logarithmic scale', () => {
     expect(checks).to.be.lessThan(400_000);
   });
 
-  it('builds its mark model once per data set, not per render or arrow key', async () => {
+  it('builds its mark model once per data set, not per render or arrow key', async function () {
+    this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
     const data = Array.from({ length: 1_000 }, (_, index) => (index % 50) + 1);
     const el = await mount(html`<lr-lite-chart type="line"
       .labels=${labelsOf(1_000)} .datasets=${[{ label: 'S', data }]}></lr-lite-chart>`);

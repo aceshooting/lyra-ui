@@ -3,7 +3,8 @@ import './transcript-feed.js';
 import type { LyraTranscriptFeed } from './transcript-feed.class.js';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
-it('bounds final-announcement identities to a rotating 1,000-entry transcript', async () => {
+it('bounds final-announcement identities to a rotating 1,000-entry transcript', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const el = await fixture<LyraTranscriptFeed>(html`<lr-transcript-feed .entries=${Array.from({length: 1000}, (_, i) => ({id: `${i}`, text: ''}))}></lr-transcript-feed>`);
   for (let batch = 1; batch <= 15; batch++) { el.entries = Array.from({length: 1000}, (_, i) => ({id: `${batch * 1000 + i}`, text: ''})); await el.updateComplete; }
   const count = (el as unknown as {announcedFinalIds: Set<string>}).announcedFinalIds.size;

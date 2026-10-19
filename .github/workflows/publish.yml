@@ -265,7 +265,7 @@ jobs:
           version="${TAG##*@}"
           expected="sha512-$(openssl dgst -sha512 -binary "$TARBALL" | openssl base64 -A)"
           url="https://registry.npmjs.org/%40aceshooting%2F${package}/${version}"
-          for attempt in $(seq 1 40); do
+          for _ in $(seq 1 40); do
             integrity="$(curl --silent --proto '=https' --tlsv1.2 --connect-timeout 10 --max-time 30 "$url" \
               | node -e 'let s="";process.stdin.on("data",(c)=>s+=c).on("end",()=>{try{console.log(JSON.parse(s).dist?.integrity??"")}catch{console.log("")}})')"
             if [[ "$integrity" == "$expected" ]]; then

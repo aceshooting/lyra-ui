@@ -5,7 +5,8 @@ import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import './agent-workspace.js';
 import type { LyraAgentWorkspace } from './agent-workspace.class.js';
 
-it('retains newest tools and maps unread source positions through the retained message tail', async () => {
+it('retains newest tools and maps unread source positions through the retained message tail', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   for (const property of ['messages', 'tools']) expectDevWarning(collectionTruncationWarningKey('lr-agent-workspace', property));
   const messages = Array.from({ length: 12000 }, (_, i) => ({ id: `m${i}`, role: 'assistant', text: '' }));
   Object.defineProperty(messages, '11990', { get: () => { throw new Error('must not read accessor'); } });

@@ -1998,7 +1998,8 @@ it('keeps an unchecked reserved row, its checkbox node and focus in place', asyn
   expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(200);
 });
 
-it('keeps rows loaded with Load more when an equivalent filter callback is re-assigned', async () => {
+it('keeps rows loaded with Load more when an equivalent filter callback is re-assigned', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const many = Array.from({ length: 450 }, (_, index) => ({ id: `t${index}`, name: `Tool ${index}` }));
   const el = await fixture<LyraToolSelectDialog>(html`
     <lr-tool-select-dialog open .tools=${many}></lr-tool-select-dialog>

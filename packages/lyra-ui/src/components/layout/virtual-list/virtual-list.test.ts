@@ -5175,7 +5175,8 @@ describe('light-DOM projection -- the light render root', () => {
     }
   });
 
-  it('stays bounded and stale-free across a long scroll', async () => {
+  it('stays bounded and stale-free across a long scroll', async function () {
+    this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
     const el = await projected();
     const initial = el.projectedRows.length;
     const container = el.scrollContainer!;

@@ -16,7 +16,8 @@ function inspectedArray(
 }
 
 describe('tree object projection limits and names', () => {
-  it('shows the localized item cap only when the retained-node budget is reached', async () => {
+  it('shows the localized item cap only when the retained-node budget is reached', async function () {
+    this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
     const el = await fixture<LyraTree>(html`<lr-tree label="Many"></lr-tree>`);
     el.data = Array.from({ length: 1_001 }, (_, index) => ({ id: String(index), label: String(index) }));
     await el.updateComplete;

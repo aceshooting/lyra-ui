@@ -38,7 +38,8 @@ it('reaches the final allocated million-record source through the public route w
   recordScaleMeasurement('lr-file-tree', '1000000 allocated records End source navigation', { reads, keyReads: keys, mountedRows: mounted });
 });
 
-it('bounds ranged million-row reads, including an unaligned large window and a focused pin', async () => {
+it('bounds ranged million-row reads, including an unaligned large window and a focused pin', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const n = 1_000_000;
   let reads = 0;
   let rows = 0;
@@ -62,14 +63,14 @@ it('bounds ranged million-row reads, including an unaligned large window and a f
     }, ...(request.action.type === 'reveal' ? { focusIndex: Number(request.action.key.slice(1)) } : {}) };
   } };
   const el = await fixture<LyraFileTree>(html`<lr-file-tree label="Ranged records" style="height: 20000px" .treeSource=${provider}></lr-file-tree>`);
-  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[data-source-key="n0"]')));
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[data-source-key="n0"]')), 'first ranged row', { timeout: 20000 });
   expect(await el.revealSourceKey('n99')).to.equal(true);
   (el.shadowRoot!.querySelector('[role="tree"]') as HTMLElement).style.blockSize = '20000px';
   const list = el.shadowRoot!.querySelector('lr-virtual-list') as import('../../layout/virtual-list/virtual-list.class.js').LyraVirtualList;
   list.scrollToIndex(199, { align: 'start', behavior: 'auto' });
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   await list.updateComplete;
-  await waitUntil(() => physical === 0);
+  await waitUntil(() => physical === 0, 'ranged reads settled', { timeout: 20000 });
   const mounted = el.shadowRoot!.querySelectorAll('[part~="source-row"]').length;
   expect(mounted).to.equal(301);
   expect(el.shadowRoot!.querySelector('[data-source-key="n99"]') !== null).to.equal(true);

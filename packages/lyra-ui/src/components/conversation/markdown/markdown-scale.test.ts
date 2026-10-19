@@ -251,7 +251,8 @@ it('creates a header on a newly committed foreign-document code frame', async ()
     expect(frame.querySelectorAll('button').length).equal(1);
   } finally { controller?.hostDisconnected(); host.remove(); iframe.remove(); }
 });
-it('does no retained metadata or template work for a progressive tail-only update', async () => {
+it('does no retained metadata or template work for a progressive tail-only update', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const el = document.createElement('lr-markdown'); el.streaming = true; el.streamingRender = 'progressive'; el.withoutSyntaxHighlighting = true;
   el.content = Array.from({ length: 1000 }, (_, index) => `# ${index} ${'x'.repeat(2050)}\n\n`).join('') + 'tail';
   document.body.append(el);

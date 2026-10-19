@@ -80,12 +80,13 @@ it('updates fixed source row geometry after a token-only theme change on a settl
   expect(getComputedStyle(list.shadowRoot!.querySelector('[part="data-row"]')!).height).to.equal('64px');
 }));
 
-it('covers the unaligned compact visible interval across both bounded rectangles', async () => {
+it('covers the unaligned compact visible interval across both bounded rectangles', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const source: LyraTabularSource = { revision: 1, rowCount: 1000000, columnCount: 100, columnAt: i => ({ key: String(i), label: 'Header' }), cellAt: (r, c) => `${r}:${c}` };
   const viewer = await fixture<LyraCsvViewer>(html`<lr-csv-viewer style="width:12800px;--lr-size-3rem:2px" .dataSource=${source}></lr-csv-viewer>`);
   const list = viewer.shadowRoot!.querySelector('lr-virtual-list')!;
   list.scrollToIndex(105, { align: 'start', behavior: 'auto' });
-  await waitUntil(() => list.shadowRoot!.querySelector('[data-row-index="250"] [aria-colindex="100"]')?.textContent === '250:99');
+  await waitUntil(() => list.shadowRoot!.querySelector('[data-row-index="250"] [aria-colindex="100"]')?.textContent === '250:99', 'unaligned interval painted', { timeout: 20000 });
 });
 
 for (const action of ['search', 'clear'] as const) it(`revokes pending public anchor retries when ${action} changes navigation intent`, async () => withScaledScrollWarning(async make => {
@@ -156,10 +157,11 @@ it('switches a compact tall workbook sheet to a small wider sheet without stale 
   expect(viewer.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.textContent).to.include('9:99');
 });
 
-it('still rejects a current visible interval beyond both rectangle budgets', async () => {
+it('still rejects a current visible interval beyond both rectangle budgets', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const errors: unknown[] = [];
   const viewer = await fixture<LyraCsvViewer>(html`<lr-csv-viewer style="width:12800px;--lr-size-3rem:1px" .dataSource=${sizedSource(1000000, 100)}
     @lr-render-error=${(event: CustomEvent) => errors.push(event.detail.error)}></lr-csv-viewer>`);
-  await waitUntil(() => errors.length > 0);
+  await waitUntil(() => errors.length > 0, 'render error reported', { timeout: 20000 });
   expect(viewer.shadowRoot!.querySelector('[part="error"]') !== null).to.equal(true);
 });

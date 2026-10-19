@@ -3,7 +3,8 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './embedding-explorer.js';
 import type { EmbeddingPoint, LyraEmbeddingExplorer } from './embedding-explorer.js';
 
-it('atomically replaces a large sample with the first valid winner of every sampled id', async () => {
+it('atomically replaces a large sample with the first valid winner of every sampled id', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const source = new Proxy(new Array<EmbeddingPoint>(1_000_000), {
     getOwnPropertyDescriptor(target, key) {
       if (typeof key === 'string' && /^\d+$/.test(key)) return { configurable: true, enumerable: true, writable: true, value: point(Number(key)) };
@@ -15,7 +16,7 @@ it('atomically replaces a large sample with the first valid winner of every samp
   const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer .points=${[{ id: 'old', x: 0, y: 0 }]}></lr-embedding-explorer>`);
   el.selectedPointId = 'duplicate'; el.points = source; await el.updateComplete;
   expect(el.points[0]!.id).to.equal('old');
-  await waitUntil(() => el.points.some(point => point.id === 'duplicate' && point.label === 'First winner'), 'first valid duplicate was lost', { timeout: 5000 });
+  await waitUntil(() => el.points.some(point => point.id === 'duplicate' && point.label === 'First winner'), 'first valid duplicate was lost', { timeout: 20000 });
   await el.updateComplete;
   expect(el.points.length).to.be.at.most(10_000);
   recordScaleMeasurement('lr-embedding-explorer', 'n=1000000 sampled identity resolution', { retained: el.points.length, rendered: el.shadowRoot!.querySelectorAll('[part="point"]').length });

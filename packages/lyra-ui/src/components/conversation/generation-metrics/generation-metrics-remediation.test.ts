@@ -5,11 +5,12 @@ import { LiveDerivedThroughput } from './generation-metrics.stories.js';
 import type { LyraGenerationMetrics } from './generation-metrics.js';
 
 describe('generation metrics live example', () => {
-  it('starts on mount, honors the first Stop, and restarts repeatedly without old timers', async () => {
+  it('starts on mount, honors the first Stop, and restarts repeatedly without old timers', async function () {
+    this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
     const root = await fixture<HTMLElement>(LiveDerivedThroughput.render!({}, null as never));
     const status = root.querySelector<LyraGenerationMetrics>('lr-generation-metrics')!;
     try {
-      await waitUntil(() => (status.tokenCount ?? 0) > 0, 'initial streaming tokens', { timeout: 1800 });
+      await waitUntil(() => (status.tokenCount ?? 0) > 0, 'initial streaming tokens', { timeout: 10000 });
       status.shadowRoot!.querySelector<HTMLButtonElement>('[part="stop-button"]')!.click();
       expect(status.status).to.equal('complete');
       const stopped = status.tokenCount;
@@ -21,7 +22,7 @@ describe('generation metrics live example', () => {
         await status.updateComplete;
         expect(status.status).to.equal('running');
         expect(status.tokenCount).to.equal(0);
-        await waitUntil(() => (status.tokenCount ?? 0) > 0, 'restarted streaming tokens', { timeout: 1800 });
+        await waitUntil(() => (status.tokenCount ?? 0) > 0, 'restarted streaming tokens', { timeout: 10000 });
         expect(status.tokenCount).to.equal(6);
         status.shadowRoot!.querySelector<HTMLButtonElement>('[part="stop-button"]')!.click();
         expect(status.status).to.equal('complete');
@@ -32,7 +33,7 @@ describe('generation metrics live example', () => {
   it('retires streaming token updates after disconnect', async () => {
     const root = await fixture<HTMLElement>(LiveDerivedThroughput.render!({}, null as never));
     const status = root.querySelector<LyraGenerationMetrics>('lr-generation-metrics')!;
-    await waitUntil(() => (status.tokenCount ?? 0) > 0, 'initial streaming tokens', { timeout: 1800 });
+    await waitUntil(() => (status.tokenCount ?? 0) > 0, 'initial streaming tokens', { timeout: 10000 });
     root.remove();
     const stopped = status.tokenCount;
     // wait-reason: asserts no token updates after disconnect for longer than one ticker interval

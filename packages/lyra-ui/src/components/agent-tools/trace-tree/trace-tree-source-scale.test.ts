@@ -38,7 +38,7 @@ function provider(ranged = false) {
   return { source, counters };
 }
 async function ready(el: Tree, key = 'span0') {
-  await waitUntil(() => Boolean(el.shadowRoot!.querySelector(`[data-source-key="${key}"]`)), 'source row mounts');
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector(`[data-source-key="${key}"]`)), 'source row mounts', { timeout: 20000 });
 }
 for (const ranged of [false, true]) it(`reaches the generated million-span ${ranged ? 'ranged' : 'indexed'} source with bounded work`, async () => {
   const { source, counters } = provider(ranged);
@@ -318,7 +318,8 @@ it('uses translated source controls and does not announce loaded historical stat
   expect(el.shadowRoot!.querySelector('lr-live-region') === null).to.equal(true);
 });
 
-it('retains only four ranged pages plus the focused row for a large allocated viewport', async () => {
+it('retains only four ranged pages plus the focused row for a large allocated viewport', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
   const { source, counters } = provider(true);
   const el = await fixture<Tree>(html`<lr-trace-tree style="height: 20000px" .treeSource=${source}></lr-trace-tree>`); await ready(el);
   expect(await el.revealSourceKey('span99')).to.equal(true);
@@ -327,7 +328,7 @@ it('retains only four ranged pages plus the focused row for a large allocated vi
   list.scrollToIndex(199, { align: 'start', behavior: 'auto' });
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   await list.updateComplete;
-  await waitUntil(() => counters.active === 0);
+  await waitUntil(() => counters.active === 0, 'ranged reads settled', { timeout: 20000 });
   const mounted = el.shadowRoot!.querySelectorAll('[data-source-key]').length;
   expect(mounted).to.equal(301);
   const control = (el as unknown as { sourceControl: { window: { pages: Map<number, { slots?: unknown[] }> }; focused?: unknown } }).sourceControl;

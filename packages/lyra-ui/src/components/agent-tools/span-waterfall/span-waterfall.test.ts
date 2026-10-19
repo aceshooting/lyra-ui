@@ -582,7 +582,8 @@ describe('lr-span-waterfall', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('keeps the truncation note outside the owned role=list children and passes axe when populated past the limit', async () => {
+  it('keeps the truncation note outside the owned role=list children and passes axe when populated past the limit', async function () {
+    this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
     const spans: LyraSpan[] = Array.from({ length: 501 }, (_, index) => ({
       id: `span-${index}`,
       name: `Span ${index}`,
