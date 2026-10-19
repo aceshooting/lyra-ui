@@ -373,7 +373,8 @@ remain advisory evidence; the deterministic scale counters are the automated reg
    package). A lyra-ui release also syncs the plugin versions, runs `./package.sh`, and rebuilds and
    remeasures because `package.sh` writes source; `node scripts/update-readme-status.mjs` runs last.
    It never lints, tests, packs, commits, tags or pushes. Then run `pnpm release:budgets`
-   (`check:bundle-size`, `check:package-size`, `check-packed-consumer.mjs --skip-attw`): the bump
+   (`check:bundle-size`, `check:package-size`, the packed lyra-translations and lyra-ide archives via
+   `scripts/check-companion-package-sizes.mjs`, `check-packed-consumer.mjs --skip-attw`): the bump
    changes version-stamped bytes, so a budget overrun surfaces before the release commit instead of
    as budget-only follow-ups after CI. Changesets can auto-expand a release to a
    publishable dependent: the package-version delta, not the changeset list, is the release set. Only
