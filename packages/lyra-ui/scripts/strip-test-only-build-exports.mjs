@@ -67,9 +67,11 @@ function stripExportPlan(file, source, names) {
     removals.push({ name, start: doc?.start ?? statement.start, end: statement.end });
   }
   for (const name of names) {
-    if (removals.filter((removal) => removal.name === name).length !== 1) {
-      throw new Error(`${file}: expected exactly one test-only export ${name}`);
-    }
+    const count = removals.filter((removal) => removal.name === name).length;
+    // `stripInternal` already drops an `@internal` declaration from emitted types; the JavaScript
+    // output still has to contain exactly one, so a misspelled entry cannot pass unnoticed.
+    if (count === 0 && file.endsWith('.d.ts')) continue;
+    if (count !== 1) throw new Error(`${file}: expected exactly one test-only export ${name}`);
   }
   let updated = source;
   for (const removal of removals.sort((a, b) => b.start - a.start)) {
