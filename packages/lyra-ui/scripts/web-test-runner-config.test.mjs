@@ -11,6 +11,7 @@ import { runInNewContext } from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { timingReporter } from './wtr-timing-reporter.mjs';
 import { completeJunitReporter } from './wtr-junit-reporter.mjs';
+import { COVERAGE_SHARD_TOTAL } from './coverage-shard-runner.mjs';
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const configUrl = pathToFileURL(resolve(packageDirectory, 'web-test-runner.config.js')).href;
@@ -614,25 +615,37 @@ test('caps aggregate-sweep browser sessions independently of the host CPU count'
 });
 
 
-test('budgets aggregate shards from both unequal engine page allocations', () => {
+test('sizes engine and coverage shards from the host page budget', () => {
   const script = readFileSync(resolve(packageDirectory, '../../scripts/test.sh'), 'utf8');
-  const allocation = script.match(/declare -Ar WTR_LANE_CONCURRENCY=\([\s\S]*?\n\)/u)?.[0];
-  assert.ok(allocation, 'aggregate page allocations must be available');
-  const start = script.indexOf('if [[ "$ENGINE_SHARDS" != "1" ]]; then');
-  const end = script.indexOf('\n# One wtr process per engine shard.', start);
-  assert.ok(start >= 0 && end > start, 'aggregate shard clamp must be available');
-  const clamp = script.slice(start, end);
-  for (const [cpus, requested, expected] of [[4, 8, 1], [16, 8, 1], [32, 8, 3], [60, 8, 6], [80, 8, 8], [4, 1, 1]]) {
-    const result = spawnSync('bash', ['-c', `${allocation}
-      ENGINE_SHARDS=${requested}
-      nproc() { printf '%s\n' ${cpus}; }
-      ${clamp}
-      printf '%s\n' "$ENGINE_SHARDS"
+  assert.match(script, new RegExp(`\\nCOVERAGE_SHARDS=${COVERAGE_SHARD_TOTAL}\\n`, 'u'));
+  assert.match(script, /local-parallelism\.mjs --cores-per-worker 2 --memory-per-worker-mb 1024\)/u);
+  const start = script.indexOf('if [[ -n "${TEST_SH_ENGINE_SHARDS:-}" ]]; then');
+  const end = script.indexOf('\necho "page budget', start);
+  assert.ok(start >= 0 && end > start, 'shard sizing must be available');
+  const sizing = script.slice(start, end);
+  // [page budget, TEST_SH_ENGINE_SHARDS, serial, engine shards, concurrent coverage shards]
+  for (const [budget, requested, serial, shards, coverage] of [
+    [1, '', 0, 1, 1], [7, '', 0, 1, 2], [29, '', 0, 5, 4], [29, '', 1, 1, 1],
+    [7, '8', 0, 1, 2], [29, '8', 0, 5, 4], [39, '8', 0, 7, 4], [39, '2', 0, 2, 4], [4, '1', 0, 1, 1],
+  ]) {
+    const result = spawnSync('bash', ['-c', `
+      PAGE_BUDGET=${budget} PER_SHARD_PAGES=5 COVERAGE_SHARDS=4 SERIAL=${serial}
+      TEST_SH_ENGINE_SHARDS='${requested}'
+      ${sizing}
+      printf '%s %s\n' "$ENGINE_SHARDS" "$COVERAGE_PARALLEL"
     `], { encoding: 'utf8' });
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(Number(result.stdout.trim()), expected, `${cpus} CPUs, ${requested} requested shards`);
+    assert.equal(result.stdout.trim(), `${shards} ${coverage}`, `budget ${budget}, requested ${requested || 'auto'}`);
   }
 });
+
+/** test.sh sizes its shards with the package's host-parallelism helper. */
+function copyAggregateHelpers(directory) {
+  mkdirSync(join(directory, 'packages/lyra-ui/scripts'), { recursive: true });
+  for (const helper of ['local-parallelism.mjs', 'is-main-module.mjs']) {
+    copyFileSync(resolve(packageDirectory, 'scripts', helper), join(directory, 'packages/lyra-ui/scripts', helper));
+  }
+}
 
 function runAggregateFixture(script, serial, failure = '') {
   const directory = mkdtempSync(join(tmpdir(), 'lyra-aggregate-'));
@@ -642,6 +655,7 @@ function runAggregateFixture(script, serial, failure = '') {
       resolve(packageDirectory, '../../scripts', script),
       join(directory, 'scripts', script),
     );
+    copyAggregateHelpers(directory);
     const packageManager = JSON.parse(
       readFileSync(resolve(packageDirectory, '../../package.json'), 'utf8'),
     ).packageManager;
@@ -929,6 +943,7 @@ for (const script of ['test.sh', 'test_all_browsers.sh']) {
       try {
         for (const name of ['scripts', 'bin', 'logs']) mkdirSync(join(directory, name));
         copyFileSync(resolve(packageDirectory, '../../scripts', script), join(directory, 'scripts', script));
+        copyAggregateHelpers(directory);
         const packageManager = JSON.parse(readFileSync(resolve(packageDirectory, '../../package.json'), 'utf8')).packageManager;
         writeFileSync(join(directory, 'package.json'), JSON.stringify({ packageManager }));
         writeFileSync(join(directory, 'bin/pnpm'), `#!/bin/bash

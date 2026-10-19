@@ -145,8 +145,11 @@ real data dependencies, so a red check names the phase to reproduce:
    weight it (a new command gets unit cost), and each lane keeps original policy order. The job uses
    a full-history checkout because the component-metadata gate reads tags. Remeasure costs from the
    `lint-timing` artifact with `node packages/lyra-ui/scripts/ci-costs.mjs lint <lint-timing.jsonl>`.
-   Local `pnpm lint` stays complete and sequential; `pnpm lint:parallel` runs CI's partition
-   (`CI_JOBS` caps workers at three without omitting checks). No lane needs Playwright or a build.
+   Local `pnpm lint` stays complete and sequential. `pnpm lint:parallel` with `CI_JOBS` set (as CI
+   sets it) runs CI's three-lane partition; without it, every inventory command becomes its own job,
+   longest measured first, on every core but two (`scripts/local-parallelism.mjs`, capped at 2 GiB
+   of available memory per worker), printing failing output whole and reporting every failure in
+   one pass. No lane needs Playwright or a build.
 2. **`static-checks`** needs neither a library build nor a docs build: workflow syntax, the generated
    release-qualification manifest, release-integrity, public-API, pinned-upstream, other-package,
    dead-code and secret checks, then regenerate-and-diff of registrations, the manifest, editor data,
@@ -293,12 +296,15 @@ order (the `chromium` lane is `check:component-quality:built` -> `test:ssr` -> `
 and a failing lane's log is printed in full at the end.
 
 The `firefox`/`webkit` lanes run `test:full-engine-shard` with `WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1`
-(the complete suite in one process). `TEST_SH_ENGINE_SHARDS=<n>` splits each engine into `n` shard
-lanes, mirroring `full-engine.yml`, so a failing CI shard reproduces as the same-numbered local one;
-raising `WTR_LANE_CONCURRENCY` instead reintroduces the hover/paint flakiness above. **Shards
-multiply here and divide in CI:** locally every shard is another process on the same host, so the
-page count is `shards x (Firefox pages + WebKit pages)`. The script budgets about half the host's
-CPUs as browser pages and clamps an over-large request with a warning rather than failing.
+(the complete suite in one process) when the host affords one engine shard. The sweep budgets every
+core but two at two cores (and 1 GiB of available memory) per browser page; unset, it splits each
+engine into as many shard lanes as that budget leaves after the four coverage shards, which run
+concurrently and are merged as in CI (`--serial` keeps one of each). `TEST_SH_ENGINE_SHARDS=<n>`
+pins `n` shard lanes, mirroring `full-engine.yml`, so a failing CI shard reproduces as the
+same-numbered local one; raising `WTR_LANE_CONCURRENCY` instead reintroduces the hover/paint
+flakiness above. **Shards multiply here and divide in CI:** locally every shard is another process
+on the same host, so the page count is `shards x (Firefox pages + WebKit pages)`; an over-large
+request is clamped to the budget with a warning rather than failing.
 
 ## Release integrity
 

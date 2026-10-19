@@ -20,6 +20,8 @@ const LINT_SUFFIX = [
 // Measured seconds per command (scripts/fixtures/lint-command-costs.json); unlisted commands cost the median.
 const { costs: COMMAND_WEIGHTS, fallback: UNMEASURED_COMMAND_WEIGHT } = readCosts('lint');
 
+export const lintCommandWeight = (command) => COMMAND_WEIGHTS.get(command) ?? UNMEASURED_COMMAND_WEIGHT;
+
 const PNPM_RUN_COMMAND = /^pnpm run ([A-Za-z0-9:_-]+)$/u;
 const NODE_SCRIPT_COMMAND = /^node (scripts\/[A-Za-z0-9._/-]+\.mjs)$/u;
 const SHELL_CONTROL = /[;&|`'"\\$<>(){}\r\n]/u;
@@ -151,7 +153,7 @@ export function partitionLintInventory(inventory, shardTotal = LINT_SHARD_TOTAL)
   const weighted = inventory
     .map((item) => ({
       ...item,
-      weight: COMMAND_WEIGHTS.get(item.command) ?? UNMEASURED_COMMAND_WEIGHT,
+      weight: lintCommandWeight(item.command),
     }))
     .sort((left, right) => right.weight - left.weight || left.ordinal - right.ordinal);
 
@@ -205,7 +207,7 @@ export function parseLintShardArguments(argv) {
   return { shardIndex, shardTotal };
 }
 
-function commandInvocation(command, platform) {
+export function commandInvocation(command, platform = process.platform) {
   const [rawExecutable, ...args] = command.split(' ');
   const executable =
     platform === 'win32' && (rawExecutable === 'pnpm' || rawExecutable === 'tsc')

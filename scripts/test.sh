@@ -25,10 +25,12 @@
 #   ./scripts/test.sh                # run every lane in parallel (default)
 #   ./scripts/test.sh --serial       # run lanes one at a time (lower-core machines)
 #   TEST_SH_SKIP_INSTALL=1 ./scripts/test.sh   # skip install + browser download
-#   TEST_SH_ENGINE_SHARDS=4 ./scripts/test.sh  # split each engine lane into 4 parallel shards
-#                                              # (clamped to what the host's CPU count supports)
+#   TEST_SH_ENGINE_SHARDS=4 ./scripts/test.sh  # split each engine lane into exactly 4 parallel shards
+#                                              # (clamped to the host's page budget)
 #
-# Sharding (TEST_SH_ENGINE_SHARDS, default 1 = unchanged behavior) is the ONLY safe way to spend
+# Unset, the engine shard count and concurrent coverage shards are sized to the host: every core
+# but two at two cores per browser page (--serial keeps one shard). Set TEST_SH_ENGINE_SHARDS to
+# match a CI shard's numbering. Sharding is the ONLY safe way to spend
 # spare cores here. Raising a lane's own WTR_CONCURRENCY instead was measured to break
 # native pointer capture isolation in Firefox and pointer/paint timing in WebKit. Firefox requires
 # one page per process; WebKit retains its bounded four-page allocation.
@@ -129,13 +131,35 @@ trap 'exit 129' HUP
 trap cleanup_logs EXIT
 echo "lane logs: $LOG_DIR"
 
+# Coverage shards are independent wtr sessions merged afterwards, exactly as CI's matrix does;
+# up to COVERAGE_PARALLEL run at once, each on its own deterministic port.
+coverage_lane() {
+  if [[ "$COVERAGE_PARALLEL" == "1" ]]; then
+    WTR_PORT="${WTR_LANE_PORTS[chromium]}" \
+      WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[chromium]}" \
+      pnpm --filter @aceshooting/lyra-ui test:coverage
+    return
+  fi
+  local failed=0 index pids=()
+  rm -rf packages/lyra-ui/coverage
+  for index in $(seq 1 "$COVERAGE_SHARDS"); do
+    while (( $(jobs -rp | wc -l) >= COVERAGE_PARALLEL )); do wait -n || failed=1; done
+    WTR_PORT="$((18090 + index))" \
+      WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[chromium]}" \
+      pnpm --filter @aceshooting/lyra-ui test:coverage --shard "$index" &
+    pids+=("$!")
+  done
+  for index in "${pids[@]}"; do wait "$index" || failed=1; done
+  # Merge even after a failing shard so the complete numbers stay diagnosable.
+  pnpm --filter @aceshooting/lyra-ui test:coverage --merge
+  return "$failed"
+}
+
 lane_chromium() {
   pnpm --filter @aceshooting/lyra-ui check:component-quality:built
   pnpm --filter @aceshooting/lyra-ui test:ssr
   pnpm --filter @aceshooting/lyra-ui test:hydration
-  WTR_PORT="${WTR_LANE_PORTS[chromium]}" \
-    WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[chromium]}" \
-    pnpm --filter @aceshooting/lyra-ui test:coverage
+  coverage_lane
   pnpm --filter @aceshooting/lyra-ui check:coverage-floors
   WTR_PORT="${WTR_LANE_PORTS[chromium]}" \
     WTR_CONCURRENCY="${WTR_LANE_CONCURRENCY[chromium]}" \
@@ -172,31 +196,46 @@ lane_workspace() {
   pnpm --filter '!@aceshooting/lyra-ui' -r test
 }
 
-ENGINE_SHARDS="${TEST_SH_ENGINE_SHARDS:-1}"
-if [[ ! "$ENGINE_SHARDS" =~ ^[1-9][0-9]*$ ]]; then
-  echo "TEST_SH_ENGINE_SHARDS must be a positive integer; received: $ENGINE_SHARDS" >&2
-  exit 2
-fi
+# Browser pages this host affords: every core but two (scripts/local-parallelism.mjs), at two
+# cores and 1 GiB of available memory per page, since each page drives its own browser threads.
+# Spending more on the same host is the overcommit that once put a 60-core box at load 71 with 64
+# pages, where lr-span-waterfall's and lr-test-results' hover assertions failed spuriously.
+PAGE_BUDGET="$(node packages/lyra-ui/scripts/local-parallelism.mjs --cores-per-worker 2 --memory-per-worker-mb 1024)"
+PER_SHARD_PAGES="$(( WTR_LANE_CONCURRENCY[firefox] + WTR_LANE_CONCURRENCY[webkit] ))"
+# Coverage runs its fixed shards (one page each) concurrently out of the same budget; this is
+# coverage-shard-runner.mjs's COVERAGE_SHARD_TOTAL (a tooling test keeps them equal).
+COVERAGE_SHARDS=4
 
 # Shards MULTIPLY, they do not divide. In CI each shard owns its own runner, so its
 # WTR_CONCURRENCY is all that machine runs; here every shard is another process on the SAME host,
-# so the page count is shards x the sum of both engine allocations. Ignoring that is how a 60-core
-# box ended up at load 71 with 64 browser pages -- the precise overcommit that makes
-# lr-span-waterfall's and lr-test-results' hover assertions fail spuriously.
-#
-# Budget roughly half the host's CPUs as concurrent browser pages, leaving the rest for each
-# browser's own threads plus the chromium/visual/workspace lanes. Clamp rather than fail: an
-# explicit request still runs, just at a size the machine can actually honor.
-if [[ "$ENGINE_SHARDS" != "1" ]]; then
-  host_cpus="$( { nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4; } )"
-  per_shard_pages="$(( WTR_LANE_CONCURRENCY[firefox] + WTR_LANE_CONCURRENCY[webkit] ))"
-  max_shards="$(( host_cpus / (2 * per_shard_pages) ))"
+# so the page count is shards x the sum of both engine allocations. Unset, the shard count is
+# whatever the page budget leaves after coverage; an explicit request is clamped to the budget
+# rather than failing, so it still runs at a size the machine can actually honor.
+if [[ -n "${TEST_SH_ENGINE_SHARDS:-}" ]]; then
+  ENGINE_SHARDS="$TEST_SH_ENGINE_SHARDS"
+  if [[ ! "$ENGINE_SHARDS" =~ ^[1-9][0-9]*$ ]]; then
+    echo "TEST_SH_ENGINE_SHARDS must be a positive integer; received: $ENGINE_SHARDS" >&2
+    exit 2
+  fi
+  max_shards="$(( PAGE_BUDGET / PER_SHARD_PAGES ))"
   (( max_shards < 1 )) && max_shards=1
   if (( ENGINE_SHARDS > max_shards )); then
-    echo "TEST_SH_ENGINE_SHARDS=$ENGINE_SHARDS would run $((ENGINE_SHARDS * per_shard_pages)) concurrent browser pages on ${host_cpus} CPUs; clamping to $max_shards to avoid timing-sensitive failures." >&2
+    echo "TEST_SH_ENGINE_SHARDS=$ENGINE_SHARDS would run $((ENGINE_SHARDS * PER_SHARD_PAGES)) concurrent browser pages within a ${PAGE_BUDGET}-page budget; clamping to $max_shards to avoid timing-sensitive failures." >&2
     ENGINE_SHARDS="$max_shards"
   fi
+elif [[ "$SERIAL" == "1" ]]; then
+  ENGINE_SHARDS=1
+else
+  ENGINE_SHARDS="$(( (PAGE_BUDGET - COVERAGE_SHARDS) / PER_SHARD_PAGES ))"
+  (( ENGINE_SHARDS < 1 )) && ENGINE_SHARDS=1
 fi
+COVERAGE_PARALLEL=1
+if [[ "$SERIAL" != "1" ]]; then
+  COVERAGE_PARALLEL="$(( PAGE_BUDGET - ENGINE_SHARDS * PER_SHARD_PAGES ))"
+  (( COVERAGE_PARALLEL > COVERAGE_SHARDS )) && COVERAGE_PARALLEL="$COVERAGE_SHARDS"
+  (( COVERAGE_PARALLEL < 1 )) && COVERAGE_PARALLEL=1
+fi
+echo "page budget $PAGE_BUDGET: $ENGINE_SHARDS engine shard(s) x $PER_SHARD_PAGES pages, $COVERAGE_PARALLEL concurrent coverage shard(s)"
 
 # One wtr process per engine shard. Ports stay deterministic and distinct for the same
 # EADDRINUSE reason the three base lanes do.
