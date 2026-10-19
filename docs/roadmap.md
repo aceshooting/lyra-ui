@@ -11,6 +11,8 @@ still open.
 - **Native document editing:** [delivery sequence](roadmap/document-editing.md) and its
   [qualification record](roadmap/document-editing-feasibility.md). Experimental, in
   `@aceshooting/lyra-docs`; not part of lyra-ui release qualification.
+- **Graph engines and WebGL 3D:** [plan](roadmap/graph.md) for moving graph engines into the
+  optional `@aceshooting/lyra-graph` companion and adding a WebGL 3D engine. Planned.
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
 ## Shipped
@@ -129,6 +131,8 @@ Only items already listed as unshipped:
 
 - **Native document editing** phases 0 to 8 in [document-editing.md](roadmap/document-editing.md),
   including the later consolidation of document viewers and editors in `@aceshooting/lyra-docs`.
+- **Graph engines companion and WebGL 3D:** phases 0 to 4 in [graph.md](roadmap/graph.md);
+  the engine move ships in a major release with a migration note.
 - **Regional and additional catalogs:** `es-419`, `en-GB`, `sk`, `bg`, `lt`, `lv`, `et`, `fr-CA`,
   `zh-HK`, `ca`, `ga`, `mt`, Serbian Cyrillic and Latin (script-aware coverage); Luxembourgish (`lb`)
   only when a reviewer and application demand exist.

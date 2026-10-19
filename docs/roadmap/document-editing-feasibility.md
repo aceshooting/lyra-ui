@@ -129,23 +129,26 @@ The categories below keep content preservation separate from what renders and wh
 
 ## DOCX admission limits
 
+Limits below match the package README at lyra-docs 0.6.2; the README also lists the admitted
+external-relationship and embedded-font cases, which are broader than this record's earlier list.
+
 The adapter validates the archive and its XML and media before passing a document to the engine.
 Exceeding a bound returns a normalized refusal code.
 
 | Resource | Limit |
 | --- | ---: |
-| Input archive | 4 MiB |
+| Input archive | 16 MiB |
 | ZIP entries | 2,048 |
-| Expanded size per entry | 8 MiB |
-| Expanded archive total | 32 MiB |
-| XML part | 4 MiB |
-| XML nodes across the archive | 150,000 |
+| Expanded size per entry | 16 MiB |
+| Expanded archive total | 64 MiB |
+| XML part | 16 MiB |
+| XML nodes across the archive | 250,000 |
 | XML nesting depth | 128 |
 | Individual image | 4 MiB |
 | Image width or height | 8,192 pixels |
 | Pixels in one image | 16 million |
-| Unique images | 128 |
-| Pixels across unique images | 32 million |
+| Unique images | 256 |
+| Pixels across unique images | 64 million |
 
 XML must be valid UTF-8. Only stored or deflated, unencrypted, non-ZIP64 DOCX archives are
 accepted. DTDs, embedded fonts, `altChunk`, embedded objects, packages, controls, and external
