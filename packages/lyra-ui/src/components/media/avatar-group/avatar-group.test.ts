@@ -1060,3 +1060,21 @@ it('defaults the shared size spelling to m while retaining explicit medium', asy
   await el.updateComplete;
   expect(el.size).to.equal('medium');
 });
+
+it('moves into another document before its first render without throwing', async () => {
+  const frame = document.createElement('iframe'); document.body.append(frame);
+  const errors: string[] = [];
+  const onError = (event: ErrorEvent) => { errors.push(event.message); event.preventDefault(); };
+  window.addEventListener('error', onError);
+  try {
+    const el = document.createElement('lr-avatar-group');
+    frame.contentDocument!.body.append(el);
+    document.body.append(el);
+    await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    expect(errors).to.deep.equal([]);
+    el.remove();
+  } finally {
+    window.removeEventListener('error', onError);
+    frame.remove();
+  }
+});

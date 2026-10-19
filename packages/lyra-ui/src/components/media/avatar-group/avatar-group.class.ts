@@ -261,7 +261,8 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.disconnectAvatarObserver();
-    if (!this.isConnected) return;
+    // Before the first render there is no slot yet; its first slotchange reconciles the avatars.
+    if (!this.isConnected || !this.hasUpdated) return;
     const slot = this.renderRoot.querySelector('slot');
     if (slot?.localName === 'slot') {
       this.reconcileAvatars(
