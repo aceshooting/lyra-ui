@@ -103,9 +103,9 @@ Qualification ledger and evidence rules: **[docs/agents/component-qualification.
   (approve `npm-publish` per package; lyra-ui, lyra-ide and lyra-translations version together,
   so each lyra-ui release publishes all three). Nothing is tagged or published locally
   ([release integrity](docs/agents/ci-and-gates.md#release-integrity)).
-- `./scripts/test.sh` sizes engine and coverage shards to every core but two; pin
-  `TEST_SH_ENGINE_SHARDS` (a count) so a failing CI shard reproduces as the same-numbered local
-  shard. `pnpm lint:parallel` without `CI_JOBS` likewise runs one job per lint command on CPU − 2.
+- `./scripts/test.sh` mirrors full-engine's split via `TEST_SH_ENGINE_SHARDS` (a count, default
+  `1`, clamped to a CPU − 2 page budget), so a failing CI shard reproduces as the same-numbered
+  local shard. `pnpm lint:parallel` without `CI_JOBS` runs one job per lint command on CPU − 2.
 - `prepack` stamps version metadata and regenerates editor data; CI freshness-checks it too.
 - `check:hit-area` and `check:numeric-guards` block `pnpm lint`;
   `ls packages/lyra-ui/scripts/check-*.mjs` is the real inventory.
