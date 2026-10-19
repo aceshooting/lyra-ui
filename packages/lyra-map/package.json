@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-map",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Modular MapLibre renderer with asynchronous feature preparation and a shared module worker",
   "type": "module",
   "license": "BSD-3-Clause",

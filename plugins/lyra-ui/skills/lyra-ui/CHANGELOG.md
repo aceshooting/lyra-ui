@@ -1,5 +1,23 @@
 # Changelog
 
+## 29.2.0
+
+### Minor Changes
+
+- 58eb5b2: Add four regional locale catalogs as small difference catalogs: `en-GB` (British English, over the built-in English), `es-419` (Latin American Spanish, over `es`), `fr-CA` (Canadian French, over `fr`) and `zh-HK` (Hong Kong Traditional Chinese, over `zh-TW`). Each registers only the messages that differ for the region and resolves every other message through its parent, so importing one also loads its parent catalog. They ship in `@aceshooting/lyra-translations` as `en-GB.js`, `es-419.js`, `fr-CA.js` and `zh-HK.js` (plus per-family slices), appear in `locales.json` and the optional locale loader, and are recorded as AI-assisted reviews with no human or native-speaker claim. An exact `zh-HK` tag now selects the `zh-HK` catalog instead of falling back to `zh-TW`.
+
+### Patch Changes
+
+- d756bce: `lr-code-block` and `lr-code-block-core` no longer throw in DOM implementations without `Element.part`, such as Happy DOM test environments, so consumers need no shim; highlighted lines keep their `line-highlight` part wherever CSS parts exist.
+- 2fd9f5c: Moving an `lr-conversation-item` (for example inside `lr-thread-list`) into another document or iframe before it has rendered no longer throws from `adoptedCallback`. The same guard now protects every component that mirrors an authored `aria-describedby` onto its inner control (`lr-image-viewer`, `lr-map`, `lr-lightbox`, `lr-textarea`, `lr-input` and others).
+
+  `lr-avatar-group` also no longer throws when moved into another document before its first render.
+- d3725d2: Pressing Tab on a control that has an open keyboard-focus `lr-tooltip` (or an open `lr-popover`) inside an `lr-dialog` or `lr-drawer` now moves focus to the next control instead of getting stuck. While such a hint was open, the other controls in the dialog were made inert; they stay interactive now. Focus also no longer jumps back to the first control of the dialog when the tooltip closes as focus moves on.
+- 5dd23d3: Anchored surfaces (`lr-tooltip`, `lr-popover`, `lr-dropdown`, `lr-popup`, `lr-select`, `lr-combobox` and the other popup users) now take the resolved positioning strategy, such as `--lr-positioning-strategy: fixed`, the moment they open instead of after the first placement pass, so a tooltip that opens or closes quickly no longer lays out at an unresolved position or briefly widens an `overflow: auto` ancestor and makes the page horizontally scrollable.
+- Updated dependencies [5112ff8]
+  - @aceshooting/lyra-map@1.2.0
+  - @aceshooting/lyra-translations@29.2.0
+
 ## 29.1.0
 
 ### Minor Changes
