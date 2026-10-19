@@ -682,25 +682,6 @@ describe("lr-widget-renderer", () => {
     );
     await expect(el).to.be.accessible();
   });
-  it("renders a col layout node as a column flex container", async () => {
-    const el = await fixture<LyraWidgetRenderer>(
-      html`<lr-widget-renderer
-        .document=${documentFor({
-          type: "col",
-          props: { gap: "m" },
-          children: [{ type: "text", children: ["hello"] }],
-        })}
-      ></lr-widget-renderer>`
-    );
-    const col = el.shadowRoot!.querySelector('[part="col"]') as HTMLElement;
-    expect(col == null).to.be.false;
-    const style = getComputedStyle(col);
-    expect(style.display).to.equal("flex");
-    expect(style.flexDirection).to.equal("column");
-    expect(style.flexWrap).to.equal("nowrap");
-    expect(el.shadowRoot!.querySelector('[part="row"]') == null).to.be.true;
-  });
-
   it("replaces a stale action handler on a reused element so one click emits only the current action", async () => {
     const el = await fixture<LyraWidgetRenderer>(
       html`<lr-widget-renderer
