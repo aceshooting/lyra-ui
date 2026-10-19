@@ -6,6 +6,7 @@
 
 - Updated dependencies [b603b71]
 - Updated dependencies [3807e35]
+- Updated dependencies [88c3542]
   - @aceshooting/lyra-ui@29.1.0
 
 ## 29.0.2
