@@ -57,24 +57,9 @@ const MAX_RENDERED_TASKS = 500;
 const canonicalTaskArrays = new WeakSet<object>();
 
 function validTaskItems(value: unknown): TaskItem[] {
-  if (value && typeof value === 'object' && canonicalTaskArrays.has(value)) return value as TaskItem[];
-  const items: TaskItem[] = [];
-  for (const item of Array.isArray(value) ? value : []) {
-    try {
-      if (
-        item !== null
-        && typeof item === 'object'
-        && !Array.isArray(item)
-        && typeof item.id === 'string'
-        && item.id.trim().length > 0
-      ) {
-        items.push(item);
-      }
-    } catch {
-      // A malformed row cannot suppress later valid tasks.
-    }
-  }
-  return items;
+  // Every `children` array that reaches rendering was produced by the task model copy or by the
+  // render-limit slice of it, so a missing or foreign value never carries rows.
+  return value && typeof value === 'object' && canonicalTaskArrays.has(value) ? value as TaskItem[] : [];
 }
 
 interface TaskProjection {

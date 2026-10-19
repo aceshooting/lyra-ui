@@ -168,11 +168,7 @@ function isArrayValue(value: unknown): value is unknown[] {
 }
 
 function isNativeArrayBufferView(value: object): value is ArrayBufferView {
-  try {
-    return ArrayBuffer.isView(value);
-  } catch {
-    return false;
-  }
+  return ArrayBuffer.isView(value);
 }
 
 function isImmutableBlob(value: object): boolean {

@@ -19471,6 +19471,7 @@
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-popup-tab-stops.test.ts",
           "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-scale.test.ts",
@@ -28765,6 +28766,7 @@
           "src/components/utility/json-viewer/json-viewer-limits.test.ts",
           "src/components/utility/json-viewer/json-viewer-remediation.test.ts",
           "src/components/utility/json-viewer/json-viewer-scale.test.ts",
+          "src/components/utility/json-viewer/json-viewer-source-copy-access.test.ts",
           "src/components/utility/json-viewer/json-viewer-source-scale.test.ts",
           "src/components/utility/json-viewer/json-viewer.test.ts"
         ],
@@ -32669,6 +32671,7 @@
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-popup-tab-stops.test.ts",
           "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-scale.test.ts",
@@ -32922,6 +32925,7 @@
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-popup-tab-stops.test.ts",
           "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-scale.test.ts",
@@ -33119,6 +33123,7 @@
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-popup-tab-stops.test.ts",
           "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
           "src/components/layout/menu/menu-scale.test.ts",
@@ -52735,8 +52740,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/task-list/task-list-reorderable.test.ts",
-              "test": "is opt-in: unset task rows remain non-focusable and Ctrl+Arrow never emits lr-reorder",
+              "file": "src/components/agent-tools/task-list/task-list-ranged-focus.test.ts",
+              "test": "resolves the focused task through the source after expanding it",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -52857,6 +52862,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/task-list/task-list-ranged-focus.test.ts",
           "src/components/agent-tools/task-list/task-list-reorderable.test.ts",
           "src/components/agent-tools/task-list/task-list-scale.test.ts",
           "src/components/agent-tools/task-list/task-list-source-scale.test.ts",
@@ -53882,11 +53888,13 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/thread-list/thread-list-adoption.test.ts",
           "src/components/conversation/thread-list/thread-list-coverage.test.ts",
           "src/components/conversation/thread-list/thread-list-input-limit.test.ts",
           "src/components/conversation/thread-list/thread-list-remediation.test.ts",
           "src/components/conversation/thread-list/thread-list-scale.test.ts",
           "src/components/conversation/thread-list/thread-list-search-size.test.ts",
+          "src/components/conversation/thread-list/thread-list-source-page-clamp.test.ts",
           "src/components/conversation/thread-list/thread-list-source-scale.test.ts",
           "src/components/conversation/thread-list/thread-list.test.ts"
         ],

@@ -473,17 +473,12 @@ export function acquireAnnouncementSink(
   const releaseRecord = (): void => {
     for (const message of [...ownMessages]) {
       const pending = record.pending.get(message);
+      // Every own message has a pending record (they are added and removed together).
       if (pending) removePendingAnnouncement(record, pending);
-      else ownMessages.delete(message);
     }
     scheduleSinkSweep(record);
     record.refs -= 1;
     if (record.refs > 0) return;
-    if (record.sweepTimer !== undefined) {
-      record.timerHost.clearTimeout(record.sweepTimer);
-      record.sweepTimer = undefined;
-      record.sweepDeadline = undefined;
-    }
     record.pending.clear();
     record.element.remove();
     const byPoliteness = sinksByParent.get(record.parent);
@@ -549,7 +544,6 @@ export function acquireAnnouncementSink(
         if (!oldest) break;
         const entry = record.pending.get(oldest);
         if (entry) removePendingAnnouncement(record, entry);
-        else ownMessages.delete(oldest);
       }
       while (record.pending.size > MAX_PENDING_MESSAGES_PER_SINK) {
         const oldest = record.pending.values().next().value;

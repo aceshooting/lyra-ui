@@ -223,25 +223,22 @@ function assertGeoJsonGraphWithinLimits(root: unknown): void {
 /**
  * Validates the complete GeoJSON structure and derives bounds in one bounded iterative pass. It
  * never recursively descends or retains a second coordinate array, so adversarial nesting and
- * large coordinate sets have explicit depth/node/position ceilings before map rendering.
+ * large coordinate sets have explicit depth/node/position ceilings before map rendering. Every node
+ * visited here is a distinct value of the graph that `assertGeoJsonGraphWithinLimits` has already
+ * admitted under `MAX_GEOJSON_NODES` (keys and scalar members included), so the walk needs no
+ * second node count.
  */
 function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
   assertGeoJsonGraphWithinLimits(value);
   if (!isRecord(value)) throw new Error('not a GeoJSON object');
   const root = value as GeoJsonLike;
   const tasks: GeoTask[] = [{ kind: 'geo', value, depth: 0, mode: 'any' }];
-  let processedNodes = 0;
   let positionCount = 0;
   let bounds: GeoBounds | null = null;
 
   const pushTask = (task: GeoTask): void => {
     if (task.depth > MAX_GEOJSON_DEPTH)
       throw new LyraResourceLimitError('The GeoJSON nesting is too deep.');
-    if (processedNodes + tasks.length >= MAX_GEOJSON_NODES) {
-      throw new LyraResourceLimitError(
-        'The GeoJSON contains too many nested values.'
-      );
-    }
     tasks.push(task);
   };
   const pushArray = (
@@ -249,11 +246,6 @@ function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
     kind: CoordinateTaskKind,
     depth: number
   ): void => {
-    if (processedNodes + tasks.length + items.length > MAX_GEOJSON_NODES) {
-      throw new LyraResourceLimitError(
-        'The GeoJSON contains too many nested values.'
-      );
-    }
     for (let index = items.length - 1; index >= 0; index--) {
       pushTask({ kind, value: items[index], depth });
     }
@@ -266,12 +258,6 @@ function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
 
   while (tasks.length > 0) {
     const task = tasks.pop()!;
-    processedNodes++;
-    if (processedNodes > MAX_GEOJSON_NODES) {
-      throw new LyraResourceLimitError(
-        'The GeoJSON contains too many nested values.'
-      );
-    }
     if (task.depth > MAX_GEOJSON_DEPTH)
       throw new LyraResourceLimitError('The GeoJSON nesting is too deep.');
 

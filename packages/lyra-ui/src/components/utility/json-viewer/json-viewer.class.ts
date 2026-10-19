@@ -141,10 +141,7 @@ function snapshotJsonValue(
   copies: WeakMap<object, JsonSnapshotContainer>,
   depth: number,
 ): JsonSnapshotValue | typeof OMIT_JSON_SNAPSHOT {
-  if (budget.remainingNodes <= 0) {
-    budget.truncated = true;
-    return OMIT_JSON_SNAPSHOT;
-  }
+  // Callers admit a value only while `remainingNodes` is positive (`effectiveMaxNodes` is at least 1).
   budget.remainingNodes -= 1;
   if (
     value === null ||
@@ -304,15 +301,14 @@ function entriesOf(
     }
     return { entries, truncated: total > count, total, exact: true };
   }
-  if (typeof value === 'object' && value !== null) {
-    let total = 0;
-    for (const key in value) {
-      total += 1;
-      if (entries.length < limit) entries.push([key, value[key]]);
-    }
-    return { entries, truncated: total > entries.length, total, exact: true };
+  // Only containers reach this helper, so anything that is not an array is an owned record.
+  const record = value as Record<string, JsonSnapshotValue>;
+  let total = 0;
+  for (const key in record) {
+    total += 1;
+    if (entries.length < limit) entries.push([key, record[key]!]);
   }
-  return { entries, truncated: false, total: 0, exact: true };
+  return { entries, truncated: total > entries.length, total, exact: true };
 }
 
 function valueType(value: JsonSnapshotValue): JsonValueType {
@@ -1241,12 +1237,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private revealActiveMatch(): void {
     const match = this.searchState.orderedMatches[this.activeSearchIndex];
     if (!match) return;
-    let path: unknown;
-    try {
-      path = JSON.parse(match.pathKey);
-    } catch {
-      return;
-    }
+    // Every `pathKey` is the `JSON.stringify` of a path array written by this class's search pass.
+    const path = JSON.parse(match.pathKey) as unknown;
     if (!Array.isArray(path)) return;
     let next: Map<string, boolean> | null = null;
     for (let depth = 0; depth < path.length; depth++) {
