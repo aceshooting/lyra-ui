@@ -167,6 +167,7 @@ export async function analyzeLocaleInventory({ packageDir = defaultPackageDir, r
     catalogs: inventory.catalogs,
     upstreamPins: { webawesome: upstream.webawesome, shoelace: upstream.shoelace },
     requireApproved: false,
+    englishRootLocales: inventory.englishRootLocales,
   });
   if (reviewErrors.length > 0) throw new Error(reviewErrors.join('\n'));
 
@@ -185,7 +186,7 @@ export async function analyzeLocaleInventory({ packageDir = defaultPackageDir, r
       review,
       module,
       ownKeys: inventory.authoredCatalogs.get(locale).map(([key]) => key),
-      parentKeys: module.parent ? inventory.catalogs.get(module.parent).map(([key]) => key) : undefined,
+      parentKeys: module.parent === 'en' ? sourceKeys : module.parent ? inventory.catalogs.get(module.parent).map(([key]) => key) : undefined,
       sourceKeys,
       pluralPin,
     });

@@ -752,3 +752,49 @@ it('detects the topmost native modal by backdrop hit testing when focus is clear
     earlier!.close();
   }
 });
+
+it('moves an eager channel into the new document when its host is adopted by an iframe', async () => {
+  const iframe = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
+  const frameDocument = iframe.contentDocument!;
+  const host = document.createElement('div');
+  document.body.append(host);
+  const controller = new AnnouncementSinkController(host, { register: false, eager: ['polite'] });
+  try {
+    controller.connect();
+    expect(document.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length).to.be.greaterThan(0);
+    expect(frameDocument.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length).to.equal(0);
+    frameDocument.body.append(frameDocument.adoptNode(host));
+    controller.adopted();
+    expect(frameDocument.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length).to.equal(1);
+    controller.announce('in the frame');
+    await waitUntil(() => sinkTexts('polite', frameDocument).includes('in the frame'), 'frame announcement missing');
+    expect(sinkTexts('polite')).to.not.include('in the frame');
+    controller.disconnect();
+    expect(frameDocument.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length).to.equal(0);
+  } finally {
+    controller.disconnect();
+    host.remove();
+    iframe.remove();
+  }
+});
+
+it('releases a lazily mounted channel on request and remounts it on the next announcement', () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const controller = new AnnouncementSinkController(host, { register: false });
+  try {
+    controller.connect();
+    expect(sinkElement('assertive')).to.equal(null);
+    controller.announceAssertive('first');
+    expect(sinkElement('assertive') === null).to.equal(false);
+    controller.releaseChannel('assertive');
+    expect(sinkElement('assertive')).to.equal(null);
+    controller.releaseChannel('assertive');
+    controller.announceAssertive('second');
+    expect(sinkElement('assertive') === null).to.equal(false);
+    expect(sinkTexts('assertive')).to.deep.equal(['second']);
+  } finally {
+    controller.disconnect();
+    host.remove();
+  }
+});

@@ -237,7 +237,7 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-translations/<locale>.js` (the sixty-six message catalogs, in the companion package),
+  `@aceshooting/lyra-translations/<locale>.js` (the seventy message catalogs, in the companion package),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of
@@ -2538,7 +2538,7 @@ category selection walks the same chain, so the two can never disagree:
    _regional-only_ catalog is reached from a less specific tag (`lang="zh"` finds `zh-CN`,
    `lang="pt"` finds `pt-BR`). Order is deterministic and independent of import order:
    1. **Same likely script** — the explicit script subtag, else CLDR likely subtags via
-      `Intl.Locale#maximize()`. `zh-Hant`, `zh-HK`, `zh-MO` and `zh-Hant-CN` reach Traditional
+      `Intl.Locale#maximize()`. `zh-Hant`, `zh-HK` (when `zh-HK` is not itself imported), `zh-MO` and `zh-Hant-CN` reach Traditional
       `zh-TW`; `zh`, `zh-Hans`, `zh-SG` and `zh-Hans-HK` reach Simplified `zh-CN`. An unknown
       script (none, `Zzzz`, or no `Intl.Locale`) never matches.
    2. **Same likely region** — a region-less tag reaches its CLDR default region: bare `pt` picks
@@ -2621,7 +2621,7 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-translations/<locale>.js`
 
-Sixty-six full catalogs ship in the companion package `@aceshooting/lyra-translations` (`pnpm add @aceshooting/lyra-translations`, same version as `@aceshooting/lyra-ui`), each covering every key in `LYRA_DEFAULT_STRINGS`.
+Seventy catalogs ship in the companion package `@aceshooting/lyra-translations` (`pnpm add @aceshooting/lyra-translations`, same version as `@aceshooting/lyra-ui`), each covering every key in `LYRA_DEFAULT_STRINGS`.
 The public `@aceshooting/lyra-ui/locales.json` manifest lists their canonical identities, authored
 source spellings, import paths, and structural coverage. It also distinguishes translation
 coverage from linguistic review tier. The catalogs are **side-effect-only modules**: import one
@@ -2630,6 +2630,9 @@ bare, read nothing from it, and it calls `registerLyraLocale()` for you.
 ```ts
 import "@aceshooting/lyra-translations/de.js";
 import "@aceshooting/lyra-translations/de-CH.js"; // Swiss Standard German
+import "@aceshooting/lyra-translations/en-GB.js"; // British English: a small difference catalog over the built-in English
+import "@aceshooting/lyra-translations/es-419.js"; // Latin American Spanish: differences over es
+import "@aceshooting/lyra-translations/fr-CA.js"; // Canadian French: differences over fr
 import "@aceshooting/lyra-translations/ar.js"; // declares dir: 'rtl'; direction still comes from dir
 import "@aceshooting/lyra-translations/fa.js"; // fa-IR falls back to this base catalog
 import "@aceshooting/lyra-translations/he.js"; // he-IL falls back to this base catalog
@@ -2638,7 +2641,8 @@ import "@aceshooting/lyra-translations/pt-BR.js"; // Brazilian: serves pt and pt
 import "@aceshooting/lyra-translations/pt-PT.js"; // European: serves pt-PT, pt-AO, pt-MZ
 import "@aceshooting/lyra-translations/ro.js"; // Romanian
 import "@aceshooting/lyra-translations/zh-CN.js"; // Simplified: serves zh, zh-Hans, zh-SG and zh-Hans-CN
-import "@aceshooting/lyra-translations/zh-TW.js"; // Traditional: serves zh-Hant, zh-HK and zh-MO
+import "@aceshooting/lyra-translations/zh-TW.js"; // Traditional: serves zh-Hant and zh-MO
+import "@aceshooting/lyra-translations/zh-HK.js"; // Hong Kong: differences over zh-TW
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
@@ -2650,11 +2654,14 @@ and `he` declare `dir: 'rtl'`, so `getLyraLocaleDirection()`
 answers for them (and for `ar-EG`, `fa-IR`, `he-IL`) — but locale selection still does not _force_
 writing direction: set `dir="rtl"` on the page or an ancestor yourself.
 
-`de-CH`, `pt-BR`, `pt-PT`, `zh-CN`, and `zh-TW` are regional catalogs: an exact tag always selects
+`de-CH`, `en-GB`, `es-419`, `fr-CA`, `pt-BR`, `pt-PT`, `zh-CN`, `zh-HK`, and `zh-TW` are regional catalogs: an exact tag always selects
 its own catalog, and a less specific tag reaches one through step 2 only when nothing on its
 truncation walk answers first (with `de` imported, `lang="de-AT"` resolves to `de`, never `de-CH`).
 The same routing drives plural selection and `getLyraLocaleDirection()`. They are listed under
-their real tags in `getRegisteredLyraLocales()`.
+their real tags in `getRegisteredLyraLocales()`. `de-CH`, `en-GB`, `es-419`, `fr-CA` and `zh-HK` are difference catalogs:
+they register only the messages that differ and resolve every other message through their parent
+(`de`, the built-in English, `es`, `fr`, `zh-TW`), and importing one also imports its parent catalog (`en-GB` has none: English is built in).
+The four regional additions are AI-assisted translations; no human or native-speaker review is claimed.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
 ones cost nothing. A catalog registered this way is merged like any other, so a later

@@ -129,6 +129,9 @@ function namedObjectLiteral(program, name) {
   return found;
 }
 
+/** A delta catalog whose parent is the built-in English source (`DEFAULT_STRINGS`), e.g. `en-GB`. */
+export const ENGLISH_SOURCE_PARENT = 'en';
+
 /** Literal full/delta registration shared by the inventory and semantic checker. */
 function registrationCall(program) {
   let call;
@@ -245,7 +248,7 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
       }
       const entries = messageEntries(object, file, errors);
       validateMeta(file, registration.meta, errors);
-      if (registration.parent && JSON.stringify(bareImportSpecifiers(program)) !== JSON.stringify([`./${registration.parent}.js`]))
+      if (registration.parent && JSON.stringify(bareImportSpecifiers(program)) !== JSON.stringify(registration.parent === ENGLISH_SOURCE_PARENT ? [] : [`./${registration.parent}.js`]))
         errors.push(`${file}: delta parent import must match its declared parent aggregate`);
       authoredCatalogs.set(registration.tag, entries);
       modules.push({ locale: registration.tag, parent: registration.parent, aggregatePath: `./${base}.js`, familyPaths: {} });
@@ -297,7 +300,7 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
         metaSignature = signature;
       }
       const parentImports = bareImportSpecifiers(sliceProgram);
-      const expectedParentImports = sliceRegistration.parent ? [`../${sliceRegistration.parent}/${family}.js`] : [];
+      const expectedParentImports = sliceRegistration.parent && sliceRegistration.parent !== ENGLISH_SOURCE_PARENT ? [`../${sliceRegistration.parent}/${family}.js`] : [];
       if (JSON.stringify(parentImports) !== JSON.stringify(expectedParentImports))
         errors.push(`${sliceFile}: parent imports must exactly match the declared parent family`);
       localeTag ??= sliceRegistration.tag;
@@ -342,12 +345,14 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
       if (visited.has(current)) throw new Error(`Locale parent cycle at ${current}`);
       if (visited.size > 32) throw new Error('Locale parent chain exceeds 32 edges');
       visited.add(current);
+      if (current === ENGLISH_SOURCE_PARENT) break;
       const module = modulesByLocale.get(current);
       if (!module) throw new Error(`Unknown locale parent ${current}`);
       current = module.parent;
     }
   }
   function familyKeys(locale, family) {
+    if (locale === ENGLISH_SOURCE_PARENT) return new Set();
     const module = modulesByLocale.get(locale);
     return new Set([
       ...(module.parent ? familyKeys(module.parent, family) : []),
@@ -362,8 +367,10 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
     if (!module) throw new Error(`Unknown locale parent ${locale}`);
     const own = authoredCatalogs.get(locale);
     validateOwnOrder(own, locale);
-    const inherited = module.parent ? resolve(module.parent, [...chain, locale]) : [];
-    if (module.parent && slicesByLocale.has(locale)) {
+    // The English source (DEFAULT_STRINGS) is an implicit root: it has no slice modules to import.
+    const englishParent = module.parent === ENGLISH_SOURCE_PARENT;
+    const inherited = englishParent ? englishEntries : module.parent ? resolve(module.parent, [...chain, locale]) : [];
+    if (module.parent && !englishParent && slicesByLocale.has(locale)) {
       const parentModule = modulesByLocale.get(module.parent);
       for (const family of Object.keys(module.familyPaths)) {
         if (!parentModule.familyPaths[family]) errors.push(`${locale}/${family}: parent has no matching family module`);
@@ -443,7 +450,16 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
     }
   }
   if (errors.length > 0) throw new Error(errors.join('\n'));
-  return { englishEntries, catalogs, authoredCatalogs, modules, pseudoModules };
+  const englishRootLocales = new Set(modules.filter(({ parent }) => parent === ENGLISH_SOURCE_PARENT).map(({ locale }) => locale));
+  const englishByKey = new Map(englishEntries);
+  for (const locale of englishRootLocales) {
+    for (const [key, value] of authoredCatalogs.get(locale)) {
+      if (JSON.stringify(englishByKey.get(key)) === JSON.stringify(value))
+        errors.push(`${locale}: override ${key} duplicates its English source value`);
+    }
+  }
+  if (errors.length > 0) throw new Error(errors.join('\n'));
+  return { englishEntries, catalogs, authoredCatalogs, modules, pseudoModules, englishRootLocales };
 }
 
 /** The base language subtag of a locale tag, normalized the way `normalizeLocale()` does. */
@@ -884,6 +900,7 @@ export async function runTranslationCatalogCheck() {
           shoelace: upstream.shoelace,
         },
         requireApproved: true,
+        englishRootLocales: inventory.englishRootLocales,
       }).map((error) => `scripts/fixtures/translation-reviews.json: ${error}`),
     );
   } catch (error) {

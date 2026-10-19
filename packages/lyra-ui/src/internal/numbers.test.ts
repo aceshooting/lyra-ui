@@ -14,6 +14,7 @@ import {
   isArrowKey,
   isSliderKey,
   decimalPlaces,
+  positiveInteger,
 } from './numbers.js';
 
 it('scans numeric and point extents in one pass, returning null only for empty input', () => {
@@ -100,4 +101,40 @@ it('counts decimal places, including exponential-notation input', () => {
   // rounded a stepped value to the wrong precision.
   expect(decimalPlaces(1e-7)).to.equal(7);
   expect(decimalPlaces(1.5e-3)).to.equal(4);
+});
+
+it('accepts only positive finite integers and otherwise returns the configured fallback', () => {
+  expect(positiveInteger(3, 9)).to.equal(3);
+  for (const rejected of [0, -2, 1.5, Number.NaN, Number.POSITIVE_INFINITY, '4', null, undefined, 4n]) {
+    expect(positiveInteger(rejected, 9), String(rejected)).to.equal(9);
+  }
+});
+
+it('returns a clamped fallback ratio for degenerate or non-finite inputs and mirrors reversed ranges', () => {
+  expect(finiteRatio(Number.NaN, 0, 10, 0.25)).to.equal(0.25);
+  expect(finiteRatio(5, Number.NEGATIVE_INFINITY, 10, 0.25)).to.equal(0.25);
+  expect(finiteRatio(5, 0, Number.POSITIVE_INFINITY, 0.25)).to.equal(0.25);
+  expect(finiteRatio(5, 7, 7, 0.4)).to.equal(0.4);
+  expect(finiteRatio(5, 7, 7, 4)).to.equal(1);
+  expect(finiteRatio(5, 7, 7, -3)).to.equal(0);
+  expect(finiteRatio(5, 7, 7, Number.NaN)).to.equal(0);
+  expect(finiteRatio(2.5, 0, 10)).to.equal(0.25);
+  expect(finiteRatio(2.5, 10, 0)).to.equal(0.75);
+  expect(finiteRatio(-1, 10, 0)).to.equal(1);
+  expect(finiteRatio(11, 10, 0)).to.equal(0);
+  expect(finiteRatio(Number.MAX_VALUE / 2, Number.MAX_VALUE, -Number.MAX_VALUE)).to.equal(0.25);
+});
+
+it('interpolates with clamped ratios and returns an endpoint for degenerate inputs', () => {
+  expect(finiteInterpolate(2, 10, 0)).to.equal(2);
+  expect(finiteInterpolate(2, 10, 1)).to.equal(10);
+  expect(finiteInterpolate(2, 10, 0.25)).to.equal(4);
+  expect(finiteInterpolate(2, 10, -5)).to.equal(2);
+  expect(finiteInterpolate(2, 10, 5)).to.equal(10);
+  expect(finiteInterpolate(2, 10, Number.NaN)).to.equal(2);
+  expect(finiteInterpolate(3, 3, 0.7)).to.equal(3);
+  expect(finiteInterpolate(Number.NaN, 8, 0.5)).to.equal(4);
+  expect(finiteInterpolate(6, Number.NaN, 0.5)).to.equal(6);
+  expect(finiteInterpolate(-Number.MAX_VALUE, Number.MAX_VALUE, 0.25)).to.be.closeTo(-Number.MAX_VALUE / 2, Number.MAX_VALUE * 1e-12);
+  expect(finiteMidpoint(Number.MAX_VALUE, Number.MAX_VALUE)).to.equal(Number.MAX_VALUE);
 });

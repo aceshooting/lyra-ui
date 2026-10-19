@@ -66,6 +66,9 @@ each package. A new npm package also needs its trusted-publisher entry configure
 publish; without it the publish fails with E404. The package versions independently of
 `@aceshooting/lyra-ui` but is released alongside it.
 
+Targets: phases 0 and 1 ship as lyra-ui 30.0.0 with lyra-graph 1.0.0; phase 2 (WebGL 3D) as
+lyra-ui 30.1.0 with lyra-graph 1.1.0; phases 3 and 4 as lyra-graph 1.2.0 and 1.3.0.
+
 ## Approach for the 3D engine
 
 - Three.js as an optional peer, strictly lazy: never in the root barrel, never in the default

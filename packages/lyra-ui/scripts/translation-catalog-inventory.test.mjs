@@ -81,6 +81,24 @@ test('a plural override replaces the complete parent message without merging its
   assert.deepEqual(new Map(inventory.catalogs.get('de')).get('key1'), {one: 'One item', other: '{count} items'});
 });
 
+test('a regional English delta resolves over the built-in English source without a parent import', async (t) => {
+  const { root, put } = await fixture(t);
+  await mkdir(path.join(root, 'src/translations/en-GB'), { recursive: true });
+  await put('en-GB.ts', "import './en-GB/forms.js';");
+  await put('en-GB/forms.ts', "const strings = {key0: 'Colour'}; registerLyraLocaleDelta('en-GB', 'en', strings, {dir: 'ltr'});");
+  const inventory = await readTranslationCatalogInventory({ packageDir: root });
+  const resolved = new Map(inventory.catalogs.get('en-GB'));
+  assert.equal(resolved.get('key0'), 'Colour');
+  assert.equal(resolved.get('key2'), 'Message 2');
+  assert.equal(inventory.authoredCatalogs.get('en-GB').length, 1);
+  assert.deepEqual([...inventory.englishRootLocales], ['en-GB']);
+  assert.equal(inventory.catalogs.has('en'), false);
+  await put('en-GB/forms.ts', "const strings = {key0: 'Message 0'}; registerLyraLocaleDelta('en-GB', 'en', strings, {dir: 'ltr'});");
+  await assert.rejects(readTranslationCatalogInventory({ packageDir: root }), /duplicates its English source value/u);
+  await put('en-GB/forms.ts', "import '../en/forms.js'; const strings = {key0: 'Colour'}; registerLyraLocaleDelta('en-GB', 'en', strings, {dir: 'ltr'});");
+  await assert.rejects(readTranslationCatalogInventory({ packageDir: root }), /parent imports/u);
+});
+
 test('flat pt-PT slices must match the nonpublished regional authoring map', async (t) => {
   const { root, put } = await fixture(t);
   const translations = path.join(root, 'src/translations');

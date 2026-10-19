@@ -17,9 +17,9 @@ it('keeps catalogs absent until an exact supported locale is requested', async (
 
 it('rejects an unshipped regional catalog without advertising it as translated', async () => {
   let rejected = false;
-  await loadLyraLocale('fr-CA').catch(() => { rejected = true; });
+  await loadLyraLocale('fr-BE').catch(() => { rejected = true; });
   expect(rejected).to.equal(true);
-  expect(getRegisteredLyraLocales()).not.to.include('fr-CA');
+  expect(getRegisteredLyraLocales()).not.to.include('fr-BE');
 });
 
 
@@ -31,5 +31,23 @@ for (const [sourceTag, canonical] of [['tl', 'fil'], ['pnb', 'lah']] as const) {
     expect(getRegisteredLyraLocaleKeys(sourceTag)).to.have.length(Object.keys(LYRA_DEFAULT_STRINGS).length);
     expect(getRegisteredLyraLocales().filter((tag) => tag === sourceTag || tag === canonical)).to.deep.equal([canonical]);
     if (sourceTag === 'pnb') expect(getLyraLocaleDirection(sourceTag)).to.equal('rtl');
+  });
+}
+
+for (const [tag, parent, sample] of [
+  ['en-GB', undefined, 'colorPicker'],
+  ['es-419', 'es', 'contactViewerTypeCell'],
+  ['fr-CA', 'fr', 'contactViewerEmailLabel'],
+  ['zh-HK', 'zh-TW', 'browserFrameControllerUser'],
+] as const) {
+  it(`loads the ${tag} difference catalog and resolves the rest through ${parent ?? 'the built-in English'}`, async () => {
+    await loadLyraLocale(tag);
+    const own = getRegisteredLyraLocaleKeys(tag);
+    expect(own.length).to.be.greaterThan(0);
+    expect(own.length).to.be.lessThan(150);
+    expect(own).to.include(sample);
+    expect(getRegisteredLyraLocales()).to.include(tag);
+    if (parent) expect(getRegisteredLyraLocaleKeys(parent)).to.have.length(Object.keys(LYRA_DEFAULT_STRINGS).length);
+    expect(getLyraLocaleDirection(tag)).to.equal('ltr');
   });
 }

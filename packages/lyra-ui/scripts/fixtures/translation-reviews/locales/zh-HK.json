@@ -1,0 +1,171 @@
+{
+  "locale": "zh-HK",
+  "direction": "ltr",
+  "source": {
+    "keyCount": 1531,
+    "sha256": "sha256:d6c63fa689ebd45a8df87cf502705e2bd843037f2ab84b5f0139c242f7fee59e"
+  },
+  "catalog": {
+    "keyCount": 1531,
+    "sha256": "sha256:2d6a2be698af0a2a73f2cc112c9461ca9c5376bf6ef14c98f145879488b340ef"
+  },
+  "translator": {
+    "status": "complete-original",
+    "role": "project localization contributor",
+    "completedAt": "2026-10-19",
+    "evidence": "Original zh-HK (Hong Kong Traditional Chinese) difference catalog: 21 regional overrides drafted over Traditional Chinese for Taiwan (zh-TW) for Hong Kong terminology (用戶, 智能體, 互聯網, 項目, 點擊, 發送, 相片). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made."
+  },
+  "reviewer": {
+    "status": "approved",
+    "role": "independent localization reviewer",
+    "reviewedAt": "2026-10-19",
+    "evidence": "AI-assisted review of the zh-HK (Hong Kong Traditional Chinese) regional overrides checked each override for meaning, regional register, terminology consistency with the parent catalog, placeholder preservation and plural forms, and confirmed that no override merely repeats its parent value. Inherited messages were not re-reviewed beyond the parent catalog's own record. No human, native-speaker or independent human review is claimed."
+  },
+  "englishIdenticalAllowlist": [
+    {
+      "messagePath": "accessibleLabelSeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "avPlayerRateOption",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('×') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "boxPlotQ1",
+      "rationale": "'Q1' is the box-plot statistics notation for the first quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "boxPlotQ3",
+      "rationale": "'Q3' is the box-plot statistics notation for the third quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "contactViewerAddressFormat",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('\n\n\n  \n') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "fileSizeUnitB",
+      "rationale": "'B' is the SI byte-size unit symbol for a single byte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitGb",
+      "rationale": "'GB' is the SI-style byte-size unit symbol for a gigabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitKb",
+      "rationale": "'KB' is the SI-style byte-size unit symbol for a kilobyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitMb",
+      "rationale": "'MB' is the SI-style byte-size unit symbol for a megabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileSizeUnitTb",
+      "rationale": "'TB' is the SI-style byte-size unit symbol for a terabyte, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileTreeDiffSummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+ -') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "fileTypePdf",
+      "rationale": "'PDF' is the file-format acronym Portable Document Format, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "flowStatusWithDetail",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "generationStatusThroughput",
+      "rationale": "'{rate} tok/s' names a token-generation throughput rate, using the ML-community abbreviation \"tok/s\" (tokens per second); Traditional Chinese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "generationStatusTokens.other",
+      "rationale": "'{count} token' names a generated-token count, using the ML/LLM jargon word \"token\" unmodified; Traditional Chinese uses the identical spelling/loanword for this term rather than a translated phrase, so the exact match reflects shared vocabulary, not leftover English prose."
+    },
+    {
+      "messagePath": "ingestionItemProgressLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "kbdAltWord",
+      "rationale": "'Alt' is the conventional printed/spoken name of the Alt modifier key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdCommandWord",
+      "rationale": "'Command' is the conventional printed/spoken name of the Mac keyboard's Command key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdControlVisual",
+      "rationale": "'Ctrl' is the conventional printed/spoken name of the Ctrl modifier key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdControlWord",
+      "rationale": "'Control' is the conventional printed/spoken name of the Control modifier key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdDeleteVisual",
+      "rationale": "'Del' is the conventional printed/spoken name of the Delete key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEndWord",
+      "rationale": "'End' is the conventional printed/spoken name of the End key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdEscapeVisual",
+      "rationale": "'Esc' is the conventional printed/spoken name of the Esc key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdHomeWord",
+      "rationale": "'Home' is the conventional printed/spoken name of the Home key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdOptionWord",
+      "rationale": "'Option' is the conventional printed/spoken name of the Mac keyboard's Option key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageDownVisual",
+      "rationale": "'PgDn' is the conventional printed/spoken name of the Page Down key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdPageUpVisual",
+      "rationale": "'PgUp' is the conventional printed/spoken name of the Page Up key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdShiftWord",
+      "rationale": "'Shift' is the conventional printed/spoken name of the Shift modifier key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "kbdTabWord",
+      "rationale": "'Tab' is the conventional printed/spoken name of the Tab key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "notebookViewerInPrompt",
+      "rationale": "'In [{count}]' reproduces Jupyter Notebook's own In[{count}] execution-count prompt convention verbatim; the notebook UI shows this exact ASCII marker regardless of locale, so translating it would mismatch the tool it represents."
+    },
+    {
+      "messagePath": "notebookViewerInPromptEmpty",
+      "rationale": "'In [ ]' reproduces Jupyter Notebook's own empty In[] execution-count prompt marker verbatim; the notebook UI shows this exact ASCII marker regardless of locale, so translating it would mismatch the tool it represents."
+    },
+    {
+      "messagePath": "pdfViewerCurrentZoom",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('%') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "showMoreCollapsed",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "spanKindLlm",
+      "rationale": "'LLM' is the AI/ML span-kind acronym for a large language model call, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "traceTreeSpanStatus",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "valueTruncated",
+      "rationale": "The ellipsis is an invariant punctuation sentinel for a truncated value; it contains no untranslated English words."
+    }
+  ],
+  "reviewTier": "ai-assisted"
+}

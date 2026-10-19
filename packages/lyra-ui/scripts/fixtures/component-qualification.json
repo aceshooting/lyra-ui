@@ -47083,8 +47083,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/sequence-strip/sequence-strip.test.ts",
-              "test": "fills 320px with the whole span in both directions, one item per cell at the cap and ranges past it",
+              "file": "src/components/data/sequence-strip/sequence-strip-source.test.ts",
+              "test": "mirrors the arrow keys under RTL",
               "kind": "rendered RTL test signal"
             }
           ]

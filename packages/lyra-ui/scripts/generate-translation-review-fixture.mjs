@@ -20,6 +20,7 @@ async function validationContext() {
   return {
     englishEntries: inventory.englishEntries,
     catalogs: inventory.catalogs,
+    englishRootLocales: inventory.englishRootLocales,
     upstreamPins: { webawesome: upstream.webawesome, shoelace: upstream.shoelace },
   };
 }

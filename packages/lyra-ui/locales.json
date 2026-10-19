@@ -351,6 +351,34 @@
       ]
     },
     {
+      "locale": "en-GB",
+      "kind": "translated",
+      "direction": "ltr",
+      "script": "Latn",
+      "parent": "en",
+      "aggregateImport": "@aceshooting/lyra-translations/en-GB.js",
+      "familyImports": {
+        "agent-tools": "@aceshooting/lyra-translations/en-GB/agent-tools.js",
+        "conversation": "@aceshooting/lyra-translations/en-GB/conversation.js",
+        "data": "@aceshooting/lyra-translations/en-GB/data.js",
+        "forms": "@aceshooting/lyra-translations/en-GB/forms.js",
+        "media": "@aceshooting/lyra-translations/en-GB/media.js",
+        "retrieval": "@aceshooting/lyra-translations/en-GB/retrieval.js",
+        "shared": "@aceshooting/lyra-translations/en-GB/shared.js",
+        "viewers": "@aceshooting/lyra-translations/en-GB/viewers.js"
+      },
+      "sourceKeyCount": 1531,
+      "translatedOwnKeyCount": 20,
+      "inheritedKeyCount": 1511,
+      "missingKeyCount": 0,
+      "reviewTier": "ai-assisted",
+      "reviewStatus": "approved",
+      "pluralCategories": [
+        "one",
+        "other"
+      ]
+    },
+    {
       "locale": "en-XA",
       "kind": "testing-only",
       "direction": "ltr",
@@ -394,6 +422,39 @@
       "sourceKeyCount": 1531,
       "translatedOwnKeyCount": 1531,
       "inheritedKeyCount": 0,
+      "missingKeyCount": 0,
+      "reviewTier": "ai-assisted",
+      "reviewStatus": "approved",
+      "pluralCategories": [
+        "many",
+        "one",
+        "other"
+      ]
+    },
+    {
+      "locale": "es-419",
+      "kind": "translated",
+      "direction": "ltr",
+      "script": "Latn",
+      "parent": "es",
+      "aggregateImport": "@aceshooting/lyra-translations/es-419.js",
+      "familyImports": {
+        "agent-tools": "@aceshooting/lyra-translations/es-419/agent-tools.js",
+        "charts": "@aceshooting/lyra-translations/es-419/charts.js",
+        "conversation": "@aceshooting/lyra-translations/es-419/conversation.js",
+        "data": "@aceshooting/lyra-translations/es-419/data.js",
+        "forms": "@aceshooting/lyra-translations/es-419/forms.js",
+        "layout": "@aceshooting/lyra-translations/es-419/layout.js",
+        "media": "@aceshooting/lyra-translations/es-419/media.js",
+        "overlays": "@aceshooting/lyra-translations/es-419/overlays.js",
+        "retrieval": "@aceshooting/lyra-translations/es-419/retrieval.js",
+        "shared": "@aceshooting/lyra-translations/es-419/shared.js",
+        "utility": "@aceshooting/lyra-translations/es-419/utility.js",
+        "viewers": "@aceshooting/lyra-translations/es-419/viewers.js"
+      },
+      "sourceKeyCount": 1531,
+      "translatedOwnKeyCount": 61,
+      "inheritedKeyCount": 1470,
       "missingKeyCount": 0,
       "reviewTier": "ai-assisted",
       "reviewStatus": "approved",
@@ -556,6 +617,39 @@
       "sourceKeyCount": 1531,
       "translatedOwnKeyCount": 1531,
       "inheritedKeyCount": 0,
+      "missingKeyCount": 0,
+      "reviewTier": "ai-assisted",
+      "reviewStatus": "approved",
+      "pluralCategories": [
+        "many",
+        "one",
+        "other"
+      ]
+    },
+    {
+      "locale": "fr-CA",
+      "kind": "translated",
+      "direction": "ltr",
+      "script": "Latn",
+      "parent": "fr",
+      "aggregateImport": "@aceshooting/lyra-translations/fr-CA.js",
+      "familyImports": {
+        "agent-tools": "@aceshooting/lyra-translations/fr-CA/agent-tools.js",
+        "charts": "@aceshooting/lyra-translations/fr-CA/charts.js",
+        "conversation": "@aceshooting/lyra-translations/fr-CA/conversation.js",
+        "data": "@aceshooting/lyra-translations/fr-CA/data.js",
+        "forms": "@aceshooting/lyra-translations/fr-CA/forms.js",
+        "layout": "@aceshooting/lyra-translations/fr-CA/layout.js",
+        "media": "@aceshooting/lyra-translations/fr-CA/media.js",
+        "overlays": "@aceshooting/lyra-translations/fr-CA/overlays.js",
+        "retrieval": "@aceshooting/lyra-translations/fr-CA/retrieval.js",
+        "shared": "@aceshooting/lyra-translations/fr-CA/shared.js",
+        "utility": "@aceshooting/lyra-translations/fr-CA/utility.js",
+        "viewers": "@aceshooting/lyra-translations/fr-CA/viewers.js"
+      },
+      "sourceKeyCount": 1531,
+      "translatedOwnKeyCount": 11,
+      "inheritedKeyCount": 1520,
       "missingKeyCount": 0,
       "reviewTier": "ai-assisted",
       "reviewStatus": "approved",
@@ -2129,6 +2223,37 @@
       "sourceKeyCount": 1531,
       "translatedOwnKeyCount": 1531,
       "inheritedKeyCount": 0,
+      "missingKeyCount": 0,
+      "reviewTier": "ai-assisted",
+      "reviewStatus": "approved",
+      "pluralCategories": [
+        "other"
+      ]
+    },
+    {
+      "locale": "zh-HK",
+      "kind": "translated",
+      "direction": "ltr",
+      "script": "Hant",
+      "parent": "zh-TW",
+      "aggregateImport": "@aceshooting/lyra-translations/zh-HK.js",
+      "familyImports": {
+        "agent-tools": "@aceshooting/lyra-translations/zh-HK/agent-tools.js",
+        "charts": "@aceshooting/lyra-translations/zh-HK/charts.js",
+        "conversation": "@aceshooting/lyra-translations/zh-HK/conversation.js",
+        "data": "@aceshooting/lyra-translations/zh-HK/data.js",
+        "forms": "@aceshooting/lyra-translations/zh-HK/forms.js",
+        "layout": "@aceshooting/lyra-translations/zh-HK/layout.js",
+        "media": "@aceshooting/lyra-translations/zh-HK/media.js",
+        "overlays": "@aceshooting/lyra-translations/zh-HK/overlays.js",
+        "retrieval": "@aceshooting/lyra-translations/zh-HK/retrieval.js",
+        "shared": "@aceshooting/lyra-translations/zh-HK/shared.js",
+        "utility": "@aceshooting/lyra-translations/zh-HK/utility.js",
+        "viewers": "@aceshooting/lyra-translations/zh-HK/viewers.js"
+      },
+      "sourceKeyCount": 1531,
+      "translatedOwnKeyCount": 21,
+      "inheritedKeyCount": 1510,
       "missingKeyCount": 0,
       "reviewTier": "ai-assisted",
       "reviewStatus": "approved",

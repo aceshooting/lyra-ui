@@ -83,7 +83,7 @@ function validateSnapshot(actual, recorded, label, errors) {
  */
 export function validateTranslationReviews(
   fixture,
-  { englishEntries, catalogs, upstreamPins, requireApproved = true },
+  { englishEntries, catalogs, upstreamPins, requireApproved = true, englishRootLocales = new Set() },
 ) {
   const errors = [];
   if (!fixture || typeof fixture !== 'object' || Array.isArray(fixture)) {
@@ -301,7 +301,9 @@ export function validateTranslationReviews(
       errors.push(`${label}.englishIdenticalAllowlist must be sorted by messagePath with no duplicates`);
     }
     if (translatedEntries) {
-      const actualIdentical = englishIdenticalMessagePaths(englishEntries, translatedEntries);
+      // A regional English delta (en-GB) inherits the English source by design, so identity with it
+      // is not a leftover; check-translations separately rejects an own override equal to English.
+      const actualIdentical = englishRootLocales.has(locale) ? [] : englishIdenticalMessagePaths(englishEntries, translatedEntries);
       const allowlisted = [...allowlistPaths].sort();
       const missing = actualIdentical.filter((path) => !allowlisted.includes(path));
       const stale = allowlisted.filter((path) => !actualIdentical.includes(path));

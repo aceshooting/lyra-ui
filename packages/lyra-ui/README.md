@@ -46,7 +46,7 @@ and no runtime dependency on either project.
   [signature starter](./llms/shared/styles-and-tokens.md#lyra-signature-starter)).
 - **Conversation and agent UI.** Progressive [Markdown](./llms/components/lr-markdown.md) and expandable
   [tool-call blocks](./llms/components/lr-tool-call-block.md).
-- **Languages and typography.** 66 optional catalogs in `@aceshooting/lyra-translations` plus built-in English
+- **Languages and typography.** 70 optional catalogs in `@aceshooting/lyra-translations` plus built-in English
   ([`locales.json`](./locales.json), [import guide](./llms/shared/localization-and-rtl.md#ready-made-catalogs-aceshootinglyra-translationslocalejs)) and
   [typography utilities](./llms/shared.md#typography).
 

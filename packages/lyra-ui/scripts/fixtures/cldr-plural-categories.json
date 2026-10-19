@@ -62,11 +62,20 @@
       "one",
       "other"
     ],
+    "en-GB": [
+      "one",
+      "other"
+    ],
     "en-XA": [
       "one",
       "other"
     ],
     "es": [
+      "many",
+      "one",
+      "other"
+    ],
+    "es-419": [
       "many",
       "one",
       "other"
@@ -88,6 +97,11 @@
       "other"
     ],
     "fr": [
+      "many",
+      "one",
+      "other"
+    ],
+    "fr-CA": [
       "many",
       "one",
       "other"
@@ -288,6 +302,9 @@
       "other"
     ],
     "zh-CN": [
+      "other"
+    ],
+    "zh-HK": [
       "other"
     ],
     "zh-TW": [

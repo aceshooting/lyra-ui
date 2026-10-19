@@ -31,7 +31,7 @@ import { existsSync } from 'node:fs';
 import { readFile, readdir, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readPortugueseRegionalOverrides, readTranslationCatalogModule } from './check-translations.mjs';
+import { ENGLISH_SOURCE_PARENT, readPortugueseRegionalOverrides, readTranslationCatalogModule } from './check-translations.mjs';
 import { catalogEntries, computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
 
 const defaultPackageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -63,7 +63,7 @@ async function readSlicedCatalog(localeDir, sliceNames) {
     const file = path.join(localeDir, `${sliceName}.ts`);
     if (!existsSync(file)) continue;
     const slice = await readCatalogFile(file);
-    const expectedImports = slice.parent ? [`../${slice.parent}/${sliceName}.js`] : [];
+    const expectedImports = slice.parent && slice.parent !== ENGLISH_SOURCE_PARENT ? [`../${slice.parent}/${sliceName}.js`] : [];
     if (JSON.stringify(slice.imports) !== JSON.stringify(expectedImports))
       throw new Error(`${file}: parent imports must exactly match the declared parent family`);
     tag ??= slice.tag;
@@ -165,7 +165,7 @@ export async function generateTranslationSlices({
       : await readCatalogFile(path.join(translationsRoot, name));
     if (current.tag !== tag) throw new Error(`${name}: registered tag does not match its file name`);
     if (!existsSync(localeDir) && current.parent &&
-        JSON.stringify(current.imports) !== JSON.stringify([`./${current.parent}.js`]))
+        JSON.stringify(current.imports) !== JSON.stringify(current.parent === ENGLISH_SOURCE_PARENT ? [] : [`./${current.parent}.js`]))
       throw new Error(`${name}: parent import must match the declared parent aggregate`);
     catalogs.set(tag, current);
   }
@@ -186,6 +186,12 @@ export async function generateTranslationSlices({
       entries: new Map([...base.entries, ...overrides]),
     });
   }
+  // The English source is the implicit root of regional English deltas (en-GB): it resolves to
+  // DEFAULT_STRINGS and has no slice modules, so children import no parent family.
+  catalogs.set(ENGLISH_SOURCE_PARENT, {
+    tag: ENGLISH_SOURCE_PARENT, parent: null, imports: [], metaText: undefined,
+    entries: catalogEntries(catalogSource, catalogFile),
+  });
   for (const tag of catalogs.keys()) {
     const visited = new Set();
     let current = tag;
@@ -244,7 +250,7 @@ export async function generateTranslationSlices({
     }
 
     const inheritedSlices = new Set();
-    if (current.parent) {
+    if (current.parent && current.parent !== ENGLISH_SOURCE_PARENT) {
       for (const key of resolved.get(current.parent).keys()) {
         const owners = keyToFamilies.get(key);
         inheritedSlices.add(owners && owners.size === 1 ? [...owners][0] : 'shared');
@@ -261,7 +267,7 @@ export async function generateTranslationSlices({
         source: sliceSource({
           tag,
           parent: current.parent,
-          parentImport: current.parent ? `../${current.parent}/${sliceName}.js` : undefined,
+          parentImport: current.parent && current.parent !== ENGLISH_SOURCE_PARENT ? `../${current.parent}/${sliceName}.js` : undefined,
           metaText: current.metaText,
           entries: bySlice.get(sliceName),
           runtimeImport: relativeImport(sliceFile, runtimeFile),

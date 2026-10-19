@@ -85,7 +85,7 @@ available to or used by the maintainers.
 | [`packages/lyra-docs`](./packages/lyra-docs) | Experimental DOCX editor companion with a bundled, lazy document engine; document viewers stay in `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-docs)](https://www.npmjs.com/package/@aceshooting/lyra-docs) | See the [package README](./packages/lyra-docs/README.md) |
 | [`packages/lyra-map`](./packages/lyra-map) | Optional modular renderer and shared module worker for `<lr-map>`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-map)](https://www.npmjs.com/package/@aceshooting/lyra-map) | See the [package README](./packages/lyra-map/README.md) |
 | [`packages/lyra-ide`](./packages/lyra-ide) | Editor data (Custom Elements Manifest, JetBrains web-types, VS Code HTML/CSS custom data), versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ide)](https://www.npmjs.com/package/@aceshooting/lyra-ide) | *n/a — JSON data* |
-| [`packages/lyra-translations`](./packages/lyra-translations) | The 66 built-in locale catalogs, versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations) | *n/a — opt-in locale modules* |
+| [`packages/lyra-translations`](./packages/lyra-translations) | The 70 built-in locale catalogs, versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations) | *n/a — opt-in locale modules* |
 
 See each package's own README for full install/usage details.
 
@@ -146,7 +146,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
   expandable tool-call blocks.
 - **Navigation and overlays:** context menus, menubars, navigation menus, toggles, app-rail and multi-split, with
   opt-in browser top-layer popups.
-- **Localization:** 66 optional translation catalogs plus built-in English.
+- **Localization:** 70 optional translation catalogs plus built-in English.
 
 The [feature guide](./packages/lyra-ui/README.md#highlights) has APIs and examples; the [roadmap](./docs/roadmap.md)
 records shipped releases and open work, including [native document editing](./docs/roadmap/document-editing.md).
