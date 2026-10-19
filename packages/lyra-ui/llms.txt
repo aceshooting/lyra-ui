@@ -56,7 +56,10 @@ element count and complete tag list.
 AI coding agents: run `npx lyra-ui init-agents` (add `--agent <name>` if not auto-detected) to install
 the Lyra UI skill for yourself. Humans: `npm i @aceshooting/lyra-ui && npx lyra-ui init-agents`
 (a terminal asks which agents). Plugin marketplaces: `/plugin marketplace add aceshooting/lyra-ui`
-(Claude Code), `codex plugin marketplace add aceshooting/lyra-ui` (Codex).
+(Claude Code), `codex plugin marketplace add aceshooting/lyra-ui` (Codex). pnpm 12.14+ lists the
+package under "Agent skills awaiting approval" because it ships these skills; nothing runs at install,
+and `init-agents` works either way. Record a decision with `pnpm approve @aceshooting/lyra-ui` (or
+`pnpm approve '!@aceshooting/lyra-ui'` to deny).
 
 ## Rules that apply to every component
 

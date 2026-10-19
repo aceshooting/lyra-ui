@@ -93,6 +93,11 @@ directory (Claude Code: `.claude/skills/`), as symlinks into `node_modules` so u
 aceshooting/lyra-ui` then `/plugin install lyra-ui@aceshooting` (Claude Code), or `codex plugin marketplace
 add aceshooting/lyra-ui` then `codex plugin add lyra-ui@aceshooting` (Codex).
 
+pnpm 12.14 and later list `@aceshooting/lyra-ui` under "Agent skills awaiting approval" after an
+install, because the package ships these skills. Nothing runs at install time and `init-agents` works
+either way; record your decision once with `pnpm approve @aceshooting/lyra-ui` (or deny it with
+`pnpm approve '!@aceshooting/lyra-ui'`), which pnpm saves in `pnpm-workspace.yaml`.
+
 ## Install
 
 ```bash
