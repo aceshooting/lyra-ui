@@ -272,7 +272,8 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
         // A cached plain template can remount attributes from an earlier highlight selection.
         line.removeAttribute('data-highlighted');
         line.removeAttribute('data-active');
-        line.part.remove('line-highlight');
+        // Test DOMs such as Happy DOM have no `Element.part`; parts only matter where CSS renders.
+        line.part?.remove('line-highlight');
         this.paintedLines.set(Number(line.dataset['line']), line);
       }
     }
@@ -284,8 +285,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       if (!line) continue;
       line.toggleAttribute('data-highlighted', highlighted.has(number));
       line.toggleAttribute('data-active', active.has(number));
-      if (highlighted.has(number)) line.part.add('line-highlight');
-      else line.part.remove('line-highlight');
+      line.part?.toggle('line-highlight', highlighted.has(number));
     }
     this.previousHighlighted = highlighted;
     this.previousActive = active;

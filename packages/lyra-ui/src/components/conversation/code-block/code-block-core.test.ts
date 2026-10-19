@@ -2035,3 +2035,24 @@ describe('unsized host in a stretched grid row', () => {
     );
   });
 });
+
+it('patches highlighted line parts on engines without Element.part', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'part')!;
+  const el = document.createElement('lr-code-block-core'); el.code = 'first\nsecond'; document.body.append(el);
+  const errors: unknown[] = [];
+  const onError = (event: PromiseRejectionEvent) => { errors.push(event.reason); event.preventDefault(); };
+  window.addEventListener('unhandledrejection', onError);
+  try {
+    await el.updateComplete;
+    Object.defineProperty(Element.prototype, 'part', { configurable: true, get: () => undefined });
+    el.highlightLines = '2'; await el.updateComplete;
+    el.highlightLines = '1'; await el.updateComplete;
+    const lines = [...el.shadowRoot!.querySelectorAll('.line[data-line]')];
+    expect(errors.length).equal(0);
+    expect(lines.map((line) => line.hasAttribute('data-highlighted'))).deep.equal([true, false]);
+  } finally {
+    Object.defineProperty(Element.prototype, 'part', descriptor);
+    window.removeEventListener('unhandledrejection', onError);
+    el.remove();
+  }
+});

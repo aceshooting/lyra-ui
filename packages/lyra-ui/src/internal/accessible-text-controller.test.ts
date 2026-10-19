@@ -1,4 +1,4 @@
-import { expect } from '@open-wc/testing';
+import { nextFrame, expect } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { AccessibleTextController } from './accessible-text-controller.js';
 
@@ -237,19 +237,25 @@ it('shares ancestor observation across controllers and releases disconnected sub
     return observe.call(this, target, options);
   };
   let changes = 0;
+  const notified = new Set<number>();
   const controllers: AccessibleTextController[] = [];
   const turn = () => new Promise<void>(resolve => setTimeout(resolve, 0));
+  // A hidden-attribute change also schedules one deferred visibility recheck (a frame, then a
+  // task), so let both settle instead of assuming which side of a single task they land on.
+  const settle = async () => { await turn(); await nextFrame(); await nextFrame(); await turn(); };
   try {
     for (let index = 0; index < 100; index++) {
       const host = controllerHost(() => undefined); host.textContent = `Label ${index}`; wrapper.append(host);
-      const controller = new AccessibleTextController(host, [], () => changes++);
+      const controller = new AccessibleTextController(host, [], () => { changes++; notified.add(index); });
       controllers.push(controller); controller.hostConnected();
     }
-    await turn(); changes = 0;
+    await settle(); changes = 0; notified.clear();
     expect(observers.size).equal(1);
-    wrapper.hidden = true; await turn(); expect(changes).equal(100);
+    wrapper.hidden = true; await settle();
+    expect(notified.size).equal(100);
+    expect(changes).within(100, 200);
     for (const controller of controllers) controller.hostDisconnected();
-    const previous = changes; wrapper.hidden = false; await turn(); expect(changes).equal(previous);
+    const previous = changes; wrapper.hidden = false; await settle(); expect(changes).equal(previous);
   } finally {
     for (const controller of controllers) controller.hostDisconnected();
     MutationObserver.prototype.observe = observe; wrapper.remove();
