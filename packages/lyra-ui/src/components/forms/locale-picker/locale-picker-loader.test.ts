@@ -207,9 +207,14 @@ it('keeps keyboard selection pending and makes loading and failure states access
   await sendKeys({ type: 'f' });
   await waitUntil(() => trigger(el).getAttribute('aria-busy') === 'true');
   expect(el.value).to.equal('en');
+  // The listbox fades through an opacity transition when the pending load changes its open state;
+  // axe reads blended mid-fade colors as a contrast failure, so audit only once it has settled.
+  const listbox = el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+  await waitUntil(() => listbox.getAnimations().length === 0);
   await expect(el).to.be.accessible();
   load.reject(new Error('not rendered'));
   await waitUntil(() => el.shadowRoot!.querySelector('[part="load-retry"]') !== null);
+  await waitUntil(() => listbox.getAnimations().length === 0);
   await expect(el).to.be.accessible();
   const retry = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="load-retry"]')!;
   expect(retry.getBoundingClientRect().height).to.be.at.least(24);
