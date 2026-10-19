@@ -133,3 +133,9 @@ Only items already listed as unshipped:
   `zh-HK`, `ca`, `ga`, `mt`, Serbian Cyrillic and Latin (script-aware coverage); Luxembourgish (`lb`)
   only when a reviewer and application demand exist.
 - **A restrained Fluent-informed look,** only on consumer demand.
+- **Next major — immutable identity collections:** reassigning the same array to an
+  identity-preserving collection property (feeds, queues, transcripts, task lists, virtual lists)
+  re-copies it today so in-place `push`/edits keep rendering. Make "assign a new array to publish
+  changes" the rule for these properties, skip same-array re-copies by default (as `threads` already
+  does), and ship a migration note plus a `lyra-ui-migrate` review entry. Not before a major: it
+  silently stops in-place updates from rendering.
