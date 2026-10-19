@@ -29,6 +29,8 @@ still open.
 | 27.0.0 | Editor data split into `@aceshooting/lyra-ide` and locale catalogs into `@aceshooting/lyra-translations`; agent skill bundled in the lyra-ui package (`npx lyra-ui init-agents`). |
 | 28.0.0 | One document-level design-token layer declared once per document and re-derived only at theme scopes (RFC 0002), with `adoptLyraTokens()` and `lyra-ui-migrate --rule=theme-scopes`; see `changelog/v28.md` for 28.x. |
 | 29.0.0 | Map and document editing load on demand: `lr-map` defaults to the optional `@aceshooting/lyra-map` companion, and the document editor bundles its engine internally. |
+| 29.2.0 | Regional difference catalogs `en-GB`, `es-419`, `fr-CA` and `zh-HK`; `@aceshooting/lyra-map` 1.2.0 on MapLibre 6.15; code-block highlighting without `Element.part`; dialog and tooltip focus and positioning fixes; test-stability fixes. |
+| 29.2.1 | Release and quality hardening: publishing fails unless npm serves the released tarball, `pnpm release:budgets` checks size budgets before the release commit, load-tolerant scale-test budgets, broader behavioural coverage with provably dead guards removed. No public API change. |
 
 ## Standing contracts
 
@@ -133,22 +135,15 @@ packages version independently. A target moves only when scope changes, never to
 
 | Target | Package versions | Scope |
 |---|---|---|
-| 29.2.0 | lyra-ui, lyra-ide, lyra-translations 29.2.0 | Regional catalogs, code-block and test-stability fixes |
-| 29.2.x | patches | Release and quality hardening |
 | 30.0.0 | lyra-ui 30.0.0; lyra-graph 1.0.0 (new) | Graph engines move (phase 1) and immutable identity collections |
 | 30.1.0 | lyra-ui 30.1.0; lyra-graph 1.1.0 | WebGL 3D graph engine (phase 2) |
-| 30.2.0 | lyra-ui 30.2.0; lyra-map 1.2.0 | Map adoption gaps |
+| 30.2.0 | lyra-ui 30.2.0; lyra-map 1.3.0 | Map adoption gaps |
 | 30.x | lyra-graph 1.2.0, 1.3.0 | Advanced graph visuals (phase 3), 100k-node scale and performance gate (phase 4) |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |
 | last | lyra-ui minors | Additional full catalogs |
 
-1. **29.2.0: regional catalogs.** `en-GB`, `es-419`, `fr-CA` and `zh-HK` as difference catalogs over
-   `en`, `es`, `fr` and `zh-TW`, with the code-block `Element.part` fix and test-stability fixes.
-2. **29.2.x: release and quality hardening.** Keep the browser suites free of timing-dependent
-   tests, raise measured coverage, and publish every package directly from the release workflow
-   without manual registry steps. No public API change.
-3. **30.0.0 with lyra-graph 1.0.0: the next major release.** It bundles the breaking changes into
+1. **30.0.0 with lyra-graph 1.0.0: the next major release.** It bundles the breaking changes into
    one migration:
    - **Graph engines move** (phases 0 and 1 in [graph.md](roadmap/graph.md)): specification,
      package boundary and WebGL feasibility in all three engines, then the existing graph, flow and
@@ -160,18 +155,18 @@ packages version independently. A target moves only when scope changes, never to
      for these properties, skip same-array re-copies by default (as `threads` already does), and ship
      a migration note plus a `lyra-ui-migrate` review entry. Not before a major: it silently stops
      in-place updates from rendering.
-4. **30.1.0 with lyra-graph 1.1.0: WebGL 3D graph** (phase 2): an opt-in WebGL renderer for
+2. **30.1.0 with lyra-graph 1.1.0: WebGL 3D graph** (phase 2): an opt-in WebGL renderer for
    `lr-graph` with a worker force layout and instanced rendering; additive.
-5. **30.2.0 with lyra-map 1.2.0: map adoption.** Find what applications still render with MapLibre
+3. **30.2.0 with lyra-map 1.3.0: map adoption.** Find what applications still render with MapLibre
    directly instead of `lr-map` (custom layers, styling, interaction or data-update needs) and close
    those gaps, so map screens share one accessible, themed component; additive.
-6. **lyra-graph 1.2.0 and 1.3.0: advanced visuals and scale** (phases 3 and 4): curved edges,
+4. **lyra-graph 1.2.0 and 1.3.0: advanced visuals and scale** (phases 3 and 4): curved edges,
    arrows, particles, DAG layouts, dragging and labels, then 100k nodes with a performance gate.
-7. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4
+5. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4
    (pagination and Word fidelity), 0.8.0 phase 5 (agent-friendly document operations), 0.9.0 to
    0.11.0 phases 6 to 8 in [document-editing.md](roadmap/document-editing.md), and 1.0.0 once
    qualified, including the consolidation of document viewers and editors in `@aceshooting/lyra-docs`.
-8. **A restrained Fluent-informed look,** only on consumer demand, in a minor release.
-9. **Additional full catalogs (last):** `sk`, `bg`, `lt`, `lv`, `et`, `ca`, `ga`, `mt`, Serbian
+6. **A restrained Fluent-informed look,** only on consumer demand, in a minor release.
+7. **Additional full catalogs (last):** `sk`, `bg`, `lt`, `lv`, `et`, `ca`, `ga`, `mt`, Serbian
    Cyrillic and Latin (script-aware coverage), about 1,600 messages each, in minor releases;
    Luxembourgish (`lb`) only when a reviewer and application demand exist.
