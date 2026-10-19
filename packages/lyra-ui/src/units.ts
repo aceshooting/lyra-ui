@@ -1,4 +1,4 @@
-import { createNumberFormat } from './internal/intl-cache.js';
+import { getNumberFormat } from './internal/intl-cache.js';
 import { snapshotSelectionCatalog, normalizeSelectionValue, type SelectionCatalogRow } from './internal/selection-catalog.js';
 
 // ECMA-402, Table 2: single units sanctioned for use in ECMAScript.
@@ -33,7 +33,7 @@ function unitNamesFor(locale: string, code: string): readonly [string, string] {
   if (!names) {
     let name = code;
     let symbol = code;
-    const part = (unitDisplay: 'long' | 'short') => createNumberFormat(locale, { style: 'unit', unit: code, unitDisplay })
+    const part = (unitDisplay: 'long' | 'short') => getNumberFormat(locale, { style: 'unit', unit: code, unitDisplay }, false)
       .formatToParts(1).filter((entry) => entry.type === 'unit').map((entry) => entry.value).join('') || code;
     try {
       name = part('long');

@@ -175,6 +175,7 @@ function getFormatter<T>(
   cache: Map<string, T>,
   keys: readonly string[],
   create: (safeLocale: string, capturedOptions: object | undefined) => T,
+  shared = true,
 ): T {
   const safeLocale = resolveIntlLocale(locale);
   // Per-row template loops repeat one lookup with a fresh but equal options literal. Comparing
@@ -183,7 +184,7 @@ function getFormatter<T>(
   // is already the most recently used one of its kind.
   const captured = captureFormatterOptions(safeLocale, options, keys);
   const entries = captured.entries;
-  if (!entries) return create(safeLocale, captured.options);
+  if (!entries || !shared) return create(safeLocale, captured.options);
   const last = lastLookups.get(cache);
   if (
     last &&
@@ -199,26 +200,23 @@ function getFormatter<T>(
 
 /**
  * A shared `Intl.NumberFormat` for the given locale and options. `undefined` and malformed input
- * safely select the library's deterministic English fallback.
+ * safely select the library's deterministic English fallback. `shared: false` returns a fresh
+ * instance for a caller that memoizes what it derives: a catalog resolving one formatter per entry
+ * would otherwise evict every other component's shared formatter.
  */
-export function getNumberFormat(locale: string | undefined, options?: Intl.NumberFormatOptions): Intl.NumberFormat {
+export function getNumberFormat(
+  locale: string | undefined,
+  options?: Intl.NumberFormatOptions,
+  shared?: boolean,
+): Intl.NumberFormat {
   return getFormatter(
     locale,
     options,
     numberFormatCache,
     numberOptions,
     (safeLocale, captured) => new Intl.NumberFormat(safeLocale, captured),
+    shared,
   );
-}
-
-/**
- * A fresh `Intl.NumberFormat` that bypasses the shared cache, through the same safe locale and
- * option boundary. For callers that memoize what they derive: a catalog resolving one formatter
- * per entry would otherwise evict every other component's shared formatter.
- */
-export function createNumberFormat(locale: string | undefined, options?: Intl.NumberFormatOptions): Intl.NumberFormat {
-  const safeLocale = resolveIntlLocale(locale);
-  return new Intl.NumberFormat(safeLocale, captureFormatterOptions(safeLocale, options, numberOptions).options);
 }
 
 /** A shared `Intl.DateTimeFormat` for the given locale and options. */

@@ -1,5 +1,5 @@
 import type { LyraCurrencyDisplayEntry, LyraCurrencyEntry } from './currency-types.js';
-import { createNumberFormat, getDisplayNames } from '../../../internal/intl-cache.js';
+import { getDisplayNames, getNumberFormat } from '../../../internal/intl-cache.js';
 
 export interface ResolvedCurrencyEntry extends LyraCurrencyDisplayEntry {
   readonly searchText: string;
@@ -8,9 +8,9 @@ export interface ResolvedCurrencyEntry extends LyraCurrencyDisplayEntry {
 function resolveSymbol(code: string, locale: string, currencyDisplay: 'symbol' | 'narrowSymbol'): string {
   try {
     // Memoized per locale and code below; 352 formatters per locale would flush the shared cache.
-    const part = createNumberFormat(locale, {
+    const part = getNumberFormat(locale, {
       style: 'currency', currency: code, currencyDisplay,
-    }).formatToParts(0).find((candidate) => candidate.type === 'currency')?.value;
+    }, false).formatToParts(0).find((candidate) => candidate.type === 'currency')?.value;
     return part?.trim() ? part : code;
   } catch {
     return code;

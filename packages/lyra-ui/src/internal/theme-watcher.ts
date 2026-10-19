@@ -356,11 +356,10 @@ interface ThemeBinding {
 interface RootObservation {
   readonly root: ObservedRoot;
   readonly bindings: Set<ThemeBinding>;
-  /** Watchers with an ancestor in this root. A host's own shadow root holds none of its ancestry, so
-   *  while no watcher's ancestry runs through it only stylesheet carriers' attributes can matter. */
-  readonly ancestral: Set<ThemeBinding>;
   releaseObserver?: () => void;
-  observesAncestry?: boolean;
+  /** Whether a watcher's ancestry runs through this root. A host's own shadow root holds none of
+   *  its ancestry, so otherwise only stylesheet carriers' attributes can matter there. */
+  ancestry?: boolean;
   /** Media queries this root's stylesheets declare; cleared whenever those stylesheets change. */
   mediaQueries?: ReadonlySet<string>;
   rebindQueued: boolean;
@@ -466,13 +465,12 @@ function onRootMutations(
   }
 }
 
-function observeRoot(registry: ThemeRegistry, root: ObservedRoot, binding: ThemeBinding, ancestral: boolean): void {
+function observeRoot(registry: ThemeRegistry, root: ObservedRoot, binding: ThemeBinding): void {
   let observation = registry.roots.get(root);
   if (!observation) {
     const created: RootObservation = {
       root,
       bindings: new Set(),
-      ancestral: new Set(),
       rebindQueued: false,
       onLoad: (event) => {
         const target = event.target as Node | null;
@@ -488,21 +486,19 @@ function observeRoot(registry: ThemeRegistry, root: ObservedRoot, binding: Theme
     root.addEventListener('slotchange', created.onSlotChange, true);
   }
   observation.bindings.add(binding);
-  if (ancestral) observation.ancestral.add(binding);
-  else observation.ancestral.delete(binding);
   syncRootObserver(registry, observation);
 }
 
 function syncRootObserver(registry: ThemeRegistry, observation: RootObservation): void {
-  const observesAncestry = observation.ancestral.size > 0;
-  if (observation.releaseObserver && observation.observesAncestry === observesAncestry) return;
+  const { root } = observation;
+  const ancestry = root.nodeType === DOCUMENT_NODE ||
+    [...observation.bindings].some(({ chain }) => chain.some((element) => element.getRootNode() === root));
+  if (observation.releaseObserver && observation.ancestry === ancestry) return;
   observation.releaseObserver?.();
-  observation.releaseObserver = undefined;
+  observation.ancestry = ancestry;
   const Observer = registry.realm.MutationObserver;
-  if (!Observer) return;
-  observation.observesAncestry = observesAncestry;
-  observation.releaseObserver = subscribeInheritedAttributes(observation.root, Observer, {
-    attributes: observesAncestry ? OBSERVED_ATTRIBUTES : STYLE_CARRIER_ATTRIBUTES,
+  observation.releaseObserver = Observer && subscribeInheritedAttributes(root, Observer, {
+    attributes: ancestry ? OBSERVED_ATTRIBUTES : STYLE_CARRIER_ATTRIBUTES,
     childList: true,
     characterData: true,
     changed: (records) => onRootMutations(registry, observation, records),
@@ -513,11 +509,7 @@ function releaseRoot(registry: ThemeRegistry, root: ObservedRoot, binding: Theme
   const observation = registry.roots.get(root);
   if (!observation) return;
   observation.bindings.delete(binding);
-  observation.ancestral.delete(binding);
-  if (observation.bindings.size > 0) {
-    syncRootObserver(registry, observation);
-    return;
-  }
+  if (observation.bindings.size > 0) return syncRootObserver(registry, observation);
   observation.releaseObserver?.();
   root.removeEventListener('load', observation.onLoad, true);
   root.removeEventListener('slotchange', observation.onSlotChange, true);
@@ -544,10 +536,9 @@ function rebind(binding: ThemeBinding): boolean {
   }
   const nextRoots = new Set(roots);
   for (const root of binding.roots) if (!nextRoots.has(root)) releaseRoot(registry, root, binding);
-  const ancestralRoots = new Set<Node>(chain.map((element) => element.getRootNode()));
-  for (const root of roots) observeRoot(registry, root, binding, ancestralRoots.has(root));
   binding.chain = chain;
   binding.roots = roots;
+  for (const root of roots) observeRoot(registry, root, binding);
   if (chain.every((element) => element.assignedSlot || !element.parentElement?.shadowRoot)) binding.rendered = chain;
   return true;
 }
