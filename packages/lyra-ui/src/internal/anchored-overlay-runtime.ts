@@ -41,8 +41,14 @@ type PendingVisibility = readonly [value: string, priority: string];
 
 const activePlacementByPopup = new WeakMap<HTMLElement, () => void>();
 
-function concealPendingPopup(popup: HTMLElement): PendingVisibility {
+function concealPendingPopup(popup: HTMLElement, strategy: PlaceStrategy | undefined): PendingVisibility {
   activePlacementByPopup.get(popup)?.();
+  // The runtime chunk loads asynchronously, so until the first placement pass writes it the popup
+  // would sit at its stylesheet `position: absolute` baseline, laid out at an unresolved origin
+  // inside whichever ancestor scroller it lives in -- widening that scroller for the frames before
+  // placement, or for the whole fade when the surface closes before placement ran. Claim the
+  // resolved strategy now, exactly as place() will, and never revert it on dispose.
+  popup.style.position = strategy ?? 'fixed';
   const pending: PendingVisibility = [
     popup.style.visibility,
     popup.style.getPropertyPriority('visibility'),
@@ -65,7 +71,7 @@ function releasePendingPopup(popup: HTMLElement, pending: PendingVisibility): vo
 /** Starts positioning after the shared runtime chunk resolves and remains synchronously disposable. */
 export function deferredPlace(...args: Parameters<typeof placeAnchoredSurface>): () => void {
   const [anchor, popup, options = {}] = args;
-  const pendingVisibility = concealPendingPopup(popup);
+  const pendingVisibility = concealPendingPopup(popup, options.strategy);
   let active = true;
   let cleanup: (() => void) | undefined;
   let positioned = false;
@@ -107,7 +113,7 @@ export function deferredPlaceReady(
   ...args: Parameters<typeof placeAnchoredSurface>
 ): DeferredOperationHandle {
   const [anchor, popup, options = {}] = args;
-  const pendingVisibility = concealPendingPopup(popup);
+  const pendingVisibility = concealPendingPopup(popup, options.strategy);
   let active = true;
   let cleanup: (() => void) | undefined;
   let settle: ((value: boolean) => void) | undefined;
