@@ -1,12 +1,12 @@
 {
   "upstream": "maplibre-gl",
-  "version": "6.14.0",
+  "version": "6.15.0",
   "sourceRepository": "https://github.com/maplibre/maplibre-gl-js",
-  "sourceTag": "v6.14.0",
-  "sourceFiles": 720,
-  "sourceBytes": 5717326,
-  "sourceTreeSha256": "47c62f3dfd711723cfa8e4f77468bf6d9d2c080ff9a6502723c41bf90382210c",
-  "packageJsonSha256": "7ede76f4070a3a304386c7db80189273931fa415ca481c255ca452d6c2bedb8c",
+  "sourceTag": "v6.15.0",
+  "sourceFiles": 735,
+  "sourceBytes": 5954621,
+  "sourceTreeSha256": "0653c9c9880d6584333721595eb7e3ca39b581132c91b75648a3b08b49acd107",
+  "packageJsonSha256": "aa2c307c0a3efd8da11ebace266ca2e39c433f9d19efa1b67b3ede9f7904e559",
   "license": {
     "file": "LICENSE.txt",
     "bytes": 5984,
@@ -17,9 +17,9 @@
   "declarationSources": [
     {
       "package": "@maplibre/geojson-vt",
-      "version": "6.2.0",
+      "version": "6.3.0",
       "file": "dist/definitions.d.ts",
-      "sha256": "1216e07268d674a83e7fed8bc5799df2b4a6528ef714a42c647d0aae047ef9c8"
+      "sha256": "8ee1f8a4742465c6a4d03c21a7b79bea28fdec3cf9e8a26cf01a35221ab4b05e"
     },
     {
       "package": "@maplibre/vt-pbf",

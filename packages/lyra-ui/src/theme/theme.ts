@@ -1089,6 +1089,7 @@ function bootstrapParts(options: LyraThemeBootstrapOptions): { storageKey: strin
 /**
  * Runs the pre-paint bootstrap as the module functions themselves instead of the serialized string,
  * so tests exercise (and coverage measures) the shipped logic. Stripped from the published build.
+ * @internal
  */
 export function applyLyraThemeBootstrapForTesting(options: LyraThemeBootstrapOptions = {}): void {
   const { storageKey, model } = bootstrapParts(options);

@@ -80,7 +80,7 @@ function workerHarness(prepareStyleLayers) {
 
 test('transforms and parses all four files from the pinned source', async () => {
   const manifest = JSON.parse(await readFile(join(upstream, 'package.json'), 'utf8'));
-  assert.equal(manifest.version, '6.14.0');
+  assert.equal(manifest.version, '6.15.0');
   for (const path of paths) {
     assert.notEqual(transformed.get(path), sources.get(path), path);
     assert.doesNotThrow(() => javascript(transformed.get(path)), path);

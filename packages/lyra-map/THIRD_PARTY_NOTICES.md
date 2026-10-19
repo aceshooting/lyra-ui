@@ -2,7 +2,7 @@
 
 The distributed renderer includes the following open-source implementations.
 
-## maplibre-gl 6.14.0
+## maplibre-gl 6.15.0
 
 License: BSD-3-Clause
 
@@ -143,7 +143,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-## @mapbox/tiny-sdf 2.2.0
+## @mapbox/tiny-sdf 2.3.0
 
 License: BSD-2-Clause
 
@@ -225,7 +225,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-## @maplibre/geojson-vt 6.2.0
+## @maplibre/geojson-vt 6.3.0
 
 License: ISC
 

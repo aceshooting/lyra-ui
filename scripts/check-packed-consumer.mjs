@@ -147,19 +147,19 @@ const optionalPeerFamilyTags = componentInventory.components
 // tags. Imperative helpers register the exact elements they need only when the helper is invoked.
 const rootHelperRegisteredTags = [];
 
-// Packed core/all.js measures 5,525,060 non-asset raw bytes plus one required
-// 466,610-byte Oniguruma binary across 58 files, after scoped theme observation, uncached
-// catalog formatters and reused tool-timeline projections. The non-asset ceiling rounds to
-// 5,525,100 bytes with 40 bytes of headroom; the total derives from that ceiling plus the exact
-// binary allowance, yielding 5,991,710 bytes. The prior non-asset measurement was 5,524,765 bytes.
+// Packed core/all.js measures 5,525,240 non-asset raw bytes plus one required
+// 466,610-byte Oniguruma binary across 58 files, after the overlay focus fix, the measurable
+// theme bootstrap and the adoption guards. The non-asset ceiling rounds to 5,525,300 bytes with
+// 60 bytes of headroom; the total derives from that ceiling plus the exact binary allowance,
+// yielding 5,991,910 bytes. The prior non-asset measurement was 5,525,060 bytes.
 // The binary allowance requires one emitted asset identical to the installed package;
 // it cannot fund non-asset growth. Peer exclusions and the complete file sum stay fixed.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  reviewedCoreMeasurementBytes: 5_525_060,
+  reviewedCoreMeasurementBytes: 5_525_240,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 40,
+  selectedRegressionHeadroomBytes: 60,
 };
 
 /**
