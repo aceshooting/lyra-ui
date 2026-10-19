@@ -222,3 +222,19 @@ it('stops obsolete source descriptor capture when an early field navigates pages
   expect(laterReads).to.equal(0); expect(el.sourcePage).to.equal(1);
   expect(virtual.items.length).to.equal(1); expect(el.shadowRoot!.querySelector('[part="source-retry"]') === null).to.equal(true);
 });
+it('discards an in-flight source page across document adoption and reloads once reattached', async () => {
+  const provider = source(); const query = provider.query; const calls: number[] = [];
+  let release: (() => void) | undefined; const gate = new Promise<void>(resolve => { release = resolve; });
+  let first = true;
+  provider.query = async request => { calls.push(request.page); if (first) { first = false; await gate; } return query(request); };
+  const el = await fixture<LyraThreadList>(html`<lr-thread-list grouping="none" .dataSource=${provider}></lr-thread-list>`);
+  await waitUntil(() => calls.length === 1);
+  const foreign = document.implementation.createHTMLDocument('foreign');
+  foreign.body.append(el);
+  document.body.append(el);
+  release!();
+  await list(el, 't0');
+  expect(el.sourceTotal).to.equal(1_000_000);
+  expect(calls).to.deep.equal([0, 0]);
+  el.remove();
+});

@@ -325,3 +325,47 @@ it('lets a later controlled selection supersede an earlier reveal', async () => 
   expect(await earlier).to.equal(false);
   await waitUntil(() => el.shadowRoot!.querySelector('[part="source-exact"]')?.textContent?.includes('Exact 1') === true);
 });
+
+describe('sequence source range-cell keyboard', () => {
+  const rangedSource = (): LyraSequenceSource<SequenceStripItem> => ({ revision: 1, length: 3,
+    getItem: index => ({ id: `id-${index}`, categoryId: 'a', label: `Exact ${index}`, disabled: index === 1 }),
+    findIndex: id => Number(id.slice(3)),
+    summarize: () => [
+      { startIndex: 0, endIndex: 1, categoryCounts: { a: 1 }, markerCount: 0, enabledCount: 1 },
+      { startIndex: 1, endIndex: 2, categoryCounts: { a: 1 }, markerCount: 0, enabledCount: 0 },
+      { startIndex: 2, endIndex: 3, categoryCounts: { a: 1 }, markerCount: 0, enabledCount: 1 },
+    ],
+  });
+  const cellsOf = (el: LyraSequenceStrip) => [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+
+  it('arrow keys skip a disabled range and Enter activates the focused enabled range', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .source=${rangedSource()}></lr-sequence-strip>`);
+    await waitUntil(() => cellsOf(el).length === 3);
+    expect(cellsOf(el)[1]!.getAttribute('aria-disabled')).to.equal('true');
+    await focusByKeyboard(cellsOf(el)[0]!);
+    await sendKeys({ press: 'ArrowRight' });
+    await waitUntil(() => el.shadowRoot!.activeElement === cellsOf(el)[2]);
+    const activated = new Promise<CustomEvent>(resolve => el.addEventListener('lr-item-activate', e => resolve(e as CustomEvent), { once: true }));
+    await sendKeys({ press: 'Enter' });
+    expect((await activated).detail.index).to.equal(2);
+  });
+
+  it('mirrors the arrow keys under RTL', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip dir="rtl" .source=${rangedSource()}></lr-sequence-strip>`);
+    await waitUntil(() => cellsOf(el).length === 3);
+    await focusByKeyboard(cellsOf(el)[2]!);
+    await sendKeys({ press: 'ArrowRight' });
+    await waitUntil(() => el.shadowRoot!.activeElement === cellsOf(el)[0]);
+    expect(el.shadowRoot!.activeElement === cellsOf(el)[0]).to.equal(true);
+  });
+
+  it('does not activate a disabled range from the keyboard', async () => {
+    const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip .source=${rangedSource()}></lr-sequence-strip>`);
+    await waitUntil(() => cellsOf(el).length === 3);
+    let activations = 0;
+    el.addEventListener('lr-item-activate', () => { activations += 1; });
+    cellsOf(el)[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(activations).to.equal(0);
+  });
+});

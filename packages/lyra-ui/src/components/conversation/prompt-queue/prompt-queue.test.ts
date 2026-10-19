@@ -712,6 +712,28 @@ it("moves focus from an editor to the nearest enabled row action when readonly b
   );
 });
 
+it("keeps focus in a row's editor when a controlled reorder moves that row", async () => {
+  const el = (await fixture(
+    html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`
+  )) as LyraPromptQueue;
+  const editors = el.shadowRoot!.querySelectorAll<
+    HTMLElement & { updateComplete: Promise<unknown> }
+  >('[part="editor"]');
+  await editors[1]!.updateComplete;
+  editors[1]!.focus();
+  expect(el.shadowRoot!.activeElement?.closest("[data-id]")?.getAttribute("data-id")).to.equal("two");
+
+  el.items = [items[1]!, items[0]!];
+  await el.updateComplete;
+
+  const active = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(active?.getAttribute("part")).to.equal("editor");
+  expect(active?.closest("[data-id]")?.getAttribute("data-id")).to.equal("two");
+  expect(
+    [...el.shadowRoot!.querySelectorAll("[data-id]")].map((row) => row.getAttribute("data-id"))
+  ).to.deep.equal(["two", "one"]);
+});
+
 it("moves focus to the queue region when controlled removal empties the queue", async () => {
   const el = (await fixture(
     html`<lr-prompt-queue .items=${[items[0]!]}></lr-prompt-queue>`

@@ -143,4 +143,44 @@ describe('tool redaction', () => {
     const failClosed = redactToolDetail({ args, result: { a: 1 }, error: 'x' }, TOO_MANY_REDACTION_PATHS, HIDDEN);
     expect([failClosed.args, failClosed.result, failClosed.error]).to.deep.equal([HIDDEN, HIDDEN, HIDDEN]);
   });
+  it('treats a hostile array length as unreadable instead of iterating it', () => {
+    for (const reported of [-1, 1.5, Number.MAX_SAFE_INTEGER + 2, 'three', Number.NaN]) {
+      const hostile = new Proxy(['args'], {
+        getOwnPropertyDescriptor(target, key) {
+          const real = Reflect.getOwnPropertyDescriptor(target, key);
+          return key === 'length' && real ? { ...real, value: reported } : real;
+        },
+      });
+      expect(projectedRedactionFields(hostile), String(reported)).to.equal(undefined);
+    }
+  });
+
+  it('keeps a scalar that sits below a masked-path prefix and masks a branch whose array cannot be read', () => {
+    const masked = redactField({ note: 'plain', token: 'secret' }, 'args', ['args.token', 'args.note.inner'], HIDDEN) as Record<string, unknown>;
+    expect(masked['token']).to.equal(HIDDEN);
+    expect(masked['note']).to.equal('plain');
+
+    const unreadable = new Proxy([1, 2], {
+      get(target, key, receiver) {
+        if (key === 'length') throw new Error('hostile length');
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    expect(redactField(unreadable, 'args', ['args.0.secret'], HIDDEN)).to.equal(HIDDEN);
+    const nested = redactField({ rows: unreadable, other: 1 }, 'args', ['args.rows.0.secret'], HIDDEN) as Record<string, unknown>;
+    expect(nested['rows']).to.equal(HIDDEN);
+    expect(nested['other']).to.equal(1);
+  });
+
+  it('fails closed on a revoked projection and masks an object branch whose getter throws', () => {
+    const revoked = Proxy.revocable([] as unknown[], {});
+    revoked.revoke();
+    expect(projectedRedactionFields(revoked.proxy)).to.equal(undefined);
+
+    const trap = { visible: 1 };
+    Object.defineProperty(trap, 'boom', { enumerable: true, get() { throw new Error('getter exploded'); } });
+    const masked = redactField({ trap, other: 2 }, 'args', ['args.trap.boom.secret'], HIDDEN) as Record<string, unknown>;
+    expect(masked['trap']).to.equal(HIDDEN);
+    expect(masked['other']).to.equal(2);
+  });
 });

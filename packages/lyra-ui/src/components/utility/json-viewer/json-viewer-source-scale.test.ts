@@ -349,3 +349,41 @@ it('does not publish a superseded source search navigation', async()=>{
  pending.resolve(await project({revision:1,locale:'en',signal:new AbortController().signal,state:null,query:{search:'x',hiddenKinds:[]},action:{type:'reveal',key:'k0'}}));
  expect(await current).to.equal(true);expect(events).to.equal(1);
 });
+
+describe('provider copy clipboard failures', () => {
+  async function copyWith(clipboard: unknown) {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard });
+    try {
+      const { provider } = source(1);
+      provider.copy = async () => 'provider-document';
+      const el = await fixture<LyraJsonViewer>(html`<lr-json-viewer copyable .strings=${strings} .treeSource=${provider}></lr-json-viewer>`);
+      await ready(el);
+      const events: string[] = [];
+      let outcome: { ok: boolean; reason?: string; text?: string } | undefined;
+      el.addEventListener('lr-error', () => events.push('error'));
+      el.addEventListener('lr-copy', () => events.push('copy'));
+      el.addEventListener('lr-copy-error', (event) => { events.push('copy-error'); outcome = (event as CustomEvent).detail; });
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toolbar"] [part="copy-button"]')!.click();
+      await waitUntil(() => events.includes('copy-error'), 'copy failure event');
+      return { events, outcome };
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  }
+
+  it('reports an unsupported outcome when the clipboard API is absent', async () => {
+    const { events, outcome } = await copyWith(undefined);
+    expect(events).to.deep.equal(['error', 'copy-error']);
+    expect(outcome).to.include({ ok: false, reason: 'unsupported', text: 'provider-document' });
+  });
+
+  it('reports a denied outcome when the clipboard write is refused', async () => {
+    const { events, outcome } = await copyWith({
+      writeText: () => Promise.reject(Object.assign(new Error('blocked'), { name: 'NotAllowedError' })),
+    });
+    expect(events).to.deep.equal(['error', 'copy-error']);
+    expect(outcome).to.include({ ok: false, reason: 'denied' });
+  });
+});

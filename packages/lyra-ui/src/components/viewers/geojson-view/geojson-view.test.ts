@@ -1557,6 +1557,29 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     ).to.equal('This document is too large to preview.');
   });
 
+  it('counts a paired astral character as two serialized units, so an emoji-heavy property loads where the same number of lone surrogates would not', async () => {
+    const pairCount = 300_000;
+    const loneCount = 700_000;
+    const astral = { type: 'Feature', geometry: null, properties: { label: '\u{1F600}'.repeat(pairCount) } };
+    stubFetch(astral);
+    const loaded = (await fixture(html`<lr-geojson-viewer></lr-geojson-viewer>`)) as LyraGeoJsonViewer;
+    (loaded as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
+    const missingPeer = oneEvent(loaded, 'lr-render-error');
+    loaded.src = GEOJSON_URL;
+    await missingPeer;
+    await waitUntil(() => loaded.shadowRoot!.querySelector('lr-json-viewer') !== null);
+    expect(loaded.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+
+    // Each unpaired surrogate escapes to a six-character sequence, so 700k of them overrun the
+    // 4 MiB serialized ceiling although the raw text is far below the text-unit budget.
+    stubFetch({ type: 'Feature', geometry: null, properties: { label: '\ud800'.repeat(loneCount) } });
+    const lone = (await fixture(html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`)) as LyraGeoJsonViewer;
+    await waitUntil(() => lone.shadowRoot!.querySelector('[part="error"]') !== null);
+    expect(lone.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+      'This document is too large to preview.'
+    );
+  });
+
   it('fits dateline-crossing coordinates across the short antimeridian span', async () => {
     stubFetch({
       type: 'MultiPoint',

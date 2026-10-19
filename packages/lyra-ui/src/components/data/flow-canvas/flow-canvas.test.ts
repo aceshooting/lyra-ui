@@ -2125,6 +2125,29 @@ describe('disabled nodes', () => {
     expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('-1');
   });
 
+  it('moves the resting tab stop back to the nearest earlier enabled node when the active node and all later nodes become disabled', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+      { id: 'c', position: { x: 400, y: 0 } },
+    ];
+    await el.updateComplete;
+    el.focusNode('b');
+    await el.updateComplete;
+    expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('0');
+
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 }, disabled: true },
+      { id: 'c', position: { x: 400, y: 0 }, disabled: true },
+    ];
+    await el.updateComplete;
+    expect(nodeControl(el, 'a').getAttribute('tabindex'), 'falls back to the enabled node before the disabled run').to.equal('0');
+    expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('-1');
+    expect(nodeControl(el, 'c').getAttribute('tabindex')).to.equal('-1');
+  });
+
   it('does not drag a disabled node even while nodes-draggable', async () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 0, y: 0 }, disabled: true }];

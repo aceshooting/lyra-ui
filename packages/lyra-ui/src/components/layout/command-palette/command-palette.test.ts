@@ -2116,3 +2116,63 @@ it('moves the active command with Home, End, PageDown and PageUp', async () => {
   expect(await press('PageUp')).to.include('Command 0');
   el.close();
 });
+
+it('treats an array whose descriptor lookup throws as an empty command list', async () => {
+  const hostile = new Proxy([], {
+    getOwnPropertyDescriptor(): never {
+      throw new Error('hostile descriptor');
+    },
+  }) as unknown as LyraCommandPalette['commands'];
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  el.commands = hostile;
+  el.openPalette();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+  expect(el.shadowRoot!.querySelectorAll('[part="command"]').length).to.equal(0);
+  el.commands = [{ commandId: 'recovered', label: 'Recovered' }];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="command"]').length).to.equal(1);
+  el.close();
+});
+
+it('opens from a property set before the first update', async () => {
+  const el = document.createElement('lr-command-palette') as LyraCommandPalette;
+  el.commands = [{ commandId: 'early', label: 'Early' }];
+  el.open = true;
+  expect(el.open).to.be.true;
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="command"]').length === 1, 'early-open rows did not render');
+    expect(el.open).to.be.true;
+  } finally {
+    el.close();
+    el.remove();
+  }
+});
+
+function revokedProxy<T extends object>(target: T): T {
+  const { proxy, revoke } = Proxy.revocable(target, {});
+  revoke();
+  return proxy;
+}
+
+it('degrades revoked proxies in the command list, a command, or its keywords without throwing', async () => {
+  const el = (await fixture(html`<lr-command-palette></lr-command-palette>`)) as LyraCommandPalette;
+  el.commands = revokedProxy<unknown[]>([]) as LyraCommandPalette['commands'];
+  el.show();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="command"]').length).to.equal(0);
+
+  el.commands = [
+    revokedProxy({ commandId: 'dead', label: 'Dead' }) as unknown as LyraCommandPalette['commands'][number],
+    { commandId: 'live', label: 'Live', keywords: revokedProxy<string[]>([]) },
+  ];
+  await el.updateComplete;
+  const labels = [...el.shadowRoot!.querySelectorAll('[part="command"]')].map((row) => row.textContent!.trim());
+  expect(labels.length).to.equal(1);
+  expect(labels[0]).to.include('Live');
+  el.hide();
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});

@@ -54,6 +54,22 @@ describe('graph spatial views', () => {
     }
   });
 
+  it('fit() reframes a spatial camera that left far nodes outside the canvas and is a safe no-op while disconnected', async () => {
+    const spread = [{ id: 'left', position: { x: -1000, y: 0, z: 0 } }, { id: 'right', position: { x: 1000, y: 0, z: 0 } }];
+    const el = await fixture<LyraGraph>(html`<lr-graph view="3d" style="inline-size:320px" .height=${400} .nodes=${spread} .camera=${camera}></lr-graph>`);
+    const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('[part="spatial-canvas"]')!;
+    const inside = (id: string) => {
+      const point = el.getNodeScreenPosition(id), bounds = canvas.getBoundingClientRect(), host = el.getBoundingClientRect();
+      return point !== undefined && host.left + point.x > bounds.left && host.left + point.x < bounds.right;
+    };
+    expect(inside('left') && inside('right'), 'the explicit camera leaves the spread outside').to.equal(false);
+    el.fit({ padding: 20 });
+    await waitUntil(() => inside('left') && inside('right'), 'fit frames both nodes', { timeout: 3000 });
+
+    el.remove();
+    expect(() => el.fit()).to.not.throw();
+  });
+
   it('provides localized keyboard orbit controls and reverses horizontal movement in RTL', async () => {
     const el = await mount();
     el.strings = { graphOrbitLeft: 'Tourner à gauche', graphSpatialInstructions: 'Utilisez les flèches' };

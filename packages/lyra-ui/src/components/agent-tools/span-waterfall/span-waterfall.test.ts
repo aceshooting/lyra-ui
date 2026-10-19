@@ -279,6 +279,26 @@ describe('lr-span-waterfall', () => {
     expect(unrelated.defaultPrevented).to.equal(false);
   });
 
+  it('jumps the roving tabindex to the last and first bar with End and Home', async () => {
+    const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`)) as LyraSpanWaterfall;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const tabStop = () => el.shadowRoot!.querySelector('[data-id][tabindex="0"]')?.getAttribute('data-id');
+    expect(tabStop()).to.equal('root');
+
+    const end = new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true, composed: true });
+    base.dispatchEvent(end);
+    await el.updateComplete;
+    expect(end.defaultPrevented).to.equal(true);
+    expect(tabStop()).to.equal('llm');
+
+    const home = new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true, composed: true });
+    base.dispatchEvent(home);
+    await el.updateComplete;
+    expect(home.defaultPrevented).to.equal(true);
+    expect(tabStop()).to.equal('root');
+  });
+
   it('repairs roving focus when a changed view hides the first sorted span', async () => {
     const spans: LyraSpan[] = [
       { id: 'early', name: 'Early', kind: 'tool', startMs: 0, endMs: 10, status: 'success' },

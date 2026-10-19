@@ -642,6 +642,32 @@ it('cannot drag the viewport rectangle to pan a readonly canvas', async () => {
   window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 60, clientY: 60 }));
 });
 
+it('cancels a viewport drag silently when the canvas turns readonly before the pointer is released', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport-hit-area"]') as SVGElement;
+  (rect as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
+  rect.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, bubbles: true }));
+  const internals = minimap as unknown as { dragState?: unknown; justDraggedViewport?: boolean };
+  expect(internals.dragState !== undefined).to.equal(true);
+
+  wrapper.readonly = true;
+  await wrapper.updateComplete;
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 60, clientY: 60 }));
+
+  expect(internals.dragState === undefined, 'the drag state is released').to.equal(true);
+  expect(internals.justDraggedViewport === true, 'no drag-click suppression is armed').to.equal(false);
+  expect(sinkTexts(), 'a canceled viewport drag must remain silent').to.deep.equal([]);
+});
+
 it('tracks an adopted iframe viewport drag on its owner window and releases it symmetrically', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">

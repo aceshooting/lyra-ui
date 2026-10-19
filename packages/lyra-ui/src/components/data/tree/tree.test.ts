@@ -910,3 +910,28 @@ it('warns once per page about a tree with no accessible name, and not about a na
   expect(unnamed).to.have.lengthOf(1);
   expect(unnamed[0]).to.include('no accessible name');
 });
+
+it('resolves a synthetic node event by detail nodeId and ignores a dangling id', async () => {
+  const el = (await fixture(html`<lr-tree selection="single"></lr-tree>`)) as LyraTree;
+  el.data = [
+    { id: 'a', label: 'A' },
+    { id: 'b', label: 'B' },
+  ];
+  await el.updateComplete;
+  const [a, b] = [...el.querySelectorAll('lr-tree-item')] as LyraTreeItem[];
+  let changes = 0;
+  el.addEventListener('lr-selection-change', () => changes++);
+
+  const origin = a!.shadowRoot!.querySelector('[part="row"]')!;
+  const synthetic = (nodeId: string) => origin.dispatchEvent(new CustomEvent('lr-node-select', { detail: { nodeId }, bubbles: true, composed: true }));
+  synthetic('missing');
+  await el.updateComplete;
+  expect(changes).to.equal(0);
+  expect(a!.selected).to.equal(false);
+
+  const change = oneEvent(el, 'lr-selection-change');
+  synthetic('b');
+  await change;
+  expect(b!.selected).to.equal(true);
+  expect(a!.selected).to.equal(false);
+});

@@ -248,3 +248,41 @@ it('reports reveal cancellation when canvas focus clears the source', async () =
   element.shadowRoot!.querySelector('canvas')!.addEventListener('focus', () => { element.preparedData = null; }, { once: true });
   expect(await element.revealSourcePoint('last')).to.equal(false);
 });
+
+describe('spatial keyboard traversal', () => {
+  async function traverse(dir: 'ltr' | 'rtl') {
+    const element = await mounted(); element.dir = dir; await element.updateComplete;
+    await waitUntil(() => element.getAttribute('aria-busy') === 'false' && element.shadowRoot!.querySelector('[data-spatial-id="middle"]') !== null);
+    const activated: string[] = [];
+    element.addEventListener('lr-spatial-point-select', event => { activated.push(`point:${(event as CustomEvent).detail.point.id}`); });
+    element.addEventListener('lr-spatial-bin-select', event => { activated.push(`bin:${(event as CustomEvent).detail.count}`); });
+    await focusByKeyboard(element.shadowRoot!.querySelector<HTMLCanvasElement>('canvas')!);
+    const at = async (...keys: string[]) => {
+      for (const key of keys) await sendKeys({ press: key });
+      await sendKeys({ press: 'Enter' });
+      return activated.at(-1);
+    };
+    return { element, at, forward: dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight', backward: dir === 'rtl' ? 'ArrowRight' : 'ArrowLeft' };
+  }
+
+  for (const dir of ['ltr', 'rtl'] as const) {
+    it(`moves through points then density regions with the inline arrows in ${dir}, clamping at both ends`, async () => {
+      const { at, forward, backward } = await traverse(dir);
+      expect(await at('Home')).to.equal('point:middle');
+      expect(await at(backward)).to.equal('point:middle');
+      expect(await at(forward)).to.equal('bin:999999');
+      expect(await at(forward)).to.equal('bin:1');
+      expect(await at(forward)).to.equal('bin:1');
+      expect(await at(backward)).to.equal('bin:999999');
+      expect(await at('ArrowUp')).to.equal('point:middle');
+      expect(await at('ArrowDown')).to.equal('bin:999999');
+      expect(await at('Home', 'End')).to.equal('bin:1');
+    });
+  }
+
+  it('ignores an unrelated key without moving the keyboard cursor', async () => {
+    const { at } = await traverse('ltr');
+    expect(await at('Home', 'ArrowDown')).to.equal('bin:999999');
+    expect(await at('a')).to.equal('bin:999999');
+  });
+});

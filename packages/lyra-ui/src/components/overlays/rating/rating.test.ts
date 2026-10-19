@@ -1895,6 +1895,27 @@ describe("lr-rating activation event", () => {
     expect(changeCount, "re-committing the same rating is not a change").to.equal(0);
   });
 
+  it("moves by ten precision steps on PageUp and PageDown and clamps at the bounds", async () => {
+    const el = await fixture<LyraRating>(
+      html`<lr-rating value="12" max="30"></lr-rating>`
+    );
+    press(el, "PageUp");
+    await el.updateComplete;
+    expect(el.value).to.equal(22);
+    press(el, "PageUp");
+    press(el, "PageUp");
+    await el.updateComplete;
+    expect(el.value, "PageUp clamps at max").to.equal(30);
+    press(el, "PageDown");
+    await el.updateComplete;
+    expect(el.value).to.equal(20);
+    press(el, "PageDown");
+    press(el, "PageDown");
+    press(el, "PageDown");
+    await el.updateComplete;
+    expect(el.value, "PageDown clamps at zero").to.equal(0);
+  });
+
   it("fires lr-activate without lr-change when Home re-commits an already-zero rating", async () => {
     const el = await fixture<LyraRating>(html`<lr-rating value="0"></lr-rating>`);
     const activated: number[] = [];

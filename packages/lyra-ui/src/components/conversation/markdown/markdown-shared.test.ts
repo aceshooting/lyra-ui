@@ -13,7 +13,9 @@ import {
   hitTestHighlightRanges,
   internalLinkHrefFrom,
   markdownHighlightKey,
+  markdownAnchorFromTarget,
   markdownHighlightConfigChanged,
+  markdownLanguageSetChanged,
   markdownNeedsReparse,
   markdownSanitizerPolicy,
   normalizeMarkdownLeadingTabs,
@@ -845,6 +847,32 @@ describe('code-block header parse contract', () => {
         ...(math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
       });
       expect(policy === markdownSanitizerPolicy({ htmlMode: 'sanitize', math, codeBlockHeader })).to.equal(false);
+    }
+  });
+});
+
+describe('markdownLanguageSetChanged', () => {
+  it('reports only grammar-set properties, not other highlight configuration', () => {
+    expect(markdownLanguageSetChanged(new Map([['languages', undefined]]))).to.equal(true);
+    expect(markdownLanguageSetChanged(new Map([['languageLoaders', undefined]]))).to.equal(true);
+    expect(markdownLanguageSetChanged(new Map([['codeBlockHeader', undefined], ['withoutSyntaxHighlighting', undefined]]))).to.equal(false);
+    expect(markdownLanguageSetChanged(new Map())).to.equal(false);
+  });
+});
+
+describe('markdownAnchorFromTarget', () => {
+  it('returns a genuine anchor, including one from another document realm', () => {
+    const anchor = document.createElement('a');
+    anchor.href = 'https://example.test/x';
+    expect(markdownAnchorFromTarget(anchor) === anchor).to.equal(true);
+    const foreign = document.implementation.createHTMLDocument('').createElement('a');
+    expect(markdownAnchorFromTarget(foreign) === foreign).to.equal(true);
+  });
+
+  it('rejects primitives, null, plain lookalikes and non-anchor elements', () => {
+    const lookalike = { getAttribute: () => 'x', href: 'https://example.test/', localName: 'a' };
+    for (const candidate of [undefined, null, 'a', 5, true, {}, lookalike, document.createElement('div'), document.createElementNS('http://www.w3.org/2000/svg', 'a')]) {
+      expect(markdownAnchorFromTarget(candidate) === undefined, String(candidate)).to.equal(true);
     }
   });
 });

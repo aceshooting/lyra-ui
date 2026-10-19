@@ -3056,6 +3056,11 @@ insertions and removals; nested shadow trees and constructed `adoptedStyleSheets
 This lets marked application scopes discover and adopt their token provider under Happy DOM.
 An existing platform collection is never replaced, and plain Node remains unchanged.
 
+`lr-code-block` and `lr-code-block-core` no longer need an `Element.part` shim: where the DOM lacks
+`Element.part` (Happy DOM), rendering does not throw, and highlighted lines keep their
+`line-highlight` part wherever CSS parts exist. If a setup file patches `Element.prototype.part`
+only for code blocks, remove it; `installHappyDomShims()` does not install one.
+
 When Happy DOM lacks the HTML `dir="ltr"`/`dir="rtl"` presentational hints,
 `installHappyDomShims()` adds zero-specificity direction rules to the document head. This restores
 computed direction and inherited component direction while preserving explicit author CSS.

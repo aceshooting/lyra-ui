@@ -1070,6 +1070,25 @@ describe('heat-tint mode', () => {
     expect(nameCells.every((c) => !c.hasAttribute('data-heat'))).to.be.true;
   });
 
+  it('keeps tints stable across an unrelated re-render and recomputes when the rows change', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = heatColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const tints = () => [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"][data-col-key="score"]')]
+      .map((c) => c.style.getPropertyValue('--lr-table-heat-t'));
+    expect(tints()).to.deep.equal(['100.00%', '0.00%']);
+
+    el.caption = 'Unrelated change';
+    await el.updateComplete;
+    expect(tints()).to.deep.equal(['100.00%', '0.00%']);
+
+    el.rows = [{ ...rows[0]!, score: 10 }, { ...rows[1]!, score: 20 }];
+    await el.updateComplete;
+    expect(tints()).to.deep.equal(['0.00%', '100.00%']);
+  });
+
   it('overrides the auto-derived domain with heatTintScale', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = heatColumns;

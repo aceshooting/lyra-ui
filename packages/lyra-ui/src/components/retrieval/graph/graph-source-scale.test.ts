@@ -461,3 +461,32 @@ it('revokes a global reveal when the final revision read installs a newer provid
   expect(graph.sourcePage).to.equal(0);
   expect(next.queries.every(request => request.page === 0)).to.equal(true);
 });
+
+for (const dir of ['ltr', 'rtl'] as const) it(`moves source row focus with ArrowDown/ArrowUp and the inline arrows under dir=${dir}, clamping at both ends`, async () => {
+  const data = provider();
+  const graph = await fixture<SourceGraph>(html`<lr-graph view="list" dir=${dir} .graphSource=${data.source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  const press = (key: string, from: string, cancelable = true) => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable });
+    row(graph, from)!.dispatchEvent(event);
+    return event;
+  };
+  const active = () => (graph.shadowRoot!.activeElement as HTMLElement | null)?.dataset['sourceKey'];
+  const forward = dir === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+  const backward = dir === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+
+  expect(press('ArrowDown', 'node:0').defaultPrevented).to.equal(true);
+  expect(active()).to.equal('node:1');
+  press(forward, 'node:1');
+  expect(active()).to.equal('node:2');
+  press(backward, 'node:2');
+  expect(active()).to.equal('node:1');
+  press('ArrowUp', 'node:1');
+  expect(active()).to.equal('node:0');
+  press('ArrowUp', 'node:0');
+  expect(active(), 'ArrowUp clamps at the first row').to.equal('node:0');
+  press('End', 'node:0');
+  press('ArrowDown', 'node:99');
+  expect(active(), 'ArrowDown clamps at the last row').to.equal('node:99');
+  expect(press('x', 'node:99').defaultPrevented, 'unrelated keys are left alone').to.equal(false);
+});

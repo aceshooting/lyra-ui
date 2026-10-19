@@ -831,3 +831,42 @@ it('accepts a foreign native Date while failing closed for forged Date lookalike
     frame.remove();
   }
 });
+
+describe('lr-format-date engine rejection fallbacks', () => {
+  const RealDateTimeFormat = Intl.DateTimeFormat;
+  afterEach(() => {
+    Intl.DateTimeFormat = RealDateTimeFormat;
+  });
+
+  function rejectWhen(reject: (locale: unknown, options: Intl.DateTimeFormatOptions | undefined) => boolean): void {
+    const Patched = function (locale?: string | string[], options?: Intl.DateTimeFormatOptions) {
+      if (reject(locale, options)) throw new RangeError('rejected by engine');
+      return new RealDateTimeFormat(locale, options);
+    } as unknown as typeof Intl.DateTimeFormat;
+    Object.setPrototypeOf(Patched, RealDateTimeFormat);
+    Object.defineProperty(Patched, 'prototype', { value: RealDateTimeFormat.prototype });
+    Intl.DateTimeFormat = Patched;
+  }
+
+  it('keeps the locale and drops every option when the option bag itself is rejected', async () => {
+    rejectWhen((_locale, options) => !!options && Object.keys(options).length > 0);
+    const el = (await fixture(html`
+      <lr-format-date date="2024-03-05T12:00:00Z" locale="en-US" time-zone="UTC" hour-format="12" day="2-digit"></lr-format-date>
+    `)) as LyraFormatDate;
+    const time = el.shadowRoot!.querySelector('time');
+    expect(time).to.not.equal(null);
+    expect(time!.dateTime).to.equal('2024-03-05T12:00:00.000Z');
+    expect(time!.textContent).to.equal('3/5/2024');
+  });
+
+  it('falls back to the runtime locale when the locale itself is rejected', async () => {
+    rejectWhen((locale) => locale === 'kok-IN');
+    const el = (await fixture(html`
+      <lr-format-date date="2024-03-05T12:00:00Z" locale="kok-IN" time-zone="UTC"></lr-format-date>
+    `)) as LyraFormatDate;
+    const time = el.shadowRoot!.querySelector('time');
+    expect(time).to.not.equal(null);
+    expect(time!.textContent!.trim()).to.not.equal('');
+    expect(time!.textContent).to.contain('2024');
+  });
+});

@@ -1004,3 +1004,45 @@ describe('lr-drawer renamed members', () => {
     await alias!.close('api');
   });
 });
+
+describe('external removal while open', () => {
+  it('lets a vetoed lr-hide keep the drawer open without a close notification, then re-attaches still open', async () => {
+    const host = (await fixture(html`<div></div>`)) as HTMLDivElement;
+    const el = document.createElement('lr-drawer') as LyraDrawer;
+    el.label = 'Veto';
+    el.open = true;
+    host.append(el);
+    await el.updateComplete;
+    let cancelable: boolean | undefined;
+    let closes = 0;
+    el.addEventListener('lr-hide', (event) => {
+      cancelable = event.cancelable;
+      event.preventDefault();
+    });
+    el.addEventListener('lr-close', () => closes++);
+
+    el.remove();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(cancelable, 'a mapped drawer hide request is cancelable on external removal').to.equal(true);
+    expect(el.open).to.be.true;
+    expect(closes).to.equal(0);
+
+    host.append(el);
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    await el.close('api');
+  });
+
+  it('closes with the unmount reason when the removal hide request is not vetoed', async () => {
+    const el = (await fixture(html`<lr-drawer open label="Plain">Body</lr-drawer>`)) as LyraDrawer;
+    const reasons: string[] = [];
+    el.addEventListener('lr-close', (event) => reasons.push((event as CustomEvent<{ reason: string }>).detail.reason));
+    el.remove();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(reasons).to.deep.equal(['unmount']);
+    expect(el.open).to.be.false;
+  });
+});

@@ -461,3 +461,19 @@ it('stops old display descriptors when an ID descriptor changes the source revis
   } };
   el.treeSource = source; await waitUntil(() => fired); expect(laterReads).to.equal(0);
 });
+it('names a provider row with token and cost metrics only when those columns are enabled, skipping invalid tokens', async () => {
+  const value: LyraSpan = { ...row(0).value, tokensIn: 12, tokensOut: -3, costText: '$0.0021' };
+  const source: Source = { revision: 1, async project() { return { state: 'one', total: 1,
+    summary: { startMs: 100, endMs: 200 }, rows: { count: 1, keyAt: () => 'span0', indexOfKey: () => 0,
+      itemAt: () => ({ ...row(0), value, setSize: 1 }) } }; } };
+  const el = await fixture<Tree>(html`<lr-trace-tree .treeSource=${source}></lr-trace-tree>`); await ready(el);
+  const name = () => el.shadowRoot!.querySelector('[data-source-key="span0"]')!.getAttribute('aria-label') ?? '';
+  expect(name()).to.not.contain('Tokens in');
+  expect(name()).to.not.contain('$0.0021');
+
+  el.withTokens = true; el.withCost = true;
+  await el.updateComplete;
+  await waitUntil(() => name().includes('Tokens in: 12'), 'token metric names the row');
+  expect(name()).to.contain('Cost: $0.0021');
+  expect(name(), 'a negative token count is not announced').to.not.contain('Tokens out');
+});

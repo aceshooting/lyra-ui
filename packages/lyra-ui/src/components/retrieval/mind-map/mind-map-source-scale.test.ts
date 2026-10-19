@@ -130,3 +130,25 @@ it('stops old projection value reads after an id descriptor changes source revis
  el=await fixture<MapElement>(html`<lr-mind-map .treeSource=${source}></lr-mind-map>`);await ready(el);armed=true;el.treeSource=source;await waitUntil(()=>!armed);await el.updateComplete;
  expect(later).to.equal(0);el.requestUpdate();await ready(el);expect(calls).to.be.greaterThan(2);
 });
+it('drives the source rows from the diagram keyboard and ignores keys once the source is replaced', async () => {
+ const data = provider(20); const el = await fixture<MapElement>(html`<lr-mind-map .treeSource=${data.source}></lr-mind-map>`); await ready(el);
+ await waitUntil(() => Boolean(el.shadowRoot!.querySelector('svg[part="svg"]')));
+ const svg = el.shadowRoot!.querySelector('svg[part="svg"]')!;
+ const tabStop = () => el.shadowRoot!.querySelector('[data-source-key][tabindex="0"]')?.getAttribute('data-source-key');
+ svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+ await waitUntil(() => tabStop() === 'n19', 'End on the diagram moves the source tab stop to the last row');
+ svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+ await waitUntil(() => tabStop() === 'n0', 'Home on the diagram returns to the first row');
+});
+it('treats a source whose revision getter throws mid-projection as stale and surfaces no rows', async () => {
+ const data = provider(5); let projecting = false, thrown = 0;
+ const source: Source = {
+  get revision() { if (projecting) { thrown++; throw new Error('revision unavailable'); } return 1; },
+  async project(request) { const result = await data.source.project(request); projecting = true; return result; },
+ };
+ const el = await fixture<MapElement>(html`<lr-mind-map .treeSource=${source}></lr-mind-map>`);
+ await waitUntil(() => thrown > 0, 'revision is re-read after the projection');
+ await el.updateComplete; await new Promise(resolve => setTimeout(resolve, 50));
+ expect(el.shadowRoot!.querySelectorAll('[data-source-key]').length, 'no row from the stale projection is mounted').to.equal(0);
+ expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(0);
+});
