@@ -33685,6 +33685,15 @@ value to the selected engine's `Map` type. `LyraMapInstance.prepareFeatures?()` 
 modular engine and absent on canonical MapLibre, so guard it or narrow to the companion `Map`
 before calling. Identity is preserved: `.map` is the engine instance, not a proxy.
 
+Paint or layout changes made directly on the engine instance (for example
+`map.setPaintProperty('background', 'background-color', '#f00')`) are rendered into the WebGL
+buffer at once, but WebKit with `preserveDrawingBuffer: false` (MapLibre's default) can keep
+presenting the previous frame until another frame is requested; this reproduces with plain
+`maplibre-gl` and is not specific to `lr-map`. Chromium and Firefox present immediately. After a
+direct engine mutation that must be visible without further interaction (a screenshot, an
+export), call the narrowed engine's `map.triggerRepaint()` once. `lr-map` does not force a
+repaint after every idle, because that would re-render forever.
+
 After `lr-map-load`, use the narrowed peer's `queryRenderedFeatures(point, { layers: [...] })`
 for identities painted by style-owned vector layers; `point` is a screen position, which can be
 obtained with the peer's `project([longitude, latitude])`. Attach peer interaction listeners when
