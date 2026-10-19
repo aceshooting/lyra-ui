@@ -50,9 +50,12 @@ it('preserves the model-select listbox close transition while removing the settl
     await waitUntil(() => listbox.getAnimations().length > 0, 'closing transition never started');
     expect(listbox.getBoundingClientRect().width, 'closing transition removed layout too early').to.be.greaterThan(0);
     listbox.getAnimations().forEach((animation) => animation.finish());
+    // An engine may deliver no transitionend after finish(); the bounded fallback then settles at
+    // the 1s duration plus 50ms, past waitUntil's 1s default.
     await waitUntil(
       () => listbox.hidden === true,
       'listbox never left layout once its close transition settled',
+      { timeout: 3000 },
     );
   }
 });

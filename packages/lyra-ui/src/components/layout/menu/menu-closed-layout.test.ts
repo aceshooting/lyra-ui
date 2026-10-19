@@ -70,9 +70,12 @@ it('preserves the submenu close transition while removing the settled-closed lay
     await waitUntil(() => surface.getAnimations().length > 0, 'closing transition never started');
     expect(surface.getBoundingClientRect().width, 'closing transition removed layout too early').to.be.greaterThan(0);
     surface.getAnimations().forEach((animation) => animation.finish());
+    // An engine may deliver no transitionend after finish(); the bounded fallback then settles at
+    // the 1s duration plus 50ms, past waitUntil's 1s default.
     await waitUntil(
       () => surface.hidden === true,
       'submenu surface never left layout once its close transition settled',
+      { timeout: 3000 },
     );
   }
 });
