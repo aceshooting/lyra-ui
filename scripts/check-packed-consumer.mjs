@@ -313,7 +313,8 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    maxRawBytes: 406_208,
+    // Scoped theme observation measures about 396.9 KiB raw; the next 64-byte boundary.
+    maxRawBytes: 406_528,
   },
 };
 
