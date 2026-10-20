@@ -11,9 +11,9 @@ still open.
 - **Native document editing:** [delivery sequence](roadmap/document-editing.md) and its
   [qualification record](roadmap/document-editing-feasibility.md). Experimental, in
   `@aceshooting/lyra-docs`; not part of lyra-ui release qualification.
-- **WebGL 3D views:** [plan](roadmap/lyra-3d.md) for the optional `@aceshooting/lyra-3d`
-  companion: a 3D force graph for `lr-graph` and a WebGL view for `lr-embedding-explorer`, loaded
-  on demand. Planned.
+- **30.0.0 work plans** (task status kept in each file): [WebGL 3D views](roadmap/lyra-3d.md) in
+  the optional `@aceshooting/lyra-3d` companion, [map adoption](roadmap/map-adoption.md) for
+  `lr-map` and lyra-map 1.3.0, and [immutable identity collections](roadmap/immutable-collections.md).
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
 ## Shipped
@@ -136,32 +136,29 @@ packages version independently. A target moves only when scope changes, never to
 
 | Target | Package versions | Scope |
 |---|---|---|
-| 30.0.0 | lyra-ui 30.0.0; lyra-3d 1.0.0 (new); lyra-map 1.3.0 | Immutable identity collections; WebGL 3D force graph and embedding views (phases 0 to 2); map adoption gaps |
-| 30.x | lyra-3d 1.1.0, 1.2.0 | Further graph visuals (phase 3), 100k-node scale and performance gate (phase 4) |
+| 30.0.0 | lyra-ui 30.0.0; lyra-3d 1.0.0 (new); lyra-map 1.3.0 | Immutable identity collections; map adoption; WebGL 3D views (graph, points, 3D charts, panoramas, model viewer) |
+| 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |
 | last | lyra-ui minors | Additional full catalogs |
 
 1. **30.0.0 with lyra-3d 1.0.0 and lyra-map 1.3.0: the next major release,** delivered as one
    release and one migration:
-   - **Immutable identity collections:** reassigning the same array to an identity-preserving
-     collection property (feeds, queues, transcripts, task lists, virtual lists) re-copies it today
-     so in-place `push`/edits keep rendering. Make "assign a new array to publish changes" the rule
-     for these properties, skip same-array re-copies by default (as `threads` already does), and ship
-     a migration note plus a `lyra-ui-migrate` review entry. Not before a major: it silently stops
-     in-place updates from rendering. This is the release's only breaking change.
-   - **WebGL 3D views** (phases 0 to 2 in [lyra-3d.md](roadmap/lyra-3d.md)): a new optional
-     companion, `@aceshooting/lyra-3d`, holds WebGL engines only. `lr-graph` gains a 3D force graph
-     (worker layout, instanced rendering, labels, arrows, dragging and link particles), and
-     `lr-embedding-explorer` gains a WebGL view that draws every point instead of a 1,000-point
-     sample, in 2D or 3D. Both tags stay in Lyra UI and load their engine only when an application
-     opts in, so applications that do not use them install and download nothing new; additive.
-   - **Map adoption with lyra-map 1.3.0:** find what applications still render with MapLibre
-     directly instead of `lr-map`, or still reach into the engine for controls, styling,
-     interaction or data updates, and close those gaps, so map screens share one accessible, themed
-     component; additive.
-2. **lyra-3d 1.1.0 and 1.2.0: further visuals and scale** (phases 3 and 4): curved edges, DAG
-   layouts, custom node rendering and optional glow, then 100k nodes with a performance gate.
+   - **Immutable identity collections** ([plan](roadmap/immutable-collections.md)): assigning the
+     same array to an identity-preserving collection property becomes a no-op, as `threads` already
+     is; assign a new array to publish changes. Breaking, with a migration note and a
+     `lyra-ui-migrate` rule.
+   - **Map adoption** ([plan](roadmap/map-adoption.md)): camera commands and padding, fit to data,
+     anchored feature content, choropleth missing values and declarative controls, so applications
+     stop reaching into the engine; `center` compares by value (breaking).
+   - **WebGL 3D views** ([plan](roadmap/lyra-3d.md)): the new optional `@aceshooting/lyra-3d`
+     companion holds WebGL engines only: a 3D force graph for `lr-graph`, a points engine for
+     `lr-embedding-explorer`, 3D scatter charts and point-cloud files, 360° panoramas for
+     `lr-image-viewer` and `lr-video`, and a new `lr-model-viewer` (glTF/GLB, STL, OBJ). Tags stay
+     in Lyra UI and load an engine only when an application opts in, so applications that do not
+     use them install and download nothing new; additive.
+2. **lyra-3d 1.x: further visuals and scale:** curved edges, DAG layouts, custom node rendering and
+   optional glow, then 100k graph nodes with a performance gate.
 3. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4
    (pagination and Word fidelity), 0.8.0 phase 5 (agent-friendly document operations), 0.9.0 to
    0.11.0 phases 6 to 8 in [document-editing.md](roadmap/document-editing.md), and 1.0.0 once
