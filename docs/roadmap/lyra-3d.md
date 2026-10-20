@@ -112,8 +112,12 @@ lyra-3d 1.0.0.
 ### 0. Specification and feasibility (S)
 
 - [x] Engine-seam inventory of `lr-graph` and `lr-embedding-explorer`.
-- [ ] WebGL feasibility spike in Chromium, Firefox and WebKit: instancing, picking, context loss,
-  worker layout, measured baseline, and whether CI can render on a real GPU.
+- [x] WebGL feasibility spike in Chromium, Firefox and WebKit: go. Rendering keeps 60 fps at 30k
+  nodes and 90k edges on a real GPU with large headroom; the force layout is the bottleneck (about
+  14 layout steps per second at 10k nodes), so layout convergence gets its own budget. CI can
+  measure real-GPU frame rates in headless Chromium; Firefox and WebKit render in software there,
+  so they get functional and fallback coverage. GPU id picking costs 1-2 ms at any size; a restored
+  context needs renderer state re-applied.
 - [ ] Engine contract, opt-in vocabulary and large-data input written and approved.
 
 Exit: written contract, measured spike, and a go or narrow decision.
