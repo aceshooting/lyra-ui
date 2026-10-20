@@ -491,6 +491,7 @@ async function verifyPackedMigrationCli(fixtureDir) {
     'migration-analysis.mjs',
     'migration-contract.json',
     'migration-contract.mjs',
+    'migration-immutable-collections.mjs',
     'migration-renames.mjs',
     'migration-theme-scopes.mjs',
     'migration-transforms.mjs',

@@ -350,7 +350,7 @@ test('packed migration inventory requires the complete split runtime and rejects
     'agent-registry.mjs', 'component-inventory.mjs', 'css-declarations.mjs', 'html-comments.mjs', 'init-agents.mjs',
     'is-main-module.mjs', 'lyra-rename-ledger.mjs', 'lyra-ui.mjs', 'migrate-wa.mjs',
     'migration-analysis.mjs', 'migration-contract.json', 'migration-contract.mjs',
-    'migration-renames.mjs', 'migration-theme-scopes.mjs', 'migration-transforms.mjs',
+    'migration-immutable-collections.mjs', 'migration-renames.mjs', 'migration-theme-scopes.mjs', 'migration-transforms.mjs',
     'theme-scope-vocabulary.generated.mjs',
   ];
   const check = (entries) => inspect('/fixture', async () => [...entries], join);

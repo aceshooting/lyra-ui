@@ -17,7 +17,7 @@
 // is copied beside migrate-wa.mjs into dist/cli.
 
 export const IMMUTABLE_COLLECTION_RULE = 'immutable-collections';
-export const IMMUTABLE_COLLECTION_CODE = 'IMMUTABLE_COLLECTION_REVIEW';
+const IMMUTABLE_COLLECTION_CODE = 'IMMUTABLE_COLLECTION_REVIEW';
 
 /** Every component property whose same-array assignment is ignored since Lyra 30. */
 export const IMMUTABLE_COLLECTION_PAIRS = Object.freeze([
@@ -96,7 +96,7 @@ function acknowledged(text, offset, property) {
  * Analyzes one file's text without editing it. Returns `{ warnings }` in the migration report
  * schema (`file`, `line`, `column`, `action`, ...).
  */
-export function analyzeImmutableCollections(text, { file = 'input' } = {}) {
+function analyzeImmutableCollections(text, { file = 'input' } = {}) {
   const warnings = [];
   if (SKIPPED_EXTENSIONS.has(extensionOf(file))) return { warnings };
   const mentioned = new Map();

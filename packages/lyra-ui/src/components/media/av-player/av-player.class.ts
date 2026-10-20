@@ -780,6 +780,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       this.transcriptLocale = locale;
       refreshTranscript = true;
     }
+    // Rows render through `renderItem`; an unchanged input array no longer re-renders the list, so a
+    // string override must refresh the callback for localized row text to reach the transcript.
+    if (changed.has('strings')) refreshTranscript = true;
     if (
       this.hasUpdated &&
       (changed.has('src') || changed.has('kind') || changed.has('mimeType'))

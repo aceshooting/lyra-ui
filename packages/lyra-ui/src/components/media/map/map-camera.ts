@@ -87,7 +87,7 @@ export function extendExtent(extent: CoordinateExtent, longitude: unknown, latit
 }
 
 /** Most positions one `fitToData()` call reads; geometry beyond it is ignored. */
-export const MAX_FIT_POSITIONS = 5_000_000;
+const MAX_FIT_POSITIONS = 5_000_000;
 
 /**
  * Extends `extent` with every position of an already-projected GeoJSON `Feature` or
