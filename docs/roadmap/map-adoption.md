@@ -77,6 +77,18 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
 - [ ] Migration notes for the full-`maplibre-gl` engine to the modular engine, including the worker
   setup the full engine still needs.
 
+## Application migration (after the 30.0.0 release)
+
+Maintained applications that build on the raw engine move to `lr-map` once the items above ship,
+deleting their engine workarounds (style-reload re-adding, z-order tables, dummy feature
+preparation, hand-clamped popups, selector-based control relabelling, SVG rasterization, startup
+timers and engine CSS overrides):
+
+- [ ] Main site application and its shared map package.
+- [ ] World site application.
+- [ ] Regional site application (same map package as the main site).
+- [ ] Applications already on `lr-map` drop the workarounds listed in the sections above.
+
 ## Exit
 
 Every item has JSDoc, three-engine tests, a story and `llms/media.md` coverage; maintained
