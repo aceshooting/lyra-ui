@@ -33,7 +33,44 @@ component and applications delete their workarounds.
 - [ ] Exported empty basemap style constant.
 - [ ] `bounds` limits that tolerate fractional zoom below 1.
 
+## Raw-engine applications
+
+Some applications build their map directly on the `@aceshooting/lyra-map` engine (about ten overlay
+layers, vector tiles, sprites, feature state, drawing) because `lr-map` lacks what they need. These
+items let them move to `lr-map`, or at least drop their workarounds on the engine:
+
+- [ ] Overlays survive a `mapStyle` swap (basemap or theme change): data layers, markers, custom
+  sources and images are re-applied automatically, instead of every layer re-adding itself on style
+  load.
+- [ ] A readiness primitive: `whenStyleReady()` / `whenIdle()` and matching `lr-map-style-load` and
+  `lr-map-idle` events, instead of guarding `isStyleLoaded()` and racing style loads.
+- [ ] Data-layer ordering: a band or `before` option on data layers instead of a hand-maintained
+  z-order table re-applied after each style swap.
+- [ ] `styleOverrides`: paint and layout overrides for basemap style layers, re-applied after style
+  loads.
+- [ ] `images` property accepting SVG markup or URLs, rasterized portably (engines cannot decode SVG
+  blobs everywhere), for symbol layers.
+- [ ] Modular engine: load the feature modules implied by `addLayer`/`addSource` automatically, or a
+  documented shorthand, instead of preparing dummy sources and layers.
+- [ ] Controls: geolocate (with localized error and out-of-bounds events), attribution options, a
+  scale `unit`, and control text that follows `lang` changes live.
+- [ ] `hash` and `maxBounds` properties, with initial fitting that yields to a URL hash.
+- [ ] Pointer workflows: `lr-map-contextmenu` event, a pick mode (crosshair cursor emitting
+  `lr-map-pick`), and a polygon/line draw mode with `lr-map-draw-*` events (area, length, centroid).
+- [ ] Anchored content clamps under fixed application chrome (boundary and safe-area insets),
+  stacks above other popups, and has a localized close label.
+- [ ] `exportImage({ type, attribution })` returning a `Blob` of the current view.
+- [ ] Bundled right-to-left text shaping (no runtime fetch from a third-party CDN).
+- [ ] Repaint after paint changes applied through data layers on every engine (WebKit otherwise
+  skips a frame).
+- [ ] First-class lazy construction (build on visibility or idle with a built-in control
+  placeholder), so applications stop deferring the map behind timers.
+- [ ] Worker plugin defaults for chunk naming, and documentation of the single-instance requirement
+  when a workspace re-exports the plugin.
+
 ## Documentation
+
+- [ ] Migration guide from the raw engine to `lr-map`, and the supported overlay-persistence pattern.
 
 - [ ] State that `lyraMapWorkerPlugin()` needs no pre-import or readiness gate, and that `LyraMap.preload()`
   is the supported warm-up.
