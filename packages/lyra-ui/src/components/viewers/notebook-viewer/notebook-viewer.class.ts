@@ -1249,10 +1249,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
       aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
     >
       ${this.loadState.kind === 'loaded'
+        // Rows read viewer state (expanded outputs, highlights, sanitizer status, strings) while the
+        // cells array is unchanged, so a fresh renderItem is the list's per-render invalidation.
         ? html`<lr-virtual-list
             exportparts="cell:cell, cell-active:cell-active, cell-highlighted:cell-highlighted, cell-highlighted-accent:cell-highlighted-accent, cell-highlighted-success:cell-highlighted-success, cell-highlighted-warning:cell-highlighted-warning, cell-highlighted-danger:cell-highlighted-danger, cell-highlighted-neutral:cell-highlighted-neutral, cell-highlight-active:cell-highlight-active, cell-gutter:cell-gutter, cell-source:cell-source, raw-source:raw-source, outputs:outputs, output:output, output-error:output-error, error-output-label:error-output-label, output-toggle:output-toggle"
             .items=${this.loadState.doc.cells}
-            .renderItem=${this.renderCell}
+            .renderItem=${(cell: unknown, index: number) => this.renderCell(cell, index)}
             .keyFunction=${this.cellKey}
             .activeItemId=${this.activeCellIndex === null ? '' : this.loadState.doc.cells[this.activeCellIndex]?.id ?? this.activeCellIndex}
             @lr-visible-range-change=${this.stopOwnedEvent}

@@ -22,7 +22,7 @@ Status (2026-10-20): in progress; speed and coverage work is built but not yet m
 
 - [ ] Restore at least 99.72% after the 30.0.0 collections and map camera work (failed shard,
   uncovered new code). The failing shard came from two regressions of the collection rule:
-  `lr-av-player` (fixed on main) and `lr-notebook-viewer` (fixed, not yet merged).
+  `lr-av-player` and `lr-notebook-viewer` (both fixed on main; complete coverage confirmation pending).
 - [ ] Cover the most-missed modules with behavioural tests (no forged internals): `lr-map` (41
   lines), `lr-chart` (30), `lr-graph` (26), `internal/aria-controls` (23), `lr-data-grid` (21),
   `lr-push-to-talk` (16), `ssr` (16), `lr-flow-canvas` (15), `lr-message-actions` (13), menu, heatmap,
