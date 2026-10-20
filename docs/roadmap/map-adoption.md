@@ -24,6 +24,9 @@ component and applications delete their workarounds.
 
 ## Overlays and data
 
+Status (2026-10-20): every item below is implemented and passes in all three engines, but is not yet
+merged (it awaits its regeneration and lint run). The anchored content uses the deferred positioner.
+
 - [ ] Anchored content for a clicked feature (an `anchor` slot positioned at `anchorLngLat`, hidden
   when off-screen), replacing hand-positioned popups.
 - [ ] `choropleth.noData` (color, stroke, label): features without a value paint and click with

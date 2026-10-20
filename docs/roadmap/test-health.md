@@ -1,6 +1,6 @@
 # Test health: coverage, speed and flakiness
 
-Status: in progress (2026-10-20). Baseline from the last green main commit before 30.0.0 work
+Status (2026-10-20): in progress; speed and coverage work is built but not yet merged. Baseline from the last green main commit before 30.0.0 work
 (Codecov and GitHub Actions data).
 
 ## Baseline
@@ -21,7 +21,8 @@ Status: in progress (2026-10-20). Baseline from the last green main commit befor
 ### Coverage (target: at least 99.80% of lines)
 
 - [ ] Restore at least 99.72% after the 30.0.0 collections and map camera work (failed shard,
-  uncovered new code).
+  uncovered new code). The failing shard came from two regressions of the collection rule:
+  `lr-av-player` (fixed on main) and `lr-notebook-viewer` (fixed, not yet merged).
 - [ ] Cover the most-missed modules with behavioural tests (no forged internals): `lr-map` (41
   lines), `lr-chart` (30), `lr-graph` (26), `internal/aria-controls` (23), `lr-data-grid` (21),
   `lr-push-to-talk` (16), `ssr` (16), `lr-flow-canvas` (15), `lr-message-actions` (13), menu, heatmap,
@@ -45,7 +46,7 @@ Status: in progress (2026-10-20). Baseline from the last green main commit befor
 
 ### Flakiness
 
-- [ ] Stabilize the WebKit document-editor qualification (`lyra-docs`): an image measurement
+- [x] Stabilize the WebKit document-editor qualification (`lyra-docs`): an image measurement
   intermittently runs before the image exists.
 - [ ] Keep a weekly check of Codecov test analytics; any test that fails on two different commits
   gets fixed or quarantined with a tracked reason.

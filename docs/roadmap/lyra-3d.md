@@ -1,6 +1,8 @@
 # WebGL 3D views (`@aceshooting/lyra-3d`)
 
-Status: phase 0 done; phase 1 in progress. Nothing has shipped. Today `lr-graph`
+Status (2026-10-20): phase 0 done; phase 1 (foundation: package, core, loader, `engine` helper,
+typed-column validation, isolation gate, CI lanes) is built and tested but not yet merged; phases 2 to 6
+not started. Nothing has shipped. Today `lr-graph`
 `view="3d"` is a zero-dependency Canvas 2D perspective mode with no 3D force solver, intended for low
 hundreds of nodes; `lr-embedding-explorer` draws an SVG scatter that renders at most 1,000 points (an
 evenly spaced sample of larger inputs); no component shows 3D models, point clouds or 360° media.
