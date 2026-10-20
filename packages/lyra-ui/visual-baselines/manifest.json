@@ -374,11 +374,15 @@
     },
     {
       "id": "charts-pie--default",
-      "profile": "forced-colors-chart"
+      "profile": "forced-colors-chart",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Per-datum border colors now match each slice instead of reusing the first slice color. The current capture reflects that intentional correction and awaits human visual review."
     },
     {
       "id": "charts-doughnut--default",
-      "profile": "standard"
+      "profile": "standard",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Per-datum border colors now match each slice instead of reusing the first slice color. The current capture reflects that intentional correction and awaits human visual review."
     },
     {
       "id": "charts-radar--default",

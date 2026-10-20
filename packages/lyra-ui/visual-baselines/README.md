@@ -32,7 +32,7 @@ happens to have installed are all pinned (see `../scripts/visual-regression.mjs`
 comment). The font substitution gap alone once cascaded into a 3.6% diff for word-cloud's
 spiral-search layout. The configured matrix is 111 stories and 321 live captures, spanning
 light, dark, and RTL plus targeted forced-colors and narrow axes. While human review is pending,
-114 captures compare with retained tracked baselines and 207 are semantic, nonblank, or
+108 captures compare with retained tracked baselines and 213 are semantic, nonblank, or
 painted-pixel evidence only. `manifest.json` computes
 that matrix and records every exemption. The CI step (`.github/workflows/ci.yml`) remains blocking:
 semantic errors, console errors, missing reviewed baselines, and mismatches outside an explicit
@@ -101,7 +101,7 @@ blocking `new` result; an evidence-only capture runs its assertions and stays un
 
 The runner expands the 111 stories into 321 capture axes before partitioning. Its three CI shards
 contain 107 captures each; the blocking unit/config tests prove the shards are deterministic,
-disjoint, exhaustive, and balanced without changing the 114 retained-baseline plus 207
+disjoint, exhaustive, and balanced without changing the 108 retained-baseline plus 213
 evidence-only policy.
 
 Before any PNG is compared or retained as evidence, the harness recursively checks rendered shadow
