@@ -981,7 +981,6 @@ interface CollectionPropertyPolicy {
   readonly owns: boolean;
   readonly preservesItemIdentity: boolean;
   readonly preservesObjectIdentity: boolean;
-  readonly immutableSource: boolean;
   /** Enrolled in `appendOrderedCollectionProperties`: an over-limit root keeps its newest entries. */
   readonly retainsNewest: boolean;
 }
@@ -1024,7 +1023,6 @@ function collectionPropertyPolicy(
   let preservesItemIdentity = false;
   let preservesObjectIdentity = false;
   let retainsNewest = false;
-  let immutableSource = false;
   for (const constructor of lyraClassChain(ctor)) {
     // These fields are protected static -- hidden from external consumers of the class, but this
     // bookkeeping helper is part of LyraElement's own internal machinery, just expressed as a
@@ -1036,7 +1034,6 @@ function collectionPropertyPolicy(
       identityCollectionProperties: readonly PropertyKey[];
       identityCollectionObjectProperties: readonly PropertyKey[];
       appendOrderedCollectionProperties: readonly PropertyKey[];
-      immutableSourceCollectionProperties: readonly PropertyKey[];
     };
     if (!limits && Object.hasOwn(constructor, 'ownedCollectionLimits') &&
       declared.ownedCollectionLimits && Object.hasOwn(declared.ownedCollectionLimits, name))
@@ -1065,8 +1062,6 @@ function collectionPropertyPolicy(
       declared.identityCollectionObjectProperties.includes(name)
     )
       preservesObjectIdentity = true;
-    if (Object.prototype.hasOwnProperty.call(constructor, 'immutableSourceCollectionProperties') &&
-      declared.immutableSourceCollectionProperties.includes(name)) immutableSource = true;
     if (
       Object.prototype.hasOwnProperty.call(
         constructor,
@@ -1082,7 +1077,6 @@ function collectionPropertyPolicy(
     preservesItemIdentity,
     preservesObjectIdentity,
     retainsNewest,
-    immutableSource,
   });
   policies.set(name, policy);
   return policy;
@@ -1093,7 +1087,6 @@ const COLLECTION_ENROLLMENT_FIELDS = [
   'identityCollectionProperties',
   'identityCollectionObjectProperties',
   'appendOrderedCollectionProperties',
-  'immutableSourceCollectionProperties',
 ] as const;
 
 /**
@@ -1155,8 +1148,7 @@ function samePolicy(
     a.owns === b.owns &&
     a.preservesItemIdentity === b.preservesItemIdentity &&
     a.preservesObjectIdentity === b.preservesObjectIdentity &&
-    a.retainsNewest === b.retainsNewest &&
-    a.immutableSource === b.immutableSource
+    a.retainsNewest === b.retainsNewest
   );
 }
 
@@ -1211,12 +1203,12 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
       // Declarative renderers commonly rebind stable inputs on every parent render. Once the
       // boundary owns a source, repeating that exact source or round-tripping the getter's snapshot
       // is a no-op unless the property deliberately supplied a domain-specific change detector.
-      // Identity-preserving collections remain explicit render requests because their live items
-      // may have changed, unless their documented contract explicitly requires a new source.
+      // Identity-preserving collections follow the same rule: the contract is that a change is
+      // published by assigning a new array, so mutating and reassigning the same array is not a
+      // render request. Opaque object sources keep their own rule below.
       if (
         previous &&
         declaration.hasChanged === undefined &&
-        (!policy.preservesItemIdentity || policy.immutableSource) &&
         !policy.preservesObjectIdentity &&
         (('primitive' in previous.source
           ? Object.is(value, previous.source.primitive)

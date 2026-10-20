@@ -39,8 +39,8 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
   controlled: add/remove/import/export are all _requests_; the host mutates and passes the array
   back. The bounded readonly outer snapshot retains at most the first 10,000 examples; records and
-  opaque `metadata` retain identity. Reassign `examples` after editing records, including when
-  reusing the same source array. A keyless `requestUpdate()` also refreshes the normalized rows and
+  opaque `metadata` retain identity. Assign a new `examples` array after editing records;
+  assigning the same array again is ignored. A keyless `requestUpdate()` also refreshes the normalized rows and
   search corpus. Other clone-owned collections retain the 10,000-entry/50,000-node safety budgets.
   Empty/blank ids and later duplicate ids are omitted before selection, filtering, mutation requests, and the
   nested grid are derived. Distinct tag chips are ordered with the component's effective-locale
@@ -49,7 +49,7 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   tags. A localized `limit` note reports the omitted count. Search and tag filtering still use all
   admitted examples and tags, including tags
   outside the displayed facet window. Filtering and the tag corpus are reused across unrelated
-  disabled or selection changes
+  disabled or selection changes. Assign a new array to update; mutating an array and assigning it again does not.
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,

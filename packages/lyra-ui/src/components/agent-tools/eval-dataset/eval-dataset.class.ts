@@ -106,7 +106,8 @@ export interface LyraEvalDatasetEventMap {
  * component surfaces.
  *
  * Public collection arrays take bounded readonly snapshots. Example records retain identity so
- * opaque metadata stays intact; reassign `examples` after editing records. At most 10,000 examples
+ * opaque metadata stays intact; assign a new `examples` array after editing records (assigning
+ * the same mutated array does not update). At most 10,000 examples
  * are admitted, with an existing limit notice when more are supplied. Other owned collections
  * retain the 10,000-entry and 50,000-node clone limits.
  *
@@ -359,7 +360,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
    *  result set resets to `null` (so Remove cannot act on a hidden row), and an active tag filter
    *  that no longer matches any row's `tags` is dropped rather than silently matching zero rows
    *  forever. Empty/blank ids are omitted and duplicates normalize first-wins before filtering,
-   *  selection, the nested grid, and mutation events. */
+   *  selection, the nested grid, and mutation events. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) examples: readonly EvalExample[] = [];
 
   /** Shows the built-in free-text search field, filtering by a case-insensitive substring match

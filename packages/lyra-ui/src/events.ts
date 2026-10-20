@@ -1776,6 +1776,11 @@ export type LyraMapLoadEvent = LyraMapEventMap['lr-map-load'];
 export type LyraMapMarkerActivateEvent = LyraMapEventMap['lr-map-marker-activate'];
 
 /**
+ * `lr-map-move` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-move']`.
+ */
+export type LyraMapMoveEvent = LyraMapEventMap['lr-map-move'];
+
+/**
  * `lr-map-view-change` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-view-change']`.
  */
 export type LyraMapViewChangeEvent = LyraMapEventMap['lr-map-view-change'];
@@ -3659,6 +3664,7 @@ export interface LyraGlobalEventMap {
   'lr-map-legend-toggle-request': LyraMapLegendToggleRequestEvent;
   'lr-map-load': LyraMapLoadEvent;
   'lr-map-marker-activate': LyraMapMarkerActivateEvent;
+  'lr-map-move': LyraMapMoveEvent;
   'lr-map-view-change': LyraMapViewChangeEvent;
   'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;
   'lr-matrix-range-select': LyraMatrixRangeSelectEvent;

@@ -3,6 +3,7 @@ export const SHARED_TOPICS = Object.freeze([
   ['imports-and-registration', 'Imports and registration'],
   // This release-specific workflow has its own indexed route; keep the legacy combined guide focused.
   ['v23-to-v24-migration', 'Upgrading from v23 to v24', 'index-only'],
+  ['v29-to-v30-migration', 'Upgrading from v29 to v30', 'index-only'],
   ['events-and-types', 'Events and TypeScript'],
   ['forms-and-accessibility', 'Forms and accessibility'],
   ['styles-and-tokens', 'Styles and tokens'],

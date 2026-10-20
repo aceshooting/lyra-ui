@@ -21,8 +21,8 @@ element count and complete tag list.
   `@aceshooting/lyra-ui/ai` types, and testing.
 - [llms/shared/imports-and-registration.md](./llms/shared/imports-and-registration.md): version
   policy, entry points, registration, and scoped registries.
-- [llms/shared/v23-to-v24-migration.md](./llms/shared/v23-to-v24-migration.md): project upgrade
-  sequence for retired routes, styling, SSR and event-detail compatibility.
+- [llms/shared/v23-to-v24-migration.md](./llms/shared/v23-to-v24-migration.md),
+  [v29-to-v30-migration.md](./llms/shared/v29-to-v30-migration.md): project upgrade sequences.
 - [llms/shared/events-and-types.md](./llms/shared/events-and-types.md): event behavior and shared
   TypeScript contracts.
 - [llms/shared/forms-and-accessibility.md](./llms/shared/forms-and-accessibility.md): native forms,

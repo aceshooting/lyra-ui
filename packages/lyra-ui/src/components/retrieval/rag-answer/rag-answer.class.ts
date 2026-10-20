@@ -2,7 +2,6 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import type {
@@ -411,7 +410,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
         ? html`<lr-grounding-summary
             part="grounding"
             .assessment=${assessment}
-            .citations=${guard([citations], () => citations)}
+            .citations=${citations}
             .withoutClaims=${this.withoutClaims}
             .headingLevel=${this.headingLevel}
             @lr-citation-select=${this.onGroundingCitationSelect}

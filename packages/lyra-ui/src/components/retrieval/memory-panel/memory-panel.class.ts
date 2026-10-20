@@ -398,10 +398,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
       'lr-add': Object.freeze(['memory']),
     });
 
-  /** Ephemeral, working-context items. Controlled and never mutated by this component. */
+  /** Ephemeral, working-context items. Controlled and never mutated by this component. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) shortTerm: readonly LyraMemoryItem[] = [];
 
-  /** Persisted memories. Controlled and never mutated by this component. */
+  /** Persisted memories. Controlled and never mutated by this component. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) longTerm: readonly LyraMemoryItem[] = [];
 
   /** `lr-provenance-panel` `types` pass-through, forwarded verbatim to every expanded item's panel. */

@@ -15,6 +15,7 @@ const runtimeModules = Object.freeze([
   'component-inventory.mjs',
   'lyra-rename-ledger.mjs',
   'migration-theme-scopes.mjs',
+  'migration-immutable-collections.mjs',
   'theme-scope-vocabulary.generated.mjs',
   'css-declarations.mjs',
 ]);

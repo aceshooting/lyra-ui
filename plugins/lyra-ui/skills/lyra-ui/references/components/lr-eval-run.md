@@ -43,7 +43,7 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   empty/blank ids and later duplicate example ids are omitted before progress, disclosure state, and correlated child
   events are derived. A valid-id streaming example whose `status`, `input`, or `output` has not
   arrived yet remains visible: status defaults to idle and either missing content payload renders
-  as empty Markdown until the host replaces the collection
+  as empty Markdown until the host replaces the collection. Assign a new array to update; mutating an array and assigning it again does not.
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
   already known. An explicit total below the current observed count is raised to `examples.length`,

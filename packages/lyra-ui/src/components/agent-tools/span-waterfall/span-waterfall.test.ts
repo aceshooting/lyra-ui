@@ -146,12 +146,15 @@ describe('lr-span-waterfall', () => {
     expect(bar.style.getPropertyValue('--_lr-span-waterfall-width')).to.equal('27.5%');
   });
 
-  it('refreshes a projected bar after mutating and reassigning the same source array', async () => {
+  it('refreshes a projected bar only when a new source array is assigned', async () => {
     const spans: LyraSpan[] = [{ id: 'run', name: 'Before', kind: 'tool', startMs: 0, endMs: 10, status: 'success' }];
     const el = await fixture<LyraSpanWaterfall>(html`<lr-span-waterfall .spans=${spans}></lr-span-waterfall>`);
     expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('Before');
     spans[0]!.name = 'After';
     el.spans = spans;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('Before');
+    el.spans = [...spans];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('After');
   });

@@ -672,10 +672,13 @@ export type {
   LyraScoreThresholds,
 } from './components/retrieval/graph/graph.class.js';
 export type { LyraNodeTypeStyle } from './internal/node-type-style.js';
+export type { LyraMapCameraOptions } from './components/media/map/map-camera.js';
 export type {
   LyraMapBounds,
   LyraMapFitBoundsOptions,
+  LyraMapMoveDetail,
   LyraMapPadding,
+  LyraMapPoint,
   LyraMapViewChangeDetail,
   LyraMapViewChangeSource,
   LyraMapLegendEntry,

@@ -436,7 +436,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
    * then admitted against endpoint and inclusive `minRange`/`maxRange` constraints before
    * `input` followed by `change`), so a consumer's existing change handling needs no special
    * case. The active preset carries `aria-pressed="true"` and `data-active`, mirroring
-   * `<lr-time-range>`'s already-shipped preset row.
+   * `<lr-time-range>`'s already-shipped preset row. Assign a new array to update: mutating an array and assigning it again does not.
    */
   private _presets: readonly LyraDateRangePreset[] = Object.freeze([]);
   @property({ attribute: false })

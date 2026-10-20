@@ -1588,9 +1588,10 @@ selected vote button without changing shared brand tokens.
 ## `lr-span-waterfall`
 
 For `lr-span-waterfall`, `lr-trace-tree`, `lr-agent-trace`, `lr-tool-timeline`, `lr-activity-feed`,
-and `lr-test-results`, assigning a collection refreshes its rendered projection. A host can mutate
-an item and reassign the same source array to publish that change. Unrelated property updates
-reuse the current projection where possible.
+and `lr-test-results` (and likewise `lr-task-list` and `lr-eval-dataset`), assigning a new array
+refreshes the rendered projection. Item objects keep their identity, but assigning the same array
+again, even after mutating an item or the array itself, is ignored: create a new array to publish
+a change. Unrelated property updates reuse the current projection where possible.
 
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
 axis, one row per legacy span in start order, status-toned bars (Langfuse timeline / Temporal
@@ -3096,7 +3097,7 @@ with `treeSource` unset.
 
 - `spans: LyraSpan[] = []` (attribute: false) — the full, unfiltered array; identical contract to
   `lr-trace-tree.spans` (see `lr-span-waterfall` above for the `LyraSpan` shape). Controlled and
-  never mutated
+  never mutated. Assign a new array to update; mutating an array and assigning it again does not.
 - `activeSpanId: string | null = null` (attribute `active-span-id`) — controlled selection forwarded
   into the composed `lr-trace-tree`; tree activation updates it before the original
   `lr-span-select` bubbles, while a legacy handoff quick-jump updates it and emits that event.
@@ -3221,8 +3222,8 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
   controlled: add/remove/import/export are all _requests_; the host mutates and passes the array
   back. The bounded readonly outer snapshot retains at most the first 10,000 examples; records and
-  opaque `metadata` retain identity. Reassign `examples` after editing records, including when
-  reusing the same source array. A keyless `requestUpdate()` also refreshes the normalized rows and
+  opaque `metadata` retain identity. Assign a new `examples` array after editing records;
+  assigning the same array again is ignored. A keyless `requestUpdate()` also refreshes the normalized rows and
   search corpus. Other clone-owned collections retain the 10,000-entry/50,000-node safety budgets.
   Empty/blank ids and later duplicate ids are omitted before selection, filtering, mutation requests, and the
   nested grid are derived. Distinct tag chips are ordered with the component's effective-locale
@@ -3231,7 +3232,7 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   tags. A localized `limit` note reports the omitted count. Search and tag filtering still use all
   admitted examples and tags, including tags
   outside the displayed facet window. Filtering and the tag corpus are reused across unrelated
-  disabled or selection changes
+  disabled or selection changes. Assign a new array to update; mutating an array and assigning it again does not.
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
@@ -3473,7 +3474,7 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   empty/blank ids and later duplicate example ids are omitted before progress, disclosure state, and correlated child
   events are derived. A valid-id streaming example whose `status`, `input`, or `output` has not
   arrived yet remains visible: status defaults to idle and either missing content payload renders
-  as empty Markdown until the host replaces the collection
+  as empty Markdown until the host replaces the collection. Assign a new array to update; mutating an array and assigning it again does not.
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
   already known. An explicit total below the current observed count is raised to `examples.length`,
@@ -3583,7 +3584,7 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   branch); an unmatched path is a no-op, never an error — and redaction is **never** applied to the
   copy of `args` handed to the approval dialog. While `needsApproval` is `true` and `approved` is
   still `undefined`, activating the entry's chip opens the shared approval dialog instead of merely
-  firing the chip's own selection event
+  firing the chip's own selection event. Assign a new array to update; mutating an array and assigning it again does not.
 - `approvalReadonly: boolean = false` (attribute `approval-readonly`, reflected) — forwarded to the
   shared approval dialog's `readonly`: withholds editing an entry's arguments before approving.
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default

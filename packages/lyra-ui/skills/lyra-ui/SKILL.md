@@ -29,6 +29,7 @@ similarly named component in another library.
 | What to install (optional peers) | `node_modules/@aceshooting/lyra-ui/llms/peers.md` |
 | One `wa-*`/`sl-*` tag | That tag's section in `node_modules/@aceshooting/lyra-ui/llms/migration.md` |
 | Lyra v23 to v24 upgrade | `node_modules/@aceshooting/lyra-ui/llms/shared/v23-to-v24-migration.md` |
+| Lyra v29 to v30 upgrade | `node_modules/@aceshooting/lyra-ui/llms/shared/v29-to-v30-migration.md` |
 | Any other version upgrade | `CHANGELOG.md` of the package (current major; it links older history) |
 
 Each component file carries its import path, optional peers, properties with types and defaults,

@@ -359,7 +359,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
   /** Commands to search and activate. The sequence is copied, bounded, and frozen while command
    *  identity is retained. `commandId` must be unique and nonempty; malformed rows and later
-   *  duplicates from untyped boundaries are omitted deterministically. */
+   *  duplicates from untyped boundaries are omitted deterministically. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) commands: readonly LyraCommand[] = [];
   /** Exact global activation chord. `mod` resolves to Command on macOS and Control elsewhere,
    * using Client Hints with legacy platform and reduced user-agent fallbacks. */

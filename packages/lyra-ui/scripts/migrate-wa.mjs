@@ -17,6 +17,7 @@ import {
 import { migrateText } from './migration-transforms.mjs';
 import { buildProjectDomFactoryBindings } from './migration-analysis.mjs';
 import { THEME_SCOPE_RULE, migrateThemeScopes } from './migration-theme-scopes.mjs';
+import { IMMUTABLE_COLLECTION_RULE, migrateImmutableCollections } from './migration-immutable-collections.mjs';
 export {
   MIGRATION_RUNTIME_SCHEMA_VERSION,
   MIGRATION_ORIGINS,
@@ -28,14 +29,21 @@ export {
 } from './migration-contract.mjs';
 export { scanUnrewrittenUpstreamReferences, migrateText } from './migration-transforms.mjs';
 export { migrateThemeScopes } from './migration-theme-scopes.mjs';
+export { migrateImmutableCollections } from './migration-immutable-collections.mjs';
 
 /** Structural rules that run on their own, independent of an origin profile. */
-export const MIGRATION_RULES = Object.freeze([THEME_SCOPE_RULE]);
+export const MIGRATION_RULES = Object.freeze([THEME_SCOPE_RULE, IMMUTABLE_COLLECTION_RULE]);
+const RULE_MIGRATORS = Object.freeze({
+  [THEME_SCOPE_RULE]: migrateThemeScopes,
+  [IMMUTABLE_COLLECTION_RULE]: migrateImmutableCollections,
+});
 
 /**
  * Runs one structural rule over `files`. `theme-scopes` (Lyra 27, RFC 0002) marks elements whose
  * inline style sets a token-layer input as theme scopes, and reports dynamic inputs, repeated
  * markers, and stylesheet rules that set inputs or shared outputs outside a scope.
+ * `immutable-collections` (Lyra 30) only reports in-place changes to item-identity collections that
+ * are assigned back, which no longer update the component.
  */
 export function migrateRuleFiles({ files, rule, dryRun = false, reportPath = null, cwd = process.cwd(), collectDiff = false }) {
   invariant(MIGRATION_RULES.includes(rule), `unknown migration rule ${String(rule)}`);
@@ -45,7 +53,7 @@ export function migrateRuleFiles({ files, rule, dryRun = false, reportPath = nul
   let filesChanged = 0;
   for (const file of files) {
     const original = fs.readFileSync(file, 'utf8');
-    const result = migrateThemeScopes(original, { file: reportPathName(file, cwd) });
+    const result = RULE_MIGRATORS[rule](original, { file: reportPathName(file, cwd) });
     changes.push(...result.changes);
     warnings.push(...result.warnings);
     if (result.content !== original) {
@@ -491,7 +499,7 @@ export function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.log(`Usage: lyra-ui-migrate [--check] [--dry-run] [--diff] [--origin=${MIGRATION_ORIGINS.join('|')}] [--rule=theme-scopes] [--lyra-version=x.y.z] [--report=path] [--ext=html,ts,...] targets...
+  console.log(`Usage: lyra-ui-migrate [--check] [--dry-run] [--diff] [--origin=${MIGRATION_ORIGINS.join('|')}] [--rule=${MIGRATION_RULES.join('|')}] [--lyra-version=x.y.z] [--report=path] [--ext=html,ts,...] targets...
 
 Only exact and fully rewritten inventory mappings change automatically. Conceptual, unsafe,
 unsupported, unknown, and unresolved deep-import uses remain unchanged with source-located
@@ -519,6 +527,10 @@ tags. Run a Lyra profile with the CLI of the installed release, after upgrading.
   --rule=theme-scopes  Lyra 27: mark elements whose inline style sets a token-layer input with
                        data-lr-theme-scope; report dynamic inputs, markers in loops, and CSS that
                        sets inputs or shared outputs outside a theme scope (runs without --origin)
+  --rule=immutable-collections
+                       Lyra 30: report in-place array changes (push, splice, sort, ...) and same-array
+                       reassignments on item-identity collection properties, which are now ignored;
+                       assign a new array instead (reports only, runs without --origin)
   --lyra-version=x.y.z apply only rename entries available in this release (default: the
                        @aceshooting/lyra-ui installed under the working directory, when found)
   --report=path        write the stable JSON migration report

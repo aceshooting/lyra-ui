@@ -541,7 +541,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
 
   /** The plan. Controlled and never mutated by this component -- pass a new array to update it.
    *  Runtime non-record rows and rows without a nonempty string id are omitted before rendering,
-   *  summaries, announcements, and reorder validation. */
+   *  summaries, announcements, and reorder validation. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) items: readonly TaskItem[] = [];
 
   /** Maximum rendered tasks including direct children; bounded to 1–5,000, default 500. */

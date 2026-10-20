@@ -87,10 +87,23 @@ export interface MapLibreMapCapability {
   ): unknown;
   /** Optional and feature-detected: whether an animation or a gesture is moving the camera now. */
   isMoving?(): boolean;
+  /** Optional and feature-detected camera commands. The peer merges `eventData` into every
+   *  movement event the command fires, which is how its `moveend` is attributed. */
+  flyTo?(options: Record<string, unknown>, eventData?: Record<string, unknown>): unknown;
+  easeTo?(options: Record<string, unknown>, eventData?: Record<string, unknown>): unknown;
+  jumpTo?(options: Record<string, unknown>, eventData?: Record<string, unknown>): unknown;
+  /** Optional: persistent screen padding the camera centre is measured inside. */
+  setPadding?(padding: { top: number; right: number; bottom: number; left: number }): unknown;
+  /** Optional: container-relative pixel position of a geographic point, and its inverse. */
+  project?(lngLat: [number, number]): { x: number; y: number };
+  unproject?(point: [number, number]): { lng: number; lat: number };
+  /** Optional: the geographic box of the whole canvas. */
+  getBounds?(): { getWest(): number; getSouth(): number; getEast(): number; getNorth(): number };
   remove(): void;
   on(type: 'error', listener: (event: { error?: unknown }) => void): this;
   on(type: 'load', listener: () => void): this;
   on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
+  on(type: 'move', listener: () => void): this;
   on(type: 'boxzoomend', listener: () => void): this;
   on(type: 'click', listener: (event: {
     point: unknown;

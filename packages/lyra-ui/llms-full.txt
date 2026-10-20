@@ -20,6 +20,7 @@ Read it end to end only if you genuinely need everything. Otherwise:
 | know what to `npm install` | `llms/peers.md` |
 | port `wa-*`/`sl-*` markup | `llms/migration.md` (per-tag classification, safe rewrites, and warnings) |
 | upgrade Lyra v23 to v24 | `llms/shared/v23-to-v24-migration.md` (routes, styling, SSR and event details) |
+| upgrade Lyra v29 to v30 | `llms/shared/v29-to-v30-migration.md` (identity collections: assign a new array to update) |
 
 Prefer stable tag-shaped registration imports such as
 `@aceshooting/lyra-ui/components/lr-input.js`; each registers its tag as a side effect without
@@ -8302,7 +8303,7 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   The active button carries `aria-pressed="true"` and `data-active`. The same
   `label`/`start`/`end`/`id` shape as `<lr-time-range>`'s `TimeRangePreset`, with ISO dates instead
   of numbers; unlike the time range, a bound may be left open. `appliedPreset` is the caller's own
-  entry object on both
+  entry object on both. Assign a new array to update; mutating an array and assigning it again does not.
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
   button produced the current `value`, or `undefined` when the range was picked by hand, cleared, or changed externally.
   `clear()` removes identity before synchronous `input`/`change` listeners run; an external value
@@ -19452,7 +19453,7 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
   part of the contract; use one event per displayed date. Input retains the first 10,000 events
   while preserving event identity. A localized `limit` part discloses omitted input in month and
   agenda views; provide a smaller date range to include other events. Changed loss notices are
-  announced politely after mount
+  announced politely after mount. Assign a new array to update; mutating an array and assigning it again does not.
 - `value: string = ''` — the selected ISO date
 - `viewDate: string` (attribute `view-date`, defaults to the 1st of the current month) — the visible
   month; an unparseable value falls back to the current month
@@ -22703,8 +22704,9 @@ contract.
   a property/lit-html binding (`.items=`), not an HTML attribute. This remains the compatibility
   source whenever `source` is unset. Its sequence is copied, bounded (the first 10,000 rows; a
   development warning names the property), and frozen while generic row identities are retained;
-  reassign a new array after sequence changes. Re-committing the same rows re-renders them without
-  moving any row or cancelling a pending `scrollToIndex()` correction.
+  assign a new array after sequence changes. Assigning the same array again, even after mutating it,
+  is ignored, so re-committing the same rows never moves any row or cancels a pending
+  `scrollToIndex()` correction.
 - `source?: LyraVirtualListSource` (attribute: false) — a readonly array or a count/index-backed
   `{ readonly count: number; itemAt(index): unknown; keyAt?(index): string | number;
 indexOfKey?(key): number }`. When set it takes precedence over `items`. The indexed form performs
@@ -24927,9 +24929,9 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   not an array is ignored, as are non-string members, without dropping otherwise-valid commands.
   Filtering is case-insensitive
   substring matching over `label` + `description` + `group` + `keywords` joined together (not
-  fuzzy/subsequence), memoized per `commands` array identity — reassign the array, never mutate it
-  in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
-  by group yourself.
+  fuzzy/subsequence), memoized per `commands` array identity — assign a new array, never mutate it
+  in place (assigning the same mutated array is ignored). Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
+  by group yourself. Assign a new array to update; mutating an array and assigning it again does not.
 - `hotkey: string = 'mod+k'` — exact global activation chord parsed as `+`-separated parts; `mod`
   resolves to Cmd on Mac and Ctrl elsewhere. Detection prefers Client Hints, then falls back to
   the legacy platform string and reduced user-agent string rather than trusting
@@ -33236,7 +33238,8 @@ modes use the same expression semantics at initial render and after a theme chan
   engine payload and is a separate opt-in from the modular default.
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2` — `center` and `zoom` are the declarative camera. Assigning either moves the
-  map without emitting anything. When the camera settles after a user gesture or `fitBounds()`, the
+  map without emitting anything. When the camera settles after a user gesture, `fitBounds()` or a
+  camera command (`flyTo()`/`easeTo()`/`jumpTo()`), the
   element writes that camera into both and reports it through `lr-map-view-change`, so its next
   update never resets it, and a later, different assignment still moves the map. Assigning a value
   the map already shows moves nothing, so echoing a reported camera back, however late, never stops
@@ -33245,8 +33248,18 @@ modes use the same expression semantics at initial render and after a theme chan
   did not assign is not left wherever the interrupted movement stopped; with nothing in flight,
   only the assigned axis moves. Because both track the settled camera, a map rebuilt after a
   disconnect/reconnect opens at the last settled camera rather than the originally declared one.
-  Re-assigning the identical `center` array (a parent re-render) is not a new request, even after
-  a gesture or fit; assign a new array to re-centre.
+  `center` is compared by value against the last value assigned: a new array holding the same two
+  numbers (a parent re-render rebuilding its arrays) is not a new request, even after a gesture,
+  fit or camera command, so it never pulls the map back over the user's pan. Assign a different
+  value to move the map, or call `jumpTo({ center })` to re-centre on the value already assigned.
+  **Behavior change:** an equal re-assignment used to re-centre the map after a pan.
+- `cameraPadding?: LyraMapPadding` (attribute: false) — screen pixels (`top`, `right`, `bottom`,
+  `left`; an omitted, negative or non-finite side is `0`) the camera is measured inside, applied to
+  the engine persistently. Every fit (`fitBounds()`, `fitToData()`) frames inside it, and the
+  `bounds` that `lr-map-view-change` and `lr-map-move` report is the visible box inside it, so a
+  panel or toolbar covering part of the map does not hide what the map frames. Changing it keeps
+  the geographic centre fixed, shifts the picture and is not reported as a camera change. Sides are
+  physical, not logical.
 - `renderWorldCopies?: boolean` (attribute: false) — forwarded to MapLibre when its map is
   constructed. Leave it unset to preserve MapLibre's own current default; set `false` before
   construction to stop repeating the world horizontally. This is a construction-time option, so a
@@ -33764,6 +33777,48 @@ settles, the element writes it into `center`/`zoom` and emits `lr-map-view-chang
   map), MapLibre leaves the camera where it is and logs its own warning: the call still returns
   `true`, and no `lr-map-view-change` fires.
 
+`fitToData(options?: LyraMapFitBoundsOptions): boolean` frames everything the map draws: `markers`,
+every `dataLayers` source and the `choropleth`, measured from the geometry the element has already
+admitted (not from your raw values), so you no longer compute a box yourself. It is `fitBounds()` of
+the union of their extents, with the same options, queueing, `cameraPadding`, write-back and
+`source: 'fit'`. `maxZoom` defaults to `16`, so one marker does not zoom to the street; pass it
+(a non-finite value for no ceiling) to change that. The extent is a plain west-to-east span, so data
+on both sides of the antimeridian frames the long way round. Returns `false`, doing nothing, when
+nothing with geometry is drawn. Assignments to `markers`/`dataLayers`/`choropleth` made in the same
+tick are already counted.
+
+`fitBounds()`, `fitToData()` and the camera commands below are not interrupted by a `center` or
+`zoom` assignment made in the same tick: they run after the update that pushes that assignment, so
+the order you wrote them in is the order they take effect (`el.center = x; el.fitBounds(box)` no
+longer needs an `await el.updateComplete` in between). Their return value is `true` once accepted
+or deferred.
+
+`flyTo(options)`, `easeTo(options)` and `jumpTo(options)` (`LyraMapCameraOptions { center?, zoom?,
+bearing?, pitch?, duration? }`; each returns `boolean`) move the camera with the engine's own
+commands, a curved flight, an eased animation and an immediate jump respectively. Use them instead of
+calling the same methods through `map`, which the element neither knows about nor reports.
+
+- Reduced motion: under `prefers-reduced-motion: reduce` (or a `data-lr-motion="reduce"` scope)
+  `flyTo()` and `easeTo()` jump.
+- Write-back: once the camera settles, the element writes it into `center`/`zoom` and emits
+  `lr-map-view-change` with `source: 'command'`; it never moves the camera a second time to apply
+  what it just wrote. `jumpTo()` is the explicit re-centre (an equal `center` re-assignment is a
+  no-op).
+- Every option is optional and an unusable one is ignored: `center` must be a finite
+  `[longitude, latitude]` (clamped into range), `zoom` is clamped into `[0, 22]`, `pitch` into
+  `[0, 85]`, and a negative or non-finite `duration` means the engine's default. With nothing
+  usable the call returns `false` (and warns in development) without moving anything.
+- Callable before the map exists: the most recent request (or `fitBounds()` call) is queued and
+  applied without animation right after construction, unless `center` or `zoom` has been given a
+  different value since. Returns `true` once the move is running or queued, `false` when the loaded
+  engine has no such command.
+
+`project(lngLat)` returns the `[x, y]` CSS pixel position of a `[longitude, latitude]` in the map's
+container, and `unproject([x, y])` the inverse, so an overlay can sit on a coordinate; both read the
+camera as it is now and return `undefined` before the map exists, for a non-finite input, or when
+the engine cannot project. Pair `project()` with `lr-map-move` to keep an overlay glued to a moving
+map.
+
 There is deliberately no declarative `bounds` property. `center` and `zoom` already describe the
 camera; a third camera input would need a precedence rule against them, and a framework that
 rebuilds its arrays on every render would refit on every render, pulling the camera away from a user
@@ -33780,7 +33835,7 @@ import type {
 let camera: LyraMapViewChangeDetail | undefined;
 const mapEl = document.querySelector('lr-map') as LyraMap;
 mapEl.addEventListener('lr-map-view-change', (event) => {
-  // Keep the host's own camera state in step: { center, zoom, source }.
+  // Keep the host's own camera state in step: { center, zoom, source, bounds }.
   camera = event.detail;
 });
 
@@ -33795,6 +33850,19 @@ function showMarkers(markers: LyraMapMarker[]): void {
   ];
   mapEl.fitBounds(box, { padding: 48, maxZoom: 14 });
 }
+
+// The same, without computing the box, inside a toolbar that covers the left 320px:
+mapEl.cameraPadding = { left: 320 };
+mapEl.fitToData({ maxZoom: 14 });
+
+// Camera commands report as `source: 'command'` and write back into center/zoom:
+mapEl.flyTo({ center: [2.35, 48.85], zoom: 11 });
+
+// Keep an overlay on a coordinate while the map moves:
+mapEl.addEventListener('lr-map-move', () => {
+  const point = mapEl.project([2.35, 48.85]);
+  if (point) overlay.style.translate = `${point[0]}px ${point[1]}px`;
+});
 ```
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
@@ -33831,15 +33899,25 @@ is MapLibre's `point_count`/`point_count_abbreviated`/`cluster_id` properties, w
 zoom-to-cluster handler reads. The count label is deliberately not hit-tested (it sits exactly on
 the circle already queried and would only make the label the topmost hit), and a `kind: 'heatmap'`
 layer is never queried at all — MapLibre returns no features for a rendered density surface.
-Also `lr-map-view-change` (non-cancelable; frozen `LyraMapViewChangeDetail { center, zoom, source }`,
-`source` being `LyraMapViewChangeSource = 'user' | 'fit'`), fired once each time the camera settles
-after a user gesture (drag, wheel, touch, keyboard, Shift+drag box zoom, or a standard peer
-navigation button) or a `fitBounds()` call. `center` is `[longitude, latitude]` with the longitude
-wrapped into `[-180, 180]`. The element has already written the camera into `center` and `zoom`
+Also `lr-map-view-change` (non-cancelable; frozen `LyraMapViewChangeDetail { center, zoom, source,
+bounds? }`, `source` being `LyraMapViewChangeSource = 'user' | 'fit' | 'command'`), fired once each
+time the camera settles after a user gesture (drag, wheel, touch, keyboard, Shift+drag box zoom, or
+a standard peer navigation button), a `fitBounds()`/`fitToData()` call (`'fit'`), or a
+`flyTo()`/`easeTo()`/`jumpTo()` call (`'command'`). `center` is `[longitude, latitude]` with the
+longitude wrapped into `[-180, 180]`. `bounds` is the visible `[[west, south], [east, north]]` box
+inside `cameraPadding` (`west` within `[-180, 180]`, `east` possibly past 180 across the antimeridian,
+so `fitBounds()` accepts it back); it is absent when the engine cannot report bounds. The element has already written the camera into `center` and `zoom`
 when it fires, so a host that mirrors camera state assigns the detail back, at any later time,
 without moving the map. Assigning `center`/`zoom` reconciles without emitting it, so a controlled
 host cannot loop, and camera moves made directly through `map` are not reported — which is why
-`'user'` and `'fit'` are the only sources.
+`'user'`, `'fit'` and `'command'` are the only sources.
+Also `lr-map-move` (non-cancelable; frozen `LyraMapMoveDetail { center, zoom, bounds? }`), fired at
+most once per animation frame while the camera moves, whatever moves it (a gesture, an animation,
+a camera command, a fit, a `center`/`zoom` assignment or a move made directly through `map`), and
+once more when the move ends so the last position is never missed. It reports the camera as it is,
+not a settled intent: use `lr-map-view-change` for where the camera came to rest, and this event to
+keep an overlay in step with the map while it travels (pair it with `project()`). It stops when the
+element disconnects.
 
 The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
@@ -36852,12 +36930,36 @@ These named interfaces and helper signatures are available to typed integrations
     setMaxBounds?(bounds: readonly [readonly [number, number], readonly [number, number]] | null): unknown;
     fitBounds?(bounds: [[number, number], [number, number]], options: Record<string, unknown>, eventData: Record<string, unknown>): unknown;
     isMoving?(): boolean;
+    flyTo?(options: Record<string, unknown>, eventData?: Record<string, unknown>): unknown;
+    easeTo?(options: Record<string, unknown>, eventData?: Record<string, unknown>): unknown;
+    jumpTo?(options: Record<string, unknown>, eventData?: Record<string, unknown>): unknown;
+    setPadding?(padding: {
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    }): unknown;
+    project?(lngLat: [number, number]): {
+      x: number;
+      y: number;
+    };
+    unproject?(point: [number, number]): {
+      lng: number;
+      lat: number;
+    };
+    getBounds?(): {
+      getWest(): number;
+      getSouth(): number;
+      getEast(): number;
+      getNorth(): number;
+    };
     remove(): void;
     on(type: 'error', listener: (event: {
       error?: unknown;
     }) => void): this;
     on(type: 'load', listener: () => void): this;
     on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
+    on(type: 'move', listener: () => void): this;
     on(type: 'boxzoomend', listener: () => void): this;
     on(type: 'click', listener: (event: {
       point: unknown;
@@ -37075,8 +37177,24 @@ These named interfaces and helper signatures are available to typed integrations
     readonly center: readonly [number, number];
     readonly zoom: number;
     readonly source: LyraMapViewChangeSource;
+    readonly bounds?: LyraMapBounds;
   }`
-  `LyraMapViewChangeSource = 'user' | 'fit'`.
+  `LyraMapViewChangeSource = 'user' | 'fit' | 'command'`.
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapMoveDetail {
+    readonly center: readonly [number, number];
+    readonly zoom: number;
+    readonly bounds?: LyraMapBounds;
+  }`
+  `LyraMapPoint = readonly [number, number]`.
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapCameraOptions {
+    readonly center?: readonly [number, number];
+    readonly zoom?: number;
+    readonly bearing?: number;
+    readonly pitch?: number;
+    readonly duration?: number;
+  }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapStyleSpecification {
     readonly version: 8;
@@ -49453,9 +49571,10 @@ selected vote button without changing shared brand tokens.
 ## `lr-span-waterfall`
 
 For `lr-span-waterfall`, `lr-trace-tree`, `lr-agent-trace`, `lr-tool-timeline`, `lr-activity-feed`,
-and `lr-test-results`, assigning a collection refreshes its rendered projection. A host can mutate
-an item and reassign the same source array to publish that change. Unrelated property updates
-reuse the current projection where possible.
+and `lr-test-results` (and likewise `lr-task-list` and `lr-eval-dataset`), assigning a new array
+refreshes the rendered projection. Item objects keep their identity, but assigning the same array
+again, even after mutating an item or the array itself, is ignored: create a new array to publish
+a change. Unrelated property updates reuse the current projection where possible.
 
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
 axis, one row per legacy span in start order, status-toned bars (Langfuse timeline / Temporal
@@ -50959,7 +51078,7 @@ with `treeSource` unset.
 
 - `spans: LyraSpan[] = []` (attribute: false) — the full, unfiltered array; identical contract to
   `lr-trace-tree.spans` (see `lr-span-waterfall` above for the `LyraSpan` shape). Controlled and
-  never mutated
+  never mutated. Assign a new array to update; mutating an array and assigning it again does not.
 - `activeSpanId: string | null = null` (attribute `active-span-id`) — controlled selection forwarded
   into the composed `lr-trace-tree`; tree activation updates it before the original
   `lr-span-select` bubbles, while a legacy handoff quick-jump updates it and emits that event.
@@ -51084,8 +51203,8 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   strings (not structured payloads), rendered as plain text by every column's `cell()`. Fully
   controlled: add/remove/import/export are all _requests_; the host mutates and passes the array
   back. The bounded readonly outer snapshot retains at most the first 10,000 examples; records and
-  opaque `metadata` retain identity. Reassign `examples` after editing records, including when
-  reusing the same source array. A keyless `requestUpdate()` also refreshes the normalized rows and
+  opaque `metadata` retain identity. Assign a new `examples` array after editing records;
+  assigning the same array again is ignored. A keyless `requestUpdate()` also refreshes the normalized rows and
   search corpus. Other clone-owned collections retain the 10,000-entry/50,000-node safety budgets.
   Empty/blank ids and later duplicate ids are omitted before selection, filtering, mutation requests, and the
   nested grid are derived. Distinct tag chips are ordered with the component's effective-locale
@@ -51094,7 +51213,7 @@ expectedOutput?: string; tags?: readonly string[]; metadata?: Record<string, unk
   tags. A localized `limit` note reports the omitted count. Search and tag filtering still use all
   admitted examples and tags, including tags
   outside the displayed facet window. Filtering and the tag corpus are reused across unrelated
-  disabled or selection changes
+  disabled or selection changes. Assign a new array to update; mutating an array and assigning it again does not.
 - `searchable: boolean = false` (reflected) — built-in free-text search over `input`,
   `expectedOutput`, and `tags` (case-insensitive substring)
 - `autocomplete: string = ''`, `spellcheck: boolean = true`, `autocapitalize: string = ''`,
@@ -51336,7 +51455,7 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
   empty/blank ids and later duplicate example ids are omitted before progress, disclosure state, and correlated child
   events are derived. A valid-id streaming example whose `status`, `input`, or `output` has not
   arrived yet remains visible: status defaults to idle and either missing content payload renders
-  as empty Markdown until the host replaces the collection
+  as empty Markdown until the host replaces the collection. Assign a new array to update; mutating an array and assigning it again does not.
 - `total: number | null = null` — the batch's expected total example count. `null` derives it from
   `examples.length`; set it explicitly while a batch is still streaming and the eventual total is
   already known. An explicit total below the current observed count is raised to `examples.length`,
@@ -51445,7 +51564,7 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   branch); an unmatched path is a no-op, never an error — and redaction is **never** applied to the
   copy of `args` handed to the approval dialog. While `needsApproval` is `true` and `approved` is
   still `undefined`, activating the entry's chip opens the shared approval dialog instead of merely
-  firing the chip's own selection event
+  firing the chip's own selection event. Assign a new array to update; mutating an array and assigning it again does not.
 - `approvalReadonly: boolean = false` (attribute `approval-readonly`, reflected) — forwarded to the
   shared approval dialog's `readonly`: withholds editing an entry's arguments before approving.
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default
@@ -53447,7 +53566,7 @@ description?: string; category?: string; keywords?: string[]; icon?: unknown; di
   malformed optional `description`, `category`, `keywords`, or `disabled` values omit only that row,
   preserving later valid entries. At most 10,000 positions are examined through own data
   descriptors; accessor-backed rows are omitted without reserving later valid rows. The frozen
-  projection drives display while `lr-select.detail.item` retains the original admitted identity
+  projection drives display while `lr-select.detail.item` retains the original admitted identity. Assign a new array to update; mutating an array and assigning it again does not.
 - `label?: string` — accessible name for the search field/listbox; omission uses the localized
   palette label. An omitted, empty, or whitespace-only value uses that fallback without changing
   the raw property readback
@@ -54904,7 +55023,7 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
   `span` that is `null` or not a `{ start, end }` pair of numbers is treated as absent — the
   citation stays in the list
   Evidence badges share one Tab stop; ArrowUp/ArrowDown/Home/End move among them. A focused badge
-  still activates and opens its preview with its existing keys.
+  still activates and opens its preview with its existing keys. Assign a new array to update; mutating an array and assigning it again does not.
 - `thresholds: LyraScoreThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
   readonly `LyraScoreThresholds { high: number; medium: number }`, with both
   0–1 fractions,
@@ -54994,7 +55113,7 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   `error` renders only while `stage === 'failed'`. A missing or unrecognized runtime stage renders
   as a localized neutral `unknown` state with no progress, retry, or cancel affordance, allowing a
   newer backend stage to fail safely. A blank `document.name` shows the localized "untitled source"
-  in the row and its retry/cancel names. Controlled — pass a new array to update
+  in the row and its retry/cancel names. Controlled — pass a new array to update; mutating an array and assigning it again does not.
 - `label?: string` — fallback name for the stable region; omission uses localized
   `ingestionQueueLabel`. A non-empty host `aria-label` makes the host the sole overall owner (the
   region omits its duplicate role/name); an explicitly empty host label stays empty
@@ -55615,7 +55734,7 @@ Composes `lr-provenance-panel` (per-item provenance, behind a disclosure toggle)
   indicator is omitted entirely rather than showing 0%/unknown. `provenance` reuses
   `lr-provenance-panel`'s own `LyraProvenance` shape verbatim (`{ entities?; relationships?;
 communities?; chunks? }`); omit it and the disclosure toggle is omitted entirely. Both arrays are
-  controlled and never mutated here — approving an action only fires the matching event
+  controlled and never mutated here — approving an action only fires the matching event. Assign a new array to update; mutating an array and assigning it again does not.
 - `types: LyraNodeTypeStyle[] = []` (attribute: false) — readonly `{ id: string; label: string; color?: string;
 shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded item's
   `lr-provenance-panel`
@@ -55810,7 +55929,7 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   `lr-chunk-inspector`'s flatter `LyraChunk` via `source.id → sourceId`, `source.name → title`, and
   `locator → anchor`; a `page`-kind `locator` additionally supplies the inspector's visible `page`.
   Nothing is ever guessed from `metadata` — a chunk with no `locator` simply leaves `anchor`/`page`
-  unset
+  unset. Assign a new array to update; mutating an array and assigning it again does not.
 - `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
   ids, duplicates, and ids absent from the canonical chunk model are pruned in the legacy route;
   source mode resolves presence globally as described above. The component updates

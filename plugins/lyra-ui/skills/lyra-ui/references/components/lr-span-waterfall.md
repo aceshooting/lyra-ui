@@ -17,9 +17,10 @@
 ## `lr-span-waterfall`
 
 For `lr-span-waterfall`, `lr-trace-tree`, `lr-agent-trace`, `lr-tool-timeline`, `lr-activity-feed`,
-and `lr-test-results`, assigning a collection refreshes its rendered projection. A host can mutate
-an item and reassign the same source array to publish that change. Unrelated property updates
-reuse the current projection where possible.
+and `lr-test-results` (and likewise `lr-task-list` and `lr-eval-dataset`), assigning a new array
+refreshes the rendered projection. Item objects keep their identity, but assigning the same array
+again, even after mutating an item or the array itself, is ignored: create a new array to publish
+a change. Unrelated property updates reuse the current projection where possible.
 
 The horizontal-timeline projection of the same `LyraSpan[]` `<lr-trace-tree>` consumes: a time
 axis, one row per legacy span in start order, status-toned bars (Langfuse timeline / Temporal

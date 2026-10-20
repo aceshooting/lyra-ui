@@ -432,7 +432,7 @@ it('renders one [part="entry"] per input entry, sorted chronologically by starte
   expect(rows.map((r) => chipIn(r).name)).to.deep.equal(['first', 'second', 'third']);
 });
 
-it('refreshes canonical fields and chronological order after same-array reassignment', async () => {
+it('refreshes canonical fields and chronological order after a new array is assigned', async () => {
   const entries: ToolTimelineEntry[] = [
     makeEntry({ id: 'first', name: 'Before', startedAt: 1000 }),
     makeEntry({ id: 'second', name: 'Second', startedAt: 2000 }),
@@ -443,6 +443,9 @@ it('refreshes canonical fields and chronological order after same-array reassign
   entries[0]!.name = 'After';
   entries[0]!.startedAt = 3000;
   el.entries = entries;
+  await el.updateComplete;
+  expect(entriesEl(el).map((row) => chipIn(row).name)).to.deep.equal(['Before', 'Second']);
+  el.entries = [...entries];
   await el.updateComplete;
   expect(entriesEl(el).map((row) => chipIn(row).name)).to.deep.equal(['Second', 'After']);
 });

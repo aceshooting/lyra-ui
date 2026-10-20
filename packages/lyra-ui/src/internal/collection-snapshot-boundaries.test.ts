@@ -611,13 +611,17 @@ describe('structured collection policies', () => {
 });
 
 
-it('keeps same-source identity collection assignments as explicit refreshes unless opted out', () => {
+it('treats a same-source identity collection assignment as a no-op and a new array as the update', () => {
   const el = document.createElement(tag('truncation-log-test')) as TruncationLog;
   const source = [{ label: 'Before' }];
   el.items = source;
   const first = el.items;
   source[0]!.label = 'After';
   el.items = source;
+  expect(el.items === first).to.equal(true);
+  el.items = first;
+  expect(el.items === first).to.equal(true);
+  el.items = [...source];
   expect(el.items === first).to.equal(false);
   expect(el.items[0] === source[0]).to.equal(true);
   expect((el.items[0] as { label: string }).label).to.equal('After');

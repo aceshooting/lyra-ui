@@ -7,19 +7,20 @@ component and applications delete their workarounds.
 
 ## Breaking change
 
-- [ ] **`center` compares by value.** Assigning a new but equal `[lng, lat]` array is a no-op instead
-  of re-centring the map over the user's pan; `jumpTo()` is the explicit way to re-centre. Migration
-  note and a `lyra-ui-migrate` review entry.
+- [x] **`center` compares by value.** Assigning a new but equal `[lng, lat]` array is a no-op instead
+  of re-centring the map over the user's pan; `jumpTo()` is the explicit way to re-centre.
+- [ ] Migration note for the value-compared `center` in the v29 → v30 guide and a
+  `lyra-ui-migrate` review entry.
 
 ## Camera
 
-- [ ] `flyTo(options)`, `easeTo(options)`, `jumpTo(options)` methods that honor reduced motion, queue
+- [x] `flyTo(options)`, `easeTo(options)`, `jumpTo(options)` methods that honor reduced motion, queue
   before the engine exists and write the result back to `center` and `zoom`.
-- [ ] `lr-map-view-change` reports programmatic moves (`source: 'command'`) and the visible `bounds`.
-- [ ] `cameraPadding` property applied persistently and used by fitting and view-change reports.
-- [ ] `fitToData(options?)` frames markers, data layers and the choropleth from already-projected
+- [x] `lr-map-view-change` reports programmatic moves (`source: 'command'`) and the visible `bounds`.
+- [x] `cameraPadding` property applied persistently and used by fitting and view-change reports.
+- [x] `fitToData(options?)` frames markers, data layers and the choropleth from already-projected
   geometry; `fitBounds()` waits for a pending property update instead of being interrupted by it.
-- [ ] `project(lngLat)` / `unproject(point)` and a frame-throttled `lr-map-move` event.
+- [x] `project(lngLat)` / `unproject(point)` and a frame-throttled `lr-map-move` event.
 
 ## Overlays and data
 

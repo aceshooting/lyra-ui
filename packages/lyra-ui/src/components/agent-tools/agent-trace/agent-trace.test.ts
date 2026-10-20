@@ -89,7 +89,7 @@ describe('lr-agent-trace', () => {
     expect(tree.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(SPANS.length);
   });
 
-  it('refreshes the projected tree after mutating a span and reassigning the same source array', async () => {
+  it('refreshes the projected tree only when a new source array is assigned after mutating a span', async () => {
     const spans: LyraSpan[] = [{ id: 'agent', name: 'Before', kind: 'agent', startMs: 0, status: 'running' }];
     const el = await fixture<LyraAgentTrace>(html`<lr-agent-trace .spans=${spans}></lr-agent-trace>`);
     const tree = el.shadowRoot!.querySelector<LyraTraceTree>('lr-trace-tree')!;
@@ -97,6 +97,10 @@ describe('lr-agent-trace', () => {
 
     spans[0]!.name = 'After';
     el.spans = spans;
+    await el.updateComplete;
+    await tree.updateComplete;
+    expect(tree.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('Before');
+    el.spans = [...spans];
     await el.updateComplete;
     await tree.updateComplete;
     expect(tree.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('After');
@@ -116,7 +120,7 @@ describe('lr-agent-trace', () => {
       el.label = 'Updated label';
       await el.updateComplete;
       expect(descriptorReads).to.equal(0);
-      el.spans = spans;
+      el.spans = [...spans];
       await el.updateComplete;
       expect(descriptorReads).to.be.greaterThan(0);
     } finally {
@@ -139,7 +143,7 @@ describe('lr-agent-trace', () => {
     expect(legend.types[0]!.label).to.equal('Delegate');
 
     spans[0]!.kind = 'tool';
-    el.spans = spans;
+    el.spans = [...spans];
     await el.updateComplete;
     expect(legend.types.map((type) => type.id)).to.deep.equal(['tool']);
   });

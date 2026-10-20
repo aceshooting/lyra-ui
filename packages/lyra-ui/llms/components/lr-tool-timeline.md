@@ -48,7 +48,7 @@ approved?: boolean; sourceKey?: string; icon?: string }`. `sourceKey` identifies
   branch); an unmatched path is a no-op, never an error — and redaction is **never** applied to the
   copy of `args` handed to the approval dialog. While `needsApproval` is `true` and `approved` is
   still `undefined`, activating the entry's chip opens the shared approval dialog instead of merely
-  firing the chip's own selection event
+  firing the chip's own selection event. Assign a new array to update; mutating an array and assigning it again does not.
 - `approvalReadonly: boolean = false` (attribute `approval-readonly`, reflected) — forwarded to the
   shared approval dialog's `readonly`: withholds editing an entry's arguments before approving.
 - `formatTimestamp?: (date: Date) => string` (attribute: false) — overrides the default

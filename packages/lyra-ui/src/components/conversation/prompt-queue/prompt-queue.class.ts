@@ -333,7 +333,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   });
 
   /** Controlled queued prompts. Accessor-backed or malformed rows and attachments are omitted;
-   * duplicate nonblank item ids normalize first-wins after full row validation. */
+   * duplicate nonblank item ids normalize first-wins after full row validation. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) items: readonly PromptQueueItem[] = [];
   /** Renders each queued prompt as read-only text instead of an editor. */
   @property({ type: Boolean, reflect: true }) readonly = false;

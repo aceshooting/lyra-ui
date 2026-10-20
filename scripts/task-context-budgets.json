@@ -39,6 +39,12 @@
       "reviewedCheckpointUtf8Bytes": 24379,
       "reviewedCheckpointProxyTokens": 6103,
       "ceilingUtf8Bytes": 26000
+    },
+    "v29-v30-upgrade": {
+      "published23Utf8Bytes": null,
+      "reviewedCheckpointUtf8Bytes": 19080,
+      "reviewedCheckpointProxyTokens": 4770,
+      "ceilingUtf8Bytes": 22000
     }
   }
 }

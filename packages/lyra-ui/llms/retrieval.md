@@ -481,7 +481,7 @@ description?: string; category?: string; keywords?: string[]; icon?: unknown; di
   malformed optional `description`, `category`, `keywords`, or `disabled` values omit only that row,
   preserving later valid entries. At most 10,000 positions are examined through own data
   descriptors; accessor-backed rows are omitted without reserving later valid rows. The frozen
-  projection drives display while `lr-select.detail.item` retains the original admitted identity
+  projection drives display while `lr-select.detail.item` retains the original admitted identity. Assign a new array to update; mutating an array and assigning it again does not.
 - `label?: string` — accessible name for the search field/listbox; omission uses the localized
   palette label. An omitted, empty, or whitespace-only value uses that fallback without changing
   the raw property readback
@@ -1938,7 +1938,7 @@ label?: string }`. Independent of `assessment`; empty omits the whole evidence s
   `span` that is `null` or not a `{ start, end }` pair of numbers is treated as absent — the
   citation stays in the list
   Evidence badges share one Tab stop; ArrowUp/ArrowDown/Home/End move among them. A focused badge
-  still activates and opens its preview with its existing keys.
+  still activates and opens its preview with its existing keys. Assign a new array to update; mutating an array and assigning it again does not.
 - `thresholds: LyraScoreThresholds = { high: 0.8, medium: 0.5 }` (attribute: false) —
   readonly `LyraScoreThresholds { high: number; medium: number }`, with both
   0–1 fractions,
@@ -2028,7 +2028,7 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   `error` renders only while `stage === 'failed'`. A missing or unrecognized runtime stage renders
   as a localized neutral `unknown` state with no progress, retry, or cancel affordance, allowing a
   newer backend stage to fail safely. A blank `document.name` shows the localized "untitled source"
-  in the row and its retry/cancel names. Controlled — pass a new array to update
+  in the row and its retry/cancel names. Controlled — pass a new array to update; mutating an array and assigning it again does not.
 - `label?: string` — fallback name for the stable region; omission uses localized
   `ingestionQueueLabel`. A non-empty host `aria-label` makes the host the sole overall owner (the
   region omits its duplicate role/name); an explicitly empty host label stays empty
@@ -2649,7 +2649,7 @@ Composes `lr-provenance-panel` (per-item provenance, behind a disclosure toggle)
   indicator is omitted entirely rather than showing 0%/unknown. `provenance` reuses
   `lr-provenance-panel`'s own `LyraProvenance` shape verbatim (`{ entities?; relationships?;
 communities?; chunks? }`); omit it and the disclosure toggle is omitted entirely. Both arrays are
-  controlled and never mutated here — approving an action only fires the matching event
+  controlled and never mutated here — approving an action only fires the matching event. Assign a new array to update; mutating an array and assigning it again does not.
 - `types: LyraNodeTypeStyle[] = []` (attribute: false) — readonly `{ id: string; label: string; color?: string;
 shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded item's
   `lr-provenance-panel`
@@ -2844,7 +2844,7 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   `lr-chunk-inspector`'s flatter `LyraChunk` via `source.id → sourceId`, `source.name → title`, and
   `locator → anchor`; a `page`-kind `locator` additionally supplies the inspector's visible `page`.
   Nothing is ever guessed from `metadata` — a chunk with no `locator` simply leaves `anchor`/`page`
-  unset
+  unset. Assign a new array to update; mutating an array and assigning it again does not.
 - `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
   ids, duplicates, and ids absent from the canonical chunk model are pruned in the legacy route;
   source mode resolves presence globally as described above. The component updates

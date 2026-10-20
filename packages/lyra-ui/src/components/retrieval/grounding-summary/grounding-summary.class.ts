@@ -402,7 +402,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   /** Evidence citations backing the assessment, each rendered as an `<lr-citation-badge>` linking
    *  back to its exact `span`. Independent of `assessment` -- the evidence section is simply
    *  omitted when this is empty, same as the warnings section is omitted when `assessment.warnings`
-   *  is empty/unset. */
+   *  is empty/unset. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) citations: readonly Citation[] = [];
 
   /** Tone thresholds applied to both `coverage` and `confidence` (both 0-1 fractions): at or above

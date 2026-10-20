@@ -238,6 +238,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   protected static override readonly identityCollectionProperties = Object.freeze(['events']);
 
   static override styles = [LyraElement.styles, styles];
+  /** Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) events: readonly CalendarEvent[] = [];
   @property() value = '';
   @property({ attribute: 'view-date' }) viewDate: string = formatISO(new Date()).slice(0, 7) + '-01';

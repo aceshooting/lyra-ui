@@ -30,7 +30,7 @@ Composes `lr-provenance-panel` (per-item provenance, behind a disclosure toggle)
   indicator is omitted entirely rather than showing 0%/unknown. `provenance` reuses
   `lr-provenance-panel`'s own `LyraProvenance` shape verbatim (`{ entities?; relationships?;
 communities?; chunks? }`); omit it and the disclosure toggle is omitted entirely. Both arrays are
-  controlled and never mutated here — approving an action only fires the matching event
+  controlled and never mutated here — approving an action only fires the matching event. Assign a new array to update; mutating an array and assigning it again does not.
 - `types: LyraNodeTypeStyle[] = []` (attribute: false) — readonly `{ id: string; label: string; color?: string;
 shape?: 'circle' | 'square' | 'diamond' }`, forwarded verbatim to every expanded item's
   `lr-provenance-panel`

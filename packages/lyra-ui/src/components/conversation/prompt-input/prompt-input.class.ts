@@ -33,7 +33,6 @@ import {
   canonicalIdentityList,
   firstByRetrievalIdentity as firstByPromptIdentity,
 } from '../../retrieval/retrieval-identity.js';
-import { guard } from 'lit/directives/guard.js';
 import {
   acquireResolvedAriaRelationship,
   type ResolvedAriaRelationshipLease,
@@ -919,7 +918,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       ${queue.length
         ? html`<lr-prompt-queue
             part="queue"
-            .items=${guard([queue], () => queue)}
+            .items=${queue}
             .disabled=${this.disabled}
             @lr-queue-change=${(event: CustomEvent<PromptQueueChangeDetail>) =>
               this.reemit(event, 'lr-queue-change')}

@@ -264,12 +264,15 @@ describe('lr-trace-tree', () => {
     expect(search.getAttribute('aria-setsize')).to.equal('2');
   });
 
-  it('refreshes the hierarchy after mutating and reassigning the same span array', async () => {
+  it('refreshes the hierarchy only when a new span array is assigned', async () => {
     const spans: LyraSpan[] = [{ id: 'root', name: 'Before', kind: 'agent', startMs: 0, status: 'running' }];
     const el = await fixture<LyraTraceTree>(html`<lr-trace-tree .spans=${spans}></lr-trace-tree>`);
     expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('Before');
     spans[0]!.name = 'After';
     el.spans = spans;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('Before');
+    el.spans = [...spans];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="name"]')?.textContent).to.equal('After');
   });

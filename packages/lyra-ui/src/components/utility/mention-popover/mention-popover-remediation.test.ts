@@ -148,3 +148,17 @@ for (const textarea of [false, true]) {
     }
   });
 }
+
+it('ignores a same-array items assignment and takes a new array', async () => {
+  const viewer = await fixture<LyraMentionPopover>(html`<lr-mention-popover></lr-mention-popover>`);
+  const source = [{ suggestionId: 'ada', label: 'Ada' }];
+  viewer.items = source;
+  const first = viewer.items;
+  source.push({ suggestionId: 'grace', label: 'Grace' });
+  viewer.items = source;
+  viewer.items = first;
+  expect(viewer.items === first).to.equal(true);
+  expect(viewer.items.length).to.equal(1);
+  viewer.items = [...source];
+  expect(viewer.items.length).to.equal(2);
+});

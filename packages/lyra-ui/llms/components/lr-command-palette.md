@@ -58,9 +58,9 @@ shortcut?, keywords?: readonly string[], disabled?, icon?, onSelect? }`. The seq
   not an array is ignored, as are non-string members, without dropping otherwise-valid commands.
   Filtering is case-insensitive
   substring matching over `label` + `description` + `group` + `keywords` joined together (not
-  fuzzy/subsequence), memoized per `commands` array identity — reassign the array, never mutate it
-  in place. Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
-  by group yourself.
+  fuzzy/subsequence), memoized per `commands` array identity — assign a new array, never mutate it
+  in place (assigning the same mutated array is ignored). Consecutive commands sharing a `group` render one `[part='group']` heading, so pre-sort
+  by group yourself. Assign a new array to update; mutating an array and assigning it again does not.
 - `hotkey: string = 'mod+k'` — exact global activation chord parsed as `+`-separated parts; `mod`
   resolves to Cmd on Mac and Ctrl elsewhere. Detection prefers Client Hints, then falls back to
   the legacy platform string and reduced user-agent string rather than trusting

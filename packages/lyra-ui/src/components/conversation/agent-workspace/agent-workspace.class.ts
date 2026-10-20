@@ -6,7 +6,6 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
-import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
@@ -553,14 +552,14 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
         ${tools.length > 0
           ? html`<section part="section">
               <h3 part="section-heading">${this.localize('agentWorkspaceTools')}</h3>
-              <lr-tool-timeline .entries=${guard([tools], () => tools)}></lr-tool-timeline>
+              <lr-tool-timeline .entries=${tools}></lr-tool-timeline>
             </section>`
           : nothing}
         ${retrievalChunks.length > 0 || this.retrievalLoading || this.retrievalErrorText
           ? html`<section part="section">
               <h3 part="section-heading">${this.localize('agentWorkspaceRetrieval')}</h3>
               <lr-retrieval-results
-                .chunks=${guard([retrievalChunks], () => retrievalChunks)}
+                .chunks=${retrievalChunks}
                 .selectedChunkIds=${this.selectedRetrievalChunkIds}
                 .loading=${this.retrievalLoading}
                 .hasMore=${this.retrievalHasMore}
@@ -575,7 +574,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               <h3 part="section-heading">${this.localize('agentWorkspaceGrounding')}</h3>
               <lr-grounding-summary
                 .assessment=${this.groundingAssessment}
-                .citations=${guard([citations], () => citations)}
+                .citations=${citations}
               ></lr-grounding-summary>
             </section>`
           : nothing}

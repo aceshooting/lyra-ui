@@ -2,7 +2,6 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
-import { guard } from 'lit/directives/guard.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { normalizeSize, type LyraSize } from '../../../internal/variants.js';
@@ -467,7 +466,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
         ${sorted.length > this.effectiveVirtualizeAt
           ? html`<lr-virtual-list
               exportparts="chunk:chunk, chunk-current:chunk-current, score:score, score-current:score-current, score-bar:score-bar, score-fill:score-fill, score-fill-success:score-fill-success, score-fill-warning:score-fill-warning, score-fill-danger:score-fill-danger, open-button:open-button, title:title, text:text, text-clamped:text-clamped, toggle:toggle"
-              .items=${guard([sorted], () => sorted)}
+              .items=${sorted}
               .renderItem=${this.virtualRenderItem()}
               .keyFunction=${this.chunkKey}
               .activeItemId=${this.activeChunkId || ''}

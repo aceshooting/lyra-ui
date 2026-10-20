@@ -169,7 +169,7 @@ it('recognizes the final snapshot returned by an accessor-backed collection gett
   expect(el.writes).to.equal(writesAfterAssignment);
 });
 
-it('keeps identity-preserving collections reactive when a retained item mutates', async () => {
+it('requires a new array for identity-preserving collections to publish a retained item mutation', async () => {
   const el = await fixture<IdentityCollectionRebindingDemo>(
     html`<lr-identity-collection-rebinding-demo></lr-identity-collection-rebinding-demo>`,
   );
@@ -182,6 +182,12 @@ it('keeps identity-preserving collections reactive when a retained item mutates'
 
   item.label = 'second';
   el.rows = source;
+  await el.updateComplete;
+
+  expect(el.rows).to.equal(firstSnapshot);
+  expect(el.rowUpdates).to.equal(updatesAfterFirstAssignment);
+
+  el.rows = [item];
   await el.updateComplete;
 
   expect(el.rows).to.not.equal(firstSnapshot);

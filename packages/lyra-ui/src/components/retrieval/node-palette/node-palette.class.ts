@@ -292,7 +292,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   /** Node templates available for filtering, activation, dragging, and optional reordering.
    * Accessor-backed or malformed rows are omitted; accepted fields are read once from own data
-   * descriptors while the original item object stays available for documented identity contracts. */
+   * descriptors while the original item object stays available for documented identity contracts. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) items: readonly LyraPaletteItem[] = [];
   /** Accessible name for the actual listbox; omitted, empty, or whitespace-only values use the
    * localized default while the public property's raw readback remains unchanged. */

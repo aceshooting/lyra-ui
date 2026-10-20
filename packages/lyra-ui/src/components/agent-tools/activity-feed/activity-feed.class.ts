@@ -219,7 +219,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   /** Append-only: stable ids, new entries at the end. The newest 10,000 caller-owned entry
    *  identities are retained; a localized limit notice discloses omitted history. Entries never change state once added.
    *  Empty/blank ids are omitted and duplicates normalize first-wins before summary,
-   *  virtualization, and rendering. */
+   *  virtualization, and rendering. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) entries: readonly ActivityEntry[] = [];
 
   /** `'live'` follows the tail (per `follow`) and pulses; `'post-hoc'` shows the completed-count

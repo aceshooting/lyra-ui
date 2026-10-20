@@ -20,6 +20,7 @@ Read it end to end only if you genuinely need everything. Otherwise:
 | know what to `npm install` | `llms/peers.md` |
 | port `wa-*`/`sl-*` markup | `llms/migration.md` (per-tag classification, safe rewrites, and warnings) |
 | upgrade Lyra v23 to v24 | `llms/shared/v23-to-v24-migration.md` (routes, styling, SSR and event details) |
+| upgrade Lyra v29 to v30 | `llms/shared/v29-to-v30-migration.md` (identity collections: assign a new array to update) |
 
 Prefer stable tag-shaped registration imports such as
 `@aceshooting/lyra-ui/components/lr-input.js`; each registers its tag as a side effect without

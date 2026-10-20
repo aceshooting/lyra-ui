@@ -21,6 +21,10 @@ import {
   readRenameLedger,
 } from './migrate-wa.mjs';
 import { emptyRenameLedger } from './lyra-rename-ledger.mjs';
+import {
+  IMMUTABLE_COLLECTION_PAIRS,
+  migrateImmutableCollections,
+} from './migration-immutable-collections.mjs';
 import { readCurrentCompatibilityContextSync } from './check-published-compatibility.mjs';
 import { copyMigrationRuntimeModules } from './copy-migration-runtime.mjs';
 import { migrationContractText } from './migration-contract-projection.mjs';
@@ -2682,4 +2686,104 @@ test('stays quiet on a file with nothing left to migrate', () => {
     ].includes(warning.warningCode),
   );
   assert.deepEqual(noise, [], 'an already-migrated file must not be warned at');
+});
+
+test('the immutable-collections rule reports in-place changes and same-array reassignments, and never edits', () => {
+  const source = [
+    "const feed = document.querySelector('lr-activity-feed');",
+    'feed.entries.push(next);',
+    'feed.entries = feed.entries;',
+    'const rows = feed.entries;',
+    'rows.splice(0, 1);',
+    'feed.entries = rows;',
+    'feed.entries = [...feed.entries, next];',
+    'const copy = [...feed.entries];',
+    'copy.push(next);',
+    'feed.entries = copy;',
+    'feed.entries = feed.entries.slice();',
+  ].join('\n');
+  const result = migrateImmutableCollections(source, { file: 'app.ts' });
+  assert.equal(result.content, source);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(result.warnings.map((warning) => [warning.line, warning.warningCode, warning.upstreamTag, warning.upstreamMember, warning.action]), [
+    [2, 'IMMUTABLE_COLLECTION_REVIEW', 'lr-activity-feed', 'entries', 'manual-review'],
+    [3, 'IMMUTABLE_COLLECTION_REVIEW', 'lr-activity-feed', 'entries', 'manual-review'],
+    [6, 'IMMUTABLE_COLLECTION_REVIEW', 'lr-activity-feed', 'entries', 'manual-review'],
+  ]);
+  assert.match(result.warnings[0].message, /lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:entries/);
+});
+
+test('the immutable-collections rule covers every method and ignores files that name no owning component', () => {
+  for (const method of ['push', 'splice', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'fill', 'copyWithin']) {
+    const result = migrateImmutableCollections(`const list = el.querySelector('lr-virtual-list');\nlist.items.${method}(1);\n`, { file: 'a.js' });
+    assert.equal(result.warnings.length, 1, method);
+    assert.equal(result.warnings[0].line, 2, method);
+  }
+  assert.deepEqual(migrateImmutableCollections('table.items.push(row);\nstate.items = state.items;\n', { file: 'a.ts' }).warnings, []);
+  assert.deepEqual(migrateImmutableCollections("'lr-calendar'; x.events.push(1);", { file: 'a.css' }).warnings, []);
+  assert.equal(migrateImmutableCollections('const t = LyraTaskList;\nel.items.sort();', { file: 'a.ts' }).warnings.length, 1, 'a class name counts as a mention');
+  assert.equal(migrateImmutableCollections("html`<lr-trace-tree></lr-trace-tree>`;\nnode.spans?.push(span);", { file: 'a.ts' }).warnings.length, 1, 'optional chaining');
+  assert.equal(migrateImmutableCollections('<lr-map></lr-map>\nmap.markers.push(m)', { file: 'a.html' }).warnings.length, 1);
+  assert.equal(migrateImmutableCollections('<lr-virtual-list></lr-virtual-list>\nlist.source.push(1)', { file: 'a.html' }).warnings.length, 0, 'source is an opaque object source');
+});
+
+test('the immutable-collections rule honors lyra-migrate-reviewed acknowledgements', () => {
+  const lines = [
+    "const d = document.querySelector('lr-calendar');",
+    'd.events.push(e); // lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:events',
+    '// lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:events',
+    'd.events.splice(0, 1);',
+    '// lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:items',
+    'd.events.pop();',
+  ];
+  const result = migrateImmutableCollections(lines.join('\n'), { file: 'a.ts' });
+  assert.deepEqual(result.warnings.map((warning) => warning.line), [6]);
+});
+
+test('the immutable-collections table matches the identity collections the components enroll', () => {
+  const componentsDir = path.join(path.dirname(scriptDir), 'src', 'components');
+  const enrolled = new Map();
+  const walk = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) walk(target);
+      else if (entry.name.endsWith('.class.ts')) {
+        const text = fs.readFileSync(target, 'utf8');
+        const tag = /@customElement (lr-[a-z0-9-]+)/.exec(text)?.[1];
+        const list = /identityCollectionProperties\s*=\s*Object\.freeze\(\s*\[([^\]]*)\]/.exec(text);
+        if (!tag || !list) continue;
+        const objectList = /identityCollectionObjectProperties\s*=\s*Object\.freeze\(\s*\[([^\]]*)\]/.exec(text);
+        const names = (match) => (match ? [...match[1].matchAll(/'([^']+)'/g)].map((name) => name[1]) : []);
+        const objects = new Set(names(objectList));
+        enrolled.set(tag, names(list).filter((name) => !objects.has(name)).sort());
+      }
+    }
+  };
+  walk(componentsDir);
+  const tabled = new Map(IMMUTABLE_COLLECTION_PAIRS.map((pair) => [pair.tag, [...pair.properties].sort()]));
+  for (const [tag, properties] of enrolled) {
+    assert.deepEqual(tabled.get(tag), properties, `${tag} identity collection properties are listed by the immutable-collections rule`);
+  }
+});
+
+test('lyra-ui-migrate --rule=immutable-collections reports, honors --check and never writes', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-immutable-'));
+  try {
+    const file = path.join(scratch, 'app.ts');
+    const original = "const q = document.querySelector('lr-prompt-queue');\nq.items.push(item);\n";
+    fs.writeFileSync(file, original);
+    const report = path.join(scratch, 'report.json');
+    const check = spawnSync(process.execPath, [migratePath, '--rule=immutable-collections', '--check', `--report=${report}`, file], { encoding: 'utf8' });
+    assert.equal(check.status, 1, check.stderr);
+    assert.match(check.stdout, /warning IMMUTABLE_COLLECTION_REVIEW/);
+    assert.equal(fs.readFileSync(file, 'utf8'), original);
+    const parsed = JSON.parse(fs.readFileSync(report, 'utf8'));
+    assert.equal(parsed.rule, 'immutable-collections');
+    assert.equal(parsed.summary.warnings, 1);
+    fs.writeFileSync(file, original.replace('q.items.push', '// lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:items\nq.items.push'));
+    assert.equal(spawnSync(process.execPath, [migratePath, '--rule=immutable-collections', '--check', file], { encoding: 'utf8' }).status, 0);
+    assert.equal(spawnSync(process.execPath, [migratePath, '--rule=immutable-collections', '--origin=lyra-v26', file], { encoding: 'utf8' }).status, 1);
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
 });

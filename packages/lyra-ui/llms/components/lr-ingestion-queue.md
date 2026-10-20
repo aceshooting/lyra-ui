@@ -50,7 +50,7 @@ embeddedChunkCount?: number; attempts?: number; error?: string }` (exported here
   `error` renders only while `stage === 'failed'`. A missing or unrecognized runtime stage renders
   as a localized neutral `unknown` state with no progress, retry, or cancel affordance, allowing a
   newer backend stage to fail safely. A blank `document.name` shows the localized "untitled source"
-  in the row and its retry/cancel names. Controlled — pass a new array to update
+  in the row and its retry/cancel names. Controlled — pass a new array to update; mutating an array and assigning it again does not.
 - `label?: string` — fallback name for the stable region; omission uses localized
   `ingestionQueueLabel`. A non-empty host `aria-label` makes the host the sole overall owner (the
   region omits its duplicate role/name); an explicitly empty host label stays empty

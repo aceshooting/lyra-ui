@@ -473,7 +473,6 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   protected static override readonly ownedCollectionProperties = Object.freeze(['threads', 'groupOrder', 'collapsedGroupIds', 'rowActions']);
   protected static override readonly identityCollectionProperties = Object.freeze(['threads']);
-  protected static override readonly immutableSourceCollectionProperties = Object.freeze(['threads']);
 
   static override styles = [LyraElement.styles, contextualSizes, styles];
   private readonly inputLimitAnnouncements = new AnnouncementSinkController(this);
@@ -717,7 +716,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  slotted content ⇒ slotted mode. Thread ids must be nonempty and unique; invalid/later
    *  duplicate rows are omitted, first wins. Group headings do not consume the thread admission
    *  budget: all admitted threads remain addressable in the virtual list. The first 10,000 input records are retained,
-   *  matching newest-first sidebar ordering. */
+   *  matching newest-first sidebar ordering. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) threads: readonly LyraChatThread[] = [];
 
   /**

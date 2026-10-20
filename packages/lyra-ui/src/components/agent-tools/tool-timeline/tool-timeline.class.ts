@@ -136,7 +136,7 @@ const ENTRY_FIELDS = [
 ] as const;
 
 /** The last projection of each source record, keyed by the field values it was built from. A
- * replaced collection re-reads every record, since a record may have changed in place, but an
+ * newly assigned array re-reads every record, since a record may have changed in place, but an
  * unchanged record keeps its canonical identity and every cache keyed on it. */
 const projections = new WeakMap<object, {
   readonly values: readonly unknown[];
@@ -250,8 +250,8 @@ function entryCorrelation(entry: CanonicalToolTimelineEntry): ToolTimelineActiva
  * Approval: activating the chip (`lr-tool-call-chip-select`) of an entry with `needsApproval` and
  * an undecided `approved` opens the shared dialog for that entry; approving or denying emits this
  * component's own `lr-tool-approval-decide-request` and closes the dialog. This component never mutates
- * `entries` itself — a host applies the decision (and any resulting status change) and re-assigns
- * `entries`; if the entry currently under review disappears or no longer qualifies as pending
+ * `entries` itself — a host applies the decision (and any resulting status change) and assigns a
+ * new `entries` array; if the entry currently under review disappears or no longer qualifies as pending
  * (its `approved` was resolved some other way) by the time `entries` changes, the dialog closes on
  * its own rather than staying open over stale data. If a host cancels `lr-tool-approval-decide-request` to
  * persist it asynchronously, `pendingApproval` identifies the held action. After success, update
@@ -359,7 +359,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
    * budget for opaque arguments/results. The newest 500 unique calls render, with open/review
    * reservations. Replace the collection to publish source-record changes.
    * The calls to render, in any order — see the class doc's ordering note. Entries with empty
-   *  invocation ids are omitted; duplicate `(sourceKey, id)` identities normalize first-wins. */
+   *  invocation ids are omitted; duplicate `(sourceKey, id)` identities normalize first-wins. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) entries: readonly ToolTimelineEntry[] = [];
 
   /** Forwarded to the shared approval dialog's own `readonly` — withholds editing an entry's

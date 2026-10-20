@@ -356,6 +356,95 @@ export const Markers: Story = {
 };
 
 /**
+ * Camera commands and the camera API around them. `flyTo()`, `easeTo()` and `jumpTo()` move the
+ * camera and report it through `lr-map-view-change` with `source: command`; `fitToData()` frames
+ * the markers without a hand-computed box; `cameraPadding` keeps the left 12rem (the pretend
+ * side panel) out of every fit; and `project()` plus `lr-map-move` keep the pin label glued to
+ * Paris while the map travels. Pan the map away and press "Re-centre": `jumpTo()` is the explicit
+ * way back, because re-assigning an equal `center` is a no-op. Under
+ * `prefers-reduced-motion: reduce` fly and ease jump.
+ */
+export const CameraCommands: Story = {
+  render: () => {
+    const cities: LyraMapMarker[] = [
+      { id: 'lisbon', lngLat: [-9.1393, 38.7223], label: 'Lisbon' },
+      { id: 'paris', lngLat: [2.3522, 48.8566], label: 'Paris' },
+      { id: 'berlin', lngLat: [13.405, 52.52], label: 'Berlin' },
+    ];
+    let map: LyraMap | undefined;
+    let status: HTMLElement | undefined;
+    let pin: HTMLElement | undefined;
+    const placePin = (): void => {
+      const point = map?.project([2.3522, 48.8566]);
+      if (!pin) return;
+      pin.hidden = point === undefined;
+      if (point) pin.style.translate = `${point[0]}px ${point[1]}px`;
+    };
+    const onViewChange = (event: CustomEvent<LyraMapViewChangeDetail>): void => {
+      const { center, zoom, source, bounds } = event.detail;
+      if (status) {
+        status.textContent =
+          `source: ${source} · center: ${center.map((value) => value.toFixed(2)).join(', ')}` +
+          ` · zoom: ${zoom.toFixed(2)}` +
+          (bounds ? ` · west: ${bounds[0][0].toFixed(2)}, east: ${bounds[1][0].toFixed(2)}` : '');
+      }
+    };
+    return html`
+      <div style="display: grid; gap: var(--lr-space-s)">
+        <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-s)">
+          <lr-button @click=${() => map?.fitToData({ maxZoom: 6 })}>Fit to data</lr-button>
+          <lr-button @click=${() => map?.flyTo({ center: [2.3522, 48.8566], zoom: 7 })}>
+            Fly to Paris
+          </lr-button>
+          <lr-button @click=${() => map?.easeTo({ center: [13.405, 52.52], zoom: 5 })}>
+            Ease to Berlin
+          </lr-button>
+          <lr-button @click=${() => map?.jumpTo({ center: [2.3522, 48.8566], zoom: 4 })}>
+            Re-centre
+          </lr-button>
+        </div>
+        <div style="position: relative; overflow: hidden">
+          <lr-map
+            label="Map driven by camera commands"
+            style="height: 20rem"
+            .center=${[2.3522, 48.8566]}
+            .zoom=${4}
+            .markers=${cities}
+            .cameraPadding=${{ left: 192 }}
+            .renderWorldCopies=${false}
+            .mapStyle=${OFFLINE_RASTER_STYLE}
+            @lr-map-view-change=${onViewChange}
+            @lr-map-move=${placePin}
+            @lr-map-load=${placePin}
+            ${ref((element) => {
+              if (element) map = element as LyraMap;
+            })}
+          ></lr-map>
+          <div
+            aria-hidden="true"
+            style="position: absolute; inset-block-start: 0; inset-inline-start: 0; inline-size: 12rem; block-size: 100%; background: var(--lr-color-surface-overlay); border-inline-end: 1px solid var(--lr-color-border); padding: var(--lr-space-s); pointer-events: none"
+          >
+            Side panel
+          </div>
+          <div
+            ${ref((element) => {
+              pin = element as HTMLElement | undefined;
+            })}
+            style="position: absolute; inset: 0 auto auto 0; pointer-events: none; padding: var(--lr-space-2xs); background: var(--lr-color-surface-raised); border: 1px solid var(--lr-color-border); border-radius: var(--lr-radius)"
+            hidden
+          >
+            Paris
+          </div>
+        </div>
+        <output ${ref((element) => {
+          status = element as HTMLElement | undefined;
+        })}>Waiting for the first settled camera…</output>
+      </div>
+    `;
+  },
+};
+
+/**
  * `fitBounds()` frames a box -- here the bounding box of the markers currently shown -- and writes
  * the settled camera back into `center`/`zoom`, reporting it through `lr-map-view-change`. The
  * story calls it before the map exists, so the fit is queued and applied as the map is built; the

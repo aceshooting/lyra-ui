@@ -20,6 +20,7 @@ their owning family path and do not register the tag.
 
 **Library-wide topics.** Focused guides cover imports and registration (`llms/shared/imports-and-registration.md`),
 the v23-to-v24 upgrade path (`llms/shared/v23-to-v24-migration.md`),
+the v29-to-v30 upgrade path (`llms/shared/v29-to-v30-migration.md`),
 events and types (`llms/shared/events-and-types.md`), forms and accessibility
 (`llms/shared/forms-and-accessibility.md`), styles and tokens
 (`llms/shared/styles-and-tokens.md`), native styles and utilities

@@ -31129,7 +31129,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3248,
+              "line": 3656,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31165,6 +31165,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/map/map-camera.test.ts",
           "src/components/media/map/map-data-layers.test.ts",
           "src/components/media/map/map-engine-preparation.test.ts",
           "src/components/media/map/map-glass.test.ts",
@@ -32362,7 +32363,7 @@
           "evidence": [
             {
               "file": "src/components/utility/mention-popover/mention-popover.class.ts",
-              "line": 1043,
+              "line": 1047,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40629,7 +40630,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 640,
+              "line": 639,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45167,7 +45168,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 933,
+              "line": 932,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -32,7 +32,7 @@ it('reuses filtering and bounds tag facets across unrelated updates at n=10000',
   } finally { seam.filterExamples = original; }
 });
 
-it('refreshes identity-retained example contents on explicit refresh and same-source reassignment', async () => {
+it('refreshes identity-retained example contents on explicit refresh and a new-array reassignment', async () => {
   const examples = [{ id: 'a', input: 'Alpha', tags: ['first'] }, { id: 'b', input: 'Beta', tags: ['second'] }];
   const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset searchable .examples=${examples}></lr-eval-dataset>`);
   const seam = el as unknown as { searchText: string };
@@ -49,6 +49,10 @@ it('refreshes identity-retained example contents on explicit refresh and same-so
   expect(table.shadowRoot!.textContent).to.include('Alpha');
   examples[0]!.input = 'Alpha';
   el.examples = examples;
+  await el.updateComplete;
+  await table.updateComplete;
+  expect(table.rows.map(row => (row as { id: string }).id)).to.deep.equal(['b']);
+  el.examples = [...examples];
   await el.updateComplete;
   await table.updateComplete;
   expect(table.rows.map(row => (row as { id: string }).id)).to.deep.equal(['a', 'b']);

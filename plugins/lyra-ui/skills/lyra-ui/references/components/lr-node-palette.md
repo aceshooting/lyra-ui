@@ -37,7 +37,7 @@ description?: string; category?: string; keywords?: string[]; icon?: unknown; di
   malformed optional `description`, `category`, `keywords`, or `disabled` values omit only that row,
   preserving later valid entries. At most 10,000 positions are examined through own data
   descriptors; accessor-backed rows are omitted without reserving later valid rows. The frozen
-  projection drives display while `lr-select.detail.item` retains the original admitted identity
+  projection drives display while `lr-select.detail.item` retains the original admitted identity. Assign a new array to update; mutating an array and assigning it again does not.
 - `label?: string` — accessible name for the search field/listbox; omission uses the localized
   palette label. An omitted, empty, or whitespace-only value uses that fallback without changing
   the raw property readback

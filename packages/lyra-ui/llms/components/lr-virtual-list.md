@@ -35,8 +35,9 @@ contract.
   a property/lit-html binding (`.items=`), not an HTML attribute. This remains the compatibility
   source whenever `source` is unset. Its sequence is copied, bounded (the first 10,000 rows; a
   development warning names the property), and frozen while generic row identities are retained;
-  reassign a new array after sequence changes. Re-committing the same rows re-renders them without
-  moving any row or cancelling a pending `scrollToIndex()` correction.
+  assign a new array after sequence changes. Assigning the same array again, even after mutating it,
+  is ignored, so re-committing the same rows never moves any row or cancels a pending
+  `scrollToIndex()` correction.
 - `source?: LyraVirtualListSource` (attribute: false) — a readonly array or a count/index-backed
   `{ readonly count: number; itemAt(index): unknown; keyAt?(index): string | number;
 indexOfKey?(key): number }`. When set it takes precedence over `items`. The indexed form performs

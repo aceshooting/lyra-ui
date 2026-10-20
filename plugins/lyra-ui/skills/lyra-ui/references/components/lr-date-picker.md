@@ -108,7 +108,7 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
   The active button carries `aria-pressed="true"` and `data-active`. The same
   `label`/`start`/`end`/`id` shape as `<lr-time-range>`'s `TimeRangePreset`, with ISO dates instead
   of numbers; unlike the time range, a bound may be left open. `appliedPreset` is the caller's own
-  entry object on both
+  entry object on both. Assign a new array to update; mutating an array and assigning it again does not.
 - `appliedPreset: LyraDateRangePreset | undefined` (read-only, new in 11.1.0) — the preset whose
   button produced the current `value`, or `undefined` when the range was picked by hand, cleared, or changed externally.
   `clear()` removes identity before synchronous `input`/`change` listeners run; an external value

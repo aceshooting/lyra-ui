@@ -8,7 +8,6 @@ import {
   type SVGTemplateResult,
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { guard } from 'lit/directives/guard.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -318,7 +317,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The queue to render, in display order. Controlled and never mutated by this component --
-   *  pass a new array (e.g. as ingestion progresses) to update it. */
+   *  pass a new array (e.g. as ingestion progresses) to update it. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) items: readonly IngestionQueueItem[] = [];
 
   private _dataSource?: IngestionQueueSource;
@@ -856,7 +855,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
           ? html`<lr-virtual-list
               part="list"
               exportparts="item:item, item-header:item-header, item-name:item-name, item-stage:item-stage, item-progress:item-progress, item-meta:item-meta, item-chunk-count:item-chunk-count, item-embedding-status:item-embedding-status, item-attempts:item-attempts, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"
-              .items=${guard([items], () => items)}
+              .items=${items}
               .renderItem=${(item: unknown) =>
                 this.itemTemplate(item as IngestionQueueItem, false)}
               .keyFunction=${this.ingestionItemKey}

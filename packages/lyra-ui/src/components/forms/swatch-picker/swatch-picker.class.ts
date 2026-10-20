@@ -161,13 +161,18 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
   private readonly stateInternals = attachInternalsSafely(this);
   private _items: readonly SwatchPickerItem[] = Object.freeze([]);
+  private itemsSource?: unknown;
   private readonly itemSnapshots = new WeakMap<object, SwatchPickerItem>();
-  /** The selectable color swatches, in display order. */
+  /** The selectable color swatches, in display order. Assign a new array to update: mutating an
+   *  array and assigning it again does not. */
   get items(): readonly SwatchPickerItem[] {
     return this._items;
   }
   set items(next: readonly SwatchPickerItem[]) {
     const old = this._items;
+    // Rebinding the same array (or this getter's snapshot) is a no-op: assign a new array to update.
+    if (next === this.itemsSource || next === old) return;
+    this.itemsSource = next;
     const snapshots: SwatchPickerItem[] = [];
     const rows: SwatchPickerItem[] = [];
     // Reserve surviving raw identities before fresh equivalents can consume their snapshots.

@@ -272,9 +272,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     'lr-citation-open': Object.freeze(['citation']),
   });
 
-  /** Grounded claims rendered as the selectable evidence index. */
+  /** Grounded claims rendered as the selectable evidence index. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) claims: readonly GroundedClaim[] = [];
-  /** Citation records resolved by each claim's citation indexes. */
+  /** Citation records resolved by each claim's citation indexes. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) citations: readonly Citation[] = [];
   /** Controlled id of the selected claim, marked `aria-pressed` and `claim-selected`. */
   @property({ attribute: 'selected-claim-id' }) selectedClaimId = '';

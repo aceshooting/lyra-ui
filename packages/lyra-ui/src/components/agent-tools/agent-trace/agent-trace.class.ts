@@ -5,7 +5,6 @@ import { collectionSupport, publicCollectionTruncation } from '../../../internal
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
-import { guard } from 'lit/directives/guard.js';
 import { ref } from 'lit/directives/ref.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -228,7 +227,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
 
   /** The full, unfiltered span array -- identical contract to `<lr-trace-tree>.spans`. Controlled
    *  and never mutated by this component; `activeSpanId` and its ancestor path reserve positions
-   *  inside the maxNodes projection (default 500) before kind filtering. */
+   *  inside the maxNodes projection (default 500) before kind filtering. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   /** Maximum projected rows, from 1 to 5000. Invalid or unset values use 500.
    * Source admission keeps the first 10000 outer entries without cloning opaque metadata. */
@@ -472,7 +471,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
         <lr-trace-tree
           part="tree"
           .maxNodes=${this.effectiveMaxNodes}
-          .spans=${sourceMode ? EMPTY_SPANS : guard([this.spans], () => this.spans)}
+          .spans=${sourceMode ? EMPTY_SPANS : this.spans}
           .activeSpanId=${this.activeSpanId}
           .label=${this.label}
           .strings=${this.strings}

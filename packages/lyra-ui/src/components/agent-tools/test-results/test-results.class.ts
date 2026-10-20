@@ -240,7 +240,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
 
   /** The suites to render, grouped in order. Controlled and never mutated by this component --
    *  pass a new array (e.g. as a run streams in) to update it. Duplicate suite ids and per-suite
-   *  test ids use deterministic first-wins identity. */
+   *  test ids use deterministic first-wins identity. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) suites: readonly TestSuiteResult[] = [];
 
   private _dataSource?: TestResultsSource;

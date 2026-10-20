@@ -36,3 +36,17 @@ it('releases a removed focused palette and restores one tab stop when items retu
   await waitUntil(() => el.shadowRoot!.querySelectorAll('[part~="swatch"][tabindex="0"]').length === 1);
   expect(changes).to.equal(0);
 });
+
+it('ignores a same-array items assignment and takes a new array', async () => {
+  const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker aria-label="Palette"></lr-swatch-picker>`);
+  const source: SwatchPickerItem[] = [green];
+  el.items = source;
+  const first = el.items;
+  source.push({ value: 'blue', color: 'rgb(0, 0, 255)', label: 'Blue' });
+  el.items = source;
+  el.items = first;
+  expect(el.items === first).to.equal(true);
+  expect(el.items.length).to.equal(1);
+  el.items = [...source];
+  expect(el.items.length).to.equal(2);
+});

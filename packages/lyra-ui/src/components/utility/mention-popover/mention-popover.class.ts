@@ -406,18 +406,22 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
 
   private itemPositions = new WeakMap<object, number>();
   private _items: readonly Readonly<LyraMentionItem>[] = Object.freeze([]);
+  private itemsSource?: unknown;
 
   /** The candidate set, pre-`query`-filtering. Admits the first 10,000 array positions and
    *  displays a localized limit notice when additional candidates are omitted. Assignment takes a shallow frozen snapshot;
    *  malformed rows without a string `label` remain in that snapshot but are omitted from every
-   *  filtered/rendered projection. */
+   *  filtered/rendered projection. Assign a new array to update: mutating an array and assigning it
+   *  again does not. */
   get items(): readonly Readonly<LyraMentionItem>[] {
     return this._items;
   }
 
   set items(next: readonly LyraMentionItem[]) {
     const previous = this._items;
-    if (next === previous) { this.requestUpdate(); return; }
+    // Rebinding the same array (or this getter's snapshot) is a no-op: assign a new array to update.
+    if (next === this.itemsSource || next === previous) return;
+    this.itemsSource = next;
     const source = Array.isArray(next) ? next : [];
     this.inputLimited = source.length > MAX_MENTION_ITEMS;
     const rows: Readonly<LyraMentionItem>[] = new Array(Math.min(source.length, MAX_MENTION_ITEMS));

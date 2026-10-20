@@ -9814,7 +9814,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "0bfa0d1dbea386419bc8",
+      "fingerprint": "fd7c7b8951fe319cdbe3",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9862,7 +9862,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "f1f7ddd434c6ad3a20fb",
+      "fingerprint": "13a28826d10ada9328e5",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9878,7 +9878,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "34ab9a9713d1f4bdb702",
+      "fingerprint": "8ec96e5c9a83e39c0239",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9894,7 +9894,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "b1cd8a230426e06e7bb4",
+      "fingerprint": "b0964d0d0dce2d6ba294",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10187,7 +10187,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapViewChangeDetail",
       "kind": "interface",
-      "fingerprint": "b85128ac73230ad59a3f",
+      "fingerprint": "be26343f59a2ff5741b3",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -14145,7 +14145,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "67babe1b500b6dea32cb",
+      "fingerprint": "0bfd1974242033d96cb2",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15770,7 +15770,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "23c1e5cdc5b929844dcc",
+      "fingerprint": "75e76103fd6b9f377d24",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15786,7 +15786,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "e2f097ca8f9124f6e674",
+      "fingerprint": "04b580eb7516dfe52c61",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15802,7 +15802,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "59224b9582f770535faa",
+      "fingerprint": "d6d89240ef3f1d4d686a",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16346,7 +16346,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "133fafd62bdfec63ef18",
+      "fingerprint": "847fefd2336b1dff68e1",
       "routes": [
         "src/vue.ts"
       ],
@@ -16755,7 +16755,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "c5c659cdc089b5605a8c",
+      "fingerprint": "d9a4c2c794bcdaea25a7",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -18192,7 +18192,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadModularMap",
       "kind": "function",
-      "fingerprint": "0a70aa5d48732d54367d",
+      "fingerprint": "c71f659b497125f137f6",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18231,7 +18231,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "ModularMapModule",
       "kind": "interface",
-      "fingerprint": "9c1b7ed4ac32131f72e0",
+      "fingerprint": "c57d00ab20d5af340054",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -20331,6 +20331,50 @@
         "kind": "component",
         "tag": "lr-chart",
         "declaration": "LyraSpatialQuery"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-camera.ts",
+      "exportName": "LyraMapCameraOptions",
+      "kind": "interface",
+      "fingerprint": "ead2d81b6a2286211fde",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapCameraOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapMoveDetail",
+      "kind": "interface",
+      "fingerprint": "fc5afbbeef5305d17e1f",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapMoveDetail"
       }
     }
   ],

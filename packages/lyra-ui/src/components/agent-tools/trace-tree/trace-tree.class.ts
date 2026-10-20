@@ -492,6 +492,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
    * `kind`/`status` values normalize to `'other'`/`'unknown'` before rendering; an absent status
    * defaults to `'pending'`. `status: 'incomplete'`
    * marks a span that ended without a result.
+   * Assign a new array to update: mutating an array and assigning it again does not.
    */
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   /** Maximum projected rows, from 1 to 5000. Invalid or unset values use 500.

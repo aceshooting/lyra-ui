@@ -27,6 +27,14 @@ import './components/agent-tools/tool-call-block/tool-call-block.js';
 import './components/agent-tools/tool-param-form/tool-param-form.js';
 import './components/agent-tools/tool-select-dialog/tool-select-dialog.js';
 import './components/agent-tools/tool-timeline/tool-timeline.js';
+import './components/agent-tools/trace-tree/trace-tree.js';
+import './components/forms/date-picker/date-picker.js';
+import './components/retrieval/claim-evidence/claim-evidence.js';
+import './components/retrieval/grounding-summary/grounding-summary.js';
+import './components/retrieval/ingestion-queue/ingestion-queue.js';
+import './components/retrieval/memory-panel/memory-panel.js';
+import './components/retrieval/node-palette/node-palette.js';
+import './components/retrieval/retrieval-results/retrieval-results.js';
 import './components/charts/chart/box-plot.js';
 import './components/charts/chart/histogram.js';
 import './components/charts/chart/lite-chart.js';
@@ -198,6 +206,24 @@ export const APP_IDENTITY_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[
   { tag: 'lr-eval-run', property: 'examples' },
 ]);
 
+/**
+ * Identity collections not covered by {@link APP_IDENTITY_ARRAY_PROPERTY_CASES}; together the two
+ * lists enroll every item-identity array property of the library (the `lr-map` markers and data
+ * layers are covered by its own tests, and `lr-virtual-list` `source` is an opaque object source).
+ */
+export const APP_ADDITIONAL_IDENTITY_ARRAY_PROPERTY_CASES: readonly CollectionPropertyCase[] = Object.freeze([
+  { tag: 'lr-trace-tree', property: 'spans' },
+  { tag: 'lr-date-picker', property: 'presets' },
+  { tag: 'lr-claim-evidence', property: 'claims' },
+  { tag: 'lr-claim-evidence', property: 'citations' },
+  { tag: 'lr-grounding-summary', property: 'citations' },
+  { tag: 'lr-ingestion-queue', property: 'items' },
+  { tag: 'lr-memory-panel', property: 'shortTerm' },
+  { tag: 'lr-memory-panel', property: 'longTerm' },
+  { tag: 'lr-node-palette', property: 'items' },
+  { tag: 'lr-retrieval-results', property: 'chunks' },
+]);
+
 /** Accessor-backed collection properties with their component/domain-specific synchronous caps. */
 export const APP_BESPOKE_ARRAY_PROPERTY_CASES: readonly BespokeCollectionPropertyCase[] =
   Object.freeze([
@@ -275,6 +301,7 @@ describe('original component collection ownership contracts', () => {
       ...APP_OWNED_ARRAY_PROPERTY_CASES,
       ...APP_OWNED_RECORD_PROPERTY_CASES,
       ...APP_IDENTITY_ARRAY_PROPERTY_CASES,
+      ...APP_ADDITIONAL_IDENTITY_ARRAY_PROPERTY_CASES,
       ...APP_BESPOKE_ARRAY_PROPERTY_CASES,
       ...(['selectedRowKeys', 'expandedRowKeys'] as const).map((property) => ({ tag: 'lr-table', property })),
       ...['lr-flow-canvas', 'lr-flow-run-status'].map((tag) => ({ tag, property: 'decorations' })),
@@ -364,7 +391,34 @@ describe('original component collection ownership contracts', () => {
     });
   }
 
-  for (const { tag, property } of APP_IDENTITY_ARRAY_PROPERTY_CASES) {
+  const identityCases = [...APP_IDENTITY_ARRAY_PROPERTY_CASES, ...APP_ADDITIONAL_IDENTITY_ARRAY_PROPERTY_CASES]
+    .filter((entry, index, all) => all.findIndex((other) => other.tag === entry.tag && other.property === entry.property) === index);
+
+  for (const { tag, property } of identityCases.filter((entry) => !(entry.tag === 'lr-virtual-list' && entry.property === 'source'))) {
+    it(`${tag}.${property} ignores a same-array or round-trip assignment and takes a new array`, () => {
+      const element = createDynamicElement(tag);
+      const ctor = customElements.get(tag) as unknown as { identityCollectionProperties: readonly string[] };
+      expect(ctor.identityCollectionProperties, 'the property is enrolled').to.include(property);
+      const item = { id: 'first', nested: { values: [1, 2] } };
+      const source = [item];
+
+      element[property] = source;
+      const first = element[property] as readonly unknown[];
+      source.push({ id: 'later', nested: { values: [] } });
+      element[property] = source;
+      expect(element[property] === first, 'same array is a no-op').to.equal(true);
+      element[property] = first;
+      expect(element[property] === first, 'round-tripped snapshot is a no-op').to.equal(true);
+      expect(first.length).to.equal(1);
+
+      element[property] = [...source];
+      expect(element[property] === first, 'a new array replaces the snapshot').to.equal(false);
+      expect((element[property] as readonly unknown[]).length).to.equal(2);
+      expect((element[property] as readonly unknown[])[0]).to.equal(item);
+    });
+  }
+
+  for (const { tag, property } of identityCases) {
     it(`${tag}.${property} owns its bounded sequence while retaining item identity`, () => {
       const element = createDynamicElement(tag);
       const item = { id: 'first', nested: { values: [1, 2] } };

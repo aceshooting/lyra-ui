@@ -268,7 +268,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
    *  to update it (e.g. as each example finishes, or as the whole batch streams in). Empty/blank ids
    *  are omitted and duplicates normalize first-wins before expansion, counts, announcements,
    *  rendering, and events. A valid-id partial streaming row keeps rendering with idle status and
-   *  empty Markdown content until its status/input/output payloads arrive. */
+   *  empty Markdown content until its status/input/output payloads arrive. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) examples: readonly EvalExampleResult[] = [];
 
   /** The batch's expected total example count. `null` (the default) derives it from

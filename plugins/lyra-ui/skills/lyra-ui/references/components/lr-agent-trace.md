@@ -60,7 +60,7 @@ with `treeSource` unset.
 
 - `spans: LyraSpan[] = []` (attribute: false) — the full, unfiltered array; identical contract to
   `lr-trace-tree.spans` (see `lr-span-waterfall` above for the `LyraSpan` shape). Controlled and
-  never mutated
+  never mutated. Assign a new array to update; mutating an array and assigning it again does not.
 - `activeSpanId: string | null = null` (attribute `active-span-id`) — controlled selection forwarded
   into the composed `lr-trace-tree`; tree activation updates it before the original
   `lr-span-select` bubbles, while a legacy handoff quick-jump updates it and emits that event.

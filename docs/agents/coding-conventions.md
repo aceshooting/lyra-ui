@@ -393,6 +393,14 @@ entries unless the class also lists the property in
 `protected static readonly appendOrderedCollectionProperties` (logs, transcripts, sample
 streams), which keeps the newest, trailing entries instead.
 
+A property listed in `identityCollectionProperties` keeps the caller's item objects, and assigning
+the same array again (or the getter's own snapshot) is a no-op: no re-copy, no update. Callers
+publish a change by assigning a new array; there is no per-property opt-in. Only
+`identityCollectionObjectProperties` sources (an opaque indexed source such as `lr-virtual-list`
+`source`) keep their own refresh rule. A bespoke accessor outside the shared boundary
+(`lr-mention-popover`, `lr-swatch-picker`, `lr-stepper`, `lr-file-tree`) follows the same
+rule by ignoring the same source and its own snapshot.
+
 Top-layer reset CSS is adopted by `promoteToTopLayer()` into the surface's actual root, once per
 owner-document sheet. It is no longer part of `LyraElement.styles`; overlay consumers use the
 positioner/promoter rather than adding their own UA reset.

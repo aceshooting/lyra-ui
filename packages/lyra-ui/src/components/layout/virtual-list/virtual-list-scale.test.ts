@@ -114,16 +114,16 @@ it('keeps a focused offscreen row from enlarging a scaled spacer', async () => {
   expect(base.scrollHeight).at.most(8000001);
   expect(el.shadowRoot!.activeElement === button).equal(true);
 });
-it('refreshes mutable identity assignments without changing an earlier snapshot', async () => {
+it('refreshes mutable identity items on a new array assignment without changing an earlier snapshot', async () => {
   const items = Array.from({ length: 5000 }, (_, index) => ({ index, label: String(index) }));
   const el = await fixture<LyraVirtualList>(html`<lr-virtual-list row-height="40" .items=${items} .keyFunction=${(item: unknown) => (item as { index: number }).index} .renderItem=${(item: unknown) => html`${(item as { label: string }).label}`}></lr-virtual-list>`);
   await settle(el);
   const retained = el.items;
   items[0]!.label = 'Updated'; items.push({ index: 5000, label: 'Tail' });
-  el.items = items; await settle(el);
+  el.items = [...items]; await settle(el);
   expect(retained.length).equal(5000); expect(el.items.length).equal(5001);
   expect(el.shadowRoot!.querySelector('[data-row-index="0"]')!.textContent).contain('Updated');
-  items.splice(0, 1); el.items = items; await settle(el);
+  items.splice(0, 1); el.items = [...items]; await settle(el);
   expect(el.items.length).equal(5000);
   expect(el.shadowRoot!.querySelector('[data-row-index="0"]')!.textContent).contain('1');
 });

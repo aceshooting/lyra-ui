@@ -158,14 +158,18 @@ it('shows a localized "Completed N steps" summary in the header while mode="post
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Completed 14 steps');
 });
 
-it('refreshes a post-hoc entry after mutating it and reassigning the same source array', async () => {
+it('refreshes a post-hoc entry only when a new source array is assigned after mutating it', async () => {
   const entries = makeEntries(1);
   const el = await fixture<LyraActivityFeed>(html`
     <lr-activity-feed mode="post-hoc" .entries=${entries}></lr-activity-feed>
   `);
   expect(el.shadowRoot!.querySelector('[part="entry-text"]')?.textContent).to.equal(entries[0]!.text);
+  const original = entries[0]!.text;
   entries[0]!.text = 'Updated step';
   el.entries = entries;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="entry-text"]')?.textContent).to.equal(original);
+  el.entries = [...entries];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="entry-text"]')?.textContent).to.equal('Updated step');
 });

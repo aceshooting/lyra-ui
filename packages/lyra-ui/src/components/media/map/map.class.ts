@@ -37,6 +37,16 @@ import {
 } from './map-loader.js';
 import { styles } from './map.styles.js';
 import {
+  emptyExtent,
+  extendExtent,
+  extendExtentWithGeoJson,
+  extentToBounds,
+  normalizeCameraOptions,
+  type LyraMapCameraOptions,
+  type MapCameraTarget,
+} from './map-camera.js';
+export type { LyraMapCameraOptions } from './map-camera.js';
+import {
   projectGeoJson,
   projectAdmittedGeoJson,
   buildProjectedGeoJsonPropertyDiff,
@@ -1765,10 +1775,11 @@ export interface LyraMapFitBoundsOptions {
   readonly animate?: boolean;
 }
 
-/** What settled the camera that a `lr-map-view-change` reports: a user gesture (drag, wheel,
- *  touch, keyboard, box zoom or a standard peer navigation button) or a `fitBounds()` call. These
- *  are the only two: camera moves made directly through `map` are never reported. */
-export type LyraMapViewChangeSource = 'user' | 'fit';
+/** What settled the camera that a `lr-map-view-change` reports: a user gesture (`'user'`: drag,
+ *  wheel, touch, keyboard, box zoom or a standard peer navigation button), a `fitBounds()` or
+ *  `fitToData()` call (`'fit'`), or a `flyTo()`, `easeTo()` or `jumpTo()` call (`'command'`). These
+ *  are the only three: camera moves made directly through `map` are never reported. */
+export type LyraMapViewChangeSource = 'user' | 'fit' | 'command';
 
 /** Detail of `lr-map-view-change`. Frozen, and detached from the component's own state. */
 export interface LyraMapViewChangeDetail {
@@ -1778,7 +1789,26 @@ export interface LyraMapViewChangeDetail {
   /** Settled zoom. Already written into `zoom`. */
   readonly zoom: number;
   readonly source: LyraMapViewChangeSource;
+  /** The visible geographic box, `[[west, south], [east, north]]`, inside `cameraPadding` (the
+   *  area not covered by the padding). Longitudes are shifted so `west` lies in `[-180, 180]` and
+   *  `east` may run past 180 across the antimeridian, so `fitBounds()` accepts the box back.
+   *  Absent when the engine cannot report bounds. */
+  readonly bounds?: LyraMapBounds;
 }
+
+/** Detail of `lr-map-move`. Frozen, and detached from the component's own state. */
+export interface LyraMapMoveDetail {
+  /** Current `[longitude, latitude]`, longitude wrapped into `[-180, 180]`. */
+  readonly center: readonly [number, number];
+  /** Current zoom. */
+  readonly zoom: number;
+  /** The visible box, as in `LyraMapViewChangeDetail.bounds`. Absent when the engine cannot
+   *  report bounds. */
+  readonly bounds?: LyraMapBounds;
+}
+
+/** A position in the map's container, `[x, y]` CSS pixels from its top-left corner. */
+export type LyraMapPoint = readonly [number, number];
 
 /** A validated `fitBounds()` request, ready for the peer. */
 interface MapFitRequest {
@@ -1797,6 +1827,30 @@ interface PendingMapFit {
 
 /** Event-data key the peer merges into the movement events of this component's own fits. */
 const FIT_EVENT_KEY = 'lyraMapFit';
+/** The same for this component's own camera commands (`flyTo()`, `easeTo()`, `jumpTo()`). */
+const COMMAND_EVENT_KEY = 'lyraMapCommand';
+
+const ZERO_CAMERA_PADDING: Readonly<Required<LyraMapPadding>> = Object.freeze({
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+});
+
+/** The ceiling `fitToData()` applies unless told otherwise, so a single marker does not zoom to the
+ *  street. */
+const FIT_TO_DATA_MAX_ZOOM = 16;
+
+type MapCommandKind = 'flyTo' | 'easeTo' | 'jumpTo';
+
+/** A camera command requested before the map existed, with the declarative camera it was
+ *  requested against. */
+interface PendingMapCommand {
+  readonly kind: MapCommandKind;
+  readonly target: MapCameraTarget;
+  readonly center: unknown;
+  readonly zoom: unknown;
+}
 
 /** Copies a `center` value for a later by-value comparison, detaching it from the host's array. */
 function snapshotCenter(center: unknown): unknown {
@@ -2137,6 +2191,7 @@ export interface LyraMapEventMap {
   /** Cancelable proposal to open or collapse the legend panel. */
   'lr-map-legend-panel-toggle-request': CustomEvent<LyraMapLegendPanelToggleDetail>;
   'lr-map-view-change': CustomEvent<LyraMapViewChangeDetail>;
+  'lr-map-move': CustomEvent<LyraMapMoveDetail>;
   'lr-map-click': CustomEvent<{
     readonly lngLat: readonly [number, number];
     readonly feature: Feature | undefined;
@@ -2219,13 +2274,21 @@ export interface LyraMapEventMap {
  *   properties; a `kind: 'heatmap'` layer is never hit-tested, because MapLibre returns no features
  *   for a density surface.
  * @event lr-map-view-change - Fired once each time the camera settles after a user gesture (drag,
- *   wheel, touch, keyboard, box zoom or a standard peer navigation button) or a `fitBounds()` call,
- *   carrying the immutable `detail: { center, zoom, source }` (`LyraMapViewChangeDetail`). The
- *   element has already written that camera into `center` and `zoom`, so it never resets it on its
- *   next update, and a host mirroring camera state assigns the detail back, at any later time,
- *   without moving the map. `source` is `'user'` or `'fit'`. Assigning `center`/`zoom` reconciles
- *   without emitting it, so a controlled host cannot loop, and camera moves made directly through
- *   `map` are not reported.
+ *   wheel, touch, keyboard, box zoom or a standard peer navigation button), a `fitBounds()` or
+ *   `fitToData()` call, or a `flyTo()`/`easeTo()`/`jumpTo()` call, carrying the immutable
+ *   `detail: { center, zoom, source, bounds? }` (`LyraMapViewChangeDetail`). The element has
+ *   already written that camera into `center` and `zoom`, so it never resets it on its next
+ *   update, and a host mirroring camera state assigns the detail back, at any later time, without
+ *   moving the map. `source` is `'user'`, `'fit'` or `'command'`; `bounds` is the visible
+ *   `[[west, south], [east, north]]` box inside `cameraPadding`. Assigning `center`/`zoom`
+ *   reconciles without emitting it, so a controlled host cannot loop, and camera moves made
+ *   directly through `map` are not reported.
+ * @event lr-map-move - Fired at most once per animation frame while the camera moves, whatever
+ *   moves it (a gesture, an animation, a camera command, a `center`/`zoom` assignment, a fit or a
+ *   move made directly through `map`), and once more when the move ends, carrying the immutable
+ *   `detail: { center, zoom, bounds? }` (`LyraMapMoveDetail`). It reports the camera as it is, not
+ *   a settled intent: use `lr-map-view-change` to learn where the camera came to rest, and this
+ *   event to keep an overlay glued to the map while it travels (pair it with `project()`).
  * @csspart base - The non-semantic map wrapper. It exposes `aria-busy="true"` while the optional
  *   map library loads and contains ordinary, non-live localized loading text.
  * @csspart container - The MapLibre container. Its generated canvas is the actual focusable map
@@ -2351,6 +2414,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     'lr-map-legend-panel-toggle-request',
     'lr-map-legend-toggle-request',
     'lr-map-marker-activate',
+    'lr-map-move',
     'lr-map-view-change',
   ]);
   /** MapLibre features and admitted marker snapshots carry opaque peer values that the generic
@@ -2403,19 +2467,56 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * a user gesture or `fitBounds()`, it holds that camera (see `lr-map-view-change`), so a map
    * rebuilt after a reconnect opens where the user left it. Assigning a value the map already
    * shows moves nothing; an assignment that interrupts an animation or gesture applies `zoom`
-   * too, so the camera never keeps a half-finished axis. Re-assigning the identical array is not a
-   * new request, even after a gesture or fit. */
+   * too, so the camera never keeps a half-finished axis.
+   *
+   * Compared by value against the last value assigned: a new array holding the same two numbers
+   * is not a new request, even after a gesture, fit or camera command, so a framework that
+   * rebuilds an equal array on every render never pulls the map back over the user's pan. A
+   * different value still moves the camera; `jumpTo()` is the explicit way to re-centre. */
   @property({ type: Array })
   get center(): readonly [number, number] {
     return this._center;
   }
   set center(value: readonly [number, number]) {
+    if (this.hasAssignedCenter && sameCenterValue(value, this.assignedCenter)) return;
+    this.hasAssignedCenter = true;
+    this.assignedCenter = snapshotCenter(value);
     this._center = value;
   }
+  /** The last value the host assigned to `center`, copied, so a later equal assignment is a no-op
+   *  however far the camera has since travelled. */
+  private assignedCenter: unknown;
+  private hasAssignedCenter = false;
   private _center: readonly [number, number] = Object.freeze([0, 0] as [number, number]);
   /** Initial and controlled map zoom level. Tracks the settled camera and reconciles the same way
    * as `center`. */
   @property({ type: Number }) zoom = 2;
+
+  /** Screen padding kept clear on each side of the viewport: the camera centre, and every fit, are
+   *  measured inside it, so a panel or toolbar covering part of the map does not hide what the map
+   *  frames. Sides are physical (not logical) pixels; an omitted side is `0`, and a negative or
+   *  non-finite side counts as `0`. It is applied persistently, so it also shapes the `bounds`
+   *  that `lr-map-view-change` and `lr-map-move` report (the visible box inside the padding).
+   *  Changing it keeps the geographic centre fixed and shifts the picture; it is not reported as a
+   *  camera change. Applied to the engine once it exists. */
+  @property({ attribute: false }) cameraPadding?: LyraMapPadding;
+  /** The padding currently applied to the engine. */
+  private appliedPadding: Readonly<Required<LyraMapPadding>> = ZERO_CAMERA_PADDING;
+
+  /** A camera command requested before the map existed; applied once, right after construction,
+   *  unless `center` or `zoom` has meanwhile been given a different value. */
+  private pendingCommand?: PendingMapCommand;
+  /** Identifies this element's own camera commands when their `moveend` arrives from the peer. */
+  private readonly commandToken = Object.freeze({});
+  /** Set while the settled camera is being written into `center`/`zoom`: that write is the
+   *  engine's own state, which the update it schedules does not push back. */
+  private reflectingCamera = false;
+  /** Whether a `center`/`zoom` write is waiting for the update that pushes it to the peer. */
+  private cameraUpdatePending = false;
+  /** Camera work waiting for that update, so it applies after the assigned camera, not before. */
+  private deferredCameraWork: Array<() => void> = [];
+  /** The animation frame a `lr-map-move` report is waiting for. */
+  private moveFrame?: number;
 
   /** A fit requested before the map existed; applied once, right after construction, unless
    *  `center` or `zoom` has meanwhile been given a different value. */
@@ -3104,14 +3205,315 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       maxZoom: isFiniteCoordinate(maxZoom) ? finiteRange(maxZoom, 22, 0, 22) : undefined,
       animate: settings.animate !== false,
     });
+    if (this.deferUntilCameraSettled(() => this.executeFit(fit))) return true;
+    return this.executeFit(fit);
+  }
+
+  private executeFit(fit: MapFitRequest): boolean {
     const map = this._map;
     if (!map) {
+      this.pendingCommand = undefined;
       this.pendingFit = Object.freeze({ fit, center: snapshotCenter(this.center), zoom: this.zoom });
       return true;
     }
     // A live fit is newer than anything still queued from before construction.
     this.pendingFit = undefined;
+    this.pendingCommand = undefined;
     return this.applyFit(map, fit, fit.animate && !prefersReducedMotion(this));
+  }
+
+  /**
+   * Runs `run` after the update that is about to push an assigned `center`/`zoom`, or reports
+   * `false` when no such update is pending and the caller should run it now. A camera command that
+   * ran first would be undone by that update, which pushes the assigned camera over the command's
+   * result; running after it makes the command the newest intent, which it is.
+   */
+  private deferUntilCameraSettled(run: () => void): boolean {
+    if (!this.cameraUpdatePending) return false;
+    this.deferredCameraWork.push(run);
+    if (this.deferredCameraWork.length === 1) {
+      void this.updateComplete.then(() => {
+        const work = this.deferredCameraWork;
+        this.deferredCameraWork = [];
+        for (const task of work) task();
+      });
+    }
+    return true;
+  }
+
+  /**
+   * Moves the camera with the engine's `flyTo`: a smooth, curved animation to `options`. The
+   * resulting camera is written into `center` and `zoom` when it settles, and reported through
+   * `lr-map-view-change` with `source: 'command'`, so declarative state stays the single source of
+   * truth and the element's own reconciliation never moves the camera a second time.
+   *
+   * Under `prefers-reduced-motion: reduce` (or `data-lr-motion="reduce"`) the move is a jump.
+   * Callable before the map exists: the most recent such request, or `fitBounds()` call, is queued
+   * and applied without animation right after construction, unless `center` or `zoom` has been
+   * given a different value since. A request made in the same tick as a `center`/`zoom` write
+   * applies after that write.
+   *
+   * Every option is optional; an unusable one is ignored (see `LyraMapCameraOptions`). Returns
+   * `false`, without moving or queueing anything, when no option is usable or the loaded engine
+   * has no such command, and `true` once the move is running or queued.
+   */
+  flyTo(options: LyraMapCameraOptions): boolean {
+    return this.runCameraCommand('flyTo', options);
+  }
+
+  /** Like `flyTo()`, but with the engine's `easeTo`: a straight, eased animation. */
+  easeTo(options: LyraMapCameraOptions): boolean {
+    return this.runCameraCommand('easeTo', options);
+  }
+
+  /**
+   * Like `flyTo()`, but without animation: the camera is at `options` at once. This is the explicit
+   * way to re-centre the map on a `center` the host already assigned (re-assigning an equal
+   * `center` is a no-op).
+   */
+  jumpTo(options: LyraMapCameraOptions): boolean {
+    return this.runCameraCommand('jumpTo', options);
+  }
+
+  private runCameraCommand(kind: MapCommandKind, options: LyraMapCameraOptions): boolean {
+    const target = normalizeCameraOptions(options);
+    if (!target) {
+      devWarnOnce(
+        'lyra-map-camera-command-rejected',
+        `<${this.localName}>: ${kind}() ignored options with no usable center, zoom, bearing or `
+          + 'pitch (center is [longitude, latitude]; every number must be finite).',
+      );
+      return false;
+    }
+    if (this.deferUntilCameraSettled(() => this.executeCameraCommand(kind, target))) return true;
+    return this.executeCameraCommand(kind, target);
+  }
+
+  private executeCameraCommand(kind: MapCommandKind, target: MapCameraTarget): boolean {
+    const map = this._map;
+    // A command is newer than a fit or command still queued from before construction.
+    this.pendingFit = undefined;
+    this.pendingCommand = undefined;
+    if (!map) {
+      this.pendingCommand = Object.freeze({
+        kind,
+        target,
+        center: snapshotCenter(this.center),
+        zoom: this.zoom,
+      });
+      return true;
+    }
+    return this.applyCameraCommand(map, kind, target, kind !== 'jumpTo' && !prefersReducedMotion(this));
+  }
+
+  private applyCameraCommand(
+    map: MapLibreMapCapability,
+    kind: MapCommandKind,
+    target: MapCameraTarget,
+    animate: boolean,
+  ): boolean {
+    const method = animate ? kind : 'jumpTo';
+    const command = map[method];
+    if (typeof command !== 'function') return false;
+    const { duration, ...camera } = target;
+    try {
+      command.call(
+        map,
+        { ...camera, ...(animate && duration !== undefined ? { duration } : {}) },
+        { [COMMAND_EVENT_KEY]: this.commandToken },
+      );
+    } catch {
+      return false;
+    }
+    return true;
+  }
+
+  private applyPendingCommand(): void {
+    const map = this._map;
+    const pending = this.pendingCommand;
+    if (!map || !pending) return;
+    this.pendingCommand = undefined;
+    // A camera assigned a different value after the call is the newer intent.
+    if (!sameCenterValue(this.center, pending.center) || !Object.is(this.zoom, pending.zoom)) return;
+    this.applyCameraCommand(map, pending.kind, pending.target, false);
+  }
+
+  /**
+   * Frames everything the map draws: `markers`, every `dataLayers` source and the `choropleth`,
+   * measured from the geometry the element has already admitted rather than from the host's raw
+   * values. Equivalent to `fitBounds()` of the union of their extents, with the same options,
+   * `cameraPadding` and write-back, and `source: 'fit'`.
+   *
+   * `maxZoom` defaults to `16`, so a single marker does not zoom to the street; pass `maxZoom`
+   * explicitly (a non-finite value for no ceiling) to change that. The extent is a plain
+   * west-to-east span, so data on both sides of the antimeridian frames the long way round.
+   *
+   * Returns `false`, doing nothing, when the map draws no geometry at all, and otherwise what
+   * `fitBounds()` returns. A `markers`/`dataLayers`/`choropleth` assignment made in the same tick
+   * is already counted.
+   */
+  fitToData(options: LyraMapFitBoundsOptions = {}): boolean {
+    const extent = emptyExtent();
+    for (const marker of this.canonicalMarkers) extendExtent(extent, marker.lngLat[0], marker.lngLat[1]);
+    for (const layer of this.canonicalDataLayers) extendExtentWithGeoJson(extent, layer.geojson);
+    const choropleth = this.canonicalChoropleth;
+    if (choropleth) extendExtentWithGeoJson(extent, choropleth.geojson);
+    const bounds = extentToBounds(extent);
+    if (!bounds) return false;
+    const settings: LyraMapFitBoundsOptions =
+      typeof options === 'object' && options !== null ? options : {};
+    return this.fitBounds(bounds, { maxZoom: FIT_TO_DATA_MAX_ZOOM, ...settings });
+  }
+
+  /**
+   * The position in the map's container, `[x, y]` CSS pixels from its top-left corner, of a
+   * `[longitude, latitude]`: what an overlay needs to sit on a coordinate. Reads the camera as it
+   * is now (so combine it with `lr-map-move` to follow a moving map), and is relative to the
+   * container, not to `cameraPadding`. Returns `undefined` when the map does not exist yet, the
+   * engine cannot project, or the input is not a finite pair.
+   */
+  project(lngLat: readonly [number, number]): LyraMapPoint | undefined {
+    const map = this._map;
+    if (!map || typeof map.project !== 'function') return undefined;
+    if (!Array.isArray(lngLat) || !isFiniteCoordinate(lngLat[0]) || !isFiniteCoordinate(lngLat[1])) {
+      return undefined;
+    }
+    try {
+      const { x, y } = map.project([lngLat[0], lngLat[1]]);
+      return isFiniteCoordinate(x) && isFiniteCoordinate(y) ? Object.freeze([x, y] as const) : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * The inverse of `project()`: the `[longitude, latitude]`, longitude wrapped into
+   * `[-180, 180]`, under a container position `[x, y]` in CSS pixels. Returns `undefined` when the
+   * map does not exist yet, the engine cannot unproject, or the input is not a finite pair.
+   */
+  unproject(point: LyraMapPoint): readonly [number, number] | undefined {
+    const map = this._map;
+    if (!map || typeof map.unproject !== 'function') return undefined;
+    if (!Array.isArray(point) || !isFiniteCoordinate(point[0]) || !isFiniteCoordinate(point[1])) {
+      return undefined;
+    }
+    try {
+      const { lng, lat } = map.unproject([point[0], point[1]]);
+      return isFiniteCoordinate(lng) && isFiniteCoordinate(lat)
+        ? Object.freeze([wrapLongitude(lng), finiteRange(lat, 0, -90, 90)] as const)
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Pushes `cameraPadding` into the engine when it differs from what the engine already has. */
+  private applyCameraPadding(): void {
+    const map = this._map;
+    if (!map || typeof map.setPadding !== 'function') return;
+    const next = normalizeFitPadding(this.cameraPadding);
+    const current = this.appliedPadding;
+    if (
+      next.top === current.top && next.right === current.right &&
+      next.bottom === current.bottom && next.left === current.left
+    ) return;
+    this.appliedPadding = next;
+    this.writeCamera(() => {
+      try {
+        map.setPadding?.({ ...next });
+      } catch {
+        // A peer that rejects padding keeps its previous one; fits then simply ignore it.
+      }
+    });
+  }
+
+  /** The visible box inside the applied `cameraPadding`, or `undefined` when it cannot be read. */
+  private readVisibleBounds(map: MapLibreMapCapability): LyraMapBounds | undefined {
+    try {
+      const { top, right, bottom, left } = this.appliedPadding;
+      const container = this.containerEl;
+      let west: number;
+      let south: number;
+      let east: number;
+      let north: number;
+      const width = container?.clientWidth ?? 0;
+      const height = container?.clientHeight ?? 0;
+      if (
+        (top || right || bottom || left) && typeof map.unproject === 'function' &&
+        width - right > left && height - bottom > top
+      ) {
+        const corners = [
+          [left, top], [width - right, top], [width - right, height - bottom], [left, height - bottom],
+        ] as const;
+        west = south = Infinity;
+        east = north = -Infinity;
+        for (const [x, y] of corners) {
+          const { lng, lat } = map.unproject([x, y]);
+          west = Math.min(west, lng);
+          east = Math.max(east, lng);
+          south = Math.min(south, lat);
+          north = Math.max(north, lat);
+        }
+      } else {
+        const box = map.getBounds?.();
+        if (!box) return undefined;
+        west = box.getWest();
+        south = box.getSouth();
+        east = box.getEast();
+        north = box.getNorth();
+      }
+      if (![west, south, east, north].every(isFiniteCoordinate)) return undefined;
+      // `west` into [-180, 180], keeping the span, so `fitBounds()` takes the box back.
+      const span = east - west;
+      if (span >= 360) {
+        west = -180;
+        east = 180;
+      } else {
+        west = wrapLongitude(west);
+        east = west + span;
+      }
+      return Object.freeze([
+        Object.freeze([west, finiteRange(south, 0, -90, 90)] as const),
+        Object.freeze([east, finiteRange(north, 0, -90, 90)] as const),
+      ] as const);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Queues a `lr-map-move` for the next animation frame, unless one is already queued. */
+  private scheduleMoveReport(map: MapLibreMapCapability): void {
+    if (this.moveFrame !== undefined) return;
+    const view = ownerWindow(this);
+    if (!view || typeof view.requestAnimationFrame !== 'function') {
+      this.reportMove(map);
+      return;
+    }
+    this.moveFrame = view.requestAnimationFrame(() => {
+      this.moveFrame = undefined;
+      this.reportMove(map);
+    });
+  }
+
+  /** Reports a queued move now: the camera has stopped, and its last position must not wait. */
+  private flushMoveReport(map: MapLibreMapCapability): void {
+    if (this.moveFrame === undefined) return;
+    this.cancelMoveReport();
+    this.reportMove(map);
+  }
+
+  private cancelMoveReport(): void {
+    if (this.moveFrame === undefined) return;
+    ownerWindow(this)?.cancelAnimationFrame?.(this.moveFrame);
+    this.moveFrame = undefined;
+  }
+
+  private reportMove(map: MapLibreMapCapability): void {
+    if (this._map !== map) return;
+    const camera = readPeerCamera(map);
+    if (!camera) return;
+    const bounds = this.readVisibleBounds(map);
+    this.emit('lr-map-move', bounds ? { ...camera, bounds } : { ...camera });
   }
 
   private applyFit(map: MapLibreMapCapability, fit: MapFitRequest, animate: boolean): boolean {
@@ -3156,10 +3558,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.reflectedCamera = { center, zoom };
     // Past the collection boundary, so a host re-committing its own array stays a no-op.
     const previousCenter = this._center;
-    this._center = center;
-    this.requestUpdate('center', previousCenter);
-    this.zoom = zoom;
-    this.emit('lr-map-view-change', { center, zoom, source });
+    this.reflectingCamera = true;
+    try {
+      this._center = center;
+      this.requestUpdate('center', previousCenter);
+      this.zoom = zoom;
+    } finally {
+      this.reflectingCamera = false;
+    }
+    const bounds = this.readVisibleBounds(map);
+    this.emit('lr-map-view-change', bounds ? { center, zoom, source, bounds } : { center, zoom, source });
   }
 
   /**
@@ -3347,6 +3755,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // Teardown is best-effort for a peer instance that failed partway through initialization.
     }
     this._map = undefined;
+    this.cancelMoveReport();
+    this.appliedPadding = ZERO_CAMERA_PADDING;
     this._styleLoaded = false;
     this.boxZoomSettling = false;
     this.reflectedCamera = undefined;
@@ -3494,8 +3904,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       candidate.on('boxzoomend', () => {
         if (this._map === candidate) this.boxZoomSettling = true;
       });
+      candidate.on('move', () => {
+        if (this._map === candidate) this.scheduleMoveReport(candidate!);
+      });
       candidate.on('moveend', (event) => {
         if (this._map !== candidate) return;
+        this.flushMoveReport(candidate!);
         // The peer merges a fit's event data into its movement events, and attaches the DOM event
         // behind every gesture-driven move (including its own navigation buttons). The one gesture
         // it does not tag is a box zoom: `boxzoomend` carries the mouseup, then the peer animates
@@ -3503,11 +3917,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         // stopped. Anything else -- this element's own `center`/`zoom` push, a resize, a move made
         // directly through `map` -- is not a camera change this element reports.
         const fit = event?.[FIT_EVENT_KEY] === this.fitToken;
-        const afterBoxZoom = !fit && this.boxZoomSettling;
-        if (!fit) this.boxZoomSettling = false;
+        const command = event?.[COMMAND_EVENT_KEY] === this.commandToken;
+        const afterBoxZoom = !fit && !command && this.boxZoomSettling;
+        if (!fit && !command) this.boxZoomSettling = false;
         if (this.writingCamera) return;
         const source: LyraMapViewChangeSource | undefined =
-          fit ? 'fit' : event?.['originalEvent'] || afterBoxZoom ? 'user' : undefined;
+          fit ? 'fit' : command ? 'command' : event?.['originalEvent'] || afterBoxZoom ? 'user' : undefined;
         if (source) this.reflectCamera(candidate!, source);
       });
       const canvas = candidate.getCanvas?.() as HTMLCanvasElement | undefined;
@@ -3528,14 +3943,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // it here, on the map-ready path, is what makes a declaratively-set box reach the peer at all;
     // `updated()` still covers a later reassignment.
     this.applyMaxBounds();
+    this.applyCameraPadding();
     // Deferred rather than applied here: this can run inside `updated()`, and the fit settles
     // synchronously, writing `center`/`zoom` -- a property write the update cycle must not see.
     if (this.pendingFit) this.scheduleAfterUpdate(() => this.applyPendingFit(), 'map-pending-fit');
+    if (this.pendingCommand) this.scheduleAfterUpdate(() => this.applyPendingCommand(), 'map-pending-command');
   }
 
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
     if (args[0] === undefined) this.geoJsonRefreshRequested = true;
     super.requestUpdate(...args);
+    if ((args[0] === 'center' || args[0] === 'zoom') && this.isUpdatePending && !this.reflectingCamera) {
+      this.cameraUpdatePending = true;
+    }
     // A no-op property write schedules nothing and must not mark the semantics stale.
     if (this.isUpdatePending && (args[0] === undefined || ['label', 'lang', 'locale', 'strings', 'markers',
       'legend', 'legendGradient', 'hasLegendSlot', 'hasLegendStartSlot'].includes(String(args[0])))) this.semanticsStale = true;
@@ -3544,6 +3964,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.cameraUpdatePending = false;
     this.setAttribute('aria-busy', String(this.loading));
     if (this.legendCollapsed && (changed.has('legendOpen') || changed.has('legendCollapsible'))) {
       // Reset before the sticky material measures the collapsed viewport. WebKit can otherwise
@@ -3623,6 +4044,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.reconcileGeneratedLayers();
     }
     if (changed.has('hiddenCategories') && this._map && this._styleLoaded) this.refreshThemePaint();
+    if (changed.has('cameraPadding') && this._map) this.applyCameraPadding();
     this.pushCamera(changed);
     if (changed.has('maxBounds') && this._map) this.writeCamera(() => this.applyMaxBounds());
     if (changed.has('markers') && this._map) this.applyMarkers();

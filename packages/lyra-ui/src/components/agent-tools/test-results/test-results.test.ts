@@ -36,7 +36,7 @@ describe('lr-test-results', () => {
     expect(el.withoutAutoExpandFailures).to.be.true;
   });
 
-  it('updates nested test fields when the same suite array is reassigned after mutation', async () => {
+  it('updates nested test fields when a new suite array is assigned after mutation, not for the same array', async () => {
     const source: TestSuiteResult[] = [{
       id: 'suite',
       name: 'Suite',
@@ -47,6 +47,9 @@ describe('lr-test-results', () => {
 
     source[0]!.tests[0]!.name = 'After';
     el.suites = source;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="test-name"]')?.textContent?.trim()).to.equal('Before');
+    el.suites = [...source];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="test-name"]')?.textContent?.trim()).to.equal('After');
   });

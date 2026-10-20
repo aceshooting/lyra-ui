@@ -125,7 +125,7 @@ queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreak
   `lr-chunk-inspector`'s flatter `LyraChunk` via `source.id → sourceId`, `source.name → title`, and
   `locator → anchor`; a `page`-kind `locator` additionally supplies the inspector's visible `page`.
   Nothing is ever guessed from `metadata` — a chunk with no `locator` simply leaves `anchor`/`page`
-  unset
+  unset. Assign a new array to update; mutating an array and assigning it again does not.
 - `selectedChunkIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. Blank
   ids, duplicates, and ids absent from the canonical chunk model are pruned in the legacy route;
   source mode resolves presence globally as described above. The component updates

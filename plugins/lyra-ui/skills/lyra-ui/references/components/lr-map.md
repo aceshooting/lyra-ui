@@ -65,7 +65,8 @@ modes use the same expression semantics at initial render and after a theme chan
   engine payload and is a separate opt-in from the modular default.
 - `center: [number, number] = [0, 0]`
 - `zoom: number = 2` — `center` and `zoom` are the declarative camera. Assigning either moves the
-  map without emitting anything. When the camera settles after a user gesture or `fitBounds()`, the
+  map without emitting anything. When the camera settles after a user gesture, `fitBounds()` or a
+  camera command (`flyTo()`/`easeTo()`/`jumpTo()`), the
   element writes that camera into both and reports it through `lr-map-view-change`, so its next
   update never resets it, and a later, different assignment still moves the map. Assigning a value
   the map already shows moves nothing, so echoing a reported camera back, however late, never stops
@@ -74,8 +75,18 @@ modes use the same expression semantics at initial render and after a theme chan
   did not assign is not left wherever the interrupted movement stopped; with nothing in flight,
   only the assigned axis moves. Because both track the settled camera, a map rebuilt after a
   disconnect/reconnect opens at the last settled camera rather than the originally declared one.
-  Re-assigning the identical `center` array (a parent re-render) is not a new request, even after
-  a gesture or fit; assign a new array to re-centre.
+  `center` is compared by value against the last value assigned: a new array holding the same two
+  numbers (a parent re-render rebuilding its arrays) is not a new request, even after a gesture,
+  fit or camera command, so it never pulls the map back over the user's pan. Assign a different
+  value to move the map, or call `jumpTo({ center })` to re-centre on the value already assigned.
+  **Behavior change:** an equal re-assignment used to re-centre the map after a pan.
+- `cameraPadding?: LyraMapPadding` (attribute: false) — screen pixels (`top`, `right`, `bottom`,
+  `left`; an omitted, negative or non-finite side is `0`) the camera is measured inside, applied to
+  the engine persistently. Every fit (`fitBounds()`, `fitToData()`) frames inside it, and the
+  `bounds` that `lr-map-view-change` and `lr-map-move` report is the visible box inside it, so a
+  panel or toolbar covering part of the map does not hide what the map frames. Changing it keeps
+  the geographic centre fixed, shifts the picture and is not reported as a camera change. Sides are
+  physical, not logical.
 - `renderWorldCopies?: boolean` (attribute: false) — forwarded to MapLibre when its map is
   constructed. Leave it unset to preserve MapLibre's own current default; set `false` before
   construction to stop repeating the world horizontally. This is a construction-time option, so a
@@ -593,6 +604,48 @@ settles, the element writes it into `center`/`zoom` and emits `lr-map-view-chang
   map), MapLibre leaves the camera where it is and logs its own warning: the call still returns
   `true`, and no `lr-map-view-change` fires.
 
+`fitToData(options?: LyraMapFitBoundsOptions): boolean` frames everything the map draws: `markers`,
+every `dataLayers` source and the `choropleth`, measured from the geometry the element has already
+admitted (not from your raw values), so you no longer compute a box yourself. It is `fitBounds()` of
+the union of their extents, with the same options, queueing, `cameraPadding`, write-back and
+`source: 'fit'`. `maxZoom` defaults to `16`, so one marker does not zoom to the street; pass it
+(a non-finite value for no ceiling) to change that. The extent is a plain west-to-east span, so data
+on both sides of the antimeridian frames the long way round. Returns `false`, doing nothing, when
+nothing with geometry is drawn. Assignments to `markers`/`dataLayers`/`choropleth` made in the same
+tick are already counted.
+
+`fitBounds()`, `fitToData()` and the camera commands below are not interrupted by a `center` or
+`zoom` assignment made in the same tick: they run after the update that pushes that assignment, so
+the order you wrote them in is the order they take effect (`el.center = x; el.fitBounds(box)` no
+longer needs an `await el.updateComplete` in between). Their return value is `true` once accepted
+or deferred.
+
+`flyTo(options)`, `easeTo(options)` and `jumpTo(options)` (`LyraMapCameraOptions { center?, zoom?,
+bearing?, pitch?, duration? }`; each returns `boolean`) move the camera with the engine's own
+commands, a curved flight, an eased animation and an immediate jump respectively. Use them instead of
+calling the same methods through `map`, which the element neither knows about nor reports.
+
+- Reduced motion: under `prefers-reduced-motion: reduce` (or a `data-lr-motion="reduce"` scope)
+  `flyTo()` and `easeTo()` jump.
+- Write-back: once the camera settles, the element writes it into `center`/`zoom` and emits
+  `lr-map-view-change` with `source: 'command'`; it never moves the camera a second time to apply
+  what it just wrote. `jumpTo()` is the explicit re-centre (an equal `center` re-assignment is a
+  no-op).
+- Every option is optional and an unusable one is ignored: `center` must be a finite
+  `[longitude, latitude]` (clamped into range), `zoom` is clamped into `[0, 22]`, `pitch` into
+  `[0, 85]`, and a negative or non-finite `duration` means the engine's default. With nothing
+  usable the call returns `false` (and warns in development) without moving anything.
+- Callable before the map exists: the most recent request (or `fitBounds()` call) is queued and
+  applied without animation right after construction, unless `center` or `zoom` has been given a
+  different value since. Returns `true` once the move is running or queued, `false` when the loaded
+  engine has no such command.
+
+`project(lngLat)` returns the `[x, y]` CSS pixel position of a `[longitude, latitude]` in the map's
+container, and `unproject([x, y])` the inverse, so an overlay can sit on a coordinate; both read the
+camera as it is now and return `undefined` before the map exists, for a non-finite input, or when
+the engine cannot project. Pair `project()` with `lr-map-move` to keep an overlay glued to a moving
+map.
+
 There is deliberately no declarative `bounds` property. `center` and `zoom` already describe the
 camera; a third camera input would need a precedence rule against them, and a framework that
 rebuilds its arrays on every render would refit on every render, pulling the camera away from a user
@@ -609,7 +662,7 @@ import type {
 let camera: LyraMapViewChangeDetail | undefined;
 const mapEl = document.querySelector('lr-map') as LyraMap;
 mapEl.addEventListener('lr-map-view-change', (event) => {
-  // Keep the host's own camera state in step: { center, zoom, source }.
+  // Keep the host's own camera state in step: { center, zoom, source, bounds }.
   camera = event.detail;
 });
 
@@ -624,6 +677,19 @@ function showMarkers(markers: LyraMapMarker[]): void {
   ];
   mapEl.fitBounds(box, { padding: 48, maxZoom: 14 });
 }
+
+// The same, without computing the box, inside a toolbar that covers the left 320px:
+mapEl.cameraPadding = { left: 320 };
+mapEl.fitToData({ maxZoom: 14 });
+
+// Camera commands report as `source: 'command'` and write back into center/zoom:
+mapEl.flyTo({ center: [2.35, 48.85], zoom: 11 });
+
+// Keep an overlay on a coordinate while the map moves:
+mapEl.addEventListener('lr-map-move', () => {
+  const point = mapEl.project([2.35, 48.85]);
+  if (point) overlay.style.translate = `${point[0]}px ${point[1]}px`;
+});
 ```
 
 **Events:** `lr-map-load` (fired once, after the underlying map's own `'load'`),
@@ -660,15 +726,25 @@ is MapLibre's `point_count`/`point_count_abbreviated`/`cluster_id` properties, w
 zoom-to-cluster handler reads. The count label is deliberately not hit-tested (it sits exactly on
 the circle already queried and would only make the label the topmost hit), and a `kind: 'heatmap'`
 layer is never queried at all — MapLibre returns no features for a rendered density surface.
-Also `lr-map-view-change` (non-cancelable; frozen `LyraMapViewChangeDetail { center, zoom, source }`,
-`source` being `LyraMapViewChangeSource = 'user' | 'fit'`), fired once each time the camera settles
-after a user gesture (drag, wheel, touch, keyboard, Shift+drag box zoom, or a standard peer
-navigation button) or a `fitBounds()` call. `center` is `[longitude, latitude]` with the longitude
-wrapped into `[-180, 180]`. The element has already written the camera into `center` and `zoom`
+Also `lr-map-view-change` (non-cancelable; frozen `LyraMapViewChangeDetail { center, zoom, source,
+bounds? }`, `source` being `LyraMapViewChangeSource = 'user' | 'fit' | 'command'`), fired once each
+time the camera settles after a user gesture (drag, wheel, touch, keyboard, Shift+drag box zoom, or
+a standard peer navigation button), a `fitBounds()`/`fitToData()` call (`'fit'`), or a
+`flyTo()`/`easeTo()`/`jumpTo()` call (`'command'`). `center` is `[longitude, latitude]` with the
+longitude wrapped into `[-180, 180]`. `bounds` is the visible `[[west, south], [east, north]]` box
+inside `cameraPadding` (`west` within `[-180, 180]`, `east` possibly past 180 across the antimeridian,
+so `fitBounds()` accepts it back); it is absent when the engine cannot report bounds. The element has already written the camera into `center` and `zoom`
 when it fires, so a host that mirrors camera state assigns the detail back, at any later time,
 without moving the map. Assigning `center`/`zoom` reconciles without emitting it, so a controlled
 host cannot loop, and camera moves made directly through `map` are not reported — which is why
-`'user'` and `'fit'` are the only sources.
+`'user'`, `'fit'` and `'command'` are the only sources.
+Also `lr-map-move` (non-cancelable; frozen `LyraMapMoveDetail { center, zoom, bounds? }`), fired at
+most once per animation frame while the camera moves, whatever moves it (a gesture, an animation,
+a camera command, a fit, a `center`/`zoom` assignment or a move made directly through `map`), and
+once more when the move ends so the last position is never missed. It reports the camera as it is,
+not a settled intent: use `lr-map-view-change` for where the camera came to rest, and this event to
+keep an overlay in step with the map while it travels (pair it with `project()`). It stops when the
+element disconnects.
 
 The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted

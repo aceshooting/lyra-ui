@@ -37,7 +37,7 @@ class AccessorLossRebindingDemo extends LyraElement {
   protected static override readonly identityCollectionProperties = ['rows'];
   protected static readonly ownedCollectionLimits = { rows: { entries: 2 } };
   private storedRows: { label: string }[] = [];
-  @property({ attribute: false })
+  @property({ attribute: false, hasChanged: () => true })
   get rows(): { label: string }[] { return this.storedRows; }
   set rows(value: readonly { label: string }[]) {
     const previous = this.storedRows;
@@ -59,6 +59,11 @@ class ExplicitDeepLossRebindingDemo extends DeepLossRebindingDemo {
 }
 customElements.define(tag('explicit-deep-loss-rebinding-demo'), ExplicitDeepLossRebindingDemo);
 expectDevWarning(collectionTruncationWarningKey(tag('explicit-deep-loss-rebinding-demo'), 'rows'));
+class ExplicitIdentityLossRebindingDemo extends LossRebindingDemo {
+  @property({ attribute: false, hasChanged: () => true }) override rows: readonly { label: string }[] = [];
+}
+customElements.define(tag('explicit-identity-loss-rebinding-demo'), ExplicitIdentityLossRebindingDemo);
+expectDevWarning(collectionTruncationWarningKey(tag('explicit-identity-loss-rebinding-demo'), 'rows'));
 customElements.define(tag('loss-rebinding-demo'), LossRebindingDemo);
 customElements.define(tag('deep-loss-rebinding-demo'), DeepLossRebindingDemo);
 customElements.define(tag('accessor-loss-rebinding-demo'), AccessorLossRebindingDemo);
@@ -66,8 +71,27 @@ for (const name of ['loss-rebinding-demo', 'deep-loss-rebinding-demo', 'accessor
   expectDevWarning(collectionTruncationWarningKey(tag(name), 'rows'));
 }
 
-it('keeps original loss on an exact owned identity snapshot while refreshing live row content', async () => {
+it('ignores an exact owned identity snapshot and a same source, keeping the original loss until a new array arrives', async () => {
   const host = await fixture<LossRebindingDemo>(html`<lr-loss-rebinding-demo></lr-loss-rebinding-demo>`);
+  const source = [{ label: 'before' }, { label: 'second' }, { label: 'omitted' }];
+  host.rows = source; await host.updateComplete;
+  const snapshot = host.rows;
+  const updates = host.rowUpdates;
+  source[0]!.label = 'after';
+  host.rows = snapshot; host.rows = source; await host.updateComplete;
+  expect(host.rows === snapshot).to.equal(true);
+  expect(host.rowUpdates).to.equal(updates);
+  expect(host.shadowRoot!.textContent?.trim()).to.equal('before');
+  expect(publicCollectionTruncation(host, 'rows')).to.deep.equal({ source: 3, retained: 2, kept: 'oldest' });
+  host.rows = [...host.rows]; await host.updateComplete;
+  expect(host.rows === snapshot).to.equal(false);
+  expect(host.rowUpdates).to.equal(updates + 1);
+  expect(host.shadowRoot!.textContent?.trim()).to.equal('after');
+  expect(publicCollectionTruncation(host, 'rows')).to.equal(undefined);
+});
+
+it('keeps original loss on an exact owned identity snapshot while a custom change detector refreshes live row content', async () => {
+  const host = await fixture<ExplicitIdentityLossRebindingDemo>(html`<lr-explicit-identity-loss-rebinding-demo></lr-explicit-identity-loss-rebinding-demo>`);
   const source = [{ label: 'before' }, { label: 'second' }, { label: 'omitted' }];
   host.rows = source; await host.updateComplete;
   const snapshot = host.rows;
@@ -82,12 +106,12 @@ it('keeps original loss on an exact owned identity snapshot while refreshing liv
   expect(publicCollectionTruncation(host, 'rows')).to.equal(undefined);
 });
 
-it('recomputes provenance for the original mutable source and preserves deep-owned snapshot no-ops', async () => {
+it('recomputes provenance for a new array from the original mutable source and preserves deep-owned snapshot no-ops', async () => {
   const host = await fixture<LossRebindingDemo>(html`<lr-loss-rebinding-demo></lr-loss-rebinding-demo>`);
   const source = [{ label: 'first' }, { label: 'second' }, { label: 'third' }];
   host.rows = source; await host.updateComplete;
   source.pop(); source[0]!.label = 'current';
-  host.rows = source; await host.updateComplete;
+  host.rows = [...source]; await host.updateComplete;
   expect(publicCollectionTruncation(host, 'rows')).to.equal(undefined);
   expect(host.shadowRoot!.textContent?.trim()).to.equal('current');
   const deep = await fixture<DeepLossRebindingDemo>(html`<lr-deep-loss-rebinding-demo></lr-deep-loss-rebinding-demo>`);

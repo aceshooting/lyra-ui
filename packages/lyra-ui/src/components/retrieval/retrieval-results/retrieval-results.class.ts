@@ -8,7 +8,6 @@ import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   firstByRetrievalIdentity,
@@ -544,7 +543,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     this.invalidateSourceLifecycle(); this.sourcePages.adopted(); super.adoptedCallback();
   }
 
-  /** The raw (not deduplicated/sorted/grouped) result set. Host-owned. */
+  /** The raw (not deduplicated/sorted/grouped) result set. Host-owned. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) chunks: readonly RetrievalChunk[] = [];
 
   /** Controlled selection, by chunk `id`. The component updates its own copy on toggle *then*
@@ -1262,7 +1261,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         : !rows.length ? html`<lr-empty part="empty" heading=${this.localize('chunkInspectorEmpty')}></lr-empty>`
         : html`<lr-virtual-list
           exportparts="row:row, group:group-header, select:select, row-body:row-body, row-body-selected:row-body-selected, metadata:metadata, metadata-entry:metadata-entry, metadata-term:metadata-term, metadata-value:metadata-value, chunk:chunk, chunk-current:chunk-current, chunk-score:chunk-score, chunk-score-current:chunk-score-current, chunk-score-bar:chunk-score-bar, chunk-score-fill:chunk-score-fill, chunk-score-fill-success:chunk-score-fill-success, chunk-score-fill-warning:chunk-score-fill-warning, chunk-score-fill-danger:chunk-score-fill-danger, chunk-open-button:chunk-open-button, chunk-title:chunk-title, chunk-text:chunk-text, chunk-text-clamped:chunk-text-clamped, chunk-toggle:chunk-toggle"
-          .items=${guard([rows], () => rows)} .groups=${this.sourceGroups}
+          .items=${rows} .groups=${this.sourceGroups}
           .keyFunction=${this.retrievalChunkKey}
           .renderItem=${(item: unknown, index: number) => this.renderRow(item, state.page * state.pageSize + index, state.result!.total)}
           @lr-load-more=${this.stopOwnedEvent} @lr-virtual-scroll=${this.stopOwnedEvent} @lr-visible-range-change=${this.stopOwnedEvent}
@@ -1343,7 +1342,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         ${useVirtualList
           ? html`<lr-virtual-list
               exportparts="row:row, group:group-header, select:select, row-body:row-body, row-body-selected:row-body-selected, metadata:metadata, metadata-entry:metadata-entry, metadata-term:metadata-term, metadata-value:metadata-value, chunk:chunk, chunk-current:chunk-current, chunk-score:chunk-score, chunk-score-current:chunk-score-current, chunk-score-bar:chunk-score-bar, chunk-score-fill:chunk-score-fill, chunk-score-fill-success:chunk-score-fill-success, chunk-score-fill-warning:chunk-score-fill-warning, chunk-score-fill-danger:chunk-score-fill-danger, chunk-open-button:chunk-open-button, chunk-title:chunk-title, chunk-text:chunk-text, chunk-text-clamped:chunk-text-clamped, chunk-toggle:chunk-toggle"
-              .items=${guard([processed.chunks], () => processed.chunks)}
+              .items=${processed.chunks}
               .renderItem=${renderVirtualRow}
               .keyFunction=${this.retrievalChunkKey}
               .groups=${processed.groups}

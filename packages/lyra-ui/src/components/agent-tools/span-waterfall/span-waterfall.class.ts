@@ -421,7 +421,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
    * Retains the first 10,000 source entries by identity; the closed span projection avoids the
    * shared 50,000-value deep-copy budget. The default rendered window remains 500 spans.
    *  The controlled `activeSpanId` reserves a position inside the shared 500-row ceiling. Foreign
-   *  runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. */
+   *  runtime `kind`/`status` values normalize to `'other'`/`'pending'` before rendering. Assign a new array to update: mutating an array and assigning it again does not. */
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   @property({ attribute: 'active-span-id' }) activeSpanId: string | null = null;
   /** Visible time window in trace-relative ms (same non-negative, trace-relative vocabulary as

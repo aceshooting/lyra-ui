@@ -7355,6 +7355,7 @@ export interface LyraComponentTypeMap {
     element: LyraMap;
     properties: LyraElementProperties<
       LyraMap,
+      | 'cameraPadding'
       | 'center'
       | 'choropleth'
       | 'dataLayers'
@@ -7385,6 +7386,7 @@ export interface LyraComponentTypeMap {
       | 'lr-map-legend-toggle-request'
       | 'lr-map-load'
       | 'lr-map-marker-activate'
+      | 'lr-map-move'
       | 'lr-map-view-change';
     cssNames:       | '--lr-map-choropleth-fill-opacity'
       | '--lr-map-height'

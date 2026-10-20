@@ -81670,6 +81670,15 @@
         ],
         "properties": [
           {
+            "name": "cameraPadding",
+            "attribute": null,
+            "type": "LyraMapPadding | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "center",
             "attribute": "center",
             "type": "readonly [number, number]",
@@ -81930,6 +81939,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-map-move",
+            "type": "CustomEvent<LyraMapMoveDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-map-view-change",
             "type": "CustomEvent<LyraMapViewChangeDetail>",
             "cancelable": "never",
@@ -82095,6 +82110,22 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "easeTo",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "LyraMapCameraOptions",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
             "name": "fitBounds",
             "overloads": [
               {
@@ -82114,6 +82145,87 @@
                   }
                 ],
                 "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "fitToData",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "LyraMapFitBoundsOptions",
+                    "optional": false,
+                    "hasDefault": true,
+                    "default": "{}"
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "flyTo",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "LyraMapCameraOptions",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "jumpTo",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "LyraMapCameraOptions",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "project",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "lngLat",
+                    "type": "readonly [number, number]",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "LyraMapPoint | undefined"
+              }
+            ]
+          },
+          {
+            "name": "unproject",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "point",
+                    "type": "LyraMapPoint",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "readonly [number, number] | undefined"
               }
             ]
           },

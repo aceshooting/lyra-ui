@@ -283,12 +283,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * Explicit exceptions whose item identity is itself part of the public contract (for example a
    * generic virtual-list row or a command object returned to an imperative callback). The array
    * sequence is still bounded, detached, and frozen; only its item references are retained.
+   * Assigning the same array again (or the getter's snapshot) is a no-op: publish a change by
+   * assigning a new array.
    */
   protected static readonly identityCollectionProperties: readonly PropertyKey[] =
-    Object.freeze([]);
-
-  /** Identity collections whose documented updates require a new source collection. */
-  protected static readonly immutableSourceCollectionProperties: readonly PropertyKey[] =
     Object.freeze([]);
 
   /** Exact opaque-object exceptions; unlike item-identity lists, no sequence claim is made. */

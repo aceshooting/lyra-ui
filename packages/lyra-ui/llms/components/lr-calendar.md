@@ -33,7 +33,7 @@ title, readonly color?, readonly data? }`; `date` accepts an ISO `YYYY-MM-DD` st
   part of the contract; use one event per displayed date. Input retains the first 10,000 events
   while preserving event identity. A localized `limit` part discloses omitted input in month and
   agenda views; provide a smaller date range to include other events. Changed loss notices are
-  announced politely after mount
+  announced politely after mount. Assign a new array to update; mutating an array and assigning it again does not.
 - `value: string = ''` — the selected ISO date
 - `viewDate: string` (attribute `view-date`, defaults to the 1st of the current month) — the visible
   month; an unparseable value falls back to the current month

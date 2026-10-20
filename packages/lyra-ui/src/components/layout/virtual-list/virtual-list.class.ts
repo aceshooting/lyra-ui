@@ -462,13 +462,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   /**
    * The full (non-windowed) item collection. Preserved as the array-compatible source when
    * `source` is unset.
+   * Assign a new array to update: mutating an array and assigning it again does not.
    */
   @property({ attribute: false }) items: readonly unknown[] = [];
 
   /**
    * A readonly array or count/index-backed collection. An array assignment is copied, bounded,
-   * and frozen while retaining each generic row's identity; reassign a new array after sequence
-   * changes. Indexed-source objects pass through by identity. When set, this takes precedence over
+   * and frozen while retaining each generic row's identity; assign a new array after sequence
+   * changes (assigning the same mutated array does not update). Indexed-source objects pass through by identity. When set, this takes precedence over
    * `items`; an indexed source lets synthetic or remote models expose a large row count without
    * allocating an `Array(0…count)` merely to feed the virtualizer. After mutating an indexed
    * source's count or callback closures, call `requestUpdate()` to refresh identities, active-key

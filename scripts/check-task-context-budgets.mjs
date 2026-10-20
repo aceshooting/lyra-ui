@@ -50,6 +50,13 @@ export const ROUTES = [
       { path: 'llms/shared/v23-to-v24-migration.md', kind: 'full', label: 'upgrade guide' },
     ],
   },
+  {
+    id: 'v29-v30-upgrade',
+    steps: [
+      { path: 'llms.txt', kind: 'full', label: 'entry index' },
+      { path: 'llms/shared/v29-to-v30-migration.md', kind: 'full', label: 'upgrade guide' },
+    ],
+  },
 ];
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
