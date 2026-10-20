@@ -13,7 +13,8 @@ still open.
   `@aceshooting/lyra-docs`; not part of lyra-ui release qualification.
 - **30.0.0 work plans** (task status kept in each file): [WebGL 3D views](roadmap/lyra-3d.md) in
   the optional `@aceshooting/lyra-3d` companion, [map adoption](roadmap/map-adoption.md) for
-  `lr-map` and lyra-map 1.3.0, and [immutable identity collections](roadmap/immutable-collections.md).
+  `lr-map` and lyra-map 1.3.0, and [immutable identity collections](roadmap/immutable-collections.md); plus
+  [test health](roadmap/test-health.md) (coverage, speed, flakiness).
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
 ## Shipped
