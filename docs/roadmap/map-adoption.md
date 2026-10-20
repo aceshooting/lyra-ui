@@ -86,6 +86,20 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
 - [ ] Migration notes for the full-`maplibre-gl` engine to the modular engine, including the worker
   setup the full engine still needs.
 
+## Release gate: application coverage
+
+30.0.0 is not released until `lr-map` covers every map need of the maintained applications that
+use it or the raw engine (the photo-mapping application, the main site, the world site, and the
+regional site that shares the main site's map package):
+
+- [ ] Re-audit each application's map code against the final `lr-map` API and record, per need,
+  the `lr-map` feature that covers it (with evidence: a test, story or prototype), or why it stays
+  application-specific.
+- [ ] Prototype each raw-engine application on `lr-map` against the release candidate build and
+  confirm the same behavior (basemap and theme switching, overlays, popups, drawing, geolocation,
+  URL hash, right-to-left, translations, mobile layout).
+- [ ] No open `component:lr-map` request in Lyra Admin.
+
 ## Application migration (after the 30.0.0 release)
 
 Maintained applications that build on the raw engine move to `lr-map` once the items above ship,
