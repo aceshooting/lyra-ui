@@ -2969,7 +2969,7 @@
     "mammoth": "^1.13.0",
     "maplibre-gl": "^6.15.0",
     "marked": "^18.1.1",
-    "oxc-parser": "^0.154.0",
+    "oxc-parser": "^0.155.0",
     "papaparse": "^5.7.0",
     "pdfjs-dist": "^6.4.299",
     "pixelmatch": "^8.0.0",
