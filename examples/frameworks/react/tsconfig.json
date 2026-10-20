@@ -8,7 +8,7 @@
     "strict": true,
     "skipLibCheck": false,
     "noEmit": true,
-    "types": ["react"]
+    "types": ["react", "vite/client"]
   },
   "include": ["src"]
 }

@@ -9,13 +9,13 @@
     "build": "pnpm run check && vite build"
   },
   "dependencies": {
-    "@aceshooting/lyra-ui": "^29.0.0",
-    "vue": "3.5.40"
+    "@aceshooting/lyra-ui": "^29.2.2",
+    "vue": "3.5.44"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "6.0.8",
-    "typescript": "5.9.3",
-    "vite": "8.2.0",
-    "vue-tsc": "3.3.9"
+    "@vitejs/plugin-vue": "6.0.10",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vue-tsc": "3.3.13"
   }
 }

@@ -9,14 +9,14 @@
     "build": "pnpm run check && vite build"
   },
   "dependencies": {
-    "@aceshooting/lyra-ui": "^29.0.0",
-    "svelte": "5.56.8"
+    "@aceshooting/lyra-ui": "^29.2.2",
+    "svelte": "5.57.2"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "7.2.0",
-    "@typescript-eslint/types": "8.70.1",
-    "svelte-check": "4.7.4",
-    "typescript": "5.9.3",
-    "vite": "8.2.4"
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@typescript-eslint/types": "8.72.0",
+    "svelte-check": "4.7.7",
+    "typescript": "6.0.3",
+    "vite": "8.3.4"
   }
 }
