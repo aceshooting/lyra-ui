@@ -1,6 +1,6 @@
 # WebGL 3D views (`@aceshooting/lyra-3d`)
 
-Status: planned; nothing in this plan has shipped. Phase 0 is in progress. Today `lr-graph`
+Status: phase 0 done; phase 1 in progress. Nothing has shipped. Today `lr-graph`
 `view="3d"` is a zero-dependency Canvas 2D perspective mode with no 3D force solver, intended for low
 hundreds of nodes; `lr-embedding-explorer` draws an SVG scatter that renders at most 1,000 points (an
 evenly spaced sample of larger inputs); no component shows 3D models, point clouds or 360° media.
@@ -118,7 +118,10 @@ lyra-3d 1.0.0.
   measure real-GPU frame rates in headless Chromium; Firefox and WebKit render in software there,
   so they get functional and fallback coverage. GPU id picking costs 1-2 ms at any size; a restored
   context needs renderer state re-applied.
-- [ ] Engine contract, opt-in vocabulary and large-data input written and approved.
+- [x] Engine contract, opt-in vocabulary and large-data input written and approved (2026-10-20):
+  `three` as a dependency of the companion, standard module workers with a main-thread fallback,
+  typed-column inputs (`graphColumns`, `pointColumns`) as immutable objects, and a dedicated
+  `lr-chart-3d` tag for 3D charts.
 
 Exit: written contract, measured spike, and a go or narrow decision.
 
@@ -149,8 +152,7 @@ Exit: the fallback chain works in all three engines and meets the 10k-node targe
 - [ ] `lyra-3d/points`: instanced point cloud with picking, category colors and 2D or 3D cameras.
 - [ ] `lr-embedding-explorer`: `engine`, optional `z` coordinate, a keyboard cursor and paginated
   list for large point sets, every point rendered up to the documented limit.
-- [ ] 3D scatter, bubble and line charts with axes, gridlines and tick labels (a chart type through
-  the existing chart API, or a small dedicated tag if phase 0 shows the chart API does not fit).
+- [ ] `lr-chart-3d`: 3D scatter, bubble and line charts with axes, gridlines and tick labels.
 - [ ] Point-cloud files (PLY, XYZ, PCD) through the model viewer's file pipeline.
 
 Exit: meets the 100k-point target; the fallback chain works in all three engines.
