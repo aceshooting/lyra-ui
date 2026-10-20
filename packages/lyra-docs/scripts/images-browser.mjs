@@ -251,6 +251,12 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
     assert.equal(before.offscreen, true, 'the direct-session target starts outside its custom viewport');
     const result = await page.evaluate(() => window.__imageNavigationSession.selectImage('next'));
     assert.equal(result.ok, true, JSON.stringify(result));
+    // The engine paints the revealed page on its own frame after selectImage resolves, so wait
+    // for the real condition: the picture is in the viewport DOM and decoded.
+    await page.waitForFunction(() => {
+      const image = document.querySelector('#image-navigation-session [data-lr-docx-viewport]')?.querySelector('img');
+      return !!image && image.complete && image.naturalWidth > 0;
+    });
     const after = await page.evaluate(async () => {
       const session = window.__imageNavigationSession, saved = await session.save();
       if (!saved.ok) throw Error(saved.code);
