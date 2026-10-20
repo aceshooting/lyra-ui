@@ -3552,7 +3552,7 @@ it('passes an explicit per-slice color array through unchanged instead of wrappi
 
   const ds = (el as any).buildConfig().data.datasets[0];
   expect(ds.backgroundColor).to.deep.equal(['rgb(17, 17, 17)', 'rgb(34, 34, 34)']);
-  expect(ds.borderColor).to.equal('rgb(17, 17, 17)');
+  expect(ds.borderColor).to.deep.equal(['rgb(17, 17, 17)', 'rgb(34, 34, 34)']);
 });
 
 it('seriesToDataset leaves the palette fallback color undefined when given an empty palette', () => {
@@ -4427,7 +4427,7 @@ it('locale-formats generated table values, row ordinals, and summary counts', as
 
     const dataset = (el as any).buildConfig().data.datasets[0];
     expect(dataset.backgroundColor).to.deep.equal(['rgb(10, 20, 30)', 'rgb(40, 50, 60)']);
-    expect(dataset.borderColor).to.equal('rgb(10, 20, 30)');
+    expect(dataset.borderColor).to.deep.equal(['rgb(10, 20, 30)', 'rgb(40, 50, 60)']);
     expect(dataset.pointBackgroundColor).to.deep.equal(['rgb(70, 80, 90)']);
     expect(dataset.segment.borderColor({ p0DataIndex: 0 })).to.equal('rgb(100, 110, 120)');
   });

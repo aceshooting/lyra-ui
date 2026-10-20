@@ -3561,8 +3561,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       chartStyle.fillColors[index % chartStyle.fillColors.length] ??
       palette[index % palette.length];
     const sourceColors = projectChartStrings(series.color);
-    const authoredColors = sourceColors && rowIndexes
-      ? rowIndexes.map((rowIndex) => sourceColors[rowIndex] ?? '')
+    const authoredColors = sourceColors?.length && rowIndexes
+      ? rowIndexes.map((rowIndex) => sourceColors[rowIndex % sourceColors.length] ?? '')
       : typeof series.color === 'string'
         ? series.color
         : sourceColors;
@@ -3598,6 +3598,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const fill = series.fill ?? this.area;
     const backgroundColor = colors ?? sliceFillColors ?? fillFallback;
     const datasetType = series.type ?? effectiveType;
+    const connectedStroke = datasetType === 'line' || datasetType === 'radar';
     const authoredSegmentColors =
       series.segmentColors?.length && rowIndexes
       ? rowIndexes.map((rowIndex) => series.segmentColors![rowIndex % series.segmentColors!.length]!)
@@ -3609,8 +3610,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         )
       : undefined;
     const authoredPointColors =
-      series.pointColors && rowIndexes
-      ? rowIndexes.map((rowIndex) => series.pointColors![rowIndex] ?? '')
+      series.pointColors?.length && rowIndexes
+      ? rowIndexes.map((rowIndex) => series.pointColors![rowIndex % series.pointColors!.length] ?? '')
       : series.pointColors;
     const backgroundColors = projectChartStrings(backgroundColor);
     const backgroundColorValue = typeof backgroundColor === 'string' ? backgroundColor : undefined;
@@ -3665,12 +3666,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             series.width,
             // radar draws the same kind of connected-polygon stroke a line chart draws, so it
             // uses the line-weight default too, not the thinner generic border default.
-            datasetType === 'line' || datasetType === 'radar' ? chartStyle.lineBorderWidth : chartStyle.borderWidth
+            connectedStroke ? chartStyle.lineBorderWidth : chartStyle.borderWidth
           ) }),
       borderDash: series.dash ? [4, 4] : chartStyle.forcedColors ? [...encoding.dash] : undefined,
       pointStyle: chartStyle.forcedColors ? encoding.pointStyle : undefined,
       backgroundColor: encodedBackgroundColor,
-      borderColor: colors?.[0] ?? sliceBorderColors ?? borderFallback,
+      borderColor: (sourceColors?.length && !connectedStroke ? colors : colors?.[0]) ?? sliceBorderColors ?? borderFallback,
+      // Connected strokes keep the series' first color; their point borders remain indexable.
+      ...(connectedStroke && sourceColors?.length
+        ? { pointBorderColor: colors }
+        : {}),
       pointBackgroundColor: authoredPointColors
         ? this.canvasTokens.resolveMany(
             authoredPointColors,

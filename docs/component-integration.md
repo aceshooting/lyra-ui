@@ -150,7 +150,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-handoff-divider"></a>`lr-handoff-divider` | conversation | `import '@aceshooting/lyra-ui/components/lr-handoff-divider.js';` | none | none | none | 22.9 KiB |
 | <a id="lr-heatmap"></a>`lr-heatmap` | data | `import '@aceshooting/lyra-ui/components/lr-heatmap.js';` | none | none | none | 65.9 KiB |
 | <a id="lr-highlight-layer"></a>`lr-highlight-layer` | viewers | `import '@aceshooting/lyra-ui/components/lr-highlight-layer.js';` | none | none | none | 31.3 KiB |
-| <a id="lr-histogram"></a>`lr-histogram` | charts | `import '@aceshooting/lyra-ui/components/lr-histogram.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 87.1 KiB |
+| <a id="lr-histogram"></a>`lr-histogram` | charts | `import '@aceshooting/lyra-ui/components/lr-histogram.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 87.2 KiB |
 | <a id="lr-html-viewer"></a>`lr-html-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-html-viewer.js';` | `dompurify` | none | none | 49 KiB |
 | <a id="lr-icon"></a>`lr-icon` | utility | `import '@aceshooting/lyra-ui/components/lr-icon.js';` | `dompurify` | none | none | 31.4 KiB |
 | <a id="lr-icon-button"></a>`lr-icon-button` | forms | `import '@aceshooting/lyra-ui/components/lr-icon-button.js';` | `dompurify` | `lr-icon` | none | 36.5 KiB |
