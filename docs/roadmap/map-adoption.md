@@ -60,7 +60,16 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
 - [ ] Anchored content clamps under fixed application chrome (boundary and safe-area insets),
   stacks above other popups, and has a localized close label.
 - [ ] `exportImage({ type, attribution })` returning a `Blob` of the current view.
-- [ ] Bundled right-to-left text shaping (no runtime fetch from a third-party CDN).
+- [ ] Document that the modular engine shapes right-to-left text without a plugin, so applications
+  drop runtime plugin fetches from third-party CDNs.
+- [ ] Data layers backed by vector tile sources (tiles URL with per-source-layer paint) and by image
+  or raster sources (canvas or data URL on corner coordinates, updated in place), surviving style
+  swaps.
+- [ ] Interactive data layers: hit priority across overlays (topmost wins; background click only
+  when nothing is hit), a hover cursor that yields to pick mode, a feature-state API, and opt-in of
+  basemap style layers (for example building footprints) into `lr-map-click`.
+- [ ] Per-data-layer `minZoom`/`maxZoom` and symbol text labels (line-placed labels, point names,
+  halo, colors from theme tokens).
 - [ ] Repaint after paint changes applied through data layers on every engine (WebKit otherwise
   skips a frame).
 - [ ] First-class lazy construction (build on visibility or idle with a built-in control
