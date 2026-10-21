@@ -120,7 +120,9 @@ describe('<lr-country-picker>', () => {
     expect(el.scrollWidth <= el.clientWidth).to.equal(true);
     child.open = true;
     await child.updateComplete;
-    await waitUntil(() => child.shadowRoot!.querySelector('[part="listbox"]')!.getBoundingClientRect().height > 0);
+    const listbox = child.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+    // Axe must inspect the fully visible listbox, after its opacity transition.
+    await waitUntil(() => listbox.getBoundingClientRect().height > 0 && getComputedStyle(listbox).opacity === '1');
     expect(child.shadowRoot!.querySelectorAll('[part~="option"]').length).to.equal(2);
     await expect(el).to.be.accessible();
   });
