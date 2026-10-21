@@ -81,6 +81,10 @@ interface NotebookSnapshotTask {
   readonly array: boolean;
 }
 
+function isNotebookRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 /** Custom-prototype JSON records are valid notebook payloads, but class/platform instances are
  * not. Admit an ordinary/null-prototype record or one data-only prototype layer; the prototype's
  * keys are never enumerated or copied. */
@@ -117,7 +121,7 @@ function isNotebookDataRecord(value: object): boolean {
  * descriptors, traversal is iterative, repeated object references fail atomically, and every
  * admitted container is frozen before the setter publishes it. */
 function snapshotNotebookDocument(value: unknown): NotebookDoc | typeof OMIT_NOTEBOOK_SNAPSHOT {
-  if (value === null || typeof value !== 'object' || Array.isArray(value))
+  if (!isNotebookRecord(value))
     return OMIT_NOTEBOOK_SNAPSHOT;
 
   let remaining = MAX_JSON_NODES;
@@ -328,7 +332,7 @@ function isJsonValue(value: unknown): boolean {
 function isNotebookOutput(value: unknown): value is NotebookOutput {
   if (typeof value !== 'object' || value === null) return false;
   const output = value as Record<string, unknown>;
-  if (!['stream', 'error', 'display_data', 'execute_result'].includes(String(output['output_type']))) return false;
+  if (!['stream', 'error', 'display_data', 'execute_result'].includes(output['output_type'] as string)) return false;
   if (output['text'] !== undefined && !isTextValue(output['text'])) return false;
   if (output['traceback'] !== undefined && !isTextValue(output['traceback'])) return false;
   if (output['ename'] !== undefined && typeof output['ename'] !== 'string') return false;
@@ -336,8 +340,8 @@ function isNotebookOutput(value: unknown): value is NotebookOutput {
   if (output['name'] !== undefined && output['name'] !== 'stdout' && output['name'] !== 'stderr') return false;
   const data = output['data'];
   if (data === undefined) return true;
-  if (typeof data !== 'object' || data === null || Array.isArray(data)) return false;
-  const mimeData = data as Record<string, unknown>;
+  if (!isNotebookRecord(data)) return false;
+  const mimeData = data;
   for (const [mime, payload] of Object.entries(mimeData)) {
     if (mime === 'application/json') {
       if (typeof payload === 'string') {
@@ -358,6 +362,17 @@ function isNotebookShape(value: unknown): value is NotebookDoc {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
   if (!Number.isInteger(v['nbformat']) || !Number.isInteger(v['nbformat_minor']) || !Array.isArray(v['cells'])) return false;
+  const metadata = v['metadata'];
+  if (metadata !== undefined) {
+    if (!isNotebookRecord(metadata)) return false;
+    for (const [section, field] of [['language_info', 'name'], ['kernelspec', 'language']] as const) {
+      const entry = metadata[section];
+      if (entry === undefined) continue;
+      if (!isNotebookRecord(entry)) return false;
+      const language = entry[field];
+      if (language !== undefined && typeof language !== 'string') return false;
+    }
+  }
   const cells = v['cells'];
   let outputCount = 0;
   for (let index = 0; index < cells.length; index++) {
@@ -365,7 +380,7 @@ function isNotebookShape(value: unknown): value is NotebookDoc {
     const value = cells[index];
     if (typeof value !== 'object' || value === null) return false;
     const cell = value as Record<string, unknown>;
-    if (!['markdown', 'code', 'raw'].includes(String(cell['cell_type']))) return false;
+    if (!['markdown', 'code', 'raw'].includes(cell['cell_type'] as string)) return false;
     if (!isTextValue(cell['source'])) return false;
     if (cell['id'] !== undefined && typeof cell['id'] !== 'string') return false;
     if (cell['execution_count'] !== undefined && cell['execution_count'] !== null &&

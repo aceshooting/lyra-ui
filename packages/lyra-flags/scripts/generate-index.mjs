@@ -179,7 +179,7 @@ function renderGeneratedJs(codes) {
     ' * generate-index.mjs for why that defeats the whole point.\n' +
     ' * @type {Record<string, () => Promise<string>>}\n' +
     ' */\n' +
-    `export const FLAG_LOADERS = {\n${loaderLines}\n};\n`
+    `export const FLAG_LOADERS = {\n  __proto__: null,\n${loaderLines}\n};\n`
   );
 }
 
@@ -204,7 +204,7 @@ function renderEagerJs(codes) {
     ' * generate-index.mjs.\n' +
     ' * @type {Record<string, string>}\n' +
     ' */\n' +
-    `export const FLAG_URLS = {\n${urlLines}\n};\n`
+    `export const FLAG_URLS = {\n  __proto__: null,\n${urlLines}\n};\n`
   );
 }
 
@@ -235,7 +235,7 @@ function renderGeneratedDetailedJs(codes) {
     ' * scripts/optimize-flags.mjs for how flags/detailed/ is populated.\n' +
     ' * @type {Record<string, () => Promise<string>>}\n' +
     ' */\n' +
-    `export const FLAG_LOADERS_DETAILED = {\n${loaderLines}\n};\n`
+    `export const FLAG_LOADERS_DETAILED = {\n  __proto__: null,\n${loaderLines}\n};\n`
   );
 }
 
@@ -267,7 +267,7 @@ function renderGeneratedCompactJs(codes) {
     ' * .webp asset, not a .svg — the compact tier is a raster (see build-compact.mjs for why).\n' +
     ' * @type {Record<string, () => Promise<string>>}\n' +
     ' */\n' +
-    `export const FLAG_LOADERS_COMPACT = {\n${loaderLines}\n};\n`
+    `export const FLAG_LOADERS_COMPACT = {\n  __proto__: null,\n${loaderLines}\n};\n`
   );
 }
 

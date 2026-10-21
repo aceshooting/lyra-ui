@@ -20,6 +20,29 @@ const server = http.createServer((req, res) => {
   } else if (pathname === '/font.ttf') {
     body = fs.readFileSync(process.env.MAP_TEST_FONT);
     type = 'font/ttf';
+  } else if (pathname === '/metadata-observation.json') {
+    body = JSON.stringify({
+      forbiddenTiles: requests.filter(request => request.path === '/metadata-forbidden.png').length,
+      rasterTiles: requests.filter(request => request.path === '/raster.png').length
+    });
+    type = 'application/json';
+  } else if (pathname === '/metadata-invalid-tilejson.json') {
+    body = JSON.stringify({
+      tiles: ['http://' + req.headers.host + '/metadata-forbidden.png'], minzoom: 0, maxzoom: 0, tileSize: 256, scheme: 'invalid'
+    });
+    type = 'application/json';
+  } else if (pathname === '/metadata-valid-tilejson.json') {
+    body = JSON.stringify({ tiles: ['http://' + req.headers.host + '/raster.png'], minzoom: 0, maxzoom: 0, tileSize: 256, scheme: 'xyz' });
+    type = 'application/json';
+  } else if (/^\/metadata-(invalid|valid)-sprite(?:@2x)?\.json$/.test(pathname)) {
+    const icon = { x: 0, y: 0, width: 16, height: 16, pixelRatio: 1, sdf: false };
+    body = JSON.stringify(pathname.includes('invalid')
+      ? { partial: icon, broken: { ...icon, x: 250 } }
+      : Object.fromEntries([['recovered', icon], ['constructor', icon], ['__proto__', icon], ['hasOwnProperty', icon]]));
+    type = 'application/json';
+  } else if (/^\/metadata-(invalid|valid)-sprite(?:@2x)?\.png$/.test(pathname) || pathname === '/metadata-forbidden.png') {
+    body = fs.readFileSync(path.join(root, 'raster.png'));
+    type = 'image/png';
   } else if (pathname === '/raster.png' || pathname === '/dem.png') {
     body = fs.readFileSync(path.join(root, pathname.slice(1)));
     type = 'image/png';
@@ -147,6 +170,8 @@ const cases = process.env.MAP_TEST_CASES?.split(',') ?? [
   'terrain',
   'custom',
   'prepare-features-null-style',
+  'invalid-source-preparation',
+  'invalid-remote-metadata',
   'controls-exports',
   'url-transform',
   'context-restore',

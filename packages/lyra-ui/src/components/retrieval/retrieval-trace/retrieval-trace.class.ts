@@ -276,7 +276,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
 
   private stageLabel(stage: RetrievalStage): string {
     if (typeof stage.label === 'string' && stage.label) return stage.label;
-    const entry = typeof stage.kind === 'string' ? STAGE_LABEL[stage.kind as RetrievalStageKind] : undefined;
+    const entry = typeof stage.kind === 'string' && Object.hasOwn(STAGE_LABEL, stage.kind) ? STAGE_LABEL[stage.kind as RetrievalStageKind] : undefined;
     if (!entry) devWarnOnce(
       'lr-retrieval-trace:unknown-kind',
       `<lr-retrieval-trace>: unknown stage kind ${JSON.stringify(typeof stage.kind === 'string' ? stage.kind.slice(0, 80) : typeof stage.kind)}; rendering a localized unknown label.`
@@ -292,7 +292,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
       (stage, index): LyraSpan => ({
         id: stage.id,
         name: names[index]!,
-        kind: typeof stage.kind === 'string' ? STAGE_SPAN_KIND[stage.kind as RetrievalStageKind] ?? 'tool' : 'tool',
+        kind: typeof stage.kind === 'string' && Object.hasOwn(STAGE_SPAN_KIND, stage.kind) ? STAGE_SPAN_KIND[stage.kind as RetrievalStageKind] : 'tool',
         startMs: stage.startMs,
         endMs: stage.endMs,
         status: stage.status,

@@ -8,7 +8,32 @@ const manifest = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'
 const provenance = JSON.parse(await readFile(resolve(root, 'dist/provenance.json'), 'utf8'));
 assert.equal(manifest.name, '@aceshooting/lyra-map');
 assert.equal(provenance.version, '6.15.0');
-assert.equal(provenance.changedSourceFiles.length, 16);
+assert.deepEqual(provenance.changedSourceFiles, [
+  'data/bucket/symbol_bucket.ts',
+  'geo/projection/projection_factory.ts',
+  'render/image_atlas.ts',
+  'render/image_manager.ts',
+  'render/painter.ts',
+  'render/subdivision.ts',
+  'render/subdivision_granularity_settings.ts',
+  'shaders/shaders.ts',
+  'source/load_tilejson.ts',
+  'source/protocol_crud.ts',
+  'source/source.ts',
+  'source/worker.ts',
+  'source/worker_tile.ts',
+  'style/create_style_layer.ts',
+  'style/load_sprite.ts',
+  'style/style.ts',
+  'tile/tile.ts',
+  'ui/map.ts',
+  'util/actor_messages.ts',
+  'util/config.ts',
+  'util/web_worker_transfer.ts',
+  'webgl/draw/index.ts',
+  'webgl/program/program_uniforms.ts',
+  'webgl/render_to_texture.ts',
+]);
 assert.ok(provenance.modules.length < 700);
 for (const module of provenance.modules) {
   assert.ok(!module.file.includes('node_modules'));

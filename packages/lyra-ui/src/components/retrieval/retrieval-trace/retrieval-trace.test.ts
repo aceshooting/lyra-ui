@@ -1,3 +1,4 @@
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent } from "@open-wc/testing";
@@ -1013,6 +1014,24 @@ it('falls back to string conversion for non-JSON metadata scalars', async () => 
     .to.equal('1');
   const metadata = el.shadowRoot!.querySelector('[part~="evidence-metadata"]')!;
   expect(metadata.getAttribute('part')?.split(' ')).to.include('metadata');
+});
+
+it('uses the unknown-stage fallback for inherited lookup names and preserves built-in kinds', async () => {
+  expectDevWarning('lr-retrieval-trace:unknown-kind');
+  const kinds = ['query-rewrite', 'embed', 'retrieve', 'rerank', 'filter', 'constructor', 'toString', '__proto__', 'dedupe'];
+  const stages = kinds.map((kind, index) => ({
+    id: String(index), kind, startMs: index, endMs: index + 1, status: 'success',
+  })) as RetrievalStage[];
+  const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`);
+  const waterfall = el.shadowRoot!.querySelector<LyraSpanWaterfall>('lr-span-waterfall')!;
+  await waterfall.updateComplete;
+
+  expect(waterfall.spans.map((span) => span.kind)).to.deep.equal([
+    'llm', 'embedding', 'retriever', 'tool', 'tool', 'tool', 'tool', 'tool', 'tool',
+  ]);
+  expect(waterfall.spans.slice(5).map((span) => span.name)).to.deep.equal(Array(4).fill('Unknown stage'));
+  expect(waterfall.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(kinds.length);
+  expect(stages.map((stage) => stage.kind)).to.deep.equal(kinds);
 });
 
 it('degrades an unknown stage.kind to a localized label instead of crashing the whole timeline', async () => {

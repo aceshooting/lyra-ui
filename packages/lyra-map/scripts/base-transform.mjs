@@ -32,7 +32,7 @@ function registry(code, classes, prepare) {
     loaders.push(`${JSON.stringify(classes[name])}:()=>import(${JSON.stringify(path)}).then(m=>{${name}=m.${name}})`);
     return `let ${name};`;
   });
-  return `${code}\nconst loaders={${loaders}};const pending={};export async function ${prepare}(types){if('${prepare}'==='prepareStyleLayers')types=types.map(layer=>typeof layer==='string'?layer:layer.type);await Promise.all([...new Set(types)].map(t=>{if(!loaders[t])throw new Error('Unknown feature '+t);return pending[t]??=(loaders[t]().catch(e=>{delete pending[t];throw e;}));}));}\n`;
+  return `${code}\nconst loaders={${loaders}};const pending=Object.create(null);export async function ${prepare}(types){if('${prepare}'==='prepareStyleLayers')types=types.map(layer=>typeof layer==='string'?layer:layer.type);await Promise.all([...new Set(types)].map(t=>{if(!Object.hasOwn(loaders,t))throw new Error('Unknown feature '+t);return pending[t]??=(loaders[t]().catch(e=>{delete pending[t];throw e;}));}));}\n`;
 }
 export const basePlugin = {
   name: 'map-feature-registry',

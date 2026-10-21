@@ -115,18 +115,18 @@ function copyValue(
   }
   if (ancestors.has(value)) return fail('invalid', 'provider snapshot contains a cycle');
 
-  if (value instanceof Date) {
-    const timestamp = value.getTime();
-    if (!Number.isFinite(timestamp)) return fail('invalid', 'provider snapshot contains an invalid date');
-    const iso = value.toISOString();
-    const copied = consumeString(iso, budget);
-    return copied.ok
-      ? { ok: true, value: iso, bytes: budget.bytes, nodes: budget.nodes }
-      : copied;
-  }
-
   ancestors.add(value);
   try {
+    if (value instanceof Date) {
+      const timestamp = value.getTime();
+      if (!Number.isFinite(timestamp)) return fail('invalid', 'provider snapshot contains an invalid date');
+      const iso = value.toISOString();
+      const copied = consumeString(iso, budget);
+      return copied.ok
+        ? { ok: true, value: iso, bytes: budget.bytes, nodes: budget.nodes }
+        : copied;
+    }
+
     if (Array.isArray(value)) {
       if (value.length > budget.limits.maxNodes - budget.nodes) {
         return fail('limit', 'provider snapshot array limit exceeded');

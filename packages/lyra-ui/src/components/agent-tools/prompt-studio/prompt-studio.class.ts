@@ -67,6 +67,7 @@ export interface LyraPromptStudioEventMap {
 
 type PromptStudioMessageMovePart = 'move-message-up' | 'move-message-down';
 
+const MESSAGE_ROLES = ['system', 'user', 'assistant', 'tool'] as const;
 const PREVIEW_MAX_DEPTH = 64;
 const PREVIEW_MAX_SUBSTITUTIONS = 10_000;
 const PREVIEW_MAX_TEXT_LENGTH = 1_048_576;
@@ -76,8 +77,8 @@ const PREVIEW_MAX_TEXT_LENGTH = 1_048_576;
  * messages, `{{variable}}` substitution, version selection, preview, save, and run intents.
  * The host owns persistence and model execution. Opting into message reordering exposes native,
  * keyboard-operable move controls; every proposed move is cancelable before the editor state changes.
- * Empty/blank message and version ids are omitted; duplicates use deterministic first-wins
- * semantics. Variable rows are
+ * Unsupported message roles and empty/blank message and version ids are omitted; duplicates
+ * use deterministic first-wins semantics. Variable rows are
  * occurrence-addressed because their names are editable and may temporarily be empty or repeated;
  * duplicate names remain independently editable while placeholder resolution uses the first one.
  * Variable values resolve recursively; undefined and cyclic placeholders remain intact within
@@ -253,16 +254,11 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     const seen = new Set<string>();
     const messages = this.messageItems(source)
       .filter((message) => {
-        if (!message || typeof message.id !== 'string' || message.id.trim().length === 0 || seen.has(message.id)) return false;
+        if (!message || !MESSAGE_ROLES.includes(message.role) || typeof message.id !== 'string' || message.id.trim().length === 0 || seen.has(message.id)) return false;
         seen.add(message.id);
         return true;
       })
-      // A foreign/parsed-data `content` value (missing, or `null` after a JSON round-trip of an
-      // omitted field -- `content` is typed as a required `string`, a compile-time-only promise
-      // for a JS consumer) must not reach resolvePreviews()/resolveText(), which dereferences
-      // `content.length`/`content.slice()` with no guard of its own: an un-coerced malformed value
-      // throws inside this component's own render() and blanks the whole panel instead of just the
-      // one malformed message.
+      // Missing or nonstring content becomes empty before preview string operations.
       .map((message) => (typeof message.content === 'string' ? message : { ...message, content: '' }));
     if (source === this.messages) {
       this.normalizedMessageSource = this.messages;
@@ -277,7 +273,11 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
       if (!version || typeof version.id !== 'string' || version.id.trim().length === 0 || seen.has(version.id)) return false;
       seen.add(version.id);
       return true;
-    });
+    }).map((version) => ({
+      ...version,
+      messages: this.uniqueMessages(version.messages),
+      ...(version.variables === undefined ? {} : { variables: this.variableItems(version.variables) }),
+    }));
   }
 
   private emitChange(messages = this.messages, variables = this.variables): void {
@@ -554,7 +554,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
           @focus=${this.onFocus}
           @blur=${this.onBlur}
         >
-          ${(['system', 'user', 'assistant', 'tool'] as const).map(
+          ${MESSAGE_ROLES.map(
             (value) =>
               html`<option value=${value} .selected=${live(value === message.role)}>${this.roleLabel(value)}</option>`,
           )}

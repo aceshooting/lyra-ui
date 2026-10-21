@@ -199,6 +199,104 @@ window.fixture = {
         'prepared imperative source and layer render'
       );
       remove(m);
+    } else if (name === 'invalid-source-preparation') {
+      const m = await make(base());
+      const activeStyle = m.style;
+      const serializedStyle = JSON.stringify(m.getStyle());
+      const rejected = [];
+      for (const type of ['does-not-exist', 'toString', 'constructor', '__proto__']) {
+        const sources = { bad: { type } };
+        for (const [method, prepare] of [
+          ['prepareStyle', () => engine.prepareStyle({ version: 8, sources, layers: [] })],
+          ['prepareFeatures', () => m.prepareFeatures({ sources })]
+        ]) {
+          let failure;
+          try { await prepare(); } catch (error) { failure = error; }
+          if (!(failure instanceof Error) || !failure.message.includes('Unknown feature ' + type)) {
+            rejected.push(method + ':' + type + ':' + (failure?.message ?? 'resolved'));
+          }
+          assert(m.style === activeStyle, method + ' keeps the active style for ' + type);
+          assert(JSON.stringify(m.getStyle()) === serializedStyle, method + ' leaves style data unchanged for ' + type);
+          assert(!m.getSource('bad'), method + ' does not install ' + type);
+        }
+      }
+      assert(rejected.length === 0, 'Unknown source preparation must reject: ' + rejected.join(', '));
+      const style = geoStyle(['circle']);
+      await Promise.all([
+        engine.prepareStyle(style),
+        engine.prepareStyle(style),
+        m.prepareFeatures({ sources: style.sources, layers: style.layers }),
+        m.prepareFeatures({ sources: style.sources, layers: style.layers })
+      ]);
+      assert(m.style === activeStyle, 'concurrent valid preparation keeps the active style');
+      assert(JSON.stringify(m.getStyle()) === serializedStyle, 'valid preparation does not mutate style data');
+      m.addSource('sample', style.sources.sample);
+      m.addLayer(style.layers.find((layer) => layer.id === 'circle'));
+      await until(
+        () => m.loaded() && m.queryRenderedFeatures().some((feature) => feature.id === 1),
+        'valid source and layer still render after rejected and concurrent preparations'
+      );
+      remove(m);
+    } else if (name === 'invalid-remote-metadata') {
+      const m = await make(base());
+      const resourceCounts = async () => (await fetch('/metadata-observation.json')).json();
+      const before = await resourceCounts();
+      const remote = { type: 'raster', url: location.origin + '/metadata-invalid-tilejson.json' };
+      const layer = { id: 'remote', type: 'raster', source: 'remote' };
+      await m.prepareFeatures({ sources: { remote }, layers: [layer] });
+      m.addSource('remote', remote);
+      m.addLayer(layer);
+      await until(() => errors.length > startErrors, 'invalid remote TileJSON error');
+      assert(errors.length === startErrors + 1, 'one TileJSON error');
+      assert(errors[startErrors].message.includes('Invalid TileJSON scheme'), 'TileJSON error names invalid metadata');
+      assert(m.getLayer('bg') && m.getLayer('remote'), 'existing style and layer remain available');
+      assert((await resourceCounts()).forbiddenTiles === before.forbiddenTiles, 'invalid TileJSON schedules no tile request');
+      m.getSource('remote').setUrl(location.origin + '/metadata-valid-tilejson.json');
+      await until(() => m.loaded() && m.isSourceLoaded('remote'), 'valid TileJSON replacement recovers source');
+      assert((await resourceCounts()).rasterTiles > before.rasterTiles, 'recovered source requested its valid tile');
+
+      m.addImage('existing', { width: 1, height: 1, data: new Uint8Array([0, 0, 0, 255]) });
+      m.setSprite(location.origin + '/metadata-invalid-sprite');
+      await until(() => errors.length > startErrors + 1, 'invalid remote sprite error');
+      assert(errors.length === startErrors + 2, 'one sprite metadata error');
+      assert(errors[startErrors + 1].message.includes('Invalid sprite metadata'), 'sprite error names invalid metadata');
+      assert(m.hasImage('existing'), 'failed sprite leaves existing runtime image intact');
+      assert(!m.hasImage('partial') && !m.hasImage('broken'), 'failed sprite installs no partial icon set');
+      m.setSprite(location.origin + '/metadata-valid-sprite');
+      await until(() => m.loaded() && m.hasImage('recovered'), 'valid sprite replacement recovers');
+      const recovered = m.getImage('recovered');
+      assert(recovered.data.width === 16 && recovered.data.height === 16, 'recovered icon extracts valid pixels');
+      assert(m.hasImage('existing'), 'recovery keeps runtime image');
+      const iconData = { type: 'FeatureCollection', features: ['constructor', '__proto__', 'hasOwnProperty'].map((icon, index) => ({
+        type: 'Feature', id: 900 + index, geometry: { type: 'Point', coordinates: [-20 + index * 20, 0] }, properties: { icon }
+      })) };
+      const iconSource = { type: 'geojson', data: iconData };
+      const iconLayer = { id: 'reserved-icons', type: 'symbol', source: 'reserved-icons', layout: {
+        'icon-image': ['get', 'icon'], 'icon-overlap': 'always'
+      } };
+      await m.prepareFeatures({ sources: { 'reserved-icons': iconSource }, layers: [iconLayer] });
+      m.addSource('reserved-icons', iconSource);
+      m.addLayer(iconLayer);
+      await until(() => m.loaded() && ['constructor', '__proto__', 'hasOwnProperty'].every(icon =>
+        m.queryRenderedFeatures({ layers: ['reserved-icons'] }).some(feature => feature.properties.icon === icon)),
+      'reserved sprite names render through worker transport and atlas');
+      m.removeLayer('reserved-icons');
+      m.removeSource('reserved-icons');
+      for (const id of ['constructor', '__proto__', 'hasOwnProperty']) {
+        assert(m.listImages().includes(id), id + ' is stored as an own image name');
+        assert(m.getImage(id).data.width === 16, id + ' extracts sprite pixels');
+        m.removeImage(id);
+        assert(!m.hasImage(id) && !m.listImages().includes(id), id + ' removal clears the own image');
+        m.addImage(id, { width: 1, height: 1, data: new Uint8Array([0, 0, 0, 255]) });
+        assert(m.getImage(id).data.width === 1, id + ' supports a runtime replacement');
+        m.removeImage(id);
+        assert(!m.hasImage(id), id + ' runtime replacement removes cleanly');
+      }
+      assert((await resourceCounts()).forbiddenTiles === before.forbiddenTiles, 'recovery does not request rejected tiles');
+      remove(m);
+      await sleep(100);
+      assert(errors.length === startErrors + 2, 'no additional source or sprite errors after recovery and removal');
+      return { name, passed: true, expectedErrors: errors.slice(startErrors) };
     } else if (name === 'controls-exports') {
       const m = await make(base());
       for (const name of ['AttributionControl', 'NavigationControl', 'GeolocateControl', 'ScaleControl']) {

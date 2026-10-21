@@ -11,6 +11,7 @@
  * @type {Record<string, string>}
  */
 export const FLAG_URLS = {
+  __proto__: null,
   ad: new URL('./ad.svg', import.meta.url).href,
   ae: new URL('./ae.svg', import.meta.url).href,
   af: new URL('./af.svg', import.meta.url).href,

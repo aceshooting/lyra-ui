@@ -11,6 +11,7 @@
  * @type {Record<string, () => Promise<string>>}
  */
 export const FLAG_LOADERS_DETAILED = {
+  __proto__: null,
   ad: () => import('./detailed/loaders/ad.js').then((m) => m.default),
   af: () => import('./detailed/loaders/af.js').then((m) => m.default),
   ar: () => import('./detailed/loaders/ar.js').then((m) => m.default),

@@ -25,6 +25,21 @@ const partOf = (el: Element, name: string): HTMLElement =>
 const activeIndexOf = (el: Element): number =>
   segmentsOf(el).findIndex((segment) => segment.getAttribute('part')!.split(/\s+/).includes('active'));
 
+it('falls back to numeric filtering for inherited and unsupported type names', async () => {
+  for (const foreign of ['constructor', 'toString', '__proto__', 'unsupported']) {
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input type=${foreign} value="12a3"></lr-otp-input>`);
+    expect(el.value).to.equal('123');
+    el.type = foreign as LyraOtpInput['type'];
+    el.value = '4b56';
+    await el.updateComplete;
+    expect(el.value).to.equal('456');
+  }
+  for (const [type, expected] of [['numeric', '123'], ['alpha', 'a'], ['alphanumeric', '12a3']] as const) {
+    const el = await fixture<LyraOtpInput>(html`<lr-otp-input type=${type} value="12a3"></lr-otp-input>`);
+    expect(el.value).to.equal(expected);
+  }
+});
+
 it('inherits public segment paint and radius across an appearance fallback', async () => {
   const wrapper = await fixture<HTMLElement>(html`
     <div style="--lr-otp-input-segment-fill: rgb(1, 2, 3); --lr-otp-input-segment-border-color: rgb(4, 5, 6); --lr-otp-input-segment-radius: 17px">

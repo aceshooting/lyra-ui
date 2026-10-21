@@ -415,7 +415,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   /** Scans a bounded source prefix, drops characters the current `type` rejects, applies `case`,
    * and truncates to the rendered count — the single funnel every live path goes through. */
   private sanitize(raw: string): string {
-    const accepted = ACCEPTED[this.type] ?? ACCEPTED.numeric;
+    const accepted = Object.hasOwn(ACCEPTED, this.type) ? ACCEPTED[this.type] : ACCEPTED.numeric;
     const limit = this.renderedSegmentCount;
     let out = '';
     for (const char of (raw ?? '').slice(0, MAX_VALUE_SOURCE_LENGTH)) {

@@ -9,7 +9,7 @@ const regularFile = (file) => {
 };
 
 /** Read asset policy and bytes from the immutable commit, never the mutable checkout. */
-export function releaseArtifactSpec({ expected, sourceSha, repositoryRoot }) {
+function releaseArtifactSpec({ expected, sourceSha, repositoryRoot }) {
   if (!/^[a-f0-9]{40}$/.test(sourceSha)) throw new Error('Expected a full source commit SHA.');
   const show = (file) => execFileSync('git', ['show', `${sourceSha}:${file}`], {
     cwd: repositoryRoot, maxBuffer: 64 * 1024 * 1024,

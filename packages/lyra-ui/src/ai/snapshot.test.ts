@@ -48,6 +48,20 @@ it('enforces shared node, byte, string, and depth budgets', () => {
   expect(snapshotProviderValue([2], shared).ok).to.equal(false);
 });
 
+it('rejects revoked and immediately throwing prototype inputs while preserving genuine dates', () => {
+  const revoked = Proxy.revocable({}, {});
+  revoked.revoke();
+  const throwing = new Proxy({}, {
+    getPrototypeOf() { throw new Error('prototype denied'); },
+  });
+  for (const value of [revoked.proxy, throwing, { nested: revoked.proxy }, { nested: throwing }]) {
+    expect(snapshotProviderValue(value)).to.deep.include({ ok: false, failure: 'invalid' });
+  }
+  const date = snapshotProviderValue(new Date('2026-08-14T00:00:00.000Z'));
+  expect(date.ok).to.equal(true);
+  if (date.ok) expect(date.value).to.equal('2026-08-14T00:00:00.000Z');
+});
+
 it('fails closed when hostile objects cannot be inspected', () => {
   let prototypeReads = 0;
   const prototypeTrap = new Proxy({}, {

@@ -198,5 +198,8 @@ export function resolveFirstDayOfWeek(value: string, locale?: string): number {
     const derived = locale ? localeFirstDayOfWeek(locale) : null;
     return derived ?? 0;
   }
-  return typeof value === 'string' ? (FDOW[value.toLowerCase()] ?? 0) : 0;
+  if (typeof value !== 'string') return 0;
+  const name = value.toLowerCase();
+  if (!Object.hasOwn(FDOW, name)) return 0;
+  return FDOW[name]!;
 }

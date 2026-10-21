@@ -736,6 +736,49 @@ it('supports native keyboard activation and keeps focus with the moved message a
   expect(el.messages.map((message) => message.id)).to.deep.equal(['user', 'assistant', 'system']);
 });
 
+it('omits unsupported message roles before deduplication, rendering, and emitted state', async () => {
+  const supported: PromptStudioMessage[] = (['system', 'user', 'assistant', 'tool'] as const)
+    .map((role) => ({ id: role, role, content: role }));
+  const source = [
+    { id: 'system', role: 'bogus', content: 'Rejected' },
+    { id: 'missing', content: 'Missing role' },
+    { id: 'null', role: null, content: 'Null role' },
+    ...supported,
+  ] as unknown as PromptStudioMessage[];
+  const original = source.map((message) => ({ ...message }));
+  const variable = { name: 'topic', value: 'roles' };
+  const version = { id: 'v', label: 'Version', messages: source, variables: [null, variable] };
+  const el = await fixture<LyraPromptStudio>(html`
+    <lr-prompt-studio .messages=${source} .versions=${[version]}></lr-prompt-studio>
+  `);
+
+  expect(el.shadowRoot!.querySelectorAll('[part="message"]').length).to.equal(4);
+  expect(Array.from(el.shadowRoot!.querySelectorAll<HTMLSelectElement>('[part="message-role"]'),
+    (select) => select.value)).to.deep.equal(['system', 'user', 'assistant', 'tool']);
+  expect(el.shadowRoot!.querySelector('[part="preview"]')!.textContent).not.to.contain('Rejected');
+
+  for (const [eventName, part] of [['lr-run', 'run'], ['lr-save', 'save']] as const) {
+    const pending = oneEvent(el, eventName);
+    el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${part}"]`)!.click();
+    expect((await pending).detail.messages).to.deep.equal(supported);
+  }
+
+  const selected = oneEvent(el, 'lr-version-select');
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="version"]')!.click();
+  expect((await selected).detail.version).to.deep.equal({ ...version, messages: supported, variables: [variable] });
+
+  const proposal = oneEvent(el, 'lr-change-request');
+  const change = oneEvent(el, 'lr-change');
+  const textarea = el.shadowRoot!.querySelector<HTMLTextAreaElement>('[part="message-content"]')!;
+  textarea.value = 'Edited';
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  const expected = supported.map((message) => message.id === 'system' ? { ...message, content: 'Edited' } : message);
+  expect((await proposal).detail.messages).to.deep.equal(expected);
+  expect((await change).detail.messages).to.deep.equal(expected);
+  expect(source).to.deep.equal(original);
+  expect(version.variables).to.deep.equal([null, variable]);
+});
+
 it('tolerates a message with missing `content` without blanking the rest of the panel', async () => {
   const el = (await fixture(html`<lr-prompt-studio></lr-prompt-studio>`)) as LyraPromptStudio;
   el.messages = [

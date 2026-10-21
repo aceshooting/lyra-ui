@@ -12,6 +12,7 @@
  * @type {Record<string, () => Promise<string>>}
  */
 export const FLAG_LOADERS_COMPACT = {
+  __proto__: null,
   ad: () => import('./compact/loaders/ad.js').then((m) => m.default),
   af: () => import('./compact/loaders/af.js').then((m) => m.default),
   ar: () => import('./compact/loaders/ar.js').then((m) => m.default),

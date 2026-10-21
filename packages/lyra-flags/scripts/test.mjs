@@ -189,6 +189,23 @@ assert.equal(await flagUrl('zz-not-a-real-code'), undefined);
 assert.equal(urls['zz-not-a-real-code'], undefined);
 assert.equal(FLAG_LOADERS['zz-not-a-real-code'], undefined);
 
+// Prototype names are not shipped flag codes, in any tier or resolver form.
+const rootResolverForUnknown = createFlagUrlResolver();
+const standardResolverForUnknown = createFlagUrlResolverStandard();
+for (const code of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) {
+  for (const resolver of [flagUrl, flagUrlStandard, flagUrlCompact, flagUrlDetailed,
+    rootResolverForUnknown, standardResolverForUnknown]) {
+    for (const variant of ['standard', 'compact', 'detailed']) {
+      const result = resolver(code, { variant });
+      assert.ok(result instanceof Promise, `${code} must preserve the Promise result contract`);
+      assert.equal(await result, undefined, `${code} is not a shipped ${variant} flag`);
+    }
+  }
+  for (const table of [FLAG_LOADERS, FLAG_LOADERS_DETAILED, FLAG_LOADERS_COMPACT, urls]) {
+    assert.equal(table[code], undefined, `${code} must not be inherited from a flag dictionary`);
+  }
+}
+
 // --- Detailed-variant pipeline (scripts/optimize-flags.mjs / the `detailed` half of
 // --- generate-index.mjs) ---
 

@@ -53,6 +53,10 @@ type DroppedDirectoryBatchResult =
 export function isFileValue(value: unknown): value is File {
   if (value === null || typeof value !== 'object') return false;
   try {
+    if (typeof File !== 'function') return false;
+    const nameGetter = Object.getOwnPropertyDescriptor(File.prototype, 'name')?.get;
+    if (!nameGetter) return false;
+    nameGetter.call(value);
     const candidate = value as Partial<File>;
     return Object.prototype.toString.call(value) === '[object File]'
       && typeof candidate.name === 'string'

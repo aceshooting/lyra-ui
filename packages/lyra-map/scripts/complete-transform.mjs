@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 import { basePlugin } from './base-transform.mjs';
 import { transformWorker } from './worker-transform.mjs';
+import { transformMetadata } from './metadata-transform.mjs';
+import { transformSpriteKeys } from './sprite-key-transform.mjs';
 
 const base = dirname(fileURLToPath(import.meta.resolve('maplibre-gl/package.json')));
 export const src = resolve(base, 'src');
@@ -154,12 +156,22 @@ export const completePlugin = {
     if (!id.startsWith(src + '/') || virtual.has(id)) return;
     const rel = id.slice(src.length + 1);
     let code = (await basePlugin.transform(original, id))?.code ?? original;
+    if (rel === 'util/config.ts')
+      code = replace(code, '    REGISTERED_PROTOCOLS: {},', '    REGISTERED_PROTOCOLS: Object.create(null),');
+    if (rel === 'source/protocol_crud.ts')
+      code = replace(
+        code,
+        "    return config.REGISTERED_PROTOCOLS[url.substring(0, url.indexOf('://'))];",
+        "    const protocol = url.substring(0, url.indexOf('://'));\n    return Object.hasOwn(config.REGISTERED_PROTOCOLS, protocol) ? config.REGISTERED_PROTOCOLS[protocol] : undefined;"
+      );
+    code = transformMetadata(code, rel) ?? code;
+    code = transformSpriteKeys(code, rel) ?? code;
     if (rel === 'shaders/shaders.ts') code = await shaderTable(original, id);
     if (rel === 'webgl/program/program_uniforms.ts') code = uniformTable(original, id);
     if (rel === 'source/source.ts')
       code = code.replace(
-        "if(!loaders[t])throw new Error('Unknown feature '+t);",
-        "if(!loaders[t]){if(getSourceType(t))return;throw new Error('Unknown feature '+t);}"
+        "if(!Object.hasOwn(loaders,t))throw new Error('Unknown feature '+t);",
+        "if(!Object.hasOwn(loaders,t)){if(!Object.hasOwn(Object.prototype,t)&&getSourceType(t))return;throw new Error('Unknown feature '+t);}"
       );
     if (rel === 'geo/projection/projection_factory.ts') {
       const loaders = [];

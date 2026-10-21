@@ -267,6 +267,51 @@ describe('<lr-signature-pad>', () => {
     expect(el.strokes[0]?.length).to.equal(SIGNATURE_PAD_MAX_POINTS);
   });
 
+  it('bounds inspected stroke and point positions before malformed entries can extend the scan', async () => {
+    const el = await fixture<LyraSignaturePad>(html`<lr-signature-pad></lr-signature-pad>`);
+    let reads = 0;
+    const strokes: unknown[] = Array.from({ length: SIGNATURE_PAD_MAX_STROKES }, () => []);
+    Object.defineProperty(strokes, SIGNATURE_PAD_MAX_STROKES, {
+      get() { reads += 1; return [[0.5, 0.5]]; },
+    });
+    el.strokes = strokes as unknown as SignatureStroke[];
+    expect(reads).to.equal(0);
+    expect(el.strokes.length).to.equal(0);
+
+    const points: unknown[] = Array.from({ length: SIGNATURE_PAD_MAX_POINTS }, () => null);
+    Object.defineProperty(points, SIGNATURE_PAD_MAX_POINTS, {
+      get() { reads += 1; return [0.5, 0.5]; },
+    });
+    el.strokes = [points] as SignatureStroke[];
+    expect(reads).to.equal(0);
+    expect(el.strokes.length).to.equal(0);
+  });
+
+  it('owns stroke data without invoking iterators or accessors and rejects revoked arrays', async () => {
+    const el = await fixture<LyraSignaturePad>(html`<lr-signature-pad></lr-signature-pad>`);
+    let reads = 0;
+    const unsafePoint = Object.defineProperty([0, 0.5], '0', {
+      get() { reads += 1; return 0.5; },
+    });
+    const points = [unsafePoint, [2, -1]];
+    const strokes = [points];
+    Object.defineProperty(strokes, Symbol.iterator, {
+      get() { reads += 1; throw new Error('iterator denied'); },
+    });
+    el.strokes = strokes as unknown as SignatureStroke[];
+    expect(reads).to.equal(0);
+    expect(el.strokes).to.deep.equal([[[1, 0]]]);
+    expect(points[1]).to.deep.equal([2, -1]);
+    expect(Object.isFrozen(el.strokes)).to.equal(true);
+    expect(Object.isFrozen(el.strokes[0])).to.equal(true);
+    expect(Object.isFrozen(el.strokes[0]?.[0])).to.equal(true);
+
+    const revoked = Proxy.revocable([], {});
+    revoked.revoke();
+    el.strokes = revoked.proxy as SignatureStroke[];
+    expect(el.strokes.length).to.equal(0);
+  });
+
   it('exports a bounded PNG that does not depend on the rendered size', async () => {
     const wrapper = await fixture<HTMLDivElement>(
       html`<div style="inline-size: 600px"><lr-signature-pad></lr-signature-pad></div>`,

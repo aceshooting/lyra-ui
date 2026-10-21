@@ -4609,3 +4609,13 @@ describe("review remediation", () => {
     );
   });
 });
+
+it('rejects a spoofed File restore before creating a thumbnail or form state', async () => {
+  const el = await fixture<LyraFileInput>(html`<lr-file-input name="upload"></lr-file-input>`);
+  const fake = {
+    [Symbol.toStringTag]: 'File', name: 'pretend.png', lastModified: 0,
+    size: 0, type: 'image/png', slice: Blob.prototype.slice,
+  } as unknown as File;
+  expect(() => el.formStateRestoreCallback(fake, 'restore')).to.not.throw();
+  expect(el.files.length).to.equal(0);
+});

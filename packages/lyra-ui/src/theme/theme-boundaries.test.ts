@@ -39,6 +39,26 @@ describe('theme validation and document ownership boundaries', () => {
     expect(Object.isFrozen(valid.tokens['--lr-theme-space-m'])).to.equal(true);
   });
 
+  for (const look of ['constructor', '__proto__', 'toString', 'application-look']) {
+    it(`uses fallback colors for an inherited custom look named ${look}`, () => {
+      const owner = document.implementation.createHTMLDocument('Style scope');
+      const ancestor = owner.createElement('section');
+      const scope = owner.createElement('section');
+      ancestor.setAttribute('data-lr-look', look);
+      ancestor.append(scope);
+      owner.body.append(ancestor);
+      try {
+        expect(() => applyLyraStyleScope(scope, {
+          mode: 'light', overrides: { '--lr-theme-space-m': '1.25rem' },
+        })).to.not.throw();
+        expect(scope.style.getPropertyValue('--_lr-ll-space-m')).to.equal('1.25rem');
+        expect(ancestor.getAttribute('data-lr-look')).to.equal(look);
+      } finally {
+        applyLyraStyleScope(scope, null);
+      }
+    });
+  }
+
   it('discards an inaccessible legacy ownership list without partially adopting its entries', () => {
     const root = document.documentElement;
     const ownershipKey = Symbol.for('@aceshooting/lyra-ui.theme-tokens.v1');

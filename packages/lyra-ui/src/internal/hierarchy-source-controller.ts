@@ -197,6 +197,7 @@ export class HierarchySourceController<T> implements ReactiveController {
     const key = hierarchyKey(field('key'));
     const parent = field('parentKey');
     const parentKey = parent === null ? null : hierarchyKey(parent);
+    if (parentKey === key) throw new TypeError('Hierarchy row cannot be its own parent');
     const level = sourceCount(field('level'));
     const position = sourceCount(field('position'));
     const setSize = sourceCount(field('setSize'));

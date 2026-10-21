@@ -283,6 +283,39 @@ describe('parsing and rendering', () => {
     }
   });
 
+  it('rejects coerced enum values and malformed language metadata before load', async () => {
+    const cell = { cell_type: 'code', source: '' };
+    const malformed = [
+      { ...NOTEBOOK, cells: [{ ...cell, cell_type: ['code'] }] },
+      { ...NOTEBOOK, cells: [{ ...cell, outputs: [{ output_type: ['stream'], text: 'x' }] }] },
+      ...[null, [], 'python', { language_info: null }, { language_info: [] },
+        { language_info: { name: 42 } }, { kernelspec: { language: {} } }]
+        .map((metadata) => ({ ...NOTEBOOK, metadata })),
+    ];
+    for (const notebook of malformed) {
+      for (const value of [notebook, JSON.stringify(notebook)]) {
+        const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+        let loads = 0;
+        el.addEventListener('lr-load', () => loads++);
+        el.notebook = value as never;
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+          'This file is not a valid Jupyter notebook.',
+        );
+        expect(loads).to.equal(0);
+      }
+    }
+    for (const metadata of [{}, { language_info: { name: 'python' } },
+      { kernelspec: { language: 'julia' } }, { custom: { unconstrained: true } }]) {
+      const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+      const loaded = oneEvent(el, 'lr-load');
+      el.notebook = { nbformat: 4, nbformat_minor: 5, cells: [], metadata };
+      const event = await loaded as CustomEvent<{ language: string }>;
+      expect(event.detail.language).to.be.a('string');
+      expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    }
+  });
+
   it('accepts dense text arrays and bounded JSON values without inspecting inherited properties', async () => {
     const inheritedPayload = Object.create({ ignored: Symbol('inherited') }) as Record<string, unknown>;
     inheritedPayload['own'] = true;

@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import type { ReactiveControllerHost } from 'lit';
-import { DropSessionController, readFileList, type DropSessionHost } from './drop-session-controller.js';
+import { DropSessionController, isFileValue, readFileList, type DropSessionHost } from './drop-session-controller.js';
 
 function controllerHost(isConnected = true): DropSessionHost {
   const base: ReactiveControllerHost = {
@@ -234,4 +234,21 @@ it('readFileList keeps only real File values from a FileList-shaped object', () 
   const list = { length: 2, 0: real, 1: fake } as unknown as FileList;
   expect(readFileList(list).map((f) => f.name)).to.deep.equal(['a.txt']);
   expect(readFileList(null)).to.deep.equal([]);
+});
+
+it('rejects a spoofed File tag while accepting genuine files from another realm', () => {
+  const fake = {
+    [Symbol.toStringTag]: 'File', name: 'pretend.png', lastModified: 0,
+    size: 0, type: 'image/png', slice: Blob.prototype.slice,
+  };
+  expect(isFileValue(fake)).to.equal(false);
+  expect(isFileValue(new File(['x'], 'local.txt'))).to.equal(true);
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  try {
+    const ForeignFile = (frame.contentWindow as unknown as { File: typeof File }).File;
+    expect(isFileValue(new ForeignFile(['x'], 'foreign.txt'))).to.equal(true);
+  } finally {
+    frame.remove();
+  }
 });

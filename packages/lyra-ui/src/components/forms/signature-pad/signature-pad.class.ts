@@ -2,6 +2,7 @@ import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { projectFrozenRows, readOwnDataValue } from '../../../internal/data-descriptors.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { isBarredFromValidation } from '../../../internal/form-associated.js';
 import { AnchoredValidityController } from '../../../internal/anchored-validity.js';
@@ -47,18 +48,16 @@ const at = (x: number, y: number): Point =>
   Object.freeze([x, y].map((v) => Math.round(Math.min(1, Math.max(0, v)) * 1e4) / 1e4) as [number, number]);
 
 function normalizeStrokes(input: unknown): readonly SignatureStroke[] {
-  const strokes: SignatureStroke[] = [];
-  for (const raw of Array.isArray(input) ? input : []) {
-    if (strokes.length === SIGNATURE_PAD_MAX_STROKES) break;
-    const points: Point[] = [];
-    for (const point of Array.isArray(raw) ? raw : []) {
-      if (points.length === SIGNATURE_PAD_MAX_POINTS) break;
-      const [x, y] = Array.isArray(point) ? point : [];
-      if (Number.isFinite(x) && Number.isFinite(y)) points.push(at(x, y));
-    }
-    if (points.length) strokes.push(Object.freeze(points));
-  }
-  return Object.freeze(strokes);
+  return projectFrozenRows<SignatureStroke>(input, (raw) => {
+    const points = projectFrozenRows<Point>(raw, (point) => {
+      if (!Array.isArray(point)) return undefined;
+      const x = readOwnDataValue(point, '0');
+      const y = readOwnDataValue(point, '1');
+      return typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)
+        ? at(x, y) : undefined;
+    }, SIGNATURE_PAD_MAX_POINTS, Object.freeze([]));
+    return points.length ? points : undefined;
+  }, SIGNATURE_PAD_MAX_STROKES, EMPTY);
 }
 
 /** A polyline ending on a zero-length segment, so a single point still draws a round dot. */
@@ -206,9 +205,10 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
 
   /**
    * The signature's strokes. Assign saved strokes to restore a signature: the input is copied,
-   * non-finite points are dropped, coordinates are clamped to 0–1, and at most
-   * `SIGNATURE_PAD_MAX_STROKES` strokes of `SIGNATURE_PAD_MAX_POINTS` points are kept. Assigning the
-   * current array is a no-op, and assignments fire no events.
+   * non-finite/accessor points are dropped and coordinates are clamped to 0–1. Only the first
+   * `SIGNATURE_PAD_MAX_STROKES` stroke positions and `SIGNATURE_PAD_MAX_POINTS` point positions per
+   * stroke are inspected through own data descriptors. Assigning the current array is a no-op,
+   * and assignments fire no events.
    */
   get strokes(): readonly SignatureStroke[] {
     return this._strokes;

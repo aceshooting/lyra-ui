@@ -81,7 +81,7 @@ export function numberFormatOptions(input: NumberFormatInputs): Intl.NumberForma
   // it forces separators in locales that ordinarily leave four-digit values ungrouped.
   if (input.withoutGrouping || input.noGrouping) options.useGrouping = false;
   if (type === 'currency') {
-    options.currency = (input.currency ?? 'USD').trim() || 'USD';
+    options.currency = typeof input.currency === 'string' ? input.currency.trim() || 'USD' : 'USD';
     options.currencyDisplay = currencyDisplay;
   }
 
@@ -132,7 +132,7 @@ export function dateTimeFormatOptions(input: DateFormatInputs): Intl.DateTimeFor
           timeZoneName: optionalClosedValue(input.timeZoneName, TIME_ZONE_NAME_STYLES),
         };
 
-  if (input.timeZone?.trim()) options.timeZone = input.timeZone.trim();
+  if (typeof input.timeZone === 'string' && input.timeZone.trim()) options.timeZone = input.timeZone.trim();
   const hourFormat = closedValue(input.hourFormat, HOUR_FORMATS, 'auto');
   if (hourFormat !== 'auto') options.hour12 = hourFormat === '12';
   return options;

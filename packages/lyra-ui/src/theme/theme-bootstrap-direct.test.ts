@@ -1,4 +1,5 @@
 import { expect } from '@open-wc/testing';
+import { lyraLookCss } from './look-css.js';
 import {
   applyLyraThemeBootstrapForTesting,
   createLyraThemeBootstrap,
@@ -48,6 +49,9 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
       sheet.replaceSync(await response.text());
       return sheet;
     }));
+    const customLookSheet = new CSSStyleSheet();
+    customLookSheet.replaceSync(lyraLookCss({ id: 'constructor', tokens: {} }));
+    sheets.push(customLookSheet);
   });
   beforeEach(() => {
     previousSheets = [...document.adoptedStyleSheets];
@@ -143,6 +147,16 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
       localStorage.removeItem('app-theme');
     }
   });
+
+  for (const run of [applyLyraThemeBootstrapForTesting, () => new Function(lyraThemeBootstrap)()]) {
+    it('restores a custom look named constructor with fallback reference colors', () => {
+      localStorage.setItem(KEY, JSON.stringify({ version: 2, look: 'constructor', mode: 'dark', accent: null }));
+      run();
+      expect(document.documentElement.getAttribute('data-lr-look')).to.equal('constructor');
+      expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+      expect(document.documentElement.getAttribute('data-lr-accent')).to.equal('none');
+    });
+  }
 
   it('shares its output with the factory entry point', () => {
     expect(createLyraThemeBootstrap()).to.equal(lyraThemeBootstrap);

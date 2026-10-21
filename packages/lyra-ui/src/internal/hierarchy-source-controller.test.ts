@@ -132,3 +132,14 @@ it('rejects an oversized identity before trimming its contents', () => {
   finally { String.prototype.trim = trim; }
   expect(oversizedTrims).to.equal(0);
 });
+
+it('rejects a source row that names itself as its logical parent', async () => {
+  const source = provider();
+  source.project = async () => ({ state: 'self-parent', total: 1, rows: {
+    count: 1, keyAt: () => 'n0', indexOfKey: (key: string) => key === 'n0' ? 0 : -1,
+    itemAt: () => ({ ...row(0), parentKey: 'n0', setSize: 1 }),
+  } });
+  const el = await fixture<LyraTree>(html`<lr-tree label="Validation" .treeSource=${source}></lr-tree>`);
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part~="source-error"]')));
+  expect(el.shadowRoot!.querySelectorAll('[part~="source-row"]').length).to.equal(0);
+});

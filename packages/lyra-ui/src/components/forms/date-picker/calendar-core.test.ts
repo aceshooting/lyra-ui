@@ -155,3 +155,25 @@ it('does not serialize unsupported years as non-round-trippable ISO dates', () =
   }
   expect(formatISO(new Date(Number.NaN))).to.equal('');
 });
+
+it('keeps inherited weekday names out of calendar geometry', () => {
+  for (const value of ['constructor', '__proto__', 'hasOwnProperty', 'toString']) {
+    const day = resolveFirstDayOfWeek(value);
+    expect(typeof day).to.equal('number');
+    expect(day).to.equal(0);
+    const matrix = monthMatrix(2026, 6, day);
+    expect(matrix.flat().every(date => Number.isFinite(date.getTime()))).to.equal(true);
+    expect(formatISO(matrixDate(matrix, 0, 0))).to.equal('2026-06-28');
+  }
+});
+
+it('preserves the closed weekday vocabulary and invalid-number fallback', () => {
+  const names = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  names.forEach((name, index) => {
+    expect(resolveFirstDayOfWeek(name)).to.equal(index);
+    expect(resolveFirstDayOfWeek(name.toUpperCase())).to.equal(index);
+  });
+  for (const value of [0, -1, 7, Number.NaN, Number.POSITIVE_INFINITY]) {
+    expect(resolveFirstDayOfWeek(value as never)).to.equal(0);
+  }
+});

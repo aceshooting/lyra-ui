@@ -983,7 +983,7 @@ function applyStoredStyleBeforePaint(
     for (const branch of modeOnly ? [] : ['light', 'dark'] as const) {
       const background = modeValue(record['surface'], branch);
       const surfaceToken = modeValue(tokens['--lr-theme-color-surface-default'], branch);
-      const colors = (STYLE_REFERENCE_SURFACES[look] ?? STYLE_REFERENCE_SURFACES['lyra'])![branch];
+      const colors = (Object.hasOwn(STYLE_REFERENCE_SURFACES, look) ? STYLE_REFERENCE_SURFACES[look] : STYLE_REFERENCE_SURFACES['lyra'])![branch];
       const surface = background ?? surfaceToken ?? colors[0];
       // Separate paints preserve accent precedence in nested mode islands without flattening it into the look.
       for (const accentPass of [false, true]) {
@@ -1729,8 +1729,8 @@ function styleResolvedInput(name: string): string {
   return `var(--_lr-dense-on,${input})var(--_lr-dense-off,max(calc((${input}) * var(--_lr-density-${spacing ? 'space' : 'control'},1)),${spacing ? '0px' : 'var(--_lr-density-target-min,0px)'}))`;
 }
 function styleReferences(state: StyleState, entries: ReadonlyMap<string, string>, mode: 'light' | 'dark', element: Element, previous?: readonly (string | undefined)[]): { colors: readonly string[]; supplied: readonly (string | undefined)[] } {
-  const look = element.closest('[data-lr-look]')?.getAttribute('data-lr-look');
-  const colors = (STYLE_REFERENCE_SURFACES[look ?? STYLE_DEFAULTS.look] ?? STYLE_REFERENCE_SURFACES['lyra'])![mode];
+  const look = element.closest('[data-lr-look]')?.getAttribute('data-lr-look') ?? STYLE_DEFAULTS.look;
+  const colors = (Object.hasOwn(STYLE_REFERENCE_SURFACES, look) ? STYLE_REFERENCE_SURFACES[look] : STYLE_REFERENCE_SURFACES['lyra'])![mode];
   // Custom accents without a token map consume only the page reference.
   const names = ['color-surface-default', 'color-surface-raised', 'color-text-normal', 'color-overlay-strong'].slice(0, entries.size ? 4 : 1).map(suffix => `--lr-theme-${suffix}`);
   const supplied = names.map(name => entries.get(name));

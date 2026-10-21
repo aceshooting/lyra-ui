@@ -13,6 +13,7 @@
  * @type {Record<string, () => Promise<string>>}
  */
 export const FLAG_LOADERS = {
+  __proto__: null,
   ad: () => import('./loaders/ad.js').then((m) => m.default),
   ae: () => import('./loaders/ae.js').then((m) => m.default),
   af: () => import('./loaders/af.js').then((m) => m.default),

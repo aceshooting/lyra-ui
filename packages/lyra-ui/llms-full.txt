@@ -14858,9 +14858,10 @@ must never be mirrored.
 - `disabled: boolean = false` (reflected) — blocks drawing and clearing and removes the surface from
   the tab order.
 - `strokes: readonly SignatureStroke[]` — the signature, empty by default. Assign saved strokes to
-  restore one: the input is copied, non-finite points are dropped, coordinates are clamped to 0–1,
-  and at most `SIGNATURE_PAD_MAX_STROKES` (256) strokes of `SIGNATURE_PAD_MAX_POINTS` (2048) points
-  are kept. Assigning the current array is a no-op.
+  restore one: own data is copied without invoking accessors or iterators, non-finite points are
+  dropped, and coordinates are clamped to 0–1. Only the first `SIGNATURE_PAD_MAX_STROKES` (256)
+  stroke positions and `SIGNATURE_PAD_MAX_POINTS` (2048) point positions per stroke are inspected.
+  Assigning the current array is a no-op.
 - `value: string` (read-only) — PNG data URL, `''` while empty: black ink on a transparent
   background, 1024 px on the long side at the surface's last measured aspect ratio (3:1 before the
   first layout). It never depends on `devicePixelRatio`, the theme or the rendered size, so the same
