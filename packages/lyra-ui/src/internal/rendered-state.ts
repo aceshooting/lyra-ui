@@ -57,7 +57,7 @@ class RenderedStateMutationHub {
   private rebuild(): void {
     this.observer.disconnect();
     const options: MutationObserverInit = {
-      attributeFilter: ['class', 'hidden', 'style'],
+      attributeFilter: ['class', 'hidden', 'open', 'style'],
       attributes: true,
       characterData: true,
       childList: true,

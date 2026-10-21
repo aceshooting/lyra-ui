@@ -236,3 +236,34 @@ it('observes hidden-state changes on composed ancestors inside a shadow root', a
     controller.stop();
   }
 });
+
+it('observes native dialog visibility in a shadow root before the next rendering opportunity', async () => {
+  const { host } = createRenderedHost();
+  const root = host.attachShadow({ mode: 'open' });
+  const dialog = document.createElement('dialog');
+  const panel = document.createElement('div');
+  panel.textContent = 'Modal content';
+  dialog.append(panel);
+  root.append(dialog);
+  const states: boolean[] = [];
+  const controller = new RenderedStateController(host, panel, (rendered) => states.push(rendered));
+  try {
+    controller.start();
+    expect(states).to.deep.equal([false]);
+
+    dialog.showModal();
+    await Promise.resolve();
+    expect(states, 'opening registers the rendered panel at the mutation checkpoint').to.deep.equal([false, true]);
+
+    dialog.close();
+    await Promise.resolve();
+    expect(states, 'closing suspends the hidden panel at the mutation checkpoint').to.deep.equal([false, true, false]);
+
+    dialog.showModal();
+    await Promise.resolve();
+    expect(states, 'reopening restores the panel before another input task').to.deep.equal([false, true, false, true]);
+  } finally {
+    controller.stop();
+    dialog.close();
+  }
+});

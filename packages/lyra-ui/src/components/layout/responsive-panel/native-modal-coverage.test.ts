@@ -84,6 +84,7 @@ for (const tag of ['lr-responsive-panel', 'lr-page', 'lr-widget', 'lr-app-rail',
       expect(requests[0], 'the close request is cancelable').to.equal(true);
       await waitUntil(() => carrier.matches(':modal'), 'the veto retained native modality');
       expect(getOpen(host, tag), 'a canceled request leaves the public layout state open').to.equal(true);
+      expect(native.open, 'the original native modal remains open after a vetoed Escape').to.equal(true);
 
       await sendKeys({ press: 'Escape' });
       await waitUntil(() => requests.length === 2 && !getOpen(host, tag), 'a second Escape was accepted');
