@@ -1,0 +1,744 @@
+{
+  "commit": "0687e5f52bec5b77018dbc2b572a5664d938fa23",
+  "lock": {
+    "path": "packages/lyra-docs/scripts/engine-source.lock.json",
+    "sha256": "c8733ed791cc67c39815c125aed5dadadedf22ab169fb95de68c8028da242648"
+  },
+  "upstream": {
+    "name": "@docx-editor.dev/core",
+    "version": "2.31.0",
+    "commit": "d22e3b4f02d4d0b73d7964114d077b286f207742",
+    "archiveUrl": "https://codeload.github.com/eigenpal/docx-editor/tar.gz/d22e3b4f02d4d0b73d7964114d077b286f207742",
+    "archiveSha256": "8532af0cab96ede4c85317e2cd634444e4c83d936383dd0ac9342e6843c11044",
+    "archiveBytes": 42689287,
+    "archivePrefix": "docx-editor-d22e3b4f02d4d0b73d7964114d077b286f207742",
+    "maxExpandedBytes": 134217728
+  },
+  "patches": [
+    {
+      "path": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "sha256": "aa016c2eef792e12e672881b0b0fe50f881e0a926e99304eae2ef13c6f801e5c"
+    }
+  ],
+  "method": "Only exact contiguous blocks of at least twenty physical lines matched to actual deletions verified against hash-pinned upstream inputs. All unmatched additions count as own/unresolved, including comments, whitespace and type-only text. No normalization. No coverage credit.",
+  "verifiedInputFiles": 1353,
+  "verifiedPreparedFiles": 1376,
+  "minimumMovedBlockLines": 20,
+  "addedLines": 22095,
+  "provedMovedUpstreamLines": 19595,
+  "ownOrUnresolvedAddedLineUpperBound": 2500,
+  "files": {
+    "packages/core/src/collaboration/document-port.ts": {
+      "added": 3,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 3
+    },
+    "packages/core/src/collaboration/paragraph-addresses.ts": {
+      "added": 3,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 3
+    },
+    "packages/core/src/editor/clipboard-file-lane.ts": {
+      "added": 7,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 7
+    },
+    "packages/core/src/editor/clipboard-html-read.prepared.ts": {
+      "added": 920,
+      "provedMoved": 842,
+      "ownOrUnresolvedUpperBound": 78
+    },
+    "packages/core/src/editor/clipboard-html-read.ts": {
+      "added": 5,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 5
+    },
+    "packages/core/src/editor/command-protection.ts": {
+      "added": 3,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 3
+    },
+    "packages/core/src/editor/docx-editor-host-config.ts": {
+      "added": 7,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 7
+    },
+    "packages/core/src/editor/docx-editor-prepared-open.ts": {
+      "added": 17,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 17
+    },
+    "packages/core/src/editor/docx-editor-types.ts": {
+      "added": 5,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 5
+    },
+    "packages/core/src/editor/docx-editor.ts": {
+      "added": 117,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 117
+    },
+    "packages/core/src/editor/paginated-surface-contract.ts": {
+      "added": 10,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 10
+    },
+    "packages/core/src/editor/paginated-surface.prepared.ts": {
+      "added": 6331,
+      "provedMoved": 5937,
+      "ownOrUnresolvedUpperBound": 394
+    },
+    "packages/core/src/editor/paginated-surface.ts": {
+      "added": 7,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 7
+    },
+    "packages/core/src/editor/surface-clipboard-ops.ts": {
+      "added": 18,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 18
+    },
+    "packages/core/src/editor/surface-input.ts": {
+      "added": 6,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 6
+    },
+    "packages/core/src/editor/surface-table-interaction.prepared.ts": {
+      "added": 915,
+      "provedMoved": 853,
+      "ownOrUnresolvedUpperBound": 62
+    },
+    "packages/core/src/editor/surface-table-interaction.ts": {
+      "added": 18,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 18
+    },
+    "packages/core/src/editor/toc-title-catalog.ts": {
+      "added": 3,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 3
+    },
+    "packages/core/src/features/command-preparation.ts": {
+      "added": 56,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 56
+    },
+    "packages/core/src/features/document-preparation.ts": {
+      "added": 100,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 100
+    },
+    "packages/core/src/features/prepared-runtime.ts": {
+      "added": 117,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 117
+    },
+    "packages/core/src/layout/note-pagination.prepared.ts": {
+      "added": 2318,
+      "provedMoved": 2153,
+      "ownOrUnresolvedUpperBound": 165
+    },
+    "packages/core/src/layout/note-pagination.ts": {
+      "added": 11,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 11
+    },
+    "packages/core/src/layout/semantic-layout.prepared.ts": {
+      "added": 2847,
+      "provedMoved": 2623,
+      "ownOrUnresolvedUpperBound": 224
+    },
+    "packages/core/src/layout/semantic-layout.ts": {
+      "added": 7,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 7
+    },
+    "packages/core/src/layout/semantic-table-layout.prepared.ts": {
+      "added": 1569,
+      "provedMoved": 1420,
+      "ownOrUnresolvedUpperBound": 149
+    },
+    "packages/core/src/layout/semantic-table-layout.ts": {
+      "added": 15,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 15
+    },
+    "packages/core/src/output/semantic-paint.prepared.ts": {
+      "added": 2223,
+      "provedMoved": 2094,
+      "ownOrUnresolvedUpperBound": 129
+    },
+    "packages/core/src/output/semantic-paint.ts": {
+      "added": 9,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 9
+    },
+    "packages/core/src/store/store/building-block-insert.ts": {
+      "added": 3,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 3
+    },
+    "packages/core/src/store/store/drawing-content-edit.prepared.ts": {
+      "added": 63,
+      "provedMoved": 46,
+      "ownOrUnresolvedUpperBound": 17
+    },
+    "packages/core/src/store/store/drawing-content-edit.ts": {
+      "added": 4,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 4
+    },
+    "packages/core/src/store/store/forms-protection-command.ts": {
+      "added": 3,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 3
+    },
+    "packages/core/src/store/store/tracked-content-control-insert.ts": {
+      "added": 3,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 3
+    },
+    "packages/core/src/store/store/tree-op-apply.ts": {
+      "added": 13,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 13
+    },
+    "packages/core/src/store/store/tree-op-comments.prepared.ts": {
+      "added": 194,
+      "provedMoved": 140,
+      "ownOrUnresolvedUpperBound": 54
+    },
+    "packages/core/src/store/store/tree-op-comments.ts": {
+      "added": 7,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 7
+    },
+    "packages/core/src/store/store/tree-op-content-control-insert.prepared.ts": {
+      "added": 263,
+      "provedMoved": 196,
+      "ownOrUnresolvedUpperBound": 67
+    },
+    "packages/core/src/store/store/tree-op-content-control-insert.ts": {
+      "added": 8,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 8
+    },
+    "packages/core/src/store/store/tree-op-content-controls.prepared.ts": {
+      "added": 366,
+      "provedMoved": 287,
+      "ownOrUnresolvedUpperBound": 79
+    },
+    "packages/core/src/store/store/tree-op-content-controls.ts": {
+      "added": 13,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 13
+    },
+    "packages/core/src/store/store/tree-op-control-content.ts": {
+      "added": 51,
+      "provedMoved": 32,
+      "ownOrUnresolvedUpperBound": 19
+    },
+    "packages/core/src/store/store/tree-op-drawings.prepared.ts": {
+      "added": 1163,
+      "provedMoved": 1081,
+      "ownOrUnresolvedUpperBound": 82
+    },
+    "packages/core/src/store/store/tree-op-drawings.ts": {
+      "added": 7,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 7
+    },
+    "packages/core/src/store/store/tree-op-insert-table.prepared.ts": {
+      "added": 342,
+      "provedMoved": 270,
+      "ownOrUnresolvedUpperBound": 72
+    },
+    "packages/core/src/store/store/tree-op-insert-table.ts": {
+      "added": 5,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 5
+    },
+    "packages/core/src/store/store/tree-op-run-split.ts": {
+      "added": 115,
+      "provedMoved": 66,
+      "ownOrUnresolvedUpperBound": 49
+    },
+    "packages/core/src/store/store/tree-op-table-authoring.prepared.ts": {
+      "added": 191,
+      "provedMoved": 166,
+      "ownOrUnresolvedUpperBound": 25
+    },
+    "packages/core/src/store/store/tree-op-table-authoring.ts": {
+      "added": 6,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 6
+    },
+    "packages/core/src/store/store/tree-op-table-batch.prepared.ts": {
+      "added": 67,
+      "provedMoved": 40,
+      "ownOrUnresolvedUpperBound": 27
+    },
+    "packages/core/src/store/store/tree-op-table-batch.ts": {
+      "added": 10,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 10
+    },
+    "packages/core/src/store/store/tree-op-tables.prepared.ts": {
+      "added": 1102,
+      "provedMoved": 999,
+      "ownOrUnresolvedUpperBound": 103
+    },
+    "packages/core/src/store/store/tree-op-tables.ts": {
+      "added": 21,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 21
+    },
+    "packages/core/src/store/store/tree-op-toc.prepared.ts": {
+      "added": 396,
+      "provedMoved": 350,
+      "ownOrUnresolvedUpperBound": 46
+    },
+    "packages/core/src/store/store/tree-op-toc.ts": {
+      "added": 9,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 9
+    },
+    "packages/core/src/store/store/tree-ops.ts": {
+      "added": 3,
+      "provedMoved": 0,
+      "ownOrUnresolvedUpperBound": 3
+    }
+  },
+  "matches": [
+    {
+      "destination": "packages/core/src/editor/clipboard-html-read.prepared.ts",
+      "destinationStart": 79,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 153,
+      "upstream": "packages/core/src/editor/clipboard-html-read.ts",
+      "upstreamStart": 102,
+      "lines": 842,
+      "sha256": "c2ecbdee662c7fe074f093bad35b5f5fda4b73be430fec4b209ead15dc452909"
+    },
+    {
+      "destination": "packages/core/src/editor/paginated-surface.prepared.ts",
+      "destinationStart": 330,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 2532,
+      "upstream": "packages/core/src/editor/paginated-surface.ts",
+      "upstreamStart": 346,
+      "lines": 4001,
+      "sha256": "8372cf207803e71ba19b4236c02944873df8dcc4fff8149bf93549f9321e1a25"
+    },
+    {
+      "destination": "packages/core/src/editor/paginated-surface.prepared.ts",
+      "destinationStart": 4332,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 6534,
+      "upstream": "packages/core/src/editor/paginated-surface.ts",
+      "upstreamStart": 4348,
+      "lines": 34,
+      "sha256": "2f48a08281ff6e9946816691e9006290bc0987c97742d5a610dbf229d84a211e"
+    },
+    {
+      "destination": "packages/core/src/editor/paginated-surface.prepared.ts",
+      "destinationStart": 4368,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 6570,
+      "upstream": "packages/core/src/editor/paginated-surface.ts",
+      "upstreamStart": 4382,
+      "lines": 1095,
+      "sha256": "54505f9b7415abe28c19e33cc8a189004cc45b2446599371a2516c64057eed91"
+    },
+    {
+      "destination": "packages/core/src/editor/paginated-surface.prepared.ts",
+      "destinationStart": 5525,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 7727,
+      "upstream": "packages/core/src/editor/paginated-surface.ts",
+      "upstreamStart": 5477,
+      "lines": 807,
+      "sha256": "c1702803ba293f5455ceb9c64525351a8fccd4cb95181fe960011a2ffdda3841"
+    },
+    {
+      "destination": "packages/core/src/editor/surface-table-interaction.prepared.ts",
+      "destinationStart": 57,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 14652,
+      "upstream": "packages/core/src/editor/surface-table-interaction.ts",
+      "upstreamStart": 88,
+      "lines": 42,
+      "sha256": "b32bbef72646c731dca76792ed896a4341a380ee485b94800317c6c2d41f8b2d"
+    },
+    {
+      "destination": "packages/core/src/editor/surface-table-interaction.prepared.ts",
+      "destinationStart": 105,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 14700,
+      "upstream": "packages/core/src/editor/surface-table-interaction.ts",
+      "upstreamStart": 136,
+      "lines": 811,
+      "sha256": "fa59476ea6b9130a06760318a52c2948565d0e7dc50abeddedc226634a92bb35"
+    },
+    {
+      "destination": "packages/core/src/layout/note-pagination.prepared.ts",
+      "destinationStart": 148,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 16846,
+      "upstream": "packages/core/src/layout/note-pagination.ts",
+      "upstreamStart": 281,
+      "lines": 166,
+      "sha256": "54d47b66a182bb8f741d7fcdff3800a57f2e1706c91bc68f139bf1e42aa3ea0b"
+    },
+    {
+      "destination": "packages/core/src/layout/note-pagination.prepared.ts",
+      "destinationStart": 332,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 17030,
+      "upstream": "packages/core/src/layout/note-pagination.ts",
+      "upstreamStart": 892,
+      "lines": 1987,
+      "sha256": "c63e035ecd4e15815aa4c79467a789e7c740a03d7bb59dbfd8ca8a868e75707d"
+    },
+    {
+      "destination": "packages/core/src/layout/semantic-layout.prepared.ts",
+      "destinationStart": 225,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 21507,
+      "upstream": "packages/core/src/layout/semantic-layout.ts",
+      "upstreamStart": 242,
+      "lines": 2623,
+      "sha256": "7c0e13a30e9438e342484e6c5e1b9ebc601f32265ff1bf98edbd1547b4d28be0"
+    },
+    {
+      "destination": "packages/core/src/layout/semantic-table-layout.prepared.ts",
+      "destinationStart": 150,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 26925,
+      "upstream": "packages/core/src/layout/semantic-table-layout.ts",
+      "upstreamStart": 351,
+      "lines": 906,
+      "sha256": "f9aee6aac50ea0fa56ff43de1f0ca0d0afda0011a271fdbe16fc3a18946b9f3a"
+    },
+    {
+      "destination": "packages/core/src/layout/semantic-table-layout.prepared.ts",
+      "destinationStart": 1056,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 27831,
+      "upstream": "packages/core/src/layout/semantic-table-layout.ts",
+      "upstreamStart": 1271,
+      "lines": 514,
+      "sha256": "6d185fb9ef6506ba2cf4d51beab71524481dc7ad8353e17f643c00b79bda72e7"
+    },
+    {
+      "destination": "packages/core/src/output/semantic-paint.prepared.ts",
+      "destinationStart": 122,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 29921,
+      "upstream": "packages/core/src/output/semantic-paint.ts",
+      "upstreamStart": 346,
+      "lines": 176,
+      "sha256": "51491d60bf41f488582e1bc3b2dfd2117cb4178da302b5b89916223ba0097fa0"
+    },
+    {
+      "destination": "packages/core/src/output/semantic-paint.prepared.ts",
+      "destinationStart": 298,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 30097,
+      "upstream": "packages/core/src/output/semantic-paint.ts",
+      "upstreamStart": 543,
+      "lines": 1159,
+      "sha256": "1dd604e2ac1cdfdd267d330bbdb07fb8bf627e504c39b834d8662826aca46343"
+    },
+    {
+      "destination": "packages/core/src/output/semantic-paint.prepared.ts",
+      "destinationStart": 1463,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 31262,
+      "upstream": "packages/core/src/output/semantic-paint.ts",
+      "upstreamStart": 1708,
+      "lines": 759,
+      "sha256": "54b1217994468821b2c835352d33e0608bc5d5eb566271c3c4ba5a8e9bb1434e"
+    },
+    {
+      "destination": "packages/core/src/store/store/drawing-content-edit.prepared.ts",
+      "destinationStart": 18,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 34211,
+      "upstream": "packages/core/src/store/store/drawing-content-edit.ts",
+      "upstreamStart": 16,
+      "lines": 46,
+      "sha256": "e29bede9ca2b713a4e74a4cd8c710c3b7cfab202201be34c2eabb70b37cc9054"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-comments.prepared.ts",
+      "destinationStart": 36,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 34584,
+      "upstream": "packages/core/src/store/store/tree-op-comments.ts",
+      "upstreamStart": 137,
+      "lines": 106,
+      "sha256": "26858a4816ce52b23e5d2bb4d0d3b14745a245906cdaa5f3a30b82acd2985d1b"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-comments.prepared.ts",
+      "destinationStart": 161,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 34709,
+      "upstream": "packages/core/src/store/store/tree-op-comments.ts",
+      "upstreamStart": 297,
+      "lines": 34,
+      "sha256": "954493d969ec58d4814f040f8f7361463e9125ba7a3805f89672144ead865da0"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-content-control-insert.prepared.ts",
+      "destinationStart": 67,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 35005,
+      "upstream": "packages/core/src/store/store/tree-op-content-control-insert.ts",
+      "upstreamStart": 114,
+      "lines": 20,
+      "sha256": "67d066bf2ce46098dd408b244504cbccb64064ff4f12a1f8b01c7372751a1c83"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-content-control-insert.prepared.ts",
+      "destinationStart": 88,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 35026,
+      "upstream": "packages/core/src/store/store/tree-op-content-control-insert.ts",
+      "upstreamStart": 135,
+      "lines": 176,
+      "sha256": "5e3786e47a331bc9300660e8636957b529c05f5647301e02263193dd722007df"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-content-controls.prepared.ts",
+      "destinationStart": 80,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 35520,
+      "upstream": "packages/core/src/store/store/tree-op-content-controls.ts",
+      "upstreamStart": 1245,
+      "lines": 130,
+      "sha256": "a57cdd5642d0675419d161d3c17b39fcefd343ed051c6a4c8dc693a0deaa689e"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-content-controls.prepared.ts",
+      "destinationStart": 210,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 35650,
+      "upstream": "packages/core/src/store/store/tree-op-content-controls.ts",
+      "upstreamStart": 1528,
+      "lines": 157,
+      "sha256": "aceb41182606b83d824b7a6a953d82a499dd6a9989629bc98331e87f7d5bf9a9"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-control-content.ts",
+      "destinationStart": 20,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 36155,
+      "upstream": "packages/core/src/store/store/tree-op-apply.ts",
+      "upstreamStart": 2019,
+      "lines": 32,
+      "sha256": "7b632cd250e78be9c7f2772eea958f50c40aa247506c0afca26168dc466ce20a"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-drawings.prepared.ts",
+      "destinationStart": 61,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 36250,
+      "upstream": "packages/core/src/store/store/tree-op-drawings.ts",
+      "upstreamStart": 67,
+      "lines": 83,
+      "sha256": "d0e2ca0e804b33ae31789fcc0bb646b24daf0a2c3993b47a65e34ea96841f4fa"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-drawings.prepared.ts",
+      "destinationStart": 164,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 36353,
+      "upstream": "packages/core/src/store/store/tree-op-drawings.ts",
+      "upstreamStart": 501,
+      "lines": 51,
+      "sha256": "23b2e918127c80865272ee1fc8964121b797b63c19b25116a9660e1fc880004b"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-drawings.prepared.ts",
+      "destinationStart": 215,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 36404,
+      "upstream": "packages/core/src/store/store/tree-op-drawings.ts",
+      "upstreamStart": 575,
+      "lines": 201,
+      "sha256": "87c01cafd5a9e45a532efa127419cfe2fc69735463cdfb81b76b8b7e371ff3a3"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-drawings.prepared.ts",
+      "destinationStart": 418,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 36607,
+      "upstream": "packages/core/src/store/store/tree-op-drawings.ts",
+      "upstreamStart": 849,
+      "lines": 170,
+      "sha256": "35669cfa68eb2dc89a550fe0d4960e2abd0f88e26d581609eb38afae42043eb4"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-drawings.prepared.ts",
+      "destinationStart": 588,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 36777,
+      "upstream": "packages/core/src/store/store/tree-op-drawings.ts",
+      "upstreamStart": 1057,
+      "lines": 576,
+      "sha256": "7859dc10b45c0019c25512e07c5feee84acad46d54bd31a1050c99823febb796"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-insert-table.prepared.ts",
+      "destinationStart": 65,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 38590,
+      "upstream": "packages/core/src/store/store/tree-op-insert-table.ts",
+      "upstreamStart": 72,
+      "lines": 212,
+      "sha256": "eac9bc25d2410a1c8034a15e5b9da629121bccf9a6afcb1201fefd4d016a2e63"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-insert-table.prepared.ts",
+      "destinationStart": 285,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 38810,
+      "upstream": "packages/core/src/store/store/tree-op-insert-table.ts",
+      "upstreamStart": 323,
+      "lines": 58,
+      "sha256": "8e8a2179644b8069cf3665de6f3cff6bf65b6b802eaff8a75d1f913ea758b8d5"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-run-split.ts",
+      "destinationStart": 50,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 39221,
+      "upstream": "packages/core/src/store/store/tree-op-apply.ts",
+      "upstreamStart": 3341,
+      "lines": 66,
+      "sha256": "c3f6a5bed25481f53a114a7942943d816e1ae295ae2e2b725081f1c70d834af7"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-table-authoring.prepared.ts",
+      "destinationStart": 26,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 39315,
+      "upstream": "packages/core/src/store/store/tree-op-table-authoring.ts",
+      "upstreamStart": 64,
+      "lines": 166,
+      "sha256": "2ffb9eee5643e1c7f62493ecec871124bbecea5484811231c5ffca3fe2d1dc12"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-table-batch.prepared.ts",
+      "destinationStart": 28,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 39694,
+      "upstream": "packages/core/src/store/store/tree-op-table-batch.ts",
+      "upstreamStart": 50,
+      "lines": 40,
+      "sha256": "1ee4897783877a3265084ad792ead65f972df9accdeb5fcd07a9a12245c3bddc"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-tables.prepared.ts",
+      "destinationStart": 87,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 39906,
+      "upstream": "packages/core/src/store/store/tree-op-tables.ts",
+      "upstreamStart": 346,
+      "lines": 34,
+      "sha256": "501321c7cc913304a127d7c160e5836df4ba687a03d296a0cad65291b1d53dd7"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-tables.prepared.ts",
+      "destinationStart": 134,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 39953,
+      "upstream": "packages/core/src/store/store/tree-op-tables.ts",
+      "upstreamStart": 422,
+      "lines": 61,
+      "sha256": "5257325938ff919831e0dfdd37c0a29192a0a0541d109da595b7538fbefdf869"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-tables.prepared.ts",
+      "destinationStart": 195,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 40014,
+      "upstream": "packages/core/src/store/store/tree-op-tables.ts",
+      "upstreamStart": 541,
+      "lines": 118,
+      "sha256": "7b70a6a74462b93f06879c684f6fc6f7f6654da9efdaea3f952ad0ae8fb6319c"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-tables.prepared.ts",
+      "destinationStart": 314,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 40133,
+      "upstream": "packages/core/src/store/store/tree-op-tables.ts",
+      "upstreamStart": 762,
+      "lines": 137,
+      "sha256": "5bccba53b5a5d6709ef3aa30bb010d0c9539e298cece59f916dab20f3b0401ab"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-tables.prepared.ts",
+      "destinationStart": 451,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 40270,
+      "upstream": "packages/core/src/store/store/tree-op-tables.ts",
+      "upstreamStart": 999,
+      "lines": 104,
+      "sha256": "e206cd8d89bdf700a152512ee49a4b13473b592e6d55bf8957086605f44b77bd"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-tables.prepared.ts",
+      "destinationStart": 557,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 40376,
+      "upstream": "packages/core/src/store/store/tree-op-tables.ts",
+      "upstreamStart": 1142,
+      "lines": 20,
+      "sha256": "6053b585f80f026bd66897623b27e1a6234737e2155c6c2358942d12c44d9c2a"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-tables.prepared.ts",
+      "destinationStart": 577,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 40396,
+      "upstream": "packages/core/src/store/store/tree-op-tables.ts",
+      "upstreamStart": 1227,
+      "lines": 177,
+      "sha256": "5e723241e9c4c73a96406136539ea06792ce09dc2bbc46703e0caa4cc3c89b2f"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-tables.prepared.ts",
+      "destinationStart": 754,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 40573,
+      "upstream": "packages/core/src/store/store/tree-op-tables.ts",
+      "upstreamStart": 1425,
+      "lines": 130,
+      "sha256": "4a0be700a5361b9689c9bb74ac34236d878d4f4263c0644acdca576c9e823c42"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-tables.prepared.ts",
+      "destinationStart": 885,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 40704,
+      "upstream": "packages/core/src/store/store/tree-op-tables.ts",
+      "upstreamStart": 1670,
+      "lines": 218,
+      "sha256": "451b1715c77e72e98d0b56bae40bb3442704dd51983bfa4d15c44ece2c8dc704"
+    },
+    {
+      "destination": "packages/core/src/store/store/tree-op-toc.prepared.ts",
+      "destinationStart": 47,
+      "patch": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "patchStart": 42088,
+      "upstream": "packages/core/src/store/store/tree-op-toc.ts",
+      "upstreamStart": 217,
+      "lines": 350,
+      "sha256": "b78149958a4ca19ce86485678d48e37e7e96de95131117db25faebd0c7cd13d5"
+    }
+  ]
+}
