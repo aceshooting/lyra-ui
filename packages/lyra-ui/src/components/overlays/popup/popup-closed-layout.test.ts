@@ -36,7 +36,7 @@ it('keeps a settled-inactive lr-popup out of the scrollable layout after a resiz
 
 it('preserves the popup opacity transition while removing the settled inactive layout', async () => {
   const control = await fixture<LyraPopup>(html`
-    <lr-popup style="--show-duration: 1s; --hide-duration: 1s">
+    <lr-popup style="--show-duration: 100ms; --hide-duration: 100ms">
       <button slot="anchor">Anchor</button>
       <div>Content</div>
     </lr-popup>
@@ -45,6 +45,8 @@ it('preserves the popup opacity transition while removing the settled inactive l
   for (let cycle = 0; cycle < 2; cycle++) {
     control.active = true;
     await waitUntil(() => popup.hasAttribute('data-active'), `activation completes on cycle ${cycle}`);
+    // Close from a fully painted entrance so this exercises a complete exit fade.
+    await waitUntil(() => getComputedStyle(popup).opacity === '1', `entrance settles on cycle ${cycle}`);
     expect(getComputedStyle(popup).visibility).to.equal('visible');
     expect(popup.hasAttribute('hidden')).to.be.false;
     control.active = false;
