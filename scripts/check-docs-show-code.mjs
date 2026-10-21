@@ -163,26 +163,12 @@ async function inspectDoc(context, doc) {
     while (idlePolls < QUIET_POLLS && Date.now() < deadline && clicked < MAX_CLICKS) {
       let expanded = false;
       while ((await tolerateNavigation(page, () => showCode().count())) > 0 && clicked < MAX_CLICKS) {
-        // Every "static" demo story on an autodocs page mounts and opens together (see e.g.
-        // MentionPopover's stories), so a floating overlay left open by an earlier story can end up
-        // sitting over a later toggle purely from where the page has grown to by now -- that's an
-        // incidental visual overlap from unrelated demo content, not a real reason this toggle isn't
-        // clickable. Scroll it into view as a normal click would, then dispatch a native click
-        // directly on the element: immune to the coordinate-based hit-test a simulated mouse click
-        // (even with `force`, which also skips the auto-scroll a real click gets) would fail on.
+        // Static demos can overlap later toggles on an autodocs page. Dispatch a native click on
+        // the control itself, without Playwright's coordinate hit test or a presentational scroll.
+        // Scrolling would activate offscreen demos whose work is unrelated to their source block.
         await tolerateNavigation(page, async () => {
           const control = showCode().first();
-          // Scroll and click in one evaluate. scrollIntoViewIfNeeded waits for the element to be
-          // "stable" -- an unchanging bounding box -- and these docs pages animate enough that the
-          // wait is not always satisfiable: observed as a 10s timeout logging "18 x waiting for
-          // element to be stable" on Forms/Radio button. The click below is a native dispatch and
-          // does not need the element in view at all, so the scroll is presentational and must not
-          // be able to gate it. This sweep exists to click every control and collect console and
-          // page errors, not to assert that a demo has stopped moving.
-          await control.evaluate((element) => {
-            element.scrollIntoView({ block: 'center', inline: 'nearest' });
-            element.click();
-          });
+          await control.evaluate((element) => element.click());
         });
         clicked += 1;
         expanded = true;

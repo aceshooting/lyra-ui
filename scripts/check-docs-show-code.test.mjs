@@ -42,7 +42,7 @@ test('the local docs server supports streaming WebAssembly compilation', async t
   assert.deepEqual(summary.diagnosticFailures, []);
 });
 
-async function inspectFixture(t, { delayedSource = false, initialDelay = 0, neverRender = false }) {
+async function inspectFixture(t, { delayedSource = false, initialDelay = 0, neverRender = false, offscreen = false, immediateSource = false }) {
   const server = createServer((request, response) => {
     if (request.url === '/index.json') {
       response.setHeader('Content-Type', 'application/json');
@@ -59,14 +59,18 @@ async function inspectFixture(t, { delayedSource = false, initialDelay = 0, neve
     response.setHeader('Content-Type', 'text/html');
     response.end(`<!doctype html>
       <body class="sb-show-main">
+        ${offscreen ? '<div style="height: 3000px"></div>' : ''}
         <div id="controls"></div>
         <script>
+          if (${offscreen}) window.addEventListener('scroll', () => console.error('offscreen source check scrolled the page'));
           function mountControls() {
             document.getElementById('controls').innerHTML = '<button role="switch" aria-checked="false" aria-controls="source">Show code</button><pre id="source"></pre>';
             const control = document.querySelector('button');
             control.addEventListener('click', () => {
               control.textContent = 'Hide code';
               control.setAttribute('aria-checked', 'true');
+              if (${offscreen} && window.scrollY !== 0) console.error('offscreen source check changed the scroll position');
+              if (${immediateSource}) document.getElementById('source').textContent = '<lr-empty>No results</lr-empty>';
               if (${delayedSource}) {
                 setTimeout(() => {
                   document.getElementById('source').textContent = '<lr-empty>No results</lr-empty>';
@@ -135,4 +139,13 @@ test('still fails within the bounded budget when required controls never render'
   assert.equal(summary.structuralFailures.length, 1);
   assert.match(summary.structuralFailures[0].failure, /no Show code controls were found/);
   assert.ok(summary.elapsedMs < 45_000, `missing controls exceeded the bounded settling budget: ${summary.elapsedMs}ms`);
+});
+
+
+test('expands offscreen source controls without scrolling into unrelated demos', { timeout: 100_000 }, async (t) => {
+  const { code, summary, stderr } = await inspectFixture(t, { offscreen: true, immediateSource: true });
+  assert.equal(code, 0, JSON.stringify({ structuralFailures: summary.structuralFailures, diagnosticFailures: summary.diagnosticFailures }) || stderr);
+  assert.equal(summary.clicked, 1);
+  assert.deepEqual(summary.structuralFailures, []);
+  assert.deepEqual(summary.diagnosticFailures, []);
 });
