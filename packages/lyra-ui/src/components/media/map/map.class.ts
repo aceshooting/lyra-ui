@@ -24,9 +24,14 @@ import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import { deferredPlace as place } from '../../../internal/anchored-overlay-runtime.js';
+import { virtualAnchorFromRect } from '../../../internal/positioner-geometry.js';
 import {
+  loadMapControl,
   loadMaplibre,
   loadModularMap,
+  type MapControlKind,
+  type MapLibreControlConstructor,
   type LyraMapFeatureRequirements,
   type MapLibreGeoJsonSource,
   type MapLibreSourceDataDiff,
@@ -46,6 +51,8 @@ import {
   type MapCameraTarget,
 } from './map-camera.js';
 export type { LyraMapCameraOptions } from './map-camera.js';
+import type { LyraMapStyleSpecification } from './map-empty-style.js';
+export { LYRA_MAP_EMPTY_STYLE, type LyraMapStyleSpecification } from './map-empty-style.js';
 import {
   projectGeoJson,
   projectAdmittedGeoJson,
@@ -69,7 +76,7 @@ import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** A caller-authored GeoJSON source diff; feature IDs must be unique and stable. */
@@ -190,6 +197,48 @@ export interface LyraMapLegendEntry {
  * through instead of maintaining a second copy that drifts from the layer it describes.
  */
 export type LyraMapLegendGradientStop = readonly [number, string];
+
+/** A labelled mark along the legend gradient bar, at a position in the data's own units. */
+export interface LyraMapLegendGradientTick {
+  /** Position on the ramp, in the same units as the gradient's stops. A tick outside the ramp's
+   *  lowest and highest stop is dropped. */
+  readonly value: number;
+  /** Caption; caller data, rendered verbatim. Defaults to the locale-formatted `value`. */
+  readonly label?: string;
+}
+
+const MAX_LEGEND_GRADIENT_TICKS = 16;
+const EMPTY_LEGEND_GRADIENT_TICKS: readonly LyraMapLegendGradientTick[] = Object.freeze([]);
+
+/** Admits a bounded, ascending, de-duplicated tick list; a bare number is a tick without a label. */
+function normalizeMapLegendGradientTicks(value: unknown): readonly LyraMapLegendGradientTick[] {
+  try {
+    const scanCount = boundedOwnArrayLength(value, MAX_LEGEND_GRADIENT_TICKS * 4);
+    if (scanCount === undefined) return EMPTY_LEGEND_GRADIENT_TICKS;
+    const byValue = new Map<number, LyraMapLegendGradientTick>();
+    for (let index = 0; index < scanCount && byValue.size < MAX_LEGEND_GRADIENT_TICKS; index += 1) {
+      const descriptor = getOwnDataDescriptor(value as object, String(index));
+      if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)) continue;
+      const entry = descriptor.value;
+      let tickValue: unknown = entry;
+      let label: unknown;
+      if (isRuntimeRecord(entry)) {
+        tickValue = optionalDescriptorValue(getOwnDataDescriptor(entry, 'value'));
+        label = optionalDescriptorValue(getOwnDataDescriptor(entry, 'label'));
+      }
+      if (typeof tickValue !== 'number' || !Number.isFinite(tickValue) || byValue.has(tickValue)) continue;
+      byValue.set(tickValue, Object.freeze(
+        typeof label === 'string' && label.trim().length > 0
+          ? { value: tickValue, label: boundedLegendText(label.trim(), 64) }
+          : { value: tickValue },
+      ));
+    }
+    if (byValue.size === 0) return EMPTY_LEGEND_GRADIENT_TICKS;
+    return Object.freeze([...byValue.values()].sort((a, b) => a.value - b.value));
+  } catch {
+    return EMPTY_LEGEND_GRADIENT_TICKS;
+  }
+}
 
 /** Upper bound on rendered gradient stops, matching the deterministic-truncation pattern
  *  `MAX_MAP_MARKERS`/`MAX_MAP_DATA_LAYERS` use below. A ramp needs a handful of stops; anything
@@ -541,6 +590,27 @@ export interface LyraMapChoroplethLayer {
    * "below the lowest advertised band" from the lowest band itself.
    */
   readonly stepBaseColor?: string;
+  /**
+   * How features without a usable value paint and are reported. A feature has no value when its
+   * `field` property is missing, `null` or not a number. Without `noData`, such a feature is not
+   * painted by this layer at all, so an application had to split its data into a second layer to
+   * show it. `noData: {}` accepts every default.
+   *
+   * A click on a no-data feature reports `noData: true` in the `lr-map-click` detail. With
+   * `choroplethLegend`, the legend shows a swatch for it, captioned `label`.
+   */
+  readonly noData?: LyraMapChoroplethNoData;
+}
+
+/** Paint and caption for choropleth features that have no value. */
+export interface LyraMapChoroplethNoData {
+  /** Fill color. A `var(--lr-…)` reference resolves against the host like `stops`. Defaults to the
+   *  neutral data tone. */
+  readonly color?: string;
+  /** Outline color, drawn on no-data features only. Without it they have no distinct outline. */
+  readonly strokeColor?: string;
+  /** Legend caption. Caller data, rendered verbatim; defaults to the localized "No data". */
+  readonly label?: string;
 }
 
 /**
@@ -699,6 +769,13 @@ export interface LyraMapClusterOptions {
   readonly countHaloColor?: string;
   /** Halo width in CSS pixels, clamped to 0–3 (one quarter of the 12px count text size). Defaults to 1 when a halo color is set. */
   readonly countHaloWidth?: number;
+  /**
+   * Zooms into a cluster when it is clicked: the camera eases to the cluster's position at the
+   * zoom where it breaks apart (clamped to the camera range), honoring reduced motion and writing
+   * the result back to `center` and `zoom`. `lr-map-click` still fires first, with
+   * `origin: 'cluster'`. Defaults to `false`.
+   */
+  readonly zoomOnClick?: boolean;
 }
 
 /** A heatmap paint value expressed either as one constant or bounded `[zoom, value]` stops. */
@@ -1158,6 +1235,7 @@ interface NormalizedClusterOptions {
   readonly countColor: string | undefined;
   readonly countHaloColor: string | undefined;
   readonly countHaloWidth: number;
+  readonly zoomOnClick: boolean;
 }
 
 /**
@@ -1178,6 +1256,7 @@ function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | un
     const countColorDescriptor = getOwnDataDescriptor(value, 'countColor');
     const countHaloColorDescriptor = getOwnDataDescriptor(value, 'countHaloColor');
     const countHaloWidthDescriptor = getOwnDataDescriptor(value, 'countHaloWidth');
+    const zoomOnClickDescriptor = getOwnDataDescriptor(value, 'zoomOnClick');
     const radiusValue = optionalDescriptorValue(radiusDescriptor);
     const maxZoomValue = optionalDescriptorValue(maxZoomDescriptor);
     const radiusSteps = normalizedSteps(
@@ -1212,6 +1291,7 @@ function normalizedClusterOptions(value: unknown): NormalizedClusterOptions | un
         0,
         3,
       ),
+      zoomOnClick: optionalDescriptorValue(zoomOnClickDescriptor) === true,
     });
   } catch {
     return undefined;
@@ -1532,6 +1612,11 @@ function dataLayerShape(layer: CanonicalMapDataLayer): string {
   return `cluster:${cluster.radius}:${cluster.maxZoom}:${cluster.countFont?.join(',') ?? ''}`;
 }
 
+/** MapLibre expression that is true for a feature carrying a numeric `field` value. */
+function choroplethHasValueExpression(field: string): unknown[] {
+  return ['==', ['typeof', ['get', field]], 'number'];
+}
+
 /** The accepted, one-read subset of a caller-owned choropleth record. */
 interface CanonicalMapChoropleth {
   readonly sourceId: string;
@@ -1541,6 +1626,32 @@ interface CanonicalMapChoropleth {
   readonly stops: readonly (readonly [number, string])[];
   readonly interpolation: LyraMapChoroplethInterpolation;
   readonly stepBaseColor: string | undefined;
+  readonly noData: CanonicalChoroplethNoData | undefined;
+}
+
+/** The accepted `choropleth.noData` record. */
+interface CanonicalChoroplethNoData {
+  readonly color: string | undefined;
+  readonly strokeColor: string | undefined;
+  readonly label: string | undefined;
+}
+
+/** Bound on a no-data caption, matching a legend label. */
+const MAX_NO_DATA_LABEL = 256;
+
+function projectChoroplethNoData(value: unknown): CanonicalChoroplethNoData | undefined {
+  try {
+    if (!isRuntimeRecord(value)) return undefined;
+    const label = optionalDescriptorValue(getOwnDataDescriptor(value, 'label'));
+    const trimmed = typeof label === 'string' ? label.trim() : '';
+    return Object.freeze({
+      color: sanitizeCssColor(optionalDescriptorValue(getOwnDataDescriptor(value, 'color'))),
+      strokeColor: sanitizeCssColor(optionalDescriptorValue(getOwnDataDescriptor(value, 'strokeColor'))),
+      label: trimmed.length > 0 ? boundedLegendText(trimmed, MAX_NO_DATA_LABEL) : undefined,
+    });
+  } catch {
+    return undefined;
+  }
 }
 
 function projectMapChoropleth(value: unknown): CanonicalMapChoropleth | undefined {
@@ -1589,6 +1700,7 @@ function projectMapChoropleth(value: unknown): CanonicalMapChoropleth | undefine
         typeof stepBaseColorValue === 'string' && stepBaseColorValue.trim().length > 0
           ? stepBaseColorValue
           : undefined,
+      noData: projectChoroplethNoData(optionalDescriptorValue(getOwnDataDescriptor(value, 'noData'))),
     });
   } catch {
     return undefined;
@@ -1703,16 +1815,68 @@ function setPopupContent(popup: MapLibrePopupCapability, marker: CanonicalMapMar
   return popup;
 }
 
-/** Peer-neutral subset of a MapLibre style accepted by `mapStyle`. */
-export interface LyraMapStyleSpecification {
-  readonly version: 8;
-  readonly sources: Readonly<Record<string, unknown>>;
-  readonly layers: readonly unknown[];
-  readonly name?: string;
-  readonly sprite?: string | readonly Readonly<{ id: string; url: string }>[];
-  readonly glyphs?: string;
-  readonly projection?: unknown;
-  readonly terrain?: unknown;
+/** Corner a declarative control is added to. The corners follow text direction under RTL. */
+export type LyraMapControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+/** Unit system of the scale control. */
+export type LyraMapScaleUnit = 'metric' | 'imperial';
+
+/** Options of the declarative navigation control (zoom buttons and compass). */
+export interface LyraMapNavigationControlOptions {
+  /** Corner to add the control to. Defaults to `'top-right'`. */
+  readonly position?: LyraMapControlPosition;
+}
+
+/** Options of the declarative scale control. */
+export interface LyraMapScaleControlOptions {
+  /** Corner to add the control to. Defaults to `'bottom-left'`. */
+  readonly position?: LyraMapControlPosition;
+  /** Unit system. Defaults to `'metric'`. */
+  readonly unit?: LyraMapScaleUnit;
+}
+
+/**
+ * Standard peer controls an `<lr-map>` adds and removes for you. Each entry is `true` (defaults),
+ * `false`/absent (not added) or an options object. Controls need the selected engine's own control
+ * code, loaded only for the ones declared.
+ */
+export interface LyraMapControls {
+  readonly navigation?: boolean | LyraMapNavigationControlOptions;
+  readonly scale?: boolean | LyraMapScaleControlOptions;
+}
+
+const CONTROL_POSITIONS: ReadonlySet<LyraMapControlPosition> = new Set([
+  'top-left', 'top-right', 'bottom-left', 'bottom-right',
+]);
+
+interface NormalizedMapControl {
+  readonly position: LyraMapControlPosition;
+  readonly unit: LyraMapScaleUnit | undefined;
+  /** Identity of the configuration: a changed key replaces the applied control. */
+  readonly key: string;
+}
+
+function normalizeMapControls(value: unknown): ReadonlyMap<MapControlKind, NormalizedMapControl> {
+  const controls = new Map<MapControlKind, NormalizedMapControl>();
+  try {
+    if (!isRuntimeRecord(value)) return controls;
+    for (const [kind, fallback] of [['navigation', 'top-right'], ['scale', 'bottom-left']] as const) {
+      const entry = optionalDescriptorValue(getOwnDataDescriptor(value, kind));
+      if (entry !== true && !isRuntimeRecord(entry)) continue;
+      const positionValue = isRuntimeRecord(entry)
+        ? optionalDescriptorValue(getOwnDataDescriptor(entry, 'position')) : undefined;
+      const position = CONTROL_POSITIONS.has(positionValue as LyraMapControlPosition)
+        ? positionValue as LyraMapControlPosition : fallback;
+      const unitValue = kind === 'scale' && isRuntimeRecord(entry)
+        ? optionalDescriptorValue(getOwnDataDescriptor(entry, 'unit')) : undefined;
+      const unit: LyraMapScaleUnit | undefined = kind === 'scale'
+        ? (unitValue === 'imperial' ? 'imperial' : 'metric') : undefined;
+      controls.set(kind, Object.freeze({ position, unit, key: `${position}:${unit ?? ''}` }));
+    }
+  } catch {
+    controls.clear();
+  }
+  return controls;
 }
 
 /**
@@ -2183,6 +2347,67 @@ export interface LyraMapLegendPanelToggleDetail {
   readonly open: boolean;
 }
 
+/** The key `choroplethLegend` derives from the choropleth. */
+interface DerivedChoroplethLegend {
+  readonly rows: readonly LyraMapLegendEntry[];
+  readonly gradient: readonly (readonly [number, string])[];
+  readonly interpolation: LyraMapChoroplethInterpolation;
+  readonly ticks: readonly LyraMapLegendGradientTick[];
+}
+
+const EMPTY_DERIVED_LEGEND: DerivedChoroplethLegend = Object.freeze({
+  rows: Object.freeze([]) as readonly LyraMapLegendEntry[],
+  gradient: Object.freeze([]) as readonly (readonly [number, string])[],
+  interpolation: 'linear',
+  ticks: EMPTY_LEGEND_GRADIENT_TICKS,
+});
+
+/** Neutral swatch for features without a value, the same token the layer paints with by default. */
+const NO_DATA_SWATCH_COLOR = 'var(--lr-color-text-quiet)';
+/** Bidi isolates: a numeric range keeps its authored order inside a right-to-left legend. */
+const ISOLATE_START = '\u2066';
+const ISOLATE_END = '\u2069';
+
+function legendRow(color: string, label: string, pattern: LyraMapLegendPattern): LyraMapLegendEntry {
+  return Object.freeze({ color, label, pattern });
+}
+
+function buildDerivedChoroplethLegend(
+  choropleth: CanonicalMapChoropleth,
+  format: (value: number) => string,
+  noDataLabel: string,
+): DerivedChoroplethLegend {
+  const rows: LyraMapLegendEntry[] = [];
+  let gradient: readonly (readonly [number, string])[] = Object.freeze([]);
+  let ticks: readonly LyraMapLegendGradientTick[] = EMPTY_LEGEND_GRADIENT_TICKS;
+  const stops = choropleth.stops;
+  const band = (text: string): string => `${ISOLATE_START}${text}${ISOLATE_END}`;
+  if (choropleth.interpolation === 'step') {
+    const base = choropleth.stepBaseColor;
+    if (base && stops.length > 0) rows.push(legendRow(base, band(`< ${format(stops[0]![0])}`), 'solid'));
+    if (base || stops.length > 1) {
+      stops.forEach(([lower, color], index) => {
+        const upper = stops[index + 1];
+        const text = upper === undefined
+          ? `\u2265 ${format(lower)}`
+          : !base && index === 0 ? `< ${format(upper[0])}` : `${format(lower)} \u2013 ${format(upper[0])}`;
+        rows.push(legendRow(color, band(text), 'solid'));
+      });
+    }
+  } else if (stops.length >= 2) {
+    gradient = stops;
+    ticks = normalizeMapLegendGradientTicks(stops.slice(1, -1).map(([value]) => value));
+  }
+  if (choropleth.noData) {
+    rows.push(legendRow(
+      choropleth.noData.color ?? NO_DATA_SWATCH_COLOR,
+      choropleth.noData.label ?? noDataLabel,
+      'diagonal',
+    ));
+  }
+  return Object.freeze({ rows: Object.freeze(rows), gradient, interpolation: choropleth.interpolation, ticks });
+}
+
 export interface LyraMapEventMap {
   'lr-map-load': CustomEvent<null>;
   'lr-map-marker-activate': CustomEvent<LyraMapMarkerActivationDetail>;
@@ -2203,6 +2428,9 @@ export interface LyraMapEventMap {
     /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit
      *  (which has only one possible source) and when nothing was hit. */
     readonly sourceId: string | undefined;
+    /** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData`
+     *  is configured; absent otherwise. */
+    readonly noData?: true;
   }>;
 }
 /**
@@ -2267,12 +2495,14 @@ export interface LyraMapEventMap {
  * @event lr-map-marker-activate - Fired once when an accepted declarative marker is activated by
  *   pointer/click or by Enter/Space. The immutable detail carries its normalized `id`, validated
  *   `lngLat`, accepted marker snapshot, and activation `source`.
- * @event lr-map-click - `detail: { lngLat, feature?, origin?, sourceId? }`. `feature` resolves
+ * @event lr-map-click - `detail: { lngLat, feature?, origin?, sourceId?, noData? }`. `feature` resolves
  *   against the choropleth fill *and* every applied `dataLayers` fill/line/circle/cluster layer,
  *   topmost first; `origin`/`sourceId` name where it came from. A hit on a clustered entry's
  *   aggregate circle reports `origin: 'cluster'` and carries MapLibre's `point_count`/`cluster_id`
  *   properties; a `kind: 'heatmap'` layer is never hit-tested, because MapLibre returns no features
- *   for a density surface.
+ *   for a density surface. A hit on a choropleth feature without a numeric `field` value reports
+ *   `noData: true` when `choropleth.noData` is configured; the key is absent otherwise. A cluster
+ *   hit also eases the camera into the cluster when its entry sets `cluster.zoomOnClick`.
  * @event lr-map-view-change - Fired once each time the camera settles after a user gesture (drag,
  *   wheel, touch, keyboard, box zoom or a standard peer navigation button), a `fitBounds()` or
  *   `fitToData()` call, or a `flyTo()`/`easeTo()`/`jumpTo()` call, carrying the immutable
@@ -2293,6 +2523,11 @@ export interface LyraMapEventMap {
  *   map library loads and contains ordinary, non-live localized loading text.
  * @csspart container - The MapLibre container. Its generated canvas is the actual focusable map
  *   region and receives the host-first accessible name and effective locale.
+ * @slot anchor - Content placed at `anchorLngLat`: above the point, flipped below near the top edge
+ *   and kept inside the map, following the point through camera moves and hidden while the point
+ *   is off screen. The element only positions it (`part="anchor"` supplies a default surface);
+ *   the slotted content owns its semantics, close control and focus.
+ * @csspart anchor - The positioned wrapper of the `anchor` slot.
  * @slot legend - Custom legend content, rendered inside the legend panel's own layout so it stays
  *  positioned with the map instead of floating beside it. Slotted content is never made
  *  interactive by `legendInteractive`, which only reaches rows projected from `legend`.
@@ -2327,6 +2562,9 @@ export interface LyraMapEventMap {
  * @csspart legend-gradient - The continuous ramp bar rendered from `legendGradient`.
  * @csspart legend-lo - The low endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
  * @csspart legend-hi - The high endpoint caption of the `legendGradient` bar (mirrors `lr-heatmap`).
+ * @csspart legend-ticks - The row of labelled marks under the gradient bar, when ticks are shown.
+ * @csspart legend-tick - One labelled mark under the gradient bar, positioned at its value.
+ * @csspart legend-derived - The swatch list `choroplethLegend` derives (step bands, no data).
  * @csspart legend-limit - Visible localized summary when legend input is bounded or shortened.
  * @csspart marker - A MapLibre-generated marker, with a 24px minimum target in both axes even
  *   when a peer/custom marker has no intrinsic content size.
@@ -2335,7 +2573,7 @@ export interface LyraMapEventMap {
  * @csspart popup-close-button - The MapLibre-generated button that closes an open marker popup.
  * @csspart attribution - MapLibre-generated map attribution.
  * @csspart attribution-toggle - MapLibre's compact-attribution disclosure control with a decorative information glyph.
- * @csspart navigation - Standard peer NavigationControl group, when added through the map getter.
+ * @csspart navigation - Standard peer NavigationControl group, added through `controls` or the map getter.
  * @csspart zoom-in - Peer zoom-in button with a localized accessible name and tokenized target.
  * @csspart zoom-out - Peer zoom-out button.
  * @csspart compass - Peer compass/reset-north button; its glyph retains the peer's bearing rotation.
@@ -2402,6 +2640,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     mapStyleRequired: LYRA_DEFAULT_mapStyleRequired,
     mapToggleAttribution: LYRA_DEFAULT_mapToggleAttribution,
     mapWebglUnavailable: LYRA_DEFAULT_mapWebglUnavailable,
+    noData: LYRA_DEFAULT_noData,
     paginationSummary: LYRA_DEFAULT_paginationSummary,
     zoomIn: LYRA_DEFAULT_zoomIn,
     zoomOut: LYRA_DEFAULT_zoomOut,
@@ -2552,10 +2791,37 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * has been observed to leave `getZoom()` returning `null` permanently, after which every frame
    * throws from inside the peer's own matrix math and the canvas never paints again -- a blank map,
    * with nothing thrown at the call site to attribute it to. Going through this property applies
-   * the same call, then checks the camera survived it and reverts if it did not, so the worst case
-   * is an unconstrained map plus a dev-mode warning rather than a blank one.
+   * the same call, then checks the camera survived it. A camera below zoom 1 (fractional zoom
+   * included) is tolerated: a rejected box is retried once from zoom 1 and the zoom and centre
+   * that were showing are restored, so the limit applies to a map that currently shows the whole
+   * world. If the box still cannot be applied the constraint is dropped, so the worst case is an
+   * unconstrained map plus a dev-mode warning rather than a blank one.
    */
   @property({ attribute: false }) maxBounds: LyraMapBounds | null = null;
+
+  /**
+   * Standard controls to add, `{ navigation, scale }`, each `true`, `false` or an options object
+   * with a `position` corner (and, for `scale`, a `unit` of `'metric'` or `'imperial'`). The
+   * element adds the control once the map exists, replaces it when its options change and removes
+   * it when it is dropped, instead of an application importing the engine's control classes and
+   * calling `map.addControl()` itself.
+   *
+   * The controls are the engine's own, styled with Lyra tokens and exposing the `navigation`,
+   * `zoom-in`, `zoom-out`, `compass` and `scale` parts. Their button names come from the `zoomIn`,
+   * `zoomOut` and `mapResetNorth` strings and are re-applied when `lang`, `locale` or `strings`
+   * change, so they follow a live language switch. A control whose code cannot be loaded is
+   * skipped with a console warning; the map itself is unaffected.
+   */
+  @property({ attribute: false }) controls?: Readonly<LyraMapControls>;
+
+  /**
+   * Where the content slotted into `anchor` sits, `[longitude, latitude]`, or `null`/`undefined`
+   * for none. The slotted content (a feature's details, say) is placed above the point, flipped
+   * below it near the top edge and kept inside the map, follows the point as the camera moves and
+   * is hidden while the point is off screen or the map is not ready. Use the `lngLat` of an
+   * `lr-map-click` to anchor content to a clicked feature. See the `anchor` slot.
+   */
+  @property({ attribute: false }) anchorLngLat?: readonly [number, number] | null;
   /** Required MapLibre style URL or peer-neutral style specification. No provider is contacted
    * unless a consumer assigns this property. */
   @property({ attribute: false }) mapStyle?: Readonly<LyraMapStyleSpecification> | string;
@@ -2671,6 +2937,48 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: 'legend-gradient-lo-label' }) legendGradientLoLabel: string | null = null;
   /** Overrides the high endpoint's caption; defaults to the highest stop value, locale-formatted. */
   @property({ attribute: 'legend-gradient-hi-label' }) legendGradientHiLabel: string | null = null;
+
+  private _legendGradientTicks = EMPTY_LEGEND_GRADIENT_TICKS;
+  private _legendGradientTicksSource?: unknown;
+  /**
+   * Labelled marks under the legend gradient bar, `[{ value, label? }]` or bare numbers, at their
+   * position on the ramp. Values are in the data's own units, so a logarithmic ramp keeps its marks
+   * at the true data positions. Bounded to 16, sorted ascending and de-duplicated; a mark outside
+   * the ramp's lowest and highest stop is not drawn. Without a `label` a mark reads the
+   * locale-formatted value. Marks mirror under RTL together with the bar.
+   *
+   * Ticks accompany `legendGradient` or the ramp `choroplethLegend` derives; without a gradient they
+   * render nothing. With `choroplethLegend`, assigning ticks replaces the derived marks (the
+   * interior stop values), and assigning an empty array draws none.
+   */
+  @property({ attribute: false })
+  get legendGradientTicks(): readonly LyraMapLegendGradientTick[] {
+    return this._legendGradientTicks;
+  }
+  set legendGradientTicks(value: readonly (number | LyraMapLegendGradientTick)[]) {
+    if (value === this._legendGradientTicksSource) return;
+    this._legendGradientTicksSource = value;
+    const previous = this._legendGradientTicks;
+    this._legendGradientTicks = normalizeMapLegendGradientTicks(value);
+    this._legendGradientTicksAssigned = Array.isArray(value);
+    this.requestUpdate('legendGradientTicks', previous);
+  }
+  private _legendGradientTicksAssigned = false;
+
+  /**
+   * Derives the legend from `choropleth`. A `'step'` ramp renders one swatch row per band
+   * (`< 10`, `10 – 20`, `≥ 50`, numbers formatted for the locale), because a continuous bar would
+   * misdescribe discrete bands; a `'linear'` or `'logarithmic'` ramp renders the gradient bar from
+   * `choropleth.stops` with its interior stops as ticks. When `choropleth.noData` is set, a
+   * hatched swatch captioned with its `label` (or the localized "No data") joins the key.
+   *
+   * An explicit `legendGradient` replaces the derived bar and an explicit `legend` renders ahead
+   * of the derived rows, so a key can still be authored by hand. Default `false`.
+   */
+  @property({ type: Boolean, attribute: 'choropleth-legend', reflect: true })
+  choroplethLegend = false;
+
+  private derivedLegend: DerivedChoroplethLegend = EMPTY_DERIVED_LEGEND;
 
   /** Counts from the latest bounded legend normalization. `truncated` covers omitted rows or
    * shortened labels; the returned record is frozen and never aliases caller input. Read-only --
@@ -2919,6 +3227,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private intersectionObserver?: IntersectionObserver;
 
   @query('[part="container"]') private containerEl?: HTMLElement;
+  @query('[part="anchor"]') private anchorEl?: HTMLElement;
   private _map?: MapLibreMapCapability;
   // Tracks whether the style has fired its initial 'load' (i.e. addSource/
   // addLayer/setPaintProperty are now safe to call), rather than re-querying
@@ -3097,7 +3406,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    *  * Once that transform is already damaged, the defensive `getZoom()`/`getCenter()` snapshots
    *    can throw too. They therefore belong to the same boundary as the mutation and readback.
    *
-   * Either way the answer is the same: drop the constraint and restore the camera -- an
+   * A camera below zoom 1 is tolerated: the rejected box is retried once from zoom 1 and the zoom
+   * and centre that were shown are restored, so a box constraining a map that currently shows
+   * the whole world (fractional zoom 0.3, say) applies instead of being dropped.
+   *
+   * Otherwise the answer is the same: drop the constraint and restore the camera -- an
    * unconstrained map is a far smaller defect than a blank one -- and say so once, naming the
    * property. Both failures therefore share one revert path.
    */
@@ -3110,9 +3423,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     try {
       zoomBefore = map.getZoom();
       centerBefore = map.getCenter();
-      map.setMaxBounds(bounds);
-      if (bounds === null) return;
-      if (Number.isFinite(map.getZoom())) return;
+      if (this.constrainTo(map, bounds)) return;
+      // The failure the peer shows at a sub-1 fractional zoom in a wide container is specific to
+      // that zoom, so retry the same box once from zoom 1 and put the camera back afterwards. A box
+      // that still fails there, or a camera that does not survive the restore, takes the revert
+      // below.
+      if (
+        bounds !== null && typeof zoomBefore === 'number' && Number.isFinite(zoomBefore) && zoomBefore < 1 &&
+        this.constrainFromWholeZoom(map, bounds, zoomBefore, centerBefore)
+      ) return;
     } catch {
       // Fall through to the shared revert below. Clearing `maxBounds` is what un-wedges the
       // peer's transform, so it must happen even though the call that wedged it threw.
@@ -3131,6 +3450,35 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         + 'fractional zooms in wide containers. Raise the zoom, narrow the box, or leave maxBounds '
         + 'unset.'
     );
+  }
+
+  /** Applies the constraint and reports whether the camera survived it. Never throws. */
+  private constrainTo(map: MapLibreMapCapability, bounds: LyraMapBounds | null): boolean {
+    try {
+      map.setMaxBounds?.(bounds);
+      return bounds === null || Number.isFinite(map.getZoom());
+    } catch {
+      return false;
+    }
+  }
+
+  /** Retries a rejected constraint from zoom 1, then restores the zoom and centre that were shown. */
+  private constrainFromWholeZoom(
+    map: MapLibreMapCapability,
+    bounds: LyraMapBounds,
+    zoom: number,
+    center: { lng: number; lat: number },
+  ): boolean {
+    try {
+      map.setMaxBounds?.(null);
+      map.setZoom(1);
+      if (!this.constrainTo(map, bounds)) return false;
+      map.setZoom(zoom);
+      map.setCenter([center.lng, center.lat]);
+      return Number.isFinite(map.getZoom());
+    } catch {
+      return false;
+    }
   }
 
   /** `zoom` normalized to a finite value clamped into `[0, 22]` -- maplibre-gl's own default
@@ -3205,6 +3553,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       maxZoom: isFiniteCoordinate(maxZoom) ? finiteRange(maxZoom, 22, 0, 22) : undefined,
       animate: settings.animate !== false,
     });
+    this.clusterZoomToken += 1;
     if (this.deferUntilCameraSettled(() => this.executeFit(fit))) return true;
     return this.executeFit(fit);
   }
@@ -3285,6 +3634,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       );
       return false;
     }
+    this.clusterZoomToken += 1;
     if (this.deferUntilCameraSettled(() => this.executeCameraCommand(kind, target))) return true;
     return this.executeCameraCommand(kind, target);
   }
@@ -3407,6 +3757,149 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
+  private readonly appliedControls = new Map<MapControlKind, { control: unknown; key: string }>();
+  private controlsGeneration = 0;
+
+  /** Adds, replaces and removes the declared standard controls so the map shows exactly them. */
+  private syncControls(): void {
+    const map = this._map;
+    if (!map || typeof map.addControl !== 'function') return;
+    const wanted = normalizeMapControls(this.controls);
+    for (const [kind, applied] of [...this.appliedControls]) {
+      if (wanted.get(kind)?.key === applied.key) continue;
+      this.appliedControls.delete(kind);
+      try {
+        map.removeControl?.(applied.control);
+      } catch {
+        // The peer may already be tearing the control down with the map.
+      }
+    }
+    const generation = ++this.controlsGeneration;
+    for (const [kind, spec] of wanted) {
+      if (this.appliedControls.has(kind)) continue;
+      void loadMapControl(kind, this.engine, this._maplibreModule).then((Control: MapLibreControlConstructor | null) => {
+        if (
+          !Control || generation !== this.controlsGeneration || this._map !== map ||
+          this.appliedControls.has(kind)
+        ) return;
+        try {
+          const control = new Control(kind === 'scale' ? { unit: spec.unit } : {});
+          map.addControl?.(control, spec.position);
+          this.appliedControls.set(kind, { control, key: spec.key });
+        } catch {
+          // A control the peer cannot build leaves the map without it; the map itself is fine.
+        }
+      });
+    }
+  }
+
+  private stopAnchorPlacement(): void {
+    this.anchorCleanup?.();
+    this.anchorCleanup = undefined;
+  }
+  private anchorCleanup?: () => void;
+  private anchorFrame?: number;
+
+  /** Runs `syncAnchor()` on the next animation frame, once however many callers ask. */
+  private scheduleAnchorSync(): void {
+    if (this.anchorFrame !== undefined) return;
+    const view = ownerWindow(this);
+    if (!view || typeof view.requestAnimationFrame !== 'function') {
+      this.syncAnchor();
+      return;
+    }
+    this.anchorFrame = view.requestAnimationFrame(() => {
+      this.anchorFrame = undefined;
+      this.syncAnchor();
+    });
+  }
+
+  private cancelAnchorSync(): void {
+    if (this.anchorFrame === undefined) return;
+    ownerWindow(this)?.cancelAnimationFrame?.(this.anchorFrame);
+    this.anchorFrame = undefined;
+  }
+
+  /** The anchor's container-relative pixel position, or `undefined` while it is not on screen. */
+  private anchorPoint(): LyraMapPoint | undefined {
+    const position = this.anchorLngLat;
+    const container = this.containerEl;
+    if (!container || !Array.isArray(position)) return undefined;
+    const point = this.project([position[0] as number, position[1] as number]);
+    if (!point) return undefined;
+    const [x, y] = point;
+    return x >= 0 && y >= 0 && x <= container.clientWidth && y <= container.clientHeight ? point : undefined;
+  }
+
+  /**
+   * Places the `anchor` slot's content at `anchorLngLat`. Run on every camera frame, resize and
+   * `anchorLngLat` change, so it only does DOM work when the point is on screen.
+   */
+  private syncAnchor(): void {
+    const wrapper = this.anchorEl;
+    if (!wrapper) return;
+    const container = this.containerEl;
+    const point = this.anchorPoint();
+    this.stopAnchorPlacement();
+    if (!container || !point) {
+      wrapper.hidden = true;
+      return;
+    }
+    wrapper.hidden = false;
+    const rect = container.getBoundingClientRect();
+    try {
+      this.anchorCleanup = place(
+        virtualAnchorFromRect({ x: rect.left + point[0], y: rect.top + point[1], contextElement: container }),
+        wrapper,
+        { placement: 'top', strategy: 'absolute', offset: 12, boundary: container, padding: 8 },
+      );
+    } catch {
+      wrapper.hidden = true;
+    }
+  }
+
+  /**
+   * Eases the camera into a clicked cluster when its entry opted in with `cluster.zoomOnClick`.
+   * The expansion zoom comes from the cluster's own source; a peer without that capability, a
+   * cluster that has vanished, or a click that a newer one superseded leaves the camera alone.
+   */
+  private zoomIntoCluster(publicSourceId: string, hit: Feature | undefined): void {
+    const map = this._map;
+    const layer = this.canonicalDataLayers.find((entry) => entry.sourceId === publicSourceId);
+    if (!map || !layer?.cluster?.zoomOnClick) return;
+    const clusterId = hit?.properties?.['cluster_id'];
+    const geometry = hit?.geometry;
+    if (typeof clusterId !== 'number' || geometry?.type !== 'Point') return;
+    const [lng, lat] = geometry.coordinates;
+    const resolvedId = this._appliedDataLayerIds.get(publicSourceId);
+    const source = resolvedId === undefined ? undefined : map.getSource(resolvedId);
+    if (!source || typeof source.getClusterExpansionZoom !== 'function') return;
+    const token = ++this.clusterZoomToken;
+    let eased = false;
+    const ease = (zoom: unknown): void => {
+      if (eased || token !== this.clusterZoomToken || this._map !== map || !isFiniteCoordinate(zoom)) return;
+      // The source and its admitted configuration must still be the ones that were clicked.
+      // A pending lookup must not move the camera after its overlay was replaced or disabled.
+      if (this.canonicalDataLayers.find((entry) => entry.sourceId === publicSourceId) !== layer ||
+        this._appliedDataLayerIds.get(publicSourceId) !== resolvedId || map.getSource(resolvedId!) !== source) return;
+      eased = true;
+      this.easeTo({ center: [lng!, lat!], zoom });
+    };
+    try {
+      const pending = source.getClusterExpansionZoom(clusterId, (error, zoom) => {
+        if (!error) ease(zoom);
+      });
+      if (pending && typeof (pending as Promise<number>).then === 'function') {
+        (pending as Promise<number>).then(ease, () => undefined);
+      }
+    } catch {
+      // A cluster that disappeared between the hit test and the lookup is not an error to surface.
+    }
+  }
+
+  /** Supersedes an earlier cluster zoom still waiting for its expansion zoom. */
+  private clusterZoomToken = 0;
+
   /** Pushes `cameraPadding` into the engine when it differs from what the engine already has. */
   private applyCameraPadding(): void {
     const map = this._map;
@@ -3510,6 +4003,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private reportMove(map: MapLibreMapCapability): void {
     if (this._map !== map) return;
+    this.syncAnchor();
     const camera = readPeerCamera(map);
     if (!camera) return;
     const bounds = this.readVisibleBounds(map);
@@ -3755,6 +4249,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // Teardown is best-effort for a peer instance that failed partway through initialization.
     }
     this._map = undefined;
+    this.controlsGeneration += 1;
+    this.appliedControls.clear();
+    this.cancelAnchorSync();
+    this.stopAnchorPlacement();
+    if (this.anchorEl) this.anchorEl.hidden = true;
     this.cancelMoveReport();
     this.appliedPadding = ZERO_CAMERA_PADDING;
     this._styleLoaded = false;
@@ -3855,6 +4354,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       });
       candidate.on('click', (event) => {
         if (this._map !== candidate) return;
+        const clickToken = ++this.clusterZoomToken;
         // Query the choropleth fill *and* every applied dataLayers layer. Querying only the
         // choropleth made a click on a `dataLayers` polygon indistinguishable from a click on
         // empty ocean -- `feature: undefined` either way -- which broke the very pattern the two
@@ -3894,12 +4394,25 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             }
           }
         }
+        const choropleth = this.canonicalChoropleth;
+        const noData = origin === 'choropleth' && choropleth?.noData !== undefined &&
+          typeof hit?.properties?.[choropleth.field] !== 'number';
         this.emit('lr-map-click', {
           lngLat: [event.lngLat.lng, event.lngLat.lat],
           feature: hit as Feature | undefined,
           origin,
           sourceId,
+          ...(noData ? { noData: true } : {}),
         });
+        if (origin === 'cluster' && sourceId !== undefined && clickToken === this.clusterZoomToken) {
+          this.zoomIntoCluster(sourceId, hit);
+        }
+      });
+      candidate.on('movestart', (event) => {
+        if (this._map === candidate && event?.['originalEvent']) this.clusterZoomToken += 1;
+      });
+      candidate.on('boxzoomstart', () => {
+        if (this._map === candidate) this.clusterZoomToken += 1;
       });
       candidate.on('boxzoomend', () => {
         if (this._map === candidate) this.boxZoomSettling = true;
@@ -3944,6 +4457,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `updated()` still covers a later reassignment.
     this.applyMaxBounds();
     this.applyCameraPadding();
+    this.syncControls();
+    this.syncAnchor();
     // Deferred rather than applied here: this can run inside `updated()`, and the fit settles
     // synchronously, writing `center`/`zoom` -- a property write the update cycle must not see.
     if (this.pendingFit) this.scheduleAfterUpdate(() => this.applyPendingFit(), 'map-pending-fit');
@@ -3954,11 +4469,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (args[0] === undefined) this.geoJsonRefreshRequested = true;
     super.requestUpdate(...args);
     if ((args[0] === 'center' || args[0] === 'zoom') && this.isUpdatePending && !this.reflectingCamera) {
+      this.clusterZoomToken += 1;
       this.cameraUpdatePending = true;
     }
     // A no-op property write schedules nothing and must not mark the semantics stale.
     if (this.isUpdatePending && (args[0] === undefined || ['label', 'lang', 'locale', 'strings', 'markers',
-      'legend', 'legendGradient', 'hasLegendSlot', 'hasLegendStartSlot'].includes(String(args[0])))) this.semanticsStale = true;
+      'legend', 'legendGradient', 'hasLegendSlot', 'hasLegendStartSlot', 'choropleth', 'choroplethLegend'].includes(String(args[0])))) this.semanticsStale = true;
     if (this.isUpdatePending && (args[0] === undefined || ['label', 'lang', 'locale', 'strings', 'markers'].includes(String(args[0])))) this.markerSemanticsStale = true;
   }
 
@@ -4047,6 +4563,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('cameraPadding') && this._map) this.applyCameraPadding();
     this.pushCamera(changed);
     if (changed.has('maxBounds') && this._map) this.writeCamera(() => this.applyMaxBounds());
+    if (changed.has('controls') && this._map) this.syncControls();
+    if (changed.has('anchorLngLat') && this._map) this.syncAnchor();
     if (changed.has('markers') && this._map) this.applyMarkers();
     if (this.semanticsStale) {
       this.semanticsStale = false;
@@ -4071,6 +4589,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('legendGradient') || changed.has('dataLayers')) {
       this.legendIsLine = this.legendDescribesLine();
     }
+    this.derivedLegend = this.choroplethLegend && this.canonicalChoropleth
+      ? buildDerivedChoroplethLegend(
+          this.canonicalChoropleth,
+          (value) => this.formatCount(value),
+          this.localize('noData'),
+        )
+      : EMPTY_DERIVED_LEGEND;
     if (
       changed.has('mapStyle') &&
       !this._map &&
@@ -4096,7 +4621,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const tokens = new Set([...Object.values(TONE_TOKEN), ...Object.values(ON_TONE_TOKEN),
         '--lr-map-choropleth-fill-opacity', '--lr-map-hidden-category-opacity']);
       const inputs = JSON.stringify([this.canonicalDataLayers.map(({geojson: _geojson, geojsonProjection: _projection, ...paint}) => paint),
-        [this.canonicalChoropleth?.stops, this.canonicalChoropleth?.stepBaseColor]]);
+        [this.canonicalChoropleth?.stops, this.canonicalChoropleth?.stepBaseColor, this.canonicalChoropleth?.noData]]);
       for (const match of inputs.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
       this.paintThemeTokens = [...tokens];
     }
@@ -4305,15 +4830,21 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (this.appliedChoroplethPaintKey === paintKey && this._map.getLayer(fillLayerId)) return;
     this.appliedChoroplethPaintKey = paintKey;
     const colorExpr = this.choroplethColorExpression(choropleth);
+    const outlineExpr = this.choroplethOutlineExpression(choropleth, colorExpr);
     if (this._map.getLayer(fillLayerId)) {
       this._map.setPaintProperty(fillLayerId, 'fill-color', colorExpr as never);
       this._map.setPaintProperty(fillLayerId, 'fill-opacity', choroplethFillOpacity(this));
+      this._map.setPaintProperty(fillLayerId, 'fill-outline-color', (outlineExpr ?? null) as never);
     } else {
       this._map.addLayer({
         id: fillLayerId,
         type: 'fill',
         source: sourceId,
-        paint: { 'fill-color': colorExpr as never, 'fill-opacity': choroplethFillOpacity(this) },
+        paint: {
+          'fill-color': colorExpr as never,
+          'fill-opacity': choroplethFillOpacity(this),
+          ...(outlineExpr ? { 'fill-outline-color': outlineExpr as never } : {}),
+        },
       });
     }
     this._appliedFillLayerId = fillLayerId;
@@ -4346,7 +4877,28 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       for (const [value, color] of resolvedStops) colorExpr.push(value, color);
     }
 
-    return colorExpr;
+    // A feature whose value is missing, null or not a number would make the expression above fail
+    // to evaluate and go unpainted, so an authored no-data paint takes those features instead.
+    const noData = choropleth.noData;
+    if (!noData) return colorExpr;
+    return ['case', choroplethHasValueExpression(field), colorExpr, this.choroplethNoDataColor(noData)];
+  }
+
+  private choroplethNoDataColor(noData: CanonicalChoroplethNoData): string {
+    return resolvedLayerColor(this, noData.color, 'neutral');
+  }
+
+  /** Outline paint, or `undefined` when no-data features have no distinct outline. */
+  private choroplethOutlineExpression(
+    choropleth: CanonicalMapChoropleth,
+    colorExpr: unknown[],
+  ): unknown[] | undefined {
+    const stroke = choropleth.noData?.strokeColor;
+    if (!stroke) return undefined;
+    const resolved = resolvedMapPaintColor(this, stroke, true);
+    if (!resolved) return undefined;
+    // Other features keep MapLibre's default outline, which is their own fill color.
+    return ['case', choroplethHasValueExpression(choropleth.field), colorExpr, resolved];
   }
 
   /**
@@ -5160,6 +5712,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       } catch {
         // A peer can be disposing in the same delivery turn; the next live allocation retries.
       }
+      // Never placed inside this delivery: placing observes the anchor's own size, and starting a
+      // new observation while another is being delivered trips the browser's loop error.
+      this.scheduleAnchorSync();
     });
     this.mapResizeObserver = observer;
     this.observedMapContainer = container;
@@ -5339,7 +5894,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       canvas.setAttribute('aria-label', this.effectiveMapLabel);
       canvas.setAttribute('lang', this.effectiveLocale);
       if (this.legend.length || this.legendGradient.length >= 2 || this.hasLegendSlot ||
-        this.hasLegendStartSlot || this.legendProjection.truncated) {
+        this.hasLegendStartSlot || this.legendProjection.truncated || this.hasDerivedLegend()) {
         canvas.setAttribute('aria-describedby', 'map-legend');
       }
       else canvas.removeAttribute('aria-describedby');
@@ -5543,23 +6098,63 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     });
   }
 
+  /** Whether `choroplethLegend` currently derives anything to show. */
+  private hasDerivedLegend(): boolean {
+    const derived = this.derivedLegend;
+    return derived.rows.length > 0 || derived.gradient.length >= 2;
+  }
+
   private renderLegendGradient(): TemplateResult | typeof nothing {
-    const stops = this.legendGradient;
+    const explicit = this.legendGradient;
+    const derived = this.derivedLegend;
+    // An authored gradient replaces the derived one outright; only the ticks may mix, and an
+    // assigned list (even an empty one) always wins over the derived interior stops.
+    const stops = explicit.length >= 2 ? explicit : derived.gradient;
     if (stops.length < 2) return nothing;
+    const interpolation = explicit.length >= 2
+      ? (this.legendIsLine ? 'linear' : this.canonicalChoropleth?.interpolation)
+      : derived.interpolation;
     const lo = stops[0]!;
     const hi = stops[stops.length - 1]!;
-    const image = choroplethLegendGradientImage(stops,
-      this.legendIsLine ? 'linear' : this.canonicalChoropleth?.interpolation);
-    return html`<div class="legend-gradient" ?hidden=${this.legendCollapsed}>
-      <span part="legend-lo">${this.legendGradientLoLabel ?? this.formatCount(lo[0])}</span>
-      <span
+    const image = choroplethLegendGradientImage(stops, interpolation);
+    const ticks = this._legendGradientTicksAssigned || explicit.length >= 2
+      ? this.legendGradientTicks
+      : derived.ticks;
+    const span = hi[0] - lo[0];
+    const marks = span > 0 ? ticks.filter((tick) => tick.value >= lo[0] && tick.value <= hi[0]) : [];
+    const bar = html`<span
         part="legend-gradient"
         class="gradient-bar"
         aria-hidden="true"
         inert
         style=${styleMap({ backgroundImage: image })}
-      ></span>
+      ></span>`;
+    return html`<div class="legend-gradient" ?hidden=${this.legendCollapsed}>
+      <span part="legend-lo">${this.legendGradientLoLabel ?? this.formatCount(lo[0])}</span>
+      ${marks.length === 0
+        ? bar
+        : html`<span class="gradient-track">${bar}<span class="gradient-ticks" part="legend-ticks">${marks.map(
+            (tick) => html`<span
+              part="legend-tick"
+              style=${styleMap({ '--_lr-map-tick-position': `${compactGradientPercent(((tick.value - lo[0]) / span) * 100)}%` })}
+              >${tick.label ?? this.formatCount(tick.value)}</span
+            >`,
+          )}</span></span>`}
       <span part="legend-hi">${this.legendGradientHiLabel ?? this.formatCount(hi[0])}</span>
+    </div>`;
+  }
+
+  /** Swatch rows derived from the choropleth (step bands, no data), in their own labelled list. */
+  private renderDerivedLegendRows(): TemplateResult | typeof nothing {
+    const rows = this.derivedLegend.rows;
+    if (rows.length === 0) return nothing;
+    return html`<div class="legend-list" part="legend-derived" role="list" ?hidden=${this.legendCollapsed}>
+      ${rows.map((entry, index) => html`<div
+        class="legend-row"
+        role="listitem"
+        aria-posinset=${String(index + 1)}
+        aria-setsize=${String(rows.length)}
+      >${this.renderLegendRowContent(entry)}</div>`)}
     </div>`;
   }
 
@@ -5587,9 +6182,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
               `
             : html`<div part="container" id="map-container" lang=${this.effectiveLocale}></div>`}
+        <div part="anchor" hidden><slot name="anchor"></slot></div>
         ${this.legend.length ||
         this.legendProjection.truncated ||
         this.legendGradient.length ||
+        this.hasDerivedLegend() ||
         this.hasLegendSlot ||
         this.hasLegendStartSlot ||
         this.probeLegendSlot('legend') ||
@@ -5614,6 +6211,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               >
                 ${this.renderLegendRows()}
               </div>
+              ${this.renderDerivedLegendRows()}
               ${this.legendProjection.truncated
                 ? html`<div id="map-legend-limit" part="legend-limit" ?hidden=${this.legendCollapsed}>
                     ${this.legendLimitText()}

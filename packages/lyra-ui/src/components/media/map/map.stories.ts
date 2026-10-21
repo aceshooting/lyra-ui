@@ -12,6 +12,7 @@ import type {
   LyraMapPointIcon,
   LyraMapViewChangeDetail,
 } from './map.js';
+import { LYRA_MAP_EMPTY_STYLE } from './map.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const legend = (): LyraMapLegendEntry[] => [
@@ -936,4 +937,240 @@ export const MarkerInspectionLimit: Story = {
       const map = event.currentTarget as LyraMap;
       map.title = map.markersTruncated ? 'The first 2,000 marker entries are shown.' : '';
     }}></lr-map>`,
+};
+
+/** A row of unit squares south-east of Paris; `null` leaves a square without a `value` property. */
+function valueSquares(values: readonly (number | null)[]): LyraMapChoroplethLayer['geojson'] {
+  return {
+    type: 'FeatureCollection',
+    features: values.map((value, index) => {
+      const west = 2.2 + index * 0.08;
+      return {
+        type: 'Feature' as const,
+        id: index,
+        properties: { name: `Area ${index + 1}`, ...(value === null ? {} : { value }) },
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [[
+            [west, 48.9], [west + 0.07, 48.9], [west + 0.07, 48.83], [west, 48.83], [west, 48.9],
+          ]],
+        },
+      };
+    }),
+  };
+}
+
+const AREA_VALUES = [12, null, 34, 58, null, 76, 91, 23];
+
+/**
+ * `choropleth.noData` paints features without a value (here Area 2 and Area 5) with its own color
+ * and outline instead of leaving them unpainted, and reports `noData: true` when one is clicked.
+ * `choroplethLegend` derives the key from the layer: one swatch per band of the step ramp plus a
+ * hatched swatch captioned with the `noData` label. `LYRA_MAP_EMPTY_STYLE` keeps the map free of a
+ * basemap and of tile requests.
+ */
+export const ChoroplethNoData: Story = {
+  render: () => {
+    const choropleth: LyraMapChoroplethLayer = {
+      sourceId: 'areas',
+      field: 'value',
+      interpolation: 'step',
+      stops: [
+        [0, storyColor('brand')],
+        [40, storyColor('warning')],
+        [80, storyColor('danger')],
+      ],
+      noData: { color: storyColor('noData'), strokeColor: storyColor('danger'), label: 'Not surveyed' },
+      geojson: valueSquares(AREA_VALUES),
+    };
+    let readout: HTMLElement | undefined;
+    return html`
+      <div style="display: grid; gap: var(--lr-space-s)">
+        <lr-map
+          style="height: 20rem"
+          label="Areas by value, with unsurveyed areas"
+          center="[2.48, 48.865]"
+          zoom="10.5"
+          choropleth-legend
+          .choropleth=${choropleth}
+          .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+          @lr-map-click=${(event: CustomEvent<{ feature?: { properties?: { name?: string } }; noData?: true }>) => {
+            if (!readout) return;
+            const name = event.detail.feature?.properties?.name;
+            readout.textContent = name
+              ? `${name}: ${event.detail.noData ? 'no data' : 'has a value'}`
+              : 'Click an area';
+          }}
+        ></lr-map>
+        <span ${ref((node) => (readout = node as HTMLElement | undefined))} role="status">Click an area</span>
+      </div>
+    `;
+  },
+};
+
+/**
+ * A continuous ramp derives a gradient bar from `choropleth.stops`, with the interior stops as ticks.
+ * `legendGradientTicks` places its own labelled marks at true positions on the ramp instead.
+ */
+export const ChoroplethGradientTicks: Story = {
+  render: () => {
+    const choropleth: LyraMapChoroplethLayer = {
+      sourceId: 'areas',
+      field: 'value',
+      interpolation: 'logarithmic',
+      stops: [
+        [0, storyColor('brand')],
+        [25, storyColor('warning')],
+        [100, storyColor('danger')],
+      ],
+      noData: {},
+      geojson: valueSquares(AREA_VALUES),
+    };
+    return html`
+      <lr-map
+        style="height: 20rem"
+        label="Areas by value on a logarithmic ramp"
+        center="[2.48, 48.865]"
+        zoom="10.5"
+        choropleth-legend
+        legend-gradient-lo-label="0"
+        legend-gradient-hi-label="100+"
+        .legendGradientTicks=${[{ value: 25, label: 'Median' }, 60]}
+        .choropleth=${choropleth}
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+      ></lr-map>
+    `;
+  },
+};
+
+/**
+ * `cluster.zoomOnClick` eases the camera into a clicked cluster at the zoom where it breaks apart;
+ * reduced motion makes it a jump.
+ */
+export const ClusterZoomOnClick: Story = {
+  render: () => {
+    let seed = 20261020;
+    const random = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed / 2147483648;
+    };
+    const dataLayers: LyraMapGeoJsonDataLayer[] = [
+      {
+        sourceId: 'stops',
+        tone: 'accent',
+        cluster: { radius: 60, maxZoom: 14, zoomOnClick: true },
+        geojson: {
+          type: 'FeatureCollection',
+          features: Array.from({ length: 300 }, (_unused, index) => ({
+            type: 'Feature' as const,
+            id: index,
+            properties: { stop: index },
+            geometry: {
+              type: 'Point' as const,
+              coordinates: [2.2 + random() * 0.3, 48.8 + random() * 0.15],
+            },
+          })),
+        },
+      },
+    ];
+    return html`
+      <lr-map
+        style="height: 20rem"
+        label="Clustered stops; click a cluster to zoom into it"
+        center="[2.35, 48.875]"
+        zoom="9.5"
+        .dataLayers=${dataLayers}
+        .mapStyle=${OFFLINE_RASTER_STYLE}
+      ></lr-map>
+    `;
+  },
+};
+
+/**
+ * `controls` adds the standard navigation and scale controls declaratively, with a corner for each
+ * and a scale `unit`; changing it replaces only the control whose options changed. Button names
+ * follow the element's language.
+ */
+export const DeclarativeControls: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let imperial = false;
+    return html`
+      <div style="display: grid; gap: var(--lr-space-s)">
+        <lr-button
+          @click=${() => {
+            imperial = !imperial;
+            if (map) map.controls = { navigation: { position: 'top-right' }, scale: { position: 'bottom-left', unit: imperial ? 'imperial' : 'metric' } };
+          }}
+          >Toggle metric / imperial</lr-button
+        >
+        <lr-map
+          ${ref((node) => (map = node as LyraMap | undefined))}
+          style="height: 20rem"
+          label="Map with declarative controls"
+          center="[2.3522, 48.8566]"
+          zoom="9"
+          .controls=${{ navigation: { position: 'top-right' }, scale: { position: 'bottom-left', unit: 'metric' } }}
+          .mapStyle=${OFFLINE_RASTER_STYLE}
+        ></lr-map>
+      </div>
+    `;
+  },
+};
+
+/**
+ * The `anchor` slot shows content at `anchorLngLat`: above the point, flipped below near the top
+ * edge, following the camera, and hidden while the point is off screen. Click an area to anchor its
+ * details there; this replaces a hand-positioned popup.
+ */
+export const AnchoredFeatureDetails: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let title: HTMLElement | undefined;
+    const choropleth: LyraMapChoroplethLayer = {
+      sourceId: 'areas',
+      field: 'value',
+      stops: [[0, storyColor('brand')], [100, storyColor('danger')]],
+      noData: {},
+      geojson: valueSquares(AREA_VALUES),
+    };
+    return html`
+      <lr-map
+        ${ref((node) => (map = node as LyraMap | undefined))}
+        style="height: 20rem"
+        label="Areas; click one to show its details"
+        center="[2.48, 48.865]"
+        zoom="10.5"
+        .choropleth=${choropleth}
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        @lr-map-click=${(event: CustomEvent<{ lngLat: [number, number]; feature?: { properties?: { name?: string } } }>) => {
+          const name = event.detail.feature?.properties?.name;
+          if (title) title.textContent = name ?? '';
+          if (map) map.anchorLngLat = name ? event.detail.lngLat : null;
+        }}
+      >
+        <div slot="anchor" role="group" aria-labelledby="anchored-details-title">
+          <strong id="anchored-details-title" ${ref((node) => (title = node as HTMLElement | undefined))}></strong>
+          <lr-button size="small" @click=${() => { if (map) map.anchorLngLat = null; }}>Close</lr-button>
+        </div>
+      </lr-map>
+    `;
+  },
+};
+
+/**
+ * `maxBounds` applies even while the map shows the whole world at a fractional zoom below 1, where
+ * the engine rejects the same box, and restores the camera afterwards.
+ */
+export const BoundsAtWholeWorldZoom: Story = {
+  render: () => html`
+    <lr-map
+      style="height: 20rem"
+      label="World map limited to Europe"
+      center="[10, 50]"
+      zoom="0.4"
+      .maxBounds=${[[-30, 30], [50, 72]]}
+      .mapStyle=${OFFLINE_RASTER_STYLE}
+    ></lr-map>
+  `,
 };

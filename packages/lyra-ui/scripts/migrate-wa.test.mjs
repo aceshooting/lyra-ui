@@ -2740,6 +2740,30 @@ test('the immutable-collections rule honors lyra-migrate-reviewed acknowledgemen
   assert.deepEqual(result.warnings.map((warning) => warning.line), [6]);
 });
 
+test('the immutable-collections rule asks for a review of lr-map center assignments, and only reports', () => {
+  const source = [
+    "const map = document.querySelector('lr-map');",
+    'map.center = home;',
+    'map.center = [10, 20];',
+    'if (map.center === home) return;',
+    '// lyra-migrate-reviewed: MAP_CENTER_REVIEW:center',
+    'map.center = initial;',
+    'map.jumpTo({ center: home });',
+  ].join('\n');
+  const result = migrateImmutableCollections(source, { file: 'app.ts' });
+  assert.equal(result.content, source);
+  assert.deepEqual(result.changes, []);
+  assert.deepEqual(result.warnings.map((warning) => [warning.line, warning.warningCode, warning.upstreamTag, warning.upstreamMember, warning.action]), [
+    [2, 'MAP_CENTER_REVIEW', 'lr-map', 'center', 'manual-review'],
+    [3, 'MAP_CENTER_REVIEW', 'lr-map', 'center', 'manual-review'],
+  ]);
+  assert.match(result.warnings[0].message, /map\.jumpTo\(\{ center \}\)/);
+  assert.match(result.warnings[0].message, /lyra-migrate-reviewed: MAP_CENTER_REVIEW:center/);
+  assert.deepEqual(migrateImmutableCollections('view.center = home;\n', { file: 'app.ts' }).warnings, [], 'a file that names no lr-map is not scanned');
+  assert.deepEqual(migrateImmutableCollections("'lr-map'; a.center = b;", { file: 'a.css' }).warnings, []);
+  assert.equal(migrateImmutableCollections('<lr-map></lr-map>\nconst c = LyraMap; map.center = x;', { file: 'a.html' }).warnings.length, 1);
+});
+
 test('the immutable-collections table matches the identity collections the components enroll', () => {
   const componentsDir = path.join(path.dirname(scriptDir), 'src', 'components');
   const enrolled = new Map();

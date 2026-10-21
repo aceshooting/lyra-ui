@@ -81570,6 +81570,16 @@
             "hasDefault": false
           },
           {
+            "name": "choropleth-legend",
+            "property": "choroplethLegend",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "engine",
             "property": "engine",
             "type": "LyraMapEngine",
@@ -81670,6 +81680,15 @@
         ],
         "properties": [
           {
+            "name": "anchorLngLat",
+            "attribute": null,
+            "type": "readonly [number, number] | null | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "cameraPadding",
             "attribute": null,
             "type": "LyraMapPadding | undefined",
@@ -81691,6 +81710,25 @@
             "name": "choropleth",
             "attribute": null,
             "type": "Readonly<LyraMapChoroplethLayer> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "choroplethLegend",
+            "attribute": "choropleth-legend",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "controls",
+            "attribute": null,
+            "type": "Readonly<LyraMapControls> | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -81790,6 +81828,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "legendGradientTicks",
+            "attribute": null,
+            "type": "readonly LyraMapLegendGradientTick[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "legendInteractive",
@@ -81899,6 +81946,10 @@
         ],
         "slots": [
           {
+            "name": "anchor",
+            "deprecated": null
+          },
+          {
             "name": "legend",
             "deprecated": null
           },
@@ -81910,7 +81961,7 @@
         "events": [
           {
             "name": "lr-map-click",
-            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: 'choropleth' | 'data-layer' | 'cluster' | undefined; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; }>",
+            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: 'choropleth' | 'data-layer' | 'cluster' | undefined; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; /** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData` * is configured; absent otherwise. */ readonly noData?: true; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -81953,6 +82004,10 @@
         ],
         "parts": [
           {
+            "name": "anchor",
+            "deprecated": null
+          },
+          {
             "name": "attribution",
             "deprecated": null
           },
@@ -81978,6 +82033,10 @@
           },
           {
             "name": "legend",
+            "deprecated": null
+          },
+          {
+            "name": "legend-derived",
             "deprecated": null
           },
           {
@@ -82014,6 +82073,14 @@
           },
           {
             "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "legend-tick",
+            "deprecated": null
+          },
+          {
+            "name": "legend-ticks",
             "deprecated": null
           },
           {
@@ -82296,6 +82363,14 @@
                 "returnType": "MapLibreGeoJsonDiff | null"
               }
             ]
+          },
+          {
+            "module": "src/components/media/map/map.class.ts",
+            "name": "LYRA_MAP_EMPTY_STYLE",
+            "kind": "variable",
+            "type": "Readonly<LyraMapStyleSpecification>",
+            "readonly": false,
+            "deprecated": null
           }
         ],
         "form": {

@@ -9,7 +9,7 @@ component and applications delete their workarounds.
 
 - [x] **`center` compares by value.** Assigning a new but equal `[lng, lat]` array is a no-op instead
   of re-centring the map over the user's pan; `jumpTo()` is the explicit way to re-centre.
-- [ ] Migration note for the value-compared `center` in the v29 → v30 guide and a
+- [x] Migration note for the value-compared `center` in the v29 → v30 guide and a
   `lyra-ui-migrate` review entry.
 
 ## Camera
@@ -24,18 +24,17 @@ component and applications delete their workarounds.
 
 ## Overlays and data
 
-Status (2026-10-20): every item below is implemented and passes in all three engines, but is not yet
-merged (it awaits its regeneration and lint run). The anchored content uses the deferred positioner.
+Status (2026-10-20): the items below are on main. The anchored content uses the deferred positioner.
 
-- [ ] Anchored content for a clicked feature (an `anchor` slot positioned at `anchorLngLat`, hidden
+- [x] Anchored content for a clicked feature (an `anchor` slot positioned at `anchorLngLat`, hidden
   when off-screen), replacing hand-positioned popups.
-- [ ] `choropleth.noData` (color, stroke, label): features without a value paint and click with
+- [x] `choropleth.noData` (color, stroke, label): features without a value paint and click with
   `noData: true`, instead of applications splitting their data into a second layer.
-- [ ] Choropleth-derived legend for step ramps and `legendGradientTicks`.
-- [ ] `cluster.zoomOnClick`.
-- [ ] Declarative `controls` (navigation and scale, with position).
-- [ ] Exported empty basemap style constant.
-- [ ] `bounds` limits that tolerate fractional zoom below 1.
+- [x] Choropleth-derived legend for step ramps and `legendGradientTicks`.
+- [x] `cluster.zoomOnClick`.
+- [x] Declarative `controls` (navigation and scale, with position).
+- [x] Exported empty basemap style constant.
+- [x] `bounds` limits that tolerate fractional zoom below 1.
 
 ## Raw-engine applications
 

@@ -12,12 +12,20 @@
 //  - `const rows = <receiver>.<property>; rows.push(…); <receiver>.<property> = rows`, the same
 //    mutation through a local alias.
 //
-// Report a site as reviewed with `lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:<property>` on
-// the reported line or alone on the line above it. Dependency-free and filesystem-free: this module
+// A second review, in the same rule run, covers `lr-map` `center` (Lyra 30 compares it by value):
+//
+//  - `<receiver>.center = <value>` in a file that mentions `lr-map` or `LyraMap`. Code that assigned
+//    the coordinates the map already held to pull it back over the user's pan no longer moves it;
+//    `jumpTo({ center })` is the explicit way to re-centre. Reported as `MAP_CENTER_REVIEW`.
+//
+// Report a site as reviewed with `lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:<property>` (or
+// `MAP_CENTER_REVIEW:center`) on the reported line or alone on the line above it. Dependency-free
+// and filesystem-free: this module
 // is copied beside migrate-wa.mjs into dist/cli.
 
 export const IMMUTABLE_COLLECTION_RULE = 'immutable-collections';
 const IMMUTABLE_COLLECTION_CODE = 'IMMUTABLE_COLLECTION_REVIEW';
+const MAP_CENTER_CODE = 'MAP_CENTER_REVIEW';
 
 /** Every component property whose same-array assignment is ignored since Lyra 30. */
 export const IMMUTABLE_COLLECTION_PAIRS = Object.freeze([
@@ -81,13 +89,13 @@ function owners(text, property, mentioned) {
   });
 }
 
-function acknowledged(text, offset, property) {
+function acknowledged(text, offset, property, code = IMMUTABLE_COLLECTION_CODE) {
   const lineStart = text.lastIndexOf('\n', offset - 1) + 1;
   const lineEnd = text.indexOf('\n', offset);
   const previousStart = lineStart > 0 ? text.lastIndexOf('\n', lineStart - 2) + 1 : lineStart;
   const nearby = text.slice(previousStart, lineEnd === -1 ? text.length : lineEnd);
   for (const match of nearby.matchAll(ACKNOWLEDGEMENT)) {
-    if (new RegExp(`${IMMUTABLE_COLLECTION_CODE}:\\s*(?:lr-[a-z-]+\\.)?${property}(?![\\w$])`).test(match[1])) return true;
+    if (new RegExp(`${code}:\\s*(?:lr-[a-z-]+\\.)?${property}(?![\\w$])`).test(match[1])) return true;
   }
   return false;
 }
@@ -144,8 +152,28 @@ function analyzeImmutableCollections(text, { file = 'input' } = {}) {
       `${name} is the array ${receiver}.${property} already holds and is changed in place before being assigned back; that assignment is ignored since Lyra 30 (${describe(tags, property)}). Copy it first (const ${name} = [...${receiver}.${property}]). ${acknowledgement(property)}`);
   }
 
+  analyzeMapCenter(text, file, warnings);
+
   warnings.sort((left, right) => left.line - right.line || left.column - right.column);
   return { warnings };
+}
+
+const MAP_MENTION = /(?<![\w-])lr-map(?![\w-])|\bLyraMap\b/;
+const CENTER_ASSIGNMENT = new RegExp(String.raw`(${RECEIVER})\.center\s*=(?!=)`, 'g');
+
+/** `<receiver>.center = …` in a file that names `lr-map`: a re-centre that is now a no-op when the
+ *  assigned coordinates equal the last assigned ones. */
+function analyzeMapCenter(text, file, warnings) {
+  if (!MAP_MENTION.test(text)) return;
+  for (const match of text.matchAll(CENTER_ASSIGNMENT)) {
+    if (acknowledged(text, match.index, 'center', MAP_CENTER_CODE)) continue;
+    warnings.push({
+      file, ...lineColumn(text, match.index), rule: IMMUTABLE_COLLECTION_RULE,
+      upstreamTag: 'lr-map', upstreamMember: 'center',
+      action: 'manual-review', target: 'jumpTo()', warningCode: MAP_CENTER_CODE,
+      message: `${match[1]}.center = … compares by value since Lyra 30: assigning the coordinates lr-map was last given moves nothing, so it no longer re-centres a map the user has panned. If this line re-centres, call ${match[1]}.jumpTo({ center }) (or flyTo()/easeTo()); an initial or changed centre needs no change. Acknowledge a reviewed site with lyra-migrate-reviewed: ${MAP_CENTER_CODE}:center.`,
+    });
+  }
 }
 
 /** Applies the rule to one file's text. The rule never edits: `content` is the input. */

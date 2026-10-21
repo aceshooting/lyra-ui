@@ -19,7 +19,7 @@ and SSR contracts use the focused guides: [imports and registration](./imports-a
 2. **Upgrade only Lyra and its lockfile.** Install the exact v30 package build being evaluated and
    confirm the resolved version. Do not change unrelated dependencies in this step.
 3. **Run the collections review.** The `immutable-collections` rule only reports; it never edits
-   source. Run it with the CLI of the installed release, review each site by hand, and acknowledge
+   source. It also asks you to review `lr-map` `center` assignments (see [Map](#map)). Run it with the CLI of the installed release, review each site by hand, and acknowledge
    a reviewed site with a comment (see [Collections](#collections)):
 
    ```sh
@@ -32,6 +32,41 @@ and SSR contracts use the focused guides: [imports and registration](./imports-a
    see (an array mutated in a helper and bound through a template) is correct.
 5. **Verify the migrated application.** Run the project's typecheck and tests, and exercise every
    screen that mutates a list shown by one of the components in the table below.
+
+## Map
+
+`lr-map` `center` is compared by value. Assigning a new array that holds the coordinates the map
+was last given is a no-op, even after the user has panned or zoomed: before v30 it moved the map
+back, so a framework re-render that rebuilt an equal array (or a "reset view" button that assigned
+the same home coordinates) re-centred it. A different value still moves the camera, and an initial
+`center` is unchanged.
+
+To re-centre explicitly, call a camera command, which also writes the result back to `center` and
+`zoom` and reports `lr-map-view-change` with `source: 'command'`:
+
+Before:
+
+```ts
+const map = document.querySelector('lr-map');
+resetButton.addEventListener('click', () => {
+  map.center = home; // moved the map back over the user's pan
+});
+```
+
+After:
+
+```ts
+resetButton.addEventListener('click', () => {
+  map.jumpTo({ center: home }); // flyTo() / easeTo() animate, honoring reduced motion
+});
+```
+
+A binding that only publishes the application's own centre (`.center=${center}` where `center`
+changes when the application wants a new view) needs no change. The `immutable-collections` rule
+reports every `<receiver>.center = …` assignment in a file that names `lr-map` or `LyraMap` as
+`MAP_CENTER_REVIEW`, because a scan cannot tell a re-centre from an initial value. Once a site is
+correct, acknowledge it with `lyra-migrate-reviewed: MAP_CENTER_REVIEW:center` on the reported line
+or alone on the line above it. The rule never edits source.
 
 ## Collections
 
@@ -111,7 +146,9 @@ Vue/Svelte/Astro sources, runs without `--origin`, and reports the warning code
 - `<receiver>.<property>.push|splice|pop|shift|unshift|sort|reverse|fill|copyWithin(` on a property
   from the table, when the file mentions a component that owns it (its `lr-` tag or class name);
 - `<receiver>.<property> = <receiver>.<property>` with nothing else on the right;
-- a local alias of the bound array that is changed in place and then assigned back.
+- a local alias of the bound array that is changed in place and then assigned back;
+- `<receiver>.center = …` in a file that names `lr-map` or `LyraMap`, as `MAP_CENTER_REVIEW` (see
+  [Map](#map)).
 
 It does not follow arrays across files or into helpers, and it cannot see a mutation behind a
 template binding, so also search for the table's properties in code that edits shared state in

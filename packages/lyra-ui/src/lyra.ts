@@ -688,6 +688,13 @@ export type {
   LyraMapLegendControlRole,
   LyraMapLegendProjection,
   LyraMapChoroplethLayer,
+  LyraMapChoroplethNoData,
+  LyraMapControlPosition,
+  LyraMapControls,
+  LyraMapLegendGradientTick,
+  LyraMapNavigationControlOptions,
+  LyraMapScaleControlOptions,
+  LyraMapScaleUnit,
   LyraMapMarker,
   LyraMapGeoJsonDataLayer,
   LyraMapDataLayerKind,
@@ -712,6 +719,7 @@ export type {
   LyraMapEngine,
   LyraMapFeatureRequirements,
 } from './components/media/map/map.class.js';
+export { LYRA_MAP_EMPTY_STYLE } from './components/media/map/map-empty-style.js';
 export type { MapLibreSourceDataDiff } from './components/media/map/map-loader.js';
 export {
   DEFAULT_MAX_FILE_SIZE_BYTES,

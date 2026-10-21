@@ -7355,9 +7355,12 @@ export interface LyraComponentTypeMap {
     element: LyraMap;
     properties: LyraElementProperties<
       LyraMap,
+      | 'anchorLngLat'
       | 'cameraPadding'
       | 'center'
       | 'choropleth'
+      | 'choroplethLegend'
+      | 'controls'
       | 'dataLayers'
       | 'engine'
       | 'hiddenCategories'
@@ -7368,6 +7371,7 @@ export interface LyraComponentTypeMap {
       | 'legendGradient'
       | 'legendGradientHiLabel'
       | 'legendGradientLoLabel'
+      | 'legendGradientTicks'
       | 'legendInteractive'
       | 'legendOpen'
       | 'legendProjection'
@@ -7397,6 +7401,7 @@ export interface LyraComponentTypeMap {
       | '--lr-map-popup-close-button-hover-bg'
       | '--lr-map-popup-close-button-hover-color';
     attributeAliases: {
+      'choropleth-legend'?: LyraMap['choroplethLegend'];
       'legend-collapsible'?: LyraMap['legendCollapsible'];
       'legend-control-role'?: LyraMap['legendControlRole'];
       'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];

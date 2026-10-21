@@ -33271,7 +33271,10 @@ modes use the same expression semantics at initial render and after a theme chan
   is selected implicitly: an unset, empty, or whitespace-only value renders the localized
   style-required failure and makes no tile/style request. Assign a hosted vector/raster style from
   a provider whose terms fit your application, or an explicitly network-silent style for local
-  geometry.
+  geometry. `LYRA_MAP_EMPTY_STYLE` (exported from `@aceshooting/lyra-ui` and the map module) is that
+  style for the common case: a frozen `{ version: 8, sources: {}, layers: [] }` with no basemap, so
+  a choropleth, `dataLayers` and markers draw on a blank canvas and no tile request is made. Assign
+  it as is (`map.mapStyle = LYRA_MAP_EMPTY_STYLE`); build a new style object to add to it.
 - `legendGradient: readonly (readonly [number, string])[] = []` (attribute: false, type
   `LyraMapLegendGradientStop[]`) — renders the legend as a **continuous** gradient bar with endpoint
   captions instead of (or alongside) the discrete `legend` swatches, which is the standard key for a
@@ -33292,6 +33295,29 @@ modes use the same expression semantics at initial render and after a theme chan
   `legendGradientHiLabel: string | null = null` (attribute `legend-gradient-hi-label`) — override
   the endpoint captions, which otherwise default to the lowest/highest stop value in the component's
   own locale-aware numeric formatting
+- `legendGradientTicks: readonly (number | LyraMapLegendGradientTick)[]` (attribute: false; the
+  getter returns the frozen `LyraMapLegendGradientTick { value: number; label?: string }` list) —
+  labelled marks under the `legendGradient` bar, each at its value's true position on the ramp
+  (the bar and its marks share one track, so a logarithmic ramp keeps them at the data positions).
+  A bare number is a mark labelled with the locale-formatted value; a `label` is caller data and is
+  rendered verbatim. At most 16 marks are kept, sorted ascending and de-duplicated; a mark outside
+  the ramp's lowest and highest stop, or a non-finite one, is not drawn, and without a gradient
+  there is nothing to mark. Marks are positioned from the inline start, so they mirror with the
+  flipped bar under RTL. Parts `legend-ticks` and `legend-tick`.
+- `choroplethLegend: boolean = false` (attribute `choropleth-legend`, reflected) — derives the key
+  from `choropleth` instead of a hand-built copy that can drift. A `'step'` ramp renders one swatch
+  row per band in `legend-derived`: `< 20`, `20 – 50`, `≥ 50` (numbers formatted for
+  `effectiveLocale`, each range wrapped in bidi isolates so it keeps its order in a right-to-left
+  legend); an explicit `stepBaseColor` becomes its own `< first` band, otherwise the first band
+  absorbs the values below the first threshold exactly as the fill does, and a lone stop without a
+  base colour describes nothing so it adds no band. A `'linear'` or `'logarithmic'` ramp renders the
+  gradient bar from `choropleth.stops` (a logarithmic one sampled as the fill is) with the interior
+  stop values as ticks, because a continuous ramp has no bands to list. When `choropleth.noData`
+  is set, a hatched swatch (`data-pattern="diagonal"`, the non-colour cue) captioned with its
+  `label`, or the localized "No data", ends the derived rows. Authored input wins where it overlaps:
+  a non-empty `legendGradient` replaces the derived bar, an assigned `legendGradientTicks` (even
+  `[]`) replaces the derived ticks, and `legend` rows render ahead of the derived rows. Derived rows
+  are not interactive. Default off, so an unset map renders what it rendered before.
 - `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
   of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
 LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
@@ -33401,6 +33427,18 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   colour, so a legend whose first band starts at the data minimum needs no extra configuration.
   Stop colors and `stepBaseColor` accept CSS custom-property references; Lyra resolves them from
   the live host cascade before passing the expression to MapLibre's WebGL renderer.
+  `noData?: LyraMapChoroplethNoData { color?: string; strokeColor?: string; label?: string }`
+  says how features without a usable value look and read, instead of splitting the data into a
+  second layer. A feature has no value when its `field` property is missing, `null` or not a number;
+  without `noData` such a feature is not painted by the choropleth at all (the expression cannot
+  evaluate). With it, `fill-color` becomes `['case', <is a number>, <ramp>, <noData color>]` under
+  every interpolation, `color` defaults to the neutral data tone and takes the same CSS colours and
+  `var(--lr-…)` references as `stops`, and the colour follows live theme changes. `strokeColor`
+  adds an outline drawn on no-data features only (other features keep the default outline, their own
+  fill colour); omitted, nothing distinct is drawn. `label` is caller data, trimmed and bounded to
+  256 characters, shown verbatim as the legend caption under `choroplethLegend` (default: the
+  localized "No data"). `noData: {}` accepts every default. A click on such a feature reports
+  `noData: true` in the `lr-map-click` detail.
 - `markers: LyraMapMarker[] = []` (attribute: false) — `LyraMapMarker { id?: string; lngLat:
 [number, number]; color?: string; label?: string; unsafeHtml?: string }`; an explicit `id` is
   trimmed and must be nonempty, and the first successfully admitted marker for an explicit ID wins.
@@ -33480,7 +33518,7 @@ heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` 
 
   `cluster?: LyraMapClusterOptions { radius?: number; maxZoom?: number; radiusSteps?: [number,
 number][]; colorSteps?: [number, string][]; strokeColor?: string; countFont?: string[]; countColor?: string;
-countHaloColor?: string; countHaloWidth?: number }` turns the entry's source into a
+countHaloColor?: string; countHaloWidth?: number; zoomOnClick?: boolean }` turns the entry's source into a
   natively clustered one — `cluster`/`clusterRadius` (default 50)/`clusterMaxZoom` (default 14) on
   the source, plus a `${sourceId}-cluster` circle filtered on `has('point_count')`, a
   `${sourceId}-cluster-count` label, and a `${sourceId}-circle` layer for the points that stayed
@@ -33507,6 +33545,13 @@ countHaloColor?: string; countHaloWidth?: number }` turns the entry's source int
   explicit width of 0 disables the outline. Both count colors accept CSS colors or `var(--lr-…)`
   references resolved against the host on theme repaint. Omitting or removing these options
   restores the previous on-tone label and halo-free default.
+  `zoomOnClick` (default `false`) eases the camera into a clicked cluster: after `lr-map-click`
+  fires with `origin: 'cluster'`, the element asks the cluster's source for the zoom at which it
+  breaks apart (promise or callback peers both work) and calls `easeTo({ center: <cluster>, zoom })`,
+  so reduced motion, the write-back into `center`/`zoom` and `lr-map-view-change` with
+  `source: 'command'` all apply, and the zoom is clamped to the camera range. A later cluster click
+  supersedes an earlier lookup still pending; a peer without the lookup, or a cluster that has
+  vanished, leaves the camera alone. It is not cancelable from the click event.
   Cluster options are baked into the source at creation time by MapLibre and have no setter, so
   changing them (or `kind`) rebuilds that one entry's source and layers; every other update still
   reconciles in place.
@@ -33642,12 +33687,34 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   escape hatch: constraining the camera can wedge maplibre-gl at a sub-1 fractional zoom in a wide
   container, leaving `getZoom()` returning `null` permanently, every frame throwing from inside the
   peer's own matrix math, and the canvas never painting again — a blank map, with nothing thrown at
-  the call site to attribute it to. This property applies the same call, then reads the camera back
-  and reverts (restoring zoom and centre) if it did not survive, so the worst case is an
+  the call site to attribute it to. This property applies the same call, then reads the camera back.
+  A camera below zoom 1, fractional zoom included, is tolerated: a box the peer rejects there is
+  retried once from zoom 1 and the zoom and centre that were showing are restored, so the limit
+  applies to a map that currently shows the whole world and no warning is issued. A box that still
+  cannot be applied reverts (restoring zoom and centre), so the worst case is an
   unconstrained map plus a dev-mode warning. The defensive camera snapshots are inside the same
   failure boundary, so a peer whose damaged transform already throws from `getZoom()` or
   `getCenter()` is also reduced to an unconstrained map instead of leaking through Lit's update.
   A malformed box is rejected rather than clamped
+- `controls?: LyraMapControls` (attribute: false) — `LyraMapControls { navigation?: boolean |
+  LyraMapNavigationControlOptions; scale?: boolean | LyraMapScaleControlOptions }`, with
+  `LyraMapNavigationControlOptions { position?: LyraMapControlPosition }`,
+  `LyraMapScaleControlOptions { position?: LyraMapControlPosition; unit?: LyraMapScaleUnit }`,
+  `LyraMapControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'` and
+  `LyraMapScaleUnit = 'metric' | 'imperial'`. The element adds the engine's standard controls once
+  the map exists, replaces one whose options changed, keeps an unchanged one and removes one that
+  is dropped, so an application no longer imports control classes and calls `map.addControl()`.
+  `true` takes the defaults (navigation `'top-right'`, scale `'bottom-left'` and `'metric'`); an
+  unknown position or unit falls back to its default. The control code comes from the selected
+  engine (`maplibre-gl`, or `@aceshooting/lyra-map/controls/navigation` and `/scale`, imported
+  only for a control that is declared); a control that cannot be loaded is skipped with a console
+  warning and the map is unaffected. Button names come from `zoomIn`, `zoomOut` and `mapResetNorth`
+  and are re-applied whenever `lang`, `locale` or `strings` change, so they follow a live language
+  switch. Controls survive a `mapStyle` swap and are dropped with the map on disconnect, then added
+  again to the next one. Parts `navigation`, `zoom-in`, `zoom-out`, `compass`, `scale`.
+- `anchorLngLat?: readonly [number, number] | null` (attribute: false) — where content in the
+  `anchor` slot sits. Pair it with the `lngLat` of an `lr-map-click` to show a clicked feature's
+  details, replacing a hand-positioned popup. See **Slots**.
 
 **Choropleth and `dataLayers` updates are diffed before they reach the peer.** `setData()`
 unconditionally re-tiles and repaints an entire source, which is invisible on a static map and
@@ -33687,8 +33754,10 @@ payload beside the map.
 `LyraMapPointRadiusInterpolation`, `LyraMapPointIcon`, `LyraMapPointIconMode`,
 `LyraMapPointIconLineCap`, `LyraMapPointIconLineJoin`, `LyraMapMarker`, `LyraMapMarkerActivationDetail`,
 `LyraMapMarkerActivationSource`, `LyraMapLegendToggleDetail`, `LyraMapLegendPanelToggleDetail`,
-`LyraMapStyleSpecification`, `LyraMapEngine`, `LyraMapFeatureRequirements`, `LyraMapSourceDataDiff`,
-and `LyraMapInstance`.
+`LyraMapChoroplethNoData`, `LyraMapLegendGradientTick`, `LyraMapControls`,
+`LyraMapNavigationControlOptions`, `LyraMapScaleControlOptions`, `LyraMapControlPosition`,
+`LyraMapScaleUnit`, `LyraMapStyleSpecification`, `LyraMapEngine`, `LyraMapFeatureRequirements`,
+`LyraMapSourceDataDiff`, the `LYRA_MAP_EMPTY_STYLE` constant, and `LyraMapInstance`.
 
 **Getters:** `map: LyraMapInstance | undefined` → the underlying runtime `maplibregl.Map`, exposed
 through the peer-neutral `getCanvas()`, `getCenter()`, `getZoom()`, `setCenter()`, `setZoom()`, and
@@ -33888,7 +33957,9 @@ Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDe
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
 (frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature?, readonly origin?,
-readonly sourceId? }`; the tuple and any hit GeoJSON feature are detached and recursively frozen).
+readonly sourceId?, readonly noData? }`; the tuple and any hit GeoJSON feature are detached and
+recursively frozen). `noData` is `true` only for a choropleth hit whose `field` value is missing,
+`null` or not a number while `choropleth.noData` is configured, and is absent otherwise.
 `feature` resolves against the choropleth fill layer **and** every applied `dataLayers`
 fill/line/circle/cluster layer, topmost first — so a shape painted through `dataLayers` is
 identifiable instead of being indistinguishable from empty space. `origin` is `'choropleth'`,
@@ -33896,7 +33967,8 @@ identifiable instead of being indistinguishable from empty space. `origin` is `'
 data-layer or cluster hit; both are `undefined` whenever `feature` is. A cluster hit is reported
 separately because it is a synthetic aggregate rather than one of your features: its useful payload
 is MapLibre's `point_count`/`point_count_abbreviated`/`cluster_id` properties, which is what a
-zoom-to-cluster handler reads. The count label is deliberately not hit-tested (it sits exactly on
+zoom-to-cluster handler reads (or set `cluster.zoomOnClick` and let the element ease into it).
+The count label is deliberately not hit-tested (it sits exactly on
 the circle already queried and would only make the label the topmost hit), and a `kind: 'heatmap'`
 layer is never queried at all — MapLibre returns no features for a rendered density surface.
 Also `lr-map-view-change` (non-cancelable; frozen `LyraMapViewChangeDetail { center, zoom, source,
@@ -33923,7 +33995,18 @@ The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
 markup as described above.
 
-**Slots:** `legend` — custom legend content, rendered inside the legend panel's own layout so it
+**Slots:** `anchor` — content placed at `anchorLngLat`, replacing a hand-positioned popup. It sits
+above the point (flipped below near the top edge, shifted to stay inside the map), follows the point
+through every camera move, resize and `anchorLngLat` change, and is hidden while `anchorLngLat` is
+unset or unusable, the point is outside the visible map, or the map does not exist (before the peer
+loads, after a failure or a disconnect). The element only places it: `part="anchor"` supplies a
+default surface (padding, border, radius, shadow, above the legend and controls) and the slotted
+content owns its semantics, labelling, close control and focus, so name it and manage focus as you
+would any dialog or popup of your own. Positioning uses the library's shared popup positioner, in
+the map's container, and the wrapper's size never depends on the placement, so it adds no layout
+loop. Typical use: `map.addEventListener('lr-map-click', (e) => { card.hidden = false;
+map.anchorLngLat = e.detail.lngLat; })`.
+`legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even
 when `legend` and `legendGradient` are both empty. `legend-start` — the same extension point at the
 **top** of the panel: it renders ahead of the gradient bar and every projected row, where `legend`
@@ -33934,7 +34017,7 @@ which only reaches rows projected from `legend`.
 **CSS parts:** `base`, `container`, `legend`, `legend-disclosure`, `legend-disclosure-icon`,
 `legend-group`, `legend-group-heading`, `legend-swatch`, `legend-toggle`,
 `legend-toggle-hidden`, `legend-gradient`, `legend-lo`,
-`legend-hi`, `legend-limit`, `marker`, `popup`,
+`legend-hi`, `legend-ticks`, `legend-tick`, `legend-derived`, `legend-limit`, `anchor`, `marker`, `popup`,
 `popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `navigation`,
 `zoom-in`, `zoom-out`, `compass`, `scale`, `error`.
 The compact attribution summary has a decorative, current-color information glyph and retains
@@ -34011,11 +34094,13 @@ reserves vertical room for these controls and attribution, including after resiz
 Attribution also reserves legend space when it is the only control. Opposing occupied corners
 share the available width, so expanded attribution wraps without covering a scale or navigation
 control on the other side; controls stay aligned to their logical edge in both text directions.
+Prefer the declarative `controls` property (`controls = { navigation: true, scale: { unit: 'metric' } }`),
+which does the dynamic import, `addControl()` and removal for you; the imperative route below stays
+supported for controls it does not cover (attribution, geolocate, fullscreen).
 Navigation exposes `navigation`, `zoom-in`, `zoom-out`, and `compass` parts; the scale exposes `scale`.
 Button names update through `zoomIn`, `zoomOut`, and `mapResetNorth` locale strings. MapLibre retains
 keyboard activation, compass rotation, zoom limits, scale units and viewport updates. No controls
-are created until the application explicitly adds them. This is a supported imperative peer-control
-integration; there is no declarative controls property.
+are created until the application declares them in `controls` or adds them itself.
 
 Navigation, scale, attribution and the legend follow the surrounding Glass or Solid surface
 treatment. Their decorative filtering leaves native control behavior and map data paint intact.
@@ -36880,6 +36965,8 @@ These named interfaces and helper signatures are available to typed integrations
     };
     Marker: new (options?: { color?: string }) => MapLibreMarkerCapability;
     Popup: new (options?: { offset?: number }) => MapLibrePopupCapability;
+    NavigationControl?: MapLibreControlConstructor;
+    ScaleControl?: MapLibreControlConstructor;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreSourceDataDiff {
@@ -36914,6 +37001,7 @@ These named interfaces and helper signatures are available to typed integrations
   `MapLibreGeoJsonSource {
     setData(data: unknown): void;
     updateData?(diff: MapLibreSourceDataDiff): void;
+    getClusterExpansionZoom?(clusterId: number, callback?: (error: unknown, zoom?: number) => void): Promise<number> | void;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibreMapCapability {
@@ -36947,6 +37035,8 @@ These named interfaces and helper signatures are available to typed integrations
       lng: number;
       lat: number;
     };
+    addControl?(control: unknown, position?: string): unknown;
+    removeControl?(control: unknown): unknown;
     getBounds?(): {
       getWest(): number;
       getSouth(): number;
@@ -37003,6 +37093,8 @@ These named interfaces and helper signatures are available to typed integrations
     Popup: new (options?: {
       offset?: number;
     }) => MapLibrePopupCapability;
+    NavigationControl?: MapLibreControlConstructor;
+    ScaleControl?: MapLibreControlConstructor;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map-loader.js`.
   `MapLibrePopupCapability {
@@ -37029,6 +37121,13 @@ These named interfaces and helper signatures are available to typed integrations
     readonly stops: readonly (readonly [number, string])[];
     readonly interpolation?: LyraMapChoroplethInterpolation;
     readonly stepBaseColor?: string;
+    readonly noData?: LyraMapChoroplethNoData;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapChoroplethNoData {
+    readonly color?: string;
+    readonly strokeColor?: string;
+    readonly label?: string;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapClusterOptions {
@@ -37041,6 +37140,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly countColor?: string;
     readonly countHaloColor?: string;
     readonly countHaloWidth?: number;
+    readonly zoomOnClick?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapGeoJsonDataLayer {
@@ -37100,6 +37200,25 @@ These named interfaces and helper signatures are available to typed integrations
     readonly interpolation?: LyraMapPointRadiusInterpolation;
     readonly fallback?: number;
   }`
+  `LyraMapLegendGradientTick {
+    readonly value: number;
+    readonly label?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapControls {
+    readonly navigation?: boolean | LyraMapNavigationControlOptions;
+    readonly scale?: boolean | LyraMapScaleControlOptions;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapNavigationControlOptions {
+    readonly position?: LyraMapControlPosition;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapScaleControlOptions {
+    readonly position?: LyraMapControlPosition;
+    readonly unit?: LyraMapScaleUnit;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapPointRadiusInterpolation = 'step' | 'linear'`;
   `LyraMapPointIconMode = 'fill' | 'stroke' | 'fill-stroke'`;
   `LyraMapPointIconLineCap = 'butt' | 'round' | 'square'`;

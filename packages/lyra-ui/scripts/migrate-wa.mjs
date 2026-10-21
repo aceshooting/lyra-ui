@@ -43,7 +43,8 @@ const RULE_MIGRATORS = Object.freeze({
  * inline style sets a token-layer input as theme scopes, and reports dynamic inputs, repeated
  * markers, and stylesheet rules that set inputs or shared outputs outside a scope.
  * `immutable-collections` (Lyra 30) only reports in-place changes to item-identity collections that
- * are assigned back, which no longer update the component.
+ * are assigned back, which no longer update the component, and asks for a review of `lr-map`
+ * `center` assignments (compared by value since Lyra 30).
  */
 export function migrateRuleFiles({ files, rule, dryRun = false, reportPath = null, cwd = process.cwd(), collectDiff = false }) {
   invariant(MIGRATION_RULES.includes(rule), `unknown migration rule ${String(rule)}`);

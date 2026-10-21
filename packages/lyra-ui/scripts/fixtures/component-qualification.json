@@ -31129,7 +31129,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map.class.ts",
-              "line": 3656,
+              "line": 3782,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31174,6 +31174,7 @@
           "src/components/media/map/map-legend-icon.test.ts",
           "src/components/media/map/map-legend-scroll.test.ts",
           "src/components/media/map/map-loader.test.ts",
+          "src/components/media/map/map-overlays.test.ts",
           "src/components/media/map/map-peer-recovery.test.ts",
           "src/components/media/map/map-public-boundaries.test.ts",
           "src/components/media/map/map-remediation.test.ts",

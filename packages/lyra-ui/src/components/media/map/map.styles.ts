@@ -216,6 +216,26 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     text-align: center;
   }
+  /* The anchor slot's wrapper. place() writes position and the coordinates; the surface mirrors a
+     marker popup, and the layer sits above the legend and controls so anchored content is never
+     covered by them. Its size never depends on the placement's published available-size variables:
+     the placement observes this element, and a size that tracked them would loop. */
+  [part='anchor'] {
+    position: absolute;
+    z-index: calc(var(--lr-layer-content) + 1);
+    box-sizing: border-box;
+    inline-size: max-content;
+    max-inline-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
+    max-block-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
+    overflow: auto;
+    padding: var(--lr-space-m);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface-overlay);
+    color: var(--lr-color-text);
+    box-shadow: var(--lr-shadow-m);
+    overflow-wrap: anywhere;
+  }
   [part='legend'] {
     position: absolute;
     inset-block-end: calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, calc(var(--lr-space-xs) * 0)));
@@ -329,6 +349,46 @@ export const styles = css`
   [part='legend-hi'] {
     flex: 0 0 auto;
     white-space: nowrap;
+  }
+  /* The bar and its tick row share one track so a tick lines up with the exact point of the ramp it
+     names, whatever width the two captions leave the bar. */
+  .legend-gradient .gradient-track {
+    display: flex;
+    flex: 1 1 var(--lr-size-6rem);
+    inline-size: var(--lr-size-6rem);
+    flex-direction: column;
+    gap: var(--lr-size-2px);
+    min-inline-size: 0;
+  }
+  .gradient-track .gradient-bar {
+    flex: none;
+    inline-size: 100%;
+  }
+  .gradient-ticks {
+    position: relative;
+    block-size: calc(var(--lr-space-m) + var(--lr-space-xs));
+    min-inline-size: 0;
+  }
+  /* Positioned from the inline start, so under RTL the ticks mirror together with the flipped bar. */
+  [part='legend-tick'] {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: var(--_lr-map-tick-position, 0%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    translate: -50% 0;
+    color: var(--lr-color-text-quiet);
+    white-space: nowrap;
+  }
+  :host(:dir(rtl)) [part='legend-tick'] {
+    translate: 50% 0;
+  }
+  [part='legend-tick']::before {
+    content: '';
+    inline-size: var(--lr-size-1px);
+    block-size: calc(var(--lr-size-2px) * 2);
+    background: currentColor;
   }
   /* Flex row order already follows inherited direction, putting the low caption at inline-start, so
      the physical gradient mirrors to keep its colors aligned -- same fix as lr-heatmap's RTL rule.

@@ -10,6 +10,12 @@ export interface MapLibreGeoJsonSource {
   updateData?(diff: MapLibreSourceDataDiff): void;
   /** Retains the automatic property-diff signature for extracted method parameter types. */
   updateData?(diff: MapLibreGeoJsonDiff): void;
+  /** Optional: zoom at which a cluster breaks apart. Promise-returning in current peers; older
+   *  peers take a node-style callback instead. */
+  getClusterExpansionZoom?(
+    clusterId: number,
+    callback?: (error: unknown, zoom?: number) => void,
+  ): Promise<number> | void;
 }
 
 /** Consumer-authored incremental GeoJSON changes, forwarded to the active map engine. */
@@ -97,6 +103,9 @@ export interface MapLibreMapCapability {
   /** Optional: container-relative pixel position of a geographic point, and its inverse. */
   project?(lngLat: [number, number]): { x: number; y: number };
   unproject?(point: [number, number]): { lng: number; lat: number };
+  /** Optional: standard peer controls. A control is the peer's own object (`onAdd`/`onRemove`). */
+  addControl?(control: unknown, position?: string): unknown;
+  removeControl?(control: unknown): unknown;
   /** Optional: the geographic box of the whole canvas. */
   getBounds?(): { getWest(): number; getSouth(): number; getEast(): number; getNorth(): number };
   remove(): void;
@@ -105,6 +114,7 @@ export interface MapLibreMapCapability {
   on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
   on(type: 'move', listener: () => void): this;
   on(type: 'boxzoomend', listener: () => void): this;
+  on(type: 'movestart' | 'boxzoomstart', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
   on(type: 'click', listener: (event: {
     point: unknown;
     lngLat: { lng: number; lat: number };
@@ -126,11 +136,17 @@ export interface MapLibreMapCapability {
   queryRenderedFeatures(point: unknown, options?: { layers?: string[] }): unknown[];
 }
 
+/** A standard peer control constructor (`NavigationControl`, `ScaleControl`). */
+export type MapLibreControlConstructor = new (options?: Record<string, unknown>) => unknown;
+
 /** The MapLibre constructors Lyra consumes, structurally owned so the optional peer never leaks. */
 export interface MaplibreModule {
   Map: new (options: Record<string, unknown>) => MapLibreMapCapability;
   Marker: new (options?: { color?: string }) => MapLibreMarkerCapability;
   Popup: new (options?: { offset?: number }) => MapLibrePopupCapability;
+  /** Present on the full engine; the modular engine ships each control as its own subpath. */
+  NavigationControl?: MapLibreControlConstructor;
+  ScaleControl?: MapLibreControlConstructor;
 }
 
 const MAP_METHODS = [
@@ -221,6 +237,8 @@ export async function loadMaplibreModule(
       get Map() { return source.Map; },
       get Marker() { return source.Marker; },
       get Popup() { return source.Popup; },
+      get NavigationControl() { return source.NavigationControl; },
+      get ScaleControl() { return source.ScaleControl; },
       get setWorkerUrl() { return source.setWorkerUrl; },
       get getVersion() { return source.getVersion; },
       get default() { return (source as unknown as { readonly default?: unknown }).default; },
@@ -295,4 +313,35 @@ let modularMap: Promise<ModularMapModule | null> | undefined;
 /** Lazily loads the modular companion once per page. A failed load never selects another engine. */
 export function loadModularMap(): Promise<ModularMapModule | null> {
   return modularMap ??= loadModularMapModule();
+}
+
+/** The standard peer controls `<lr-map controls>` can add, by kind. */
+export type MapControlKind = 'navigation' | 'scale';
+
+/**
+ * Loads one standard control constructor for the selected engine. The full engine carries every
+ * control on its main module; the modular engine ships each as a subpath import, so a map that
+ * declares no control never fetches one. Resolves to `null` when the peer cannot provide it.
+ * @internal
+ */
+export async function loadMapControl(
+  kind: MapControlKind,
+  engine: 'modular' | 'maplibre',
+  module: MaplibreModule | undefined,
+): Promise<MapLibreControlConstructor | null> {
+  const name = kind === 'navigation' ? 'NavigationControl' : 'ScaleControl';
+  const provided = module?.[name];
+  if (isConstructor(provided)) return provided as MapLibreControlConstructor;
+  if (engine !== 'modular') return null;
+  try {
+    const source: unknown = kind === 'navigation'
+      ? await import('@aceshooting/lyra-map/controls/navigation')
+      : await import('@aceshooting/lyra-map/controls/scale');
+    const candidate = unwrapOptionalPeerDefault(source);
+    const control = isObjectLike(candidate) ? candidate[name] : undefined;
+    return isConstructor(control) ? control as MapLibreControlConstructor : null;
+  } catch (error) {
+    console.warn(`<lr-map> could not load the ${kind} control from \`@aceshooting/lyra-map\`.`, error);
+    return null;
+  }
 }
