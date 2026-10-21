@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil, aTimeout } from '@open-wc/testing';
 import type { Chart } from 'chart.js';
-import { sendMouse, resetMouse } from '../../../../test/wtr-mouse.js';
+import { sendMouse, resetMouse, hoverUntilMatched } from '../../../../test/wtr-mouse.js';
 import './chart.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraSpatialChartPoint, LyraSpatialChartSource } from '../../../utilities/data-spatial.js';
@@ -217,12 +217,35 @@ describe('spatial chart density activation by pointer', () => {
     await waitUntil(() => !!el.chart, 'spatial chart initialized', { timeout: 5000 });
     await waitUntil(() => el.getAttribute('aria-busy') === 'false');
     await el.updateComplete;
-    const area = peer(el).chartArea;
-    const box = el.shadowRoot!.querySelector<HTMLCanvasElement>('canvas')!.getBoundingClientRect();
+    const canvas = el.shadowRoot!.querySelector<HTMLCanvasElement>('canvas')!;
+    // The first allocation can replace the peer after query completion. Settle it before input.
+    await waitUntil(() => {
+      const allocation = el as unknown as {
+        lastObservedInlineSize?: number;
+        samplingWidth: number;
+        resizeDrawFrame?: number;
+      };
+      const width = allocation.lastObservedInlineSize;
+      const chart = peer(el), box = canvas.getBoundingClientRect(), area = chart?.chartArea;
+      return typeof width === 'number' && Number.isFinite(width) && width > 0 &&
+        allocation.samplingWidth === Math.floor(width) && allocation.resizeDrawFrame === undefined &&
+        !el.isUpdatePending && el.getAttribute('aria-busy') === 'false' && !!area &&
+        [box.width, box.height, chart.width, chart.height, area.width, area.height]
+          .every(value => Number.isFinite(value) && value > 0) &&
+        Math.abs(box.width - chart.width) < 1 && Math.abs(box.height - chart.height) < 1;
+    }, 'spatial chart allocation settled');
+    const position = (box = canvas.getBoundingClientRect()): [number, number] => {
+      const chart = peer(el), area = chart.chartArea;
+      return [
+        Math.round(box.left + (area.left + area.width * 0.2) * box.width / chart.width),
+        Math.round(box.top + (area.top + area.height * 0.6) * box.height / chart.height),
+      ];
+    };
     const counts: number[] = [];
     el.addEventListener('lr-spatial-bin-select', (event) => counts.push((event as CustomEvent<{ count: number }>).detail.count));
     try {
-      await sendMouse({ type: 'click', position: [Math.round(box.left + area.left + area.width * 0.2), Math.round(box.top + area.top + area.height * 0.6)] });
+      await hoverUntilMatched(canvas, 'density region receives pointer input', position);
+      await sendMouse({ type: 'click', position: position() });
       await waitUntil(() => counts.length === 1, 'density region selected');
       expect(counts).to.deep.equal([600]);
     } finally { await resetMouse(); }

@@ -65,6 +65,18 @@ async function waitForPart(el: LyraQrCode, part: string): Promise<void> {
   await el.updateComplete;
 }
 
+// A ready canvas can still be waiting for its first visibility entry. All paint fixtures use
+// ordinary sizes below the allocation cap, so wait for their CSS and fixed-2x backing dimensions.
+async function waitForInitialPaint(el: LyraQrCode): Promise<void> {
+  await waitForPart(el, 'canvas');
+  await waitUntil(
+    () => el.canvas.style.width === `${el.size}px` &&
+      el.canvas.style.height === `${el.size}px` &&
+      el.canvas.width === el.size * 2 && el.canvas.height === el.size * 2,
+    'the QR canvas did not paint',
+  );
+}
+
 function semanticInternals(el: LyraQrCode): ElementInternals {
   const internals = (el as unknown as { accessibilityInternals?: ElementInternals })
     .accessibilityInternals;
@@ -280,7 +292,7 @@ describe('lr-qr-code', () => {
     `)) as LyraQrCode;
     installFakeLoader(el, fakeApi(() => ({ modules: peerModules })));
     el.value = 'owned snapshot';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     expect(reads).to.equal(4);
     bits.fill(1);
     peerModules.get = () => { throw new Error('must not be read after normalization'); };
@@ -404,9 +416,8 @@ describe('lr-qr-code', () => {
       fakeApi(() => ({ modules: fakeModules(true) })),
     );
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    await waitUntil(() => canvas.width === 180 && canvas.style.width === '90px', 'the QR canvas did not paint');
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
     expect(parseInt(canvas.style.height, 10)).to.equal(90);
     expect(canvas.width).to.equal(180);
@@ -540,7 +551,7 @@ describe('lr-qr-code', () => {
       );
     };
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     expect(loadCalls).to.equal(1);
     expect(createCalls).to.equal(1);
 
@@ -557,7 +568,7 @@ describe('lr-qr-code', () => {
       fakeApi(() => ({ modules: fakeModules(true) })),
     );
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     const canvas = el.canvas;
     const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
     try {
@@ -713,7 +724,7 @@ describe('lr-qr-code', () => {
     try {
       document.body.append(el);
       el.value = 'reconnect without observer';
-      await waitForPart(el, 'canvas');
+      await waitForInitialPaint(el);
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
       expect(parseInt(canvas.style.width, 10)).to.equal(90);
 
@@ -745,7 +756,7 @@ describe('lr-qr-code', () => {
       fakeApi(() => ({ modules: fakeModules(true) })),
     );
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     let refreshCalls = 0;
     const originalRefreshTheme = el.refreshTheme.bind(el);
     el.refreshTheme = () => {
@@ -776,9 +787,8 @@ describe('lr-qr-code', () => {
     runtime.litIssuedWarnings = new Set();
     try {
       el.value = 'hello';
-      await waitForPart(el, 'canvas');
+      await waitForInitialPaint(el);
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-      await waitUntil(() => canvas.width === 256, 'the invalid-color QR canvas did not paint');
       const ctx = canvas.getContext('2d')!;
       const center = Math.round(canvas.width / 2);
       const pixel = ctx.getImageData(center, center, 1, 1).data;
@@ -811,8 +821,7 @@ describe('lr-qr-code', () => {
     delete runtime.litIssuedWarnings;
     try {
       el.value = 'production diagnostic';
-      await waitForPart(el, 'canvas');
-      await waitUntil(() => el.canvas.width === 256, 'the production-diagnostic QR canvas did not paint');
+      await waitForInitialPaint(el);
       expect(calls).to.have.length(0);
     } finally {
       console.warn = originalWarn;
@@ -826,7 +835,7 @@ describe('lr-qr-code', () => {
       const el = (await fixture(html`<lr-qr-code size="90" .fill=${color}></lr-qr-code>`)) as LyraQrCode;
       installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
       el.value = 'hello';
-      await waitForPart(el, 'canvas');
+      await waitForInitialPaint(el);
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
       const center = Math.round(canvas.width / 2);
       expect([...canvas.getContext('2d')!.getImageData(center, center, 1, 1).data.slice(0, 3)])
@@ -845,7 +854,7 @@ describe('lr-qr-code', () => {
     `)) as LyraQrCode;
     installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     const ctx = el.canvas.getContext('2d')!;
     const pixel = (x: number, y: number): number[] => [...ctx.getImageData(x, y, 1, 1).data.slice(0, 3)];
     expect(pixel(Math.round(el.canvas.width * 0.75), Math.round(el.canvas.height * 0.75))).to.deep.equal([255, 0, 0]);
@@ -858,7 +867,7 @@ describe('lr-qr-code', () => {
     `)) as LyraQrCode;
     installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
     el.value = 'full canvas';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     const ctx = el.canvas.getContext('2d')!;
     for (const [x, y] of [
       [0, 0],
@@ -882,7 +891,7 @@ describe('lr-qr-code', () => {
       fakeApi(() => ({ modules: mixedModules() })),
     );
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const darkCenter = Math.round(canvas.width * 0.75);
@@ -898,7 +907,7 @@ describe('lr-qr-code', () => {
       const el = (await fixture(html`<lr-qr-code size="90" style=${style}></lr-qr-code>`)) as LyraQrCode;
       installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
       el.value = 'hello';
-      await waitForPart(el, 'canvas');
+      await waitForInitialPaint(el);
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
       const lightCenter = Math.round(canvas.width * 0.25);
       return [...canvas.getContext('2d')!.getImageData(lightCenter, lightCenter, 1, 1).data.slice(0, 3)];
@@ -915,7 +924,7 @@ describe('lr-qr-code', () => {
     `)) as LyraQrCode;
     installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const darkCenter = Math.round(canvas.width * 0.75);
@@ -930,7 +939,7 @@ describe('lr-qr-code', () => {
     `)) as LyraQrCode;
     installFakeLoader(el, fakeApi(() => ({ modules: mixedModules() })));
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const darkCenter = Math.round(canvas.width * 0.75);
@@ -962,7 +971,7 @@ describe('lr-qr-code', () => {
       }),
     );
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     await waitUntil(
       () => Boolean((el as unknown as { loadState?: { image?: HTMLImageElement } }).loadState?.image),
     );
@@ -996,7 +1005,7 @@ describe('lr-qr-code', () => {
     el.imageCoverage = Number.POSITIVE_INFINITY;
     el.imagePadding = -100;
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     await waitUntil(
       () => Boolean((el as unknown as { loadState?: { image?: HTMLImageElement } }).loadState?.image),
     );
@@ -1016,7 +1025,7 @@ describe('lr-qr-code', () => {
     }) as typeof window.getComputedStyle;
     try {
       el.value = 'hello';
-      await waitForPart(el, 'canvas');
+      await waitForInitialPaint(el);
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
       const ctx = canvas.getContext('2d')!;
       const darkCenter = Math.round(canvas.width * 0.75);
@@ -1108,9 +1117,8 @@ describe('lr-qr-code', () => {
       fakeApi(() => ({ modules: fakeModules(true) })),
     );
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
-    await waitUntil(() => canvas.style.width === '90px', 'the initially visible canvas did not paint');
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
 
     (el as unknown as { visible: boolean }).visible = false;
@@ -1475,7 +1483,7 @@ describe('lr-qr-code', () => {
     (HTMLCanvasElement.prototype as unknown as { getContext: () => null }).getContext = () => null;
     try {
       el.value = 'hello';
-      await waitForPart(el, 'canvas');
+      await waitForInitialPaint(el);
     } finally {
       HTMLCanvasElement.prototype.getContext = originalGetContext;
     }
@@ -1510,7 +1518,7 @@ describe('lr-qr-code', () => {
       })),
     );
     el.value = 'hello';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     const ctx = canvas.getContext('2d')!;
     const backingScale = canvas.width / el.size;
@@ -1676,7 +1684,7 @@ describe('lr-qr-code', () => {
     const el = (await fixture(html`<lr-qr-code size="100"></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
     el.value = 'draw guards';
-    await waitForPart(el, 'canvas');
+    await waitForInitialPaint(el);
 
     const canvas = el.canvas;
     const context = canvas.getContext('2d')!;
