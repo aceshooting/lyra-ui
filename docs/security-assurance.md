@@ -58,5 +58,17 @@ can protect secrets from other scripts running in the same origin. Treat files a
 as untrusted even when their extension or media type appears supported. Review custom renderers
 and any caller-supplied DOM under the application's own security requirements.
 
+## Credential entry and storage
+
+Password and one-time-code controls process values supplied by the user or application at runtime.
+The application can replace a control's `value` without rebuilding Lyra; assigning the live property
+does not change its `defaultValue` or declarative value attribute. Keep any stored credentials in a
+dedicated application-owned credential source, separate from general configuration and logs, and
+supply only the values needed by the current interaction. Lyra does not provide a credential store
+or require credentials in its source or UI-state persistence. The controls participate in native
+form submission and browser autofill/state restoration, so this is not a promise that values are
+never persisted. Password masking and Shadow DOM do not protect values from other scripts running
+with the application's origin privileges.
+
 This document describes the implementation's security argument and its limits. It is not a claim
 that an independent security audit has been performed.

@@ -1,5 +1,9 @@
 # Lyra UI roadmap
 
+This roadmap sets the project's direction for the next year, from October 2026 through
+October 2027. Version targets express delivery order and scope, not guaranteed dates; conditional
+work remains subject to its stated demand and qualification requirements.
+
 ## Roadmap index and release status
 
 Release and publication state is established by the package changelog
