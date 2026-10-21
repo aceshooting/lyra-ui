@@ -184,8 +184,8 @@ function caretClientRect(el: TextControl): DOMRect | null {
   const index = el.selectionStart ?? el.value.length;
   const before = el.value.slice(0, index);
   const after = el.value.slice(index) || '​';
-  if (prefix.data !== before) prefix.data = before;
-  if (suffix.data !== after) suffix.data = after;
+  if (prefix.textContent !== before) prefix.textContent = before;
+  if (suffix.textContent !== after) suffix.textContent = after;
   owner.body.appendChild(mirror);
 
   const mirrorRect = mirror.getBoundingClientRect();

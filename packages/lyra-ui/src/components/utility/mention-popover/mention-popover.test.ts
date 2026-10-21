@@ -1440,6 +1440,73 @@ it('anchors caret-precisely against a real <textarea>, tracking selectionStart a
   expect(secondLeft).to.not.equal(firstLeft);
 });
 
+for (const controlTag of ['textarea', 'input'] as const) {
+  it(`keeps markup literal in the cached ${controlTag} caret mirror across value and selection changes`, async () => {
+    const el = (await fixture(html`<lr-mention-popover></lr-mention-popover>`)) as LyraMentionPopover;
+    const control = document.createElement(controlTag);
+    control.style.cssText = 'width:300px; height:80px; font:16px monospace;';
+    document.body.append(control);
+    const mirrors: HTMLDivElement[] = [];
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node instanceof HTMLDivElement && node.style.left === '-9999px') mirrors.push(node);
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true });
+
+    const before = '<img src="invalid:" onerror="this.remove()">&amp; @';
+    const after = '</span><svg onload="this.remove()">&lt;</svg>';
+    try {
+      control.value = before + after;
+      control.setSelectionRange(before.length, before.length);
+      el.anchor = control;
+      el.items = ITEMS;
+      el.open = true;
+      await el.updateComplete;
+      await waitUntil(() => mirrors.length > 0);
+      const mirror = mirrors[0]!;
+      const prefix = mirror.firstChild!;
+      const marker = mirror.lastElementChild!;
+      const suffix = marker.firstChild!;
+      expect(prefix.nodeType).to.equal(Node.TEXT_NODE);
+      expect(suffix.nodeType).to.equal(Node.TEXT_NODE);
+      expect(prefix.textContent).to.equal(before);
+      expect(suffix.textContent).to.equal(after);
+      expect(mirror.querySelectorAll('*').length).to.equal(1);
+      expect(marker.localName).to.equal('span');
+      expect(mirror.isConnected).to.equal(false);
+
+      mirrors.length = 0;
+      control.value = after + before;
+      control.setSelectionRange(after.length, after.length);
+      el.query = 'a';
+      await el.updateComplete;
+      await waitUntil(() => mirrors.length > 0);
+      expect(mirrors[0] === mirror).to.equal(true);
+      expect(mirror.firstChild === prefix).to.equal(true);
+      expect(marker.firstChild === suffix).to.equal(true);
+      expect(prefix.textContent).to.equal(after);
+      expect(suffix.textContent).to.equal(before);
+      expect(mirror.querySelectorAll('*').length).to.equal(1);
+
+      mirrors.length = 0;
+      control.setSelectionRange(control.value.length, control.value.length);
+      el.query = 'al';
+      await el.updateComplete;
+      await waitUntil(() => mirrors.length > 0);
+      expect(prefix.textContent).to.equal(control.value);
+      expect(suffix.textContent).to.equal('\u200b');
+      expect(mirror.querySelectorAll('*').length).to.equal(1);
+    } finally {
+      observer.disconnect();
+      el.remove();
+      control.remove();
+    }
+  });
+}
+
 it('cleans up the virtual caret anchor when a new text-control anchor lives in a different document', async () => {
   const textarea = document.createElement('textarea');
   textarea.style.cssText = 'position:absolute; width:300px; height:80px; font:16px monospace;';

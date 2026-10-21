@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
+import { serializeJavaScript } from './code-serialization.mjs';
 import { basePlugin } from './base-transform.mjs';
 import { transformWorker } from './worker-transform.mjs';
 import { transformMetadata } from './metadata-transform.mjs';
@@ -10,7 +11,7 @@ export const src = resolve(base, 'src');
 export const virtual = new Map();
 export const changed = new Map();
 const moduleId = (name) => resolve(src, 'modular', name + '.ts');
-const path = (p) => JSON.stringify(resolve(src, p));
+const path = (p) => serializeJavaScript(resolve(src, p));
 const runtimeId = moduleId('runtime');
 const prepareId = moduleId('prepare');
 function replace(code, old, value, count = 1) {
@@ -58,7 +59,7 @@ import {prepareDraws} from ${path('webgl/draw/index.ts')};
 import {prepareShaders} from ${path('shaders/shaders.ts')};
 import {prepareUniforms} from ${path('webgl/program/program_uniforms.ts')};
 import {prepareProjection} from ${path('geo/projection/projection_factory.ts')};
-import {prepareSymbols,prepareTerrain} from ${JSON.stringify(runtimeId)};
+import {prepareSymbols,prepareTerrain} from ${serializeJavaScript(runtimeId)};
 export function snapshotStyle(value){if(Array.isArray(value))return value.map(snapshotStyle);if(value&&typeof value==='object'){const prototype=Object.getPrototypeOf(value);if(prototype===null||Object.getPrototypeOf(prototype)===null)return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,snapshotStyle(item)]));}return value;}
 import {validateStyleAndEmit} from ${path('style/validate_style.ts')};
 export async function prepareReplacement(style,json,options,controller){const previous=options.transformStyle?style.serialize():undefined;const state=snapshotStyle(options.transformStyle?options.transformStyle(previous,json):json);if((options.validate??true)&&validateStyleAndEmit(style,state))return;await prepareTransaction(style,state,controller);return state;}
@@ -94,7 +95,7 @@ async function shaderTable(code, id) {
   delete groups.core;
   const importCode = (items) =>
     [...new Set(items.flatMap((m) => [m[2], m[3]]))]
-      .map((n) => `import ${n} from ${JSON.stringify(imports.get(n))};`)
+      .map((n) => `import ${n} from ${serializeJavaScript(imports.get(n))};`)
       .join('\n');
   const objectCode = (items) => items.map((m) => `${m[1]}:prepare(${m[2]},${m[3]})`).join(',');
   const loaders = [];
@@ -102,9 +103,9 @@ async function shaderTable(code, id) {
     const v = moduleId('shader-' + group);
     virtual.set(
       v,
-      `${importCode(items)}\nimport {prepare} from ${JSON.stringify(id)};export default {${objectCode(items)}};`
+      `${importCode(items)}\nimport {prepare} from ${serializeJavaScript(id)};export default {${objectCode(items)}};`
     );
-    loaders.push(`${JSON.stringify(group)}:()=>import(${JSON.stringify(v)})`);
+    loaders.push(`${serializeJavaScript(group)}:()=>import(${serializeJavaScript(v)})`);
   }
   const tail = code.slice(end + 3).replace('function prepare(', 'export function prepare(');
   return `${importCode(core)}\nexport const shaders={${objectCode(
@@ -129,7 +130,7 @@ function uniformTable(code, id) {
   delete groups.core;
   const generate = (items) => {
     const defs = [...new Set(items.map((m) => m[2]).filter((n) => n !== 'emptyUniforms'))]
-      .map((n) => `import {${n}} from ${JSON.stringify(imports.get(n))};`)
+      .map((n) => `import {${n}} from ${serializeJavaScript(imports.get(n))};`)
       .join('\n');
     return `${defs}\nconst emptyUniforms=()=>({});export default {${items.map((m) => `${m[1]}:${m[2]}`)}};`;
   };
@@ -137,7 +138,7 @@ function uniformTable(code, id) {
   for (const [group, items] of Object.entries(groups)) {
     const v = moduleId('uniform-' + group);
     virtual.set(v, generate(items));
-    loaders.push(`${JSON.stringify(group)}:()=>import(${JSON.stringify(v)})`);
+    loaders.push(`${serializeJavaScript(group)}:()=>import(${serializeJavaScript(v)})`);
   }
   return `const emptyUniforms=()=>({});export const programUniforms={${core.map(
     (m) => `${m[1]}:${m[2]}`
@@ -178,7 +179,7 @@ export const completePlugin = {
       code = code.replace(
         /^import \{([^}]+)\} from '(\.\/(?:globe|vertical_perspective)[^']+)';$/gm,
         (line, name, p) => {
-          loaders.push(`import(${JSON.stringify(p)}).then(m=>{${name}=m.${name};})`);
+          loaders.push(`import(${serializeJavaScript(p)}).then(m=>{${name}=m.${name};})`);
           return `let ${name};`;
         }
       );
@@ -186,7 +187,7 @@ export const completePlugin = {
       code += `\nlet projectionReady;export async function prepareProjection(name){if(name==='mercator')return;return projectionReady??=(Promise.all([${loaders}]).catch(e=>{projectionReady=undefined;throw e;}));}`;
     }
     if (rel === 'ui/map.ts') {
-      code = `import {prepareReplacement,prepareMapFeatures,beginPreparation} from ${JSON.stringify(
+      code = `import {prepareReplacement,prepareMapFeatures,beginPreparation} from ${serializeJavaScript(
         prepareId
       )};\n${code}`;
       code = replace(
@@ -217,7 +218,7 @@ export const completePlugin = {
       code = replace(
         code,
         "import {Terrain} from '../render/terrain.ts';",
-        `import {runtimeFeatures} from ${JSON.stringify(runtimeId)};`
+        `import {runtimeFeatures} from ${serializeJavaScript(runtimeId)};`
       );
       code = replace(code, "import {RenderToTexture} from '../webgl/render_to_texture.ts';", '');
       code = replace(code, 'new Terrain(', 'new runtimeFeatures.Terrain(');
@@ -248,7 +249,7 @@ export const completePlugin = {
       code = replace(
         code,
         "import {SymbolBucket} from '../data/bucket/symbol_bucket.ts';",
-        `import {runtimeFeatures} from ${JSON.stringify(runtimeId)};`
+        `import {runtimeFeatures} from ${serializeJavaScript(runtimeId)};`
       );
       code = replace(
         code,
@@ -258,14 +259,14 @@ export const completePlugin = {
       );
     }
     if (rel === 'data/bucket/symbol_bucket.ts')
-      code += `\nimport {runtimeFeatures} from ${JSON.stringify(runtimeId)};runtimeFeatures.SymbolBucket=SymbolBucket;`;
+      code += `\nimport {runtimeFeatures} from ${serializeJavaScript(runtimeId)};runtimeFeatures.SymbolBucket=SymbolBucket;`;
     if (rel === 'style/style.ts') {
       code = replace(
         code,
         "import {PauseablePlacement} from './pauseable_placement.ts';",
-        `import {runtimeFeatures} from ${JSON.stringify(
+        `import {runtimeFeatures} from ${serializeJavaScript(
           runtimeId
-        )};import {beginPreparation,prepareTransaction,snapshotStyle} from ${JSON.stringify(prepareId)};`
+        )};import {beginPreparation,prepareTransaction,snapshotStyle} from ${serializeJavaScript(prepareId)};`
       );
       code = replace(code, "import {CrossTileSymbolIndex} from '../symbol/cross_tile_symbol_index.ts';", '');
       code = replace(

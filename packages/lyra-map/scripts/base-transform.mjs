@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
+import { serializeJavaScript } from './code-serialization.mjs';
 const base = dirname(fileURLToPath(import.meta.resolve('maplibre-gl/package.json')));
 const src = resolve(base, 'src');
 const layerClass = {
@@ -29,7 +30,9 @@ function registry(code, classes, prepare) {
   code = code.replace(/^import \{([^}]+)\} from '([^']+)';$/gm, (line, names, path) => {
     const name = names.split(',')[0].trim();
     if (!classes[name]) return line;
-    loaders.push(`${JSON.stringify(classes[name])}:()=>import(${JSON.stringify(path)}).then(m=>{${name}=m.${name}})`);
+    loaders.push(
+      `${serializeJavaScript(classes[name])}:()=>import(${serializeJavaScript(path)}).then(m=>{${name}=m.${name}})`
+    );
     return `let ${name};`;
   });
   return `${code}\nconst loaders={${loaders}};const pending=Object.create(null);export async function ${prepare}(types){if('${prepare}'==='prepareStyleLayers')types=types.map(layer=>typeof layer==='string'?layer:layer.type);await Promise.all([...new Set(types)].map(t=>{if(!Object.hasOwn(loaders,t))throw new Error('Unknown feature '+t);return pending[t]??=(loaders[t]().catch(e=>{delete pending[t];throw e;}));}));}\n`;
@@ -46,7 +49,7 @@ export const basePlugin = {
     code = code.replace(/^import \{(is\w+StyleLayer)\} from '[^']+style_layer\/[^']+';$/gm, (line, name) => {
       const cls = name.slice(2);
       const type = layerClass[cls];
-      return type ? `const ${name}=(layer)=>layer.type===${JSON.stringify(type)};` : line;
+      return type ? `const ${name}=(layer)=>layer.type===${serializeJavaScript(type)};` : line;
     });
     if (relative === 'webgl/draw/index.ts') {
       const imports = [...code.matchAll(/^import \{([^}]+)\} from '([^']+)';$/gm)];
@@ -86,7 +89,7 @@ export const basePlugin = {
       const loaders = [];
       for (const [path, items] of Object.entries(groups))
         loaders.push(
-          `${JSON.stringify(path)}:()=>import(${JSON.stringify(path)}).then(m=>{${items
+          `${serializeJavaScript(path)}:()=>import(${serializeJavaScript(path)}).then(m=>{${items
             .map(
               (x) => `${x.name}=m.${x.name};${keys[x.name] ? `webglDrawFunctions.${keys[x.name]}=m.${x.name};` : ''}`
             )
@@ -97,7 +100,7 @@ export const basePlugin = {
       );
       code = `export let ${defs
         .map((x) => x.name)
-        .join(',')};export const webglDrawFunctions={};const paths=${JSON.stringify(
+        .join(',')};export const webglDrawFunctions={};const paths=${serializeJavaScript(
         paths
       )};const loaders={${loaders}};const pending={};export async function prepareDraws(types){const list=['./draw_debug.ts','./draw_terrain.ts','./draw_sky.ts',...types.map(t=>paths[t]).filter(Boolean)];await Promise.all([...new Set(list)].map(p=>pending[p]??=loaders[p]().catch(e=>{delete pending[p];throw e;})));}`;
     }

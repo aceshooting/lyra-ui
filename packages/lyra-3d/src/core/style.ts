@@ -45,7 +45,7 @@ export const DEFAULT_LYRA_3D_STYLE: Lyra3dStyle = Object.freeze({
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const HEX = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/iu;
-const NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?(%?)$/iu;
+const NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?(%?)$/iu;
 
 /** Parses one channel: a number on `scale` (255 for rgb, 1 for color()) or a percentage. */
 function channel(token: string | undefined, scale: number): number | null {
@@ -90,7 +90,7 @@ export function parseCssColor(value: unknown): Lyra3dRgba | null {
     return Object.freeze({ r: byte(0), g: byte(1), b: byte(2), a: expanded.length === 8 ? byte(3) : 1 });
   }
   const rgb = /^rgba?\((.*)\)$/u.exec(text);
-  const srgb = /^color\(\s*srgb\s+(.*)\)$/u.exec(text);
+  const srgb = /^color\(\s*srgb\s+(\S.*)\)$/u.exec(text);
   const body = rgb?.[1] ?? srgb?.[1];
   if (body === undefined) return null;
   const tokens = functionTokens(body);
