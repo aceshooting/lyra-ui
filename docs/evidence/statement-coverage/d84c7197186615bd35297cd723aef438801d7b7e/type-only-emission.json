@@ -1,0 +1,261 @@
+{
+  "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "nodeVersion": "v22.23.2",
+  "compilerVersion": "Version 7.0.2",
+  "compilerEntrySha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd",
+  "argv": [
+    "node",
+    "packages/lyra-ui/node_modules/typescript/bin/tsc",
+    "--ignoreConfig",
+    "--noCheck",
+    "--noResolve",
+    "--target",
+    "esnext",
+    "--module",
+    "esnext",
+    "--verbatimModuleSyntax",
+    "--rootDir",
+    "packages/lyra-ui/src",
+    "--outDir",
+    "type-only-emit",
+    "packages/lyra-ui/src/ai/types.ts",
+    "packages/lyra-ui/src/components/agent-tools/eval-result/eval-run-result.ts",
+    "packages/lyra-ui/src/components/agent-tools/run-events.ts",
+    "packages/lyra-ui/src/components/agent-tools/tool-param-form/tool-param-types.ts",
+    "packages/lyra-ui/src/components/data/sequence-strip/sequence-strip-item.ts",
+    "packages/lyra-ui/src/components/forms/currency-picker/currency-types.ts",
+    "packages/lyra-ui/src/components/forms/emoji-picker/emoji-types.ts",
+    "packages/lyra-ui/src/components/layout/dashboard-grid/layout-types.ts",
+    "packages/lyra-ui/src/components/layout/details/accordion-types.ts",
+    "packages/lyra-ui/src/components/media/lightbox/lightbox-types.ts",
+    "packages/lyra-ui/src/components/viewers/viewer-diagnostics.ts",
+    "packages/lyra-ui/src/custom-elements-jsx.ts",
+    "packages/lyra-ui/src/data-sources.ts",
+    "packages/lyra-ui/src/events.ts",
+    "packages/lyra-ui/src/framework-types.ts",
+    "packages/lyra-ui/src/internal/deprecated-alias-types.ts",
+    "packages/lyra-ui/src/internal/localization-types.ts",
+    "packages/lyra-ui/src/internal/node-type-style.ts",
+    "packages/lyra-ui/src/internal/picker-value.ts",
+    "packages/lyra-ui/src/internal/stream-phase.ts",
+    "packages/lyra-ui/src/internal/theme-token-types.ts",
+    "packages/lyra-ui/src/svelte.ts",
+    "packages/lyra-ui/src/utilities/anchor-target.ts",
+    "packages/lyra-ui/src/utilities/catalog.ts",
+    "packages/lyra-ui/src/utilities/data-spatial.ts",
+    "packages/lyra-ui/src/vue.ts"
+  ],
+  "workingDirectory": "[temporary] exact source fixture",
+  "exitCode": 0,
+  "output": "",
+  "files": [
+    {
+      "path": "packages/lyra-ui/src/ai/types.ts",
+      "sourceSha256": "7e9ef664ef1bf564df3bc727e44ea692179f69517e62d8c049e0839f5263a5d6",
+      "emission": "ai/types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/agent-tools/eval-result/eval-run-result.ts",
+      "sourceSha256": "f0d05e6980b3516a5ca949aa6123a176329af0b006a2746e2c12714707aff0f9",
+      "emission": "components/agent-tools/eval-result/eval-run-result.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/agent-tools/run-events.ts",
+      "sourceSha256": "fbbd1adf9b53a5a777bcd24b30add8483df65068dd0966c4ae6f723787192955",
+      "emission": "components/agent-tools/run-events.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/agent-tools/tool-param-form/tool-param-types.ts",
+      "sourceSha256": "8e40d64bcc427cc3acd04f09c123307457add94dab11573060b7790e66fb6866",
+      "emission": "components/agent-tools/tool-param-form/tool-param-types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/data/sequence-strip/sequence-strip-item.ts",
+      "sourceSha256": "dbfb016f6db3dca003f9b1376a5cb99b9c1d9d83b974bc0a6fddfb7cfc9663a9",
+      "emission": "components/data/sequence-strip/sequence-strip-item.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/forms/currency-picker/currency-types.ts",
+      "sourceSha256": "2a1b371efc7aeb23e729b0128c9bac920f12ad00c679777acfdd611a4ee31738",
+      "emission": "components/forms/currency-picker/currency-types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/forms/emoji-picker/emoji-types.ts",
+      "sourceSha256": "10dccd0eccf95a7cdd91f65e213cbc95a8a9ee1858412dc95f30fed0f109002c",
+      "emission": "components/forms/emoji-picker/emoji-types.js",
+      "emissionSha256": "29775d49449653213bf21d96c00086deb6f11073813fcf41db95faec5112d831",
+      "emissionBytes": 307,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/layout/dashboard-grid/layout-types.ts",
+      "sourceSha256": "8093e131336a1c640fabdff7b6135ba500b741c11353d2bc12f22bfdd04d71bf",
+      "emission": "components/layout/dashboard-grid/layout-types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/layout/details/accordion-types.ts",
+      "sourceSha256": "0f554384314011c8ea217d56e2b211fcb61100314ee8cd6f5616c9014e81ab44",
+      "emission": "components/layout/details/accordion-types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/media/lightbox/lightbox-types.ts",
+      "sourceSha256": "3a87a966a5a16a8bc71f2339f40a47fbd83d31625902361735d1311f78fe292a",
+      "emission": "components/media/lightbox/lightbox-types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/components/viewers/viewer-diagnostics.ts",
+      "sourceSha256": "94ecd29ea677376d2754bc2dd2773c1e9cb522f343a39aa7a4bd849e039aa369",
+      "emission": "components/viewers/viewer-diagnostics.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/custom-elements-jsx.ts",
+      "sourceSha256": "51340e3abcaa6cb6c7cb6fc77ad4118af862a01f6bc15107785325b9112e360b",
+      "emission": "custom-elements-jsx.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/data-sources.ts",
+      "sourceSha256": "c868617bd1e4c224572c577a60454cd53f56d697fa6999b92ccd386ca5298f70",
+      "emission": "data-sources.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/events.ts",
+      "sourceSha256": "8a7dee5398ac200e534e1ba26198f27c4a4c8f43ecafa460e84fb98fa5ccf765",
+      "emission": "events.js",
+      "emissionSha256": "bea33a3ce8448717b780dd6c04c4d62ef652d65eebf506604790c7c1541f8ac4",
+      "emissionBytes": 346,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/framework-types.ts",
+      "sourceSha256": "02e941754504a0d5ec28c0aba12640d994c4731995abd4895784dc4f19a9209b",
+      "emission": "framework-types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/deprecated-alias-types.ts",
+      "sourceSha256": "23fb56b883c0f30dc432d4fe723b3966235d0c0aee6eb0650954aedd367007df",
+      "emission": "internal/deprecated-alias-types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/localization-types.ts",
+      "sourceSha256": "0071643c3a3a034d80ca84c3547d4aea32b591d85c2482efd50b0d8de76e5022",
+      "emission": "internal/localization-types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/node-type-style.ts",
+      "sourceSha256": "7f8f4cd7e1973365a5471cdee9f649d5922e3591bbeaa8c4e880d1fc68d5b716",
+      "emission": "internal/node-type-style.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/picker-value.ts",
+      "sourceSha256": "2640d500d070b0900c9186b6b0b3c53b13a128a82501059cec077c2bf4b94a6c",
+      "emission": "internal/picker-value.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/stream-phase.ts",
+      "sourceSha256": "405ace6669843b52943f5182b19e8c275a9212c6eb6b35debeb2be73f2a58fcf",
+      "emission": "internal/stream-phase.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/theme-token-types.ts",
+      "sourceSha256": "8462b34ab0e3500490516d41b8cd72d5f8792d26b0354c5d0475a014f73d001f",
+      "emission": "internal/theme-token-types.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/svelte.ts",
+      "sourceSha256": "bc85afca3bca7aaf5036f7c4c460b9dc417e825fe2553e718b5dda5f5aa86c87",
+      "emission": "svelte.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/utilities/anchor-target.ts",
+      "sourceSha256": "7ac9a5da01c30b326006251d643d318bbf4aa5bfe327de796fc2c5f024c1e9c4",
+      "emission": "utilities/anchor-target.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/utilities/catalog.ts",
+      "sourceSha256": "a7c454108e2086154ed8e085e7345a4682e4c5729e787bf48879afea74c8590b",
+      "emission": "utilities/catalog.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/utilities/data-spatial.ts",
+      "sourceSha256": "39c07e2c6c848a1b02b0bcabc9cc0f4d442f761786681f0c182b979c7c7f8083",
+      "emission": "utilities/data-spatial.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    },
+    {
+      "path": "packages/lyra-ui/src/vue.ts",
+      "sourceSha256": "1fcd4ed73ea20847ba4e720acded576110a9e2a3fb05e064472dee68f8f7fc09",
+      "emission": "vue.js",
+      "emissionSha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "emissionBytes": 11,
+      "onlyCommentsAndEmptyExport": true
+    }
+  ]
+}

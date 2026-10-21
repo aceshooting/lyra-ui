@@ -1,0 +1,138 @@
+{
+  "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "scope": "Generator local import closure, authored token inputs, central inventory and registration outputs. The clean exact-commit execution receipt binds all remaining repository reads to C.",
+  "files": [
+    {
+      "path": "packages/lyra-ui/package.json",
+      "sha256": "7e0faf7f15dc483bcc24e8ac38beaa466befde9c25183b9b67e8f787e56b31be"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/document-token-layer.mjs",
+      "sha256": "a16b1a82a6d46369eb52f929bca251fe860cfe2757a4e707a47d84ab904054df"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/fixtures/component-inventory.json",
+      "sha256": "37e2919833b96272b255e2febab6576f73fbdc75640a8f8195265286d5748b23"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/generate-design-tokens.mjs",
+      "sha256": "e8045e2846145bc063100d29000e46b909b30122eec563eb0c78ef33c3aef336"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/generate-option-presets.mjs",
+      "sha256": "ea28874011b78914ea52151364790f7adee13d9b6afe465fc5589a17f04a4598"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/generate-registration-artifacts.mjs",
+      "sha256": "80c8d4cf20973c254ae361eb49068364ef0d051659c3e4b64568abe8c9c83792"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/generate-side-effects.mjs",
+      "sha256": "a10d81e4a71ea7094b589f3aa9cc60e3c34caeef2289b70a36767824035f902a"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/generate-tag-aliases.mjs",
+      "sha256": "9e3ea22f6e43a9dd1d0190419bae4c3a99464d80ff0fae65a12a974f2bd7791a"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/is-main-module.mjs",
+      "sha256": "04e64b6b73f046e96f6f210f6e020591a465f23c9cebb1ce7e8d4458f5558d7d"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/lib/fs-walk.mjs",
+      "sha256": "c91f0ab3b418cc2632693497bc691ac41c5fe15746069b2cebe7d50d74fc0b09"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/style-axes-model.mjs",
+      "sha256": "f8c05f9e292adbf17c761f260b0ed85bc709802c46c17b364e495a4eeb2bf9ba"
+    },
+    {
+      "path": "packages/lyra-ui/scripts/theme-token-grammar.mjs",
+      "sha256": "96cd51a8aa5f82accbffdae075caaeacbac4aded5ef5767d97b6858f5a921bd1"
+    },
+    {
+      "path": "packages/lyra-ui/src/all.ts",
+      "sha256": "85ef20e23164d041b09a456bf2b9f7a6b743cfea62e997ef20c302f3479b843a"
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/sizes.styles.ts",
+      "sha256": "393e23c46bdd3868d3c29fad914748eef995a3f65b462d26392e61ebfeb19a42"
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/specialist-tokens.styles.ts",
+      "sha256": "76c79197612d6136f3c7af28b5a4b0f059e9b774f92c2dc66211cfe06c7786ef"
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/tokens.styles.ts",
+      "sha256": "2c05c074bc51bc6d47445fb1ae735149ce1d990e00535f37b4b4f3be465f78d7"
+    },
+    {
+      "path": "packages/lyra-ui/src/internal/tokens/palette.styles.ts",
+      "sha256": "de05f76ebda98c29c21997d6591140210088ac960a7218ddef825dc7eb668426"
+    },
+    {
+      "path": "packages/lyra-ui/src/ssr/all.ts",
+      "sha256": "abb9ff97aa59afc97681309b8054f809464d8e062e7759ecbbc4247b95688b7d"
+    },
+    {
+      "path": "packages/lyra-ui/src/theme.css",
+      "sha256": "0c8010b79a1fe7539bcae841943632dd9701ebd8291ba4b732ea645a16faaf99"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/canonical-tokens.json",
+      "sha256": "636b20b3bcb7abc01d15617cbc401ae41bbda7b02b75f080c224fed47d6d38fb"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/canonical-tokens.schema.json",
+      "sha256": "db1d04d6e72d8e4cc62e9bdbce0432e525762b6b82db21a669ad39d600f51fc4"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/default-style.json",
+      "sha256": "94761e9f09a0304ccb153ac6040cf675afddcc51730b1b01ebc45cb49abb3b51"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/density.json",
+      "sha256": "40d8d2bf24e1ce06a0ce6153f8ea84d42d209d721efb469eb4962e7c4d8058cd"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/looks/data.json",
+      "sha256": "61dc9aeab3903e77f92cc5e73f37d094f6395ecb3a398a6166047b6b7d8c41ed"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/looks/high-contrast.json",
+      "sha256": "a5fa7c5f46e839e0bd35b0a70177d712e37e4a8a7f1b20205f55801db551adfd"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/looks/material.json",
+      "sha256": "215e77c337d0f85ed6374e0fe8758c05854b786ee1065d20c95efe170b6f24d9"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/looks/shadcn.json",
+      "sha256": "4a1ea4681caea504d60f7ebaa602feea346747ca99a10cad8dc8810a05f0fe5d"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/looks/terminal.json",
+      "sha256": "3c4aaca73cb6a9f3046b741263ca6018a42e964de98531781e0f90394964705c"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/option-presets.schema.json",
+      "sha256": "4cfe2146237cf093be154709e21a4efbc6288743652ad91d50282015b96806f1"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/options/elevation.json",
+      "sha256": "d57c8c97bba85820b8e208cd4a1d3961c5a66ee97d8613a49e38b6b7d383f47a"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/options/shape.json",
+      "sha256": "44fa745aac5981cad9ddd911bbe8ccdc81d95ba41aad88180059f970c9881712"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/options/typography.json",
+      "sha256": "aac343cfa824f548a12f4764721e825db35bb00f0c99078c0d0ef2e32cb9b717"
+    },
+    {
+      "path": "packages/lyra-ui/tokens/surfaces/glass.json",
+      "sha256": "be47e2dc02392c225275b83b383b0880b2b9d043c0bc4e3e02392d754a8810b2"
+    }
+  ]
+}

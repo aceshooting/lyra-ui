@@ -1,0 +1,67 @@
+{
+  "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "count": 363,
+  "exclusionsSha256": "32dbc7b1addf5c7045e549330bfc99d3d07de6da9041dd88b2120e6bb363c7a8",
+  "sections": {
+    "generated-duplicates": [
+      {
+        "file": "generator-checks.json",
+        "sha256": "4ff2f3c3deb78428fc762de53b071dda2bf8a25436563103dea9b9ef72521276"
+      },
+      {
+        "file": "generator-input-identities.json",
+        "sha256": "122e24b80cab3d439c2c379f4626ce34abc39bedc3e186c8e86c3dacb1317d21"
+      }
+    ],
+    "generated-tables": [
+      {
+        "file": "generator-checks.json",
+        "sha256": "4ff2f3c3deb78428fc762de53b071dda2bf8a25436563103dea9b9ef72521276"
+      },
+      {
+        "file": "generator-input-identities.json",
+        "sha256": "122e24b80cab3d439c2c379f4626ce34abc39bedc3e186c8e86c3dacb1317d21"
+      },
+      {
+        "file": "flag-regeneration.json",
+        "sha256": "371e79d20da1bdd34e610593a186c4c8e5a4fa1adb8f19a6b96325c7520918ac"
+      },
+      {
+        "file": "flag-input-names.json",
+        "sha256": "671ce73d1741ed562bacbffd5681fe33bd8b399a95a88c0c33ea7aac491a11b6"
+      }
+    ],
+    "type-only": [
+      {
+        "file": "type-only-emission.json",
+        "sha256": "7b4cf83475c82e7c366ab7bd0d2de34f139e66acd3a9ff0993886ec5846a263e"
+      }
+    ],
+    "docs-no-runtime": [
+      {
+        "file": "docs-no-runtime.json",
+        "sha256": "16c0d17c422f88f2856b1d86b7d5d9cc843a9159a6b3c64f9ec25d25459f6a53"
+      }
+    ],
+    "test-classification": [
+      {
+        "file": "test-classification.json",
+        "sha256": "513e60826cda15e7ecf5a6b3bd7fc992dd4c4bba76ddd4a5e820d0256487a1b6"
+      }
+    ],
+    "patch-provenance": [
+      {
+        "file": "patch-provenance-check.json",
+        "sha256": "0a3c296c2673ebf429df778e25bbf6c1d024e65b32b689c427d3fcef05a672c8"
+      }
+    ]
+  },
+  "limits": "No coverage pass or release qualification is asserted. Exclusions apply only to the listed source hashes at this commit. Four docs no-runtime exclusions use actual complete C collector metadata. Generator checks were maintainer executions, not CI attestations.",
+  "verification": {
+    "command": "Source blobs read with git show SOURCE_COMMIT:path; SHA-256 compared to every exclusion and the published patch provenance; complete docs collector exclusion records matched exactly.",
+    "exitCode": 0,
+    "uniquePaths": 363,
+    "changedHistoricalSourceHashes": 3,
+    "changedHistoricalSourcesRenewedBy": "flag-regeneration.json"
+  }
+}

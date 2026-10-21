@@ -1,0 +1,666 @@
+{
+  "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "method": "Source boundary review; import markers are supporting evidence, not a standalone exclusion criterion. Only the enumerated test suites and their test-only fixtures are excluded.",
+  "files": [
+    {
+      "path": "packages/lyra-docs/scripts/browser-test.mjs",
+      "sha256": "a460a214123e26b6450873bd49602159840bfa62bd6265361ebfb37eb24892f8",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/browser-test.mjs",
+      "classification": "Browser suite runner launching Playwright engines and invoking component scenario suites with assertions; production collectors and static serving helpers remain counted.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 9,
+          "text": "import { chromium, firefox, webkit } from 'playwright';"
+        },
+        {
+          "line": 85,
+          "text": "  await page.keyboard.press('ControlOrMeta+A');"
+        },
+        {
+          "line": 96,
+          "text": "  await check('basic editing fixture opens with actual paragraph styles and preserved OPC parts', async () => {"
+        },
+        {
+          "line": 110,
+          "text": "  await check('paragraph select keeps selection, edits style, and undo/redo round trips', async () => {"
+        },
+        {
+          "line": 138,
+          "text": "  await check('mixed selections expose unavailable values and match selection restores concrete formatting', async () => {"
+        },
+        {
+          "line": 157,
+          "text": "  await check('alignment controls serialize all four values including Word both for justify', async () => {"
+        },
+        {
+          "line": 160,
+          "text": "    await page.keyboard.insertText('Aligned paragraph');"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/commands-search-browser.mjs",
+      "sha256": "46574cd80a1f5d15899cb2406ec0fd74d5080c2e1bc0572ca9141a9531114a97",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/commands-search-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 2,
+          "text": "import { paints, assertNoAxeViolations } from './lib/harness.mjs';"
+        },
+        {
+          "line": 8,
+          "text": "export async function runCommandsAndSearch(page, check, { createEditor, saveEditor }) {"
+        },
+        {
+          "line": 13,
+          "text": "  await check('commands retain the original text selection and have no global hotkey owner', async () => {"
+        },
+        {
+          "line": 17,
+          "text": "    await page.keyboard.insertText('Original text');"
+        },
+        {
+          "line": 19,
+          "text": "    await page.keyboard.press('ControlOrMeta+A');"
+        },
+        {
+          "line": 21,
+          "text": "    await page.keyboard.press('ControlOrMeta+K');"
+        },
+        {
+          "line": 26,
+          "text": "    await page.keyboard.press('Enter');"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/document-inspection-browser.mjs",
+      "sha256": "144d2498e77bdd697a4f58f139c3db77cc44b68b0b7775d150629e584bafc1c5",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/document-inspection-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 3,
+          "text": "import { zipParts } from './lib/harness.mjs';"
+        },
+        {
+          "line": 18,
+          "text": "export async function runDocumentInspection(page, check, { createEditor, saveEditor }) {"
+        },
+        {
+          "line": 24,
+          "text": "    await check(`body outline and metadata diagnostics are bounded readonly queries (${readOnly ? 'viewing' : 'editing'})`, async () => {"
+        },
+        {
+          "line": 57,
+          "text": "        await page.keyboard.insertText('Heading navigation sentinel ');"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/editor-contracts-browser.mjs",
+      "sha256": "a100ee230644b1991f195b83f0b5647d5c8db564382f8780e1809f239b3c92ad",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/editor-contracts-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 2,
+          "text": "import { paints } from './lib/harness.mjs';"
+        },
+        {
+          "line": 5,
+          "text": "export async function runEditorContracts(page, check, { createEditor }) {"
+        },
+        {
+          "line": 9,
+          "text": "  await check('opening registers the deferred controls and charts load their painter', async () => {"
+        },
+        {
+          "line": 18,
+          "text": "  await check('bulk ancestor mutations keep the session, and a lost session is reported', async () => {"
+        },
+        {
+          "line": 22,
+          "text": "    await page.keyboard.insertText('Unsaved');"
+        },
+        {
+          "line": 51,
+          "text": "  await check('typing keeps formatting controls enabled and the remembered toolbar stop', async () => {"
+        },
+        {
+          "line": 55,
+          "text": "    await page.keyboard.press('Alt+F10');"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/formatting-browser.mjs",
+      "sha256": "418404b6eb59e840c16dc4f8ba0c0d774579bba1e8d518c7ecb09b7a40cbb7ea",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/formatting-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 5,
+          "text": "export async function runFormattingTools(page, check, { saveEditor }) {"
+        },
+        {
+          "line": 14,
+          "text": "    await page.keyboard.press('End');"
+        },
+        {
+          "line": 15,
+          "text": "    await page.keyboard.press('Shift+Home');"
+        },
+        {
+          "line": 28,
+          "text": "    await page.keyboard.insertText(text);"
+        },
+        {
+          "line": 33,
+          "text": "  await check('strikethrough, superscript and clear formatting edit the selection from the toolbar', async () => {"
+        },
+        {
+          "line": 50,
+          "text": "  await check('a text color swatch applies once, closes the panel, returns focus and updates the trigger bar', async () => {"
+        },
+        {
+          "line": 66,
+          "text": "  await check('Automatic color writes auto over an explicit color and closes the panel', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/image-extensions-browser.mjs",
+      "sha256": "202c319799f7cfdaac72f4d01867bed7bf6ebebfe8e5f430bd7bc62c6a063c69",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/image-extensions-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 4,
+          "text": "import { zipParts as parts } from './lib/harness.mjs';"
+        },
+        {
+          "line": 26,
+          "text": "export async function runImageExtensions(page, check, { createEditor, saveEditor }) {"
+        },
+        {
+          "line": 27,
+          "text": "  for (const table of [false, true]) await check(`image insertion into a styled ${table ? 'plain table cell' : 'body paragraph'} preserves caret, styles and one undo`, async () => {"
+        },
+        {
+          "line": 35,
+          "text": "    await page.keyboard.press('Home');"
+        },
+        {
+          "line": 36,
+          "text": "    if (!table) { await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight'); }"
+        },
+        {
+          "line": 52,
+          "text": "  await check('local image replacement preserves metadata, dimensions and opaque parts through one undo and reopen', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/image-insertion-browser.mjs",
+      "sha256": "a6517d00b4e2c51712975ea849264dcd7608e381711574195902d98a1af6e030",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/image-insertion-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 3,
+          "text": "import { zipParts as parts } from './lib/harness.mjs';"
+        },
+        {
+          "line": 18,
+          "text": "  await page.keyboard.type('alpha'); await page.keyboard.press('Enter');"
+        },
+        {
+          "line": 19,
+          "text": "  await page.keyboard.type('beta'); await page.keyboard.press('Enter'); await page.keyboard.type('gamma');"
+        },
+        {
+          "line": 20,
+          "text": "  await page.keyboard.press('Home'); await page.keyboard.press('ArrowRight');"
+        },
+        {
+          "line": 23,
+          "text": "export async function runImageInsertion(page, check, { createEditor, saveEditor }) {"
+        },
+        {
+          "line": 25,
+          "text": "  for (const kind of ['png', 'jpeg', 'gif']) await check(`public ${kind} insertion copies bytes and commits exactly one history unit with metadata and reopen`, async () => {"
+        },
+        {
+          "line": 56,
+          "text": "  await check('public insertion refuses malformed input, aborted work and unsupported packages without history or ZIP changes', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/image-insertion-tools-browser.mjs",
+      "sha256": "f552cbca97cd2e177575482c3359018419da1c02d8c672b3fa881c2c27d96c0d",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/image-insertion-tools-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 2,
+          "text": "import { assertNoAxeViolations, paints, screenshot, toolbarTo, zipParts as parts } from './lib/harness.mjs';"
+        },
+        {
+          "line": 16,
+          "text": "  await page.keyboard.type('alpha'); await page.keyboard.press('Enter');"
+        },
+        {
+          "line": 17,
+          "text": "  await page.keyboard.type('beta'); await page.keyboard.press('Enter'); await page.keyboard.type('gamma');"
+        },
+        {
+          "line": 18,
+          "text": "  await page.keyboard.press('Home'); await page.keyboard.press('ArrowRight');"
+        },
+        {
+          "line": 32,
+          "text": "  await page.keyboard.press('Home'); await page.keyboard.press('ArrowRight'); await paints(page);"
+        },
+        {
+          "line": 43,
+          "text": "    await page.keyboard.press('Enter');"
+        },
+        {
+          "line": 66,
+          "text": "export async function runImageInsertionTools(page, check, { createEditor, saveEditor }) {"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/image-tools-browser.mjs",
+      "sha256": "3e6ca5e360559cd9cfe5d880e460c0d5c83a4ae44abed79f16b053f6a190779f",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/image-tools-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 3,
+          "text": "import { assertNoAxeViolations, screenshot, toolbarTo, zipParts as parts } from './lib/harness.mjs';"
+        },
+        {
+          "line": 19,
+          "text": "  if (activate) await page.keyboard.press('Enter');"
+        },
+        {
+          "line": 44,
+          "text": "export async function runImageTools(page, check, { createEditor, saveEditor, assertProtectedParts }) {"
+        },
+        {
+          "line": 47,
+          "text": "  await check('native toolbar preserves caret and copied text ranges across a narrow RTL allocation', async () => {"
+        },
+        {
+          "line": 55,
+          "text": "          await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.press('ControlOrMeta+C');"
+        },
+        {
+          "line": 56,
+          "text": "          await page.keyboard.press('Backspace'); await page.keyboard.press('ControlOrMeta+V');"
+        },
+        {
+          "line": 61,
+          "text": "      await page.keyboard.press('Home');"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/images-browser.mjs",
+      "sha256": "370a2cd65a98053e168554fbf868e664073e6474da7e454c5aef8c2438369aeb",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/images-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 6,
+          "text": "import { paints, zipParts as parts } from './lib/harness.mjs';"
+        },
+        {
+          "line": 58,
+          "text": "export async function runImageEditing(page, check, { createEditor, saveEditor }) {"
+        },
+        {
+          "line": 73,
+          "text": "  ]) await check(`selected image ${kind} ${action.type}${action.description?.includes('\\r') ? ' CR/CRLF' : ''} commits once and preserves history/media/reopen`, async () => {"
+        },
+        {
+          "line": 106,
+          "text": "  await check('selected image identical and invalid commands preserve revision dirty history and package', async () => {"
+        },
+        {
+          "line": 120,
+          "text": "  await check('selected image exact authoring bounds serialize actual committed dimensions', async () => {"
+        },
+        {
+          "line": 131,
+          "text": "  await check('repeated resize then metadata and delete remain eligible with independent inner extents', async () => {"
+        },
+        {
+          "line": 174,
+          "text": "  await check('near-admission-limit package preserves opaque bytes at escaped metadata limits and reopens', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/layout-browser.mjs",
+      "sha256": "97462b67b626819427a7b4de8baf7e8f65663f66410c4bbb7527d0f41b52cec6",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/layout-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 2,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 6,
+          "text": "export async function runEditorLayout(page, check, { createEditor, saveEditor }) {"
+        },
+        {
+          "line": 12,
+          "text": "  await page.keyboard.insertText('Readable document text');"
+        },
+        {
+          "line": 19,
+          "text": "  await check('populated white paper survives dark chrome without changing authored black text', async () => {"
+        },
+        {
+          "line": 35,
+          "text": "  await check('fit width follows phone resizing below fifty percent without changing the document', async () => {"
+        },
+        {
+          "line": 59,
+          "text": "  await check('toolbar uses one stable row when wide and two reachable rows when narrower', async () => {"
+        },
+        {
+          "line": 98,
+          "text": "      await page.keyboard.press('Alt+F10');"
+        },
+        {
+          "line": 99,
+          "text": "      await page.keyboard.press('End');"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/lib/harness.mjs",
+      "sha256": "be6e3bb122940ce74ab9f842bc564a22b60f51c7adfa77b091de013192911498",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/lib/harness.mjs",
+      "classification": "Browser testing utilities operating on Playwright page objects and asserting axe results; imported by browser test suites.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 20,
+          "text": "export async function toolbarTo(page, id, name, { tries = 80 } = {}) {"
+        },
+        {
+          "line": 21,
+          "text": "  await page.keyboard.press('Alt+F10');"
+        },
+        {
+          "line": 22,
+          "text": "  await page.keyboard.press('Home');"
+        },
+        {
+          "line": 26,
+          "text": "    await page.keyboard.press(forward);"
+        },
+        {
+          "line": 32,
+          "text": "export async function assertNoAxeViolations(page, id) {"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/review-browser.mjs",
+      "sha256": "9434bbb0fff51c6cff81d2dfc8c7a3245f2457a002d0efcf3be870ac76a42bf9",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/review-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 3,
+          "text": "import { zipParts } from './lib/harness.mjs';"
+        },
+        {
+          "line": 22,
+          "text": "export async function runReview(page, check, { createEditor, saveEditor }) {"
+        },
+        {
+          "line": 23,
+          "text": "  await check('review accepts and rejects plain body revisions, invalidates identifiers and round trips undo', async () => {"
+        },
+        {
+          "line": 66,
+          "text": "  await check('comments add, reply, resolve and reopen using explicit authors and literal text', async () => {"
+        },
+        {
+          "line": 69,
+          "text": "      await page.locator(`#${id} .docx-pages`).click(); await page.keyboard.insertText('Discuss these words.');"
+        },
+        {
+          "line": 71,
+          "text": "      await page.keyboard.press('Home'); await page.keyboard.press('Shift+End');"
+        },
+        {
+          "line": 94,
+          "text": "  await check('tracking state is truthful, requires an author and records ordinary inserted text', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/tables-browser.mjs",
+      "sha256": "0bfbc2b9396f4cf02752c9fd1ed883fbdc85e076008bb6e647da15023b7ac0f2",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/tables-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 4,
+          "text": "import { assertNoAxeViolations, paints, toolbarTo, zipParts as parts } from './lib/harness.mjs';"
+        },
+        {
+          "line": 23,
+          "text": "  await page.keyboard.press('ArrowLeft');"
+        },
+        {
+          "line": 27,
+          "text": "export async function runTableEditing(page, check, { createEditor, saveEditor, assertProtectedParts }) {"
+        },
+        {
+          "line": 36,
+          "text": "    await check(`table ${type} ${where ?? target} commits once and round trips history/package`, async () => {"
+        },
+        {
+          "line": 70,
+          "text": "  await check('insert-table uses an outside collapsed caret and validates before mutation', async () => {"
+        },
+        {
+          "line": 91,
+          "text": "    await check(`table refusal ${fixture} ${target} ${action.type} preserves package/revision/history`, async () => {"
+        },
+        {
+          "line": 102,
+          "text": "  await check('alternate namespace prefix and imported over-limit simple table remain editable', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-docs/scripts/tables-formatting-browser.mjs",
+      "sha256": "52c4bd17eae7d6ea71ec9ce33c5b5c366cc3caad12433a5a017fe96839ab43b8",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-docs/scripts/tables-formatting-browser.mjs",
+      "classification": "Browser test scenario module accepting Playwright page/check fixtures, exercising UI and asserting results; imported by the browser suite runner.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 4,
+          "text": "import { zipParts } from './lib/harness.mjs';"
+        },
+        {
+          "line": 26,
+          "text": "  await page.keyboard.press('ArrowLeft');"
+        },
+        {
+          "line": 35,
+          "text": "export async function runTableFormatting(page, check, { createEditor, saveEditor, assertProtectedParts }) {"
+        },
+        {
+          "line": 42,
+          "text": "    await check(`${action.type} preserves caret, commits once, round trips and leaves repeats unchanged`, async () => {"
+        },
+        {
+          "line": 89,
+          "text": "  await check('clearing cell fill and a border edge preserves the other edges; disabling headers clears repeats', async () => {"
+        },
+        {
+          "line": 110,
+          "text": "  await check('table formatting refuses unsupported topology, too-narrow width, invalid values and stale revisions unchanged', async () => {"
+        },
+        {
+          "line": 138,
+          "text": "  await check('public session table formatting retains toolbar intent and rejects a reselected lease', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-ui/scripts/public-api-diff-cli.cases.mjs",
+      "sha256": "1969d95afcc66796a1168c9dfb0232f7544fd309bfb36e564cdc03211855c847",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-ui/scripts/public-api-diff-cli.cases.mjs",
+      "classification": "Explicit node:test case suite exercising the production API diff implementation; the production implementation remains counted.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 2,
+          "text": "import test from 'node:test';"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-ui/scripts/public-api-diff-compare.cases.mjs",
+      "sha256": "b44d2294fe777864a7fb505f407fce2f548d23db12fef79a04d16c4ccc629fb5",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-ui/scripts/public-api-diff-compare.cases.mjs",
+      "classification": "Explicit node:test case suite exercising the production API diff implementation; the production implementation remains counted.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 2,
+          "text": "import test from 'node:test';"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-ui/scripts/public-api-diff-normalize.cases.mjs",
+      "sha256": "b3a9bc3508ac50af6ac5ffb104c99a04b8877dfdef0cf19b6d2efffb97ce9066",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-ui/scripts/public-api-diff-normalize.cases.mjs",
+      "classification": "Explicit node:test case suite exercising the production API diff implementation; the production implementation remains counted.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 2,
+          "text": "import test from 'node:test';"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-ui/scripts/public-api-diff-relocation.cases.mjs",
+      "sha256": "f20d3d0719f4317932a698e910c3b304c3c08c3f0c590ed0dfff1835bc2d56c6",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-ui/scripts/public-api-diff-relocation.cases.mjs",
+      "classification": "Explicit node:test case suite exercising the production API diff implementation; the production implementation remains counted.",
+      "markers": [
+        {
+          "line": 1,
+          "text": "import assert from 'node:assert/strict';"
+        },
+        {
+          "line": 2,
+          "text": "import test from 'node:test';"
+        }
+      ]
+    },
+    {
+      "path": "packages/lyra-ui/scripts/public-api-diff-test-fixtures.mjs",
+      "sha256": "5ca87f16668b0ffd0eddad2c9035d2915213acdebf8accbe97542fe392474bc0",
+      "sourceUrl": "https://github.com/aceshooting/lyra-ui/blob/d84c7197186615bd35297cd723aef438801d7b7e/packages/lyra-ui/scripts/public-api-diff-test-fixtures.mjs",
+      "classification": "Test-only JSON fixtures imported by public-api-diff node:test case modules; this helper does not itself import node:test.",
+      "markers": [
+        {
+          "line": 9,
+          "text": "export const baseline = readFixture('baseline');"
+        },
+        {
+          "line": 10,
+          "text": "export const additive = readFixture('additive');"
+        },
+        {
+          "line": 11,
+          "text": "export const breaking = readFixture('breaking');"
+        }
+      ]
+    }
+  ]
+}

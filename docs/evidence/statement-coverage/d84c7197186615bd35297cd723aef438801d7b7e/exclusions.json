@@ -1,0 +1,2180 @@
+[
+  {
+    "path": ".storybook/token-preview.generated.js",
+    "sha256": "025ee06d7ec56f42e36943d78ff3c3064807aaff8f03c1869eae3706d51025b0",
+    "reason": "generated data table: generated header/build provenance",
+    "proof": "exclusion-proof-receipt.json#generated-tables"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/browser-test.mjs",
+    "sha256": "a460a214123e26b6450873bd49602159840bfa62bd6265361ebfb37eb24892f8",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/commands-search-browser.mjs",
+    "sha256": "46574cd80a1f5d15899cb2406ec0fd74d5080c2e1bc0572ca9141a9531114a97",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/document-inspection-browser.mjs",
+    "sha256": "144d2498e77bdd697a4f58f139c3db77cc44b68b0b7775d150629e584bafc1c5",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/editor-contracts-browser.mjs",
+    "sha256": "a100ee230644b1991f195b83f0b5647d5c8db564382f8780e1809f239b3c92ad",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/formatting-browser.mjs",
+    "sha256": "418404b6eb59e840c16dc4f8ba0c0d774579bba1e8d518c7ecb09b7a40cbb7ea",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/image-extensions-browser.mjs",
+    "sha256": "202c319799f7cfdaac72f4d01867bed7bf6ebebfe8e5f430bd7bc62c6a063c69",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/image-insertion-browser.mjs",
+    "sha256": "a6517d00b4e2c51712975ea849264dcd7608e381711574195902d98a1af6e030",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/image-insertion-tools-browser.mjs",
+    "sha256": "f552cbca97cd2e177575482c3359018419da1c02d8c672b3fa881c2c27d96c0d",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/image-tools-browser.mjs",
+    "sha256": "3e6ca5e360559cd9cfe5d880e460c0d5c83a4ae44abed79f16b053f6a190779f",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/images-browser.mjs",
+    "sha256": "370a2cd65a98053e168554fbf868e664073e6474da7e454c5aef8c2438369aeb",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/layout-browser.mjs",
+    "sha256": "97462b67b626819427a7b4de8baf7e8f65663f66410c4bbb7527d0f41b52cec6",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/lib/harness.mjs",
+    "sha256": "be6e3bb122940ce74ab9f842bc564a22b60f51c7adfa77b091de013192911498",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/review-browser.mjs",
+    "sha256": "9434bbb0fff51c6cff81d2dfc8c7a3245f2457a002d0efcf3be870ac76a42bf9",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/tables-browser.mjs",
+    "sha256": "0bfbc2b9396f4cf02752c9fd1ed883fbdc85e076008bb6e647da15023b7ac0f2",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-docs/scripts/tables-formatting-browser.mjs",
+    "sha256": "52c4bd17eae7d6ea71ec9ce33c5b5c366cc3caad12433a5a017fe96839ab43b8",
+    "reason": "browser test suite/harness",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-flags/flags/generated-compact.js",
+    "sha256": "fd083f38b88e03b6614eecc37cf8df5f5001f48436c4e1740987c238df8b800b",
+    "reason": "generated data table: generated header/build provenance",
+    "proof": "exclusion-proof-receipt.json#generated-tables"
+  },
+  {
+    "path": "packages/lyra-flags/flags/generated-detailed.js",
+    "sha256": "2b81331d22c08e828cc67bde2753c125598d672116ea8161c07d1f07b902506e",
+    "reason": "generated data table: generated header/build provenance",
+    "proof": "exclusion-proof-receipt.json#generated-tables"
+  },
+  {
+    "path": "packages/lyra-flags/flags/generated.js",
+    "sha256": "f07c5187da774c134d9889b292987475401e6670a3bd610bcba94b6798f41dca",
+    "reason": "generated data table: generated header/build provenance",
+    "proof": "exclusion-proof-receipt.json#generated-tables"
+  },
+  {
+    "path": "packages/lyra-ui/scripts/public-api-diff-cli.cases.mjs",
+    "sha256": "1969d95afcc66796a1168c9dfb0232f7544fd309bfb36e564cdc03211855c847",
+    "reason": "explicit test cases/helpers (imports node:test)",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-ui/scripts/public-api-diff-compare.cases.mjs",
+    "sha256": "b44d2294fe777864a7fb505f407fce2f548d23db12fef79a04d16c4ccc629fb5",
+    "reason": "explicit test cases/helpers (imports node:test)",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-ui/scripts/public-api-diff-normalize.cases.mjs",
+    "sha256": "b3a9bc3508ac50af6ac5ffb104c99a04b8877dfdef0cf19b6d2efffb97ce9066",
+    "reason": "explicit test cases/helpers (imports node:test)",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-ui/scripts/public-api-diff-relocation.cases.mjs",
+    "sha256": "f20d3d0719f4317932a698e910c3b304c3c08c3f0c590ed0dfff1835bc2d56c6",
+    "reason": "explicit test cases/helpers (imports node:test)",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-ui/scripts/public-api-diff-test-fixtures.mjs",
+    "sha256": "5ca87f16668b0ffd0eddad2c9035d2915213acdebf8accbe97542fe392474bc0",
+    "reason": "explicit test fixture helper (consumed by node:test cases)",
+    "proof": "exclusion-proof-receipt.json#test-classification"
+  },
+  {
+    "path": "packages/lyra-ui/scripts/theme-scope-vocabulary.generated.mjs",
+    "sha256": "8a37084e3b93b029d44c2eabdc0429726e3d078995aab12f5443bb94380d0562",
+    "reason": "generated data table: generated header/build provenance",
+    "proof": "exclusion-proof-receipt.json#generated-tables"
+  },
+  {
+    "path": "packages/lyra-ui/src/ai/types.ts",
+    "sha256": "7e9ef664ef1bf564df3bc727e44ea692179f69517e62d8c049e0839f5263a5d6",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/agent-tools/eval-result/eval-run-result.ts",
+    "sha256": "f0d05e6980b3516a5ca949aa6123a176329af0b006a2746e2c12714707aff0f9",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/agent-tools/run-events.ts",
+    "sha256": "fbbd1adf9b53a5a777bcd24b30add8483df65068dd0966c4ae6f723787192955",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/agent-tools/tool-param-form/tool-param-types.ts",
+    "sha256": "8e40d64bcc427cc3acd04f09c123307457add94dab11573060b7790e66fb6866",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/data/sequence-strip/sequence-strip-item.ts",
+    "sha256": "dbfb016f6db3dca003f9b1376a5cb99b9c1d9d83b974bc0a6fddfb7cfc9663a9",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/forms/currency-picker/currency-types.ts",
+    "sha256": "2a1b371efc7aeb23e729b0128c9bac920f12ad00c679777acfdd611a4ee31738",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/forms/emoji-picker/emoji-types.ts",
+    "sha256": "10dccd0eccf95a7cdd91f65e213cbc95a8a9ee1858412dc95f30fed0f109002c",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/layout/dashboard-grid/layout-types.ts",
+    "sha256": "8093e131336a1c640fabdff7b6135ba500b741c11353d2bc12f22bfdd04d71bf",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/layout/details/accordion-types.ts",
+    "sha256": "0f554384314011c8ea217d56e2b211fcb61100314ee8cd6f5616c9014e81ab44",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-accordion-item.ts",
+    "sha256": "c9a77164346a36a2ae67af55e0016657e773c093bc24d9a404c4183d80693f84",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-accordion.ts",
+    "sha256": "52dded73393c913fc6787f0a751a39860b73f1beba4eca5d79e117785afc4965",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-activity-feed.ts",
+    "sha256": "e5821b7ac78e55c2fa9ad7305529bb3ad191ae2654eca7d9c10809f704f36ac4",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-agent-eval-dashboard.ts",
+    "sha256": "95807319ada4d1742c6f444e2fafb1f2d5df05576e207eeace28744b148b5ff6",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-agent-question.ts",
+    "sha256": "2098b894946a32993409b9f994aea42ff3c050589d608ecf90f2bd176782ce6c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-agent-run.ts",
+    "sha256": "51fdc246115083d3c2c131c3daa2802e03cf72267e333dc440bcb9d65d57339a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-agent-trace.ts",
+    "sha256": "ebb26d8b723f140d60394576802aa48ab35e3abe9d0c6b67302fa90104957264",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-agent-workspace.ts",
+    "sha256": "fba1723c14e0791fbee894dda3b619a752bc9d3fef3861c4ebe3564f42f0047e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-alert.ts",
+    "sha256": "9aa3db6ac3be93056cb474daea0e19879012238d750c4b44ff1eb1e1df89026c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-animated-image.ts",
+    "sha256": "32d45bff53308bd6ae63914924c4466498b86423327efad20217f55adeb48f75",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-animation.ts",
+    "sha256": "2579dce69084781c286e1099248abba189210398abe5a2e602791e58377a0167",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-app-rail-group.ts",
+    "sha256": "c9034535972b4f5b4eae1a2acc4dd1487b008a457f11ed9be4f51e3cad138458",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-app-rail-item.ts",
+    "sha256": "81a5840a42988782402d29aef1ae908203c83fba5aa1b6fb40dac32c095bb359",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-app-rail.ts",
+    "sha256": "300772a61b1129abca234913fa8d57d7f17291353df4c0beb195db1704030622",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-approval-queue.ts",
+    "sha256": "abc47556b296fb6f68ad174ddb168022707cde77d60bb0d9fda8b9d111a8b81d",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-archive-viewer.ts",
+    "sha256": "ff5c27c7950543957bd4772d8955c176981e167bf6eca79365bba9ae5ab82e64",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-artifact-panel.ts",
+    "sha256": "729a217f4b471f7a80730fb5269ceb175488adbf32ed5673aea006642f09b754",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-attachment-chip.ts",
+    "sha256": "9fd947de6406ef4fd56df1a3dbdabdde885681001c243cf30e7cf2a36ca9654e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-attachment-trigger.ts",
+    "sha256": "99390755709136caf960c5604fdec58fe896f9c2d0582e98fc0a6d8dffa23f3f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-audio-visualizer.ts",
+    "sha256": "c305f6403d68021f1aa5027f9c0227c4f8acda51512cee9750c8d311905620a3",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-av-player.ts",
+    "sha256": "c2a7e809963d6b606ac564672a506fc5042baec5eb46729214dad24cea6ed15c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-avatar-group.ts",
+    "sha256": "932f20a13eb4bccdacd12dfd009448a1cc5f3aa2a7e08f76b7e99722710b40e4",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-avatar.ts",
+    "sha256": "82120220bd020b32f9fefb441fe12c2afaaefb23da4af056ccdc0d3652e8ef59",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-background-runs.ts",
+    "sha256": "2c95aec127452c7c214e7ad7506a7f041d81247cdf310e3a621380d60d9a0ca2",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-badge.ts",
+    "sha256": "edf36ee9dbecb82345da4f4367b73058faf59359b2dba6b3f97ddcccfb3d5775",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-bar-chart.ts",
+    "sha256": "6d73184c26bf176e23300c8d2f2f2d371b3caf071509a73e980891a69bee42fd",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-box-plot.ts",
+    "sha256": "be7cc678d88d2e8e2957d5468d1446f96350b02fb0c86a68f4d5558d9aead810",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-branch-picker.ts",
+    "sha256": "ec02d7b2f1f65b1716ec745b47d026a246ffd929b5808d2188f48ed6c6898997",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-breadcrumb-item.ts",
+    "sha256": "61869fa22bf8fe1fd835e3088f300a186df96f63ed2f37c3ce082e399760c774",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-breadcrumb.ts",
+    "sha256": "377e5379156c15ef143bd81aa05a90a17e17a9a12d32fa480d7bae7b323041fc",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-browser-frame.ts",
+    "sha256": "02f88dd1b8e7cc0515d5870fd28a10a49cb2e662e562d3c1f037fdba14a7812a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-bubble-chart.ts",
+    "sha256": "40de508b20cce984a03c55a5cd53cdb8312a8e601d82d1418d6e249ce203e0e4",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-budget-meter.ts",
+    "sha256": "c998f1d15bd51b6c3870f559b1ddafbc203abc82e4c94c8c719e50a128d5da90",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-button-group.ts",
+    "sha256": "10db904661bf718d5595111defc8cd7c0b1494c80288be901d91b82ed73fca78",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-button.ts",
+    "sha256": "dc646395809d3057e2b1b731d0bc44b8b4bf38bc1f6a1a85b28fd27cd268b65e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-calendar-viewer.ts",
+    "sha256": "cf7a6116dbb82feba4f466d1d905e0c1309c9c07fde57eb49110cf2757139354",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-calendar.ts",
+    "sha256": "d771392a6952fad1ced379fc63cd91ca14ea3e3e04e595bdb817bb392837e852",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-callout.ts",
+    "sha256": "bb0f15c36c8e7ed73c4c1b5e362c0e77060ec8a6ff95734906e3d474dca42e78",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-card.ts",
+    "sha256": "43f68141a845bf6c6b6f598e400e22aff5d8b5b5ad8c4f7eec3426cccc0fda69",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-carousel-item.ts",
+    "sha256": "e02b3ca59d1ce69725c3dea781d35aafebda0b4b5ca85a9e6043324df39c6342",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-carousel.ts",
+    "sha256": "1a21c35728656f7944910df5cc61f994a3a4f4fabfc65e1d7b61140c7a903314",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-change-review.ts",
+    "sha256": "e502c7002b6638c8636ed02b495c4566c8915b4889f9ff8090dd576ae05a539c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-chart.ts",
+    "sha256": "ad9340fb7eef9946d5a89fe883fe96f9b49fdd151e8587ab59c2dbdb849510ba",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-chat-composer.ts",
+    "sha256": "f31fae0fe7e830d822bd0b2a759e708278f3b1b77ecdb1bb91c90417f58946f1",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-chat-message.ts",
+    "sha256": "2937b1d6385babab6e45b2f4936f3e17ed040be847c4caee9ab97a63a5a39064",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-chat-viewport.ts",
+    "sha256": "0ceee10eaa310aaa5a771ec884b36d54deafa87185ed143766616bdcdf4fe1af",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-checkbox-group.ts",
+    "sha256": "3e2cf5e2b9f321986653ca6c1cc175c055ae23f30dc2e6a9d11a0dca8bb515d9",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-checkbox.ts",
+    "sha256": "688a80af279b8ade994b6b86f2abece4a28f29a05a131bb58ac0aab7cbe4be32",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-checkpoint.ts",
+    "sha256": "94bd4ccea89ff9fb82c43d5c4c28999de9260fe786d5c2276d630179495119db",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-chip-group.ts",
+    "sha256": "8045bd7bfee3192304f71609214db2a7a1d9da19c12f786579dff19a883e02fe",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-chip.ts",
+    "sha256": "b3083177af1a98b17548a61ab4be7e660e89f799b9c02ead096dd78da80a88fd",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-chunk-inspector.ts",
+    "sha256": "dc0db25755ec746d3f80a4349f33613c335f2402b9fecb0c0b84640abed28fbd",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-citation-badge.ts",
+    "sha256": "71d55fde21ae6da872adbf93d2689c5484f12c83708454a8811b24d71b86b0a6",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-claim-evidence.ts",
+    "sha256": "f25b03963d83e8dad7c9564f409875e7df45a0229d61cecbdd881b3c95bb1169",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-code-block-core.ts",
+    "sha256": "b3a25b219d8923cabfa43866eda255975a7a2ae35379f4e09ad836202fd7fc04",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-code-block.ts",
+    "sha256": "94ac24d69b6413f90f3c40beb09f150863a482a51910047095d12a31655f2da7",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-code-editor.ts",
+    "sha256": "35be7101d53b05641a6366ff0f9d2362479974e8e04b4566857bc6456ec5d756",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-color-picker.ts",
+    "sha256": "8a162fdcaac2b685303a41555ad4313b445f706796d79233fa8f507e12798936",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-combobox.ts",
+    "sha256": "512c2dc9ad30c51a224c511a2d1d583947ef727dbdc964eceb9cf187021ea469",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-command-palette.ts",
+    "sha256": "d2b6907fb309f22a0b0e701534534575fcaf16fd0101da1341ddef8cb5ee51d0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-commit-card.ts",
+    "sha256": "51a8b31f58d279246c0d4f61788d357fefad2af1a0d43ea2906b3985d1afea38",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-community-card.ts",
+    "sha256": "9be51aa6c7d48fc34fdbb97598d6d85a98e03952bf5f5c7378d3b157558468d2",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-compare-panel.ts",
+    "sha256": "ccd614f36b84dbaefbf562d463b0b8c7e9c1b8f57bb2094a0fdad71ed0207acc",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-condition-builder.ts",
+    "sha256": "85c39eaacde7688e69df8b8281f3ccd1e013b9ab843c2b30998838454b11c9aa",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-confirm-bar.ts",
+    "sha256": "0e30ca1caf5aafb4a93265351a2c73444197bd3947b2bb704c38786a6e187553",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-connector-manager.ts",
+    "sha256": "f3180d72a9655729a3edf4289d4df67e628206716a9b98552d0664241ca61667",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-contact-viewer.ts",
+    "sha256": "e7f43fcde88de224577b73b7759fe70562fac6b4c8ad2dbc5086eb5d2fc3bfe8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-context-inspector.ts",
+    "sha256": "b5411f909eae555c1fd4bae307c373a00fef6b243d5fcc39876366b3bab0bd8e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-context-menu.ts",
+    "sha256": "e43106a847485b3e03f13846debd68d8dfe28da916ee80f88d961092900144c8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-context-meter.ts",
+    "sha256": "3b7268174b8aca854b5689aedbc9ff330ff3cf5b7ce0640196fd5d6d25dae0f8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-control-group.ts",
+    "sha256": "0a7c02a22b05a95500e522430e5afebaf4e0738680eb8561f36caa01a5ad0fb8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-conversation-item.ts",
+    "sha256": "42329dc728a0f93631b9eeef0c2c795b44dd1204a0caa5585928379e5c5edc67",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-copy-button.ts",
+    "sha256": "4db27ae6f6eb39c237aaae984b60e43e1487ab3acf73b6284f850233b20ea999",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-country-picker.ts",
+    "sha256": "325d18e04e84a3f77710b59323161e1e87d351fa46b7b9f0b97544f023152a05",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-csv-viewer.ts",
+    "sha256": "b47800111cabcc30ba0e28c4d01174a3a76bcaebc8a18b778c498346b9a43234",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-currency-picker.ts",
+    "sha256": "01d33e4104eec851a0d4fa3536c0bdf1cbac3a70b6a65cffe0efd9cf30a2372f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-dashboard-grid.ts",
+    "sha256": "36fe6650e0ce0f4c88849411c18e7f73f161c4627ac6889b410aee9fd9b5df22",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-data-grid.ts",
+    "sha256": "a4178107e7d0906405197e7859f4e1cb8a833ca6ce063d9c14676914c79151a7",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-dataset-viewer.ts",
+    "sha256": "199aefa44db0e6911df9ab999d42e0b77029fb9a15e1f352ae5d1265a3597018",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-date-input.ts",
+    "sha256": "10a3e2704b1bb4703bd95b9551e44c89eb01bcaefbf6d64b88ec759e7053aab0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-date-picker.ts",
+    "sha256": "01a854cbe6255dc9a360b75b8224d101a6de2eccf2374e233c1860fe275c72c4",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-details.ts",
+    "sha256": "cc3395eb9ced80d2f6c96da410b69fdc71dd98f68857163b95f49ce0a39f1860",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-dialog.ts",
+    "sha256": "d7eb52fd561db6c69a0d229d0dc67eb81944af22cf5519b6a2864fe06d5ac1b7",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-diff-view.ts",
+    "sha256": "5020eed45d2e46fa0e6744abaaf816ebd6dee5af1a6e367b0e89253429e09781",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-divider.ts",
+    "sha256": "1ceb40092ecea76f829e85a5bc208c0e7094316f9f73e43d55028d02309e8eba",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-dock-panel.ts",
+    "sha256": "19625a7ffd9282124da1dcc3fae098a60b1097ffd4d46438ecdfb5f78312b6f4",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-document-compare.ts",
+    "sha256": "d9ccfbacdd6bbf6000217c779ea98f527c0386f2a5abd0671f9b634fd38bdf0e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-document-library.ts",
+    "sha256": "60952890e3016593c437a4b024ac7d305f789f5139dcb8076d07f3ef170bbeb5",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-document-preview.ts",
+    "sha256": "f4edd7432868c24328444dfa6da1b1fe245f36232fa378378a3b78f6ceebb90c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-document-viewer.ts",
+    "sha256": "960b0aa96883a0bf42f0f015e1cb52a2f580b6e862e1c0a614c4098081cecf02",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-docx-viewer.ts",
+    "sha256": "c265e352d3c1a446564b369a45c3ce468c9756266ad69a7b089f66ae518dcbdc",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-doughnut-chart.ts",
+    "sha256": "44892f181c03559552988c02f96ceaca13c7dd68356c0a83f5b0b3cd4f79c15e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-drawer.ts",
+    "sha256": "f7b66b75e6d323ea01946f357e185843537c2fd4f67a3c1ad80dfa50d7e8b712",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-drilldown-panel.ts",
+    "sha256": "7efea41d20c84f0645f152481c7f65f9c844b0ce82d43737cb7ef00979584108",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-drop-zone.ts",
+    "sha256": "71cfd4c6c5e6c7c7db4a48c0cbf59e5caa3ada56e509972477e066da1c154d40",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-dropdown-item.ts",
+    "sha256": "3b4a70fac27dfe46678a3aa841c9ebbd0717886b20c259057907c085a8011daa",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-dropdown.ts",
+    "sha256": "4d4f7b6d19e9df5afea1f2e07606c1d8e800bfb98ee08feb56d0ade64ac5458b",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-ebook-viewer.ts",
+    "sha256": "ec6a45d6711afad94aaf18160a3f4dc72c4feaa0d267d4b5a76d01c52c13c93e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-email-viewer.ts",
+    "sha256": "e1aabcf18fb3205dcabe65b0a8557e69dc8fd4d116c5ae7633e2e5352418db88",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-embedding-explorer.ts",
+    "sha256": "548f23d1049253d87bb7b3dd00d02831404431a56bd6df7b46fd55b8e1295b34",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-emoji-picker.ts",
+    "sha256": "06d8b5883ea29a5210ea0333e1e809064db5c3254f8222c4369b5c4b8264cb28",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-empty.ts",
+    "sha256": "b1daef76178cf31654c72eeaf63a25e0cbb138a7886a22fcc75ab079b7f726f3",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-entity-card.ts",
+    "sha256": "456ea3e913e885992c314377aa728301027ebb1d41047b6c36bcc46fc93b777f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-entity-chip.ts",
+    "sha256": "de8ea8a8d7c3aeccf9f8b5cfceeff160e18bf9270f04dd741deeff340280ce3f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-entity-dossier.ts",
+    "sha256": "f12b1ac084df907df936b950074a9a5be9c4312c4dd706764b6668d186185639",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-env-list.ts",
+    "sha256": "68a851cf3cd4317f52aad4a04ed99f9d6f15057a6d66ea3da62ca52aa4332034",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-eval-dataset.ts",
+    "sha256": "5aa4068200af98aceb8e432889e39b2af69343f102bf4342ea94b2c6310cab0e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-eval-result.ts",
+    "sha256": "2d8cc5ef666e95126500c5159ee34d43615ebc3651ce916da17d44786b372b11",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-eval-run.ts",
+    "sha256": "8fc9d21bdc85ee0374055a823c17d2bcaee272642a2dbfb0df4025141fb5d466",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-export-button.ts",
+    "sha256": "d3ebab9515b3744aae30e2d499906fd224e46f83b2449332f865fe13683eda04",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-file-icon.ts",
+    "sha256": "767d4df923603062672bab5adaae3afbbbc2c47a877c4603b90b564d97fe9bce",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-file-input.ts",
+    "sha256": "ccf2ca026f74a4facd8e156749506091cba857da3bfff2e0a4987e1dc0068795",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-file-tree.ts",
+    "sha256": "8b44ed3b7152476c78ca718615b677dba519817d38ce38bcbcafe59829e053b5",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-filter-bar.ts",
+    "sha256": "e05de7bd2f317a52a0c9f6f43e50339d8caddebe8f2c6f13a20b74b7e4837ae0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-flag.ts",
+    "sha256": "d808d175480668b79ed4e1324eb25c614a48135b8d342acfe3f6d0635f93b17a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-flow-canvas.ts",
+    "sha256": "ca4dc45a223ea31b392910d265306d3f58d03eef02e9d871d089718aa0668f99",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-flow-controls.ts",
+    "sha256": "c8fb36434f1516df7df6dbb8b1754c06cf4ef85bd20ae7245b5038be82893a23",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-flow-minimap.ts",
+    "sha256": "c78903795e544ac2f2480abf105cde0cb4417143a89ba27a256d1626972180ea",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-flow-node.ts",
+    "sha256": "23536acf856d69b2c638958c8d6bc6436000ce2075c67db207b686464195c800",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-flow-run-status.ts",
+    "sha256": "84d8b28b72373720117794c0e2faa1bb39c804d259f5f18f5672737e8b64f90a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-format-bytes.ts",
+    "sha256": "8794afa8765345eb39a7dbd87c353d8369357940bcfe00241b619aa09f2b299e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-format-date.ts",
+    "sha256": "f0e2b7e21eda94c3cf8e5c0ca732c15c8d5c4c1483e0fcc6acf9157de96081dc",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-format-number.ts",
+    "sha256": "a78572b6ce9518cb560dd0b5d2175f787e55d3649c32667377ae4974ef92c882",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-funnel.ts",
+    "sha256": "391f5f753cc6b641f0b357e8d9643a3268f743df6e58dd4deeb548def3f984a9",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-gauge.ts",
+    "sha256": "16198406686dca7de7dd51a998960920a88cc558e7d75978199c5a5eeb460280",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-generation-metrics.ts",
+    "sha256": "5ec3f95de0f5c141016279882e095f6b659fb52e86e5fe6d7f994bc325e7a40d",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-geojson-viewer.ts",
+    "sha256": "7454efca55af199e7aa45748f02dae7805aa65daa6b12d8e91328022c64b8db7",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-graph-legend.ts",
+    "sha256": "0fd0da457bd60afd8bfb0c483087e243148272a3dd1e95e768fef8a9f2732b36",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-graph-query-builder.ts",
+    "sha256": "b6fe245097ecdb56dc3ac49fb3f291ff0744704c839276ec1a80884813cda60f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-graph.ts",
+    "sha256": "93d6ac571abaf37e2a93ddf049e768d1d68e109262b7aca53761d61fa5fa7e74",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-grounding-summary.ts",
+    "sha256": "48c682904d965826370f2cf7fb63df725365f0263e8711e88b3654f7e0d320d5",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-handoff-divider.ts",
+    "sha256": "e697ae3a57beeba5c27c55685d3fc68c0f676fc70cb4104449d7db7a6d05150a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-heatmap.ts",
+    "sha256": "6b0649c99f205c2172fad8913a82936d67bb36f475c9b787200ccd966af1eebd",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-highlight-layer.ts",
+    "sha256": "38efb68bfb53f592fe6c7d7a617badc87ee6032021ccee2b47f7b006a455f846",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-histogram.ts",
+    "sha256": "be071c0a4857a048d13d9094a85e8b09e1f20d1729cfb1935d084e4989b788e5",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-html-viewer.ts",
+    "sha256": "6530923030f3a0f7f94b741264969d163e49b33899a47d31006eb07921244311",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-icon-button.ts",
+    "sha256": "6381180f3ecc766a66a725b3148511b1dc3fc3954395cbe9b25bb349cb03100f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-icon.ts",
+    "sha256": "e33f0a5958b72f2078bd975461068dc42370ea0df627d582167df627069adb8e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-image-comparer.ts",
+    "sha256": "0f7e6d3c140f966df1c4785e9226d47021c256c41efc05a47eeaceb8529cdadf",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-image-viewer.ts",
+    "sha256": "066b744246a9f955fd5b78d93c1dbe2a3e72420624f3b5fb5165fbd918f5490e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-include.ts",
+    "sha256": "8efdc2b6b1faa32453d7a584ff526663d2e7762ba1e3d5e75f89a758d5a746ce",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-ingestion-queue.ts",
+    "sha256": "672757c630887eb3a5e6e7ff4dc574fda41c7f62ba4e7ab91637b2ab98921cbf",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-input.ts",
+    "sha256": "59bd1d2456c64c237287acf6922c189ad3dbc3aa31f49e4c6b6746f57a96dcdd",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-intersection-observer.ts",
+    "sha256": "25b9f92e381ceee931435746fa9fb1228ea92dfc470fe6bc35d8d687fabc3bbd",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-json-schema-viewer.ts",
+    "sha256": "40f7d18a6e523f162e921297827b89966da7498a658090d5b03fe585570bee95",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-json-viewer.ts",
+    "sha256": "be5ea9219f3ebbc2eed43d006d56e3670a60578bb450f8f324f80769a976c820",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-kbd.ts",
+    "sha256": "67bf38e1e2fe973f8bb69358e4115d4cecc00050fb2ea64196283b9305ea168a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-knowledge-base-admin.ts",
+    "sha256": "60d18b00e821dfebeaebe03ae6ae9cf66fcc96bc8d508009e8e13325285ef9a6",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-knowledge-base.ts",
+    "sha256": "c9d9b631e81a2445791c3ff2b5cd711687dab7e4b4218ad56d8918074cc339d0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-knowledge-graph-explorer.ts",
+    "sha256": "3351ecef7cc966e2ef26434be9c67ea1b8910ab6bfda7a092f1def0323fe274f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-known-date.ts",
+    "sha256": "d6a9f40fc39694c679f765e442ac5f24a9735b7c69b3e9b2dfe2bd90634f2c44",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-lightbox.ts",
+    "sha256": "5998395519874587e0b226fc263d8119f33412803b86134d688d6bcf9f894acf",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-line-chart.ts",
+    "sha256": "aaef5f661f12e72f25b473f946000288fa61ba4af1e79302be24598b7aaa3a5c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-lite-chart.ts",
+    "sha256": "274b656cadc36a19e661a2fe81063545e41234c2fe030afdfdab5e9eb12bbed0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-live-region.ts",
+    "sha256": "2f822ec3f7ff3c9671e333e62c8e9fd273a4ed9e73a2cc0e59e81710e38c468f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-locale-picker.ts",
+    "sha256": "f5f1f1dab1ce25771dbb6f1ca404e8b07a0686ce9c7de5a2087cf938eb15d515",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-map.ts",
+    "sha256": "3645037568913308781e593457f736fc69e09af218069b792d59b5a036b935af",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-markdown-core.ts",
+    "sha256": "b952b502322f52625146ff72d053c86ff109341143287e49a3d07b00920fb8ed",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-markdown.ts",
+    "sha256": "22626e8db68c3b587a4071216e786fd41932c817d6b284160d3c48ffcb9addc0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-mcp-app.ts",
+    "sha256": "9b6073c0bf8c08d3370d76c81ba27734cec71d52638e85ee753dca982a37941f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-media-card.ts",
+    "sha256": "f37212a105072b3dd643484fe6cd856d51a15c868e3e7b1769671a9e8bedd424",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-memory-panel.ts",
+    "sha256": "754a2f3d5c858c38e4addddb2ab7014eaf94a3f97e2025a746fbc32aa44d0d94",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-mention-popover.ts",
+    "sha256": "b0f4fafae1e96f464bca011fd831d2619fdc1423e54d59ca8aa59aaac7f642c0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-menu-item.ts",
+    "sha256": "6a3aae6e08961ec39c96adfae875e9b73f36821677b10377a9e4956bf3fb6484",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-menu-label.ts",
+    "sha256": "a9ae78a400fd3270f1202881ff24648febe47428f4f343315b66511e7bfa9e22",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-menu.ts",
+    "sha256": "a0b175347721441a30eea9507a3670feb014d99cef5348a8abda70a18158ca16",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-menubar-item.ts",
+    "sha256": "b4c74efe47cab0e166343a2e0d63aa45797ba953f02a567d4cc5ef638cc85de5",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-menubar.ts",
+    "sha256": "0eda3bfd2ac6591501a33e3da687151f9ed036d2d07dca42cc13ecfc48ed8918",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-message-actions.ts",
+    "sha256": "fdb9a177cf9eac20c16bef1ae90ecd4b1dbb05dbe7f1d19768bb763b99a96936",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-message-feedback.ts",
+    "sha256": "0fad27ffcec0336b9a9376d8ff727a1bdf7fbc1befb646f3eafa1604e1ad6a5b",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-message-parts.ts",
+    "sha256": "b837b8f4efd26bc13a28127877e70ab6248ed80fb8ba590666f729b3f6ba7dd7",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-mind-map.ts",
+    "sha256": "eed754c858cbdf6d48dd4efc5e5cd676116343ae97f4f9c3668bffd11d829b28",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-model-select.ts",
+    "sha256": "f20faef784593bc5f6f35e264100cf478d6dcd6253eaa9bd0b84ec4ca6cccb89",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-model-settings-panel.ts",
+    "sha256": "8c8581133df22f5053a951b50a181723780fc18eea840f52adbf560d08608dbb",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-multi-split.ts",
+    "sha256": "4d69d97b092ebf9dac04def4b778e066a3b8d277821c5316a5c82ab55778e4e1",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-mutation-observer.ts",
+    "sha256": "7b3a582bacf6f0bd9c2afd22bb1e9dbb1974eab738f9fab0cc1b7b26aa7398c2",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-native-time-input.ts",
+    "sha256": "0d14b88f108bb52e09abe565bf71c3f78c7166023ee82e0b61dbb934eac58377",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-navigation-menu-item.ts",
+    "sha256": "eefa22f0b94ead7cd8b2c55ac49a8ab3f9417e9a7542c48174e3a57691bc240f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-navigation-menu.ts",
+    "sha256": "f77c4501a9d540bb18e86968f42f96b4734971bed715e9275aef7c15d50af01f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-neighbor-list.ts",
+    "sha256": "29f6514296a98cf586d3d640d32a3ee0dfd19d06608ed079ac3c09712e84168e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-node-palette.ts",
+    "sha256": "c9664c2fd459839f770c68a9072d5b8219bee4d4ac009c40c01ceafc401158b8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-notebook-viewer.ts",
+    "sha256": "c363e5b424ba4462d35f41f9c565912e70aea8f1d884174898e5b06d0c13b472",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-number-input.ts",
+    "sha256": "0aad7e4687beec698025e87680a7e4db429db53e73aefe2c4106725f80bf2243",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-option.ts",
+    "sha256": "33cb887969d8a401fe52f7d79c839fc5630367c965a30bd1a6f55b588c851482",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-otp-input.ts",
+    "sha256": "537a1f3f77cc2a374f1eb9be1d9d629df02934f3aa3bf6accfd188a70ca64d39",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-page-rail.ts",
+    "sha256": "36935612bde5f4f0ef2093c426cd0f8e8190984f6819ea88caf3a716de7048f3",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-page.ts",
+    "sha256": "7393689c2e5f7c86c5dcd54b971e5816f91d0ce26409060cf9a7d7ff9b2e5cf0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-pagination.ts",
+    "sha256": "d6b34500d6d0ee65fc87c5d74c227aee1e529298778aa98a6a5406f64c54d549",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-pan-zoom.ts",
+    "sha256": "dee47ce6e9baa6cc2e35261c3a61c217d12ae85c7e7a68b8a4efdc9d28d48ebb",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-path-strip.ts",
+    "sha256": "042dba81b7a50db87dd2a4e73e0c30f1bd207f32fac42c9cc3215f1bfc5a11c3",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-pdf-viewer.ts",
+    "sha256": "c553870eb6a0367dba7d2b6f0fd37a8a24af1b23c226ef1550c3ac57a9a94a90",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-permission-grant.ts",
+    "sha256": "7b90c3a76404d882fee362ba6631add59ed2de665eb1fc82545280799f95814c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-permission-rules.ts",
+    "sha256": "a8da792cb4b6e060118004f25b32746a8ac1d53ec16ec3de86560656b0543885",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-phone-input.ts",
+    "sha256": "eaec2eed61682065986ed4b180cbc1e9414c4a392ee4f09da0488d8acf6cca6b",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-pie-chart.ts",
+    "sha256": "b68e0ff72165a2679b2560d8e816db66f338eed616d982c4b4ede2010023c145",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-polar-area-chart.ts",
+    "sha256": "3e8cf37b1a413e4c0677ae725bdf8c74a0d4d7177c59f75a540b100867d934cb",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-policy-summary.ts",
+    "sha256": "862ca1b890d61d5f26700ad9e6ffe8c236a0770d4bd83b286a449c70f737d21c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-poll-status.ts",
+    "sha256": "2c43a43e0c4fd95d4359363b34bdabf732b7acc49a78a6e0b57953a34c42e2f8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-popover.ts",
+    "sha256": "90ff994bd775f3a21a6b671377936c469965b892ba55d210cda98ca678b17a6a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-popup.ts",
+    "sha256": "3b0e7374bf8f7f61ef4fa9190d0215977333f331bfe291b0e4f09437fbaa893b",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-pptx-viewer.ts",
+    "sha256": "cb19c7d6992ec00e72076bd5ed897b656912de8c3ee42ccdc447865795ee3cc7",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-progress-bar.ts",
+    "sha256": "d7f55e963938c8edf327cad5a87254f3953b9fe7151b03b626081b0a69a6d09a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-progress-ring.ts",
+    "sha256": "ac5235e10edbe89270f1d6c57ec37e6f8fefff8e7dd9c201d489d32f8442eca1",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-prompt-input.ts",
+    "sha256": "3494ef427cbf636e6614fff7ac47d65c489b7c80fa83c23686608cb3733e98f7",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-prompt-queue.ts",
+    "sha256": "5c16a5ecd717238332390b35e0f19815925f89f2901145acb569ae2883ef379f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-prompt-studio.ts",
+    "sha256": "8838086363bc8ab8402d8824e655f9701e721a37c91aa943b504a11e55b24347",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-provenance-panel.ts",
+    "sha256": "0fe032d5e908fa46794129d0eb6daa1e13faff9f25d439a4d4c40f26e051fe31",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-push-to-talk.ts",
+    "sha256": "5fcbaa496ae09afc2748ed2ef63534daa4768cbacdebddf83976e54951ce83a8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-qr-code.ts",
+    "sha256": "7ee7629a14417148b26da7bdd359404c07f4bd600089e95f21a73b18064c6118",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-radar-chart.ts",
+    "sha256": "ed4cd3f64e124fca1bd611240f8e7ae2a2a518f80d554ce5760c6efba1a73693",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-radio-button.ts",
+    "sha256": "31f365f9f6e2a094959404f2ec30d33305da3c9d0ccd6f8e6021552171955b39",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-radio-group.ts",
+    "sha256": "e6bfdf97da1f3b91faa3be8315f9361c9a8d83337ea8558183e4c8a073d9d5f4",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-radio.ts",
+    "sha256": "7ab058afca1d22176e349545a690e08fcfaeba4009b95b5c696b4afce2e58fef",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-rag-answer.ts",
+    "sha256": "f8c4a0e5a7fd40e8b8ce35082bf025956d4bb91280ad1983112bbbd974a926f3",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-rag-eval-dashboard.ts",
+    "sha256": "b30f6c694f5eb1762c0a48cfc7c311a514b3a3adef2fcf499808e36754e1b9fc",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-random-content.ts",
+    "sha256": "9b2b325b226531a47961a7012ae63ab739f0a83a48ad5d28a64a91468c0ef1c1",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-rating.ts",
+    "sha256": "7b0aa7828e3648577c93439b3459ed0609a538f88d9d2254e9ebc1b875e6b016",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-realtime-session.ts",
+    "sha256": "ec0e0d6697df1726b53eb2dfbbec4e2d0b7f5c65763c5c6a36a272af51338b72",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-relative-time.ts",
+    "sha256": "615cd6ac633f8832917cfd4ce67146e82f4dd224b03081eb59b1792083aebb0b",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-reorder-item.ts",
+    "sha256": "8a58a80837f3dc0fc3bebd2fdd0a7fdc9c450983b0f21b74f8587584a87dc9b9",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-reorder-list.ts",
+    "sha256": "e73744256350508fef253ebbc3b2515bebbdc2c34d2fd117e2de3f10006e3d53",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-research-progress.ts",
+    "sha256": "438eea97d84e53dd61d249fef0a71e904af762851ccabd6d72d0ed9ce7c652c7",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-resize-observer.ts",
+    "sha256": "f7e25891d720d24f8a81a4f1a1e000cb940000c89d900c216d424f6783ce0637",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-responsive-panel.ts",
+    "sha256": "278a6a2fdfbb956ac6a33d73d9b1cc234ff7b91d8b8bcc3dc254061284756925",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-result-card.ts",
+    "sha256": "4a90447f091477b7d42121a1440d1702fe7fea64735372797b897f49125dfbc4",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-result-field.ts",
+    "sha256": "19dc2ca001e618eecfcc3b9f7cbd45b167d39a6585db1a5e4bd86aeb13c4363c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-retrieval-compare.ts",
+    "sha256": "06b7ec21eeb10de59daf6c93d0f856817bd19c1ee83cb8b8f06f928eba2fcdc4",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-retrieval-results.ts",
+    "sha256": "79e575cfab4022274a50fb5bdb5ee426e6b654042b5b6a4e81540276841b672a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-retrieval-search.ts",
+    "sha256": "3b7efff656839bbc051562890aa3c92031c7b5d4bf067ef587af5c03089e1719",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-retrieval-trace.ts",
+    "sha256": "df8c8698a35c8ef3351d72d963d50b571bd7c0ba2b984930fc5c9a075195adb1",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-rubric-form.ts",
+    "sha256": "875e32a137dfce54ce0e1ea4b56584a58f34597b66efabec48add58cb2872094",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-scatter-chart.ts",
+    "sha256": "edbfc274eb02c5620735893f19c1110b96f13f67dd41b42b90711d17d76ec7fd",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-scroller.ts",
+    "sha256": "67e23dd162ceab907ef2ad9d2dab2c64261ee85958a904c30fa59c4308fabc4a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-segmented.ts",
+    "sha256": "1010411eb82ee23c0c743092a59b56eee863c512a6ff55fd85d0690dd8cbbfc4",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-select.ts",
+    "sha256": "9ad16644e07ae5f267851ccd9c61aa689c6564930b97b52a1926e0ac10a4b5fd",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-selection-toolbar.ts",
+    "sha256": "47744ba537a5a906455d2ecfdfc04a9a86193d99bb4597689bbb5faffb1b0bff",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-sequence-playback.ts",
+    "sha256": "f7a2715b9dffb1d54697b65c472cccf83faff25f549f3885c908d037a0d90045",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-sequence-strip.ts",
+    "sha256": "64570dc639a80172750af8dbb1f2401eed93d5725fe6151293409281977a4761",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-signature-pad.ts",
+    "sha256": "826915c31d614a0454ed2655574fcdc016b29b0377ad96e6c17deaffa77b9e24",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-skeleton.ts",
+    "sha256": "f02d9f35615826fa5a08314d759dc08ecd62343906db9a081f885c9a1b248bd0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-slider.ts",
+    "sha256": "895d18497836f4192f3850f6b87ba2db58b232ffd2f556f2b15419ce063fceb2",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-source-card.ts",
+    "sha256": "18c9c3aa78a14a4d75e865343e61c9fa386ed90300a797aced137f06acfabfbd",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-source-list.ts",
+    "sha256": "96f560148c73d144ff7b0659d77de8032f59afec3b2f253a47325da2bda5a6ab",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-source-picker.ts",
+    "sha256": "8851ed0aebed9b23e10bb1987842b6a17023495c7e7b1f0f0a9c467f0932099a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-span-waterfall.ts",
+    "sha256": "5e07337caa0328abe8255a5a8c141641ebd3500968dbf6011fc60b8d2028ca07",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-sparkline.ts",
+    "sha256": "cc4dae6b07d44e6f0927e1693a89f83b7849fe90ea1b76e9ea198df4b2adb07e",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-spinner.ts",
+    "sha256": "316e764f7a4fee3597b9605f60fc533b9119713de9aab097dd96bcd2ae5dac25",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-split-panel.ts",
+    "sha256": "045e45fd4145fa1c3c810734fb8b81c496b037d90a220965d7f3038665e5cb16",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-spreadsheet-viewer.ts",
+    "sha256": "4fd76b030a4221ba673d6fddec8789278649b74dd6b4bdee011ab5cee197e752",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-stack-trace.ts",
+    "sha256": "3febc96d91bca7ef0230f2c9a152dea918f1d273ed631e85059e52097d0575fb",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-stat.ts",
+    "sha256": "f180acd6b8074f569a6157e43e5685887cf02a708efd30bdcceabb3cd75a12bf",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-stepper.ts",
+    "sha256": "a41cc88aa95f1946e043b9b8a83ffd21c89ca8470cb1eb3570ce97906b1b6e52",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-stream-status.ts",
+    "sha256": "233f257f3b28c19791f9bc8bab98c211df21830068b3cea02dacc197f9194fd3",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-streaming-text-core.ts",
+    "sha256": "3564b800360e818bdd660813d325fe858ff17405f508741699d74db208bf3def",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-streaming-text.ts",
+    "sha256": "9e837aacbec254f41f9e0e594f10d982a8737437beed057783b8ac7684d51eb7",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-subagent-panel.ts",
+    "sha256": "5ad59861b3d0102f54ec7e32d5d0274fe1f5645495e2a845a998b5ee8d31bb80",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-suggestion-chips.ts",
+    "sha256": "f6babda981f5ddf5c4a696d90aaafd69aacb5bf1befb1b9678b15324e3960a21",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-svg-viewer.ts",
+    "sha256": "bac8fda18cfb7a27d5c2294486605ed31928731644c11621c9cd0c52d72827ff",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-swatch-picker.ts",
+    "sha256": "1238a2a53f58fd4932d6651bb3c935a6fcbaa07a0c9ae59dde29e26ff836a2a1",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-switch.ts",
+    "sha256": "5ed72cef21a19e0f380f627873cdf08a6a83548ea0afcd46db4282970af0f865",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tab-group.ts",
+    "sha256": "ea9029be723581786524b3ee7da175ef14dd1655582f03c01dba56d2d69fa409",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tab-panel.ts",
+    "sha256": "bdafa81ba3537148e2008b9c35d255076d52045915685ca525d36195abe054a9",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tab.ts",
+    "sha256": "22c2048ab8b5f20b39bf565508abce1343e7764d0bf3b7bb0f7a9b2a1cf67a35",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tag.ts",
+    "sha256": "606003e1069a80366dd3bf4e22d4b4d2997606477f62f4848faf9d5d93654b51",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-task-list.ts",
+    "sha256": "77651c6b46a4237f211910cd3acff87fc162d8c4229cc27295281c2744d7b6ec",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-terminal.ts",
+    "sha256": "56715b9fcf41e2451afd1cd3c151652a4b7edda05b76747141402f027d10dd69",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-test-results.ts",
+    "sha256": "9c0bdecdc1a32360d4253dab4dc5af18abaf3757265b7a7bf1feb8926c6857ca",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-textarea.ts",
+    "sha256": "54642382bfd11fdd7faf3108c53c1332db3985ba9d834d7fb0c5cf184bd33f17",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-thinking-panel.ts",
+    "sha256": "6709516987b3acfa1484b63a8cfa7220390a0be3ba9cdb3d3dd0cb40977f4254",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-thread-list.ts",
+    "sha256": "347fc651234916b7a14e7b8225219678baeeaf9ec4d6694dab83d63fff23f2b1",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-time-input.ts",
+    "sha256": "afebe2b1e8d8e1d2b3a07fdea5c21c1e73b5f14138cb1884989e959efb22bfeb",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-time-range.ts",
+    "sha256": "378a5946da2c12fc9a20731913d4cc442913d68b201487f7b12decea01b7620c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-time-zone-picker.ts",
+    "sha256": "1212a459ef9c44127b29d830ea9b375b220b0708957d377c8f94a419c430710c",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-timeline-item.ts",
+    "sha256": "795b3f5246cdd1e43c53078506ae2fddb83d6fb49025d952e351c693a8c26f0f",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-timeline.ts",
+    "sha256": "3a8545f832d0123b9f9a222a0ddda4f5a71296c2f5755ed5b7b92a16c83bccca",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-toast-item.ts",
+    "sha256": "2f572ce1e0514ae448ef89b1f3787313202be22ca08c717459644b63c484b7c5",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-toast.ts",
+    "sha256": "baaf75b9f627a030fececcbcdc2d676b35932530e873d79d82a0e718ec71f106",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-toggle-group.ts",
+    "sha256": "2cfd0eaeaa162da2a8a5ebef9cf2a59577ad51ca6d93c93fa48a73809e0f89c1",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-toggle.ts",
+    "sha256": "7c30d5b2d2a21407d2b36d7310e3fa8a375f95c714705ad24f80aa0a663e5d9a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-token-input.ts",
+    "sha256": "d60e69be862fb623f42cc975dee3c131d8818ba651c07b29bc1a083c104c8843",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tool-approval-dialog.ts",
+    "sha256": "6495dd11acf1e62b4ceac7ccba45f84475a81fb0154f6e88f2cede095d1a7d9a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tool-call-block.ts",
+    "sha256": "e773a6ba49d6ce49511a39efc7155faccdaa86a3dce230fdb7d5e14e49efde90",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tool-call-chip.ts",
+    "sha256": "9957667cbaa3d4134fafcd0af3bd7b2c009bf1bd8873c7919f1eff59bd31f4eb",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tool-param-form.ts",
+    "sha256": "09f3305e0e0bc7f69cc2fedbd888782223dd35cc7edfb2e618a33ef033fa0c55",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tool-result-dialog.ts",
+    "sha256": "8330c25e2bd933f91e6635a94e67ff754124f6f55d723d127d68573783d41dd8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tool-result-view.ts",
+    "sha256": "b59246d3328d79c076a45b2e9b6602e4263d1237a27b329fe0ae88feb5034557",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tool-select-dialog.ts",
+    "sha256": "7e4b0bf697d5b3a20aad1d361971277da28d4d5fac5c06f10b0ebcb80ac2e62a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tool-timeline.ts",
+    "sha256": "1d1253e524b7b04eecaf3f876799dc5ce9de0536dfd53507f44c69a0961fafba",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tooltip.ts",
+    "sha256": "7982fa6caa20268f0feba70bb1e6c4458df76917420e94028b13e2e4bfb5da07",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tour.ts",
+    "sha256": "6b4f67221fb66746d5f3fbb08b868bce2fc583f79d1028fbbfc33e7b0591dd75",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-trace-tree.ts",
+    "sha256": "f1ed05ffef85e62f4d7c020e7d1711b8844a580dd6fc739f45ff5ca2bc509d82",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-transcript-feed.ts",
+    "sha256": "6fa7567f99517b80fd082f2f58d567d1f769bd3dd191687b4d3f7bdf6f8d2cb8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tree-item.ts",
+    "sha256": "99a4b6a47983d863fe0ca53a690c3cf5d789b1cc129448b983d1d40cb92bdb80",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-tree.ts",
+    "sha256": "3de94a5de43e7184a1372532cd11fdf4f10eaeb7a58f0ef76a6a784453ce3576",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-typing-indicator.ts",
+    "sha256": "e4508cc420703269beb5683ece60730b709c68146529742c281d88989065613a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-unit-picker.ts",
+    "sha256": "31f3de8235eeab66099f00f3ea276f2d8f23eba8152bce06a27d962a04b52fe0",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-usage-badge.ts",
+    "sha256": "63001d9b431c10b433da4c8ef0cdd1fecb20409400d1ea51aac142f32ce2ab77",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-video-playlist.ts",
+    "sha256": "62a2cbad9993a1e4da4fd9e5d627534aa36aa864b0c82d1339775e7ddf083b9a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-video.ts",
+    "sha256": "c36e1f6bf0289cda206a902d08cdd65c5265e3bea687b7dafb151c36db37de3a",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-virtual-list.ts",
+    "sha256": "0870d5822e0e7b1c2e77122418286004f68468df09e4428c97abcd7576243a52",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-visually-hidden.ts",
+    "sha256": "6238738c8b61e45d49fbe06992b3793345df23de8d0e8e4f3a4851e47151a7c1",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-voice-picker.ts",
+    "sha256": "213f3127b4943775a2b958f5dbd292d298665c76094a6dc8a607da5901b82f79",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-widget-renderer.ts",
+    "sha256": "ddf4a5ae26ebca1cf649678e203fedd1a3ad22e4c0dd7c3d4400ad882364a341",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-widget.ts",
+    "sha256": "0587dea3792d3c3392494725205e7a3c0e939d55091db8aed178e6161b05ce88",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-word-cloud.ts",
+    "sha256": "0bfb06d4a25a9aa7ca6ea71fc5de9046d0dd7c773e2fb59862ace4fb87ff17b8",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-xml-viewer.ts",
+    "sha256": "27a7f2a483d386b5e2586c4da916ac3c36d33549ee77d8d8f28bdc1219df3675",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/lr-zoomable-frame.ts",
+    "sha256": "99ab6814d4b5dd684e4b305d38e0323cb8ce6db1e50ea94ff667ca89d97e4a25",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/media/lightbox/lightbox-types.ts",
+    "sha256": "3a87a966a5a16a8bc71f2339f40a47fbd83d31625902361735d1311f78fe292a",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/components/viewers/viewer-diagnostics.ts",
+    "sha256": "94ecd29ea677376d2754bc2dd2773c1e9cb522f343a39aa7a4bd849e039aa369",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/custom-elements-jsx.ts",
+    "sha256": "51340e3abcaa6cb6c7cb6fc77ad4118af862a01f6bc15107785325b9112e360b",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/data-sources.ts",
+    "sha256": "c868617bd1e4c224572c577a60454cd53f56d697fa6999b92ccd386ca5298f70",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/events.ts",
+    "sha256": "8a7dee5398ac200e534e1ba26198f27c4a4c8f43ecafa460e84fb98fa5ccf765",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/framework-types.ts",
+    "sha256": "02e941754504a0d5ec28c0aba12640d994c4731995abd4895784dc4f19a9209b",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/internal/deprecated-alias-types.ts",
+    "sha256": "23fb56b883c0f30dc432d4fe723b3966235d0c0aee6eb0650954aedd367007df",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/internal/localization-types.ts",
+    "sha256": "0071643c3a3a034d80ca84c3547d4aea32b591d85c2482efd50b0d8de76e5022",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/internal/node-type-style.ts",
+    "sha256": "7f8f4cd7e1973365a5471cdee9f649d5922e3591bbeaa8c4e880d1fc68d5b716",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/internal/picker-value.ts",
+    "sha256": "2640d500d070b0900c9186b6b0b3c53b13a128a82501059cec077c2bf4b94a6c",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/internal/stream-phase.ts",
+    "sha256": "405ace6669843b52943f5182b19e8c275a9212c6eb6b35debeb2be73f2a58fcf",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/internal/theme-token-types.ts",
+    "sha256": "8462b34ab0e3500490516d41b8cd72d5f8792d26b0354c5d0475a014f73d001f",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/ssr/all.ts",
+    "sha256": "abb9ff97aa59afc97681309b8054f809464d8e062e7759ecbbc4247b95688b7d",
+    "reason": "generated duplicate forwarding/registration",
+    "proof": "exclusion-proof-receipt.json#generated-duplicates"
+  },
+  {
+    "path": "packages/lyra-ui/src/svelte.ts",
+    "sha256": "bc85afca3bca7aaf5036f7c4c460b9dc417e825fe2553e718b5dda5f5aa86c87",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/utilities/anchor-target.ts",
+    "sha256": "7ac9a5da01c30b326006251d643d318bbf4aa5bfe327de796fc2c5f024c1e9c4",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/utilities/catalog.ts",
+    "sha256": "a7c454108e2086154ed8e085e7345a4682e4c5729e787bf48879afea74c8590b",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/utilities/data-spatial.ts",
+    "sha256": "39c07e2c6c848a1b02b0bcabc9cc0f4d442f761786681f0c182b979c7c7f8083",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-ui/src/vue.ts",
+    "sha256": "1fcd4ed73ea20847ba4e720acded576110a9e2a3fb05e064472dee68f8f7fc09",
+    "reason": "no emitted runtime",
+    "proof": "exclusion-proof-receipt.json#type-only"
+  },
+  {
+    "path": "packages/lyra-docs/src/docx/document-inspection-types.ts",
+    "sha256": "92f932ff399468c2fe73e65240f9aac0866eb3fe47c306a1d710ce38e72c439b",
+    "reason": "no emitted runtime code",
+    "proof": "exclusion-proof-receipt.json#docs-no-runtime"
+  },
+  {
+    "path": "packages/lyra-docs/src/docx/engine-port.ts",
+    "sha256": "fc819a2e5ed26f70359e883847e2fd8987ddb2e74cdc3f9fc8fd7d996eca186a",
+    "reason": "no emitted runtime code",
+    "proof": "exclusion-proof-receipt.json#docs-no-runtime"
+  },
+  {
+    "path": "packages/lyra-docs/src/docx/types.ts",
+    "sha256": "b33746a62743c5dc37299d35eefc88a5f4e0a2b5ced7afd178e41e2b692df658",
+    "reason": "no emitted runtime code",
+    "proof": "exclusion-proof-receipt.json#docs-no-runtime"
+  },
+  {
+    "path": "packages/lyra-docs/src/index.ts",
+    "sha256": "69e09f18342bf22d0a1482895b39ff772e198863daddc7a5662eb98389939e9c",
+    "reason": "no emitted runtime code",
+    "proof": "exclusion-proof-receipt.json#docs-no-runtime"
+  }
+]

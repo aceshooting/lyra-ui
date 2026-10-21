@@ -1,0 +1,39 @@
+{
+  "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "nodeVersion": "v22.23.2",
+  "pnpmVersion": "12.14.0",
+  "trackedCleanBefore": true,
+  "startedAt": "2026-10-21T20:10:53.555242+00:00",
+  "checks": [
+    {
+      "argv": [
+        "node",
+        "packages/lyra-ui/scripts/generate-tag-aliases.mjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "output": "Stable tag aliases are fresh (308 entries).\n"
+    },
+    {
+      "argv": [
+        "node",
+        "packages/lyra-ui/scripts/generate-registration-artifacts.mjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "output": "registration artifacts are current: 293 all.js + 308 ssr/all.js tags (15 optional-peer)\n"
+    },
+    {
+      "argv": [
+        "node",
+        "packages/lyra-ui/scripts/generate-design-tokens.mjs",
+        "--check"
+      ],
+      "exitCode": 0,
+      "output": "Canonical design-token artifacts are fresh.\n"
+    }
+  ],
+  "trackedCleanAfter": true,
+  "sourceCommitAfter": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "finishedAt": "2026-10-21T20:10:55.681813+00:00"
+}

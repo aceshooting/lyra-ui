@@ -1,0 +1,45 @@
+{
+  "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "metadataSha256": "f8379ed27f35b0bebad8b1453bdbc5d8dbe6732f7e0dcb3cb24e01a1b2b0ed67",
+  "executionCommand": "pnpm --filter @aceshooting/lyra-docs test:coverage",
+  "exitCode": 0,
+  "metadataComplete": true,
+  "unitStatus": 0,
+  "browserStatus": 0,
+  "metadataRecords": [
+    {
+      "source": "src/docx/document-inspection-types.ts",
+      "reason": "no emitted runtime code"
+    },
+    {
+      "source": "src/docx/engine-port.ts",
+      "reason": "no emitted runtime code"
+    },
+    {
+      "source": "src/docx/types.ts",
+      "reason": "no emitted runtime code"
+    },
+    {
+      "source": "src/index.ts",
+      "reason": "no emitted runtime code"
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/lyra-docs/src/docx/document-inspection-types.ts",
+      "sha256": "92f932ff399468c2fe73e65240f9aac0866eb3fe47c306a1d710ce38e72c439b"
+    },
+    {
+      "path": "packages/lyra-docs/src/docx/engine-port.ts",
+      "sha256": "fc819a2e5ed26f70359e883847e2fd8987ddb2e74cdc3f9fc8fd7d996eca186a"
+    },
+    {
+      "path": "packages/lyra-docs/src/docx/types.ts",
+      "sha256": "b33746a62743c5dc37299d35eefc88a5f4e0a2b5ced7afd178e41e2b692df658"
+    },
+    {
+      "path": "packages/lyra-docs/src/index.ts",
+      "sha256": "69e09f18342bf22d0a1482895b39ff772e198863daddc7a5662eb98389939e9c"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "nodeVersion": "v22.23.2",
+  "argv": [
+    "node",
+    "packages/lyra-flags/scripts/generate-index.mjs"
+  ],
+  "workingDirectory": "[temporary] exact generator and empty asset-name placeholders",
+  "generatorSha256": "1859fcc80204ebb0801e6320818eb5858b43d18b9f957287089ff57716e8fd2a",
+  "inputNames": "flag-input-names.json",
+  "inputNamesSha256": "671ce73d1741ed562bacbffd5681fe33bd8b399a95a88c0c33ea7aac491a11b6",
+  "exitCode": 0,
+  "output": "Generated flags/generated.js + flags/eager.js (+ .d.ts) + flags/loaders/*.js for 249 flag(s), plus flags/generated-detailed.js (+ .d.ts) + flags/detailed/loaders/*.js for 65 detailed variant(s), plus flags/generated-compact.js (+ .d.ts) + flags/compact/loaders/*.js for 65 compact variant(s).\n",
+  "files": [
+    {
+      "path": "packages/lyra-flags/flags/generated-compact.js",
+      "sha256": "fd083f38b88e03b6614eecc37cf8df5f5001f48436c4e1740987c238df8b800b",
+      "byteIdenticalToCommit": true
+    },
+    {
+      "path": "packages/lyra-flags/flags/generated-detailed.js",
+      "sha256": "2b81331d22c08e828cc67bde2753c125598d672116ea8161c07d1f07b902506e",
+      "byteIdenticalToCommit": true
+    },
+    {
+      "path": "packages/lyra-flags/flags/generated.js",
+      "sha256": "f07c5187da774c134d9889b292987475401e6670a3bd610bcba94b6798f41dca",
+      "byteIdenticalToCommit": true
+    }
+  ]
+}

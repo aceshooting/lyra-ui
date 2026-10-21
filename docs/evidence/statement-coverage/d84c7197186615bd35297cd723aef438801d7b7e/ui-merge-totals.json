@@ -1,0 +1,75 @@
+{
+  "production": {
+    "lines": {
+      "total": 506953,
+      "covered": 505801,
+      "skipped": 0,
+      "pct": 99.77
+    },
+    "statements": {
+      "total": 506953,
+      "covered": 505801,
+      "skipped": 0,
+      "pct": 99.77
+    },
+    "functions": {
+      "total": 17471,
+      "covered": 17372,
+      "skipped": 0,
+      "pct": 99.43
+    },
+    "branches": {
+      "total": 107050,
+      "covered": 103259,
+      "skipped": 0,
+      "pct": 96.45
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "independent": {
+    "lines": {
+      "total": 506953,
+      "covered": 505801,
+      "skipped": 0,
+      "pct": 99.77
+    },
+    "statements": {
+      "total": 506953,
+      "covered": 505801,
+      "skipped": 0,
+      "pct": 99.77
+    },
+    "functions": {
+      "total": 17471,
+      "covered": 17372,
+      "skipped": 0,
+      "pct": 99.43
+    },
+    "branches": {
+      "total": 107050,
+      "covered": 103259,
+      "skipped": 0,
+      "pct": 96.45
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "presentationNormalization": [
+    {
+      "metric": "branchesTrue",
+      "raw": "Unknown",
+      "jsonSummary": 100,
+      "total": 0
+    }
+  ],
+  "exactEquality": true
+}

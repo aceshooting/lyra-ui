@@ -1,0 +1,22 @@
+{
+  "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "method": "Verified exact C source lock and patch bytes match the hash-pinned public moved-source provenance. This is a provenance compatibility check, not a fresh upstream extraction run. Only its verified moved ranges can be excluded; own/unresolved additions remain counted.",
+  "provenancePath": "docs/evidence/engine-patch-provenance.json",
+  "provenanceSha256": "876b4f6a0dff35dc26cd918191ce50661c0e2c3b27db5c6ad547e582db686520",
+  "provenanceOriginalCommit": "0687e5f52bec5b77018dbc2b572a5664d938fa23",
+  "files": [
+    {
+      "path": "packages/lyra-docs/scripts/engine-source.lock.json",
+      "sha256": "c8733ed791cc67c39815c125aed5dadadedf22ab169fb95de68c8028da242648",
+      "matchesPublishedProvenance": true
+    },
+    {
+      "path": "packages/lyra-docs/scripts/engine/patches/01-semantic-features.patch",
+      "sha256": "aa016c2eef792e12e672881b0b0fe50f881e0a926e99304eae2ef13c6f801e5c",
+      "matchesPublishedProvenance": true
+    }
+  ],
+  "provedMovedUpstreamLines": 19595,
+  "ownOrUnresolvedAddedLineUpperBound": 2500,
+  "exitCode": 0
+}

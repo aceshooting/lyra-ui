@@ -1,0 +1,29 @@
+{
+  "commit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "reports": [
+    {
+      "package": "packages/lyra-ui",
+      "coverage": "ui-coverage-final.json",
+      "complete": true,
+      "provenance": "CI run39666245495 attempt1: all four coverage shards and merge/floor job119460590641 succeeded; raw archive digests and job URLs in assembly-receipt.json."
+    },
+    {
+      "package": "packages/lyra-docs",
+      "coverage": "docs-coverage-final.json",
+      "complete": true,
+      "provenance": "Complete maintainer-run Node/Chromium collector at the exact source commit; clean before/after; original and normalized map/metadata/log hashes and actual execution receipt in assembly-receipt.json."
+    }
+  ],
+  "reporter": {
+    "path": "scripts/report-statement-coverage.py",
+    "revision": "Evidence publication commit; source digest below identifies the exact reporter, separately from measured source commit.",
+    "sha256": "241e2f46d8e121e7db5f0c54e772c8edbcd9858839e8857a7b4769477de89ebf",
+    "pythonVersion": "3.14.4",
+    "pyYamlVersion": "6.0.3",
+    "focusedTests": {
+      "normal": 20,
+      "optimizedPython": 20,
+      "failures": 0
+    }
+  }
+}

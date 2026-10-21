@@ -147,6 +147,8 @@ def main():
     paths = list(tree)
     records = {}
     excluded = []
+    source_totals = {}
+    ignored_measured = []
     observed = {}
     for p in paths:
         extensionless = "." not in pathlib.PurePosixPath(p).name
@@ -183,9 +185,14 @@ def main():
         ):
             continue
         digest = hashlib.sha256(raw).hexdigest()
+        source_totals[p] = lines(raw.decode())
         if excluded_test(p):
             excluded.append(
-                {"path": p, "reason": "test, story, declaration, or fixture"}
+                {
+                    "path": p,
+                    "sha256": digest,
+                    "reason": "test, story, declaration, or fixture",
+                }
             )
             continue
         if p in exclusions:
@@ -199,10 +206,11 @@ def main():
         records[p] = {
             "path": p,
             "sha256": digest,
-            "total": lines(raw.decode()),
+            "total": source_totals[p],
             "covered": 0,
             "kind": "unmeasured upper bound",
         }
+    excluded_by_path = {item["path"]: item for item in excluded}
     for r in evidence["reports"]:
         if not (r["complete"] is True and r["provenance"]):
             raise ValueError("incomplete or unattested report")
@@ -214,8 +222,8 @@ def main():
                 p = marker + normalized.split(marker, 1)[1]
             else:
                 p = marker + normalized.removeprefix("./")
-            if p not in records:
-                raise ValueError((p, "report source missing from census or excluded"))
+            if p not in records and p not in excluded_by_path:
+                raise ValueError((p, "report source missing from census"))
             if p in observed:
                 raise ValueError(
                     (
@@ -234,12 +242,25 @@ def main():
                 if not loc["start"]["line"] not in seen_lines:
                     raise ValueError((p, "duplicate physical line counter"))
                 seen_lines.add(loc["start"]["line"])
-                if not 1 <= loc["start"]["line"] <= records[p]["total"]:
+                if not 1 <= loc["start"]["line"] <= source_totals[p]:
                     raise ValueError((p, "invalid mapped source location"))
                 covered += int(v > 0)
-            if not len(c["s"]) <= records[p]["total"]:
+            if not len(c["s"]) <= source_totals[p]:
                 raise ValueError((p, "counter count exceeds physical-line model"))
             observed[p] = True
+            if p in excluded_by_path:
+                exclusion = excluded_by_path[p]
+                ignored_measured.append(
+                    {
+                        "path": p,
+                        "sha256": exclusion["sha256"],
+                        "reason": exclusion["reason"],
+                        "observedCounters": len(c["s"]),
+                        "coveredCounters": covered,
+                        "sourceCounters": source_totals[p],
+                    }
+                )
+                continue
             records[p].update(
                 covered=covered,
                 observedCounters=len(c["s"]),
@@ -356,6 +377,7 @@ def main():
                 "appliedPatchProvenance": applied_patch_provenance,
                 "files": list(records.values()),
                 "exclusions": excluded,
+                "ignoredMeasuredSources": ignored_measured,
             },
             indent=2,
         )

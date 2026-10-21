@@ -166,6 +166,50 @@ class ReportingTests(unittest.TestCase):
         self.assertEqual((j["covered"], j["totalUpperBound"]), (1, 7))
         self.assertEqual(j["packages"]["packages/lyra-3d"]["total"], 1)
 
+    def test_measured_test_sources_are_recorded_but_not_counted(self):
+        path = "packages/lyra-ui/src/a.test.ts"
+        self.map[path] = {"s": {"0": 9}, "statementMap": {"0": self.loc(1)}}
+        result = self.run_report()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual((report["covered"], report["totalUpperBound"]), (1, 7))
+        omitted = report["ignoredMeasuredSources"][0]
+        self.assertEqual(omitted["path"], path)
+        self.assertEqual(omitted["sha256"], hashlib.sha256((self.root / path).read_bytes()).hexdigest())
+        self.assertEqual((omitted["observedCounters"], omitted["coveredCounters"]), (1, 1))
+        self.assertIn("test", omitted["reason"])
+
+    def test_measured_fixture_is_not_confused_with_unknown_source(self):
+        path = "packages/lyra-ui/src/fixtures/builder.ts"
+        self.map[path] = {"s": {"0": 1}, "statementMap": {"0": self.loc(1)}}
+        self.assertNotEqual(self.run_report().returncode, 0)
+        self.put(path, "export const fixture = 1;\n")
+        self.git("add", path)
+        self.git("commit", "-qm", "fixture helper")
+        self.sha = self.git("rev-parse", "HEAD").strip()
+        result = self.run_report()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual((report["covered"], report["totalUpperBound"]), (1, 7))
+        self.assertEqual(report["ignoredMeasuredSources"][0]["path"], path)
+
+    def test_measured_content_addressed_exclusion_is_recorded(self):
+        path = "packages/lyra-ui/src/a.ts"
+        self.exclusions = [{"path": path, "sha256": hashlib.sha256((self.root / path).read_bytes()).hexdigest(),
+                            "reason": "fixture generated duplicate", "proof": "fixture producer"}]
+        result = self.run_report()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual((report["covered"], report["totalUpperBound"]), (0, 5))
+        self.assertEqual(report["ignoredMeasuredSources"][0]["reason"], "fixture generated duplicate")
+
+    def test_excluded_measurements_still_reject_duplicates_and_invalid_locations(self):
+        self.map = {"packages/lyra-ui/src/a.test.ts": {"s": {"0": 1}, "statementMap": {"0": self.loc(31)}}}
+        self.assertNotEqual(self.run_report().returncode, 0)
+        self.map["packages/lyra-ui/src/a.test.ts"]["statementMap"]["0"] = self.loc(1)
+        self.reports *= 2
+        self.assertNotEqual(self.run_report().returncode, 0)
+
     def test_sparse_map_keeps_full_source_denominator(self):
         del self.map["packages/lyra-ui/src/a.ts"]["s"]["1"]
         del self.map["packages/lyra-ui/src/a.ts"]["statementMap"]["1"]

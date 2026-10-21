@@ -1,0 +1,161 @@
+{
+  "canonicalization": "Only coverage top-level keys and corresponding entry.path normalized; all other maps/counters unchanged. JSON whitespace/key order normalized. Deterministic gzip mtime0/empty filename.",
+  "docsExecutionReceipt": {
+    "command": "pnpm --filter @aceshooting/lyra-docs test:coverage",
+    "exitCode": 0,
+    "finishedAt": "2026-10-21T20:09:52.809943+00:00",
+    "noUntrackedExecutableInputs": true,
+    "noUntrackedExecutableInputsBefore": true,
+    "nodeVersion": "22.23.2",
+    "pnpmVersion": "12.14.0",
+    "sha256": {
+      "coverage-final.json": "f92f3343999eaee360687e9711d9e672066c2f1b9d2520eab45c6e9b66e2ff96",
+      "coverage-metadata.json": "f8379ed27f35b0bebad8b1453bdbc5d8dbe6732f7e0dcb3cb24e01a1b2b0ed67",
+      "docs-coverage-final.log": "8c6b545e07b65679348a824a061b30ba4a9847f19fffc09c9c219f2a6fb70762"
+    },
+    "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+    "sourceCommitAfter": "d84c7197186615bd35297cd723aef438801d7b7e",
+    "sourceCommitBefore": "d84c7197186615bd35297cd723aef438801d7b7e",
+    "startedAt": "2026-10-21T20:03:26.229066+00:00",
+    "trackedCleanAfter": true,
+    "trackedCleanBefore": true
+  },
+  "files": {
+    "docs-coverage-final.json.gz": {
+      "bytes": 324035,
+      "sha256": "23b9e1be5268fcd6c679869aaf9b1fbce2ad3b174c2e5c61fbf128430a5a9dfd"
+    },
+    "docs-coverage-metadata.json": {
+      "bytes": 5231,
+      "sha256": "907ae7a3069b84a4b96d57c20bed2d278d2ef63a5989804e388dd82c3a535937"
+    },
+    "docs-run.log.gz": {
+      "bytes": 41529,
+      "sha256": "78c0f16ac63ba7f83e9e4672beee294fcd747fbc9bfa9d797922f5da3374cc8b"
+    },
+    "ui-coverage-final.json.gz": {
+      "bytes": 8282184,
+      "sha256": "e5fa011144cf65bb529e535aaeed76c220847fdb903c11c5d386526614957830"
+    }
+  },
+  "originalInputSha256": {
+    "coverage-final.json": "f92f3343999eaee360687e9711d9e672066c2f1b9d2520eab45c6e9b66e2ff96",
+    "coverage-metadata.json": "f8379ed27f35b0bebad8b1453bdbc5d8dbe6732f7e0dcb3cb24e01a1b2b0ed67",
+    "docs-coverage-final.log": "8c6b545e07b65679348a824a061b30ba4a9847f19fffc09c9c219f2a6fb70762"
+  },
+  "redaction": "Private execution roots replaced with [workspace], temporary paths with [temporary], plus explicitly reviewed replacements. Original inputs retained privately.",
+  "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+  "status": "Completed collection and independently reconciled source accounting for the recorded source commit; published separately from that commit.",
+  "uiArtifactMergeReceipt": {
+    "allTestsPassed": true,
+    "artifacts": [
+      {
+        "archiveSha256": "c15421276ecb15f2db4411b3e52094f5ccb7429e7a599834baef3765bf96fbb6",
+        "expiresAt": "2026-10-22T20:13:51Z",
+        "id": 12377599702,
+        "name": "lyra-ui-coverage-shard-1",
+        "url": "https://api.github.com/repos/aceshooting/lyra-ui/actions/artifacts/12377599702/zip"
+      },
+      {
+        "archiveSha256": "1a14f1016bfcab731b9ec45debce5d673efabf28931cf8716794a2f0543f67fe",
+        "expiresAt": "2026-10-22T20:15:27Z",
+        "id": 12379430203,
+        "name": "lyra-ui-coverage-shard-2",
+        "url": "https://api.github.com/repos/aceshooting/lyra-ui/actions/artifacts/12379430203/zip"
+      },
+      {
+        "archiveSha256": "a8439759ab39f17886b85c07b3ebfdf17e7b99d1ce05a8660ccca26ee74216d3",
+        "expiresAt": "2026-10-22T20:13:36Z",
+        "id": 12378816327,
+        "name": "lyra-ui-coverage-shard-3",
+        "url": "https://api.github.com/repos/aceshooting/lyra-ui/actions/artifacts/12378816327/zip"
+      },
+      {
+        "archiveSha256": "9a29a376d46aeba5835e06a8d0091f1cb1b05f3b507ea1b289b5bf20bbe4203b",
+        "expiresAt": "2026-10-22T20:13:34Z",
+        "id": 12377564702,
+        "name": "lyra-ui-coverage-shard-4",
+        "url": "https://api.github.com/repos/aceshooting/lyra-ui/actions/artifacts/12377564702/zip"
+      }
+    ],
+    "attestation": "Archive bytes independently hashed against GitHub metadata; merged-map production and complete test-selection validation are explicit maintainer execution receipts.",
+    "ciCoverageJobs": [
+      {
+        "conclusion": "success",
+        "id": 119454174426,
+        "name": "build-and-coverage / coverage / shard 2/4",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "id": 119454174468,
+        "name": "build-and-coverage / coverage / shard 4/4",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "id": 119454174535,
+        "name": "build-and-coverage / coverage / shard 3/4",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "id": 119454174558,
+        "name": "build-and-coverage / coverage / shard 1/4",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "id": 119460590641,
+        "name": "build-and-coverage / coverage",
+        "status": "completed"
+      }
+    ],
+    "manifestValidationExitCode": 0,
+    "mergeCommand": "source [toolchain]/nvm.sh && nvm use 22.23.2 && node [evidence-preparation]/merge-ui.mjs > [evidence-preparation]/ui-merge.log 2>&1",
+    "mergeExitCode": 0,
+    "mergedMapSha256": "7ff3aaa79283c804a9dc4a8480c4f09ab843c5d010e751e8709995628a3d2a18",
+    "recordedAt": "2026-10-21T20:16:58.098462+00:00",
+    "runAttempt": 1,
+    "runId": 39666245495,
+    "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e"
+  },
+  "uiRun": {
+    "id": 39666245495,
+    "jobs": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/aceshooting/lyra-ui/actions/runs/39666245495/job/119454174558",
+        "id": 119454174558,
+        "name": "build-and-coverage / coverage / shard 1/4"
+      },
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/aceshooting/lyra-ui/actions/runs/39666245495/job/119454174426",
+        "id": 119454174426,
+        "name": "build-and-coverage / coverage / shard 2/4"
+      },
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/aceshooting/lyra-ui/actions/runs/39666245495/job/119454174535",
+        "id": 119454174535,
+        "name": "build-and-coverage / coverage / shard 3/4"
+      },
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/aceshooting/lyra-ui/actions/runs/39666245495/job/119454174468",
+        "id": 119454174468,
+        "name": "build-and-coverage / coverage / shard 4/4"
+      },
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/aceshooting/lyra-ui/actions/runs/39666245495/job/119460590641",
+        "id": 119460590641,
+        "name": "build-and-coverage / coverage"
+      }
+    ],
+    "runAttempt": 1,
+    "sourceCommit": "d84c7197186615bd35297cd723aef438801d7b7e",
+    "url": "https://github.com/aceshooting/lyra-ui/actions/runs/39666245495"
+  }
+}
