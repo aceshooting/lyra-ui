@@ -29,6 +29,9 @@ on:
       tarball_sha256:
         description: SHA-256 of the byte-reproducible release tarball
         value: ${{ jobs.verify.outputs.tarball_sha256 }}
+      additional_assets_sha256:
+        description: SHA-256 of the verified standalone asset manifest
+        value: ${{ jobs.verify.outputs.additional_assets_sha256 }}
       node_version:
         description: Exact Node version used to verify the tagged package
         value: ${{ jobs.verify.outputs.node_version }}
@@ -47,6 +50,7 @@ jobs:
       tag: ${{ steps.tag.outputs.tag }}
       tag_sha: ${{ steps.source.outputs.sha }}
       tarball_sha256: ${{ steps.asset_digest.outputs.sha256 }}
+      additional_assets_sha256: ${{ steps.additional_assets.outputs.sha256 }}
       node_version: ${{ steps.node.outputs['node-version'] }}
     steps:
       - name: Resolve release tag
@@ -141,7 +145,7 @@ jobs:
           set -euo pipefail
           dir="$RUNNER_TEMP/release-assets"
           mkdir -p "$dir"
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.tgz' --dir "$dir"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*' --dir "$dir"
           files=()
           while IFS= read -r -d '' file; do
             files+=(--file "$file")
@@ -173,6 +177,26 @@ jobs:
           node scripts/release-integrity.mjs compare-rebuild \
             --release-file "$RELEASE_TARBALL" \
             --rebuilt-file "${rebuilt[0]}"
+
+      - name: Verify complete release asset inventory against tagged source
+        id: additional_assets
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        run: |
+          node scripts/release-integrity.mjs verify-release-assets \
+            --tag "$TAG" --sha "$SOURCE_SHA" \
+            --directory "$RUNNER_TEMP/release-assets" \
+            --output-directory "$RUNNER_TEMP/verified-additional-release" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Upload verified standalone assets and digest manifest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verified-additional-release-assets
+          path: ${{ runner.temp }}/verified-additional-release
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Record verified tarball digest
         id: asset_digest

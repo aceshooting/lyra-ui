@@ -6,6 +6,8 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { collectReleaseAssets, verifyReleaseAssets } from './release-artifacts.mjs';
+
 import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -827,9 +829,23 @@ export async function runCli(argv = process.argv.slice(2)) {
   if (options.command === 'validate-workflow-source') return validateWorkflowSourceCli(options);
   if (options.command === 'validate-tarball') return validateTarballCli(options);
   if (options.command === 'compare-rebuild') return compareRebuildCli(options);
+  if (['collect-release-assets', 'verify-release-assets'].includes(options.command)) {
+    const args = {
+      expected: parseReleaseTag(requireOption(options, 'tag')),
+      sourceSha: requireOption(options, 'sha'),
+      repositoryRoot: repoRoot,
+      directory: path.resolve(requireOption(options, 'directory')),
+    };
+    if (options.command === 'collect-release-assets') return collectReleaseAssets(args);
+    const result = verifyReleaseAssets({ ...args,
+      outputDirectory: path.resolve(requireOption(options, 'output_directory')),
+    });
+    appendFileSync(requireOption(options, 'github_output'), `sha256=${result.manifestSha256}\n`);
+    return result;
+  }
   if (options.command === 'verify-site-freshness') return verifySiteFreshnessCli(options);
   throw new Error(
-    'Usage: release-integrity.mjs wait-ci|wait-full-engine|wait-test-all-browsers|plan-release|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild|verify-site-freshness [options]',
+    'Usage: release-integrity.mjs wait-ci|wait-full-engine|wait-test-all-browsers|plan-release|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild|collect-release-assets|verify-release-assets|verify-site-freshness [options]',
   );
 }
 

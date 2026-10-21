@@ -331,3 +331,250 @@ test('publishing fails unless the registry serves the released tarball bytes', (
     rmSync(fixture, { recursive: true, force: true });
   }
 });
+
+test('standalone release assets come from immutable source and reject incomplete or extra downloads', async () => {
+  const { collectReleaseAssets, verifyReleaseAssets } = await import('./release-artifacts.mjs');
+  const { mkdirSync, copyFileSync, symlinkSync } = await import('node:fs');
+  const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-release-assets-'));
+  const git = (...args) => {
+    const result = spawnSync('git', args, { cwd: fixture, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  try {
+    git('init', '--quiet');
+    git('config', 'user.email', 'fixture@example.invalid');
+    git('config', 'user.name', 'Release fixture');
+    const expected = { directory: 'packages/lyra-ui', packageName: '@aceshooting/lyra-ui', version: '1.2.3' };
+    const packageDir = path.join(fixture, expected.directory);
+    mkdirSync(packageDir, { recursive: true });
+    writeFileSync(path.join(packageDir, 'package.json'), JSON.stringify({ name: expected.packageName, version: expected.version, scripts: { manifest: 'generate' } }));
+    for (const name of ['CHANGELOG.md', 'custom-elements.json', 'llms.txt', 'llms-full.txt']) writeFileSync(path.join(packageDir, name), `committed ${name}\n`);
+    git('add', '.');
+    git('commit', '--quiet', '-m', 'Fixture source');
+    const sourceSha = git('rev-parse', 'HEAD');
+    const args = { expected, sourceSha, repositoryRoot: fixture };
+    const downloads = path.join(fixture, 'downloads');
+    const spec = collectReleaseAssets({ ...args, directory: downloads });
+    assert.equal(spec.sourceName, 'lyra-ui-1.2.3-source.tar');
+    assert.equal(spec.standalone.length, 4);
+    writeFileSync(path.join(downloads, spec.tarballName), 'separately validated package bytes');
+    // Local generated drift must not become signed source or standalone evidence.
+    writeFileSync(path.join(packageDir, 'llms.txt'), 'mutable local data');
+    writeFileSync(path.join(packageDir, 'package.json'), '{}');
+    const verified = path.join(fixture, 'verified');
+    const result = verifyReleaseAssets({ ...args, directory: downloads, outputDirectory: verified });
+    const manifest = readFileSync(path.join(verified, 'SHA256SUMS'));
+    assert.equal(result.manifestSha256, createHash('sha256').update(manifest).digest('hex'));
+    assert.equal(readFileSync(path.join(verified, 'llms.txt'), 'utf8'), 'committed llms.txt\n');
+    assert.equal(manifest.toString().trim().split('\n').length, 5);
+    const sourceEntry = spawnSync('tar', ['-xOf', path.join(verified, spec.sourceName), `lyra-ui-${sourceSha}/packages/lyra-ui/llms.txt`], { encoding: 'utf8' });
+    assert.equal(sourceEntry.status, 0, sourceEntry.stderr);
+    assert.equal(sourceEntry.stdout, 'committed llms.txt\n');
+    assert.throws(() => verifyReleaseAssets({ ...args, directory: downloads, outputDirectory: verified }), /must be empty/);
+    assert.throws(() => collectReleaseAssets({ ...args, sourceSha: 'HEAD', directory: verified }), /full source commit/);
+    assert.throws(() => collectReleaseAssets({ ...args, expected: { ...expected, version: '1.2.4' }, directory: verified }), /tagged package identity/);
+    let count = 0;
+    const check = (pattern) => assert.throws(() => verifyReleaseAssets({ ...args, directory: downloads, outputDirectory: path.join(fixture, `rejected-${count++}`) }), pattern);
+    for (const name of [...spec.standalone, spec.sourceName]) {
+      const file = path.join(downloads, name);
+      const original = readFileSync(file);
+      writeFileSync(file, Buffer.concat([original, Buffer.from('tampered')]));
+      check(/does not byte-match/);
+      writeFileSync(file, original);
+      rmSync(file);
+      check(/ENOENT/);
+      writeFileSync(file, original);
+    }
+    for (const name of ['unexpected.txt', 'unknown.sigstore.json', 'SHA256SUMS', 'nested']) {
+      writeFileSync(path.join(downloads, name), 'unapproved');
+      check(/Unexpected release asset/);
+      rmSync(path.join(downloads, name));
+    }
+    const llms = path.join(downloads, 'llms.txt');
+    rmSync(llms);
+    symlinkSync(path.join(verified, 'llms.txt'), llms);
+    check(/regular release asset/);
+    rmSync(llms);
+    copyFileSync(path.join(verified, 'llms.txt'), llms);
+    writeFileSync(path.join(downloads, `${spec.sourceName}.sigstore.json`), 'previous provenance');
+    verifyReleaseAssets({ ...args, directory: downloads, outputDirectory: path.join(fixture, 'with-sidecar') });
+    // Companion packages without a manifest generator still require source and changelog.
+    git('checkout', '--', expected.directory);
+    writeFileSync(path.join(packageDir, 'package.json'), JSON.stringify({ name: expected.packageName, version: expected.version }));
+    git('add', expected.directory);
+    git('commit', '--quiet', '-m', 'Fixture without manifest generator');
+    const minimal = collectReleaseAssets({ ...args, sourceSha: git('rev-parse', 'HEAD'), directory: path.join(fixture, 'minimal') });
+    assert.deepEqual(minimal.standalone, ['CHANGELOG.md']);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+function standaloneStep(workflow, name) {
+  const marker = `      - name: ${name}\n`;
+  const step = workflow.indexOf(marker);
+  assert.ok(step >= 0, `Missing ${name}`);
+  const start = workflow.indexOf('        run: |\n', step) + '        run: |\n'.length;
+  const lines = [];
+  for (const line of workflow.slice(start).split('\n')) {
+    if (line.startsWith('          ')) lines.push(line.slice(10));
+    else if (line === '') lines.push('');
+    else break;
+  }
+  return lines.join('\n');
+}
+
+test('standalone protected transfer rejects altered manifests, bytes, links and extra files', async () => {
+  const { mkdirSync, symlinkSync } = await import('node:fs');
+  const sources = ['publish', 'sign-release'].map((name) => standaloneStep(read(`.github/workflows/${name}.yml`), 'Verify standalone asset transfer'));
+  assert.equal(sources[0], sources[1]);
+  const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-standalone-transfer-'));
+  try {
+    const dir = path.join(fixture, 'verified-additional-release');
+    mkdirSync(dir);
+    const files = ['CHANGELOG.md', 'lyra-ui-1.2.3-source.tar'];
+    for (const name of files) writeFileSync(path.join(dir, name), name);
+    const manifest = files.map((name) => `${createHash('sha256').update(name).digest('hex')}  ${name}\n`).join('');
+    writeFileSync(path.join(dir, 'SHA256SUMS'), manifest);
+    const expected = createHash('sha256').update(manifest).digest('hex');
+    const output = path.join(fixture, 'output');
+    const run = (sha = expected) => spawnSync('bash', ['-c', sources[0]], { encoding: 'utf8', env: { ...process.env, RUNNER_TEMP: fixture, GITHUB_OUTPUT: output, EXPECTED_MANIFEST_SHA256: sha } });
+    const accepted = run();
+    assert.equal(accepted.status, 0, accepted.stderr);
+    assert.match(readFileSync(output, 'utf8'), /paths<<RELEASE_ASSETS/);
+    assert.doesNotMatch(readFileSync(output, 'utf8'), /\/SHA256SUMS/);
+    writeFileSync(path.join(dir, 'SHA256SUMS'), `${manifest}altered\n`);
+    assert.notEqual(run().status, 0);
+    const traversal = `${'0'.repeat(64)}  ../escape\n`;
+    writeFileSync(path.join(dir, 'SHA256SUMS'), traversal);
+    assert.notEqual(run(createHash('sha256').update(traversal).digest('hex')).status, 0);
+    writeFileSync(path.join(dir, 'SHA256SUMS'), manifest);
+    writeFileSync(path.join(dir, files[0]), 'tampered');
+    assert.notEqual(run().status, 0);
+    writeFileSync(path.join(dir, files[0]), files[0]);
+    writeFileSync(path.join(dir, 'unverified.txt'), 'extra');
+    assert.notEqual(run().status, 0);
+    rmSync(path.join(dir, 'unverified.txt'));
+    rmSync(path.join(dir, files[0]));
+    writeFileSync(path.join(fixture, 'outside'), files[0]);
+    symlinkSync(path.join(fixture, 'outside'), path.join(dir, files[0]));
+    assert.notEqual(run().status, 0);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test('standalone asset signing preserves authority, qualification and dry-run boundaries', () => {
+  const verifier = read('.github/workflows/release-verification.yml');
+  const release = read('.github/workflows/release.yml');
+  assert.match(release, /collect-release-assets[\s\S]*--sha "\$GITHUB_SHA"/);
+  assert.match(verifier, /--pattern '\*'/);
+  assert.match(verifier, /compare-rebuild[\s\S]*verify-release-assets/);
+  assert.match(verifier, /SOURCE_SHA: \$\{\{ steps\.source\.outputs\.sha \}\}/);
+  assert.match(verifier, /additional_assets_sha256: \$\{\{ steps\.additional_assets\.outputs\.sha256 \}\}/);
+  for (const name of ['publish', 'sign-release']) {
+    const workflow = read(`.github/workflows/${name}.yml`);
+    const protectedJob = workflow.slice(workflow.indexOf(name === 'publish' ? '\n  publish:\n' : '\n  sign:\n'));
+    assert.doesNotMatch(protectedJob, /actions\/checkout@|pnpm install|scripts\/release-|git archive/);
+    assert.match(protectedJob, /environment: npm-publish/);
+    assert.match(protectedJob, /subject-path: \$\{\{ steps\.additional_assets\.outputs\.paths \}\}/);
+    assert.match(protectedJob, /EXPECTED_MANIFEST_SHA256: \$\{\{ needs\.verify\.outputs\.additional_assets_sha256 \}\}/);
+    assert.ok(protectedJob.indexOf('Rebind all standalone release assets after approval') < protectedJob.indexOf('Generate standalone release provenance'));
+    if (name === 'publish') {
+      for (const step of ['Generate standalone release provenance', 'Upload standalone release provenance']) {
+        const section = protectedJob.slice(protectedJob.indexOf(`      - name: ${step}\n`)).split('\n      - name:')[0];
+        assert.match(section, /if: \$\{\{ github\.event_name == 'release' \|\| inputs\.dry_run != true \}\}/);
+      }
+    }
+  }
+});
+
+test('standalone approval round-trip and provenance upload reject moved tags and changed release assets', async () => {
+  const { mkdirSync, readdirSync } = await import('node:fs');
+  const publish = read('.github/workflows/publish.yml');
+  const sign = read('.github/workflows/sign-release.yml');
+  const rebindName = 'Rebind all standalone release assets after approval';
+  const uploadName = 'Upload standalone release provenance';
+  for (const name of [rebindName, uploadName]) assert.equal(standaloneStep(publish, name), standaloneStep(sign, name));
+  const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-standalone-roundtrip-'));
+  try {
+    const bin = path.join(fixture, 'bin');
+    mkdirSync(bin);
+    const executable = (name, source) => { const file = path.join(bin, name); writeFileSync(file, source); chmodSync(file, 0o755); };
+    executable('git', '#!/usr/bin/env bash\nprintf "%s\\trefs/tags/lyra-ui@1.2.3^{}\\n" "$MOCK_TAG_SHA"\n');
+    executable('gh', `#!/usr/bin/env node
+const fs = require('node:fs'), path = require('node:path');
+const args = process.argv.slice(2);
+fs.appendFileSync(process.env.MOCK_LOG, JSON.stringify(args) + '\\n');
+if (args[0] !== 'release') process.exit(90);
+if (args[1] === 'upload') {
+  for (const file of args.slice(3, args.indexOf('--repo'))) fs.copyFileSync(file, path.join(process.env.MOCK_RELEASE, path.basename(file)));
+} else if (args[1] === 'download') {
+  const dir = args[args.indexOf('--dir') + 1], pattern = args[args.indexOf('--pattern') + 1];
+  const names = fs.readdirSync(process.env.MOCK_RELEASE).filter(name => pattern === '*' || pattern === name);
+  if (!names.length) process.exit(1);
+  for (const name of names) fs.copyFileSync(path.join(process.env.MOCK_RELEASE, name), path.join(dir, name));
+} else process.exit(91);
+`);
+    let sequence = 0;
+    const run = ({ workflow = publish, step = rebindName, changed = false, extra = false, moved = false, dryRun = false, changedTarball = false, missingTarball = false, missingStandalone = false } = {}) => {
+      const runDir = path.join(fixture, String(sequence++));
+      const verified = path.join(runDir, 'verified-additional-release');
+      const remote = path.join(runDir, 'remote');
+      mkdirSync(verified, { recursive: true });
+      mkdirSync(remote);
+      const names = ['CHANGELOG.md', 'lyra-ui-1.2.3-source.tar'];
+      const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
+      for (const name of names) { writeFileSync(path.join(verified, name), name); writeFileSync(path.join(remote, name), changed ? 'changed' : name); }
+      writeFileSync(path.join(verified, 'SHA256SUMS'), names.map(name => `${sha(name)}  ${name}\n`).join(''));
+      const tarball = path.join(runDir, 'aceshooting-lyra-ui-1.2.3.tgz');
+      writeFileSync(tarball, 'tarball');
+      if (!missingTarball) writeFileSync(path.join(remote, path.basename(tarball)), changedTarball ? 'changed tarball' : 'tarball');
+      if (missingStandalone) rmSync(path.join(remote, names[0]));
+      if (extra) writeFileSync(path.join(remote, 'unverified.txt'), 'unverified');
+      const bundle = path.join(runDir, 'bundle.json');
+      writeFileSync(bundle, 'fixture bundle');
+      const log = path.join(runDir, 'calls.log');
+      const sourceSha = 'a'.repeat(40);
+      const result = spawnSync('bash', ['-c', standaloneStep(workflow, step)], { encoding: 'utf8', env: {
+        ...process.env, PATH: `${bin}:${process.env.PATH}`, RUNNER_TEMP: runDir,
+        EXPECTED_TAG_SHA: sourceSha, EXPECTED_TARBALL_SHA256: sha('tarball'),
+        MOCK_TAG_SHA: moved ? 'b'.repeat(40) : sourceSha, MOCK_RELEASE: remote, MOCK_LOG: log,
+        GITHUB_REPOSITORY: 'fixture/repository', GITHUB_EVENT_NAME: 'workflow_dispatch',
+        TAG: 'lyra-ui@1.2.3', TARBALL: tarball, DRY_RUN: String(dryRun), BUNDLE: bundle,
+      } });
+      return { result, remote, names: readdirSync(remote), calls: (() => { try { return readFileSync(log, 'utf8'); } catch { return ''; } })() };
+    };
+    const restored = run({ changed: true });
+    assert.equal(restored.result.status, 0, restored.result.stderr);
+    assert.equal(readFileSync(path.join(restored.remote, 'CHANGELOG.md'), 'utf8'), 'CHANGELOG.md');
+    assert.notEqual(run({ extra: true }).result.status, 0, 'undeclared downloads must fail');
+    const moved = run({ moved: true });
+    assert.notEqual(moved.result.status, 0);
+    assert.equal(moved.calls, '', 'moved tags cannot authorize release changes');
+    const dry = run({ dryRun: true });
+    assert.equal(dry.result.status, 0, dry.result.stderr);
+    assert.doesNotMatch(dry.calls, /"upload"/);
+    const alteredDry = run({ dryRun: true, changed: true });
+    assert.notEqual(alteredDry.result.status, 0);
+    assert.doesNotMatch(alteredDry.calls, /"upload"/);
+    for (const workflow of [publish, sign]) {
+      const uploaded = run({ workflow, step: uploadName });
+      assert.equal(uploaded.result.status, 0, uploaded.result.stderr);
+      assert.equal(uploaded.names.filter(name => name.endsWith('.sigstore.json')).length, 2);
+      // Model changes after the earlier approval check and intervening attestation steps.
+      for (const state of [
+        { extra: true }, { changedTarball: true }, { missingTarball: true },
+        { missingStandalone: true }, { changed: true }, { moved: true },
+      ]) {
+        const rejected = run({ workflow, step: uploadName, ...state });
+        assert.notEqual(rejected.result.status, 0, `Final publication must reject ${JSON.stringify(state)}`);
+        assert.doesNotMatch(rejected.calls, /"upload"/);
+        assert.equal(rejected.names.filter(name => name.endsWith('.sigstore.json')).length, 0);
+      }
+    }
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});

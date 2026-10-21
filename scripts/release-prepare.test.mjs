@@ -206,6 +206,7 @@ test('release preparation fetches published tags before bumping and refuses conf
     for (const file of [
       'scripts/release-prepare.mjs',
       'scripts/release-integrity.mjs',
+      'scripts/release-artifacts.mjs',
       'scripts/check-node-version.mjs',
       'packages/lyra-ui/scripts/is-main-module.mjs',
       '.github/release-qualification.json',

@@ -393,7 +393,7 @@ remain advisory evidence; the deterministic scale counters are the automated reg
    `workflow_dispatch`/`main` runs of both browser workflows. A credential-free job packs each
    tarball with the pinned Node and pnpm (the same command publish verification rebuilds with) and
    fails if packing changes tracked files. A job with no checkout then pushes the annotated tags
-   atomically, creates each GitHub Release with the tarball and `CHANGELOG.md` (plus
+   atomically, creates each GitHub Release with the tarball, canonical source archive and `CHANGELOG.md` (plus
    `custom-elements.json`, `llms.txt` and `llms-full.txt` for packages with a manifest generator) and
    dispatches `publish.yml` per tag. A release made with `GITHUB_TOKEN` emits no `release: published`
    event, so that dispatch is the only publish trigger.
@@ -432,6 +432,64 @@ the in-toto statement) and is uploaded byte-identically as `.sigstore.json` for 
 the single rebuild/byte-verification implementation; recovery keeps the same artifact handoff,
 protected signer, post-approval tag check and asset round-trip, and is dispatched on the requested
 tag, never on `main`.
+
+### Verify signed release downloads
+
+For releases containing the complete-asset signing workflow, the canonical signed source
+archive is `<package>-<version>-source.tar` (for example, `lyra-ui-<version>-source.tar`). It is a
+Git archive of the exact tagged commit, prefixed `lyra-ui-<source-sha>/`. GitHub's automatic
+"Source code (zip)" and "Source code (tar.gz)" links are separate downloads and are not covered by
+these attestations. Git tags themselves remain unsigned.
+
+Every release payload has `.sigstore.json` and `.intoto.jsonl` sidecars: the package `.tgz`, canonical
+source `.tar`, `CHANGELOG.md`, and, for packages with a manifest generator, `custom-elements.json`,
+`llms.txt` and `llms-full.txt`. The standalone assets byte-match their committed versions at the
+qualified source SHA. The verifier rejects missing or unknown payloads and accepts sidecars only
+for declared payloads. Additional files require an explicit inventory change and qualification.
+
+The shared read-only verifier recreates the source archive, compares standalone downloads and
+transfers them with a SHA-256 manifest bound to a job output. Both protected jobs validate that
+manifest before interpreting filenames, restore and round-trip all verified payloads after approval,
+and recheck the source tag, complete release inventory, standalone bytes and tarball digest before
+uploading the standalone bundles. They do not execute
+or extract the source archive. A dry run validates existing downloads without uploading assets or
+attestations. The existing tarball rebuild, approval and npm integrity checks continue to apply.
+
+To verify a download, select the release tag, expected source commit and filename from a trusted
+release review. Use `publish.yml` for normal publishing or `sign-release.yml` for an explicitly
+reviewed recovery signature. Do not obtain the expected signer identity or commit solely from an
+untrusted bundle:
+
+```sh
+TAG='lyra-ui@<version>'
+SOURCE_SHA='<reviewed full source commit SHA>'
+FILE='lyra-ui-<version>-source.tar'
+WORKFLOW='publish.yml'
+mkdir -p release-verification
+gh release download "$TAG" --repo aceshooting/lyra-ui \
+  --pattern "$FILE" --pattern "$FILE.sigstore.json" --dir release-verification
+sha256sum "release-verification/$FILE"
+gh attestation verify "release-verification/$FILE" \
+  --bundle "release-verification/$FILE.sigstore.json" \
+  --repo aceshooting/lyra-ui \
+  --cert-identity "https://github.com/aceshooting/lyra-ui/.github/workflows/$WORKFLOW@refs/tags/$TAG" \
+  --cert-oidc-issuer https://token.actions.githubusercontent.com \
+  --signer-digest "$SOURCE_SHA" --format json
+```
+
+Repeat for every independently downloaded payload. The displayed SHA-256 identifies the bytes;
+the attestation verifier checks that digest against the signed subject and validates the expected
+workflow certificate and transparency evidence. A checksum alone does not establish a trusted
+signer. The public bundle contains verification material, not a private signing key; GitHub OIDC
+supplies the existing keyless signing identity. See the
+[GitHub CLI verification reference](https://cli.github.com/manual/gh_attestation_verify) and
+[attestation action](https://github.com/actions/attest).
+
+This extension applies only to tags whose commit contains the complete-asset workflow. Dispatching
+recovery on an older tag runs the older code; dispatching on `main` to sign that tag remains rejected
+by source binding. Do not rewrite historical tags or claim their unsigned source/standalone assets
+are covered. Demonstrating complete signing requires a future qualified release containing this
+workflow and successful verification of every payload on that release.
 
 Component release history needs a non-shallow clone with tags (`fetch-depth: 0` in every lint
 worker). `history.taggedCurrent` preserves the immutable current-version tag record while the mutable

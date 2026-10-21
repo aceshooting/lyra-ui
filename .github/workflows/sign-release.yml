@@ -62,6 +62,40 @@ jobs:
           fi
           echo "path=${tarballs[0]}" >> "$GITHUB_OUTPUT"
 
+      - name: Download verified standalone assets
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: verified-additional-release-assets
+          path: ${{ runner.temp }}/verified-additional-release
+
+      - name: Verify standalone asset transfer
+        id: additional_assets
+        env:
+          EXPECTED_MANIFEST_SHA256: ${{ needs.verify.outputs.additional_assets_sha256 }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/verified-additional-release"
+          test -f SHA256SUMS && test ! -L SHA256SUMS
+          test "$(sha256sum SHA256SUMS | cut -d ' ' -f1)" = "$EXPECTED_MANIFEST_SHA256"
+          count=0
+          while IFS= read -r line; do
+            if [[ ! "$line" =~ ^[a-f0-9]{64}'  '[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+              echo '::error::Invalid standalone asset manifest entry.'
+              exit 1
+            fi
+            file="${line:66}"
+            test "$file" != SHA256SUMS && test -f "$file" && test ! -L "$file"
+            count=$((count + 1))
+          done < SHA256SUMS
+          test "$count" -ge 2
+          test "$(find . -mindepth 1 -maxdepth 1 | wc -l)" -eq "$((count + 1))"
+          sha256sum --check --strict SHA256SUMS
+          {
+            echo 'paths<<RELEASE_ASSETS'
+            while IFS= read -r line; do printf '%s/%s\n' "$PWD" "${line:66}"; done < SHA256SUMS
+            echo 'RELEASE_ASSETS'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Rebind release tag and tarball after approval
         env:
           EXPECTED_SHA256: ${{ needs.verify.outputs.tarball_sha256 }}
@@ -89,6 +123,46 @@ jobs:
             exit 1
           fi
 
+      - name: Rebind all standalone release assets after approval
+        env:
+          EXPECTED_TAG_SHA: ${{ needs.verify.outputs.tag_sha }}
+          EXPECTED_TARBALL_SHA256: ${{ needs.verify.outputs.tarball_sha256 }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          TARBALL: ${{ steps.release_asset.outputs.path }}
+          DRY_RUN: 'false'
+        run: |
+          set -euo pipefail
+          remote_sha="$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG^{}" | cut -f1)"
+          test "$remote_sha" = "$EXPECTED_TAG_SHA"
+          dir="$RUNNER_TEMP/verified-additional-release"
+          payloads=()
+          while IFS= read -r line; do payloads+=("$dir/${line:66}"); done < "$dir/SHA256SUMS"
+          if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch || "$DRY_RUN" != true ]]; then
+            gh release upload "$TAG" "${payloads[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+          fi
+          roundtrip="$RUNNER_TEMP/all-release-roundtrip"
+          mkdir -p "$roundtrip"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*' --dir "$roundtrip"
+          allowed=()
+          for file in "$TARBALL" "${payloads[@]}"; do
+            name="${file##*/}"
+            allowed+=("$name" "$name.sigstore.json" "$name.intoto.jsonl")
+          done
+          while IFS= read -r -d '' file; do
+            name="${file##*/}"
+            known=false
+            for allowed_name in "${allowed[@]}"; do
+              if [[ "$name" == "$allowed_name" ]]; then known=true; break; fi
+            done
+            if [[ ! -f "$file" || -L "$file" || "$known" != true ]]; then
+              echo '::error::Unexpected release asset after approval.'
+              exit 1
+            fi
+          done < <(find "$roundtrip" -mindepth 1 -maxdepth 1 -print0)
+          (cd "$roundtrip" && sha256sum --check --strict "$dir/SHA256SUMS")
+          test "$(sha256sum "$roundtrip/${TARBALL##*/}" | cut -d ' ' -f1)" = "$EXPECTED_TARBALL_SHA256"
+
       - name: Generate release provenance
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
@@ -114,3 +188,56 @@ jobs:
           cp "$BUNDLE" "$provenance"
           cp "$BUNDLE" "$intoto"
           gh release upload "$TAG" "$provenance" "$intoto" --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Generate standalone release provenance
+        id: attest_additional
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.additional_assets.outputs.paths }}
+
+      - name: Upload standalone release provenance
+        env:
+          BUNDLE: ${{ steps.attest_additional.outputs.bundle-path }}
+          EXPECTED_TAG_SHA: ${{ needs.verify.outputs.tag_sha }}
+          EXPECTED_TARBALL_SHA256: ${{ needs.verify.outputs.tarball_sha256 }}
+          TARBALL: ${{ steps.release_asset.outputs.path }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          set -euo pipefail
+          remote_sha="$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG^{}" | cut -f1)"
+          test "$remote_sha" = "$EXPECTED_TAG_SHA"
+          dir="$RUNNER_TEMP/verified-additional-release"
+          payloads=()
+          while IFS= read -r line; do payloads+=("$dir/${line:66}"); done < "$dir/SHA256SUMS"
+          roundtrip="$RUNNER_TEMP/standalone-final-roundtrip"
+          mkdir -p "$roundtrip"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*' --dir "$roundtrip"
+          allowed=()
+          for file in "$TARBALL" "${payloads[@]}"; do
+            name="${file##*/}"
+            allowed+=("$name" "$name.sigstore.json" "$name.intoto.jsonl")
+          done
+          while IFS= read -r -d '' file; do
+            name="${file##*/}"
+            known=false
+            for allowed_name in "${allowed[@]}"; do
+              if [[ "$name" == "$allowed_name" ]]; then known=true; break; fi
+            done
+            if [[ ! -f "$file" || -L "$file" || "$known" != true ]]; then
+              echo '::error::Unexpected release asset before provenance upload.'
+              exit 1
+            fi
+          done < <(find "$roundtrip" -mindepth 1 -maxdepth 1 -print0)
+          (cd "$roundtrip" && sha256sum --check --strict "$dir/SHA256SUMS")
+          test "$(sha256sum "$roundtrip/${TARBALL##*/}" | cut -d ' ' -f1)" = "$EXPECTED_TARBALL_SHA256"
+          remote_sha="$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG^{}" | cut -f1)"
+          test "$remote_sha" = "$EXPECTED_TAG_SHA"
+          bundles=()
+          while IFS= read -r line; do
+            name="${line:66}"
+            cp "$BUNDLE" "$dir/$name.sigstore.json"
+            cp "$BUNDLE" "$dir/$name.intoto.jsonl"
+            bundles+=("$dir/$name.sigstore.json" "$dir/$name.intoto.jsonl")
+          done < "$dir/SHA256SUMS"
+          gh release upload "$TAG" "${bundles[@]}" --repo "$GITHUB_REPOSITORY" --clobber

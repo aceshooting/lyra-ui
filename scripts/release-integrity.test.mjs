@@ -2410,7 +2410,9 @@ test('release workflow qualifies the exact main commit before tagging, releasing
   assert.match(pack, /pnpm --filter "\$name" --fail-if-no-match pack --pack-destination/);
   assert.match(pack, /check:component-quality:built/);
   assert.match(pack, /validate-tarball --tag "\$tag"/);
-  assert.match(pack, /CHANGELOG\.md[\s\S]*custom-elements\.json[\s\S]*llms\.txt[\s\S]*llms-full\.txt/);
+  assert.match(pack, /collect-release-assets[\s\S]*--sha "\$GITHUB_SHA"/);
+  const assetHelper = readFileSync(path.join(repoRoot, 'scripts/release-artifacts.mjs'), 'utf8');
+  assert.match(assetHelper, /CHANGELOG\.md[\s\S]*custom-elements\.json[\s\S]*llms\.txt[\s\S]*llms-full\.txt/);
   assert.match(pack, /git diff --exit-code/);
   assert.doesNotMatch(pack, /contents: write|GH_TOKEN/);
 
