@@ -642,10 +642,6 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 
   private openPresentation(focus: MenuFocusTarget = 'first'): void {
-    if (this.dropdownContained && this.dropdownOwner) {
-      this.focusContained(focus);
-      return;
-    }
     this.pendingFocus = focus;
     if (this.presentationOpen) {
       if (!this.submenuAnchor || this.presentationPositioned) this.focusRoving(focus);
@@ -992,7 +988,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    */
   private isForeignEvent(e: Event): boolean {
     for (const node of e.composedPath()) {
-      if (node === this) return false;
+      if (node === this) break;
       if (isLyraMenuElement(node)) return true;
     }
     return false;

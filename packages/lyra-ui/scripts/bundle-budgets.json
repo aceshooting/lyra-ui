@@ -28,7 +28,7 @@
     "dist/hydration.js": 5454,
     "dist/localization.js": 24515,
     "dist/lyra.js": 145261,
-    "dist/ssr.js": 4563,
+    "dist/ssr.js": 4373,
     "dist/ssr/all.js": 1553101,
     "dist/theme/theme.js": 13381
   },
@@ -37,7 +37,7 @@
   "dist/autoloader-cdn.js": 1507.4375,
   "dist/autoloader.js": 1507.25,
   "dist/hydration.js": 5.43359375,
-  "dist/ssr.js": 4.4560546875,
+  "dist/ssr.js": 4.2705078125,
   "dist/ssr/all.js": 1516.75,
   "dist/localization.js": 24.0,
   "dist/lyra.js": 141.875,

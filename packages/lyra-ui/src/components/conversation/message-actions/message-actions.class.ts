@@ -583,6 +583,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     try {
       return action.disabled !== true;
     } catch {
+      // Direct actions may override methods read by the focus-availability predicate.
       return false;
     }
   }
@@ -709,7 +710,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       try {
         action.setTabIndex(stopIndex === this.activeStopIndex ? 0 : -1);
       } catch {
-        // A third-party action may still throw despite its descriptor-safe projection.
+        // Direct actions can override the tabIndex setter; keep reconciling the other stops.
       }
     });
     this.managedStops = stops;
@@ -720,7 +721,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     try {
       stop.action.releaseTabIndex?.();
     } catch {
-      // A throwing optional release cannot strand another managed stop.
+      // Direct actions can override attribute methods; keep restoring the other stops.
     }
     if (this.directActions.get(stop.owner) === stop.action) {
       this.directActions.delete(stop.owner);
@@ -880,8 +881,6 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
           .rating=${this.feedbackRating}
           @lr-toolbar-actions-change=${this.onToolbarActionsChange}
         ></lr-message-feedback>`;
-      default:
-        return nothing;
     }
   }
 

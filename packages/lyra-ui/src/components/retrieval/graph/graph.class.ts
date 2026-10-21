@@ -221,18 +221,6 @@ function ownGraphText(
     : descriptor.value;
 }
 
-/** Reads an own data value without crossing an accessor-backed row property. */
-function ownGraphValue(
-  value: object,
-  property: PropertyKey
-): unknown | undefined {
-  const descriptor = getOwnDataDescriptor(value, property);
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-    descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-    ? undefined
-    : descriptor.value;
-}
-
 /**
  * Tiny deterministic PRNG (mulberry32, public-domain) used only when `seed`
  * is set, so a node's initial x/y is reproducible instead of whatever
@@ -1536,13 +1524,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     );
   }
 
-  private computedStyle(element: Element = this): CSSStyleDeclaration {
+  private computedStyle(): CSSStyleDeclaration {
     const view = this.ownerWindow;
-    return view
-      ? view.getComputedStyle(element)
-      : 'style' in element
-      ? (element as HTMLElement).style
-      : this.style;
+    return view ? view.getComputedStyle(this) : this.style;
   }
 
   override connectedCallback(): void {
@@ -2320,7 +2304,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   fit(options?: { padding?: number }): void {
     if (this.view !== '2d') {
       if (this.spatial) this.spatial.fit(options?.padding);
-      else if (this.isConnected) void this.ensureSpatial().then(() => { if (this.isConnected && this.view !== '2d') this.spatial?.fit(options?.padding); });
+      // The renderer's canvas is only measurable after the update that paints it.
+      else if (this.isConnected) void this.ensureSpatial().then(() => this.updateComplete).then(() => { if (this.isConnected && this.view !== '2d') this.spatial?.fit(options?.padding); });
       return;
     }
     if (
@@ -3633,7 +3618,13 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       } else (this.renderRoot.querySelector<HTMLElement>('[data-source-key]') ?? this.renderRoot.querySelector<HTMLElement>('[part="source-navigator"]'))?.focus();
     }
     if (this.sourceMode && this.focusNodeId && this.focusNodeId !== this.lastAppliedFocusNodeId && (!this.loading || this.view !== '2d')) {
-      this.lastAppliedFocusNodeId = this.focusNodeId; void this.focusNode(this.focusNodeId);
+      this.scheduleAfterUpdate(() => {
+        const id = this.focusNodeId;
+        if (this.sourceMode && id && id !== this.lastAppliedFocusNodeId && (!this.loading || this.view !== '2d')) {
+          this.lastAppliedFocusNodeId = id;
+          void this.focusNode(id);
+        }
+      }, 'graph-source-focus');
     }
     if (!this.isConnected) {
       for (const [key, previous] of changed)
@@ -4035,9 +4026,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // method.
     for (const n of this.simNodes) {
       if (n.x != null && n.y != null) {
-        const position = this.lastPositionById.get(n.id);
-        if (position) { position.x = n.x; position.y = n.y; }
-        else this.lastPositionById.set(n.id, { x: n.x, y: n.y });
+        const position = this.lastPositionById.get(n.id) ?? { x: n.x, y: n.y };
+        position.x = n.x;
+        position.y = n.y;
+        this.lastPositionById.set(n.id, position);
       }
     }
     if (this.renderer === 'canvas') {
@@ -4581,20 +4573,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private linkAccessibleText(link: SimLink): string {
     const accessibleLabel = ownGraphText(link, 'accessibleLabel');
     if (accessibleLabel) return accessibleLabel;
-    const sourceValue = ownGraphValue(link, 'source');
-    const targetValue = ownGraphValue(link, 'target');
-    const source =
-      sourceValue !== null && typeof sourceValue === 'object'
-        ? this.nodeAccessibleText(sourceValue as SimNode)
-        : typeof sourceValue === 'string'
-        ? sourceValue
-        : '';
-    const target =
-      targetValue !== null && typeof targetValue === 'object'
-        ? this.nodeAccessibleText(targetValue as SimNode)
-        : typeof targetValue === 'string'
-        ? targetValue
-        : '';
+    // Rendered links always carry projected endpoints: a resolved node, or the string/number id
+    // of an endpoint that the simulation has not resolved yet.
+    const endpointText = (endpoint: SimLink['source']): string =>
+      typeof endpoint === 'object'
+        ? this.nodeAccessibleText(endpoint)
+        : String(endpoint);
+    const source = endpointText(link.source);
+    const target = endpointText(link.target);
     return (
       ownGraphText(link, 'label') ||
       this.localize('graphLink', undefined, { source, target })

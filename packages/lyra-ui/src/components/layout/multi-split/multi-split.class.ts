@@ -647,8 +647,6 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     PanelOwnershipSnapshot
   >();
   private panelOwnershipObserver?: MutationObserver;
-  private panelOwnershipObserverDocument?: Document;
-  private panelOwnershipObserverGeneration = 0;
   private constraintIssueKey = '';
   private constraintConfigVersion = 0;
   private renderConstraintBounds: Array<{ min: number; max: number }> = [];
@@ -1168,8 +1166,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  enabled divider is never attempted twice by the shared repair. */
   private collapseFocusFallbacks(collapsing: HTMLElement): HTMLElement[] {
     const dividers = [
-      ...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="divider"]') ??
-        []),
+      ...this.renderRoot.querySelectorAll<HTMLElement>('[part="divider"]'),
     ];
     return [
       ...new Set([
@@ -1618,10 +1615,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private resetPanelOwnershipObserver(): void {
-    this.panelOwnershipObserverGeneration += 1;
     this.panelOwnershipObserver?.disconnect();
     this.panelOwnershipObserver = undefined;
-    this.panelOwnershipObserverDocument = undefined;
   }
 
   private observeOwnedPanels(): void {
@@ -1636,16 +1631,9 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     ) {
       return;
     }
-    const generation = this.panelOwnershipObserverGeneration;
     const observer = new MutationObserverConstructor((records) => {
-      if (
-        this.panelOwnershipObserver !== observer ||
-        this.panelOwnershipObserverDocument !== this.ownerDocument ||
-        this.panelOwnershipObserverGeneration !== generation ||
-        !this.isConnected
-      ) {
-        return;
-      }
+      // No staleness guard: every path that retires this observer (disconnect, adoption, a rebuild)
+      // calls disconnect(), which discards queued records, so it never reports after retirement.
       const changed = records.some((record) => {
         const panel = record.target as HTMLElement;
         const snapshot = this.panelOwnership.get(panel);
@@ -1654,7 +1642,6 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       if (changed) this.requestUpdate();
     });
     this.panelOwnershipObserver = observer;
-    this.panelOwnershipObserverDocument = ownerDocument;
     for (const panel of this.ownedPanels) {
       observer.observe(panel, {
         attributes: true,

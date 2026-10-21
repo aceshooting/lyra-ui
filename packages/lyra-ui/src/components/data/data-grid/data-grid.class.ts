@@ -273,13 +273,13 @@ function isSafeColumnPropertyValue(
       );
     case 'footer':
       return typeof value === 'string' || typeof value === 'function';
-    case 'aggregation':
+    default:
+      // Every other column property is a callback (handled above) or one of the cases before this
+      // one, so only `aggregation` can arrive here.
       return (
         typeof value === 'function' ||
         (typeof value === 'string' && DATA_GRID_AGGREGATIONS.has(value))
       );
-    default:
-      return false;
   }
 }
 
@@ -1959,28 +1959,16 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       });
       return indexes;
     };
-    return rows === this.allSourceRows
-      ? this.memoize('sourceIndex', [rows], build)
-      : build();
+    return this.memoize('sourceIndex', [rows], build);
   }
 
   private sourceIndexFor(
     row: Row,
     indexes: ReadonlyMap<Row, number>
   ): number | undefined {
-    const direct = indexes.get(row);
-    if (direct !== undefined) return direct;
-    const identity = this.rowIdentity(row);
-    if (identity === undefined) return undefined;
-    const identities = this.memoize('sourceIdentityPositions', [indexes, this.rowKey], () => {
-      const result = new Map<DataGridKey, number>();
-      for (const [candidate, index] of indexes) {
-        const key = this.rowIdentity(candidate);
-        if (key !== undefined && !result.has(key)) result.set(key, index);
-      }
-      return result;
-    });
-    return identities.get(identity);
+    // Every row reaching here is a member of the current source projection (page rows come from
+    // its canonical roots, children from `canonicalMembers()`), so reference lookup is complete.
+    return indexes.get(row);
   }
 
   private canonicalRowIndex(rows: readonly Row[] = this.allSourceRows): ReadonlyMap<DataGridKey, Row> {
@@ -1993,9 +1981,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       }
       return byIdentity;
     };
-    return rows === this.allSourceRows
-      ? this.memoize('canonicalIndex', [rows], build)
-      : build();
+    return this.memoize('canonicalIndex', [rows], build);
   }
 
   private canonicalMembers(
@@ -3937,10 +3923,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const scaleY = bodyRect.height / layoutHeight;
     if (!Number.isFinite(scaleY) || scaleY <= 0) return 0;
     const style = body.ownerDocument.defaultView?.getComputedStyle(body);
-    const computedBorderTop = Number.parseFloat(style?.borderTopWidth ?? '');
-    const borderTop = Number.isFinite(computedBorderTop) && computedBorderTop >= 0
-      ? computedBorderTop
-      : body.clientTop;
+    // A computed border width is always a non-negative length; an unreadable one yields NaN, which
+    // makes the visual error NaN and the correction 0 below.
+    const borderTop = Number.parseFloat(style?.borderTopWidth ?? '');
     const visualError = target.getBoundingClientRect().top -
       (bodyRect.top + borderTop * scaleY);
     return Math.abs(visualError) > 1 ? visualError / scaleY : 0;
@@ -5001,13 +4986,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       return true;
     }
     if (direction > 0 || !this.childRows || item.depth === 0) return false;
-    for (let index = rowPosition - 1; index >= 0; index--) {
-      if ((items[index]?.depth ?? 0) < item.depth) {
-        this.focusCell(index, 0);
-        return true;
-      }
-    }
-    return false;
+    // Display construction emits every nested row after its parent, so the walk always finds one;
+    // the first row is a root, which bounds it.
+    let parent = rowPosition - 1;
+    while (parent > 0 && (items[parent]?.depth ?? 0) >= item.depth) parent -= 1;
+    this.focusCell(parent, 0);
+    return true;
   }
 
   private onGridKeyDown(

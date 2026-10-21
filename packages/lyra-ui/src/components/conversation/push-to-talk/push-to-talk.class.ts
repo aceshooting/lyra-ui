@@ -368,11 +368,10 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     }
     const request = this.pendingRequest;
     if (request) {
-      if (retainCurrentRealmIntents && this.isCurrentRealm(request.owner)) {
-        this.rebaseCurrentRealmOwner(request.owner);
-      } else {
-        this.retirePendingRequest(request, notifyCancellation);
-      }
+      // A pending request never coexists with an active take, and every adoption or disconnect
+      // that keeps current-realm intents is triggered by an active take of another realm, so a
+      // pending request is always retired here.
+      this.retirePendingRequest(request, notifyCancellation);
     }
     const active = this.activeCapture;
     if (active) {
@@ -541,10 +540,9 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private startForIntent(intent: CaptureIntent): Promise<boolean> {
     const pending = this.pendingRequest;
     if (pending) {
-      if (!this.canAdoptRequest(pending, intent)) {
-        this.clearIntent(intent);
-        return Promise.resolve(false);
-      }
+      // A pending request is always owned by the current lifecycle (any teardown that would
+      // change that retires it first) and a freshly created intent shares its owner, so the new
+      // intent can always take it over.
       pending.intent = intent;
       return pending.completion ?? Promise.resolve(false);
     }

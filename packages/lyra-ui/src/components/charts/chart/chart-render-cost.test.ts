@@ -40,12 +40,13 @@ function countDescriptorReads(body: () => void): number {
   return count;
 }
 
-function countUpdates(runtime: RuntimeProbe): { readonly count: number } {
-  const counter = { count: 0 };
+function countUpdates(runtime: RuntimeProbe): { readonly count: number; readonly modes: readonly (string | undefined)[] } {
+  const counter = { count: 0, modes: [] as (string | undefined)[] };
   const probe = runtime as unknown as { update(mode?: string): void };
   const original = probe.update.bind(probe);
   probe.update = (mode?: string) => {
     counter.count += 1;
+    counter.modes.push(mode);
     original(mode);
   };
   return counter;
@@ -212,17 +213,29 @@ describe('canvas color resolution', () => {
     </div>`);
     const chart = host.querySelector<LyraChart>('lr-line-chart')!;
     await waitUntil(() => peer(chart) !== undefined, 'chart did not initialize', { timeout: 5000 });
-    await aTimeout(0);
+    // Peer creation precedes responsive ResizeObserver delivery. Both the component sampling
+    // width and the native chart resize enqueue frame work; start the theme-only measurement
+    // after an actual allocation notification and its following rendering turn.
+    await new Promise<void>(resolve => {
+      const observer = new ResizeObserver(() => {
+        observer.disconnect();
+        requestAnimationFrame(() => resolve());
+      });
+      observer.observe(chart);
+    });
+    await chart.updateComplete;
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    await chart.updateComplete;
     const updates = countUpdates(peer(chart)!);
 
     host.style.setProperty('--unrelated-layout-size', '42px');
     host.classList.add('unrelated-layout');
     await aTimeout(0);
-    expect(updates.count).to.equal(0);
+    expect(updates.count, `unrelated mutation update modes: ${JSON.stringify(updates.modes)}`).to.equal(0);
 
     host.classList.add('retinted');
     await aTimeout(0);
-    expect(updates.count).to.equal(1);
+    expect(updates.count, `theme mutation update modes: ${JSON.stringify(updates.modes)}`).to.equal(1);
     const tooltip = (peer(chart) as unknown as {
       options: { plugins: { tooltip: { backgroundColor: string } } };
     }).options.plugins.tooltip;

@@ -45,6 +45,7 @@ import { showChartActiveDatum } from './chart-active-datum.js';
 import { devWarnOnce } from '../../../internal/dev-warning.js';
 import {
   getOwnDataDescriptor,
+  readOwnDataValue,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
@@ -766,104 +767,100 @@ const CHART_SERIES_PROPERTIES = [
  * copied through an own data descriptor before later rendering code sees it.
  * @internal */
 export function projectChartSeries(value: unknown): LyraChartSeries | undefined {
-  try {
-    if (typeof value === 'object' && value !== null && canonicalChartSeriesSnapshots.has(value)) return value as LyraChartSeries;
-    if (!isChartRecord(value)) return undefined;
-    const descriptors = new Map<
-      (typeof CHART_SERIES_PROPERTIES)[number],
-      ReturnType<typeof getOwnDataDescriptor>
-    >();
-    for (const property of CHART_SERIES_PROPERTIES) {
-      const descriptor = chartRecordValue(value, property);
-      if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
-      descriptors.set(property, descriptor);
-    }
-    const valueAt = (
-      property: (typeof CHART_SERIES_PROPERTIES)[number]
-    ): unknown | undefined => {
-      const descriptor = descriptors.get(property);
-      return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
-        descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
-        descriptor === undefined
-        ? undefined
-        : descriptor.value;
-    };
-    const label = valueAt('label');
-    if (label !== undefined && typeof label !== 'string') return undefined;
-    const output: {
-      label: string;
-      data?: readonly (number | null)[];
-      points?: readonly LyraChartPoint[];
-      color?: string | readonly string[];
-      fill?: boolean;
-      width?: number;
-      dash?: boolean;
-      noTooltip?: boolean;
-      axis?: 'y' | 'y2';
-      stack?: string;
-      pointColors?: readonly string[];
-      pointRadius?: number | readonly number[];
-      segmentColors?: readonly string[];
-      type?: 'line' | 'bar';
-    } = { label: label ?? '' };
-    const rawData = valueAt('data');
-    const rawDataAdmission = admitChartArray(rawData);
-    const data = projectChartNumberData(rawData, rawDataAdmission);
-    const rawPoints = valueAt('points');
-    const rawPointsAdmission = admitChartArray(rawPoints);
-    const points = projectChartPoints(rawPoints, rawPointsAdmission);
-    const color = valueAt('color');
-    const fill = valueAt('fill');
-    const width = valueAt('width');
-    const dash = valueAt('dash');
-    const noTooltip = valueAt('noTooltip');
-    const axis = valueAt('axis');
-    const stack = valueAt('stack');
-    const pointColors = projectChartStrings(valueAt('pointColors'));
-    const pointRadius = valueAt('pointRadius');
-    const segmentColors = projectChartStrings(valueAt('segmentColors'));
-    const type = valueAt('type');
-    // `data` and `points` are public caller-owned snapshots. Their canonical copies below are
-    // the only values the component reads after admission; the public fields retain identity for
-    // append and inspection workflows.
-    if (data && rawDataAdmission)
-      output.data = rawDataAdmission.source as unknown as readonly (number | null)[];
-    // `points` is a documented caller-owned identity used by append workflows. Keep it visible
-    // unchanged, while the non-enumerable canonical copy below is the only shape rendering reads.
-    if (points && rawPointsAdmission)
-      output.points = rawPointsAdmission.source as unknown as readonly LyraChartPoint[];
-    if (typeof color === 'string') output.color = color;
-    else {
-      const colors = projectChartStrings(color);
-      if (colors) output.color = colors;
-    }
-    if (typeof fill === 'boolean') output.fill = fill;
-    if (typeof width === 'number' && Number.isFinite(width))
-      output.width = width;
-    if (typeof dash === 'boolean') output.dash = dash;
-    if (typeof noTooltip === 'boolean') output.noTooltip = noTooltip;
-    if (axis === 'y' || axis === 'y2') output.axis = axis;
-    if (typeof stack === 'string') output.stack = stack;
-    if (pointColors) output.pointColors = pointColors;
-    if (typeof pointRadius === 'number' && Number.isFinite(pointRadius)) {
-      output.pointRadius = pointRadius;
-    } else {
-      const radii = projectChartPointRadii(pointRadius);
-      if (radii) output.pointRadius = radii;
-    }
-    if (segmentColors) output.segmentColors = segmentColors;
-    if (type === 'line' || type === 'bar') output.type = type;
-    const series = Object.freeze(output) as LyraChartSeries;
-    retainChartInputLimit(rawData, series);
-    retainChartInputLimit(rawPoints, series);
-    canonicalChartSeriesSnapshots.set(series, {
-      data: data ?? Object.freeze([]),
-      ...(points ? { points } : {}),
-    });
-    return series;
-  } catch {
-    return undefined;
+  if (typeof value === 'object' && value !== null && canonicalChartSeriesSnapshots.has(value)) return value as LyraChartSeries;
+  if (!isChartRecord(value)) return undefined;
+  const descriptors = new Map<
+    (typeof CHART_SERIES_PROPERTIES)[number],
+    ReturnType<typeof getOwnDataDescriptor>
+  >();
+  for (const property of CHART_SERIES_PROPERTIES) {
+    const descriptor = chartRecordValue(value, property);
+    if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
+    descriptors.set(property, descriptor);
   }
+  const valueAt = (
+    property: (typeof CHART_SERIES_PROPERTIES)[number]
+  ): unknown | undefined => {
+    const descriptor = descriptors.get(property);
+    return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
+      descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
+      descriptor === undefined
+      ? undefined
+      : descriptor.value;
+  };
+  const label = valueAt('label');
+  if (label !== undefined && typeof label !== 'string') return undefined;
+  const output: {
+    label: string;
+    data?: readonly (number | null)[];
+    points?: readonly LyraChartPoint[];
+    color?: string | readonly string[];
+    fill?: boolean;
+    width?: number;
+    dash?: boolean;
+    noTooltip?: boolean;
+    axis?: 'y' | 'y2';
+    stack?: string;
+    pointColors?: readonly string[];
+    pointRadius?: number | readonly number[];
+    segmentColors?: readonly string[];
+    type?: 'line' | 'bar';
+  } = { label: label ?? '' };
+  const rawData = valueAt('data');
+  const rawDataAdmission = admitChartArray(rawData);
+  const data = projectChartNumberData(rawData, rawDataAdmission);
+  const rawPoints = valueAt('points');
+  const rawPointsAdmission = admitChartArray(rawPoints);
+  const points = projectChartPoints(rawPoints, rawPointsAdmission);
+  const color = valueAt('color');
+  const fill = valueAt('fill');
+  const width = valueAt('width');
+  const dash = valueAt('dash');
+  const noTooltip = valueAt('noTooltip');
+  const axis = valueAt('axis');
+  const stack = valueAt('stack');
+  const pointColors = projectChartStrings(valueAt('pointColors'));
+  const pointRadius = valueAt('pointRadius');
+  const segmentColors = projectChartStrings(valueAt('segmentColors'));
+  const type = valueAt('type');
+  // `data` and `points` are public caller-owned snapshots. Their canonical copies below are
+  // the only values the component reads after admission; the public fields retain identity for
+  // append and inspection workflows.
+  if (data && rawDataAdmission)
+    output.data = rawDataAdmission.source as unknown as readonly (number | null)[];
+  // `points` is a documented caller-owned identity used by append workflows. Keep it visible
+  // unchanged, while the non-enumerable canonical copy below is the only shape rendering reads.
+  if (points && rawPointsAdmission)
+    output.points = rawPointsAdmission.source as unknown as readonly LyraChartPoint[];
+  if (typeof color === 'string') output.color = color;
+  else {
+    const colors = projectChartStrings(color);
+    if (colors) output.color = colors;
+  }
+  if (typeof fill === 'boolean') output.fill = fill;
+  if (typeof width === 'number' && Number.isFinite(width))
+    output.width = width;
+  if (typeof dash === 'boolean') output.dash = dash;
+  if (typeof noTooltip === 'boolean') output.noTooltip = noTooltip;
+  if (axis === 'y' || axis === 'y2') output.axis = axis;
+  if (typeof stack === 'string') output.stack = stack;
+  if (pointColors) output.pointColors = pointColors;
+  if (typeof pointRadius === 'number' && Number.isFinite(pointRadius)) {
+    output.pointRadius = pointRadius;
+  } else {
+    const radii = projectChartPointRadii(pointRadius);
+    if (radii) output.pointRadius = radii;
+  }
+  if (segmentColors) output.segmentColors = segmentColors;
+  if (type === 'line' || type === 'bar') output.type = type;
+  const series = Object.freeze(output) as LyraChartSeries;
+  retainChartInputLimit(rawData, series);
+  retainChartInputLimit(rawPoints, series);
+  canonicalChartSeriesSnapshots.set(series, {
+    data: data ?? Object.freeze([]),
+    ...(points ? { points } : {}),
+  });
+  return series;
 }
 
 /** Replaces numeric data on an already admitted series without rereading retained values. */
@@ -997,11 +994,6 @@ function projectChartDatasetConfiguration(
     const array = admitChartArray(candidate);
     if (key === 'data') {
       if (array) {
-        if (!chartArrayIsStillAdmitted(array)) {
-          output[key] = Object.freeze([]);
-          canonicalValues = Object.freeze([]);
-          continue;
-        }
         const copied = copyChartArrayEntries(array);
         output[key] = copied;
         const canonical =
@@ -1340,12 +1332,7 @@ function labelText(value: unknown, depth = 0): string {
   if (depth < MAX_CHART_CONFIGURATION_DEPTH && admission) {
     const values: string[] = [];
     for (let index = 0; index < admission.length; index += 1) {
-      const descriptor = chartRecordValue(admission.source, String(index));
-      values.push(
-        descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
-          ? ''
-          : labelText(descriptor.value, depth + 1),
-      );
+      values.push(labelText(readOwnDataValue(admission.source, String(index)), depth + 1));
     }
     return values.join(' ');
   }
@@ -1381,9 +1368,11 @@ function chartDatasetValues(dataset: unknown): readonly unknown[] {
 /** The peer payload stays opaque, but append cloning needs its admitted source identity. */
 function chartDatasetPeerValues(dataset: unknown): readonly unknown[] {
   const data = chartDatasetValue(dataset, 'data');
-  if (typeof data === 'object' && data !== null && canonicalChartDatasetDataValues.has(data)) return data as readonly unknown[];
-  const admission = admitChartArray(data);
-  return admission ? copyChartArrayEntries(admission) : Object.freeze([]);
+  // Every explicit configuration dataset was projected by `projectChartDatasetConfiguration()`,
+  // which records this provenance for each admitted data array and drops any other `data` value.
+  return typeof data === 'object' && data !== null && canonicalChartDatasetDataValues.has(data)
+    ? data as readonly unknown[]
+    : Object.freeze([]);
 }
 
 function chartIndex(value: unknown): number | undefined {
@@ -4849,9 +4838,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     index?: number,
     effective = this.effectiveData(),
   ): LyraChartFormatterMetadata {
-    const dataset = effective.datasets[datasetIndex];
+    // Every caller resolved `datasetIndex` through `callbackDatasetIndex()`/`callbackIndexes()` or
+    // from this same `effective` snapshot's own dataset list, so the dataset always exists.
+    const dataset = effective.datasets[datasetIndex]!;
     const point =
-      index === undefined || dataset === undefined
+      index === undefined
         ? null
         : normalizedChartPoint(this.datasetValues(dataset)[index]);
     const label =
@@ -4863,9 +4854,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       datasetIndex,
       ...(index === undefined ? {} : { index }),
       ...(label === undefined ? {} : { label }),
-      ...(dataset === undefined
-        ? {}
-        : { seriesLabel: this.datasetLabel(dataset, datasetIndex) }),
+      seriesLabel: this.datasetLabel(dataset, datasetIndex),
       ...(axis === undefined ? {} : { axis }),
     };
   }
@@ -4939,14 +4928,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }));
     return labels.map((item) => {
       const value = this.legendValue(item, chart, effective);
-      const visualDatasetIndex = this.callbackDatasetIndex(item, effective);
+      // A value exists only for an item whose dataset resolves, and `formatValue()` leaves an
+      // absent value untouched, so such an item is returned as generated.
+      if (value === undefined) return item;
+      const visualDatasetIndex = this.callbackDatasetIndex(item, effective)!;
       const visualRowIndex = chartIndex(chartDatasetValue(item, 'index'));
       const formatted = this.formatValue(
         value,
         'legend',
-        visualDatasetIndex === undefined
-          ? {}
-          : this.datumFormatterMetadata(visualDatasetIndex, visualRowIndex, effective),
+        this.datumFormatterMetadata(visualDatasetIndex, visualRowIndex, effective),
       );
       return formatted === value || formatted === undefined
         ? item
@@ -6179,17 +6169,16 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       const formatted = this.formatValue(value, 'legend', enriched);
       const percentageText =
         getNumberFormat(this.effectiveLocale, { style: 'percent', maximumFractionDigits: 1 }).format(percentage);
-      return formatted === undefined
-        ? label
-        : {
-            format: (values) => this.localize('chartValuePercentageLabel', undefined, values),
-            values: {
-              label,
-              value: typeof formatted === 'number' ? this.formatSummaryValue(formatted) : String(formatted),
-              percentage: percentageText,
-            },
-            isolated: ['label', 'value', 'percentage'],
-          };
+      // `value` is defined here and `formatValue()` falls back to it, so `formatted` is never undefined.
+      return {
+        format: (values) => this.localize('chartValuePercentageLabel', undefined, values),
+        values: {
+          label,
+          value: typeof formatted === 'number' ? this.formatSummaryValue(formatted) : String(formatted),
+          percentage: percentageText,
+        },
+        isolated: ['label', 'value', 'percentage'],
+      };
     }
     const explicit = this.legendDisplay === 'value' || this.legendDisplay === 'percentage';
     const formatted = this.legendDisplay === 'percentage'
@@ -6238,10 +6227,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const array = admitChartArray(rawCandidate);
     const first = array?.length
       ? chartRecordValue(array.source, String((datumIndex ?? 0) % array.length)) : undefined;
+    // A missing/unsafe entry leaves `rawCandidate`, which is the array itself and so never a string.
     const candidate =
-      first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR
-        ? undefined
-        : first?.value ?? rawCandidate;
+      typeof first === 'object' ? first.value ?? rawCandidate : rawCandidate;
     if (typeof candidate !== 'string') return fallback;
     let cached = colorCache.get(candidate);
     if (!cached) {

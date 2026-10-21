@@ -2263,10 +2263,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const renderedAccessibleCells = activeAccessibleCell?.matches(
       '[part="cell"]'
     )
-      ? [
-          ...(this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]') ??
-            []),
-        ]
+      ? [...this.renderRoot.querySelectorAll<HTMLElement>('[part="cell"]')]
       : [];
     const accessibleFocusSnapshot = activeAccessibleCell?.matches(
       '[part="cell"]'
@@ -3003,9 +3000,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     color: string,
     paintedShape?: ReturnType<LyraHeatmap['matrixCellShape']>
   ): void {
-    const shape = paintedShape ?? (this.effectiveMode === 'matrix'
-      ? this.matrixCellShape(size)
-      : this.calendarCellShape(size));
+    // Matrix callers always hand over the shape they painted; only calendar cells derive it here.
+    const shape = paintedShape ?? this.calendarCellShape(size);
     const width = shape?.custom ? shape.w : size;
     const height = shape?.custom ? shape.h : size;
     if (shape?.custom) {

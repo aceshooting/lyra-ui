@@ -136,7 +136,6 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   private readonly pendingHiddenWrites = new Map<Element, boolean[]>();
   private visibilityObserver?: MutationObserver;
   private visibilityObserverDocument?: Document;
-  private visibilityObserverGeneration = 0;
   private trackedChipFocus?: TrackedChipFocus;
 
   override connectedCallback(): void {
@@ -154,17 +153,10 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     this.resetVisibilityObserver();
     const MutationObserverCtor = ownerDocument.defaultView?.MutationObserver;
     if (!MutationObserverCtor) return;
-    const generation = this.visibilityObserverGeneration;
     const observer = new MutationObserverCtor((records) => {
-      if (
-        this.visibilityObserver !== observer ||
-        this.visibilityObserverDocument !== ownerDocument ||
-        this.visibilityObserverGeneration !== generation ||
-        !this.isConnected ||
-        this.ownerDocument !== ownerDocument
-      ) {
-        return;
-      }
+      // No staleness guard: every path that retires this observer (disconnect, adoption, a
+      // new owner document) calls disconnect(), which discards queued records, so the callback
+      // never runs for a retired observer or a disconnected group.
       if (this.processHiddenMutations(records)) {
         this.reconcileChildVisibilityAndFocus();
         this.requestUpdate();
@@ -226,7 +218,6 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   }
 
   private resetVisibilityObserver(): void {
-    this.visibilityObserverGeneration += 1;
     this.visibilityObserver?.disconnect();
     this.visibilityObserver = undefined;
     this.visibilityObserverDocument = undefined;

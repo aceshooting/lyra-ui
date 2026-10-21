@@ -1,7 +1,8 @@
 # Test health: coverage, speed and flakiness
 
-Status (2026-10-20): in progress; speed and coverage work is built but not yet merged. Baseline from the last green main commit before 30.0.0 work
-(Codecov and GitHub Actions data).
+Status (2026-10-21): shard balancing and polling improvements are merged. Coverage qualification
+and the CI wall-clock target remain in progress. Baseline from the last green main commit before
+30.0.0 work (Codecov and GitHub Actions data).
 
 ## Baseline
 
@@ -20,9 +21,10 @@ Status (2026-10-20): in progress; speed and coverage work is built but not yet m
 
 ### Coverage (target: at least 99.80% of lines)
 
-- [ ] Restore at least 99.72% after the 30.0.0 collections and map camera work (failed shard,
-  uncovered new code). The failing shard came from two regressions of the collection rule:
-  `lr-av-player` and `lr-notebook-viewer` (both fixed on main; complete coverage confirmation pending).
+- [ ] Restore at least 99.72% after the collections and map camera work. The collection fixes for
+  `lr-av-player` and `lr-notebook-viewer` are merged. An earlier complete run covered 504,411 of
+  505,828 lines (approximately 99.7199%), below 99.72%. Confirmation from a complete merged run
+  strictly above 99.74% remains pending.
 - [ ] Cover the most-missed modules with behavioural tests (no forged internals): `lr-map` (41
   lines), `lr-chart` (30), `lr-graph` (26), `internal/aria-controls` (23), `lr-data-grid` (21),
   `lr-push-to-talk` (16), `ssr` (16), `lr-flow-canvas` (15), `lr-message-actions` (13), menu, heatmap,
@@ -33,8 +35,9 @@ Status (2026-10-20): in progress; speed and coverage work is built but not yet m
 
 ### Speed (target: CI wall-clock under 15 minutes)
 
-- [ ] Rebalance coverage shards by measured duration (shard 4 is 2.4 minutes slower than shard 1),
-  or add a shard if the free-tier concurrency allows it.
+- [x] Refresh measured per-file costs and use median observations for browser shard balancing.
+- [x] Reduce default condition polling from 50 ms to 10 ms while preserving explicit caller
+  intervals and timeouts.
 - [ ] Speed up the slowest files without losing assertions: `lifecycle-contracts` (59 s),
   `virtual-list` (42 s), `navigation-menu` (40 s for 152 tests), `map` (34 s), `package-entrypoints`
   (one test takes 14 s), `chart`, `lite-chart`, `thread-list`, `glass-contrast`, `pdf-viewer`,

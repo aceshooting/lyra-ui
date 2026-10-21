@@ -527,11 +527,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
             if (reader.field(raw, 'groups') !== undefined || reader.field(raw, 'tags') !== undefined) throw new TypeError('Unexpected flow metadata');
             return { rows: flowSourceRows(reader.field(raw, 'rows'), request.pageSize, reader), total: sourceCount(reader.field(raw, 'total')), summary: flowSourceSummary(reader.field(raw, 'summary'), reader) };
           },
-          lookup: async (keys, context) => {
-            if (keys.length > 32) throw new RangeError('Flow lookup limit');
-            const reader = new SceneReader(checked(context.signal)); reader.check(); const lookup = records.lookup; reader.check();
-            const raw = await Reflect.apply(lookup, records, [keys, context]); reader.check(); return flowSourceRows(raw, keys.length, reader);
-          },
+          // The flow canvas never selects records by key (selection lives in `selectedNodeIds`), so
+          // the page controller has no use for a lookup; reject it instead of reaching the source.
+          lookup: () => Promise.reject(new TypeError('Flow records are not looked up by key')),
           locate: async (key, query, context) => {
             const reader = new SceneReader(checked(context.signal)); reader.check(); const locate = records.locate; reader.check();
             const index = await Reflect.apply(locate, records, [key, query, context]); reader.check(); return index;
@@ -2046,7 +2044,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    */
   private isFromTopLayerSurface(e: Event, boundary: EventTarget | null | undefined): boolean {
     for (const entry of e.composedPath()) {
-      if (entry === boundary) return false;
+      if (entry === boundary) break;
       if (
         entry instanceof Element &&
         (entry.hasAttribute('data-lr-top-layer') || isNativeTopLayerElement(entry))
@@ -2467,7 +2465,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   /** Whether `event` started on an actionable element inside `boundary`, slotted content included. */
   private startedOnAction(event: Event, boundary: EventTarget | null): boolean {
     for (const entry of event.composedPath()) {
-      if (entry === boundary) return false;
+      if (entry === boundary) break;
       if ((entry as Node).nodeType === 1 && isActionableElement(entry as Element)) return true;
     }
     return false;

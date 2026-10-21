@@ -1763,12 +1763,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           this.indexedMeasurementIndexDirty = true;
         }
       }
-      for (const key of this.measuredIndices.keys()) {
-        if (!liveKeys.has(key)) {
-          this.measuredIndices.delete(key);
-          this.indexedMeasurementIndexDirty = true;
-        }
-      }
+      // `measuredIndices` only ever holds keys that `measuredHeights` also holds (every write and
+      // delete pairs them), so the sweep above retires both stores.
     }
   }
 

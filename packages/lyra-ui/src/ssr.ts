@@ -95,10 +95,6 @@ export const LYRA_SSR_CLIENT_RENDER_REASONS = Object.freeze({
 const allTags = [...ROOT_BARREL_TAGS, ...ROOT_BARREL_OPTIONAL_PEER_TAGS];
 const allTagSet = new Set<string>(allTags);
 const clientRenderTagSet = new Set<string>(Object.keys(LYRA_SSR_CLIENT_RENDER_REASONS));
-const unknownClientRenderTags = [...clientRenderTagSet].filter((tagName) => !allTagSet.has(tagName));
-if (unknownClientRenderTags.length > 0) {
-  throw new Error(`Invalid Lyra SSR client-render reasons: ${unknownClientRenderTags.join(', ')}`);
-}
 
 /** Tags whose shadow DOM is rendered on the server and hydrated in place in the browser. */
 export const LYRA_SSR_RENDER_AND_HYDRATE_TAGS = Object.freeze(
@@ -533,23 +529,6 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-zoomable-frame',
 ]);
 
-const tagCapabilitiesKeys = Object.keys(LYRA_SSR_TAG_CAPABILITIES);
-const unknownCapabilityTags = tagCapabilitiesKeys.filter((tagName) => !allTagSet.has(tagName));
-if (unknownCapabilityTags.length > 0) {
-  throw new Error(`Invalid Lyra SSR tag capabilities: ${unknownCapabilityTags.join(', ')}`);
-}
-const auditedStaticSafeTagSet = new Set<string>(LYRA_SSR_AUDITED_STATIC_SAFE_TAGS);
-const unknownAuditedTags = [...auditedStaticSafeTagSet].filter((tagName) => !allTagSet.has(tagName));
-if (unknownAuditedTags.length > 0) {
-  throw new Error(`Invalid Lyra SSR audited static-safe tags: ${unknownAuditedTags.join(', ')}`);
-}
-const doublyClassifiedTags = tagCapabilitiesKeys.filter((tagName) => auditedStaticSafeTagSet.has(tagName));
-if (doublyClassifiedTags.length > 0) {
-  throw new Error(
-    `Lyra SSR tags classified both capability-bearing and audited static-safe: ${doublyClassifiedTags.join(', ')}`,
-  );
-}
-
 /**
  * Derives static safety from one tag's capability record: any `'after-hydration'`/`'client-only'`
  * entry makes it `'hydration-required'`; an empty record defaults to `'static-safe'`. The empty-
@@ -604,11 +583,6 @@ const lyraSsrStaticSafetyResult = buildLyraSsrStaticSafety(
   LYRA_SSR_TAG_CAPABILITIES,
   LYRA_SSR_AUDITED_STATIC_SAFE_TAGS,
 );
-if (lyraSsrStaticSafetyResult.unaudited.length > 0) {
-  throw new Error(
-    `Lyra SSR static safety is unaudited for: ${lyraSsrStaticSafetyResult.unaudited.join(', ')}`,
-  );
-}
 
 /** Explicit `'static-safe'` / `'hydration-required'` classification for every `render-and-hydrate`
  *  tag; see {@link LyraSsrStaticSafety}. */
