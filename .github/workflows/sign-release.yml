@@ -77,8 +77,9 @@ jobs:
           cd "$RUNNER_TEMP/verified-additional-release"
           test -f SHA256SUMS && test ! -L SHA256SUMS
           test "$(sha256sum SHA256SUMS | cut -d ' ' -f1)" = "$EXPECTED_MANIFEST_SHA256"
+          mapfile -t manifest_lines < SHA256SUMS
           count=0
-          while IFS= read -r line; do
+          for line in "${manifest_lines[@]}"; do
             if [[ ! "$line" =~ ^[a-f0-9]{64}'  '[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
               echo '::error::Invalid standalone asset manifest entry.'
               exit 1
@@ -86,13 +87,13 @@ jobs:
             file="${line:66}"
             test "$file" != SHA256SUMS && test -f "$file" && test ! -L "$file"
             count=$((count + 1))
-          done < SHA256SUMS
+          done
           test "$count" -ge 2
           test "$(find . -mindepth 1 -maxdepth 1 | wc -l)" -eq "$((count + 1))"
           sha256sum --check --strict SHA256SUMS
           {
             echo 'paths<<RELEASE_ASSETS'
-            while IFS= read -r line; do printf '%s/%s\n' "$PWD" "${line:66}"; done < SHA256SUMS
+            for line in "${manifest_lines[@]}"; do printf '%s/%s\n' "$PWD" "${line:66}"; done
             echo 'RELEASE_ASSETS'
           } >> "$GITHUB_OUTPUT"
 
