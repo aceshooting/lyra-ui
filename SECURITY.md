@@ -45,12 +45,14 @@ Please include:
 ## Scope
 
 Lyra UI is a client-side web component library (Lit-based custom elements) with no server-side
-runtime, database, or authentication layer of its own. In-scope concerns include:
+runtime, database, or authentication layer of its own. See [Security requirements and
+assurance](docs/security-assurance.md) for the controls and their boundaries. In-scope concerns include:
 
 - Cross-site scripting (XSS) via component rendering, slots, or property/attribute binding
   (e.g. unsafe `innerHTML`/`unsafeHTML` usage, insufficient sanitization of user-supplied content)
-- Server-side request forgery (SSRF) via a consumer-supplied `src`/URL fetched by a document
-  viewer or `<lr-map>` — e.g. a scheme/host that bypasses the library's `safeFetchUrl()` gate
+- Unsafe URL handling or remote-resource loading from a consumer-supplied `src`/URL — for
+  example, bypassing a component's scheme validation or documented response limits.
+  `safeFetchUrl()` checks schemes; it does not restrict destination hosts.
 - Prototype pollution or supply-chain issues in published npm artifacts
 - ReDoS or other resource-exhaustion bugs in bundled utilities (e.g. localization, validation)
 - Build/publish pipeline compromise (npm package tampering, dependency confusion)
