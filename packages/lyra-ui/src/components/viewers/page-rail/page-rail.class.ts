@@ -286,9 +286,9 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
           DEFAULT_ALLOCATION_WIDTH,
           0,
         );
-        if (width === this.allocationWidth) return;
+        const thumbnailWidth = this.safeThumbWidth;
         this.allocationWidth = width;
-        this.invalidateThumbnails();
+        if (this.safeThumbWidth !== thumbnailWidth) this.invalidateThumbnails();
       });
       this.resizeObserver.observe(this);
     }

@@ -406,6 +406,7 @@ describe('lr-qr-code', () => {
     el.value = 'hello';
     await waitForPart(el, 'canvas');
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    await waitUntil(() => canvas.width === 180 && canvas.style.width === '90px', 'the QR canvas did not paint');
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
     expect(parseInt(canvas.style.height, 10)).to.equal(90);
     expect(canvas.width).to.equal(180);
@@ -777,6 +778,7 @@ describe('lr-qr-code', () => {
       el.value = 'hello';
       await waitForPart(el, 'canvas');
       const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      await waitUntil(() => canvas.width === 256, 'the invalid-color QR canvas did not paint');
       const ctx = canvas.getContext('2d')!;
       const center = Math.round(canvas.width / 2);
       const pixel = ctx.getImageData(center, center, 1, 1).data;
@@ -810,6 +812,7 @@ describe('lr-qr-code', () => {
     try {
       el.value = 'production diagnostic';
       await waitForPart(el, 'canvas');
+      await waitUntil(() => el.canvas.width === 256, 'the production-diagnostic QR canvas did not paint');
       expect(calls).to.have.length(0);
     } finally {
       console.warn = originalWarn;

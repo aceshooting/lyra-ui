@@ -1136,7 +1136,7 @@ describe('lr-page-rail', () => {
   });
 
   it('falls back to the default allocation width when a ResizeObserver delivery has no entries, and no-ops when that matches the current width', async () => {
-    class FakeResizeObserver {
+    class FakeResizeObserver implements ResizeObserver {
       static instances: FakeResizeObserver[] = [];
       observedTargets: Element[] = [];
       constructor(public callback: ResizeObserverCallback) {
@@ -1655,17 +1655,45 @@ describe('thumbnail window ownership', () => {
   });
 
   it('keeps an unavailable thumbnail settled without retrying its fallback', async () => {
-    const viewer = new StubViewer();
-    viewer.renderResult = false;
-    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
-    viewer.emitLoad(1);
-    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    await waitUntil(() => Boolean(list.shadowRoot?.querySelector('lr-file-icon')));
-    const calls = viewer.renderCalls.length;
-    el.label = 'Pages';
-    await el.updateComplete;
-    await aTimeout(50); // wait-reason: allow an accidental fallback retry loop to schedule
-    expect(viewer.renderCalls.length).to.equal(calls);
-    expect(list.shadowRoot!.querySelectorAll('lr-file-icon').length).to.equal(1);
+    class FakeResizeObserver {
+      static instances: FakeResizeObserver[] = [];
+      observedTargets: Element[] = [];
+      constructor(public callback: ResizeObserverCallback) { FakeResizeObserver.instances.push(this); }
+      observe(target: Element): void { this.observedTargets.push(target); }
+      unobserve(): void {}
+      disconnect(): void {}
+      deliver(width: number): void {
+        const entry: ResizeObserverEntry = {
+          target: this.observedTargets[0]!, contentRect: new DOMRect(0, 0, width, 0),
+          borderBoxSize: [], contentBoxSize: [], devicePixelContentBoxSize: [],
+        };
+        this.callback([entry], this);
+      }
+    }
+    const original = window.ResizeObserver;
+    window.ResizeObserver = FakeResizeObserver;
+    try {
+      const viewer = new StubViewer();
+      viewer.renderResult = false;
+      const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+      viewer.emitLoad(1);
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      await waitUntil(() => Boolean(list.shadowRoot?.querySelector('lr-file-icon')));
+      expect(viewer.renderCalls).to.deep.equal([{ page: 1, width: 96 }]);
+      const observer = FakeResizeObserver.instances.find(instance => instance.observedTargets.includes(el));
+      expect(Boolean(observer)).to.equal(true);
+      observer!.deliver(200);
+      el.label = 'Pages';
+      await el.updateComplete;
+      await aTimeout(50); // wait-reason: allow an accidental fallback retry loop to schedule
+      expect(viewer.renderCalls).to.deep.equal([{ page: 1, width: 96 }]);
+      expect(list.shadowRoot!.querySelectorAll('lr-file-icon').length).to.equal(1);
+
+      observer!.deliver(64);
+      await waitUntil(() => viewer.renderCalls.some(call => call.width === 64));
+      expect(viewer.renderCalls).to.deep.equal([{ page: 1, width: 96 }, { page: 1, width: 64 }]);
+    } finally {
+      window.ResizeObserver = original;
+    }
   });
 });
