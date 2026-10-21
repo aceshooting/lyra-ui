@@ -36,6 +36,14 @@ export const LYRA_DEFAULT_documentPreviewTypeImage: LyraMessage = 'image';
 export const LYRA_DEFAULT_download: LyraMessage = 'Download';
 export const LYRA_DEFAULT_durationMilliseconds: LyraMessage = '{value}ms';
 export const LYRA_DEFAULT_durationSeconds: LyraMessage = '{value}s';
+export const LYRA_DEFAULT_engine3dContextLost: LyraMessage = 'The 3D view lost its graphics context.';
+export const LYRA_DEFAULT_engine3dError: LyraMessage = 'The 3D view stopped because of an error.';
+export const LYRA_DEFAULT_engine3dLoading: LyraMessage = 'Loading the 3D view…';
+export const LYRA_DEFAULT_engine3dShowingBuiltin: LyraMessage = 'Showing the standard view instead.';
+export const LYRA_DEFAULT_engine3dShowingList: LyraMessage = 'Showing a list instead.';
+export const LYRA_DEFAULT_engine3dSoftwareRendering: LyraMessage = '3D graphics run without hardware acceleration, so detail is reduced.';
+export const LYRA_DEFAULT_engine3dUnavailable: LyraMessage = 'The 3D engine could not be loaded.';
+export const LYRA_DEFAULT_engine3dUnsupported: LyraMessage = 'This browser cannot display 3D graphics.';
 export const LYRA_DEFAULT_envListValueHidden: LyraMessage = 'Value hidden';
 export const LYRA_DEFAULT_expand: LyraMessage = 'Expand';
 export const LYRA_DEFAULT_fieldRequired: LyraMessage = 'This field is required.';
@@ -76,6 +84,8 @@ export const LYRA_DEFAULT_items: LyraMessage = {
     other: 'items',
   };
 export const LYRA_DEFAULT_jumpToLatest: LyraMessage = 'Jump to latest';
+export const LYRA_DEFAULT_largeDataInvalid: LyraMessage = 'The data cannot be displayed because {column} is invalid.';
+export const LYRA_DEFAULT_largeDataLimit: LyraMessage = 'The data cannot be displayed because it exceeds the limit of {limit}.';
 export const LYRA_DEFAULT_legendTypeHidden: LyraMessage = '{label} hidden';
 export const LYRA_DEFAULT_legendTypeShown: LyraMessage = '{label} shown';
 export const LYRA_DEFAULT_loadMore: LyraMessage = 'Load more';

@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'ไม่สามารถโหลดรายการที่เลือกได้',
   catalogPickerInputLimit: 'ละรายการในแค็ตตาล็อกบางส่วนไว้เนื่องจากถึงขีดจำกัดข้อมูลนำเข้า',
   tagFacetLimit: '+{count} แท็กเพิ่มเติม',
+  engine3dLoading: 'กำลังโหลดมุมมอง 3D…',
+  engine3dUnavailable: 'ไม่สามารถโหลดเอนจิน 3D ได้',
+  engine3dUnsupported: 'เบราว์เซอร์นี้ไม่สามารถแสดงกราฟิก 3D ได้',
+  engine3dContextLost: 'มุมมอง 3D สูญเสียบริบทกราฟิก',
+  engine3dError: 'มุมมอง 3D หยุดทำงานเนื่องจากเกิดข้อผิดพลาด',
+  engine3dSoftwareRendering: 'กราฟิก 3D ทำงานโดยไม่มีการเร่งด้วยฮาร์ดแวร์ จึงแสดงรายละเอียดได้น้อยลง',
+  engine3dShowingBuiltin: 'กำลังแสดงมุมมองมาตรฐานแทน',
+  engine3dShowingList: 'กำลังแสดงรายการแทน',
+  largeDataInvalid: 'ไม่สามารถแสดงข้อมูลได้เนื่องจาก {column} ไม่ถูกต้อง',
+  largeDataLimit: 'ไม่สามารถแสดงข้อมูลได้เนื่องจากเกินขีดจำกัด {limit}',
 };
 
 registerLyraLocale('th', strings);

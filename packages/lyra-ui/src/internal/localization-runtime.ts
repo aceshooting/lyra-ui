@@ -31,9 +31,7 @@ interface HostLocaleTarget extends Element {
   requestUpdate(): unknown;
 }
 
-interface HostLocaleSubscription {
-  readonly host: WeakRef<HostLocaleTarget>;
-}
+type HostLocaleSubscription = WeakRef<HostLocaleTarget>;
 
 const MAX_LOCALE_CANDIDATES = 64;
 const MAX_LOCALE_PARENT_DEPTH = 32;
@@ -402,13 +400,12 @@ const trustedMessageRecords = new WeakSet<object>();
 function ownDataValue(
   record: Record<string, unknown>,
   key: string
-): { found: boolean; value?: unknown } {
+): unknown {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(record, key);
-    if (!descriptor || !('value' in descriptor)) return { found: false };
-    return { found: true, value: descriptor.value };
+    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
   } catch {
-    return { found: false };
+    return undefined;
   }
 }
 
@@ -422,8 +419,8 @@ function snapshotPluralMessage(value: unknown): LyraPluralMessage | undefined {
         return undefined;
       if (!Object.prototype.hasOwnProperty.call(value, key)) return undefined;
       const entry = ownDataValue(value, key);
-      if (!entry.found || typeof entry.value !== 'string') return undefined;
-      snapshot[key] = entry.value;
+      if (typeof entry !== 'string') return undefined;
+      snapshot[key] = entry;
     }
   } catch {
     return undefined;
@@ -495,10 +492,9 @@ function snapshotLocaleMeta(
   if (!isPlainRecord(meta)) return Object.freeze({});
   const snapshot: LyraLocaleMeta = {};
   const dir = ownDataValue(meta, 'dir');
-  if (dir.found && (dir.value === 'ltr' || dir.value === 'rtl'))
-    snapshot.dir = dir.value;
+  if (dir === 'ltr' || dir === 'rtl') snapshot.dir = dir;
   const name = ownDataValue(meta, 'name');
-  if (name.found && typeof name.value === 'string') snapshot.name = name.value;
+  if (typeof name === 'string') snapshot.name = name;
   return Object.freeze(snapshot);
 }
 
@@ -557,8 +553,7 @@ function safeMessageAt(source: unknown, key: string): LyraMessage | undefined {
   if (trustedMessageRecords.has(source)) {
     return (source as Record<string, LyraMessage | undefined>)[key];
   }
-  const entry = ownDataValue(source, key);
-  return entry.found ? snapshotMessage(entry.value) : undefined;
+  return snapshotMessage(ownDataValue(source, key));
 }
 
 function deliverLocaleListeners(
@@ -604,12 +599,10 @@ function forgetHostLocaleSubscription(
   hostLocaleFinalizer.unregister(subscription);
 }
 
-function liveHostLocaleSubscriptions(): Array<{
-  readonly host: HostLocaleTarget;
-}> {
-  const live: Array<{ readonly host: HostLocaleTarget }> = [];
+function liveHostLocaleSubscriptions(): HostLocaleTarget[] {
+  const live: HostLocaleTarget[] = [];
   for (const subscription of [...hostLocaleListeners]) {
-    const host = subscription.host.deref();
+    const host = subscription.deref();
     // Removing an iframe does not disconnect descendants in its content document in every engine:
     // they can retain `isConnected === true` while the document has lost its window. Prune that
     // owner explicitly, as well as ordinary disconnected/dead hosts, before taking the delivery
@@ -623,7 +616,7 @@ function liveHostLocaleSubscriptions(): Array<{
       forgetHostLocaleSubscription(subscription);
       continue;
     }
-    live.push({ host });
+    live.push(host);
   }
   return live;
 }
@@ -669,7 +662,7 @@ function registerLocale(
   const previouslyAffectedActive = candidateTopologyChanged && activeLocale !== '' &&
     localeUsesCatalog(activeLocale, key);
   const previouslyAffectedHosts = new Set(candidateTopologyChanged
-    ? liveHostLocaleSubscriptions().filter(({ host }) => localeUsesCatalog(inheritedLocale(host), key)).map(({ host }) => host)
+    ? liveHostLocaleSubscriptions().filter((host) => localeUsesCatalog(inheritedLocale(host), key))
     : []);
   // Exact-only is an identity of the registered locale tag, not of one catalog write. A later
   // public registration may extend a pseudo catalog, but must never turn that tag into a reverse
@@ -697,9 +690,9 @@ function registerLocale(
   const activeSnapshot =
     previouslyAffectedActive || (activeLocale && localeUsesCatalog(activeLocale, key)) ? [...listeners] : [];
   const hostSnapshot = liveHostLocaleSubscriptions()
-    .filter(({ host }) => previouslyAffectedHosts.has(host) || localeUsesCatalog(inheritedLocale(host), key))
+    .filter((host) => previouslyAffectedHosts.has(host) || localeUsesCatalog(inheritedLocale(host), key))
     .map(
-      ({ host }) =>
+      (host) =>
         () =>
           host.requestUpdate()
     );
@@ -824,16 +817,16 @@ export function setLyraLocale(locale: string): void {
   const next = storedLocaleIdentity(locale, false).publicTag;
   if (activeLocale === next) return;
   const hostSnapshot = liveHostLocaleSubscriptions();
-  const previousHostLocales = hostSnapshot.map(({ host }) =>
+  const previousHostLocales = hostSnapshot.map((host) =>
     inheritedLocale(host)
   );
   activeLocale = next;
   const affectedHostListeners = hostSnapshot
     .filter(
-      ({ host }, index) => inheritedLocale(host) !== previousHostLocales[index]
+      (host, index) => inheritedLocale(host) !== previousHostLocales[index]
     )
     .map(
-      ({ host }) =>
+      (host) =>
         () =>
           host.requestUpdate()
     );
@@ -898,9 +891,7 @@ export function subscribeLyraLocale(listener: () => void): () => void {
  */
 export function subscribeLyraLocaleForHost(host: HostLocaleTarget): () => void {
   recordLyraOwnerDocumentConnection(host);
-  const subscription: HostLocaleSubscription = {
-    host: new WeakRef(host),
-  };
+  const subscription: HostLocaleSubscription = new WeakRef(host);
   hostLocaleListeners.add(subscription);
   hostLocaleFinalizer.register(host, subscription, subscription);
   return () => forgetHostLocaleSubscription(subscription);

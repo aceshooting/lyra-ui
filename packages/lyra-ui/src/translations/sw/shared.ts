@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Vipengee vilivyochaguliwa havikuweza kupakiwa.',
   catalogPickerInputLimit: 'Baadhi ya maingizo ya katalogi yameachwa kwa sababu kikomo cha ingizo kimefikiwa.',
   tagFacetLimit: '+{count} lebo zaidi',
+  engine3dLoading: 'Inapakia mwonekano wa 3D…',
+  engine3dUnavailable: 'Injini ya 3D haikuweza kupakiwa.',
+  engine3dUnsupported: 'Kivinjari hiki hakiwezi kuonyesha michoro ya 3D.',
+  engine3dContextLost: 'Mwonekano wa 3D umepoteza muktadha wake wa michoro.',
+  engine3dError: 'Mwonekano wa 3D umesimama kwa sababu ya hitilafu.',
+  engine3dSoftwareRendering: 'Michoro ya 3D inaendeshwa bila uharakishaji wa maunzi, kwa hivyo undani umepungua.',
+  engine3dShowingBuiltin: 'Mwonekano wa kawaida unaonyeshwa badala yake.',
+  engine3dShowingList: 'Orodha inaonyeshwa badala yake.',
+  largeDataInvalid: 'Data haiwezi kuonyeshwa kwa sababu {column} si halali.',
+  largeDataLimit: 'Data haiwezi kuonyeshwa kwa sababu inazidi kikomo cha {limit}.',
 };
 
 registerLyraLocale('sw', strings);

@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: '無法載入已選擇的項目。',
   catalogPickerInputLimit: '由於達到輸入限制，部分目錄項目已被省略。',
   tagFacetLimit: '+{count} 個標籤',
+  engine3dLoading: '正在載入 3D 檢視…',
+  engine3dUnavailable: '無法載入 3D 引擎。',
+  engine3dUnsupported: '此瀏覽器無法顯示 3D 圖形。',
+  engine3dContextLost: '3D 檢視遺失了圖形環境。',
+  engine3dError: '3D 檢視因錯誤而停止。',
+  engine3dSoftwareRendering: '3D 圖形在沒有硬體加速的情況下執行，因此細節有所減少。',
+  engine3dShowingBuiltin: '已改為顯示標準檢視。',
+  engine3dShowingList: '已改為顯示清單。',
+  largeDataInvalid: '無法顯示資料，因為 {column} 無效。',
+  largeDataLimit: '無法顯示資料，因為資料超過了 {limit} 的上限。',
 };
 
 registerLyraLocale('zh-TW', strings);

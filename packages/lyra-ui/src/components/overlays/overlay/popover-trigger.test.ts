@@ -356,6 +356,19 @@ describe('lr-popover trigger modes', () => {
     outside.remove();
   });
 
+  it('normalizes edge whitespace, mixed case and duplicate trigger keywords in authored order', async () => {
+    const el = await build('trigger="  FOCUS hover FOCUS sideways CLICK  "');
+    expect(el.trigger).to.equal('focus hover click');
+
+    el.trigger = '  HOVER\tclick\nhover unknown FOCUS  ';
+    await el.updateComplete;
+    expect(el.trigger).to.equal('hover click focus');
+
+    el.trigger = ' \t\n ';
+    await el.updateComplete;
+    expect(el.trigger).to.equal('click');
+  });
+
   it('drops unsupported keywords and lets manual win over the rest', async () => {
     const el = await build('trigger="hover sideways"');
     expect(el.trigger).to.equal('hover', 'the unsupported keyword is dropped');

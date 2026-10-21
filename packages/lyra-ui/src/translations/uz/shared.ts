@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Tanlangan elementlarni yuklab bo‘lmadi.',
   catalogPickerInputLimit: 'Kiritish chegarasiga yetilgani uchun ayrim katalog yozuvlari tashlab ketildi.',
   tagFacetLimit: '+{count} ta qoʻshimcha teg',
+  engine3dLoading: '3D ko‘rinish yuklanmoqda…',
+  engine3dUnavailable: '3D dvigatelini yuklab bo‘lmadi.',
+  engine3dUnsupported: 'Bu brauzer 3D grafikani ko‘rsata olmaydi.',
+  engine3dContextLost: '3D ko‘rinish grafik kontekstini yo‘qotdi.',
+  engine3dError: '3D ko‘rinish xatolik tufayli to‘xtadi.',
+  engine3dSoftwareRendering: '3D grafika apparat tezlatishsiz ishlayapti, shuning uchun tafsilotlar kamaytirilgan.',
+  engine3dShowingBuiltin: 'Buning o‘rniga standart ko‘rinish ko‘rsatilmoqda.',
+  engine3dShowingList: 'Buning o‘rniga ro‘yxat ko‘rsatilmoqda.',
+  largeDataInvalid: '{column} yaroqsiz bo‘lgani uchun ma’lumotlarni ko‘rsatib bo‘lmaydi.',
+  largeDataLimit: 'Ma’lumotlar {limit} chegarasidan oshgani uchun ularni ko‘rsatib bo‘lmaydi.',
 };
 
 registerLyraLocale('uz', strings);

@@ -2,24 +2,24 @@
   "locale": "fr-CA",
   "direction": "ltr",
   "source": {
-    "keyCount": 1531,
-    "sha256": "sha256:d6c63fa689ebd45a8df87cf502705e2bd843037f2ab84b5f0139c242f7fee59e"
+    "keyCount": 1541,
+    "sha256": "sha256:84fb00728395d0d05d7f9b8b4f5ae46be9230cf47ebee2dd081045271324fc82"
   },
   "catalog": {
-    "keyCount": 1531,
-    "sha256": "sha256:3e537e10b6964f9cb9958d78d540d21ff641b145a3f84a9dfab110e7ba575a83"
+    "keyCount": 1541,
+    "sha256": "sha256:774165dcf8b6f17648e4ff80a189b633f15c23f26b33b7da6b7f02faa7518199"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-10-19",
-    "evidence": "Original fr-CA (Canadian French) difference catalog: 11 regional overrides drafted over French (fr) for Quebec usage (courriel, cellulaire, and the Office quebecois de la langue francaise term \"televerser\" for uploads). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made."
+    "evidence": "Original fr-CA (Canadian French) difference catalog: 11 regional overrides drafted over French (fr) for Quebec usage (courriel, cellulaire, and the Office quebecois de la langue francaise term \"televerser\" for uploads). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
-    "reviewedAt": "2026-10-19",
-    "evidence": "AI-assisted review of the fr-CA (Canadian French) regional overrides checked each override for meaning, regional register, terminology consistency with the parent catalog, placeholder preservation and plural forms, and confirmed that no override merely repeats its parent value. Inherited messages were not re-reviewed beyond the parent catalog's own record. No human, native-speaker or independent human review is claimed."
+    "reviewedAt": "2026-10-21",
+    "evidence": "AI-assisted review of the fr-CA (Canadian French) regional overrides checked each override for meaning, regional register, terminology consistency with the parent catalog, placeholder preservation and plural forms, and confirmed that no override merely repeats its parent value. Inherited messages were not re-reviewed beyond the parent catalog's own record. No human, native-speaker or independent human review is claimed. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification."
   },
   "englishIdenticalAllowlist": [
     {

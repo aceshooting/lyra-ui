@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'ਚੁਣੀਆਂ ਆਈਟਮਾਂ ਲੋਡ ਨਹੀਂ ਕੀਤੀਆਂ ਜਾ ਸਕੀਆਂ।',
   catalogPickerInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਕੈਟਾਲਾਗ ਦੀਆਂ ਕੁਝ ਐਂਟਰੀਆਂ ਛੱਡ ਦਿੱਤੀਆਂ ਗਈਆਂ ਹਨ।',
   tagFacetLimit: '+{count} ਹੋਰ ਟੈਗ',
+  engine3dLoading: '3D ਦ੍ਰਿਸ਼ ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ…',
+  engine3dUnavailable: '3D ਇੰਜਣ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕਿਆ।',
+  engine3dUnsupported: 'ਇਹ ਬ੍ਰਾਊਜ਼ਰ 3D ਗ੍ਰਾਫ਼ਿਕਸ ਨਹੀਂ ਦਿਖਾ ਸਕਦਾ।',
+  engine3dContextLost: '3D ਦ੍ਰਿਸ਼ ਦਾ ਗ੍ਰਾਫ਼ਿਕਸ ਸੰਦਰਭ ਗੁਆਚ ਗਿਆ।',
+  engine3dError: 'ਗੜਬੜ ਕਾਰਨ 3D ਦ੍ਰਿਸ਼ ਰੁਕ ਗਿਆ।',
+  engine3dSoftwareRendering: '3D ਗ੍ਰਾਫ਼ਿਕਸ ਹਾਰਡਵੇਅਰ ਐਕਸਲਰੇਸ਼ਨ ਤੋਂ ਬਿਨਾਂ ਚੱਲ ਰਹੇ ਹਨ, ਇਸ ਲਈ ਵੇਰਵਾ ਘੱਟ ਹੈ।',
+  engine3dShowingBuiltin: 'ਇਸ ਦੀ ਬਜਾਏ ਮਿਆਰੀ ਦ੍ਰਿਸ਼ ਦਿਖਾਇਆ ਜਾ ਰਿਹਾ ਹੈ।',
+  engine3dShowingList: 'ਇਸ ਦੀ ਬਜਾਏ ਸੂਚੀ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ।',
+  largeDataInvalid: 'ਡਾਟਾ ਨਹੀਂ ਦਿਖਾਇਆ ਜਾ ਸਕਦਾ ਕਿਉਂਕਿ {column} ਅਵੈਧ ਹੈ।',
+  largeDataLimit: 'ਡਾਟਾ ਨਹੀਂ ਦਿਖਾਇਆ ਜਾ ਸਕਦਾ ਕਿਉਂਕਿ ਇਹ {limit} ਦੀ ਸੀਮਾ ਤੋਂ ਵੱਧ ਹੈ।',
 };
 
 registerLyraLocale('pa', strings);

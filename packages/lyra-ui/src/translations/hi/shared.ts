@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'चुने गए आइटम लोड नहीं किए जा सके।',
   catalogPickerInputLimit: 'इनपुट सीमा पूरी होने के कारण कैटलॉग की कुछ प्रविष्टियाँ छोड़ दी गई हैं।',
   tagFacetLimit: '+{count} और टैग',
+  engine3dLoading: '3D दृश्य लोड हो रहा है…',
+  engine3dUnavailable: '3D इंजन लोड नहीं हो सका।',
+  engine3dUnsupported: 'यह ब्राउज़र 3D ग्राफ़िक्स नहीं दिखा सकता।',
+  engine3dContextLost: '3D दृश्य का ग्राफ़िक्स कॉन्टेक्स्ट खो गया।',
+  engine3dError: 'किसी त्रुटि के कारण 3D दृश्य रुक गया।',
+  engine3dSoftwareRendering: '3D ग्राफ़िक्स हार्डवेयर एक्सेलेरेशन के बिना चल रहे हैं, इसलिए विवरण कम हो गया है।',
+  engine3dShowingBuiltin: 'इसके बजाय मानक दृश्य दिखाया जा रहा है।',
+  engine3dShowingList: 'इसके बजाय एक सूची दिखाई जा रही है।',
+  largeDataInvalid: 'डेटा नहीं दिखाया जा सकता क्योंकि {column} अमान्य है।',
+  largeDataLimit: 'डेटा नहीं दिखाया जा सकता क्योंकि यह {limit} की सीमा से अधिक है।',
 };
 
 registerLyraLocale('hi', strings);

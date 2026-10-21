@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Ba a iya loda abubuwan da aka zaɓa ba.',
   catalogPickerInputLimit: 'An bar wasu shigarwar kundin zaɓuɓɓuka saboda an kai iyakar shigarwa.',
   tagFacetLimit: '+{count} ƙarin alamomin rarrabawa',
+  engine3dLoading: 'Ana loda kallon 3D…',
+  engine3dUnavailable: 'Ba a iya loda injin 3D ba.',
+  engine3dUnsupported: 'Wannan burauzar ba za ta iya nuna zane-zanen 3D ba.',
+  engine3dContextLost: 'Kallon 3D ya rasa mahallin zane-zanensa.',
+  engine3dError: 'Kallon 3D ya tsaya saboda kuskure.',
+  engine3dSoftwareRendering: 'Zane-zanen 3D suna aiki ba tare da hanzartawar hardware ba, don haka matakin daki-daki ya ragu.',
+  engine3dShowingBuiltin: 'Ana nuna kallon yau da kullum maimakon haka.',
+  engine3dShowingList: 'Ana nuna jeri maimakon haka.',
+  largeDataInvalid: 'Ba za a iya nuna bayanan ba saboda {column} ba shi da inganci.',
+  largeDataLimit: 'Ba za a iya nuna bayanan ba saboda sun wuce iyakar {limit}.',
 };
 
 registerLyraLocale('ha', strings);

@@ -1,0 +1,76 @@
+{
+  "name": "@aceshooting/lyra-3d",
+  "version": "0.0.0",
+  "description": "WebGL engines for Lyra UI's 3D views, loaded on demand by the components that opt in",
+  "keywords": [
+    "webgl",
+    "three",
+    "3d",
+    "web-components"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "Aceshooting",
+    "email": "info@aceshooting.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aceshooting/lyra-ui.git",
+    "directory": "packages/lyra-3d"
+  },
+  "homepage": "https://github.com/aceshooting/lyra-ui/tree/main/packages/lyra-3d#readme",
+  "bugs": {
+    "url": "https://github.com/aceshooting/lyra-ui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.14.0",
+  "sideEffects": [
+    "./dist/**/*.worker.js"
+  ],
+  "types": "./dist/core/index.d.ts",
+  "exports": {
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepack": "pnpm build",
+    "lint": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && node scripts/check-package.mjs",
+    "test": "pnpm build && node --test test/*.test.mjs",
+    "test:browser": "node scripts/browser-test.mjs"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "peerDependencies": {
+    "@types/three": "^0.186.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/three": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/three": "^0.186.0",
+    "playwright": "^1.64.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  }
+}

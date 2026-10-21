@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'নির্বাচিত আইটেম লোড করা যায়নি।',
   catalogPickerInputLimit: 'ইনপুটের সীমা পূর্ণ হওয়ায় ক্যাটালগের কিছু এন্ট্রি বাদ দেওয়া হয়েছে।',
   tagFacetLimit: 'আরও ট্যাগ: +{count}',
+  engine3dLoading: '3D দৃশ্য লোড হচ্ছে…',
+  engine3dUnavailable: '3D ইঞ্জিন লোড করা যায়নি।',
+  engine3dUnsupported: 'এই ব্রাউজার 3D গ্রাফিক্স দেখাতে পারে না।',
+  engine3dContextLost: '3D দৃশ্যের গ্রাফিক্স কনটেক্সট হারিয়ে গেছে।',
+  engine3dError: 'একটি ত্রুটির কারণে 3D দৃশ্য বন্ধ হয়ে গেছে।',
+  engine3dSoftwareRendering: '3D গ্রাফিক্স হার্ডওয়্যার অ্যাক্সেলারেশন ছাড়াই চলছে, তাই বিশদ কমে গেছে।',
+  engine3dShowingBuiltin: 'এর পরিবর্তে আদর্শ দৃশ্য দেখানো হচ্ছে।',
+  engine3dShowingList: 'এর পরিবর্তে একটি তালিকা দেখানো হচ্ছে।',
+  largeDataInvalid: '{column} অবৈধ হওয়ায় ডেটা দেখানো যাচ্ছে না।',
+  largeDataLimit: 'ডেটা {limit} সীমা ছাড়িয়ে যাওয়ায় দেখানো যাচ্ছে না।',
 };
 
 registerLyraLocale('bn', strings);

@@ -36,6 +36,28 @@ it('exposes the active-locale subscription, which is not the registry subscripti
 });
 
 describe('bridgeLyraLocale', () => {
+  it('does not let a released handle remove a later bridge on the same target', async () => {
+    const el = await host();
+    el.setAttribute('lang', 'fr');
+    el.setAttribute('dir', 'rtl');
+    withActiveLocale(() => {
+      setLyraLocale('en');
+      const stopPrevious = bridgeLyraLocale({ target: el });
+      stopPrevious();
+      const stopCurrent = bridgeLyraLocale({ target: el });
+      try {
+        stopPrevious();
+        setLyraLocale('de');
+        expect(el.getAttribute('lang')).to.equal('de');
+        expect(el.getAttribute('dir')).to.equal('ltr');
+      } finally {
+        stopCurrent();
+      }
+      expect(el.getAttribute('lang')).to.equal('fr');
+      expect(el.getAttribute('dir')).to.equal('rtl');
+    });
+  });
+
   it('mirrors the canonical public BCP-47 spelling chosen by setLyraLocale', async () => {
     const el = await host();
     withActiveLocale(() => {
@@ -77,6 +99,55 @@ describe('bridgeLyraLocale', () => {
       stop();
       expect(el.hasAttribute('lang'), 'an absent attribute must come back absent').to.equal(false);
       expect(el.hasAttribute('dir')).to.equal(false);
+    });
+  });
+
+  it('keeps distinct targets and their restoration snapshots independent', async () => {
+    const first = await host();
+    const second = await host();
+    first.setAttribute('lang', 'fr');
+    first.setAttribute('dir', 'rtl');
+    second.setAttribute('lang', 'de');
+    second.setAttribute('dir', 'ltr');
+    withActiveLocale(() => {
+      setLyraLocale('en');
+      const stopFirst = bridgeLyraLocale({ target: first });
+      const stopSecond = bridgeLyraLocale({ target: second });
+      try {
+        expect(first.getAttribute('lang')).to.equal('en');
+        expect(second.getAttribute('lang')).to.equal('en');
+        stopFirst();
+        setLyraLocale('es');
+        expect(first.getAttribute('lang')).to.equal('fr');
+        expect(first.getAttribute('dir')).to.equal('rtl');
+        expect(second.getAttribute('lang')).to.equal('es');
+        expect(second.getAttribute('dir')).to.equal('ltr');
+      } finally {
+        stopFirst();
+        stopSecond();
+      }
+      expect(second.getAttribute('lang')).to.equal('de');
+      expect(second.getAttribute('dir')).to.equal('ltr');
+    });
+  });
+
+  it('preserves authored empty language and direction attributes after cleanup', async () => {
+    const el = await host();
+    el.setAttribute('lang', '');
+    el.setAttribute('dir', '');
+    withActiveLocale(() => {
+      setLyraLocale('en');
+      const stop = bridgeLyraLocale({ target: el });
+      try {
+        expect(el.getAttribute('lang')).to.equal('en');
+      } finally {
+        stop();
+      }
+      expect(el.getAttribute('lang')).to.equal('');
+      expect(el.getAttribute('dir')).to.equal('');
+      setLyraLocale('de');
+      expect(el.getAttribute('lang')).to.equal('');
+      expect(el.getAttribute('dir')).to.equal('');
     });
   });
 

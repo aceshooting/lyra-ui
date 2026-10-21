@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Δεν ήταν δυνατή η φόρτωση των επιλεγμένων στοιχείων.',
   catalogPickerInputLimit: 'Ορισμένες καταχωρίσεις του καταλόγου παραλείφθηκαν επειδή συμπληρώθηκε ένα όριο εισόδου.',
   tagFacetLimit: 'Επιπλέον ετικέτες: +{count}',
+  engine3dLoading: 'Φόρτωση της προβολής 3D…',
+  engine3dUnavailable: 'Δεν ήταν δυνατή η φόρτωση της μηχανής 3D.',
+  engine3dUnsupported: 'Αυτό το πρόγραμμα περιήγησης δεν μπορεί να εμφανίσει γραφικά 3D.',
+  engine3dContextLost: 'Η προβολή 3D έχασε το περιβάλλον γραφικών της.',
+  engine3dError: 'Η προβολή 3D σταμάτησε λόγω σφάλματος.',
+  engine3dSoftwareRendering: 'Τα γραφικά 3D εκτελούνται χωρίς επιτάχυνση υλικού, γι’ αυτό η λεπτομέρεια είναι μειωμένη.',
+  engine3dShowingBuiltin: 'Εμφανίζεται αντ’ αυτού η τυπική προβολή.',
+  engine3dShowingList: 'Εμφανίζεται αντ’ αυτού μια λίστα.',
+  largeDataInvalid: 'Δεν είναι δυνατή η εμφάνιση των δεδομένων επειδή το {column} δεν είναι έγκυρο.',
+  largeDataLimit: 'Δεν είναι δυνατή η εμφάνιση των δεδομένων επειδή υπερβαίνουν το όριο των {limit}.',
 };
 
 registerLyraLocale('el', strings);

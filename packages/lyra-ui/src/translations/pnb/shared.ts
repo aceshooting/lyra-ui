@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'چنیاں چیزاں لوڈ نئیں ہو سکیاں۔',
   catalogPickerInputLimit: 'اِن پُٹ دی حد پوری ہون کارن کیٹالاگ دے کجھ اندراج چھڈ دتے گئے نیں۔',
   tagFacetLimit: '+{count} ہور ٹیگ',
+  engine3dLoading: '3D منظر لوڈ ہو ریا اے…',
+  engine3dUnavailable: '3D انجن لوڈ نئیں ہو سکیا۔',
+  engine3dUnsupported: 'ایہ براؤزر 3D گرافکس نئیں وکھا سکدا۔',
+  engine3dContextLost: '3D منظر دا گرافکس کونٹیکسٹ ختم ہو گیا۔',
+  engine3dError: 'غلطی دی وجہ توں 3D منظر رک گیا۔',
+  engine3dSoftwareRendering: '3D گرافکس ہارڈویئر ایکسلریشن دے بغیر چل رہے نیں، اس لئی تفصیل گھٹ ہو گئی اے۔',
+  engine3dShowingBuiltin: 'اس دی تھاں معیاری منظر وکھایا جا ریا اے۔',
+  engine3dShowingList: 'اس دی تھاں اک فہرست وکھائی جا رہی اے۔',
+  largeDataInvalid: 'ڈیٹا نئیں وکھایا جا سکدا کیوں جے {column} غلط اے۔',
+  largeDataLimit: 'ڈیٹا نئیں وکھایا جا سکدا کیوں جے ایہ {limit} دی حد توں ودھ اے۔',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

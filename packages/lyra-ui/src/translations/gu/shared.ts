@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'પસંદ કરેલી આઇટમ્સ લોડ કરી શકાઈ નથી.',
   catalogPickerInputLimit: 'ઇનપુટ મર્યાદા પહોંચી જવાથી કૅટલૉગની કેટલીક એન્ટ્રીઓ છોડી દેવાઈ છે.',
   tagFacetLimit: '+{count} વધુ ટૅગ',
+  engine3dLoading: '3D દૃશ્ય લોડ થઈ રહ્યું છે…',
+  engine3dUnavailable: '3D એન્જિન લોડ થઈ શક્યું નથી.',
+  engine3dUnsupported: 'આ બ્રાઉઝર 3D ગ્રાફિક્સ બતાવી શકતું નથી.',
+  engine3dContextLost: '3D દૃશ્યે તેનો ગ્રાફિક્સ કોન્ટેક્સ્ટ ગુમાવ્યો.',
+  engine3dError: 'ભૂલને કારણે 3D દૃશ્ય બંધ થઈ ગયું.',
+  engine3dSoftwareRendering: '3D ગ્રાફિક્સ હાર્ડવેર એક્સિલરેશન વિના ચાલે છે, તેથી વિગત ઓછી છે.',
+  engine3dShowingBuiltin: 'તેના બદલે સામાન્ય દૃશ્ય બતાવવામાં આવી રહ્યું છે.',
+  engine3dShowingList: 'તેના બદલે યાદી બતાવવામાં આવી રહી છે.',
+  largeDataInvalid: '{column} અમાન્ય હોવાથી ડેટા બતાવી શકાતો નથી.',
+  largeDataLimit: 'ડેટા {limit} ની મર્યાદા કરતાં વધી જતો હોવાથી બતાવી શકાતો નથી.',
 };
 
 registerLyraLocale('gu', strings);

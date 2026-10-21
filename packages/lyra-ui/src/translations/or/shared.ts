@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'ଚୟନିତ ଆଇଟମ୍‌ଗୁଡ଼ିକ ଲୋଡ୍ କରିହେଲା ନାହିଁ।',
   catalogPickerInputLimit: 'ଇନପୁଟ୍ ସୀମାରେ ପହଞ୍ଚିଥିବାରୁ କିଛି ତାଲିକା ପ୍ରବିଷ୍ଟି ବାଦ ଦିଆଯାଇଛି।',
   tagFacetLimit: '+{count} ଅଧିକ ଟ୍ୟାଗ୍',
+  engine3dLoading: '3D ଦୃଶ୍ୟ ଲୋଡ୍ ହେଉଛି…',
+  engine3dUnavailable: '3D ଇଞ୍ଜିନ୍ ଲୋଡ୍ କରିହେଲା ନାହିଁ।',
+  engine3dUnsupported: 'ଏହି ବ୍ରାଉଜର୍ 3D ଗ୍ରାଫିକ୍ସ ଦେଖାଇପାରିବ ନାହିଁ।',
+  engine3dContextLost: '3D ଦୃଶ୍ୟ ଏହାର ଗ୍ରାଫିକ୍ସ କଣ୍ଟେକ୍ସଟ୍ ହରାଇଲା।',
+  engine3dError: 'ତ୍ରୁଟି ଯୋଗୁଁ 3D ଦୃଶ୍ୟ ବନ୍ଦ ହୋଇଗଲା।',
+  engine3dSoftwareRendering: '3D ଗ୍ରାଫିକ୍ସ ହାର୍ଡୱେର୍ ଆକ୍ସିଲରେସନ୍ ବିନା ଚାଲୁଛି, ତେଣୁ ବିବରଣୀ କମ୍ ହୋଇଛି।',
+  engine3dShowingBuiltin: 'ଏହା ବଦଳରେ ମାନକ ଦୃଶ୍ୟ ଦେଖାଯାଉଛି।',
+  engine3dShowingList: 'ଏହା ବଦଳରେ ଏକ ତାଲିକା ଦେଖାଯାଉଛି।',
+  largeDataInvalid: '{column} ଅବୈଧ ହୋଇଥିବାରୁ ତଥ୍ୟ ଦେଖାଯାଇପାରିବ ନାହିଁ।',
+  largeDataLimit: 'ତଥ୍ୟ {limit} ସୀମାଠାରୁ ଅଧିକ ହୋଇଥିବାରୁ ଦେଖାଯାଇପାରିବ ନାହିଁ।',
 };
 
 registerLyraLocale('or', strings);

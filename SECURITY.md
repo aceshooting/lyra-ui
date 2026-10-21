@@ -13,6 +13,7 @@ package receives security fixes.
 | `@aceshooting/lyra-ide`   | Latest release only |
 | `@aceshooting/lyra-translations` | Latest release only |
 | `@aceshooting/lyra-map` | Latest release only |
+| `@aceshooting/lyra-3d` | Latest release only |
 
 Older versions will not receive backported patches. Please upgrade to the latest release before
 reporting an issue.

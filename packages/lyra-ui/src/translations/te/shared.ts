@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'ఎంచుకున్న అంశాలను లోడ్ చేయడం సాధ్యపడలేదు.',
   catalogPickerInputLimit: 'ఇన్‌పుట్ పరిమితిని చేరుకున్నందున కొన్ని కేటలాగ్ నమోదులు వదిలివేయబడ్డాయి.',
   tagFacetLimit: '+{count} మరిన్ని ట్యాగ్‌లు',
+  engine3dLoading: '3D వీక్షణం లోడ్ అవుతోంది…',
+  engine3dUnavailable: '3D ఇంజిన్‌ను లోడ్ చేయడం సాధ్యం కాలేదు.',
+  engine3dUnsupported: 'ఈ బ్రౌజర్ 3D గ్రాఫిక్స్‌ను ప్రదర్శించలేదు.',
+  engine3dContextLost: '3D వీక్షణం తన గ్రాఫిక్స్ కాంటెక్స్ట్‌ను కోల్పోయింది.',
+  engine3dError: 'లోపం కారణంగా 3D వీక్షణం ఆగిపోయింది.',
+  engine3dSoftwareRendering: '3D గ్రాఫిక్స్ హార్డ్‌వేర్ యాక్సిలరేషన్ లేకుండా నడుస్తున్నాయి, కాబట్టి వివరాలు తగ్గాయి.',
+  engine3dShowingBuiltin: 'బదులుగా ప్రామాణిక వీక్షణం చూపబడుతోంది.',
+  engine3dShowingList: 'బదులుగా జాబితా చూపబడుతోంది.',
+  largeDataInvalid: '{column} చెల్లనిది కావడంతో డేటాను ప్రదర్శించలేము.',
+  largeDataLimit: 'డేటా {limit} పరిమితిని మించినందున దానిని ప్రదర్శించలేము.',
 };
 
 registerLyraLocale('te', strings);

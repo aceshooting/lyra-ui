@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Item anu dipilih teu tiasa dimuat.',
   catalogPickerInputLimit: 'Sababaraha éntri katalog teu diasupkeun lantaran wates input geus kahontal.',
   tagFacetLimit: '+{count} tag deui',
+  engine3dLoading: 'Nuju muat tampilan 3D…',
+  engine3dUnavailable: 'Mesin 3D teu bisa dimuat.',
+  engine3dUnsupported: 'Browser ieu teu bisa nampilkeun grafik 3D.',
+  engine3dContextLost: 'Tampilan 3D leungit konteks grafikna.',
+  engine3dError: 'Tampilan 3D eureun alatan aya kasalahan.',
+  engine3dSoftwareRendering: 'Grafik 3D jalan tanpa akselerasi hardware, jadi detailna dikurangan.',
+  engine3dShowingBuiltin: 'Tampilan standar dipintonkeun gaganti.',
+  engine3dShowingList: 'Daptar dipintonkeun gaganti.',
+  largeDataInvalid: 'Data teu bisa dipintonkeun sabab {column} teu valid.',
+  largeDataLimit: 'Data teu bisa dipintonkeun sabab ngaleuwihan wates {limit}.',
 };
 
 registerLyraLocale('su', strings);

@@ -143,9 +143,9 @@ const POPOVER_TRIGGER_KEYWORDS: readonly LyraPopoverTrigger[] = [
  */
 function normalizeTriggerList(next: unknown): string {
   const keywords: LyraPopoverTrigger[] = [];
-  for (const token of String(next ?? '').trim().toLowerCase().split(/\s+/)) {
-    const keyword = POPOVER_TRIGGER_KEYWORDS.find((candidate) => candidate === token);
-    if (keyword && !keywords.includes(keyword)) keywords.push(keyword);
+  for (const token of String(next ?? '').toLowerCase().split(/\s+/)) {
+    const keyword = token as LyraPopoverTrigger;
+    if (POPOVER_TRIGGER_KEYWORDS.includes(keyword) && !keywords.includes(keyword)) keywords.push(keyword);
   }
   return keywords.length > 0 ? keywords.join(' ') : 'click';
 }
@@ -443,17 +443,17 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.requestUpdate('trigger', old);
   }
   /** The resolved interaction keywords, always at least one. */
-  private get triggerKeywords(): Set<string> {
-    return new Set(this._trigger.split(' '));
+  private get triggerKeywords(): string[] {
+    return this._trigger.split(' ');
   }
   /** `manual` beats every other keyword: a surface an author declared programmatic must not still
    *  be openable by a stray `hover` left beside it. */
   protected get isManualTrigger(): boolean {
-    return this.triggerKeywords.has('manual');
+    return this.triggerKeywords.includes('manual');
   }
   /** Whether `keyword` is one of the interactions currently allowed to open this popover. */
   protected opensOn(keyword: LyraPopoverTrigger): boolean {
-    return !this.isManualTrigger && this.triggerKeywords.has(keyword);
+    return !this.isManualTrigger && this.triggerKeywords.includes(keyword);
   }
   /** Delay (ms) between a `hover`/`focus` interaction and the popover opening. NaN, negative and
    *  oversized values all normalize through `finiteDuration`.
@@ -1499,11 +1499,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   show(): Promise<void> {
     if (this._open || !this.canOpen) return Promise.resolve();
     return this.transitionGate.request(true, () => {
-      if (this.emitCancelableLifecycle('lr-show').defaultPrevented) {
-        this.syncOpenAttribute();
-        return;
-      }
-      if (!this.closePopoverPeers()) {
+      if (this.emitCancelableLifecycle('lr-show').defaultPrevented || !this.closePopoverPeers()) {
         this.syncOpenAttribute();
         return;
       }

@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'ရွေးထားသော အရာများကို တင်၍မရပါ။',
   catalogPickerInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် ကတ်တလောက်စာရင်းအချို့ကို ချန်လှပ်ထားသည်။',
   tagFacetLimit: 'နောက်ထပ် တဂ်များ: +{count}',
+  engine3dLoading: '3D မြင်ကွင်းကို တင်နေသည်…',
+  engine3dUnavailable: '3D အင်ဂျင်ကို မတင်နိုင်ပါ။',
+  engine3dUnsupported: 'ဤဘရောက်ဇာသည် 3D ဂရပ်ဖစ်များကို ပြသ၍ မရပါ။',
+  engine3dContextLost: '3D မြင်ကွင်းသည် ၎င်း၏ ဂရပ်ဖစ်ကွန်တက်စ်ကို ဆုံးရှုံးသွားသည်။',
+  engine3dError: 'အမှားတစ်ခုကြောင့် 3D မြင်ကွင်း ရပ်သွားသည်။',
+  engine3dSoftwareRendering: '3D ဂရပ်ဖစ်များသည် ဟာ့ဒ်ဝဲအရှိန်မြှင့်ခြင်းမရှိဘဲ လည်ပတ်နေသဖြင့် အသေးစိတ်ကို လျှော့ထားသည်။',
+  engine3dShowingBuiltin: '၎င်းအစား ပုံမှန်မြင်ကွင်းကို ပြသနေသည်။',
+  engine3dShowingList: '၎င်းအစား စာရင်းတစ်ခုကို ပြသနေသည်။',
+  largeDataInvalid: '{column} သည် မမှန်ကန်သောကြောင့် ဒေတာကို ပြသ၍ မရပါ။',
+  largeDataLimit: 'ဒေတာသည် {limit} ကန့်သတ်ချက်ကို ကျော်လွန်နေသောကြောင့် ပြသ၍ မရပါ။',
 };
 
 registerLyraLocale('my', strings);

@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'A kijelölt elemek betöltése nem sikerült.',
   catalogPickerInputLimit: 'A bemeneti korlát elérése miatt egyes katalógusbejegyzések kimaradtak.',
   tagFacetLimit: '+{count} további címke',
+  engine3dLoading: 'A 3D nézet betöltése…',
+  engine3dUnavailable: 'A 3D motort nem sikerült betölteni.',
+  engine3dUnsupported: 'Ez a böngésző nem tud 3D grafikát megjeleníteni.',
+  engine3dContextLost: 'A 3D nézet elvesztette a grafikus kontextusát.',
+  engine3dError: 'A 3D nézet hiba miatt leállt.',
+  engine3dSoftwareRendering: 'A 3D grafika hardveres gyorsítás nélkül fut, ezért kevesebb a részlet.',
+  engine3dShowingBuiltin: 'Helyette a szokásos nézet látható.',
+  engine3dShowingList: 'Helyette egy lista látható.',
+  largeDataInvalid: 'Az adatok nem jeleníthetők meg, mert a(z) {column} érvénytelen.',
+  largeDataLimit: 'Az adatok nem jeleníthetők meg, mert meghaladják a(z) {limit} korlátot.',
 };
 
 registerLyraLocale('hu', strings);

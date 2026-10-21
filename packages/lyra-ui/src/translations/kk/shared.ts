@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Таңдалған элементтерді жүктеу мүмкін болмады.',
   catalogPickerInputLimit: 'Енгізу шегіне жеткендіктен, каталогтың кейбір жазбалары алынып тасталды.',
   tagFacetLimit: '+{count} қосымша тег',
+  engine3dLoading: '3D көрінісі жүктелуде…',
+  engine3dUnavailable: '3D қозғалтқышын жүктеу мүмкін болмады.',
+  engine3dUnsupported: 'Бұл браузер 3D графиканы көрсете алмайды.',
+  engine3dContextLost: '3D көрінісі графикалық контекстін жоғалтты.',
+  engine3dError: '3D көрінісі қате салдарынан тоқтады.',
+  engine3dSoftwareRendering: '3D графика аппараттық үдетусіз жұмыс істейді, сондықтан егжей-тегжей азайтылған.',
+  engine3dShowingBuiltin: 'Оның орнына стандартты көрініс көрсетілуде.',
+  engine3dShowingList: 'Оның орнына тізім көрсетілуде.',
+  largeDataInvalid: '{column} жарамсыз болғандықтан, деректерді көрсету мүмкін емес.',
+  largeDataLimit: 'Деректер {limit} шегінен асатындықтан, оларды көрсету мүмкін емес.',
 };
 
 registerLyraLocale('kk', strings);

@@ -116,6 +116,7 @@ jobs:
       - run: pnpm --filter @aceshooting/lyra-map build
       - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
       - run: pnpm --filter @aceshooting/lyra-map lint
+      - run: pnpm --filter @aceshooting/lyra-3d lint
       - run: pnpm --filter @aceshooting/lyra-docs lint
       - run: pnpm --filter @aceshooting/lyra-ide lint
       - run: pnpm --filter @aceshooting/lyra-translations lint
@@ -582,7 +583,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # lyra-flags, lyra-docs, lyra-ide, lyra-translations and lyra-map tarballs for the contract job (the docs and translations
+  # lyra-flags, lyra-docs, lyra-ide, lyra-translations, lyra-map and lyra-3d tarballs for the contract job (the docs and translations
   # prepacks are this run's build plus their own; lyra-ide's is a copy of lyra-ui's committed editor data).
   packed_consumer_companions:
     name: packed-consumer / companion packages
@@ -609,6 +610,8 @@ jobs:
           (cd packages/lyra-flags && pnpm pack --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-map build
           (cd packages/lyra-map && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
+          pnpm --filter @aceshooting/lyra-3d build
+          (cd packages/lyra-3d && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-docs build
           (cd packages/lyra-docs && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-translations assemble
@@ -619,12 +622,13 @@ jobs:
           git diff --exit-code
           cd artifacts/packed-companions
           tarballs=(*.tgz)
-          test "${#tarballs[@]}" -eq 5
+          test "${#tarballs[@]}" -eq 6
           sha256sum "${tarballs[@]}" > SHA256SUMS
           cd ../..
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-translations --tarball artifacts/packed-companions/aceshooting-lyra-translations-*.tgz
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-ide --tarball artifacts/packed-companions/aceshooting-lyra-ide-*.tgz
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-map --tarball artifacts/packed-companions/aceshooting-lyra-map-*.tgz
+          node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-3d --tarball artifacts/packed-companions/aceshooting-lyra-3d-*.tgz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-companion-tarballs
@@ -1367,6 +1371,23 @@ jobs:
         with:
           name: map-companion-${{ matrix.browser }}-${{ github.run_attempt }}
           path: packages/lyra-map/test-results
+          if-no-files-found: error
+          retention-days: 7
+      # Functional and fallback coverage only: hosted runners render WebGL in software, so frame-rate
+      # targets are measured separately with LYRA_3D_GPU on real GPU hardware.
+      - name: Qualify the 3D companion in each browser channel
+        if: matrix.shard_index == 1
+        env:
+          WTR_BROWSER: ${{ matrix.install_browser }}
+        run: |
+          pnpm --filter @aceshooting/lyra-3d build
+          pnpm --filter @aceshooting/lyra-3d test:browser
+      - name: Archive 3D companion qualification
+        if: always() && matrix.shard_index == 1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: 3d-companion-${{ matrix.browser }}-${{ github.run_attempt }}
+          path: packages/lyra-3d/test-results
           if-no-files-found: error
           retention-days: 7
       - name: Download this run's lyra-ui build for the DOCX editor

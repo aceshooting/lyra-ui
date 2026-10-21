@@ -162,6 +162,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'تعذّر تحميل العناصر المحددة.',
   catalogPickerInputLimit: 'حُذفت بعض إدخالات الكتالوج لبلوغ حد الإدخال.',
   tagFacetLimit: '+{count} من الوسوم الأخرى',
+  engine3dLoading: 'جارٍ تحميل العرض ثلاثي الأبعاد…',
+  engine3dUnavailable: 'تعذّر تحميل محرك العرض ثلاثي الأبعاد.',
+  engine3dUnsupported: 'لا يمكن لهذا المتصفح عرض الرسومات ثلاثية الأبعاد.',
+  engine3dContextLost: 'فقد العرض ثلاثي الأبعاد سياق الرسومات.',
+  engine3dError: 'توقف العرض ثلاثي الأبعاد بسبب خطأ.',
+  engine3dSoftwareRendering: 'تعمل الرسومات ثلاثية الأبعاد دون تسريع الأجهزة، لذلك تقل التفاصيل.',
+  engine3dShowingBuiltin: 'يتم عرض العرض القياسي بدلًا من ذلك.',
+  engine3dShowingList: 'يتم عرض قائمة بدلًا من ذلك.',
+  largeDataInvalid: 'لا يمكن عرض البيانات لأن {column} غير صالح.',
+  largeDataLimit: 'لا يمكن عرض البيانات لأنها تتجاوز الحد البالغ {limit}.',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

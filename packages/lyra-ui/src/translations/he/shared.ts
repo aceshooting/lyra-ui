@@ -156,6 +156,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'לא ניתן לטעון את הפריטים שנבחרו.',
   catalogPickerInputLimit: 'חלק מרשומות הקטלוג הושמטו משום שהקלט הגיע למגבלה.',
   tagFacetLimit: 'תגיות נוספות: +{count}',
+  engine3dLoading: 'תצוגת התלת־ממד נטענת…',
+  engine3dUnavailable: 'לא ניתן היה לטעון את מנוע התלת־ממד.',
+  engine3dUnsupported: 'הדפדפן הזה אינו יכול להציג גרפיקה תלת־ממדית.',
+  engine3dContextLost: 'תצוגת התלת־ממד איבדה את הקשר הגרפי שלה.',
+  engine3dError: 'תצוגת התלת־ממד נעצרה עקב שגיאה.',
+  engine3dSoftwareRendering: 'הגרפיקה התלת־ממדית פועלת ללא האצת חומרה, ולכן רמת הפירוט מופחתת.',
+  engine3dShowingBuiltin: 'במקום זאת מוצגת התצוגה הרגילה.',
+  engine3dShowingList: 'במקום זאת מוצגת רשימה.',
+  largeDataInvalid: 'לא ניתן להציג את הנתונים מכיוון ש-{column} אינו תקין.',
+  largeDataLimit: 'לא ניתן להציג את הנתונים מכיוון שהם חורגים מהמגבלה של {limit}.',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

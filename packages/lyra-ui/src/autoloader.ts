@@ -323,12 +323,10 @@ function collectDiscoveryBatch(
 ): {
   readonly roots: readonly LyraDefinitionRoot[];
   readonly elements: readonly Element[];
-  readonly rootDepths: ReadonlyMap<LyraDefinitionRoot, number>;
   readonly elementDepths: ReadonlyMap<Element, number>;
 } {
   const batchRoots: LyraDefinitionRoot[] = [];
   const batchElements: Element[] = [];
-  const rootDepths = new Map<LyraDefinitionRoot, number>();
   const elementDepths = new Map<Element, number>();
   const seenRequests = new Set<LyraDefinitionRoot>();
   for (const request of requestedRoots) {
@@ -343,7 +341,6 @@ function collectDiscoveryBatch(
     );
     for (const discoveredRoot of result.roots) {
       batchRoots.push(discoveredRoot);
-      rootDepths.set(discoveredRoot, result.rootDepths.get(discoveredRoot) ?? request.depth);
     }
     for (const element of result.elements) {
       batchElements.push(element);
@@ -353,7 +350,6 @@ function collectDiscoveryBatch(
   return {
     roots: batchRoots,
     elements: batchElements,
-    rootDepths,
     elementDepths,
   };
 }

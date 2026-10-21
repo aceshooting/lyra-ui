@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Item sing dipilih ora bisa dimuat.',
   catalogPickerInputLimit: 'Sawetara entri katalog ora dilebokake amarga wates input wis tekan.',
   tagFacetLimit: '+{count} tag liyane',
+  engine3dLoading: 'Lagi ngemot tampilan 3D…',
+  engine3dUnavailable: 'Mesin 3D ora bisa dimuat.',
+  engine3dUnsupported: 'Browser iki ora bisa nampilake grafis 3D.',
+  engine3dContextLost: 'Tampilan 3D kélangan konteks grafisé.',
+  engine3dError: 'Tampilan 3D mandheg amarga ana kesalahan.',
+  engine3dSoftwareRendering: 'Grafis 3D mlaku tanpa akselerasi hardware, mula detailé suda.',
+  engine3dShowingBuiltin: 'Tampilan standar ditampilake minangka gantiné.',
+  engine3dShowingList: 'Dhaptar ditampilake minangka gantiné.',
+  largeDataInvalid: 'Data ora bisa ditampilake amarga {column} ora valid.',
+  largeDataLimit: 'Data ora bisa ditampilake amarga ngluwihi wates {limit}.',
 };
 
 registerLyraLocale('jv', strings);

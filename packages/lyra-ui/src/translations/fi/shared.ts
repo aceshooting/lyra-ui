@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Valittujen kohteiden lataaminen epäonnistui.',
   catalogPickerInputLimit: 'Osa luettelon merkinnöistä jätettiin pois syöterajan täyttymisen vuoksi.',
   tagFacetLimit: 'Muut tunnisteet: +{count}',
+  engine3dLoading: 'Ladataan 3D-näkymää…',
+  engine3dUnavailable: '3D-moottoria ei voitu ladata.',
+  engine3dUnsupported: 'Tämä selain ei voi näyttää 3D-grafiikkaa.',
+  engine3dContextLost: '3D-näkymä menetti grafiikkakontekstinsa.',
+  engine3dError: '3D-näkymä pysähtyi virheen vuoksi.',
+  engine3dSoftwareRendering: '3D-grafiikka toimii ilman laitteistokiihdytystä, joten yksityiskohtia on vähemmän.',
+  engine3dShowingBuiltin: 'Sen sijaan näytetään vakionäkymä.',
+  engine3dShowingList: 'Sen sijaan näytetään luettelo.',
+  largeDataInvalid: 'Tietoja ei voi näyttää, koska {column} on virheellinen.',
+  largeDataLimit: 'Tietoja ei voi näyttää, koska ne ylittävät rajan {limit}.',
 };
 
 registerLyraLocale('fi', strings);

@@ -156,6 +156,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Elementele selectate nu au putut fi încărcate.',
   catalogPickerInputLimit: 'Unele intrări din catalog au fost omise deoarece s-a atins o limită de intrare.',
   tagFacetLimit: '+{count} — etichete suplimentare',
+  engine3dLoading: 'Se încarcă vizualizarea 3D…',
+  engine3dUnavailable: 'Motorul 3D nu a putut fi încărcat.',
+  engine3dUnsupported: 'Acest browser nu poate afișa grafică 3D.',
+  engine3dContextLost: 'Vizualizarea 3D și-a pierdut contextul grafic.',
+  engine3dError: 'Vizualizarea 3D s-a oprit din cauza unei erori.',
+  engine3dSoftwareRendering: 'Grafica 3D rulează fără accelerare hardware, așa că nivelul de detaliu este redus.',
+  engine3dShowingBuiltin: 'În locul ei se afișează vizualizarea standard.',
+  engine3dShowingList: 'În locul ei se afișează o listă.',
+  largeDataInvalid: 'Datele nu pot fi afișate deoarece {column} nu este valid.',
+  largeDataLimit: 'Datele nu pot fi afișate deoarece depășesc limita de {limit}.',
 };
 
 registerLyraLocale('ro', strings);

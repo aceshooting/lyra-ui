@@ -82,6 +82,7 @@ const FIXTURE_OPTIONAL_PEERS = Object.freeze({
  * new optional peer forces an explicit decision instead of silently landing uncovered.
  */
 const OPTIONAL_PEER_COVERAGE_EXEMPTIONS = Object.freeze({
+  '@aceshooting/lyra-3d': 'no packed entry point imports it yet; the bundle-size gate proves every entry reaches it only through import()',
   '@aceshooting/lyra-map': 'installed from the packed workspace tarball, not the registry',
   '@aceshooting/lyra-flags': 'installed from the packed workspace tarball, not the registry',
   '@aceshooting/lyra-translations': 'installed from the packed workspace tarball, not the registry',

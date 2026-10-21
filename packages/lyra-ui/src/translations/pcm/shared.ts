@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Di selected items no fit load.',
   catalogPickerInputLimit: 'Some catalog entries no enter because di input don reach im limit.',
   tagFacetLimit: '+{count} more tags',
+  engine3dLoading: '3D view dey load…',
+  engine3dUnavailable: 'Di 3D engine no load.',
+  engine3dUnsupported: 'Dis browser no fit show 3D graphics.',
+  engine3dContextLost: 'Di 3D view lose im graphics context.',
+  engine3dError: 'Di 3D view stop because of error.',
+  engine3dSoftwareRendering: '3D graphics dey run without hardware acceleration, so e no too get detail.',
+  engine3dShowingBuiltin: 'We dey show di standard view instead.',
+  engine3dShowingList: 'We dey show list instead.',
+  largeDataInvalid: 'Di data no fit show because {column} no correct.',
+  largeDataLimit: 'Di data no fit show because e pass di limit of {limit}.',
 };
 
 registerLyraLocale('pcm', strings);

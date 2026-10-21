@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'चुनल आइटम लोड ना हो सकल।',
   catalogPickerInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से कैटलॉग के कुछ प्रविष्टि छोड़ दिहल गइल बा।',
   tagFacetLimit: '+{count} गो अउरी टैग',
+  engine3dLoading: '3D दृश्य लोड हो रहल बा…',
+  engine3dUnavailable: '3D इंजन लोड ना हो सकल।',
+  engine3dUnsupported: 'ई ब्राउज़र 3D ग्राफ़िक्स ना देखा सकेला।',
+  engine3dContextLost: '3D दृश्य के ग्राफ़िक्स कॉन्टेक्स्ट खो गइल।',
+  engine3dError: '3D दृश्य एगो त्रुटि के कारण रुक गइल।',
+  engine3dSoftwareRendering: '3D ग्राफ़िक्स हार्डवेयर एक्सेलेरेशन के बिना चलत बा, एहसे विवरण कम हो गइल बा।',
+  engine3dShowingBuiltin: 'एकरा बदला में मानक दृश्य देखावल जा रहल बा।',
+  engine3dShowingList: 'एकरा बदला में एगो सूची देखावल जा रहल बा।',
+  largeDataInvalid: 'डेटा ना देखावल जा सकेला काहेकि {column} अमान्य बा।',
+  largeDataLimit: 'डेटा ना देखावल जा सकेला काहेकि ई {limit} के सीमा से ज्यादा बा।',
 };
 
 registerLyraLocale('bho', strings);

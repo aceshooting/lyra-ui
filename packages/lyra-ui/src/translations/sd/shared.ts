@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'چونڊيل شيون لوڊ نه ٿي سگهيون.',
   catalogPickerInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب فهرست جون ڪجهه داخلائون ڇڏيون ويون آهن.',
   tagFacetLimit: '+{count} وڌيڪ ٽيگ',
+  engine3dLoading: '3D ڏيک لوڊ ٿي رهيو آهي…',
+  engine3dUnavailable: '3D انجڻ لوڊ نه ٿي سگهي.',
+  engine3dUnsupported: 'هي برائوزر 3D گرافڪس ڏيکاري نٿو سگهي.',
+  engine3dContextLost: '3D ڏيک پنهنجو گرافڪس ڪانٽيڪسٽ وڃائي ويٺو.',
+  engine3dError: 'هڪ غلطيءَ سبب 3D ڏيک بند ٿي ويو.',
+  engine3dSoftwareRendering: '3D گرافڪس هارڊويئر ايڪسيليريشن کان سواءِ هلي رهيا آهن، تنهنڪري تفصيل گهٽجي ويو آهي.',
+  engine3dShowingBuiltin: 'ان جي بدران معياري ڏيک ڏيکاريو پيو وڃي.',
+  engine3dShowingList: 'ان جي بدران هڪ فهرست ڏيکاري پئي وڃي.',
+  largeDataInvalid: 'ڊيٽا ڏيکاري نٿي سگهجي ڇاڪاڻ ته {column} غلط آهي.',
+  largeDataLimit: 'ڊيٽا ڏيکاري نٿي سگهجي ڇاڪاڻ ته اها {limit} جي حد کان وڌيڪ آهي.',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

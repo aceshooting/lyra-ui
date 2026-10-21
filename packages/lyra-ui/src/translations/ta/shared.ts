@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'தேர்ந்தெடுக்கப்பட்ட உருப்படிகளை ஏற்ற முடியவில்லை.',
   catalogPickerInputLimit: 'உள்ளீட்டு வரம்பை எட்டியதால் சில பட்டியல் பதிவுகள் விடுபட்டுள்ளன.',
   tagFacetLimit: '+{count} கூடுதல் குறிச்சொற்கள்',
+  engine3dLoading: '3D காட்சி ஏற்றப்படுகிறது…',
+  engine3dUnavailable: '3D என்ஜினை ஏற்ற முடியவில்லை.',
+  engine3dUnsupported: 'இந்த உலாவியால் 3D வரைகலையைக் காட்ட முடியாது.',
+  engine3dContextLost: '3D காட்சி தனது வரைகலைச் சூழலை இழந்தது.',
+  engine3dError: 'பிழை காரணமாக 3D காட்சி நின்றுவிட்டது.',
+  engine3dSoftwareRendering: '3D வரைகலை வன்பொருள் முடுக்கம் இல்லாமல் இயங்குகிறது, எனவே விவரம் குறைக்கப்பட்டுள்ளது.',
+  engine3dShowingBuiltin: 'அதற்குப் பதிலாக நிலையான காட்சி காட்டப்படுகிறது.',
+  engine3dShowingList: 'அதற்குப் பதிலாக பட்டியல் காட்டப்படுகிறது.',
+  largeDataInvalid: '{column} தவறானது என்பதால் தரவைக் காட்ட முடியாது.',
+  largeDataLimit: 'தரவு {limit} வரம்பை மீறுவதால் அதைக் காட்ட முடியாது.',
 };
 
 registerLyraLocale('ta', strings);

@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'ټاکل شوي توکي رانیول کېدای نه شول.',
   catalogPickerInputLimit: 'د ننوتو حد ته د رسېدو له امله د نوملړ ځینې ننوتنې پرېښودل شوې دي.',
   tagFacetLimit: '+{count} نورې نښې',
+  engine3dLoading: 'درې‌بعدي لید رانیول کېږي…',
+  engine3dUnavailable: 'درې‌بعدي انجن نه شو رانیول کېدای.',
+  engine3dUnsupported: 'دا براوزر نه شي کولای درې‌بعدي ګرافیک وښيي.',
+  engine3dContextLost: 'درې‌بعدي لید خپل ګرافیکي شرایط له لاسه ورکړل.',
+  engine3dError: 'درې‌بعدي لید د یوې تېروتنې له امله ودرېد.',
+  engine3dSoftwareRendering: 'درې‌بعدي ګرافیک د هارډویر له چټکتیا پرته چلېږي، نو جزئیات کم شوي دي.',
+  engine3dShowingBuiltin: 'پر ځای یې معیاري لید ښودل کېږي.',
+  engine3dShowingList: 'پر ځای یې یو لیست ښودل کېږي.',
+  largeDataInvalid: 'معلومات نه شي ښودل کېدای ځکه {column} ناسم دی.',
+  largeDataLimit: 'معلومات نه شي ښودل کېدای ځکه د {limit} له حد څخه ډېر دي.',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

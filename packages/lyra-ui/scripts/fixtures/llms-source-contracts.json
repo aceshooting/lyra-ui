@@ -15052,7 +15052,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "ce0d3895c3c86fd221ca",
+      "fingerprint": "7c00f623d150910d5231",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15186,7 +15186,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "899b7fb89666b373c8fc",
+      "fingerprint": "6b50e50ffccee939469a",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16329,7 +16329,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "c7c7fd547ce7e6a2661c",
+      "fingerprint": "cb0f98ffb36db8444706",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16780,7 +16780,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "d2653251fff43839fac5",
+      "fingerprint": "241d87aded6325da7d17",
       "routes": [
         "src/localization.ts"
       ],

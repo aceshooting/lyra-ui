@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Seçili öğeler yüklenemedi.',
   catalogPickerInputLimit: 'Girdi sınırına ulaşıldığı için bazı katalog girdileri atlandı.',
   tagFacetLimit: '+{count} etiket daha',
+  engine3dLoading: '3B görünüm yükleniyor…',
+  engine3dUnavailable: '3B motoru yüklenemedi.',
+  engine3dUnsupported: 'Bu tarayıcı 3B grafikleri görüntüleyemiyor.',
+  engine3dContextLost: '3B görünüm grafik bağlamını kaybetti.',
+  engine3dError: '3B görünüm bir hata nedeniyle durdu.',
+  engine3dSoftwareRendering: '3B grafikler donanım hızlandırması olmadan çalışıyor, bu yüzden ayrıntı azaltıldı.',
+  engine3dShowingBuiltin: 'Bunun yerine standart görünüm gösteriliyor.',
+  engine3dShowingList: 'Bunun yerine bir liste gösteriliyor.',
+  largeDataInvalid: '{column} geçersiz olduğu için veriler görüntülenemiyor.',
+  largeDataLimit: 'Veriler {limit} sınırını aştığı için görüntülenemiyor.',
 };
 
 registerLyraLocale('tr', strings);

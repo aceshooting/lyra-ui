@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'निवडलेले आयटम लोड करता आले नाहीत.',
   catalogPickerInputLimit: 'इनपुट मर्यादा गाठल्यामुळे कॅटलॉगमधील काही नोंदी वगळल्या आहेत.',
   tagFacetLimit: 'आणखी टॅग: +{count}',
+  engine3dLoading: '3D दृश्य लोड होत आहे…',
+  engine3dUnavailable: '3D इंजिन लोड करता आले नाही.',
+  engine3dUnsupported: 'हा ब्राउझर 3D ग्राफिक्स दाखवू शकत नाही.',
+  engine3dContextLost: '3D दृश्याचा ग्राफिक्स कॉन्टेक्स्ट गमावला गेला.',
+  engine3dError: 'त्रुटीमुळे 3D दृश्य थांबले.',
+  engine3dSoftwareRendering: '3D ग्राफिक्स हार्डवेअर प्रवेगाशिवाय चालत आहेत, त्यामुळे तपशील कमी झाला आहे.',
+  engine3dShowingBuiltin: 'त्याऐवजी मानक दृश्य दाखवले जात आहे.',
+  engine3dShowingList: 'त्याऐवजी यादी दाखवली जात आहे.',
+  largeDataInvalid: '{column} अवैध असल्यामुळे डेटा दाखवता येत नाही.',
+  largeDataLimit: 'डेटा {limit} च्या मर्यादेपेक्षा जास्त असल्यामुळे दाखवता येत नाही.',
 };
 
 registerLyraLocale('mr', strings);

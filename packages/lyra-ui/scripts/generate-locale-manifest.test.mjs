@@ -47,6 +47,20 @@ test('manifest and loader map preserve authored aliases while publishing canonic
   assert.equal(loaderLocales.some((entry) => entry.locale === 'en-XA' || entry.locale === 'ar-XB'), false);
 });
 
+test('published locale JSON stays compact without changing metadata or loader imports', async () => {
+  const { manifest, loaderLocales } = await analyzeLocaleInventory({ runtime: pinnedRuntime });
+  const artifacts = renderLocaleArtifacts({ manifest, loaderLocales });
+  const serialized = artifacts.get(path.join(packageDir, 'locales.json'));
+  assert.deepEqual(JSON.parse(serialized), manifest);
+  assert.equal(serialized.endsWith('\n'), true);
+  assert.equal(serialized.split('\n').length, 2);
+  assert.ok(Buffer.byteLength(serialized) < Buffer.byteLength(JSON.stringify(manifest, null, 2)));
+  assert.equal(
+    artifacts.get(path.join(packageDir, 'src/internal/locale-loaders.generated.ts')),
+    renderLocaleLoaderMap(loaderLocales),
+  );
+});
+
 test('literal loader map contains one exact import per canonical catalog', () => {
   const source = renderLocaleLoaderMap([
     { locale: 'lah', sourceLocale: 'pnb', importPath: '../translations/pnb.js' },

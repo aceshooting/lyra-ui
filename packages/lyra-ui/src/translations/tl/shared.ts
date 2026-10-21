@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Hindi ma-load ang mga napiling item.',
   catalogPickerInputLimit: 'May ilang tala sa katalogo na hindi isinama dahil naabot ang limitasyon sa input.',
   tagFacetLimit: '+{count} pang tag',
+  engine3dLoading: 'Nilo-load ang 3D na tanaw…',
+  engine3dUnavailable: 'Hindi na-load ang 3D engine.',
+  engine3dUnsupported: 'Hindi maipapakita ng browser na ito ang 3D graphics.',
+  engine3dContextLost: 'Nawala sa 3D na tanaw ang graphics context nito.',
+  engine3dError: 'Huminto ang 3D na tanaw dahil sa isang error.',
+  engine3dSoftwareRendering: 'Tumatakbo ang 3D graphics nang walang hardware acceleration, kaya nabawasan ang detalye.',
+  engine3dShowingBuiltin: 'Ipinapakita ang karaniwang tanaw bilang kapalit.',
+  engine3dShowingList: 'Ipinapakita ang isang listahan bilang kapalit.',
+  largeDataInvalid: 'Hindi maipapakita ang datos dahil di-wasto ang {column}.',
+  largeDataLimit: 'Hindi maipapakita ang datos dahil lumalampas ito sa limitasyong {limit}.',
 };
 
 registerLyraLocale('tl', strings);

@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: '无法加载已选择的项目。',
   catalogPickerInputLimit: '由于达到输入限制，部分目录条目已被省略。',
   tagFacetLimit: '+{count} 个标签',
+  engine3dLoading: '正在加载 3D 视图…',
+  engine3dUnavailable: '无法加载 3D 引擎。',
+  engine3dUnsupported: '此浏览器无法显示 3D 图形。',
+  engine3dContextLost: '3D 视图丢失了图形上下文。',
+  engine3dError: '3D 视图因错误而停止。',
+  engine3dSoftwareRendering: '3D 图形在没有硬件加速的情况下运行，因此细节有所减少。',
+  engine3dShowingBuiltin: '已改为显示标准视图。',
+  engine3dShowingList: '已改为显示列表。',
+  largeDataInvalid: '无法显示数据，因为 {column} 无效。',
+  largeDataLimit: '无法显示数据，因为数据超过了 {limit} 的上限。',
 };
 
 registerLyraLocale('zh-CN', strings);

@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'De valgte elementer kunne ikke indlæses.',
   catalogPickerInputLimit: 'Nogle katalogposter blev udeladt, fordi en grænse for input blev nået.',
   tagFacetLimit: '+{count} flere tags',
+  engine3dLoading: 'Indlæser 3D-visningen…',
+  engine3dUnavailable: '3D-motoren kunne ikke indlæses.',
+  engine3dUnsupported: 'Denne browser kan ikke vise 3D-grafik.',
+  engine3dContextLost: '3D-visningen mistede sin grafikkontekst.',
+  engine3dError: '3D-visningen blev stoppet af en fejl.',
+  engine3dSoftwareRendering: '3D-grafik kører uden hardwareacceleration, så detaljeringsgraden er reduceret.',
+  engine3dShowingBuiltin: 'I stedet vises standardvisningen.',
+  engine3dShowingList: 'I stedet vises en liste.',
+  largeDataInvalid: 'Dataene kan ikke vises, fordi {column} er ugyldig.',
+  largeDataLimit: 'Dataene kan ikke vises, fordi de overskrider grænsen på {limit}.',
 };
 
 registerLyraLocale('da', strings);

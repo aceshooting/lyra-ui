@@ -40,6 +40,7 @@ import {
 import { positiveInitialMarginalGzipBytes } from "./bundle-metrics.mjs";
 import { bundleInitialRoute as measureInitialRoute } from "./bundle-initial-entry.mjs";
 import { bundleCssMeasurement } from "./bundle-css-entry.mjs";
+import { verifyEngine3dIsolation } from "./engine-3d-isolation.mjs";
 import {
   cssBudgetFinding,
   validateCssBundleConfig,
@@ -367,6 +368,18 @@ const toKb = (bytes) => (bytes / 1024).toFixed(1);
 
 const errors = [];
 errors.push(...(await verifyBundleExclusionClaims()));
+const isolationErrors = await verifyEngine3dIsolation({
+  esbuild,
+  packageDir,
+  exportsMap: pkg.exports,
+  external,
+});
+errors.push(...isolationErrors);
+if (isolationErrors.length === 0) {
+  console.log(
+    "3D isolation verified: no published entry point statically reaches @aceshooting/lyra-3d or three"
+  );
+}
 
 if (exclusionClaimsOnly) {
   if (errors.length > 0) {

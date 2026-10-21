@@ -262,6 +262,25 @@ describe('popover peer and transition lifecycle', () => {
     expect(lifecycle).to.deep.equal([]);
   });
 
+  it('keeps an open peer untouched when the newcomer vetoes its own show', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div>${popover('keeper')}${popover('newcomer')}</div>`);
+    const keeper = wrapper.querySelector<LyraPopover>('#keeper')!;
+    const newcomer = wrapper.querySelector<LyraPopover>('#newcomer')!;
+    await keeper.show();
+    let hideRequests = 0;
+    keeper.addEventListener('lr-hide', () => { hideRequests += 1; });
+    newcomer.addEventListener('lr-show', (event) => event.preventDefault());
+
+    newcomer.setAttribute('open', '');
+    await newcomer.updateComplete;
+
+    expect(hideRequests).to.equal(0);
+    expect(keeper.open).to.equal(true);
+    expect(keeper.hasAttribute('open')).to.equal(true);
+    expect(newcomer.open).to.equal(false);
+    expect(newcomer.hasAttribute('open')).to.equal(false);
+  });
+
   it('aborts a newcomer when the current root peer vetoes its close', async () => {
     const wrapper = await fixture<HTMLElement>(html`<div>${popover('keeper')}${popover('newcomer')}</div>`);
     const keeper = wrapper.querySelector<LyraPopover>('#keeper')!;
@@ -272,7 +291,9 @@ describe('popover peer and transition lifecycle', () => {
     await newcomer.show();
 
     expect(keeper.open).to.equal(true);
+    expect(keeper.hasAttribute('open')).to.equal(true);
     expect(newcomer.open).to.equal(false);
+    expect(newcomer.hasAttribute('open')).to.equal(false);
   });
 
   it('allows initially open DOM-anchored popovers in separate shadow roots to coexist', async () => {
@@ -2412,7 +2433,7 @@ describe('overlay semantic and lifecycle regressions', () => {
     const iframe = document.createElement('iframe');
     document.body.append(iframe);
     const frameDocument = iframe.contentDocument;
-    const frameWindow = iframe.contentWindow;
+    const frameWindow = iframe.contentWindow as (Window & { MutationObserver: typeof MutationObserver }) | null;
     if (!frameDocument || !frameWindow) {
       iframe.remove();
       throw new Error('The iframe realm was unavailable.');

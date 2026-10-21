@@ -221,9 +221,14 @@ matrix per browser. Node 22 uses `package.json#packageManager` (`pnpm@12.14.0`).
 `.github/workflows/full-engine.yml` runs the complete non-coverage `src/**/*.test.ts` suite in
 Firefox and WebKit weekly and on `workflow_dispatch`, each browser in eight cost-balanced shards
 under Node 22. The runner discovers and lexically sorts the live inventory, so every file runs
-exactly once without a second allowlist. Unknown files have unit cost; the package-entrypoint
-contract has a higher source-controlled cost; greedy least-cost assignment keeps it from dominating
-one shard. Every shard builds first (`package-entrypoints.test.ts` imports `dist/`; the package's
+exactly once without a second allowlist. Shards (these and the four coverage shards) are packed
+longest-first onto the least-loaded shard from the committed per-file seconds in
+`scripts/fixtures/test-file-costs.json`; a file it does not list costs the table's median. Regenerate
+the table from several runs' `lyra-ui-test-timing` artifacts (median per file, so one slow runner
+never dominates): `node packages/lyra-ui/scripts/ci-costs.mjs tests <timing.jsonl>...`, and refresh
+it whenever the unlisted share grows (a tooling test fails below 85% listed). The assignment depends
+only on the inventory and the table, so a failing CI shard reproduces as the same-numbered local
+shard. Every shard builds first (`package-entrypoints.test.ts` imports `dist/`; the package's
 `pretest` gives a clean `pnpm test` the same guarantee) and runs with strict browser-console handling.
 
 Scale with *more shards*, not more concurrency per shard: raising a lane's `WTR_CONCURRENCY` from 4
@@ -341,10 +346,10 @@ qualification needs a new commit and fresh qualification, and an existing tag is
 verify packed exports and dependencies against the versions actually on npm; workspace source at a
 matching version is no evidence a registry dependency works. npm needs a package to exist before its
 trusted publisher can be configured, so for the first publication of `@aceshooting/lyra-docs`,
-`@aceshooting/lyra-ide`, `@aceshooting/lyra-translations` or `@aceshooting/lyra-map`, provide a short-lived granular npm token
+`@aceshooting/lyra-ide`, `@aceshooting/lyra-translations`, `@aceshooting/lyra-map` or `@aceshooting/lyra-3d`, provide a short-lived granular npm token
 (`@aceshooting` read/write direct publish, Bypass 2FA) as the `NPM_BOOTSTRAP_TOKEN` secret in the
 protected `npm-publish` environment and dispatch
-`gh workflow run release.yml --ref main -f package=<lyra-docs|lyra-ide|lyra-translations|lyra-map> -f first_package_bootstrap=true`.
+`gh workflow run release.yml --ref main -f package=<lyra-docs|lyra-ide|lyra-translations|lyra-map|lyra-3d> -f first_package_bootstrap=true`.
 Both workflows reject the flag for other packages, for a package already on the registry, and on an
 ambiguous registry response. After environment approval the protected job uses the token only for the
 verified tarball and publishes with provenance. Then configure the trusted publisher for

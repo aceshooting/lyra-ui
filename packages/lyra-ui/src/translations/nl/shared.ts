@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'De geselecteerde items konden niet worden geladen.',
   catalogPickerInputLimit: 'Sommige catalogusvermeldingen zijn weggelaten omdat een invoerlimiet is bereikt.',
   tagFacetLimit: '+{count} extra labels',
+  engine3dLoading: '3D-weergave laden…',
+  engine3dUnavailable: 'De 3D-engine kon niet worden geladen.',
+  engine3dUnsupported: 'Deze browser kan geen 3D-graphics weergeven.',
+  engine3dContextLost: 'De 3D-weergave is de grafische context kwijtgeraakt.',
+  engine3dError: 'De 3D-weergave is gestopt vanwege een fout.',
+  engine3dSoftwareRendering: '3D-graphics draaien zonder hardwareversnelling, waardoor het detailniveau lager is.',
+  engine3dShowingBuiltin: 'In plaats daarvan wordt de standaardweergave getoond.',
+  engine3dShowingList: 'In plaats daarvan wordt een lijst getoond.',
+  largeDataInvalid: 'De gegevens kunnen niet worden weergegeven omdat {column} ongeldig is.',
+  largeDataLimit: 'De gegevens kunnen niet worden weergegeven omdat ze de limiet van {limit} overschrijden.',
 };
 
 registerLyraLocale('nl', strings);

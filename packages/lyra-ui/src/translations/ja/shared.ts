@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: '選択した項目を読み込めませんでした。',
   catalogPickerInputLimit: '入力上限に達したため、カタログ項目の一部が省略されました。',
   tagFacetLimit: '+{count} 件の追加タグ',
+  engine3dLoading: '3D 表示を読み込んでいます…',
+  engine3dUnavailable: '3D エンジンを読み込めませんでした。',
+  engine3dUnsupported: 'このブラウザーでは 3D グラフィックスを表示できません。',
+  engine3dContextLost: '3D 表示でグラフィックスコンテキストが失われました。',
+  engine3dError: 'エラーのため 3D 表示が停止しました。',
+  engine3dSoftwareRendering: '3D グラフィックスはハードウェアアクセラレーションなしで動作しているため、詳細度が下がっています。',
+  engine3dShowingBuiltin: '代わりに標準表示を表示しています。',
+  engine3dShowingList: '代わりに一覧を表示しています。',
+  largeDataInvalid: '{column} が無効なため、データを表示できません。',
+  largeDataLimit: 'データが上限の {limit} を超えているため、表示できません。',
 };
 
 registerLyraLocale('ja', strings);

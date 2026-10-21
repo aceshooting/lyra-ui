@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'የተመረጡትን ንጥሎች መጫን አልተቻለም።',
   catalogPickerInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ የካታሎግ ግቤቶች ተወግደዋል።',
   tagFacetLimit: '+{count} ተጨማሪ መለያዎች',
+  engine3dLoading: 'የ3D እይታ በመጫን ላይ…',
+  engine3dUnavailable: 'የ3D ሞተሩን መጫን አልተቻለም።',
+  engine3dUnsupported: 'ይህ አሳሽ የ3D ግራፊክስን ማሳየት አይችልም።',
+  engine3dContextLost: 'የ3D እይታ የግራፊክስ አውድ አጥቷል።',
+  engine3dError: 'የ3D እይታ በስህተት ምክንያት ቆሟል።',
+  engine3dSoftwareRendering: '3D ግራፊክስ ያለ ሃርድዌር ማፋጠን ይሰራል፣ ስለዚህ ዝርዝሩ ቀንሷል።',
+  engine3dShowingBuiltin: 'በምትኩ መደበኛው እይታ እየታየ ነው።',
+  engine3dShowingList: 'በምትኩ ዝርዝር እየታየ ነው።',
+  largeDataInvalid: '{column} ልክ ስላልሆነ ውሂቡን ማሳየት አይቻልም።',
+  largeDataLimit: 'ውሂቡ ከ{limit} ገደብ ስለሚበልጥ ማሳየት አይቻልም።',
 };
 
 registerLyraLocale('am', strings);

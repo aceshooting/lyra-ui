@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'De valgte elementene kunne ikke lastes inn.',
   catalogPickerInputLimit: 'Noen katalogoppføringer ble utelatt fordi en inndatagrense ble nådd.',
   tagFacetLimit: '+{count} etiketter til',
+  engine3dLoading: 'Laster inn 3D-visningen…',
+  engine3dUnavailable: '3D-motoren kunne ikke lastes inn.',
+  engine3dUnsupported: 'Denne nettleseren kan ikke vise 3D-grafikk.',
+  engine3dContextLost: '3D-visningen mistet grafikkonteksten sin.',
+  engine3dError: '3D-visningen stoppet på grunn av en feil.',
+  engine3dSoftwareRendering: '3D-grafikk kjører uten maskinvareakselerasjon, så detaljnivået er redusert.',
+  engine3dShowingBuiltin: 'Standardvisningen vises i stedet.',
+  engine3dShowingList: 'En liste vises i stedet.',
+  largeDataInvalid: 'Dataene kan ikke vises fordi {column} er ugyldig.',
+  largeDataLimit: 'Dataene kan ikke vises fordi de overskrider grensen på {limit}.',
 };
 
 registerLyraLocale('nb', strings);

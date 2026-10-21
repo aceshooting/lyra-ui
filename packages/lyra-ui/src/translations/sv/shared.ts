@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'De valda objekten kunde inte läsas in.',
   catalogPickerInputLimit: 'Vissa katalogposter utelämnades eftersom en indatagräns nåddes.',
   tagFacetLimit: '+{count} taggar till',
+  engine3dLoading: 'Läser in 3D-vyn…',
+  engine3dUnavailable: '3D-motorn kunde inte läsas in.',
+  engine3dUnsupported: 'Den här webbläsaren kan inte visa 3D-grafik.',
+  engine3dContextLost: '3D-vyn förlorade sin grafikkontext.',
+  engine3dError: '3D-vyn stoppades på grund av ett fel.',
+  engine3dSoftwareRendering: '3D-grafik körs utan maskinvaruacceleration, så detaljnivån är lägre.',
+  engine3dShowingBuiltin: 'Standardvyn visas i stället.',
+  engine3dShowingList: 'En lista visas i stället.',
+  largeDataInvalid: 'Data kan inte visas eftersom {column} är ogiltig.',
+  largeDataLimit: 'Data kan inte visas eftersom de överskrider gränsen på {limit}.',
 };
 
 registerLyraLocale('sv', strings);

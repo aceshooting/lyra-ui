@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'موارد انتخاب‌شده بارگیری نشد.',
   catalogPickerInputLimit: 'برخی ورودی‌های فهرست به‌دلیل رسیدن به محدودیت ورودی حذف شدند.',
   tagFacetLimit: '+{count} برچسب دیگر',
+  engine3dLoading: 'در حال بارگذاری نمای سه‌بعدی…',
+  engine3dUnavailable: 'موتور سه‌بعدی بارگذاری نشد.',
+  engine3dUnsupported: 'این مرورگر نمی‌تواند گرافیک سه‌بعدی را نمایش دهد.',
+  engine3dContextLost: 'نمای سه‌بعدی زمینهٔ گرافیکی خود را از دست داد.',
+  engine3dError: 'نمای سه‌بعدی به دلیل خطا متوقف شد.',
+  engine3dSoftwareRendering: 'گرافیک سه‌بعدی بدون شتاب‌دهی سخت‌افزاری اجرا می‌شود، بنابراین جزئیات کاهش یافته است.',
+  engine3dShowingBuiltin: 'به‌جای آن، نمای استاندارد نمایش داده می‌شود.',
+  engine3dShowingList: 'به‌جای آن، یک فهرست نمایش داده می‌شود.',
+  largeDataInvalid: 'داده‌ها نمایش داده نمی‌شوند زیرا {column} نامعتبر است.',
+  largeDataLimit: 'داده‌ها نمایش داده نمی‌شوند زیرا از حد مجاز {limit} فراتر می‌روند.',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Izinto ezikhethiwe azikwazanga ukulayishwa.',
   catalogPickerInputLimit: 'Okunye okufakiwe kukhathalogi kushiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
   tagFacetLimit: '+{count} omaka abengeziwe',
+  engine3dLoading: 'Iyalayisha ukubuka kwe-3D…',
+  engine3dUnavailable: 'Injini ye-3D ayikwazanga ukulayishwa.',
+  engine3dUnsupported: 'Leli bhrawuza alikwazi ukubonisa imifanekiso ye-3D.',
+  engine3dContextLost: 'Ukubuka kwe-3D kulahlekelwe umongo wayo wemifanekiso.',
+  engine3dError: 'Ukubuka kwe-3D kumiswe iphutha.',
+  engine3dSoftwareRendering: 'Imifanekiso ye-3D isebenza ngaphandle kokusheshiswa kwehadiwe, ngakho imininingwane iyancishiswa.',
+  engine3dShowingBuiltin: 'Kubonisa ukubuka okujwayelekile esikhundleni.',
+  engine3dShowingList: 'Kubonisa uhlu esikhundleni.',
+  largeDataInvalid: 'Idatha ayikwazi ukubonisa ngoba i-{column} ayivumelekile.',
+  largeDataLimit: 'Idatha ayikwazi ukubonisa ngoba idlula umkhawulo we-{limit}.',
 };
 
 registerLyraLocale('zu', strings);

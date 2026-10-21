@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'ಆಯ್ಕೆಮಾಡಿದ ಐಟಂಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
   catalogPickerInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಕ್ಯಾಟಲಾಗ್‌ನ ಕೆಲವು ನಮೂದುಗಳನ್ನು ಬಿಡಲಾಗಿದೆ.',
   tagFacetLimit: 'ಹೆಚ್ಚುವರಿ ಟ್ಯಾಗ್‌ಗಳು: +{count}',
+  engine3dLoading: '3D ನೋಟವನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ…',
+  engine3dUnavailable: '3D ಎಂಜಿನ್ ಅನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
+  engine3dUnsupported: 'ಈ ಬ್ರೌಸರ್ 3D ಗ್ರಾಫಿಕ್ಸ್ ಅನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
+  engine3dContextLost: '3D ನೋಟವು ತನ್ನ ಗ್ರಾಫಿಕ್ಸ್ ಸಂದರ್ಭವನ್ನು ಕಳೆದುಕೊಂಡಿತು.',
+  engine3dError: 'ದೋಷದ ಕಾರಣ 3D ನೋಟ ನಿಂತುಹೋಯಿತು.',
+  engine3dSoftwareRendering: '3D ಗ್ರಾಫಿಕ್ಸ್ ಹಾರ್ಡ್‌ವೇರ್ ವೇಗವರ್ಧನೆ ಇಲ್ಲದೆ ಚಲಿಸುತ್ತಿದೆ, ಆದ್ದರಿಂದ ವಿವರ ಕಡಿಮೆಯಾಗಿದೆ.',
+  engine3dShowingBuiltin: 'ಬದಲಿಗೆ ಪ್ರಮಾಣಿತ ನೋಟವನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ.',
+  engine3dShowingList: 'ಬದಲಿಗೆ ಪಟ್ಟಿಯನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ.',
+  largeDataInvalid: '{column} ಅಮಾನ್ಯವಾಗಿರುವುದರಿಂದ ಡೇಟಾವನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
+  largeDataLimit: 'ಡೇಟಾ {limit} ಮಿತಿಯನ್ನು ಮೀರುವುದರಿಂದ ಅದನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
 };
 
 registerLyraLocale('kn', strings);

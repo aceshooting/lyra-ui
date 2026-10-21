@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'منتخب آئٹمز لوڈ نہیں ہو سکے۔',
   catalogPickerInputLimit: 'ان پٹ کی حد پوری ہونے کی وجہ سے کیٹلاگ کے کچھ اندراجات چھوڑ دیے گئے ہیں۔',
   tagFacetLimit: '+{count} مزید ٹیگ',
+  engine3dLoading: 'تین جہتی منظر لوڈ ہو رہا ہے…',
+  engine3dUnavailable: 'تین جہتی انجن لوڈ نہیں ہو سکا۔',
+  engine3dUnsupported: 'یہ براؤزر تین جہتی گرافکس نہیں دکھا سکتا۔',
+  engine3dContextLost: 'تین جہتی منظر کا گرافکس کانٹیکسٹ ختم ہو گیا۔',
+  engine3dError: 'ایک خرابی کی وجہ سے تین جہتی منظر رک گیا۔',
+  engine3dSoftwareRendering: 'تین جہتی گرافکس ہارڈویئر ایکسیلریشن کے بغیر چل رہے ہیں، اس لیے تفصیل کم ہو گئی ہے۔',
+  engine3dShowingBuiltin: 'اس کے بجائے معیاری منظر دکھایا جا رہا ہے۔',
+  engine3dShowingList: 'اس کے بجائے ایک فہرست دکھائی جا رہی ہے۔',
+  largeDataInvalid: 'ڈیٹا نہیں دکھایا جا سکتا کیونکہ {column} غلط ہے۔',
+  largeDataLimit: 'ڈیٹا نہیں دکھایا جا سکتا کیونکہ یہ {limit} کی حد سے تجاوز کرتا ہے۔',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

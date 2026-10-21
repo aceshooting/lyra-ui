@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Ekokaki te kozwa biloko oyo eponami.',
   catalogPickerInputLimit: 'Balongoli ndambo ya makomi ya catalogue mpo motango ya kokɔtisa ekómi na ndelo.',
   tagFacetLimit: '+{count} bilembo mosusu',
+  engine3dLoading: 'Ezali kobimisa emonaneli ya 3D…',
+  engine3dUnavailable: 'Moteur ya 3D ekoki te kobima.',
+  engine3dUnsupported: 'Navigateur oyo ekoki te komonisa bililingi ya 3D.',
+  engine3dContextLost: 'Emonaneli ya 3D ebungisi contexte ya bililingi na yango.',
+  engine3dError: 'Emonaneli ya 3D etɛlɛmi mpo na libunga.',
+  engine3dSoftwareRendering: 'Bililingi ya 3D ezali kosala kozanga kopesama mbangu na matériel, yango wana makambo ya mikemike ekitami.',
+  engine3dShowingBuiltin: 'Emonaneli ya ntango nyonso emonisami na esika na yango.',
+  engine3dShowingList: 'Liste emonisami na esika na yango.',
+  largeDataInvalid: 'Ekoki te komonisa ba données mpo {column} ezali malamu te.',
+  largeDataLimit: 'Ekoki te komonisa ba données mpo eleki limite ya {limit}.',
 };
 
 registerLyraLocale('ln', strings);

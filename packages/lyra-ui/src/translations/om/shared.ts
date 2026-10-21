@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Wantoota filataman feʼuun hin dandaʼamne.',
   catalogPickerInputLimit: 'Daangaan galtee waan gaʼameef galmeewwan kaataalogii tokko tokko hafaniiru.',
   tagFacetLimit: '+{count} mallattoolee dabalataa',
+  engine3dLoading: 'Mulʼata 3D feʼaa jira…',
+  engine3dUnavailable: 'Inajiniin 3D feʼamuu hin dandaʼamne.',
+  engine3dUnsupported: 'Biraawzarii kun suuraalee 3D agarsiisuu hin dandaʼu.',
+  engine3dContextLost: 'Mulʼanni 3D haala suuraa isaa dhabe.',
+  engine3dError: 'Mulʼanni 3D dogoggora tokko irraa kan kaʼeen dhaabbate.',
+  engine3dSoftwareRendering: 'Suuraaleen 3D saffisiinsa hardiweerii malee hojjetu, kanaaf balʼinni xiqqaateera.',
+  engine3dShowingBuiltin: 'Mulʼanni idilee bakka isaa buʼee agarsiifameera.',
+  engine3dShowingList: 'Tarreen bakka isaa buʼee agarsiifameera.',
+  largeDataInvalid: 'Daataan agarsiifamuu hin dandaʼu sababni {column} sirrii miti.',
+  largeDataLimit: 'Daataan agarsiifamuu hin dandaʼu sababni daangaa {limit} caalu.',
 };
 
 registerLyraLocale('om', strings);

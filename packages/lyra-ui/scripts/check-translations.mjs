@@ -688,15 +688,15 @@ export async function runTranslationCatalogCheck() {
   // re-derived, so a translation slice's expected key set can never drift from what
   // `generate-translation-slices.mjs` actually routes there.
   const familyIndex = await computeFamilyKeyIndex({ packageDir: packageRoot });
-  const orderedKeysForSlice = (sliceName) => {
-    if (sliceName === 'shared') {
-      return englishOrder.filter((key) => (familyIndex.keyToFamilies.get(key)?.size ?? 0) > 1);
-    }
-    return englishOrder.filter((key) => {
-      const owners = familyIndex.keyToFamilies.get(key);
-      return owners?.size === 1 && owners.has(sliceName);
-    });
+  // Routed exactly as generate-translation-slices.mjs routes them: a key with one owning family
+  // goes to that family's slice, any other reachable key to `shared`. A key reached only from a
+  // shared `src/internal/` helper is owned by `shared` itself and belongs there too.
+  const sliceOfKey = (key) => {
+    const owners = familyIndex.keyToFamilies.get(key);
+    if (!owners || owners.size === 0) return undefined;
+    return owners.size === 1 ? [...owners][0] : 'shared';
   };
+  const orderedKeysForSlice = (sliceName) => englishOrder.filter((key) => sliceOfKey(key) === sliceName);
   const knownSliceNames = new Set([...familyIndex.familyToKeys.keys(), 'shared']);
 
   let files = [];

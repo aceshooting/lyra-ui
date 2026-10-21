@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'തിരഞ്ഞെടുത്ത ഇനങ്ങൾ ലോഡ് ചെയ്യാനായില്ല.',
   catalogPickerInputLimit: 'ഇൻപുട്ട് പരിധിയിലെത്തിയതിനാൽ കാറ്റലോഗിലെ ചില എൻട്രികൾ ഒഴിവാക്കി.',
   tagFacetLimit: '+{count} ടാഗുകൾ കൂടി',
+  engine3dLoading: '3D കാഴ്ച ലോഡ് ചെയ്യുന്നു…',
+  engine3dUnavailable: '3D എൻജിൻ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല.',
+  engine3dUnsupported: 'ഈ ബ്രൗസറിന് 3D ഗ്രാഫിക്സ് പ്രദർശിപ്പിക്കാൻ കഴിയില്ല.',
+  engine3dContextLost: '3D കാഴ്ചയ്ക്ക് ഗ്രാഫിക്സ് കോൺടെക്സ്റ്റ് നഷ്ടപ്പെട്ടു.',
+  engine3dError: 'ഒരു പിശക് കാരണം 3D കാഴ്ച നിലച്ചു.',
+  engine3dSoftwareRendering: '3D ഗ്രാഫിക്സ് ഹാർഡ്‌വെയർ ആക്സലറേഷൻ ഇല്ലാതെയാണ് പ്രവർത്തിക്കുന്നത്, അതിനാൽ വിശദാംശങ്ങൾ കുറവാണ്.',
+  engine3dShowingBuiltin: 'പകരം സ്റ്റാൻഡേർഡ് കാഴ്ച കാണിക്കുന്നു.',
+  engine3dShowingList: 'പകരം ഒരു ലിസ്റ്റ് കാണിക്കുന്നു.',
+  largeDataInvalid: '{column} അസാധുവായതിനാൽ ഡാറ്റ പ്രദർശിപ്പിക്കാൻ കഴിയില്ല.',
+  largeDataLimit: 'ഡാറ്റ {limit} പരിധി കവിയുന്നതിനാൽ പ്രദർശിപ്പിക്കാൻ കഴിയില്ല.',
 };
 
 registerLyraLocale('ml', strings);

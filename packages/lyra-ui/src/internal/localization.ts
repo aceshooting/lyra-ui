@@ -1627,6 +1627,16 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   tagFacetLimit: '+{count} more tags',
   codeBlockHighlightLimit: 'Long code is shown without syntax highlighting.',
   diffViewHighlightLimit: 'Long code is shown without syntax highlighting.',
+  engine3dLoading: 'Loading the 3D view…',
+  engine3dUnavailable: 'The 3D engine could not be loaded.',
+  engine3dUnsupported: 'This browser cannot display 3D graphics.',
+  engine3dContextLost: 'The 3D view lost its graphics context.',
+  engine3dError: 'The 3D view stopped because of an error.',
+  engine3dSoftwareRendering: '3D graphics run without hardware acceleration, so detail is reduced.',
+  engine3dShowingBuiltin: 'Showing the standard view instead.',
+  engine3dShowingList: 'Showing a list instead.',
+  largeDataInvalid: 'The data cannot be displayed because {column} is invalid.',
+  largeDataLimit: 'The data cannot be displayed because it exceeds the limit of {limit}.',
 };
 
 export {

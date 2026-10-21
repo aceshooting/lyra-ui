@@ -155,6 +155,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Não foi possível carregar os itens selecionados.',
   catalogPickerInputLimit: 'Algumas entradas do catálogo foram omitidas por ter sido atingido um limite de entrada.',
   tagFacetLimit: '+{count} etiquetas',
+  engine3dLoading: 'A carregar a vista 3D…',
+  engine3dUnavailable: 'Não foi possível carregar o motor 3D.',
+  engine3dUnsupported: 'Este navegador não consegue apresentar gráficos 3D.',
+  engine3dContextLost: 'A vista 3D perdeu o contexto gráfico.',
+  engine3dError: 'A vista 3D parou devido a um erro.',
+  engine3dSoftwareRendering: 'Os gráficos 3D são executados sem aceleração de hardware, pelo que o nível de detalhe é reduzido.',
+  engine3dShowingBuiltin: 'É apresentada a vista predefinida em alternativa.',
+  engine3dShowingList: 'É apresentada uma lista em alternativa.',
+  largeDataInvalid: 'Não é possível apresentar os dados porque {column} é inválido.',
+  largeDataLimit: 'Não é possível apresentar os dados porque excedem o limite de {limit}.',
 };
 
 registerLyraLocale('pt-PT', strings);

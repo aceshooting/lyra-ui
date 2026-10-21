@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: '선택한 항목을 로드할 수 없습니다.',
   catalogPickerInputLimit: '입력 한도에 도달하여 일부 카탈로그 항목이 생략되었습니다.',
   tagFacetLimit: '+{count}개 추가 태그',
+  engine3dLoading: '3D 보기를 불러오는 중…',
+  engine3dUnavailable: '3D 엔진을 불러오지 못했습니다.',
+  engine3dUnsupported: '이 브라우저에서는 3D 그래픽을 표시할 수 없습니다.',
+  engine3dContextLost: '3D 보기의 그래픽 컨텍스트가 손실되었습니다.',
+  engine3dError: '오류로 인해 3D 보기가 중지되었습니다.',
+  engine3dSoftwareRendering: '3D 그래픽이 하드웨어 가속 없이 실행되어 세부 표현이 줄어듭니다.',
+  engine3dShowingBuiltin: '대신 표준 보기를 표시합니다.',
+  engine3dShowingList: '대신 목록을 표시합니다.',
+  largeDataInvalid: '{column}이(가) 올바르지 않아 데이터를 표시할 수 없습니다.',
+  largeDataLimit: '데이터가 {limit} 한도를 초과하여 표시할 수 없습니다.',
 };
 
 registerLyraLocale('ko', strings);

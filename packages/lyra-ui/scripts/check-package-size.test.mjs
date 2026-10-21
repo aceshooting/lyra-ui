@@ -234,6 +234,30 @@ test('checks a Map companion archive through the shared tarball validator and it
   }
 });
 
+test('checks the 3D companion archive against its own required files and budget', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-package-size-'));
+  const tarball = join(directory, '3d.tgz');
+  const companion = JSON.parse(readFileSync(new URL('../../lyra-3d/package.json', import.meta.url), 'utf8'));
+  const contents = {
+    ...Object.fromEntries(requiredTarballFiles.map((file) => [file, null])),
+    ...Object.fromEntries([
+      'dist/core/index.js', 'dist/core/index.d.ts', 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
+    ].map((file) => [file, 'public package content'])),
+  };
+  try {
+    const actualBudgets = JSON.parse(readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'));
+    writeFileSync(tarball, archiveFixture(companion, contents));
+    assert.deepEqual(companionBudgetFindings(await readTarballMetrics(tarball, companion), companion.name, actualBudgets), []);
+    writeFileSync(tarball, archiveFixture(companion, { ...contents, 'dist/core/index.js': null, 'src/core/index.ts': 'source' }));
+    assert.deepEqual(companionBudgetFindings(await readTarballMetrics(tarball, companion), companion.name, actualBudgets), [
+      'published tarball is missing required file: dist/core/index.js',
+      'published tarball contains 1 source map, source or test file(s)',
+    ]);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('accepts only an honest measured unpacked exception with tight headroom', () => {
   const withException = {
     ...budgets,

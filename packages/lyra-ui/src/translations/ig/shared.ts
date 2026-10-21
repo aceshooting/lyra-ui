@@ -154,6 +154,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Enweghị ike ibunye ihe ndị ahọpụtara.',
   catalogPickerInputLimit: 'A hapụrụ ụfọdụ ndekọ katalọgụ n\'ihi na e ruru oke ntinye.',
   tagFacetLimit: '+{count} mkpado ndị ọzọ',
+  engine3dLoading: 'Na-ebugo ọhụhụ 3D…',
+  engine3dUnavailable: 'Enweghị ike ibugo injin 3D.',
+  engine3dUnsupported: 'Brọọza a enweghị ike igosi eserese 3D.',
+  engine3dContextLost: 'Ọhụhụ 3D furu ọnọdụ eserese ya.',
+  engine3dError: 'Ọhụhụ 3D kwụsịrị n’ihi njehie.',
+  engine3dSoftwareRendering: 'Eserese 3D na-arụ ọrụ na-enweghị ngwa ngwa hardware, ya mere nkọwa dị ntakịrị.',
+  engine3dShowingBuiltin: 'A na-egosi ọhụhụ nkịtị kama nke ahụ.',
+  engine3dShowingList: 'A na-egosi ndepụta kama nke ahụ.',
+  largeDataInvalid: 'Enweghị ike igosi data n’ihi na {column} adịghị mma.',
+  largeDataLimit: 'Enweghị ike igosi data n’ihi na ọ gafere oke nke {limit}.',
 };
 
 registerLyraLocale('ig', strings);

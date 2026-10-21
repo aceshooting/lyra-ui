@@ -1570,7 +1570,17 @@ export type LyraMessageKey =
   | 'ingestionQueueInputLimit'
   | 'tagFacetLimit'
   | 'codeBlockHighlightLimit'
-  | 'diffViewHighlightLimit';
+  | 'diffViewHighlightLimit'
+  | 'engine3dLoading'
+  | 'engine3dUnavailable'
+  | 'engine3dUnsupported'
+  | 'engine3dContextLost'
+  | 'engine3dError'
+  | 'engine3dSoftwareRendering'
+  | 'engine3dShowingBuiltin'
+  | 'engine3dShowingList'
+  | 'largeDataInvalid'
+  | 'largeDataLimit';
 
 /**
  * Message-catalog input. Registration and per-instance `.strings` assignment snapshot eligible

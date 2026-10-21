@@ -12,6 +12,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const COMPANIONS = [
   { name: '@aceshooting/lyra-translations', directory: 'packages/lyra-translations', prepare: 'assemble' },
   { name: '@aceshooting/lyra-ide', directory: 'packages/lyra-ide', prepare: 'sync' },
+  { name: '@aceshooting/lyra-3d', directory: 'packages/lyra-3d', prepare: 'build' },
 ];
 
 function run(command, args, cwd = root) {

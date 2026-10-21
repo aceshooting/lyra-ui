@@ -1897,6 +1897,9 @@ test('release workflows accept the document companion and reject unsupported tag
     ['lyra-map@1.0.0-beta.1', false],
     ['lyra-map@1.0.0+meta', false],
     ['lyra-map@01.0.0', false],
+    ['lyra-3d@1.0.0', true],
+    ['lyra-3d@1.0.0-beta.1', false],
+    ['lyra-3d@01.0.0', false],
     ['lyra-docs@0.1.0-beta.1', false],
     ['lyra-docs@0.1.0+rebuild.1', false],
     ['lyra-docs@00.1.0', false],
@@ -1938,6 +1941,22 @@ test('initial map release selects and validates only its own stable package', ()
   assert.throws(() => planReleaseTags({ packages, existingTags: ['lyra-map@1.0.0'], selection: 'lyra-map' }), /already exists/u);
   const release = readFileSync(path.join(repoRoot, '.github/workflows/release.yml'), 'utf8');
   assert.match(release, /options:\n(?:          - [^\n]+\n)*          - lyra-map\n/u);
+});
+
+test('initial 3D release selects and validates only its own stable package', () => {
+  const engines = { directory: 'packages/lyra-3d', name: '@aceshooting/lyra-3d', version: '1.0.0' };
+  const packages = [engines, { directory: 'packages/lyra-ui', name: '@aceshooting/lyra-ui', version: '30.0.0' }];
+  const plan = planReleaseTags({ packages, existingTags: [], selection: 'lyra-3d' });
+  assert.deepEqual(plan, [{ tag: 'lyra-3d@1.0.0', directory: engines.directory, packageName: engines.name, version: engines.version }]);
+  assert.deepEqual(validateTarballIdentity(engines, plan[0]), { name: engines.name, version: engines.version });
+  assert.throws(() => validateTarballIdentity({ ...engines, name: '@aceshooting/lyra-map' }, plan[0]), /does not match tag package/u);
+  assert.throws(() => planReleaseTags({ packages, existingTags: ['lyra-3d@1.0.0'], selection: 'lyra-3d' }), /already exists/u);
+  assert.throws(
+    () => planReleaseTags({ packages: [{ ...engines, version: '1.0.0-unreleased' }], existingTags: [], selection: 'all' }),
+    /Unsupported release tag/u,
+  );
+  const release = readFileSync(path.join(repoRoot, '.github/workflows/release.yml'), 'utf8');
+  assert.match(release, /options:\n(?:          - [^\n]+\n)*          - lyra-3d\n/u);
 });
 
 test('freshness dispatch is isolated and only follows real UI or flags publication', () => {

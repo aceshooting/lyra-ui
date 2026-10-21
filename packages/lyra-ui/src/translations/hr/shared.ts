@@ -156,6 +156,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Nije moguće učitati odabrane stavke.',
   catalogPickerInputLimit: 'Neke stavke kataloga izostavljene su jer je dosegnuto ograničenje ulaza.',
   tagFacetLimit: 'Dodatne oznake: +{count}',
+  engine3dLoading: 'Učitavanje 3D prikaza…',
+  engine3dUnavailable: '3D mehanizam nije bilo moguće učitati.',
+  engine3dUnsupported: 'Ovaj preglednik ne može prikazati 3D grafiku.',
+  engine3dContextLost: '3D prikaz izgubio je grafički kontekst.',
+  engine3dError: '3D prikaz zaustavljen je zbog pogreške.',
+  engine3dSoftwareRendering: '3D grafika radi bez hardverskog ubrzanja pa je razina detalja smanjena.',
+  engine3dShowingBuiltin: 'Umjesto toga prikazuje se standardni prikaz.',
+  engine3dShowingList: 'Umjesto toga prikazuje se popis.',
+  largeDataInvalid: 'Podatke nije moguće prikazati jer je {column} nevaljan.',
+  largeDataLimit: 'Podatke nije moguće prikazati jer premašuju ograničenje od {limit}.',
 };
 
 registerLyraLocale('hr', strings);

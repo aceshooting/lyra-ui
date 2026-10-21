@@ -381,6 +381,47 @@ it("keeps a localized subscriber live in a legitimate viewless owner document", 
   }
 });
 
+it('keeps subscriptions for the same connected host independent across repeated cleanup', async () => {
+  const locale = uniqueLocale('independenthost');
+  const host = await fixture<HTMLSpanElement & { requestUpdate(): void }>(
+    html`<span locale=${locale}></span>`
+  );
+  let updateRequests = 0;
+  host.requestUpdate = () => {
+    updateRequests += 1;
+  };
+  const stopFirst = subscribeLyraLocaleForHost(host);
+  const stopSecond = subscribeLyraLocaleForHost(host);
+  let stopLater: (() => void) | undefined;
+  try {
+    registerLyraLocale(locale, { noData: 'First catalog' });
+    expect(updateRequests).to.equal(2);
+
+    stopFirst();
+    stopFirst();
+    registerLyraLocale(locale, { noData: 'Second catalog' });
+    expect(updateRequests).to.equal(3);
+
+    stopSecond();
+    registerLyraLocale(locale, { noData: 'No subscribers' });
+    expect(updateRequests).to.equal(3);
+
+    stopLater = subscribeLyraLocaleForHost(host);
+    stopFirst();
+    stopSecond();
+    registerLyraLocale(locale, { noData: 'Later subscriber' });
+    expect(updateRequests).to.equal(4);
+
+    stopLater();
+    registerLyraLocale(locale, { noData: 'Released later subscriber' });
+    expect(updateRequests).to.equal(4);
+  } finally {
+    stopFirst();
+    stopSecond();
+    stopLater?.();
+  }
+});
+
 it("keeps host-locale subscription and delivery safe under a hostile owner-view accessor", () => {
   const locale = uniqueLocale("hov");
   const frame = document.createElement("iframe");

@@ -40,8 +40,9 @@ export default {
     'packages/lyra-ui': {
       // Edge startup diagnostics probe the hosted runner's OS-installed channel executable.
       ignoreBinaries: ['microsoft-edge'],
-      // The duplication checker spawns the pinned CLI from node_modules/.bin.
-      ignoreDependencies: ['jscpd'],
+      // The duplication checker spawns the pinned CLI from node_modules/.bin. The 3D companion is
+      // an optional peer that components import lazily once their engines exist.
+      ignoreDependencies: ['jscpd', '@aceshooting/lyra-3d'],
       entry: [
         'src/**/*.test.ts',
         'src/**/*.stories.ts',
@@ -74,6 +75,12 @@ export default {
       project: ['src/**/*.{mjs,ts}!', 'types/**/*.ts!', 'scripts/**/*.mjs', 'test/**/*.{mjs,ts}'],
       // Linux browser qualification uses the system font resolver and an isolated display server.
       ignoreBinaries: ['fc-match', 'Xvfb'],
+    },
+    'packages/lyra-3d': {
+      entry: ['test/*.test.{mjs,ts}', 'test/browser/*.mjs'],
+      project: ['src/**/*.ts!', 'scripts/**/*.mjs', 'test/**/*.{mjs,ts}'],
+      // Linux browser qualification runs Firefox and WebKit headed on an isolated display server.
+      ignoreBinaries: ['Xvfb'],
     },
     'packages/lyra-flags': {
       project: ['scripts/**/*.mjs', '*.js'],

@@ -2832,7 +2832,7 @@ preferred in production.
 
 ## Optional peer dependencies
 
-All 31 peers are optional, in two groups. The 28 component-facing peers remain outside the default
+All 32 peers are optional, in two groups. The 29 component-facing peers remain outside the default
 install; components load them on demand where applicable. React, Svelte, and Vue are
 compile-time-only peers for their matching
 opt-in declaration entries (`custom-elements-jsx`, `svelte`, and `vue`): those entries emit empty

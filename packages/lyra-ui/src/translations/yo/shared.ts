@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Kò ṣeé ṣe láti gbé àwọn ohun tí a yàn wọlé.',
   catalogPickerInputLimit: 'A fi díẹ̀ lára àwọn àkọsílẹ̀ àtòjọ sílẹ̀ nítorí pé a ti dé ààlà ìwọlé.',
   tagFacetLimit: '+{count} àmì sí i',
+  engine3dLoading: 'Ń gbé ìwò 3D wọlé…',
+  engine3dUnavailable: 'A kò lè gbé ẹ́ńjìnnì 3D wọlé.',
+  engine3dUnsupported: 'Aṣàwákiri yìí kò lè ṣàfihàn àwòrán 3D.',
+  engine3dContextLost: 'Ìwò 3D pàdánù àyíká àwòrán rẹ̀.',
+  engine3dError: 'Ìwò 3D dúró nítorí àṣìṣe.',
+  engine3dSoftwareRendering: 'Àwòrán 3D ń ṣiṣẹ́ láì lo ìyára hardware, nítorí náà àlàyé ti dínkù.',
+  engine3dShowingBuiltin: 'A ń ṣàfihàn ìwò déédé dípò rẹ̀.',
+  engine3dShowingList: 'A ń ṣàfihàn àtòjọ kan dípò rẹ̀.',
+  largeDataInvalid: 'A kò lè ṣàfihàn data náà nítorí pé {column} kò tọ́.',
+  largeDataLimit: 'A kò lè ṣàfihàn data náà nítorí pé ó kọjá ààlà {limit}.',
 };
 
 registerLyraLocale('yo', strings);

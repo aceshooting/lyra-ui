@@ -248,7 +248,7 @@ export function renderLocaleArtifacts({ packageDir = defaultPackageDir, manifest
   return new Map([
     [
       path.join(packageDir, 'locales.json'),
-      `${JSON.stringify(manifest, null, 2)}\n`,
+      `${JSON.stringify(manifest)}\n`,
     ],
     [
       path.join(packageDir, 'src/internal/locale-loaders.generated.ts'),

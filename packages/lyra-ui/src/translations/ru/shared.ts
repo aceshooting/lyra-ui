@@ -158,6 +158,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Не удалось загрузить выбранные элементы.',
   catalogPickerInputLimit: 'Часть записей каталога пропущена из-за достижения ограничения на входные данные.',
   tagFacetLimit: '+{count} — дополнительные теги',
+  engine3dLoading: 'Загрузка 3D-вида…',
+  engine3dUnavailable: 'Не удалось загрузить 3D-движок.',
+  engine3dUnsupported: 'Этот браузер не может отображать 3D-графику.',
+  engine3dContextLost: '3D-вид потерял графический контекст.',
+  engine3dError: '3D-вид остановлен из-за ошибки.',
+  engine3dSoftwareRendering: '3D-графика работает без аппаратного ускорения, поэтому детализация снижена.',
+  engine3dShowingBuiltin: 'Вместо него показан стандартный вид.',
+  engine3dShowingList: 'Вместо него показан список.',
+  largeDataInvalid: 'Невозможно отобразить данные, так как {column} недопустимо.',
+  largeDataLimit: 'Невозможно отобразить данные, так как они превышают лимит {limit}.',
 };
 
 registerLyraLocale('ru', strings);

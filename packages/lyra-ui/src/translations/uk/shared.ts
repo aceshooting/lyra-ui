@@ -158,6 +158,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Не вдалося завантажити вибрані елементи.',
   catalogPickerInputLimit: 'Частину записів каталогу пропущено через досягнення обмеження на вхідні дані.',
   tagFacetLimit: '+{count} — додаткові теги',
+  engine3dLoading: 'Завантаження 3D-вигляду…',
+  engine3dUnavailable: 'Не вдалося завантажити 3D-рушій.',
+  engine3dUnsupported: 'Цей браузер не може відображати 3D-графіку.',
+  engine3dContextLost: '3D-вигляд втратив графічний контекст.',
+  engine3dError: '3D-вигляд зупинився через помилку.',
+  engine3dSoftwareRendering: '3D-графіка працює без апаратного прискорення, тому деталізацію знижено.',
+  engine3dShowingBuiltin: 'Натомість показано стандартний вигляд.',
+  engine3dShowingList: 'Натомість показано список.',
+  largeDataInvalid: 'Неможливо показати дані, оскільки {column} недійсне.',
+  largeDataLimit: 'Неможливо показати дані, оскільки вони перевищують ліміт {limit}.',
 };
 
 registerLyraLocale('uk', strings);

@@ -158,6 +158,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Izbranih elementov ni bilo mogoče naložiti.',
   catalogPickerInputLimit: 'Nekateri vnosi v katalogu so bili izpuščeni, ker je bila dosežena omejitev vnosa.',
   tagFacetLimit: '+{count} — dodatne oznake',
+  engine3dLoading: 'Nalaganje 3D-prikaza …',
+  engine3dUnavailable: '3D-pogona ni bilo mogoče naložiti.',
+  engine3dUnsupported: 'Ta brskalnik ne more prikazati 3D-grafike.',
+  engine3dContextLost: '3D-prikaz je izgubil grafični kontekst.',
+  engine3dError: '3D-prikaz se je ustavil zaradi napake.',
+  engine3dSoftwareRendering: '3D-grafika deluje brez strojnega pospeševanja, zato je podrobnosti manj.',
+  engine3dShowingBuiltin: 'Namesto tega je prikazan standardni prikaz.',
+  engine3dShowingList: 'Namesto tega je prikazan seznam.',
+  largeDataInvalid: 'Podatkov ni mogoče prikazati, ker je {column} neveljaven.',
+  largeDataLimit: 'Podatkov ni mogoče prikazati, ker presegajo omejitev {limit}.',
 };
 
 registerLyraLocale('sl', strings);

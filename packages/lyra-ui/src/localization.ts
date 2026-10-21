@@ -92,16 +92,11 @@ export interface LyraLocaleBridgeOptions {
  */
 export type LyraLocaleBridgeCleanup = () => void;
 
-interface LocaleBridgeRegistration {
-  readonly id: symbol;
-  readonly mirrorDirection: boolean;
-}
-
 interface LocaleBridgeState {
-  readonly target: Element;
   readonly previousLang: string | null;
   readonly previousDir: string | null;
-  readonly registrations: Map<symbol, LocaleBridgeRegistration>;
+  count: number;
+  directionCount: number;
   unsubscribe: () => void;
 }
 
@@ -114,26 +109,10 @@ function restoreAttribute(target: Element, name: string, value: string | null): 
   else target.setAttribute(name, value);
 }
 
-function bridgeMirrorsDirection(state: LocaleBridgeState): boolean {
-  for (const registration of state.registrations.values()) {
-    if (registration.mirrorDirection) return true;
-  }
-  return false;
-}
-
-function applyLocaleBridge(state: LocaleBridgeState): void {
-  const locale = getLyraLocale();
-  if (!locale) {
-    restoreAttribute(state.target, 'lang', state.previousLang);
-    restoreAttribute(state.target, 'dir', state.previousDir);
-    return;
-  }
-  state.target.setAttribute('lang', locale);
-  if (bridgeMirrorsDirection(state)) {
-    state.target.setAttribute('dir', getLyraLocaleDirection(locale));
-  } else {
-    restoreAttribute(state.target, 'dir', state.previousDir);
-  }
+function applyLocaleBridge(target: Element, state: LocaleBridgeState, locale = getLyraLocale()): void {
+  restoreAttribute(target, 'lang', locale || state.previousLang);
+  restoreAttribute(target, 'dir', locale && state.directionCount
+    ? getLyraLocaleDirection(locale) : state.previousDir);
 }
 
 /**
@@ -181,43 +160,37 @@ export function bridgeLyraLocale(options: LyraLocaleBridgeOptions = {}): LyraLoc
   ) {
     throw new TypeError('bridgeLyraLocale() requires a target element when there is no document.');
   }
-  const registration: LocaleBridgeRegistration = {
-    id: Symbol('Lyra locale bridge registration'),
-    mirrorDirection: options.direction !== false,
-  };
+  const mirrorDirection = options.direction !== false;
   let state = localeBridgeStates.get(target);
   if (!state) {
-    let nextState: LocaleBridgeState;
-    const unsubscribe = subscribeLyraLocale(() => applyLocaleBridge(nextState));
-    nextState = {
-      target,
+    state = {
+      unsubscribe: subscribeLyraLocale(() => applyLocaleBridge(target, state!)),
       previousLang: target.getAttribute('lang'),
       previousDir: target.getAttribute('dir'),
-      registrations: new Map(),
-      unsubscribe,
+      count: 0,
+      directionCount: 0,
     };
-    state = nextState;
     localeBridgeStates.set(target, state);
     // A registration reachable from the active locale also notifies: a declared `dir` arrives
     // with its catalog, so direction can only resolve correctly once that import has landed.
     // Unrelated registrations are filtered, and every handle shares this one subscription.
   }
-  state.registrations.set(registration.id, registration);
-  applyLocaleBridge(state);
+  state.count += 1;
+  if (mirrorDirection) state.directionCount += 1;
+  applyLocaleBridge(target, state);
   let disposed = false;
 
   return () => {
     if (disposed) return;
     disposed = true;
-    const activeState = localeBridgeStates.get(target);
-    if (!activeState || !activeState.registrations.delete(registration.id)) return;
-    if (activeState.registrations.size > 0) {
-      applyLocaleBridge(activeState);
+    if (localeBridgeStates.get(target) !== state) return;
+    if (mirrorDirection) state.directionCount -= 1;
+    if (--state.count) {
+      applyLocaleBridge(target, state);
       return;
     }
-    activeState.unsubscribe();
-    restoreAttribute(target, 'lang', activeState.previousLang);
-    restoreAttribute(target, 'dir', activeState.previousDir);
+    state.unsubscribe();
+    applyLocaleBridge(target, state, '');
     localeBridgeStates.delete(target);
   };
 }

@@ -158,6 +158,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Vybrané položky se nepodařilo načíst.',
   catalogPickerInputLimit: 'Některé položky katalogu byly vynechány kvůli dosažení limitu vstupu.',
   tagFacetLimit: 'Další štítky: +{count}',
+  engine3dLoading: 'Načítání 3D zobrazení…',
+  engine3dUnavailable: '3D engine se nepodařilo načíst.',
+  engine3dUnsupported: 'Tento prohlížeč nedokáže zobrazit 3D grafiku.',
+  engine3dContextLost: '3D zobrazení ztratilo grafický kontext.',
+  engine3dError: '3D zobrazení se zastavilo kvůli chybě.',
+  engine3dSoftwareRendering: '3D grafika běží bez hardwarové akcelerace, a proto je detailů méně.',
+  engine3dShowingBuiltin: 'Místo toho se zobrazuje standardní zobrazení.',
+  engine3dShowingList: 'Místo toho se zobrazuje seznam.',
+  largeDataInvalid: 'Data nelze zobrazit, protože {column} je neplatné.',
+  largeDataLimit: 'Data nelze zobrazit, protože překračují limit {limit}.',
 };
 
 registerLyraLocale('cs', strings);

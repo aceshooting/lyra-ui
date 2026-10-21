@@ -152,6 +152,16 @@ const strings: LyraLocaleStrings = {
   sourceSelectionFailed: 'Không thể tải các mục đã chọn.',
   catalogPickerInputLimit: 'Một số mục trong danh mục đã bị bỏ qua vì đạt giới hạn đầu vào.',
   tagFacetLimit: '+{count} thẻ nữa',
+  engine3dLoading: 'Đang tải chế độ xem 3D…',
+  engine3dUnavailable: 'Không thể tải công cụ 3D.',
+  engine3dUnsupported: 'Trình duyệt này không thể hiển thị đồ họa 3D.',
+  engine3dContextLost: 'Chế độ xem 3D đã mất ngữ cảnh đồ họa.',
+  engine3dError: 'Chế độ xem 3D đã dừng do có lỗi.',
+  engine3dSoftwareRendering: 'Đồ họa 3D chạy không có tăng tốc phần cứng nên mức độ chi tiết bị giảm.',
+  engine3dShowingBuiltin: 'Chế độ xem tiêu chuẩn được hiển thị thay thế.',
+  engine3dShowingList: 'Một danh sách được hiển thị thay thế.',
+  largeDataInvalid: 'Không thể hiển thị dữ liệu vì {column} không hợp lệ.',
+  largeDataLimit: 'Không thể hiển thị dữ liệu vì vượt quá giới hạn {limit}.',
 };
 
 registerLyraLocale('vi', strings);
