@@ -1312,6 +1312,14 @@ describe("syntax highlighting", () => {
       '[part="line"][data-type="add"]'
     ) as HTMLElement;
 
+    // Content visibility can leave this offscreen row at its intrinsic placeholder size.
+    line.scrollIntoView({ block: 'center', inline: 'start' });
+    const content = line.querySelector('ins')!;
+    await waitUntil(
+      () => content.checkVisibility({ contentVisibilityAuto: true }),
+      'highlighted changed line content did not become rendered',
+    );
+
     expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
     expect(line.scrollWidth).to.be.greaterThan(base.clientWidth);
     expect(line.offsetWidth).to.be.at.least(line.scrollWidth);

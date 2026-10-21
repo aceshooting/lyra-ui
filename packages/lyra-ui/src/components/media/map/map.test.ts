@@ -7726,7 +7726,11 @@ describe('standard peer navigation and scale controls', () => {
     const glyph = zoom.querySelector<HTMLElement>('.maplibregl-ctrl-icon')!;
     expect(getComputedStyle(glyph, '::before').content).to.include('+');
     const legend = el.shadowRoot!.querySelector<HTMLElement>('[part="legend"]')!;
-    await waitUntil(() => legend.getBoundingClientRect().bottom <= scale.getBoundingClientRect().top);
+    // Peer parts are assigned before the next-frame measurement reserves both control corners.
+    await waitUntil(() => legend.getBoundingClientRect().bottom <= Math.min(
+      scale.getBoundingClientRect().top, zoom.getBoundingClientRect().top,
+    ), 'the legend clears both the scale and the taller navigation control');
+    expect(legend.getBoundingClientRect().bottom).to.be.at.most(scale.getBoundingClientRect().top);
     expect(legend.getBoundingClientRect().bottom).to.be.at.most(zoom.getBoundingClientRect().top);
     const before = map.getZoom();
     zoom.focus();
