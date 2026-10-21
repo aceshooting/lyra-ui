@@ -113,7 +113,7 @@ describe('app rail sidebar frame', () => {
     const edge = base(el).getBoundingClientRect(); const resizer = el.shadowRoot!.querySelector('[part="resizer"]')!.getBoundingClientRect();
     expect(Math.abs((resizer.left + resizer.right) / 2 - (direction === 'ltr' ? edge.right : edge.left))).to.be.lessThan(1.1);
     el.forceMode = 'icon-only'; await el.updateComplete;
-    await waitUntil(() => Math.abs(base(el).getBoundingClientRect().width - 64) < 0.5, 'icon-only rail width did not settle');
+    await waitUntil(() => base(el).getBoundingClientRect().width === 64, 'icon-only rail width did not settle');
     expect(base(el).getBoundingClientRect().width).to.equal(64);
   });
 

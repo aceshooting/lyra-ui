@@ -29,7 +29,22 @@ function tooltip(chart: SyncChart): string {
 function crosshair(chart: SyncChart): boolean { return !!chart.shadowRoot!.querySelector('[part="sync-crosshair"]'); }
 async function ready(chart: SyncChart): Promise<void> {
   await waitUntil(() => chart.shadowRoot!.querySelectorAll('[part="bar"], [part="point"], canvas').length > 0);
-  if (chart.localName !== 'lr-lite-chart') await waitUntil(() => !!(chart as LyraChart).chart);
+  if (chart.localName !== 'lr-lite-chart') {
+    const core = chart as LyraChart;
+    const allocation = core as unknown as {
+      lastObservedInlineSize?: number;
+      samplingWidth: number;
+      resizeDrawFrame?: number;
+    };
+    // Initial allocation changes invalidate synchronization ownership, so settle them before interaction.
+    await waitUntil(() => {
+      const width = allocation.lastObservedInlineSize;
+      const area = core.chartArea;
+      return !!core.chart && width !== undefined && Number.isFinite(width) && width > 0 &&
+        allocation.samplingWidth === Math.floor(width) && allocation.resizeDrawFrame === undefined &&
+        !!area && area.width > 0 && area.height > 0;
+    }, 'core chart allocation is ready for interaction');
+  }
   if (typeof chart.syncGroup === 'string' && chart.syncGroup.trim() &&
       (chart.localName === 'lr-lite-chart' || (chart as any).syncCompatible()))
     await waitUntil(() => (chart as any).chartSync.enabled);

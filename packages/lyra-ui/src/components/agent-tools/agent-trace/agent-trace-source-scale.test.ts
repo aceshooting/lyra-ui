@@ -87,15 +87,23 @@ it('forwards keyless refresh and same-source rebind once while named presentatio
   expect(p.actions).to.deep.equal(['reset']);
   expect(tree(el).label).to.equal('Full trace'); expect(tree(el).withTokens).to.equal(true);
   expect(tree(el).withCost).to.equal(true); expect(tree(el).withoutBars).to.equal(true);
-  el.activeSpanId = 'span500000'; await ready(el, 'span500000');
+  const readyFocused = async () => {
+    await ready(el, 'span500000');
+    // Mounted rows precede navigation's focus commit, which the next refresh must preserve.
+    const child = tree(el) as unknown as { sourceControl: { whenReady(): Promise<boolean> } };
+    expect(await child.sourceControl.whenReady(), 'provider navigation completes').to.equal(true);
+    expect(tree(el).shadowRoot!.querySelector('[data-source-key="span500000"]')?.matches(':focus'),
+      'the revealed provider row receives focus').to.equal(true);
+  };
+  el.activeSpanId = 'span500000'; await readyFocused();
   expect(p.actions).to.deep.equal(['reset', 'reveal']);
   el.activeSpanId = null; await el.updateComplete;
-  el.requestUpdate(); await waitUntil(() => p.actions.length === 3); await ready(el, 'span500000');
+  el.requestUpdate(); await waitUntil(() => p.actions.length === 3); await readyFocused();
   expect(p.actions[2]).to.equal('reset');
-  el.treeSource = p.source; await waitUntil(() => p.actions.length === 4); await ready(el, 'span500000');
+  el.treeSource = p.source; await waitUntil(() => p.actions.length === 4); await readyFocused();
   expect(p.actions[3]).to.equal('reset');
   Object.defineProperty(p.source, 'revision', { value: 2 });
-  el.requestUpdate(); await waitUntil(() => p.actions.length === 5); await ready(el, 'span500000');
+  el.requestUpdate(); await waitUntil(() => p.actions.length === 5); await readyFocused();
   expect(p.actions[4]).to.equal('reset');
 });
 it('preserves the source filter proposal veto, exact commit and request containment', async () => {

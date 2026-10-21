@@ -1670,8 +1670,11 @@ describe("collapse-toggle/handle hover and pressed theming cssprops", () => {
     try {
       await sendMouse({ type: "move", position });
       await waitUntil(
-        () => getComputedStyle(toggle).backgroundColor === expectedHoverBg,
-        "collapse-toggle hover background never settled at the resolved brand-quiet color"
+        () => {
+          const style = getComputedStyle(toggle);
+          return style.backgroundColor === expectedHoverBg && style.color === expectedHoverColor;
+        },
+        'collapse-toggle hover colors never settled at the resolved brand colors'
       );
       const hovered = getComputedStyle(toggle).backgroundColor;
       expect(hovered).to.not.equal(resting);
