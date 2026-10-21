@@ -300,11 +300,11 @@ test('publishing fails unless the registry serves the released tarball bytes', (
       writeFileSync(file, script);
       chmodSync(file, 0o755);
     };
-    writeExecutable('curl', '#!/usr/bin/env bash\nprintf \'%s\' "$REGISTRY_BODY"\n');
+    writeExecutable('curl', '#!/usr/bin/env bash\nif [[ "${CURL_FAIL:-}" == true ]]; then exit 22; fi\nprintf \'%s\' "$REGISTRY_BODY"\n');
     writeExecutable('sleep', '#!/usr/bin/env bash\nexit 0\n');
-    const run = (body) => spawnSync('bash', ['-c', source], {
+    const run = (body, extraEnv = {}) => spawnSync('bash', ['-c', source], {
       encoding: 'utf8',
-      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, TAG: 'lyra-ui@1.2.3', TARBALL: tarball, REGISTRY_BODY: body },
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, RUNNER_TEMP: fixture, TAG: 'lyra-ui@1.2.3', TARBALL: tarball, REGISTRY_BODY: body, ...extraEnv },
     });
 
     const served = run(JSON.stringify({ dist: { integrity: released } }));
@@ -319,6 +319,14 @@ test('publishing fails unless the registry serves the released tarball bytes', (
     const staged = run('{"error":"Not found"}');
     assert.equal(staged.status, 1);
     assert.match(staged.stdout, /still not served by the npm registry 20 minutes after publish\. It is most likely staged/);
+
+    const malformed = run('{');
+    assert.equal(malformed.status, 1);
+    assert.match(malformed.stdout, /still not served by the npm registry 20 minutes after publish\. It is most likely staged/);
+
+    const unavailable = run('', { CURL_FAIL: 'true' });
+    assert.equal(unavailable.status, 22);
+    assert.doesNotMatch(unavailable.stdout, /npm serves @aceshooting/);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
