@@ -858,12 +858,18 @@ it('restores each copy trigger baseline across replacement and preserves a consu
     `)) as LyraCopyButton;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy API key');
 
+    await tooltip(el).hide();
+    const shown = oneEvent(tooltip(el), 'lr-after-show');
     baseButton(el).click();
     await settle(el);
+    await shown;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copy API key');
     // The custom name is fixed, so the live region is the only channel left to announce the
     // outcome — it must still carry it.
     expect(feedbackText(el)).to.equal('Copied!');
+    const popup = tooltip(el).shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    expect(tooltip(el).open).to.equal(true);
+    expect(getComputedStyle(popup).opacity).to.equal('1');
     await expect(el).to.be.accessible();
   });
 
@@ -1236,8 +1242,11 @@ describe('lr-copy-button clipboard failure', () => {
       const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
       const restingIcon = el.shadowRoot!.querySelector('[part="copy-icon"]')!.innerHTML;
       const restingLabel = baseButton(el).getAttribute('aria-label');
+      await tooltip(el).hide();
+      const shown = oneEvent(tooltip(el), 'lr-after-show');
       baseButton(el).click();
       await settle(el);
+      await shown;
       const errorIcon = el.shadowRoot!.querySelector('[part="error-icon"]')!;
       // Non-colour channels: a different glyph, a different accessible name, and a live-region
       // announcement. Colour is only the fourth signal.
@@ -1251,6 +1260,9 @@ describe('lr-copy-button clipboard failure', () => {
           getComputedStyle(paintedControl(resting)).color,
         'the failure colour differs from the resting one',
       );
+      const popup = tooltip(el).shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+      expect(tooltip(el).open).to.equal(true);
+      expect(getComputedStyle(popup).opacity).to.equal('1');
       await expect(el).to.be.accessible();
     });
   });

@@ -142,26 +142,20 @@ describe('lr-copy-button: composed lr-icon-button', () => {
       html`<lr-copy-button value="hello"></lr-copy-button>`
     )) as LyraCopyButton;
     await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('lr-tooltip')!;
+    await tooltip.hide();
+    const shown = oneEvent(tooltip, 'lr-after-show');
     el.click();
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part~="base-success"]') !== null,
       'the confirmation state renders'
     );
     await el.updateComplete;
-    // The confirmation also opens the nested tooltip, which fades its own surface in. axe samples
-    // whatever colour is painted at the instant it runs, so reading mid-fade reports the
-    // intermediate blend as a contrast failure -- reproducible in Firefox, invisible in Chromium.
-    // Poll for a settled surface instead of racing the transition.
-    const tooltipBody = el.shadowRoot!
-      .querySelector('lr-tooltip')!
-      .shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
-    let previous = '';
-    await waitUntil(() => {
-      const current = getComputedStyle(tooltipBody).backgroundColor;
-      const settled = current === previous;
-      previous = current;
-      return settled;
-    }, 'the tooltip surface stops transitioning');
+    // The popup owns the fade; its body can keep the same background throughout the animation.
+    await shown;
+    const popup = tooltip.shadowRoot!.querySelector<HTMLElement>('[part~="popup"]')!;
+    expect(tooltip.open).to.equal(true);
+    expect(getComputedStyle(popup).opacity).to.equal('1');
     await expect(el).to.be.accessible();
   });
 });
