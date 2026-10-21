@@ -8,20 +8,31 @@ const KINDS = {
 };
 const tablePath = (kind) => new URL(`./fixtures/${KINDS[kind].file}`, import.meta.url);
 
-/** Per-key seconds from WTR_TIMING_REPORT (`tests`) or LINT_TIMING_REPORT (`lint`) JSON lines; the largest observation wins. */
+const median = (values) => {
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+/**
+ * Per-key seconds from WTR_TIMING_REPORT (`tests`) or LINT_TIMING_REPORT (`lint`) JSON lines. Pass the
+ * reports of several runs: a file's cost is the median of its observations, because one slow runner
+ * (or a completion delta attributed to the neighbouring file) would otherwise dominate a maximum.
+ */
 export function costsFromTimingReports(kind, texts) {
   const { key, seconds } = KINDS[kind];
-  const table = new Map();
+  const observations = new Map();
   for (const line of texts.join('\n').split('\n').filter((entry) => entry.trim())) {
     const record = JSON.parse(line);
     const value = seconds(record);
     if (typeof record[key] !== 'string' || !record[key] || !Number.isFinite(value) || value < 0) {
       throw new TypeError(`Invalid ${kind} timing record: ${line}`);
     }
-    table.set(record[key], Math.max(table.get(record[key]) ?? 0, Math.max(0.1, Math.round(value * 10) / 10)));
+    observations.set(record[key], [...(observations.get(record[key]) ?? []), value]);
   }
-  if (table.size === 0) throw new Error(`No ${kind} timing records.`);
-  return Object.fromEntries([...table].sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)));
+  if (observations.size === 0) throw new Error(`No ${kind} timing records.`);
+  const table = [...observations].map(([name, values]) => [name, Math.max(0.1, Math.round(median(values) * 10) / 10)]);
+  return Object.fromEntries(table.sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)));
 }
 
 /** The committed table as a Map plus its median, the cost of anything it does not list. */

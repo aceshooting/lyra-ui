@@ -96,29 +96,33 @@ describe('staged data preparation', () => {
     this.timeout(30000);
     const n = 1_000_000;
     const pointSource = indexed(n, i => ({ x: i, y: i === n - 2 ? 1e9 : i === 501234 ? -1e9 : i % 13 }));
-    const points = await prepareLyraSeriesData(series(pointSource.input), { maxPointsPerSeries: 100, batchSize: 8192 });
+    const categorySource = indexed(n, i => i);
+    const numberSource = indexed(n, i => i);
+    const wordSource = indexed(n, i => ({ id: String(i), text: `Word ${i}`, weight: i }));
+    const waveSource = indexed(n, i => i === n - 1 ? 1 : 0);
+    // Every reducer yields a macrotask between chunks, so running the five independent reductions
+    // concurrently overlaps those waits instead of serialising them; each owns its own source.
+    const [points, categories, histogram, words, wave] = await Promise.all([
+      prepareLyraSeriesData(series(pointSource.input), { maxPointsPerSeries: 100, batchSize: 8192 }),
+      prepareLyraCategoryData(categorySource.input, {
+        categories: [{ id: 'even', label: 'Even' }, { id: 'odd', label: 'Odd' }], seriesId: 's', seriesLabel: 'Count',
+        categoryOf: i => i % 2 ? 'odd' : 'even', aggregation: 'count', batchSize: 8192,
+      }),
+      prepareLyraHistogram(numberSource.input, { binCount: 100, batchSize: 8192 }),
+      prepareLyraWordCloud(wordSource.input, { maxWords: 150, batchSize: 8192 }),
+      prepareLyraWaveform(waveSource.input, { duration: 3600, maxBuckets: 1000, batchSize: 8192 }),
+    ]);
     expect(points.series[0]!.samples.length).to.be.at.most(100);
     expect(points.series[0]!.samples.map(p => p.sourceIndex)).to.include.members([0, 501234, n - 2, n - 1]);
     expect(points.series[0]!.counts.validCount).to.equal(n);
     expect(pointSource.calls.reduce((sum, [, size]) => sum + size, 0)).to.equal(n);
-    const categorySource = indexed(n, i => i);
-    const categories = await prepareLyraCategoryData(categorySource.input, {
-      categories: [{ id: 'even', label: 'Even' }, { id: 'odd', label: 'Odd' }], seriesId: 's', seriesLabel: 'Count',
-      categoryOf: i => i % 2 ? 'odd' : 'even', aggregation: 'count', batchSize: 8192,
-    });
     expect(categories.series[0]!.values).to.deep.equal([n / 2, n / 2]);
-    const numberSource = indexed(n, i => i);
-    const histogram = await prepareLyraHistogram(numberSource.input, { binCount: 100, batchSize: 8192 });
     expect(histogram.binCounts.reduce((sum, count) => sum + count, 0)).to.equal(n);
     expect(histogram.binCounts).to.have.length(100);
     expect(numberSource.calls.reduce((sum, [, size]) => sum + size, 0)).to.equal(2 * n);
-    const wordSource = indexed(n, i => ({ id: String(i), text: `Word ${i}`, weight: i }));
-    const words = await prepareLyraWordCloud(wordSource.input, { maxWords: 150, batchSize: 8192 });
     expect(words.words).to.have.length(150);
     expect(words.words[0]!.id).to.equal(String(n - 1));
     expect(words.totalWeight).to.equal(n * (n - 1) / 2);
-    const waveSource = indexed(n, i => i === n - 1 ? 1 : 0);
-    const wave = await prepareLyraWaveform(waveSource.input, { duration: 3600, maxBuckets: 1000, batchSize: 8192 });
     expect(wave.buckets).to.have.length(1000);
     expect(wave.buckets.at(-1)).to.deep.equal({ startIndex: 999000, endIndex: n, maxAmplitude: 1 });
     expect(wave.counts.validCount).to.equal(n);

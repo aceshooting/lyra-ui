@@ -997,6 +997,7 @@ describe("lr-pdf-viewer", () => {
     try {
       el.src = "https://example.test/report.pdf";
       await waitUntil(() => el.pageViewerSnapshot.status === "ready");
+      await twoFrames(); // let the load's own page normalisation finish before choosing page 2
       el.page = 2;
       await el.updateComplete;
       const snapshot = el.pageViewerSnapshot;

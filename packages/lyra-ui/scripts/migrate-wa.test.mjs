@@ -19,6 +19,7 @@ import {
   parseArgs,
   readExportDeprecations,
   readRenameLedger,
+  runCli,
 } from './migrate-wa.mjs';
 import { emptyRenameLedger } from './lyra-rename-ledger.mjs';
 import {
@@ -70,6 +71,36 @@ const extensions = ['html', 'js', 'ts', 'jsx', 'vue', 'svelte'];
 function fixture(name) {
   return fs.readFileSync(path.join(fixtureDir, name), 'utf8');
 }
+
+test('contributor CLI loads compatibility history only for origin migrations', async (context) => {
+  context.mock.method(console, 'log', () => {});
+  context.mock.method(console, 'error', () => {});
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lyra-migrate-cli-context-'));
+  context.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const file = path.join(directory, 'plain.html');
+  fs.writeFileSync(file, '<div>Content</div>');
+  let preparations = 0;
+  const prepareContext = async () => {
+    preparations += 1;
+    return { compatibilityContext: checkedCompatibilityContext, currentExportDeprecations: readExportDeprecations() };
+  };
+  for (const [argv, code] of [
+    [['--rule=immutable-collections', '--check', file], 0],
+    [['--rule=theme-scopes', '--check', file], 0],
+    [['--rule=immutable-collections', '--origin=lyra-v26', file], 1],
+    [['--rule=unknown', file], 1],
+    [['--unknown', file], 1],
+    [['--help'], 0],
+    [['-h'], 0],
+    [[], 1],
+  ]) {
+    assert.equal(await runCli(argv, { prepareContext }), code, argv.join(' '));
+    assert.equal(preparations, 0, 'standalone rules, usage and invalid arguments do not read history');
+  }
+  assert.equal(await runCli(['--check', file], { prepareContext }), 0);
+  assert.equal(preparations, 1, 'ordinary migration still validates current compatibility history');
+  assert.equal(fs.readFileSync(file, 'utf8'), '<div>Content</div>');
+});
 
 function migrationCoverageFixture() {
   const coverageInventory = structuredClone(inventory);

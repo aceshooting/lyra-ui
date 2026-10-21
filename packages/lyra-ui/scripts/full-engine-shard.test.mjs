@@ -3,6 +3,8 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { readFileSync, realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
 
 import {
   discoverTestFiles,
@@ -15,6 +17,7 @@ import {
   shouldRunNativeScrollbarVerification,
 } from './full-engine-shard.mjs';
 import { costsFromTimingReports, readCosts } from './ci-costs.mjs';
+import { waitUntilPollIntervalPlugin } from './wait-until-poll-interval.mjs';
 
 test('discovers only src/**/*.test.ts files in lexical order', async () => {
   const fixture = await mkdtemp(join(tmpdir(), 'lyra-full-engine-shard-'));
@@ -266,6 +269,10 @@ test('keeps the expensive package-entrypoint contract from dominating one full-s
 test('balances the live test inventory by measured time across the CI shard counts', async () => {
   const { costs, fallback } = readCosts('tests');
   const files = await discoverTestFiles();
+  assert.ok(
+    files.filter((file) => costs.has(file)).length / files.length >= 0.85,
+    'scripts/fixtures/test-file-costs.json is stale; regenerate it with ci-costs.mjs from the lyra-ui-test-timing artifacts',
+  );
   for (const total of [4, 8]) {
     const shards = Array.from({ length: total }, (_value, index) => shardTestFiles(files, index + 1, total));
     assert.deepEqual(shards.flat().sort(), [...files].sort());
@@ -280,7 +287,11 @@ test('derives cost tables from timing lines and reads them fail-closed', async (
       `${JSON.stringify({ file: 'src/b.test.ts', deltaMs: 1234 })}\n${JSON.stringify({ file: 'src/a.test.ts', deltaMs: 40 })}`,
       JSON.stringify({ file: 'src/b.test.ts', deltaMs: 2049 }),
     ]),
-    { 'src/a.test.ts': 0.1, 'src/b.test.ts': 2 },
+    { 'src/a.test.ts': 0.1, 'src/b.test.ts': 1.6 },
+  );
+  assert.deepEqual(
+    costsFromTimingReports('tests', [1000, 1100, 9000].map((deltaMs) => JSON.stringify({ file: 'src/c.test.ts', deltaMs }))),
+    { 'src/c.test.ts': 1.1 },
   );
   assert.deepEqual(costsFromTimingReports('lint', [JSON.stringify({ command: 'pnpm run a', seconds: 12.34 })]), { 'pnpm run a': 12.3 });
   assert.throws(() => costsFromTimingReports('tests', ['']), /No tests timing records/u);
@@ -311,4 +322,64 @@ test('validates environment shard coordinates', () => {
     /cannot exceed/,
   );
   assert.throws(() => shardTestFiles([], 1, 0), /shardTotal must be a positive integer/);
+});
+
+test('keeps the waitUntil poll-interval patch of web-test-runner.config.js applicable', () => {
+  // pnpm links a package's dependencies beside its real directory.
+  const testing = realpathSync(new URL('../node_modules/@open-wc/testing', import.meta.url));
+  const helpers = join(testing, '..', 'testing-helpers', 'src', 'helpers.js');
+  assert.ok(
+    /\{\s*interval\s*=\s*50\s*,/u.test(readFileSync(helpers, 'utf8')),
+    'the waitUntil default moved: update waitUntilPollIntervalPlugin in web-test-runner.config.js',
+  );
+});
+
+test('patches only the helper JavaScript served by the polling plugin', () => {
+  const body = 'const { interval = 50, timeout = 1000 } = options;';
+  const context = (path, type = 'js') => ({ path, body, response: { is: (expected) => expected === type } });
+  assert.equal(
+    waitUntilPollIntervalPlugin.transform(context('/node_modules/@open-wc/testing-helpers/src/helpers.js')),
+    'const { interval = 10, timeout = 1000 } = options;',
+  );
+  for (const [path, type] of [
+    ['/node_modules/other/src/helpers.js', 'js'],
+    ['/node_modules/@open-wc/testing-helpers/src/other.js', 'js'],
+    ['/node_modules/@open-wc/testing-helpers/src/helpers.js', 'html'],
+  ]) assert.equal(waitUntilPollIntervalPlugin.transform(context(path, type)), undefined);
+});
+
+test('polls the transformed installed helper at 10ms while preserving explicit options and timeouts', async () => {
+  const testing = realpathSync(new URL('../node_modules/@open-wc/testing', import.meta.url));
+  const path = join(testing, '..', 'testing-helpers', 'src', 'helpers.js');
+  const require = createRequire(import.meta.url);
+  const esbuild = createRequire(require.resolve('@web/dev-server-esbuild'))('esbuild');
+  const { code } = await esbuild.transform(readFileSync(path, 'utf8'), { target: 'es2022', format: 'cjs' });
+  const transformed = waitUntilPollIntervalPlugin.transform({
+    path,
+    body: code,
+    response: { is: (type) => type === 'js' },
+  });
+  const timers = [];
+  // The installed module has no imports. Evaluate it with scoped timers so assertions observe
+  // requested delays without depending on wall-clock scheduling or modifying browser globals.
+  const waitUntil = new Function('setTimeout', 'clearTimeout', `const module = { exports: {} }; ${transformed}; return module.exports.waitUntil;`)(
+    (callback, delay) => { timers.push({ callback, delay }); return timers.length; },
+    () => {},
+  );
+  for (const [options, interval, timeout] of [[undefined, 10, 1000], [{ interval: 73, timeout: 1234 }, 73, 1234]]) {
+    timers.length = 0;
+    let calls = 0;
+    const ready = waitUntil(() => ++calls === 2, undefined, options);
+    await Promise.resolve();
+    assert.deepEqual(timers.map((timer) => timer.delay), [timeout, interval]);
+    timers[1].callback();
+    await ready;
+    assert.equal(calls, 2);
+  }
+  timers.length = 0;
+  const pending = waitUntil(() => false, 'still pending', { timeout: 321 });
+  const rejection = assert.rejects(pending, /Timeout: still pending/u);
+  timers[0].callback();
+  await rejection;
+  assert.equal(timers[0].delay, 321);
 });

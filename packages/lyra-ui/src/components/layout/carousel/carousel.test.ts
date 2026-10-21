@@ -778,14 +778,14 @@ it('inherits independent navigation and pagination hover/pressed paint from an a
     // button's own background/border transition can reach a frame later.
     await hoverUntilMatched(navigation, 'the next navigation button never registered :hover');
     await waitUntil(
-      () => getComputedStyle(navigation).backgroundColor === 'rgb(1, 2, 3)',
+      () => getComputedStyle(navigation).backgroundColor === 'rgb(1, 2, 3)' && getComputedStyle(navigation).borderTopColor === 'rgb(4, 5, 6)',
       'navigation hover paint must settle',
     );
     expect(getComputedStyle(navigation).backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(getComputedStyle(navigation).borderTopColor).to.equal('rgb(4, 5, 6)');
     await sendMouse({ type: 'down' });
     await waitUntil(
-      () => getComputedStyle(navigation).backgroundColor === 'rgb(7, 8, 9)',
+      () => getComputedStyle(navigation).backgroundColor === 'rgb(7, 8, 9)' && getComputedStyle(navigation).borderTopColor === 'rgb(10, 11, 12)',
       'navigation pressed paint must settle',
     );
     expect(getComputedStyle(navigation).backgroundColor).to.equal('rgb(7, 8, 9)');
@@ -799,14 +799,14 @@ it('inherits independent navigation and pagination hover/pressed paint from an a
   try {
     await hoverUntilMatched(pagination, 'the pagination indicator never registered :hover');
     await waitUntil(
-      () => getComputedStyle(dot).backgroundColor === 'rgb(13, 14, 15)',
+      () => getComputedStyle(dot).backgroundColor === 'rgb(13, 14, 15)' && getComputedStyle(dot).borderTopColor === 'rgb(16, 17, 18)',
       'pagination hover paint must settle',
     );
     expect(getComputedStyle(dot).backgroundColor).to.equal('rgb(13, 14, 15)');
     expect(getComputedStyle(dot).borderTopColor).to.equal('rgb(16, 17, 18)');
     await sendMouse({ type: 'down' });
     await waitUntil(
-      () => getComputedStyle(dot).backgroundColor === 'rgb(19, 20, 21)',
+      () => getComputedStyle(dot).backgroundColor === 'rgb(19, 20, 21)' && getComputedStyle(dot).borderTopColor === 'rgb(22, 23, 24)',
       'pagination pressed paint must settle',
     );
     expect(getComputedStyle(dot).backgroundColor).to.equal('rgb(19, 20, 21)');

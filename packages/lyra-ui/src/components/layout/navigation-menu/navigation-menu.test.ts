@@ -1129,6 +1129,7 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
   });
 
   it('guards the distance property against junk', async () => {
+    const cases: Array<{ value: string; menu: Awaited<ReturnType<typeof menuFixture>> }> = [];
     for (const value of ['banana', 'NaN', '-1', 'Infinity']) {
       const attributeMenu = await menuFixture(
         html`<lr-navigation-menu distance=${value}>${items(`d${value.length}-`)}</lr-navigation-menu>`,
@@ -1136,22 +1137,26 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
       const propertyMenu = await menuFixture(html`<lr-navigation-menu>${items(`q${value.length}-`)}</lr-navigation-menu>`);
       propertyMenu.distance = Number(value);
       await settle(propertyMenu);
-      for (const menu of [attributeMenu, propertyMenu]) {
-        const target = itemsOf(menu)[0]!;
-        target.open = true;
-        await waitPlaced(target);
-        const expected = value === '-1' ? 0 : 6;
-        await waitUntil(() => {
-          const gap = panel(target).getBoundingClientRect().top - part(menu, 'list')!.getBoundingClientRect().bottom;
-          return Math.abs(gap - expected) <= 1;
-        }, `distance=${value} did not resolve to ${expected}px`);
-        target.open = false;
-        await settle(menu);
-      }
+      cases.push({ value, menu: attributeMenu }, { value, menu: propertyMenu });
+    }
+    // Every menu is independent, so open all panels first and let their placements settle together
+    // instead of serialising one positioning round per menu.
+    for (const { menu } of cases) itemsOf(menu)[0]!.open = true;
+    for (const { value, menu } of cases) {
+      const target = itemsOf(menu)[0]!;
+      await waitPlaced(target);
+      const expected = value === '-1' ? 0 : 6;
+      await waitUntil(() => {
+        const gap = panel(target).getBoundingClientRect().top - part(menu, 'list')!.getBoundingClientRect().bottom;
+        return Math.abs(gap - expected) <= 1;
+      }, `distance=${value} did not resolve to ${expected}px`);
+      target.open = false;
+      await settle(menu);
     }
   });
 
   it('guards the show-delay property against junk', async () => {
+    const targets: Array<{ value: string; target: ReturnType<typeof itemsOf>[number] }> = [];
     for (const value of ['banana', 'NaN', 'Infinity', '-1']) {
       const attributeMenu = await menuFixture(
         html`<lr-navigation-menu show-delay=${value} skip-delay="0">${items(`s${value.length}-`)}</lr-navigation-menu>`,
@@ -1161,17 +1166,21 @@ describe('<lr-navigation-menu> positioning and indicator', () => {
       );
       propertyMenu.showDelay = (value === 'banana' ? value : Number(value)) as unknown as number;
       await settle(propertyMenu);
-      for (const target of [itemsOf(attributeMenu)[0]!, itemsOf(propertyMenu)[0]!]) {
-        hoverSynthetic(target);
-        if (value === '-1') {
-          expect(target.open, 'show-delay=-1 did not behave like 0').to.equal(true);
-        } else {
-          // wait-reason: negative assertion, the hover must not open before the invalid show-delay falls back to the default
-          await aTimeout(50);
-          expect(target.open, `show-delay=${value} did not behave like the default`).to.equal(false);
-          await waitUntil(() => target.open, `show-delay=${value} never opened`);
-        }
-      }
+      for (const target of [itemsOf(attributeMenu)[0]!, itemsOf(propertyMenu)[0]!]) targets.push({ value, target });
+    }
+    // The menus are independent: hover them all, then check the shared negative window once, so the
+    // default delay elapses concurrently rather than once per menu.
+    for (const { target } of targets) hoverSynthetic(target);
+    for (const { value, target } of targets) {
+      if (value === '-1') expect(target.open, 'show-delay=-1 did not behave like 0').to.equal(true);
+    }
+    // wait-reason: negative assertion, no hover may open before the invalid show-delay falls back to the default
+    await aTimeout(50);
+    for (const { value, target } of targets) {
+      if (value !== '-1') expect(target.open, `show-delay=${value} did not behave like the default`).to.equal(false);
+    }
+    for (const { value, target } of targets) {
+      if (value !== '-1') await waitUntil(() => target.open, `show-delay=${value} never opened`);
     }
   });
 

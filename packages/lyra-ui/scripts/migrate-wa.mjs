@@ -742,16 +742,29 @@ function invokedAsCli() {
   }
 }
 
-if (invokedAsCli()) {
+async function prepareContributorContext() {
+  const { readCurrentCompatibilityContext } = await import('./check-published-compatibility.mjs');
+  const { readComponentMetadataSources, assembleComponentMetadata } = await import('./component-metadata-source.mjs');
+  const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const compatibilityContext = await readCurrentCompatibilityContext(packageRoot);
+  return { compatibilityContext,
+    currentExportDeprecations: assembleComponentMetadata(readComponentMetadataSources(packageRoot)).exportDeprecations };
+}
+
+/** Runs the CLI, preparing contributor history only when the selected migration consumes it. */
+export async function runCli(argv, { prepareContext = prepareContributorContext } = {}) {
   // Build-only history is never imported by the packed CLI, whose inventory is prevalidated.
-  if (packagedRuntime || process.argv.includes('--help') || process.argv.length < 3) {
-    process.exitCode = run(process.argv.slice(2));
-  } else {
-    const { readCurrentCompatibilityContext } = await import('./check-published-compatibility.mjs');
-    const { readComponentMetadataSources, assembleComponentMetadata } = await import('./component-metadata-source.mjs');
-    const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-    const compatibilityContext = await readCurrentCompatibilityContext(packageRoot);
-    process.exitCode = run(process.argv.slice(2), { compatibilityContext,
-      currentExportDeprecations: assembleComponentMetadata(readComponentMetadataSources(packageRoot)).exportDeprecations });
+  if (packagedRuntime) return run(argv);
+  let options;
+  try {
+    options = parseArgs(argv);
+  } catch {
+    return run(argv);
   }
+  if (options.help || !options.targets.length || options.rule !== null) return run(argv);
+  return run(argv, await prepareContext());
+}
+
+if (invokedAsCli()) {
+  process.exitCode = await runCli(process.argv.slice(2));
 }

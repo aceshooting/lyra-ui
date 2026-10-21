@@ -37960,7 +37960,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 4905,
+              "line": 4906,
               "kind": "rendered RTL test signal"
             }
           ]

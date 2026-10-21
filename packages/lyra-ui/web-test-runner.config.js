@@ -13,6 +13,7 @@ import { esbuildPlugin } from '@web/dev-server-esbuild';
 import { scaleReporter } from './scripts/wtr-scale-reporter.mjs';
 import { timingReporter } from './scripts/wtr-timing-reporter.mjs';
 import { completeJunitReporter } from './scripts/wtr-junit-reporter.mjs';
+import { waitUntilPollIntervalPlugin } from './scripts/wait-until-poll-interval.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -528,6 +529,7 @@ export default {
   plugins: [
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     sourceDiagnosticsPlugin,
+    waitUntilPollIntervalPlugin,
     hammerEsmInteropPlugin,
     papaparseEsmInteropPlugin,
     mammothEsmInteropPlugin,

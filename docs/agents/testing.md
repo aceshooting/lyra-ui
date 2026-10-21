@@ -197,6 +197,12 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   short, generously-margined thresholds; see `stream-status.test.ts` for the pattern. Add an
   ESM-compatible timer harness only when a future test genuinely cannot be reliable with real
   timers.
+- **`waitUntil` polls every 10 ms here, not the helper's 50 ms.** `web-test-runner.config.js`
+  rewrites the default `interval` of `@open-wc/testing-helpers` (an explicit `interval` still wins),
+  because a condition that turns true just after a check otherwise costs a full 50 ms and the suite
+  has thousands of waits. A predicate therefore runs up to five times as often: keep it free of side
+  effects and cheap (no layout reads you would not want repeated); pass a longer `interval` when it
+  is expensive.
 - **A test that stubs a browser global saves and restores it** — `window.matchMedia`,
   `window.ResizeObserver`, `window.IntersectionObserver`, `window.MediaRecorder`,
   `window.AudioContext`, `navigator.mediaDevices.getUserMedia`. There is no sinon/fake-timers

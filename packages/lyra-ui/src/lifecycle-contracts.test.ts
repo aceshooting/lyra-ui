@@ -115,59 +115,149 @@ function prepareDefaultElement(tag: string, el: Element): void {
   }
 }
 
+/**
+ * Contracts 1, 3 and 4 read only each element's own state and install no global instrumentation, so
+ * the elements of many tags can share the animation-frame waits: every tag's scenario runs in a
+ * batch of concurrent, mutually independent hosts and the per-tag `it` reports that tag's outcome
+ * (the original error is rethrown unchanged). The leak contract tallies window/document listeners
+ * globally, so it stays strictly one tag at a time.
+ */
+const BATCH_SIZE = 48;
+const SCENARIO_TIMEOUT_MS = 6000;
+
+type Outcome<T> = { value: T } | { error: unknown };
+
+async function runInBatches<T>(
+  tags: readonly string[],
+  scenario: (tag: string, signal: AbortSignal) => Promise<T>,
+  timeoutMs = SCENARIO_TIMEOUT_MS,
+): Promise<Map<string, Outcome<T>>> {
+  const outcomes = new Map<string, Outcome<T>>();
+  for (let start = 0; start < tags.length; start += BATCH_SIZE) {
+    await Promise.all(
+      tags.slice(start, start + BATCH_SIZE).map(async (tag) => {
+        const controller = new AbortController();
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const deadline = new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
+            const error = new Error(`<${tag}> lifecycle scenario timed out after ${timeoutMs}ms`);
+            controller.abort(error);
+            reject(error);
+          }, timeoutMs);
+        });
+        try {
+          outcomes.set(tag, { value: await Promise.race([scenario(tag, controller.signal), deadline]) });
+        } catch (error) {
+          outcomes.set(tag, { error });
+        } finally {
+          clearTimeout(timer);
+        }
+      }),
+    );
+  }
+  return outcomes;
+}
+
+function outcomeOf<T>(outcomes: Map<string, Outcome<T>>, tag: string): T {
+  const outcome = outcomes.get(tag);
+  if (!outcome) throw new Error(`<${tag}> was not exercised by its contract batch`);
+  if ('error' in outcome) throw outcome.error;
+  return outcome.value;
+}
+
+describe('lifecycle batch deadlines', () => {
+  it('reports a stalled tag without losing completed tags and aborts its cleanup signal', async () => {
+    let aborted = false;
+    const outcomes = await runInBatches(['stalled', 'ready'], async (tag, signal) => {
+      if (tag === 'ready') return 'finished';
+      signal.addEventListener('abort', () => { aborted = true; }, { once: true });
+      return new Promise<string>(() => {});
+    }, 25);
+    expect(outcomeOf(outcomes, 'ready')).to.equal('finished');
+    expect(aborted).to.equal(true);
+    expect(() => outcomeOf(outcomes, 'stalled')).to.throw('<stalled> lifecycle scenario timed out after 25ms');
+  });
+
+  it('retains the original scenario failure for the corresponding tag', async () => {
+    const original = new Error('scenario failed');
+    const outcomes = await runInBatches(['broken'], async () => { throw original; });
+    const outcome = outcomes.get('broken');
+    expect(outcome !== undefined && 'error' in outcome && outcome.error === original).to.equal(true);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Contract 1 — reconnect-smoke
 // ---------------------------------------------------------------------------
 
 describe('lifecycle contract: reconnect-smoke', () => {
+  let outcomes: Map<string, Outcome<void>>;
+
+  before(async function () {
+    this.timeout(120_000);
+    outcomes = await runInBatches(
+      ROOT_BARREL_TAGS.filter((tag) => !optOutReason(tag, 'reconnect-smoke')),
+      reconnectScenario,
+    );
+  });
+
   for (const tag of ROOT_BARREL_TAGS) {
-    it(`<${tag}> survives disconnect and reconnect`, async function () {
+    it(`<${tag}> survives disconnect and reconnect`, function () {
       if (optOutReason(tag, 'reconnect-smoke')) return this.skip();
-
-      const host = mountPoint();
-      try {
-        const el = document.createElement(tag);
-        prepareDefaultElement(tag, el);
-        host.appendChild(el);
-        await settle(el);
-
-        const hadShadowRoot = el.shadowRoot !== null;
-        const hadShadowChildren = (el.shadowRoot?.childElementCount ?? 0) > 0;
-
-        el.remove();
-        // Let disconnect-scheduled microtasks/frames run while detached so the
-        // reconnect below exercises a genuinely settled detached state.
-        await flushAsyncWork();
-
-        host.appendChild(el);
-        await settle(el);
-
-        expect(el.isConnected, `<${tag}> should be connected after re-append`).to.be.true;
-        if (hadShadowRoot) {
-          expect(el.shadowRoot, `<${tag}> should retain its shadow root across reconnect`).to.exist;
-        }
-        if (hadShadowChildren) {
-          expect(
-            el.shadowRoot!.childElementCount,
-            `<${tag}> should still render shadow content after reconnect`,
-          ).to.be.greaterThan(0);
-        }
-
-        const lit = el as MaybeLit;
-        if (typeof lit.requestUpdate === 'function') {
-          lit.requestUpdate();
-          expect(
-            lit.isUpdatePending,
-            `<${tag}> should schedule an update from requestUpdate() after reconnect`,
-          ).to.be.true;
-          await lit.updateComplete;
-        }
-      } finally {
-        host.remove();
-      }
+      outcomeOf(outcomes, tag);
     });
   }
 });
+
+async function reconnectScenario(tag: string, signal: AbortSignal): Promise<void> {
+  const host = mountPoint();
+  const removeHost = () => host.remove();
+  signal.addEventListener('abort', removeHost, { once: true });
+  try {
+    const el = document.createElement(tag);
+    prepareDefaultElement(tag, el);
+    host.appendChild(el);
+    await settle(el);
+    signal.throwIfAborted();
+
+    const hadShadowRoot = el.shadowRoot !== null;
+    const hadShadowChildren = (el.shadowRoot?.childElementCount ?? 0) > 0;
+
+    el.remove();
+    // Let disconnect-scheduled microtasks/frames run while detached so the
+    // reconnect below exercises a genuinely settled detached state.
+    await flushAsyncWork();
+    signal.throwIfAborted();
+
+    host.appendChild(el);
+    await settle(el);
+    signal.throwIfAborted();
+
+    expect(el.isConnected, `<${tag}> should be connected after re-append`).to.be.true;
+    if (hadShadowRoot) {
+      expect(el.shadowRoot, `<${tag}> should retain its shadow root across reconnect`).to.exist;
+    }
+    if (hadShadowChildren) {
+      expect(
+        el.shadowRoot!.childElementCount,
+        `<${tag}> should still render shadow content after reconnect`,
+      ).to.be.greaterThan(0);
+    }
+
+    const lit = el as MaybeLit;
+    if (typeof lit.requestUpdate === 'function') {
+      lit.requestUpdate();
+      expect(
+        lit.isUpdatePending,
+        `<${tag}> should schedule an update from requestUpdate() after reconnect`,
+      ).to.be.true;
+      await lit.updateComplete;
+    }
+  } finally {
+    signal.removeEventListener('abort', removeHost);
+    host.remove();
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Contract 2 — leak-contract
@@ -486,40 +576,76 @@ function describeCandidate(candidate: HTMLElement): string {
   return `<${candidate.localName}${id}${part ? ` part="${part}"` : ''}>`;
 }
 
+/**
+ * One settled default-state element per tag, shared by the focusable-name and template-whitespace
+ * contracts (both only read the rendered tree). Hosts stay mounted until `after()`.
+ */
+const defaultStateHosts: HTMLElement[] = [];
+let defaultStates: Map<string, Outcome<Element>> | undefined;
+
+async function defaultStateOf(tag: string, signal: AbortSignal): Promise<Element> {
+  const host = mountPoint();
+  defaultStateHosts.push(host);
+  const removeHost = () => host.remove();
+  signal.addEventListener('abort', removeHost, { once: true });
+  try {
+    const el = document.createElement(tag);
+    prepareDefaultElement(tag, el);
+    host.appendChild(el);
+    await settle(el);
+    signal.throwIfAborted();
+    // Some components finish composing their default state a frame after
+    // the first update (measured layout, deferred renders).
+    await flushAsyncWork();
+    await settle(el);
+    signal.throwIfAborted();
+    return el;
+  } finally {
+    signal.removeEventListener('abort', removeHost);
+  }
+}
+
+async function ensureDefaultStates(): Promise<Map<string, Outcome<Element>>> {
+  defaultStates ??= await runInBatches(
+    ROOT_BARREL_TAGS.filter(
+      (tag) => !optOutReason(tag, 'focusable-name-contract') || !optOutReason(tag, 'template-whitespace-contract'),
+    ),
+    defaultStateOf,
+  );
+  return defaultStates;
+}
+
+after(() => {
+  for (const host of defaultStateHosts.splice(0)) host.remove();
+  defaultStates = undefined;
+});
+
 describe('lifecycle contract: focusable-name-contract', () => {
+  before(async function () {
+    this.timeout(120_000);
+    await ensureDefaultStates();
+  });
+
   for (const tag of ROOT_BARREL_TAGS) {
     it(`<${tag}> names and roles its default-state focusable shadow elements`, async function () {
       if (optOutReason(tag, 'focusable-name-contract')) return this.skip();
 
-      const host = mountPoint();
-      try {
-        const el = document.createElement(tag);
-        prepareDefaultElement(tag, el);
-        host.appendChild(el);
-        await settle(el);
-        // Some components finish composing their default state a frame after
-        // the first update (measured layout, deferred renders).
-        await flushAsyncWork();
-        await settle(el);
+      const el = outcomeOf(await ensureDefaultStates(), tag);
+      const root = el.shadowRoot;
+      if (!root) return;
 
-        const root = el.shadowRoot;
-        if (!root) return;
-
-        const failures: string[] = [];
-        for (const candidate of root.querySelectorAll<HTMLElement>(FOCUSABLE_CANDIDATE_SELECTOR)) {
-          if (isExcludedFromA11yTree(candidate)) continue;
-          if (!exposesRole(candidate)) {
-            failures.push(`${describeCandidate(candidate)} is focusable but exposes no role`);
-          }
-          if (!exposesNameSource(candidate, root)) {
-            failures.push(`${describeCandidate(candidate)} is focusable but has no accessible-name source`);
-          }
+      const failures: string[] = [];
+      for (const candidate of root.querySelectorAll<HTMLElement>(FOCUSABLE_CANDIDATE_SELECTOR)) {
+        if (isExcludedFromA11yTree(candidate)) continue;
+        if (!exposesRole(candidate)) {
+          failures.push(`${describeCandidate(candidate)} is focusable but exposes no role`);
         }
-
-        expect(failures, `<${tag}> focusable-name violations:\n${failures.join('\n')}`).to.deep.equal([]);
-      } finally {
-        host.remove();
+        if (!exposesNameSource(candidate, root)) {
+          failures.push(`${describeCandidate(candidate)} is focusable but has no accessible-name source`);
+        }
       }
+
+      expect(failures, `<${tag}> focusable-name violations:\n${failures.join('\n')}`).to.deep.equal([]);
     });
   }
 });
@@ -532,19 +658,9 @@ describe('lifecycle contract: template-whitespace-contract', () => {
   for (const tag of ROOT_BARREL_TAGS) {
     it(`<${tag}> renders no template whitespace in its default state`, async function () {
       if (optOutReason(tag, 'template-whitespace-contract')) return this.skip();
-      const host = mountPoint();
-      try {
-        const el = document.createElement(tag);
-        prepareDefaultElement(tag, el);
-        host.appendChild(el);
-        await settle(el);
-        await flushAsyncWork();
-        await settle(el);
-        if (!el.shadowRoot) return;
-        expect(renderedTemplateWhitespace(el.shadowRoot), `<${tag}>`).to.deep.equal([]);
-      } finally {
-        host.remove();
-      }
+      const el = outcomeOf(await ensureDefaultStates(), tag);
+      if (!el.shadowRoot) return;
+      expect(renderedTemplateWhitespace(el.shadowRoot), `<${tag}>`).to.deep.equal([]);
     });
   }
 });
