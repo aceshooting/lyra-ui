@@ -1,8 +1,7 @@
 # WebGL 3D views (`@aceshooting/lyra-3d`)
 
-Status (2026-10-20): phase 0 done; phase 1 (foundation: package, core, loader, `engine` helper,
-typed-column validation, isolation gate, CI lanes) is built and tested but not yet merged; phases 2 to 6
-not started. Nothing has shipped. Today `lr-graph`
+Status (2026-10-21): phase 0 is done and phase 1's shared foundation is merged; component
+engines and views in phases 2 to 5, and release qualification in phase 6, remain pending. Nothing has shipped. Today `lr-graph`
 `view="3d"` is a zero-dependency Canvas 2D perspective mode with no 3D force solver, intended for low
 hundreds of nodes; `lr-embedding-explorer` draws an SVG scatter that renders at most 1,000 points (an
 evenly spaced sample of larger inputs); no component shows 3D models, point clouds or 360° media.
@@ -129,13 +128,15 @@ Exit: written contract, measured spike, and a go or narrow decision.
 
 ### 1. Foundation (M)
 
-- [ ] `packages/lyra-3d`: build, entry points, `sideEffects`, licenses and notices, size budgets,
-  packaging and freshness checks, CI lanes, changeset and trusted publisher.
-- [ ] Shared engine core: renderer setup, orbit camera, fit and focus, GPU picking, token style
-  input, resize, context loss, disposal, reduced motion.
-- [ ] Lyra UI side: shared engine loader and capability validation, the `engine` property helper,
-  the large-data input, fallback notices and localized strings in every catalog.
-- [ ] Size gates prove Three.js is unreachable from every Lyra UI entry point.
+- [x] `packages/lyra-3d`: build, entry points, `sideEffects`, licenses and notices, size budgets,
+  packaging and freshness checks, CI lanes and changeset.
+- [x] Shared engine core: renderer setup, orbit camera, fit and focus, GPU picking, token style
+  input, resize, context loss, disposal and reduced motion.
+- [x] Lyra UI side: shared engine loader and capability validation, the `engine` property helper,
+  typed-column validation and localized foundation strings.
+- [x] Size gates prove Three.js is unreachable from every Lyra UI entry point.
+- [ ] Connect component opt-ins and fallback notices in the later view phases.
+- [ ] Configure the trusted publisher before the companion's first publication.
 
 ### 2. Graph engine (L)
 
