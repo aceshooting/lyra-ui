@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Àpótí agbejáde',
   details: 'Àlàyé',
   map: 'Màpù',
+  model: 'Àwòṣe',
   select: 'Yan',
   sourceListDefaultLabel: 'Àwọn orísun',
   thinkingPanelLabel: 'Ń ronú',

@@ -23,6 +23,23 @@ nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old
 
 ## `lr-graph`
 
+**Optional WebGL engine:** `engine: Engine3dPreference = 'builtin'` accepts `'builtin'`
+or `'webgl'`; invalid values normalize to `'builtin'`. The 3D view lazily requests
+`@aceshooting/lyra-3d/graph` when WebGL is selected; 2D ignores this preference. Failure falls
+back to built-in spatial rendering and then the paginated list. Localized feedback accompanies
+`lr-engine-fallback` with `{ from, to, reason }`; reasons are `'unavailable'`, `'unsupported'`,
+`'context-lost'` or `'error'`.
+
+`graphColumns: LyraGraphColumns | undefined` (property only) replaces local arrays in 3D/list;
+`graphSource` remains authoritative. Columns support 200,000 nodes and 1,000,000 edges.
+Required `ids` supplies string node IDs; optional Float32Array columns are `x`, `y`, `z`, `size`;
+optional Uint16Array columns are `category`, `edgeCategory`. Required Uint32Array `source` and
+`target` contain node indices. Optional `categories`/`labels` are string arrays. Validation
+checks lengths, coordinates and indices; coordinates are bounded to ±10,000,000 graph units.
+Assign a new immutable object after changes. Column edge IDs are `column-edge-${row}`.
+Built-in/list alternatives page all admitted rows in groups of 200. Columns in 2D report invalid
+data rather than displaying stale arrays.
+
 A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d"` for an
 orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
 list of all admitted graph items. The 3D and list views require no optional peer.
@@ -67,7 +84,7 @@ units. All three must be finite own data properties; inherited or accessor-backe
 read. Coordinates clamp to ±1,000,000. Missing/invalid positions receive deterministic spherical
 placement keyed by node id, with genuine z separation. Inputs are never moved or modified. In 3D,
 `renderer`, `layout`, `chargeStrength`, `edgeDistance` and `seed` have no effect: there is no force
-solver, settling animation, auto-rotation or inertia. Rendering uses original perspective math
+solver, settling animation, auto-rotation or inertia. The built-in renderer uses original perspective math
 and a Canvas 2D raster surface, with near-plane clipping, depth-ordered node/edge segments and
 frontmost picking. Adaptive edge subdivision approximates crossings; this is not a mesh renderer or
 a guarantee of perfect translucent intersections. Use modest graphs, typically low hundreds;
@@ -266,6 +283,8 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 `lr-camera-change` (`detail: { camera: LyraGraphCamera }`, a copied immutable spatial camera after a gesture, fit or focus,
 coalesced to one event per frame), and `lr-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
 Direct camera and view property assignments are silent.
+With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
+`'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.
 
 **Slots:** none.
 
@@ -2354,6 +2373,10 @@ tokens.
 
 ## `lr-knowledge-graph-explorer`
 
+`engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
+`engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
+with `{ from, to, reason }`.
+
 Orchestration-level knowledge-graph surface: the `lr-graph` canvas plus entity search, type filters,
 neighborhood expansion, pinned nodes, path finding between pins, node selection, and a details
 overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-list`,
@@ -2573,6 +2596,8 @@ filtered-out id). None change `selectedNodeId` or filters.
   (`detail: { nodeId, x, y, z? }`, world coordinates with z in spatial/list views), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
+- `lr-engine-fallback` (`detail: { from, to, reason }`) — forwarded from the graph when `engine="webgl"`
+  steps down the fallback chain.
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
@@ -3235,8 +3260,23 @@ source list. Either slot renders from its assigned content without requiring the
 
 ## `lr-embedding-explorer`
 
-Dependency-free accessible 2D embedding projection viewer. Coordinates are projected by the host;
-the component only normalizes them into SVG, colors optional clusters, and emits selection events.
+Accessible embedding projection viewer with a dependency-free SVG default. Coordinates are
+projected by the host; the component normalizes them, colors clusters and emits selection events.
+
+`engine: Engine3dPreference = 'builtin'` accepts `'builtin'` or `'webgl'`; invalid values use
+`'builtin'`. WebGL lazily requests `@aceshooting/lyra-3d/points`; failure falls back to the
+built-in view and then the text alternative. `lr-engine-fallback` carries `{ from, to, reason }`,
+with reason `'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`. Source mode retains
+its density renderer and reports unsupported fallback when WebGL is requested.
+
+`pointColumns: LyraPointColumns | null = null` (property only) replaces `points`; non-null
+`source` wins over both. Columns support 1,000,000 rows with required string `ids`, Float32Array
+`x`/`y`, optional Float32Array `z`, optional Uint16Array `cluster`, and optional string arrays
+`clusters`/`labels`. Publish changes with a new immutable object; column arrays remain caller-owned.
+Validation occurs once per assignment. Empty or invalid columns do not restore stale arrays.
+Built-in/text alternatives page 200 rows; WebGL renders every admitted row. `lr-point-select`
+retains the point payload and adds `id` and admitted row `index` (`sourceIndex` in source mode).
+Additional parts: `engine`, `engine-notice`, `rows`, `row`, `pagination`, `page-button`.
 
 **Complete spatial source:** `source: LyraSpatialPointSource<EmbeddingPoint & LyraSpatialPoint>
 | null = null` (attribute: false) takes precedence over `points` without copying the complete
@@ -3300,6 +3340,8 @@ sourceIndex. Activating a density bin emits noncancelable `lr-spatial-bin-select
 adds `bin` and `error` parts; `limit` reports the complete global count/domain and current viewport
 count/domain with density and overlay counts distinguished. The cluster legend describes retained
 point overlays rather than certifying all global clusters.
+With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
+`'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.
 
 Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
 Named style/strings updates reuse admitted data. Replacement, refresh, disconnect and adoption
@@ -3347,6 +3389,9 @@ cancel unfinished work, and reconnect resumes from the current source.
 `limit` (the "showing N of M" sampling notice), `empty`.
 Spatial-source parts: `bin` (a focusable density region, separate from representative point
 overlays) and `error` (invalid or unavailable spatial-source feedback).
+WebGL parts (with `engine="webgl"`): `engine` (the canvas container), `engine-notice` (localized
+loading or fallback feedback), `rows` (the paginated text alternative) with one focusable `row` per
+point, and `pagination` with its `page-button` previous and next actions.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`
@@ -3745,6 +3790,7 @@ These named interfaces and helper signatures are available to typed integrations
     id: string;
     x: number;
     y: number;
+    z?: number;
     label?: string;
     sourceId?: string;
     cluster?: string | number;
@@ -4137,3 +4183,40 @@ These named interfaces and helper signatures are available to typed integrations
     name?: string;
     children?: readonly LyraSourceEntry[];
   }`
+
+- **`optional-renderer-column-contracts`** — Shared fallback event data and immutable typed-column inputs.
+  Import these interfaces with `import type` from `@aceshooting/lyra-ui`; importing types does not
+  load a renderer. `LyraPointColumns` is also exported by
+  `@aceshooting/lyra-ui/components/lr-embedding-explorer.js`.
+  `Engine3dFallbackDetail {
+    readonly from: Engine3dRenderer;
+    readonly to: Engine3dRenderer;
+    readonly reason: Engine3dFallbackReason;
+  }`
+  `Engine3dRenderer` is `'webgl' | 'builtin' | 'list'`; `Engine3dFallbackReason` is
+  `'unavailable' | 'unsupported' | 'context-lost' | 'error'`.
+  `LyraGraphColumns {
+    readonly ids: readonly string[];
+    readonly x?: Float32Array;
+    readonly y?: Float32Array;
+    readonly z?: Float32Array;
+    readonly size?: Float32Array;
+    readonly category?: Uint16Array;
+    readonly categories?: readonly string[];
+    readonly labels?: readonly string[];
+    readonly source: Uint32Array;
+    readonly target: Uint32Array;
+    readonly edgeCategory?: Uint16Array;
+  }`
+  `LyraPointColumns {
+    readonly ids: readonly string[];
+    readonly x: Float32Array;
+    readonly y: Float32Array;
+    readonly z?: Float32Array;
+    readonly cluster?: Uint16Array;
+    readonly clusters?: readonly string[];
+    readonly labels?: readonly string[];
+  }`
+  Publish column changes by assigning a new immutable column object. Row-aligned columns share
+  identities; graph source/target columns index node rows. SharedArrayBuffer-backed columns are
+  unsupported by the optional WebGL engines. Input admission limits do not promise rendering throughput.

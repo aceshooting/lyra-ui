@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'د نقشې انځور صادر نه شو',
   mapDrawingVertex: 'څوکه {index}',
   mapDrawingEditInstructions: 'د دې څوکې د خوځولو لپاره د غشو تڼۍ وکاروئ؛ د لویو ګامونو لپاره Shift ونیسئ. Page Up او Page Down څوکې ټاکي. Home او End لومړۍ او وروستۍ ښکاره څوکه ټاکي.',
+  panoramaInstructions: 'د شاوخوا کتلو لپاره غشي تڼۍ، د لویولو او کوچني کولو لپاره جمع او منفي، او د لید بیاټاکلو لپاره Home وکاروئ.',
+  panoramaHotspotsLabel: 'د پانوراما تعاملي ټکي',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

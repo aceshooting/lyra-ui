@@ -54,7 +54,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Kirim tanggapan',
   feedbackSubmitted: 'Tanggapan wis dikirim',
   suggestionsLabel: 'Pituduh sing disaranake',
-  model: 'Model',
   selectModel: 'Pilih model…',
   modelSelectNoModels: 'Ora ana model',
   modelSelectRequired: 'Pilih model.',

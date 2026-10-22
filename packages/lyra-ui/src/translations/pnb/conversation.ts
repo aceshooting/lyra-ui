@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'رائے جمع کرو',
   feedbackSubmitted: 'رائے جمع ہو گئی',
   suggestionsLabel: 'تجویز کیتے پرامپٹ',
-  model: 'ماڈل',
   selectModel: 'ماڈل چنو…',
   modelSelectNoModels: 'کوئی ماڈل نئیں',
   modelSelectRequired: 'براہ کرم اک ماڈل چنو۔',

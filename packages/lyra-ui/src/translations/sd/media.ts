@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'نقشي جي تصوير برآمد نه ٿي سگهي',
   mapDrawingVertex: 'ڪنڊ {index}',
   mapDrawingEditInstructions: 'هن ڪنڊ کي هلائڻ لاءِ تير واريون ڪنجيون استعمال ڪريو؛ وڏن قدمن لاءِ Shift دٻائي رکو. Page Up ۽ Page Down ڪنڊون چونڊين ٿا. Home ۽ End پهرين ۽ آخري ڏسڻ ۾ ايندڙ ڪنڊ چونڊين ٿا.',
+  panoramaInstructions: 'چوڌاري ڏسڻ لاءِ تير واريون ڪنجيون، وڏو ۽ ننڍو ڪرڻ لاءِ جمع ۽ ڪاٽو، ۽ ڏيک بحال ڪرڻ لاءِ Home استعمال ڪريو.',
+  panoramaHotspotsLabel: 'پينوراما جا تعاملي هنڌ',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'فرستادن بازخورد',
   feedbackSubmitted: 'بازخورد فرستاده شد',
   suggestionsLabel: 'پیشنهادهای درخواست',
-  model: 'مدل',
   selectModel: 'یک مدل انتخاب کنید…',
   modelSelectNoModels: 'مدلی نیست',
   modelSelectRequired: 'لطفاً یک مدل انتخاب کنید.',

@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Gambar peta ora bisa diekspor',
   mapDrawingVertex: 'Titik pucuk {index}',
   mapDrawingEditInstructions: 'Gunakake tombol panah kanggo mindhah titik pucuk iki; tahan Shift supaya langkah luwih gedhe. Page Up lan Page Down milih titik pucuk. Home lan End milih titik pucuk kapisan lan pungkasan sing katon.',
+  panoramaInstructions: 'Gunakake tombol panah kanggo ndeleng sakubenge, tambah lan kurang kanggo nggedhekake lan nyilikake, lan Home kanggo mulihake tampilan.',
+  panoramaHotspotsLabel: 'Titik interaktif panorama',
 };
 
 registerLyraLocale('jv', strings);

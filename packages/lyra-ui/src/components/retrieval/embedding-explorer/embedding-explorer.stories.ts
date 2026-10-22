@@ -110,3 +110,27 @@ export const SpatialSource: Story = {
     },
   }}></lr-embedding-explorer>`,
 };
+
+/** Columns remain immutable after assignment; every row is available through 200-row pages. */
+export const TypedColumns: Story = {
+  render: () => html`<lr-embedding-explorer label="Paged embedding columns" .pointColumns=${{
+    ids: Array.from({ length: 450 }, (_, index) => `column-${index}`),
+    x: Float32Array.from({ length: 450 }, (_, index) => Math.cos(index) * index),
+    y: Float32Array.from({ length: 450 }, (_, index) => Math.sin(index) * index),
+    cluster: Uint16Array.from({ length: 450 }, (_, index) => index % 3),
+    clusters: ['Documents', 'Questions', 'Examples'],
+  }}></lr-embedding-explorer>`,
+};
+
+/** Explicit opt-in loads only the optional points entry; unsupported environments keep the
+ * standard point view. A third coordinate enables the orbit view. */
+export const WebGL: Story = {
+  render: () => html`<lr-embedding-explorer engine="webgl" label="Three-dimensional embeddings" .pointColumns=${{
+    ids: Array.from({ length: 2000 }, (_, index) => `vector-${index}`),
+    x: Float32Array.from({ length: 2000 }, (_, index) => Math.cos(index / 20)),
+    y: Float32Array.from({ length: 2000 }, (_, index) => Math.sin(index / 20)),
+    z: Float32Array.from({ length: 2000 }, (_, index) => index / 500),
+    cluster: Uint16Array.from({ length: 2000 }, (_, index) => Math.floor(index / 500)),
+    clusters: ['Guides', 'Reference', 'Tutorials', 'Examples'],
+  }}></lr-embedding-explorer>`,
+};

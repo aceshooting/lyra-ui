@@ -365,7 +365,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-retrieval-search` · lr-retrieval-search.js · `stable` since `4.1.0` — - the query bar for a retrieval/RAG surface: query text, an active- filter/scope chip row, a vector/keyword/hybrid mode selector, and loa...
 - `lr-retrieval-trace` · lr-retrieval-trace.js · `stable` since `4.1.0` — a retrieval pipeline's stage timeline (query rewriting, embedding, retrieval, reranking, filtering), rendered through `<lr-span-waterfall...
 - `lr-rag-answer` · lr-rag-answer.js · `stable` since `6.2.0` — a controlled grounded-answer surface combining sanitized Markdown, citation badges, a grounding assessment, and source previews.
-- `lr-embedding-explorer` · lr-embedding-explorer.js · `stable` since `6.2.0` — a dependency-free, accessible 2D embedding projection viewer.
+- `lr-embedding-explorer` · lr-embedding-explorer.js · `stable` since `6.2.0` — an accessible embedding projection viewer with a dependency-free builtin SVG renderer and an optional WebGL point renderer.
 - `lr-knowledge-base-admin` · lr-knowledge-base-admin.js · `stable` since `6.2.0` — a responsive operations shell composing the existing controlled source inventory and ingestion queue into one tabbed knowledge-base view.
 - `lr-claim-evidence` · lr-claim-evidence.js · `stable` since `7.0.0` — a controlled claim-by-claim grounding audit.
 - `lr-retrieval-compare` · lr-retrieval-compare.js · `stable` since `7.0.0` — a side-by-side retrieval/reranking workbench that makes rank, overlap, and dense/sparse/rerank/final score changes inspectable.

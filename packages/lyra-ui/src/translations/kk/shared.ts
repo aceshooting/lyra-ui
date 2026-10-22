@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Қалқымалы терезе',
   details: 'Толығырақ',
   map: 'Карта',
+  model: 'Модель',
   select: 'Таңдау',
   sourceListDefaultLabel: 'Дереккөздер',
   thinkingPanelLabel: 'Ойлану',

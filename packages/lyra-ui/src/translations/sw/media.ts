@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Picha ya ramani haikuweza kuhamishwa',
   mapDrawingVertex: 'Kipeo {index}',
   mapDrawingEditInstructions: 'Tumia vitufe vya vishale kusogeza kipeo hiki; shikilia Shift kwa hatua kubwa zaidi. Page Up na Page Down huchagua vipeo. Home na End huchagua kipeo cha kwanza na cha mwisho kinachoonekana.',
+  panoramaInstructions: 'Tumia vitufe vya mishale kutazama huku na huku, jumlisha na toa kukuza na kupunguza, na Home kurejesha mwonekano.',
+  panoramaHotspotsLabel: 'Sehemu shirikishi za panorama',
 };
 
 registerLyraLocale('sw', strings);

@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Ekoki kobimisa te elilingi ya carte',
   mapDrawingVertex: 'Nsuka {index}',
   mapDrawingEditInstructions: 'Salelá bafungola ya flɛ́shɛ mpo na kotambolisa nsuka oyo; simbá Shift mpo na matambe minene. Page Up ná Page Down eponaka bansuka. Home ná End eponaka nsuka ya liboso mpe ya nsuka oyo ezali komonana.',
+  panoramaInstructions: 'Salelá bafungola ya flɛ́mɛ mpo na kotala zingazinga, kobakisa mpe kolongola mpo na kokómisa monene to moke, mpe Home mpo na kozongisa botali.',
+  panoramaHotspotsLabel: 'Bisika ya boyokani na panorama',
 };
 
 registerLyraLocale('ln', strings);

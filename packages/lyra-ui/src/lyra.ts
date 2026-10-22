@@ -2206,3 +2206,18 @@ export type { LyraTimeZonePickerEventMap, LyraTimeZoneChangeDetail } from './com
 export type { LyraUnitPickerEventMap, LyraUnitChangeDetail } from './components/forms/unit-picker/unit-picker.class.js';
 export type { SelectionCatalogEntry, SelectionCatalogRow } from './internal/selection-catalog.js';
 export type { LyraCatalogPickerChangeDetail, LyraCatalogPickerEventMap } from './components/forms/catalog-picker-base.js';
+
+// Shared optional-renderer preferences and public typed-column inputs.
+export type {
+  Engine3dPreference,
+  Engine3dRenderer,
+  Engine3dFallbackReason,
+  Engine3dFallbackDetail,
+} from './internal/engine-3d.js';
+export type { LyraGraphColumns, LyraPointColumns } from './internal/typed-columns.js';
+export type {
+  LyraMediaProjection,
+  LyraPanoramaCamera,
+  LyraPanoramaHotspot,
+  LyraPanoramaHotspotSelectDetail,
+} from './components/media/image-viewer/image-viewer-panorama.js';

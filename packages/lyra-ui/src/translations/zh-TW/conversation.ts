@@ -54,7 +54,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: '提交反饋',
   feedbackSubmitted: '反饋已提交',
   suggestionsLabel: '建議的提示詞',
-  model: '模型',
   selectModel: '選擇模型…',
   modelSelectNoModels: '無可用模型',
   modelSelectRequired: '請選擇一個模型。',

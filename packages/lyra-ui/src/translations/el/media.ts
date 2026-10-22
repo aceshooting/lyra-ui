@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Δεν ήταν δυνατή η εξαγωγή της εικόνας του χάρτη',
   mapDrawingVertex: 'Κορυφή {index}',
   mapDrawingEditInstructions: 'Χρησιμοποιήστε τα πλήκτρα βέλους για να μετακινήσετε αυτή την κορυφή· κρατήστε πατημένο το Shift για μεγαλύτερα βήματα. Τα Page Up και Page Down επιλέγουν κορυφές. Τα Home και End επιλέγουν την πρώτη και την τελευταία ορατή κορυφή.',
+  panoramaInstructions: 'Χρησιμοποιήστε τα βέλη για να κοιτάξετε γύρω, το συν και το πλην για μεγέθυνση και σμίκρυνση και το Home για επαναφορά της προβολής.',
+  panoramaHotspotsLabel: 'Διαδραστικά σημεία πανοράματος',
 };
 
 registerLyraLocale('el', strings);

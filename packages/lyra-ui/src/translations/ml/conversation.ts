@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'ഫീഡ്ബാക്ക് സമർപ്പിക്കുക',
   feedbackSubmitted: 'ഫീഡ്ബാക്ക് സമർപ്പിച്ചു',
   suggestionsLabel: 'നിർദ്ദേശിച്ച പ്രോംപ്റ്റുകൾ',
-  model: 'മോഡൽ',
   selectModel: 'ഒരു മോഡൽ തിരഞ്ഞെടുക്കുക…',
   modelSelectNoModels: 'മോഡലുകളില്ല',
   modelSelectRequired: 'ഒരു മോഡൽ തിരഞ്ഞെടുക്കുക.',

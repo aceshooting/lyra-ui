@@ -8,13 +8,17 @@
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
-- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
+- **Optional peers** `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 19 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-knowledge-graph-explorer`
+
+`engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
+`engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
+with `{ from, to, reason }`.
 
 Orchestration-level knowledge-graph surface: the `lr-graph` canvas plus entity search, type filters,
 neighborhood expansion, pinned nodes, path finding between pins, node selection, and a details
@@ -235,6 +239,8 @@ filtered-out id). None change `selectedNodeId` or filters.
   (`detail: { nodeId, x, y, z? }`, world coordinates with z in spatial/list views), `lr-edge-activate` (`detail: { sourceNodeId, targetNodeId, edgeId? }`), `lr-community-activate`
   (`detail: { communityId }`), `lr-node-expand` (`detail: { nodeId }`, from `lr-graph` and/or `lr-neighbor-list`),
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
+- `lr-engine-fallback` (`detail: { from, to, reason }`) — forwarded from the graph when `engine="webgl"`
+  steps down the fallback chain.
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.

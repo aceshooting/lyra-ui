@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Taga mai fitowa',
   details: 'Cikakkun bayanai',
   map: 'Taswira',
+  model: 'Samfuri',
   select: 'Zaɓa',
   sourceListDefaultLabel: 'Madogara',
   thinkingPanelLabel: 'Tunani',

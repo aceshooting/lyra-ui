@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Fenêtre contextuelle',
   details: 'Détails',
   map: 'Carte',
+  model: 'Modèle',
   select: 'Sélectionner',
   sourceListDefaultLabel: 'Sources',
   thinkingPanelLabel: 'Réflexion',

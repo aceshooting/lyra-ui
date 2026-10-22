@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'ਫੀਡਬੈਕ ਜਮ੍ਹਾਂ ਕਰੋ',
   feedbackSubmitted: 'ਫੀਡਬੈਕ ਜਮ੍ਹਾਂ ਹੋ ਗਿਆ',
   suggestionsLabel: 'ਸੁਝਾਏ ਪ੍ਰੌੰਪਟ',
-  model: 'ਮਾਡਲ',
   selectModel: 'ਮਾਡਲ ਚੁਣੋ…',
   modelSelectNoModels: 'ਕੋਈ ਮਾਡਲ ਨਹੀਂ',
   modelSelectRequired: 'ਕਿਰਪਾ ਕਰਕੇ ਮਾਡਲ ਚੁਣੋ।',

@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Lähetä palaute',
   feedbackSubmitted: 'Palaute lähetetty',
   suggestionsLabel: 'Ehdotetut kehotteet',
-  model: 'Malli',
   selectModel: 'Valitse malli…',
   modelSelectNoModels: 'Ei malleja',
   modelSelectRequired: 'Valitse malli.',

@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Açılır pencere',
   details: 'Ayrıntılar',
   map: 'Harita',
+  model: 'Model',
   select: 'Seç',
   sourceListDefaultLabel: 'Kaynaklar',
   thinkingPanelLabel: 'Akıl yürütme',

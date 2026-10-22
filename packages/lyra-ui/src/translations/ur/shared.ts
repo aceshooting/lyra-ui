@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'پاپ اوور',
   details: 'تفصیلات',
   map: 'نقشہ',
+  model: 'ماڈل',
   select: 'منتخب کریں',
   sourceListDefaultLabel: 'ذرائع',
   thinkingPanelLabel: 'سوچنے کا عمل',

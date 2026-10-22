@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'नक्शा के तस्वीर निर्यात ना हो सकल',
   mapDrawingVertex: 'कोना {index}',
   mapDrawingEditInstructions: 'ई कोना के हिलावे खातिर तीर वाला कुंजी इस्तेमाल करीं; बड़ कदम खातिर Shift दबवले राखीं। Page Up आ Page Down से कोना चुनीं। Home आ End से पहिला आ आखिरी देखाई देवे वाला कोना चुनीं।',
+  panoramaInstructions: 'चारों ओर देखे खातिर तीर कुंजी, बड़ आ छोट करे खातिर प्लस आ माइनस, आ दृश्य रीसेट करे खातिर Home इस्तेमाल करीं।',
+  panoramaHotspotsLabel: 'पैनोरमा के इंटरैक्टिव बिंदु',
 };
 
 registerLyraLocale('bho', strings);

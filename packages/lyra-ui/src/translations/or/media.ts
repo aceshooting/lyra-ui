@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'ମାନଚିତ୍ରର ଛବି ରପ୍ତାନି ହୋଇପାରିଲା ନାହିଁ',
   mapDrawingVertex: 'ଶୀର୍ଷବିନ୍ଦୁ {index}',
   mapDrawingEditInstructions: 'ଏହି ଶୀର୍ଷବିନ୍ଦୁକୁ ଘୁଞ୍ଚାଇବାକୁ ତୀର କୀ ବ୍ୟବହାର କରନ୍ତୁ; ବଡ଼ ପଦକ୍ଷେପ ପାଇଁ Shift ଦବାଇ ରଖନ୍ତୁ। Page Up ଓ Page Down ଶୀର୍ଷବିନ୍ଦୁ ବାଛେ। Home ଓ End ପ୍ରଥମ ଓ ଶେଷ ଦୃଶ୍ୟମାନ ଶୀର୍ଷବିନ୍ଦୁ ବାଛେ।',
+  panoramaInstructions: 'ଚାରିପାଖ ଦେଖିବାକୁ ତୀର କୀ, ଜୁମ୍ କରିବାକୁ ପ୍ଲସ୍ ଓ ମାଇନସ୍ ଏବଂ ଦୃଶ୍ୟ ପୁନଃସେଟ୍ କରିବାକୁ Home ବ୍ୟବହାର କରନ୍ତୁ।',
+  panoramaHotspotsLabel: 'ପାନୋରାମାର ପାରସ୍ପରିକ ବିନ୍ଦୁଗୁଡ଼ିକ',
 };
 
 registerLyraLocale('or', strings);

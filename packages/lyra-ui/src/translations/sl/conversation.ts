@@ -57,7 +57,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Pošlji povratne informacije',
   feedbackSubmitted: 'Povratne informacije so poslane',
   suggestionsLabel: 'Predlagani pozivi',
-  model: 'Model',
   selectModel: 'Izberite model …',
   modelSelectNoModels: 'Ni modelov',
   modelSelectRequired: 'Izberite model.',

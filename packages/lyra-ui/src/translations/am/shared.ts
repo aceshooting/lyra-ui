@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'ብቅ-ባይ',
   details: 'ዝርዝሮች',
   map: 'ካርታ',
+  model: 'ሞዴል',
   select: 'ምረጥ',
   sourceListDefaultLabel: 'ምንጮች',
   thinkingPanelLabel: 'በማሰብ ላይ',

@@ -1670,6 +1670,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   mapExportUnavailable: 'Map image could not be exported',
   mapDrawingVertex: 'Vertex {index}',
   mapDrawingEditInstructions: 'Use arrow keys to move this vertex; hold Shift for larger steps. Page Up and Page Down select vertices. Home and End select the first and last visible vertex.',
+  panoramaInstructions: 'Use arrow keys to look around, plus and minus to zoom, and Home to reset the view.',
+  panoramaHotspotsLabel: 'Panorama hotspots',
 };
 
 export {

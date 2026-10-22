@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Popover',
   details: 'Butiran',
   map: 'Peta',
+  model: 'Model',
   select: 'Pilih',
   sourceListDefaultLabel: 'Sumber',
   thinkingPanelLabel: 'Pemikiran',

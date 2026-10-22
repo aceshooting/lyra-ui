@@ -40,6 +40,9 @@ function provider() {
 }
 const row = (el: LyraGraph, key: string) => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-source-key]')].find(node => node.dataset['sourceKey'] === key);
 async function ready(el: LyraGraph, key: string): Promise<void> { await waitUntil(() => !!row(el, key), `source row ${key}`, { timeout: 2000 }); }
+// Positions arrive after the provider scene and the first layout frames, which can exceed the
+// 1 s waitUntil default while other browser test files run in parallel.
+async function placed(read: () => unknown, label: string): Promise<void> { await waitUntil(() => !!read(), label, { timeout: 4000 }); }
 
 it('reaches first middle and final nodes and edges in the global million-record navigator without loading diagram peers', async () => {
   const data = provider();
@@ -181,7 +184,7 @@ it('keeps scene geometry stable on page and selection changes and displays a bou
   const data = provider();
   const graph = await fixture<SourceGraph>(html`<lr-graph seed="7" .graphSource=${data.source}></lr-graph>`);
   await ready(graph, 'node:0');
-  await waitUntil(() => !!graph.getNodePosition('0'));
+  await placed(() => graph.getNodePosition('0'), 'node 0 placed');
   const calls = data.scenes.length;
   const position = graph.getNodePosition('0');
   graph.sourcePage = 5000; await ready(graph, 'node:500000');
@@ -192,11 +195,11 @@ it('keeps scene geometry stable on page and selection changes and displays a bou
   expect(data.scenes.at(-1)!.centerKey).to.equal('node:999999');
   expect(graph.getNodePosition('999999')).not.to.equal(undefined);
   graph.renderer = 'canvas'; await graph.updateComplete;
-  await waitUntil(() => !!graph.shadowRoot!.querySelector('canvas'));
+  await placed(() => graph.shadowRoot!.querySelector('canvas'), 'canvas renderer mounted');
   expect(graph.getNodePosition('999999')).not.to.equal(undefined);
   const sceneCalls = data.scenes.length;
   graph.view = '3d'; await graph.updateComplete;
-  await waitUntil(() => !!graph.getNodePosition3d('999999'));
+  await placed(() => graph.getNodePosition3d('999999'), 'node 999999 placed in 3D');
   expect(data.scenes.length).to.equal(sceneCalls);
   expect(graph.getNodePosition3d('999999')).to.deep.equal({ x: 999, y: 0, z: 0 });
   expect(graph.shadowRoot!.querySelector('[part="source-navigator"]') !== null).to.equal(true);
@@ -314,7 +317,7 @@ it('reserves the final global edge and both endpoints before selected keys withi
 it('bounds retained positions across repeated neighborhoods without paging records for camera gestures', async () => {
   const data = provider();
   const graph = await fixture<SourceGraph>(html`<lr-graph seed="7" .graphSource=${data.source}></lr-graph>`);
-  await ready(graph, 'node:0'); await waitUntil(() => !!graph.getNodePosition('0'));
+  await ready(graph, 'node:0'); await placed(() => graph.getNodePosition('0'), 'node 0 placed');
   for (const id of ['100000', '500000', '999999']) expect(await graph.focusNode(id)).to.equal(true);
   const seam = graph as unknown as { lastPositionById: Map<string, unknown>; simNodeById: Map<string, unknown> };
   expect(seam.lastPositionById.size).to.equal(1); expect(seam.simNodeById.size).to.equal(1);

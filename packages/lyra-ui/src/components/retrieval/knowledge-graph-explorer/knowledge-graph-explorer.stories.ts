@@ -291,3 +291,10 @@ export const SourceNavigation: Story = {
     return html`<lr-knowledge-graph-explorer view="list" .graphSource=${source} .nodeTypes=${[{ id: 'person', label: 'Person' }]}></lr-knowledge-graph-explorer>`;
   },
 };
+
+
+export const WebglSpatial: Story = {
+  render: () => html`<lr-knowledge-graph-explorer view="3d" engine="webgl" style="height:32rem"
+    .nodes=${[{ id: 'a', label: 'Alpha', position: { x: -60, y: 0, z: 30 } }, { id: 'b', label: 'Beta', position: { x: 60, y: 0, z: -30 } }]}
+    .edges=${[{ source: 'a', target: 'b', directed: true }]}></lr-knowledge-graph-explorer>`,
+};

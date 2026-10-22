@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Yaada dhiyeessi',
   feedbackSubmitted: 'Yaadni dhiyaateera',
   suggestionsLabel: 'Ajajoota yaadaman',
-  model: 'Moodeela',
   selectModel: 'Moodeela filadhu…',
   modelSelectNoModels: 'Moodeelli hin jiru',
   modelSelectRequired: 'Maaloo moodeela filadhu.',

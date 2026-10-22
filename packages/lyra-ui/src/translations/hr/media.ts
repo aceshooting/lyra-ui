@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Sliku karte nije bilo moguće izvesti',
   mapDrawingVertex: 'Vrh {index}',
   mapDrawingEditInstructions: 'Pomičite ovaj vrh tipkama sa strelicama; držite Shift za veće korake. Page Up i Page Down odabiru vrhove. Home i End odabiru prvi i posljednji vidljivi vrh.',
+  panoramaInstructions: 'Tipkama sa strelicama gledajte oko sebe, tipkama plus i minus zumirajte, a tipkom Home vratite početni prikaz.',
+  panoramaHotspotsLabel: 'Interaktivne točke panorame',
 };
 
 registerLyraLocale('hr', strings);

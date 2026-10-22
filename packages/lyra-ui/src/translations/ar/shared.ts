@@ -107,6 +107,7 @@ const strings: LyraLocaleStrings = {
   popover: 'نافذة منبثقة',
   details: 'التفاصيل',
   map: 'خريطة',
+  model: 'النموذج',
   select: 'تحديد',
   sourceListDefaultLabel: 'المصادر',
   thinkingPanelLabel: 'التفكير',

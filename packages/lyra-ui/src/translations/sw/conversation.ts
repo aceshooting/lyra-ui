@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Wasilisha maoni',
   feedbackSubmitted: 'Maoni yamewasilishwa',
   suggestionsLabel: 'Mapendekezo ya maagizo',
-  model: 'Muundo',
   selectModel: 'Chagua muundo…',
   modelSelectNoModels: 'Hakuna miundo',
   modelSelectRequired: 'Chagua muundo.',

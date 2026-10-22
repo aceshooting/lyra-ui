@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Ponnahdusikkuna',
   details: 'Tiedot',
   map: 'Kartta',
+  model: 'Malli',
   select: 'Valitse',
   sourceListDefaultLabel: 'Lähteet',
   thinkingPanelLabel: 'Päättely',

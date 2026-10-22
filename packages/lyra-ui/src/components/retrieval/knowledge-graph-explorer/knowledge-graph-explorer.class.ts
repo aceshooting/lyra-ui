@@ -1,3 +1,4 @@
+import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
 import { ref } from 'lit/directives/ref.js';
 import { setGraphSourceComposition, resolveGraphSourceComposition, focusGraphSourceComposition, type GraphSourceCompositionSnapshot } from '../graph/graph-source-composition.js';
 import type { GraphSource } from '../graph/graph.class.js';
@@ -59,7 +60,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExplorerAllTypesHidden, LYRA_DEFAULT_graphExplorerClearTypes, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_graphNodeLimit } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_statusError, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Search results rendered at once; the match count still covers every match. */
@@ -135,6 +136,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
     LyraEventDetailSnapshot<{ hiddenTypes: string[] }>
   >;
   'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>;
+  'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
   'lr-camera-change': CustomEvent<{ camera: LyraGraphCamera }>;
   'lr-view-change': CustomEvent<{ view: LyraGraphView }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
@@ -229,6 +231,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  *   `detail: { hiddenTypes }`. See the class doc above. Direct host assignments do not emit.
  * @event lr-node-activate - Bubbles unchanged with `{ nodeId, x, y, z? }`; spatial activation
  *   includes world z, while 2D retains its existing local x/y coordinates.
+ * @event lr-engine-fallback - Bubbles unchanged from the composed graph with `{ from, to, reason }`.
  * @event lr-camera-change - Bubbles unchanged from the composed graph with `{ camera }`.
  *   Spatial detail popovers follow the newly projected node position.
  * @event lr-view-change - Bubbles from the graph toolbar with `{ view }`; the explorer updates
@@ -276,6 +279,18 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    engine3dContextLost: LYRA_DEFAULT_engine3dContextLost,
+    engine3dError: LYRA_DEFAULT_engine3dError,
+    engine3dLoading: LYRA_DEFAULT_engine3dLoading,
+    engine3dShowingBuiltin: LYRA_DEFAULT_engine3dShowingBuiltin,
+    engine3dShowingList: LYRA_DEFAULT_engine3dShowingList,
+    engine3dSoftwareRendering: LYRA_DEFAULT_engine3dSoftwareRendering,
+    engine3dUnavailable: LYRA_DEFAULT_engine3dUnavailable,
+    engine3dUnsupported: LYRA_DEFAULT_engine3dUnsupported,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
     graphEdgeLimit: LYRA_DEFAULT_graphEdgeLimit,
@@ -292,7 +307,16 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     graphExplorerUnpin: LYRA_DEFAULT_graphExplorerUnpin,
     graphExplorerUnpinned: LYRA_DEFAULT_graphExplorerUnpinned,
     graphNodeLimit: LYRA_DEFAULT_graphNodeLimit,
+    largeDataInvalid: LYRA_DEFAULT_largeDataInvalid,
+    largeDataLimit: LYRA_DEFAULT_largeDataLimit,
     loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
+    open: LYRA_DEFAULT_open,
+    progress: LYRA_DEFAULT_progress,
+    restore: LYRA_DEFAULT_restore,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     viewerSearchMatchCount: LYRA_DEFAULT_viewerSearchMatchCount,
     viewerSearchNoMatches: LYRA_DEFAULT_viewerSearchNoMatches,
@@ -526,6 +550,11 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    * an orbit camera; 'list' exposes all graph items through visible pagination. Spatial/list
    * views work without optional d3 peers. Toolbar changes also update this property. */
   @property() view: LyraGraphView = '2d';
+  private _engine: Engine3dPreference = 'builtin';
+  /** Optional 3D graph renderer preference, forwarded to the composed graph. */
+  @property({ converter: ENGINE_3D_PREFERENCE })
+  get engine(): Engine3dPreference { return this._engine; }
+  set engine(value: Engine3dPreference) { const old = this._engine; this._engine = ENGINE_3D_PREFERENCE.normalize(value); this.requestUpdate('engine', old); }
   /** Optional orbit-camera input forwarded to lr-graph.camera; camera changes bubble as
    * lr-camera-change. Angles use radians, distance and target use graph units. */
   @property({ attribute: false }) camera?: LyraGraphCamera;
@@ -1531,6 +1560,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           .dimmedEdgeIds=${guard(dimmedDeps, () => this.computedDimmedLinkIds)}
           renderer=${this.renderer}
           .view=${this.view}
+          .engine=${this.engine}
           .camera=${this.camera}
           fit-to=${this.fitTo}
           node-labels=${this.nodeLabels ?? nothing}

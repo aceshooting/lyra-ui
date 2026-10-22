@@ -53643,7 +53643,9 @@
       "registrationModule": "src/components/retrieval/embedding-explorer/embedding-explorer.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "@aceshooting/lyra-3d"
+      ],
       "maturity": {
         "status": "stable",
         "since": "6.2.0",
@@ -53679,6 +53681,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "engine",
+            "property": "engine",
+            "type": "Engine3dPreference",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "height",
@@ -53743,6 +53754,15 @@
             "default": null
           },
           {
+            "name": "engine",
+            "attribute": "engine",
+            "type": "Engine3dPreference",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "height",
             "attribute": "height",
             "type": "string",
@@ -53781,6 +53801,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 1000
+          },
+          {
+            "name": "pointColumns",
+            "attribute": null,
+            "type": "LyraPointColumns | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "points",
@@ -53824,8 +53853,14 @@
         "slots": [],
         "events": [
           {
+            "name": "lr-engine-fallback",
+            "type": "CustomEvent<Engine3dFallbackDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-point-select",
-            "type": "CustomEvent<{ point: EmbeddingPoint }>",
+            "type": "CustomEvent<{ point: EmbeddingPoint; id: string; index: number }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -53847,6 +53882,14 @@
           },
           {
             "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "engine",
+            "deprecated": null
+          },
+          {
+            "name": "engine-notice",
             "deprecated": null
           },
           {
@@ -53874,11 +53917,27 @@
             "deprecated": null
           },
           {
+            "name": "page-button",
+            "deprecated": null
+          },
+          {
+            "name": "pagination",
+            "deprecated": null
+          },
+          {
             "name": "plot",
             "deprecated": null
           },
           {
             "name": "point",
+            "deprecated": null
+          },
+          {
+            "name": "row",
+            "deprecated": null
+          },
+          {
+            "name": "rows",
             "deprecated": null
           }
         ],
@@ -64401,6 +64460,7 @@
       "rootIncluded": false,
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
+        "@aceshooting/lyra-3d",
         "d3-drag",
         "d3-force",
         "d3-selection",
@@ -64474,6 +64534,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0.6
+          },
+          {
+            "name": "engine",
+            "property": "engine",
+            "type": "Engine3dPreference",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "fit-to",
@@ -64733,6 +64802,15 @@
             "default": "[]"
           },
           {
+            "name": "engine",
+            "attribute": "engine",
+            "type": "Engine3dPreference",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "fitTo",
             "attribute": "fit-to",
             "type": "LyraGraphFit",
@@ -64751,6 +64829,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "graphColumns",
+            "attribute": null,
+            "type": "LyraGraphColumns | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "graphSource",
@@ -64996,6 +65083,12 @@
           {
             "name": "lr-edge-leave",
             "type": "CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string; }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-engine-fallback",
+            "type": "CustomEvent<Engine3dFallbackDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -71206,7 +71299,9 @@
       "registrationModule": "src/components/media/image-viewer/image-viewer.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "@aceshooting/lyra-3d"
+      ],
       "maturity": {
         "status": "stable",
         "since": "4.0.0",
@@ -71266,6 +71361,15 @@
             "default": false
           },
           {
+            "name": "engine",
+            "property": "engine",
+            "type": "Engine3dPreference",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "fit",
             "property": "fit",
             "type": "LyraImageFit",
@@ -71313,6 +71417,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "projection",
+            "property": "projection",
+            "type": "LyraMediaProjection",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "rotation",
@@ -71405,6 +71518,15 @@
             "default": false
           },
           {
+            "name": "engine",
+            "attribute": "engine",
+            "type": "Engine3dPreference",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "fit",
             "attribute": "fit",
             "type": "LyraImageFit",
@@ -71422,6 +71544,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "hotspots",
+            "attribute": null,
+            "type": "readonly LyraPanoramaHotspot[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -71462,6 +71593,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "panoramaCamera",
+            "attribute": null,
+            "type": "LyraPanoramaCamera",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "projection",
+            "attribute": "projection",
+            "type": "LyraMediaProjection",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "rotation",
@@ -71524,6 +71673,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-engine-fallback",
+            "type": "CustomEvent<Engine3dFallbackDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-fit-change",
             "type": "CustomEvent<{ fit: LyraImageFit }>",
             "cancelable": "never",
@@ -71538,6 +71693,18 @@
           {
             "name": "lr-load",
             "type": "CustomEvent<{ naturalWidth: number; naturalHeight: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-panorama-camera-change",
+            "type": "CustomEvent<{ camera: LyraPanoramaCamera }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-panorama-hotspot-select",
+            "type": "CustomEvent<LyraPanoramaHotspotSelectDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -71620,6 +71787,30 @@
           },
           {
             "name": "image-wrapper",
+            "deprecated": null
+          },
+          {
+            "name": "panorama",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-engine",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-hotspot",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-hotspots",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-notice",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-page",
             "deprecated": null
           },
           {
@@ -75998,6 +76189,7 @@
       "rootIncluded": false,
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
+        "@aceshooting/lyra-3d",
         "d3-drag",
         "d3-force",
         "d3-selection",
@@ -76047,6 +76239,15 @@
       "counterparts": [],
       "surface": {
         "attributes": [
+          {
+            "name": "engine",
+            "property": "engine",
+            "type": "Engine3dPreference",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "fit-to",
             "property": "fitTo",
@@ -76203,6 +76404,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "engine",
+            "attribute": "engine",
+            "type": "Engine3dPreference",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "entityDetails",
@@ -76443,6 +76653,14 @@
           {
             "name": "lr-edge-activate",
             "type": "CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
+          },
+          {
+            "name": "lr-engine-fallback",
+            "type": "CustomEvent<Engine3dFallbackDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -154746,6 +154964,7 @@
       "rootIncluded": true,
       "rootExclusion": null,
       "optionalPeers": [
+        "@aceshooting/lyra-3d",
         "dompurify"
       ],
       "maturity": {
@@ -154844,6 +155063,15 @@
             "default": 0
           },
           {
+            "name": "engine",
+            "property": "engine",
+            "type": "Engine3dPreference",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "icon-library",
             "property": "iconLibrary",
             "type": "string",
@@ -154902,6 +155130,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "metadata"
+          },
+          {
+            "name": "projection",
+            "property": "projection",
+            "type": "LyraMediaProjection",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "src",
@@ -155006,6 +155243,24 @@
             "default": 0
           },
           {
+            "name": "engine",
+            "attribute": "engine",
+            "type": "Engine3dPreference",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "hotspots",
+            "attribute": null,
+            "type": "readonly LyraPanoramaHotspot[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "iconLibrary",
             "attribute": "icon-library",
             "type": "string",
@@ -155046,6 +155301,15 @@
             "default": false
           },
           {
+            "name": "panoramaCamera",
+            "attribute": null,
+            "type": "LyraPanoramaCamera",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "playing",
             "attribute": null,
             "type": "boolean",
@@ -155073,6 +155337,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "metadata"
+          },
+          {
+            "name": "projection",
+            "attribute": "projection",
+            "type": "LyraMediaProjection",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "src",
@@ -155199,6 +155472,24 @@
             "composed": false
           },
           {
+            "name": "lr-engine-fallback",
+            "type": "CustomEvent<Engine3dFallbackDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-panorama-camera-change",
+            "type": "CustomEvent<{ camera: LyraPanoramaCamera }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-panorama-hotspot-select",
+            "type": "CustomEvent<LyraPanoramaHotspotSelectDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "pause",
             "type": "Event",
             "cancelable": "never",
@@ -155250,6 +155541,30 @@
           },
           {
             "name": "controls-overlay",
+            "deprecated": null
+          },
+          {
+            "name": "panorama",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-engine",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-hotspot",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-hotspots",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-notice",
+            "deprecated": null
+          },
+          {
+            "name": "panorama-page",
             "deprecated": null
           },
           {
@@ -225705,6 +226020,7 @@
         "runtime": {
           "registration": "all",
           "optionalPeers": [
+            "@aceshooting/lyra-3d",
             "dompurify"
           ]
         },

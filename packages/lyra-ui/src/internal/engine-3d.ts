@@ -50,12 +50,20 @@ export const ENGINE_3D_DEFAULT_STRINGS: Readonly<Record<Engine3dMessageKey, Lyra
   engine3dShowingList: LYRA_DEFAULT_engine3dShowingList,
 });
 
-const REASON_KEYS: Readonly<Record<Engine3dFallbackReason, Engine3dMessageKey>> = Object.freeze({
+/** Why an element fell back, as a message key; plain literal tables keep `localize()` keys checkable. */
+export const ENGINE_3D_REASON_MESSAGE = {
   unavailable: 'engine3dUnavailable',
   unsupported: 'engine3dUnsupported',
   'context-lost': 'engine3dContextLost',
   error: 'engine3dError',
-});
+} as const satisfies Readonly<Record<Engine3dFallbackReason, Engine3dMessageKey>>;
+
+/** What a fallback shows now, as a message key. A fallback never lands on the WebGL renderer. */
+export const ENGINE_3D_SHOWING_MESSAGE = {
+  webgl: 'engine3dShowingList',
+  builtin: 'engine3dShowingBuiltin',
+  list: 'engine3dShowingList',
+} as const satisfies Readonly<Record<Engine3dRenderer, Engine3dMessageKey>>;
 
 /**
  * The two message keys of a fallback notice: why the element fell back, then what it shows now.
@@ -66,8 +74,8 @@ export function engine3dFallbackNotice(detail: Engine3dFallbackDetail): {
   readonly showing: Engine3dMessageKey;
 } {
   return {
-    reason: REASON_KEYS[detail.reason],
-    showing: detail.to === 'builtin' ? 'engine3dShowingBuiltin' : 'engine3dShowingList',
+    reason: ENGINE_3D_REASON_MESSAGE[detail.reason],
+    showing: ENGINE_3D_SHOWING_MESSAGE[detail.to],
   };
 }
 

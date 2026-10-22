@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Не удалось экспортировать изображение карты',
   mapDrawingVertex: 'Вершина {index}',
   mapDrawingEditInstructions: 'Используйте клавиши со стрелками, чтобы переместить эту вершину; удерживайте Shift для более крупных шагов. Page Up и Page Down выбирают вершины. Home и End выбирают первую и последнюю видимую вершину.',
+  panoramaInstructions: 'Используйте стрелки, чтобы осмотреться, плюс и минус для масштабирования и Home для сброса вида.',
+  panoramaHotspotsLabel: 'Интерактивные точки панорамы',
 };
 
 registerLyraLocale('ru', strings);

@@ -8,8 +8,8 @@
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
-- **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 16 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** `@aceshooting/lyra-3d`, `dompurify` — see `llms/peers.md`
+- **Themeable via** 22 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,6 +20,26 @@ Experimental inline native video player with custom controls, safe declarative s
 selectable captions, and bounded WebVTT thumbnail previews. It mirrors the public Web Awesome Video
 API under the `lr-` prefix. Import the granular registration entry with
 `import '@aceshooting/lyra-ui/components/lr-video.js'`.
+
+**Optional panorama:** `projection: LyraMediaProjection = 'flat'` accepts `'flat'` or
+`'equirectangular'`. Set `projection="equirectangular"` and `engine="webgl"` together to request
+spherical rendering from optional `@aceshooting/lyra-3d/panorama`. The default
+`engine: Engine3dPreference = 'builtin'` retains flat media. Invalid values normalize to defaults.
+Missing companion, unavailable WebGL2, errors or context loss retain native flat media with
+localized feedback. `lr-engine-fallback` carries `{ from, to, reason }`, where reason is
+`'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`.
+
+`panoramaCamera: LyraPanoramaCamera` (property only) defaults to
+`{ yaw: 0, pitch: 0, fieldOfView: 75 }`. Yaw/pitch are radians; vertical fieldOfView is degrees,
+clamped to 20–100. Authored writes are silent. Arrow keys look around (horizontal keys honor
+RTL), +/- zoom, and Home resets. `lr-panorama-camera-change` carries `{ camera }` after gestures
+or keyboard changes.
+
+`hotspots: readonly LyraPanoramaHotspot[] = []` (property only) accepts
+`{ id, yaw, pitch, label? }`, with radians and pitch within ±π/2. Invalid rows are omitted;
+first valid unique ID wins. Reassign after changes. A visible keyboard alternative pages 200
+hotspots with arrows, Home/End and Previous/Next navigation. `lr-panorama-hotspot-select` carries
+`{ hotspot, id, index }`.
 
 When progress is unavailable, the disabled native range input and its visible timeline track retain
 resting paint under hover and press. Once media duration makes progress available, the track retains
@@ -70,6 +90,9 @@ non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline al
 immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
 play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
 (bubbling and composed, preserving `relatedTarget`).
+With the optional panorama, `lr-panorama-camera-change` (`detail: { camera }`, after a user gesture or
+keyboard change), `lr-panorama-hotspot-select` (`detail: { hotspot, id, index }`) and
+`lr-engine-fallback` (`detail: { from, to, reason }`) are emitted; none is cancelable.
 
 **Slots:** the default slot accepts direct `<source>` and `<track>` children;
 `controls-after-play`, `controls-start`, `exit-fullscreen-icon`, `fullscreen-icon`, `mute-icon`,
@@ -92,6 +115,10 @@ without asking the browser to paint a duplicate native caption layer.
 `caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
 `video`, and `video-title-overlay`.
+Panorama parts (with `projection="equirectangular"`): `panorama` (the keyboard-operable spherical
+viewport), `panorama-engine` (the optional renderer container), `panorama-notice` (localized
+renderer loading or fallback feedback), `panorama-hotspots` (the paginated hotspot alternative)
+with one `panorama-hotspot` button per hotspot, and `panorama-page` (a hotspot page action).
 
 The `progress` range carries `aria-label` and points through `aria-describedby` to a localized
 `{current} of {duration}` description (key `avPlayerPosition`, shared with `lr-av-player`) built

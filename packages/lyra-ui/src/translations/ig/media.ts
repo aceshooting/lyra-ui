@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Enweghị ike ibupụta onyonyo maapụ',
   mapDrawingVertex: 'Ọnụ {index}',
   mapDrawingEditInstructions: 'Jiri bọtịnụ akụ bugharịa ọnụ a; jide Shift maka nzọụkwụ buru ibu. Page Up na Page Down na-ahọrọ ọnụ. Home na End na-ahọrọ ọnụ mbụ na nke ikpeazụ a na-ahụ anya.',
+  panoramaInstructions: 'Jiri igodo akụ lee gburugburu, mgbakwunye na mwepụ mee ka nlele too ma ọ bụ pere mpe, na Home weghachi nlele.',
+  panoramaHotspotsLabel: 'Ebe mmekọrịta na panorama',
 };
 
 registerLyraLocale('ig', strings);

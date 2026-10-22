@@ -2,24 +2,24 @@
   "locale": "en-GB",
   "direction": "ltr",
   "source": {
-    "keyCount": 1574,
-    "sha256": "sha256:dfd5062eaa9ac9efeda55ade8f300e5f99921e1ad4a8813dc3b1582ba6277a06"
+    "keyCount": 1576,
+    "sha256": "sha256:3192d7994204dd33ff050984ce6bbbcccd4ed33cb3df6e18855af122216cc504"
   },
   "catalog": {
-    "keyCount": 1574,
-    "sha256": "sha256:4506b0808937ecbd3ce9c9269c0dd50ead79333f8499eff265e38ffb4705233b"
+    "keyCount": 1576,
+    "sha256": "sha256:2af4ade6d92c38d8cd9bc68bcb072fc010fa6768ad673243dcba2f3a26f2fde1"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-10-19",
-    "evidence": "Original en-GB (British English) difference catalog: 21 regional overrides drafted over the English source (DEFAULT_STRINGS) for British spelling (colour, centred, neighbourhood, catalogue, maximise, organisation, initialised, serialisable). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made. Bounded 2026-10-21 AI-assisted review verified that the ten foundation messages inherit the current English source without an authored en-GB override. This is inheritance verification, not a translated-language or human/native-speaker review. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits English. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review."
+    "evidence": "Original en-GB (British English) difference catalog: 21 regional overrides drafted over the English source (DEFAULT_STRINGS) for British spelling (colour, centred, neighbourhood, catalogue, maximise, organisation, initialised, serialisable). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made. Bounded 2026-10-21 AI-assisted review verified that the ten foundation messages inherit the current English source without an authored en-GB override. This is inheritance verification, not a translated-language or human/native-speaker review. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits English. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of two panorama keyboard-instruction and hotspot messages: this catalog inherits English. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
     "reviewedAt": "2026-10-21",
-    "evidence": "AI-assisted review of the en-GB (British English) regional overrides checked each override for meaning, regional register, terminology consistency with the parent catalog, placeholder preservation and plural forms, and confirmed that no override merely repeats its parent value. Inherited messages were not re-reviewed beyond the parent catalog's own record. No human, native-speaker or independent human review is claimed. Bounded 2026-10-21 AI-assisted review verified that the ten foundation messages inherit the current English source without an authored en-GB override. This is inheritance verification, not a translated-language or human/native-speaker review. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits English. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review."
+    "evidence": "AI-assisted review of the en-GB (British English) regional overrides checked each override for meaning, regional register, terminology consistency with the parent catalog, placeholder preservation and plural forms, and confirmed that no override merely repeats its parent value. Inherited messages were not re-reviewed beyond the parent catalog's own record. No human, native-speaker or independent human review is claimed. Bounded 2026-10-21 AI-assisted review verified that the ten foundation messages inherit the current English source without an authored en-GB override. This is inheritance verification, not a translated-language or human/native-speaker review. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits English. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review. Bounded 2026-10-22 AI-assisted enrollment of two panorama keyboard-instruction and hotspot messages: this catalog inherits English. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review."
   },
   "englishIdenticalAllowlist": [],
   "reviewTier": "ai-assisted"

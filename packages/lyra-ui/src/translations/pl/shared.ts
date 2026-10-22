@@ -103,6 +103,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Wyskakujące okienko',
   details: 'Szczegóły',
   map: 'Mapa',
+  model: 'Model',
   select: 'Wybierz',
   sourceListDefaultLabel: 'Źródła',
   thinkingPanelLabel: 'Rozumowanie',

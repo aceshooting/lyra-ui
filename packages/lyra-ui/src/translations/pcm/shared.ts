@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Popover',
   details: 'More information',
   map: 'Map',
+  model: 'Model',
   select: 'Choose',
   sourceListDefaultLabel: 'Where di information come from',
   thinkingPanelLabel: 'E dey think',

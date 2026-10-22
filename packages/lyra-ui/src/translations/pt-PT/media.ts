@@ -148,6 +148,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Não foi possível exportar a imagem do mapa',
   mapDrawingVertex: 'Vértice {index}',
   mapDrawingEditInstructions: 'Utilize as teclas de seta para mover este vértice; mantenha a tecla Shift premida para passos maiores. Page Up e Page Down selecionam vértices. Home e End selecionam o primeiro e o último vértice visível.',
+  panoramaInstructions: 'Utilize as setas para olhar em redor, mais e menos para ampliar ou reduzir e Home para repor a vista.',
+  panoramaHotspotsLabel: 'Pontos interativos do panorama',
 };
 
 registerLyraLocale('pt-PT', strings);

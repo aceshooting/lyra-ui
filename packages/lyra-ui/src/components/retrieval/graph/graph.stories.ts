@@ -580,3 +580,22 @@ export const SourceNavigator: Story = {
     return html`<lr-graph view="list" style="height: 30rem" .graphSource=${source}></lr-graph>`;
   },
 };
+
+
+/** The optional companion is downloaded only for this explicit 3D preference. */
+export const WebglSpatial: Story = {
+  render: () => html`<lr-graph view="3d" engine="webgl" style="height:30rem"
+    .nodes=${[{ id: 'a', label: 'First', position: { x: -80, y: 0, z: 40 } }, { id: 'b', label: 'Second', position: { x: 80, y: 0, z: -40 } }]}
+    .edges=${[{ id: 'a-b', source: 'a', target: 'b', directed: true, label: 'Connects' }]} with-edge-labels></lr-graph>`,
+};
+
+export const WebglTypedColumns: Story = {
+  render: () => {
+    const count = 12000;
+    const ids = Array.from({ length: count }, (_, row) => `node-${row}`);
+    const x = new Float32Array(count), y = new Float32Array(count), z = new Float32Array(count), category = new Uint16Array(count);
+    for (let row = 0; row < count; row++) { const angle = row * 2.399963229728653; x[row] = Math.cos(angle) * Math.sqrt(row) * 3; y[row] = Math.sin(angle) * Math.sqrt(row) * 3; z[row] = row % 101 - 50; category[row] = row % 3; }
+    const source = Uint32Array.from({ length: count - 1 }, (_, row) => row), target = Uint32Array.from(source, (row) => row + 1);
+    return html`<lr-graph view="3d" engine="webgl" style="height:30rem" .graphColumns=${{ ids, x, y, z, source, target, category, categories: ['First', 'Second', 'Third'] }}></lr-graph>`;
+  },
+};

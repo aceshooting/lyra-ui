@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Etanda oyo ebimaka',
   details: 'Makambo ya sikisiki',
   map: 'Karte',
+  model: 'Modèle',
   select: 'Pona',
   sourceListDefaultLabel: 'Ba source',
   thinkingPanelLabel: 'Kokanisa',

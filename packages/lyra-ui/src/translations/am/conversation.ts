@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'ግብረመልስ አስገባ',
   feedbackSubmitted: 'ግብረመልስ ተልኳል',
   suggestionsLabel: 'የተጠቆሙ ጥያቄዎች',
-  model: 'ሞዴል',
   selectModel: 'ሞዴል ይምረጡ…',
   modelSelectNoModels: 'ሞዴል የለም',
   modelSelectRequired: 'እባክዎ ሞዴል ይምረጡ።',

@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Sprettoppvindauge',
   details: 'Detaljar',
   map: 'Kart',
+  model: 'Modell',
   select: 'Vel',
   sourceListDefaultLabel: 'Kjelder',
   thinkingPanelLabel: 'Tankeprosess',

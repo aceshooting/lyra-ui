@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'לא ניתן לייצא את תמונת המפה',
   mapDrawingVertex: 'קודקוד {index}',
   mapDrawingEditInstructions: 'השתמשו במקשי החצים כדי להזיז את הקודקוד הזה; החזיקו את Shift לצעדים גדולים יותר. Page Up ו־Page Down בוחרים קודקודים. Home ו־End בוחרים את הקודקוד הגלוי הראשון והאחרון.',
+  panoramaInstructions: 'יש להשתמש בחצים כדי להביט מסביב, בפלוס ובמינוס לשינוי התקרבות וב־Home לאיפוס התצוגה.',
+  panoramaHotspotsLabel: 'נקודות אינטראקטיביות בפנורמה',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

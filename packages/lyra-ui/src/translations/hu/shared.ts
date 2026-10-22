@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Előugró panel',
   details: 'Részletek',
   map: 'Térkép',
+  model: 'Modell',
   select: 'Kijelölés',
   sourceListDefaultLabel: 'Források',
   thinkingPanelLabel: 'Gondolkodás',

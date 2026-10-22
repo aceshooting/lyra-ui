@@ -93,6 +93,7 @@ export const LYRA_DEFAULT_loadMore: LyraMessage = 'Load more';
 export const LYRA_DEFAULT_loading: LyraMessage = 'Loading…';
 export const LYRA_DEFAULT_map: LyraMessage = 'Map';
 export const LYRA_DEFAULT_menuLabel: LyraMessage = 'Menu';
+export const LYRA_DEFAULT_model: LyraMessage = 'Model';
 export const LYRA_DEFAULT_moveDown: LyraMessage = 'Move down';
 export const LYRA_DEFAULT_moveUp: LyraMessage = 'Move up';
 export const LYRA_DEFAULT_navigation: LyraMessage = 'Navigation';

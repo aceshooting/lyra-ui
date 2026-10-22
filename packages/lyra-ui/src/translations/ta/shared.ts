@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'மேல்தோன்றும் பலகம்',
   details: 'விவரங்கள்',
   map: 'வரைபடம்',
+  model: 'மாதிரி',
   select: 'தேர்ந்தெடு',
   sourceListDefaultLabel: 'மூலங்கள்',
   thinkingPanelLabel: 'சிந்தனை',

@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Thumela impendulo',
   feedbackSubmitted: 'Impendulo ithunyelwe',
   suggestionsLabel: 'Imiyalo ephakanyisiwe',
-  model: 'Imodeli',
   selectModel: 'Khetha imodeli…',
   modelSelectNoModels: 'Awekho amamodeli',
   modelSelectRequired: 'Khetha imodeli.',

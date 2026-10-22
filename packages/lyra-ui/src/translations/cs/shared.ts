@@ -103,6 +103,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Vyskakovací panel',
   details: 'Podrobnosti',
   map: 'Mapa',
+  model: 'Model',
   select: 'Vybrat',
   sourceListDefaultLabel: 'Zdroje',
   thinkingPanelLabel: 'Uvažování',

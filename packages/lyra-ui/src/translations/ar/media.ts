@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'تعذّر تصدير صورة الخريطة',
   mapDrawingVertex: 'الرأس {index}',
   mapDrawingEditInstructions: 'استخدم مفاتيح الأسهم لتحريك هذا الرأس؛ اضغط باستمرار على Shift للتحريك بخطوات أكبر. يحدد Page Up وPage Down الرؤوس. يحدد Home وEnd أول رأس مرئي وآخر رأس مرئي.',
+  panoramaInstructions: 'استخدم مفاتيح الأسهم للنظر حولك، وعلامتي الجمع والطرح للتكبير والتصغير، وHome لإعادة ضبط العرض.',
+  panoramaHotspotsLabel: 'النقاط التفاعلية في البانوراما',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

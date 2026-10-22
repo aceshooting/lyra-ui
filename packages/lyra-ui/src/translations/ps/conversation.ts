@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'نظر لېږل',
   feedbackSubmitted: 'نظر ولېږل شو',
   suggestionsLabel: 'وړاندیز شوې غوښتنې',
-  model: 'ماډل',
   selectModel: 'یو ماډل وټاکئ…',
   modelSelectNoModels: 'ماډل نشته',
   modelSelectRequired: 'یو ماډل وټاکئ.',

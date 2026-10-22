@@ -42,7 +42,7 @@ export default {
       ignoreBinaries: ['microsoft-edge'],
       // The duplication checker spawns the pinned CLI from node_modules/.bin. The 3D companion is
       // an optional peer that components import lazily once their engines exist.
-      ignoreDependencies: ['jscpd', '@aceshooting/lyra-3d'],
+      ignoreDependencies: ['jscpd'],
       entry: [
         'src/**/*.test.ts',
         'src/**/*.stories.ts',

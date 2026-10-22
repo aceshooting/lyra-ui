@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Fereastră contextuală',
   details: 'Detalii',
   map: 'Hartă',
+  model: 'Model',
   select: 'Selectează',
   sourceListDefaultLabel: 'Surse',
   thinkingPanelLabel: 'Gândire',

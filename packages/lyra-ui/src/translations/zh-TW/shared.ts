@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   popover: '彈出框',
   details: '詳情',
   map: '地圖',
+  model: '模型',
   select: '選擇',
   sourceListDefaultLabel: '來源',
   thinkingPanelLabel: '思考過程',

@@ -11542,10 +11542,10 @@
       }
     },
     {
-      "module": "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
+      "module": "src/components/retrieval/embedding-explorer/embedding-explorer-data.ts",
       "exportName": "EmbeddingPoint",
       "kind": "interface",
-      "fingerprint": "d8c1f32e08514478d408",
+      "fingerprint": "0787307ee7518f37d5bc",
       "routes": [
         "src/all.ts",
         "src/components/lr-embedding-explorer.ts",
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "8ff056c690e4de279dda",
+      "fingerprint": "ba96489c62c5113a4aea",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15602,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "32203947359a1c24fa7e",
+      "fingerprint": "65b21f26477b903e9f9a",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15736,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "3de08d168df49c8ba5cc",
+      "fingerprint": "b4684552df125f206662",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "d50ee7e7690339f94eec",
+      "fingerprint": "5b9023082056c306dec9",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "6da39c006d2a8b543a6f",
+      "fingerprint": "60ba8671f8d262195321",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "a05bfbf5c9ef9ce549c6",
+      "fingerprint": "800b0c3808d28036108e",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16879,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "c49b0b6c14aea273341d",
+      "fingerprint": "f8c875c50041d10df4eb",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "40040e4feee40f4d9e37",
+      "fingerprint": "4a3509366400e9709332",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "59c19a25198520d333f3",
+      "fingerprint": "9f71d93f6cb8e87678c4",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17330,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "34b940ff96d151e604d7",
+      "fingerprint": "aa67f193a5216d25eaf7",
       "routes": [
         "src/localization.ts"
       ],
@@ -21189,6 +21189,139 @@
         "kind": "utility",
         "name": "components-media-map-owned-contracts",
         "declaration": "LyraMapStyleOverride"
+      }
+    },
+    {
+      "module": "src/components/media/image-viewer/image-viewer-panorama.ts",
+      "exportName": "LyraPanoramaCamera",
+      "kind": "interface",
+      "fingerprint": "da1c40782257f05351a8",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-image-viewer.ts",
+        "src/components/lr-video.ts",
+        "src/components/media/image-viewer/image-viewer.class.ts",
+        "src/components/media/image-viewer/image-viewer.ts",
+        "src/components/media/index.ts",
+        "src/components/media/video/video.class.ts",
+        "src/components/media/video/video.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-image-viewer-panorama-contracts",
+        "declaration": "LyraPanoramaCamera"
+      }
+    },
+    {
+      "module": "src/components/media/image-viewer/image-viewer-panorama.ts",
+      "exportName": "LyraPanoramaHotspot",
+      "kind": "interface",
+      "fingerprint": "587caf187899b577cff3",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-image-viewer.ts",
+        "src/components/lr-video.ts",
+        "src/components/media/image-viewer/image-viewer.class.ts",
+        "src/components/media/image-viewer/image-viewer.ts",
+        "src/components/media/index.ts",
+        "src/components/media/video/video.class.ts",
+        "src/components/media/video/video.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-image-viewer-panorama-contracts",
+        "declaration": "LyraPanoramaHotspot"
+      }
+    },
+    {
+      "module": "src/components/media/image-viewer/image-viewer-panorama.ts",
+      "exportName": "LyraPanoramaHotspotSelectDetail",
+      "kind": "interface",
+      "fingerprint": "5a159a0e1eaf0a84c572",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-image-viewer.ts",
+        "src/components/lr-video.ts",
+        "src/components/media/image-viewer/image-viewer.class.ts",
+        "src/components/media/image-viewer/image-viewer.ts",
+        "src/components/media/index.ts",
+        "src/components/media/video/video.class.ts",
+        "src/components/media/video/video.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-image-viewer-panorama-contracts",
+        "declaration": "LyraPanoramaHotspotSelectDetail"
+      }
+    },
+    {
+      "module": "src/internal/engine-3d.ts",
+      "exportName": "Engine3dFallbackDetail",
+      "kind": "interface",
+      "fingerprint": "6fb39672ba6ffac30a71",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "utility",
+        "name": "optional-renderer-column-contracts",
+        "declaration": "Engine3dFallbackDetail"
+      }
+    },
+    {
+      "module": "src/internal/typed-columns.ts",
+      "exportName": "LyraGraphColumns",
+      "kind": "interface",
+      "fingerprint": "be5a8fbc9d6384db8ae7",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "utility",
+        "name": "optional-renderer-column-contracts",
+        "declaration": "LyraGraphColumns"
+      }
+    },
+    {
+      "module": "src/internal/typed-columns.ts",
+      "exportName": "LyraPointColumns",
+      "kind": "interface",
+      "fingerprint": "f6139d451601bd9485e2",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-embedding-explorer.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
+        "src/components/retrieval/embedding-explorer/embedding-explorer.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "utility",
+        "name": "optional-renderer-column-contracts",
+        "declaration": "LyraPointColumns"
       }
     }
   ],

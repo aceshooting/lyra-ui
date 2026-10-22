@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'ไม่สามารถส่งออกภาพแผนที่ได้',
   mapDrawingVertex: 'จุดยอด {index}',
   mapDrawingEditInstructions: 'ใช้ปุ่มลูกศรเพื่อย้ายจุดยอดนี้ กด Shift ค้างไว้เพื่อขยับทีละมากขึ้น Page Up และ Page Down ใช้เลือกจุดยอด Home และ End ใช้เลือกจุดยอดแรกและจุดยอดสุดท้ายที่มองเห็น',
+  panoramaInstructions: 'ใช้ปุ่มลูกศรเพื่อมองไปรอบ ๆ ปุ่มบวกและลบเพื่อซูม และ Home เพื่อรีเซ็ตมุมมอง',
+  panoramaHotspotsLabel: 'จุดโต้ตอบในภาพพาโนรามา',
 };
 
 registerLyraLocale('th', strings);

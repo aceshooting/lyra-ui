@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Gambar peta teu tiasa diékspor',
   mapDrawingVertex: 'Titik juru {index}',
   mapDrawingEditInstructions: 'Paké kenop panah pikeun mindahkeun titik juru ieu; tahan Shift pikeun léngkah anu leuwih gedé. Page Up jeung Page Down milih titik juru. Home jeung End milih titik juru kahiji jeung panungtung anu katingali.',
+  panoramaInstructions: 'Paké tombol panah pikeun ningali sabudeureun, tambah jeung kurang pikeun ngagedékeun jeung ngaleutikan, sarta Home pikeun mulangkeun tampilan.',
+  panoramaHotspotsLabel: 'Titik interaktif panorama',
 };
 
 registerLyraLocale('su', strings);

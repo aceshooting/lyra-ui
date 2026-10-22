@@ -57,7 +57,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Odeslat zpětnou vazbu',
   feedbackSubmitted: 'Zpětná vazba odeslána',
   suggestionsLabel: 'Navrhované prompty',
-  model: 'Model',
   selectModel: 'Vyberte model…',
   modelSelectNoModels: 'Žádné modely',
   modelSelectRequired: 'Vyberte prosím model.',

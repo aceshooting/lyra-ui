@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   popover: 'ポップオーバー',
   details: '詳細',
   map: '地図',
+  model: 'モデル',
   select: '選択',
   sourceListDefaultLabel: '出典',
   thinkingPanelLabel: '思考',

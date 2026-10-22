@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Skicka feedback',
   feedbackSubmitted: 'Feedback har skickats',
   suggestionsLabel: 'Föreslagna promptar',
-  model: 'Modell',
   selectModel: 'Välj en modell…',
   modelSelectNoModels: 'Inga modeller',
   modelSelectRequired: 'Välj en modell.',

@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'মতামত জমা দিন',
   feedbackSubmitted: 'মতামত জমা হয়েছে',
   suggestionsLabel: 'প্রস্তাবিত প্রম্পট',
-  model: 'মডেল',
   selectModel: 'একটি মডেল বেছে নিন…',
   modelSelectNoModels: 'কোনো মডেল নেই',
   modelSelectRequired: 'একটি মডেল বেছে নিন।',

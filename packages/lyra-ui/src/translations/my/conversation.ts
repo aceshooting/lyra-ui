@@ -54,7 +54,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'အကြံပြုချက် ပေးပို့ရန်',
   feedbackSubmitted: 'အကြံပြုချက် ပေးပို့ပြီးပါပြီ',
   suggestionsLabel: 'အကြံပြုထားသော prompt များ',
-  model: 'မော်ဒယ်',
   selectModel: 'မော်ဒယ်တစ်ခု ရွေးပါ…',
   modelSelectNoModels: 'မော်ဒယ် မရှိပါ',
   modelSelectRequired: 'မော်ဒယ်တစ်ခု ရွေးပါ။',

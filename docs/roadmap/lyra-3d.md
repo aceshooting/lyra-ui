@@ -142,12 +142,12 @@ Exit: written contract, measured spike, and a go or narrow decision.
 
 ### 2. Graph engine (L)
 
-- [ ] Extract `lr-graph`'s Canvas 3D drawing behind the contract (the built-in fallback), keeping
+- [x] Extract `lr-graph`'s Canvas 3D drawing behind the contract (the built-in fallback), keeping
   selection, events and keyboard handling unchanged.
 - [x] `lyra-3d/graph`: 3D force layout in a module worker (Barnes-Hut octree), instanced nodes and
   edges, labels, arrows, node dragging with pinning, directional link particles; explicit node
   positions stay pinned.
-- [ ] `engine` on `lr-graph`, forwarded by `lr-knowledge-graph-explorer`; events, getters,
+- [x] `engine` on `lr-graph`, forwarded by `lr-knowledge-graph-explorer`; events, getters,
   `camera`, `fit`, `focusNode` and the list fallback work identically on every renderer.
 
 Exit: the fallback chain works in all three engines and meets the 10k-node target.
@@ -155,7 +155,7 @@ Exit: the fallback chain works in all three engines and meets the 10k-node targe
 ### 3. Points engine (M)
 
 - [x] `lyra-3d/points`: instanced point cloud with picking, category colors and 2D or 3D cameras.
-- [ ] `lr-embedding-explorer`: `engine`, optional `z` coordinate, a keyboard cursor and paginated
+- [x] `lr-embedding-explorer`: `engine`, optional `z` coordinate, a keyboard cursor and paginated
   list for large point sets, every point rendered up to the documented limit.
 - [ ] `lr-chart-3d`: 3D scatter, bubble and line charts with axes, gridlines and tick labels.
 - [ ] Point-cloud files (PLY, XYZ, PCD) through the model viewer's file pipeline.
@@ -166,7 +166,7 @@ Exit: meets the 100k-point target; the fallback chain works in all three engines
 
 - [x] `lyra-3d/panorama`: equirectangular sphere with pointer look-around, field of view
   zoom and hotspot picking.
-- [ ] Opt-in 360° mode and keyboard look-around on `lr-image-viewer` and `lr-video`; playback
+- [x] Opt-in 360° mode and keyboard look-around on `lr-image-viewer` and `lr-video`; playback
   state and controls stay in `lr-video`; the flat image or video is the fallback.
 
 ### 5. Model viewer (M)

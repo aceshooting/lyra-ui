@@ -8,13 +8,30 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
-- **Optional peers** `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
+- **Optional peers** `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 33 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-graph`
+
+**Optional WebGL engine:** `engine: Engine3dPreference = 'builtin'` accepts `'builtin'`
+or `'webgl'`; invalid values normalize to `'builtin'`. The 3D view lazily requests
+`@aceshooting/lyra-3d/graph` when WebGL is selected; 2D ignores this preference. Failure falls
+back to built-in spatial rendering and then the paginated list. Localized feedback accompanies
+`lr-engine-fallback` with `{ from, to, reason }`; reasons are `'unavailable'`, `'unsupported'`,
+`'context-lost'` or `'error'`.
+
+`graphColumns: LyraGraphColumns | undefined` (property only) replaces local arrays in 3D/list;
+`graphSource` remains authoritative. Columns support 200,000 nodes and 1,000,000 edges.
+Required `ids` supplies string node IDs; optional Float32Array columns are `x`, `y`, `z`, `size`;
+optional Uint16Array columns are `category`, `edgeCategory`. Required Uint32Array `source` and
+`target` contain node indices. Optional `categories`/`labels` are string arrays. Validation
+checks lengths, coordinates and indices; coordinates are bounded to ±10,000,000 graph units.
+Assign a new immutable object after changes. Column edge IDs are `column-edge-${row}`.
+Built-in/list alternatives page all admitted rows in groups of 200. Columns in 2D report invalid
+data rather than displaying stale arrays.
 
 A node-link diagram whose default 2D force layout uses `d3-force`. Set `view="3d"` for an
 orbitable perspective view of real x/y/z positions, or `view="list"` for a visible, paginated
@@ -60,7 +77,7 @@ units. All three must be finite own data properties; inherited or accessor-backe
 read. Coordinates clamp to ±1,000,000. Missing/invalid positions receive deterministic spherical
 placement keyed by node id, with genuine z separation. Inputs are never moved or modified. In 3D,
 `renderer`, `layout`, `chargeStrength`, `edgeDistance` and `seed` have no effect: there is no force
-solver, settling animation, auto-rotation or inertia. Rendering uses original perspective math
+solver, settling animation, auto-rotation or inertia. The built-in renderer uses original perspective math
 and a Canvas 2D raster surface, with near-plane clipping, depth-ordered node/edge segments and
 frontmost picking. Adaptive edge subdivision approximates crossings; this is not a mesh renderer or
 a guarantee of perfect translucent intersections. Use modest graphs, typically low hundreds;
@@ -259,6 +276,8 @@ Enter/Space activations within 500ms — regardless of `LyraGraphNode.expandable
 `lr-camera-change` (`detail: { camera: LyraGraphCamera }`, a copied immutable spatial camera after a gesture, fit or focus,
 coalesced to one event per frame), and `lr-view-change` (`detail: { view: LyraGraphView }`, a user toolbar view switch).
 Direct camera and view property assignments are silent.
+With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
+`'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.
 
 **Slots:** none.
 

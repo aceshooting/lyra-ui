@@ -1940,15 +1940,22 @@ test('composed registrations inherit optional peers only when the parent forward
   // Positive case: video and video-playlist forward an author-settable `iconLibrary` straight
   // into their composed `<lr-icon library=${...}>`, which a registered resolver can route through
   // the same sanitized-fetch path a direct `src` uses -- so they DO inherit the icon's peer.
+  // Video also owns the optional panorama renderer, so its own 3D companion peer is listed too.
   assert.deepEqual(
     peersFor('src/components/media/video/video.ts'),
-    ['dompurify'],
+    ['@aceshooting/lyra-3d', 'dompurify'],
     'video forwards iconLibrary to every composed icon and therefore retains sanitizer capability'
   );
   assert.deepEqual(
     peersFor('src/components/media/video-playlist/video-playlist.ts'),
     ['dompurify'],
-    'video-playlist forwards iconLibrary through its composed video and icons'
+    'video-playlist forwards iconLibrary but never a projection, so its video cannot load the 3D renderer'
+  );
+  assert.ok(
+    peersFor(
+      'src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.ts'
+    ).includes('@aceshooting/lyra-3d'),
+    'the knowledge-graph explorer forwards its engine preference into the composed graph'
   );
   assert.deepEqual(
     peersFor('src/components/layout/command-palette/command-palette.ts'),

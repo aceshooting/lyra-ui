@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Das Kartenbild konnte nicht exportiert werden',
   mapDrawingVertex: 'Stützpunkt {index}',
   mapDrawingEditInstructions: 'Verschieben Sie diesen Stützpunkt mit den Pfeiltasten; halten Sie für größere Schritte die Umschalttaste gedrückt. Mit Bild auf und Bild ab wählen Sie Stützpunkte aus. Mit Pos1 und Ende wählen Sie den ersten und letzten sichtbaren Stützpunkt aus.',
+  panoramaInstructions: 'Verwenden Sie die Pfeiltasten zum Umsehen, Plus und Minus zum Zoomen und Pos1 zum Zurücksetzen der Ansicht.',
+  panoramaHotspotsLabel: 'Interaktive Punkte im Panorama',
 };
 
 registerLyraLocale('de', strings);

@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Kartbiletet kunne ikkje eksporterast',
   mapDrawingVertex: 'Hjørnepunkt {index}',
   mapDrawingEditInstructions: 'Bruk piltastane til å flytte dette hjørnepunktet; hald Shift inne for større steg. Page Up og Page Down vel hjørnepunkt. Home og End vel det første og siste synlege hjørnepunktet.',
+  panoramaInstructions: 'Bruk piltastane til å sjå deg rundt, pluss og minus til å zoome og Home til å nullstille visinga.',
+  panoramaHotspotsLabel: 'Interaktive punkt i panoramaet',
 };
 
 registerLyraLocale('nn', strings);

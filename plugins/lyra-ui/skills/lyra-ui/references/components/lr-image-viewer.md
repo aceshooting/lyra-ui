@@ -8,8 +8,8 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
-- **Optional peers** none
-- **Themeable via** 18 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
+- **Themeable via** 24 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,6 +20,26 @@ A full pan/zoom raster-image viewer with labeled region highlights and opt-in re
 landing surface for `region`-anchored citations. Distinct from `<lr-svg-viewer>` (rendered SVG
 documents) and `<lr-image-comparer>` (before/after slotted surfaces). Adopts `DocumentAnchorTarget`
 with `anchorKinds: ['region']` only — no text selection is bound.
+
+**Optional panorama:** `projection: LyraMediaProjection = 'flat'` accepts `'flat'` or
+`'equirectangular'`. Set `projection="equirectangular"` and `engine="webgl"` together to request
+spherical rendering from optional `@aceshooting/lyra-3d/panorama`. The default
+`engine: Engine3dPreference = 'builtin'` retains flat media. Invalid values normalize to defaults.
+Missing companion, unavailable WebGL2, errors or context loss retain native flat media with
+localized feedback. `lr-engine-fallback` carries `{ from, to, reason }`, where reason is
+`'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`.
+
+`panoramaCamera: LyraPanoramaCamera` (property only) defaults to
+`{ yaw: 0, pitch: 0, fieldOfView: 75 }`. Yaw/pitch are radians; vertical fieldOfView is degrees,
+clamped to 20–100. Authored writes are silent. Arrow keys look around (horizontal keys honor
+RTL), +/- zoom, and Home resets. `lr-panorama-camera-change` carries `{ camera }` after gestures
+or keyboard changes.
+
+`hotspots: readonly LyraPanoramaHotspot[] = []` (property only) accepts
+`{ id, yaw, pitch, label? }`, with radians and pitch within ±π/2. Invalid rows are omitted;
+first valid unique ID wins. Reassign after changes. A visible keyboard alternative pages 200
+hotspots with arrows, Home/End and Previous/Next navigation. `lr-panorama-hotspot-select` carries
+`{ hotspot, id, index }`.
 
 Disabled fit, rotate and annotate controls retain their resting paint on hover and press. Enabled
 controls keep their token-driven feedback.
@@ -67,6 +87,9 @@ which also fire for programmatic changes, `lr-annotatable-change` (`detail: { an
 annotate toggle only), `lr-highlight-activate` (`detail: { highlightId }`), `lr-annotation-create` (`detail: { anchor }`, kind
 `'region'`), `lr-anchor-result` (`detail: { found }`), and `lr-render-error` (`detail: { error
 }`).
+With the optional panorama, `lr-panorama-camera-change` (`detail: { camera }`, after a user gesture or
+keyboard change), `lr-panorama-hotspot-select` (`detail: { hotspot, id, index }`) and
+`lr-engine-fallback` (`detail: { from, to, reason }`) are emitted; none is cancelable.
 
 `lr-text-select` is not part of this raster viewer's event contract because it binds no selectable
 text.
@@ -78,6 +101,10 @@ embedded `lr-pan-zoom`), forwarded aliases `frame-viewport`, `frame-content`, `f
 `annotation-box`, `error`, and `anchor-live-region` (an aria-hidden, non-live shadow mirror of the
 latest anchor-jump message; the spoken copy is appended to the shared document-level polite sink
 only while the viewer and its composed ancestors are exposed to the accessibility tree).
+Panorama parts (with `projection="equirectangular"`): `panorama` (the keyboard-operable spherical
+viewport), `panorama-engine` (the optional renderer container), `panorama-notice` (localized
+renderer loading or fallback feedback), `panorama-hotspots` (the paginated hotspot alternative)
+with one `panorama-hotspot` button per hotspot, and `panorama-page` (a hotspot page action).
 
 `error` is ordinary localized visible text, not a shadow live region. A fresh post-mount image
 failure or transition to an unsafe source appends the localized message to the document's

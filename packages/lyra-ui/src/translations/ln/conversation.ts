@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Tinda retour',
   feedbackSubmitted: 'Retour etindami',
   suggestionsLabel: 'Ba prompt oyo basengi',
-  model: 'Modèle',
   selectModel: 'Pona modèle…',
   modelSelectNoModels: 'Modèle ezali te',
   modelSelectRequired: 'Pona modèle.',

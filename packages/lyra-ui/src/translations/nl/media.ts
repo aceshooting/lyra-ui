@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'De kaartafbeelding kon niet worden geëxporteerd',
   mapDrawingVertex: 'Hoekpunt {index}',
   mapDrawingEditInstructions: 'Gebruik de pijltoetsen om dit hoekpunt te verplaatsen; houd Shift ingedrukt voor grotere stappen. Page Up en Page Down selecteren hoekpunten. Home en End selecteren het eerste en laatste zichtbare hoekpunt.',
+  panoramaInstructions: 'Gebruik de pijltjestoetsen om rond te kijken, plus en min om te zoomen en Home om de weergave te herstellen.',
+  panoramaHotspotsLabel: 'Interactieve punten in het panorama',
 };
 
 registerLyraLocale('nl', strings);

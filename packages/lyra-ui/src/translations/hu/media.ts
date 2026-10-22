@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'A térkép képe nem exportálható',
   mapDrawingVertex: 'Csúcspont {index}',
   mapDrawingEditInstructions: 'A csúcspontot a nyílbillentyűkkel mozgathatja; nagyobb lépésekhez tartsa lenyomva a Shift billentyűt. A Page Up és a Page Down csúcspontokat választ ki. A Home és az End az első és az utolsó látható csúcspontot választja ki.',
+  panoramaInstructions: 'A nyílbillentyűkkel nézhet körül, a plusz és mínusz gombbal nagyíthat és kicsinyíthet, a Home gombbal pedig visszaállíthatja a nézetet.',
+  panoramaHotspotsLabel: 'A panoráma interaktív pontjai',
 };
 
 registerLyraLocale('hu', strings);

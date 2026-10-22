@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'राय जमा करीं',
   feedbackSubmitted: 'राय जमा भइल',
   suggestionsLabel: 'सुझावल प्रॉम्प्ट',
-  model: 'मॉडल',
   selectModel: 'मॉडल चुनीं…',
   modelSelectNoModels: 'कवनो मॉडल नइखे',
   modelSelectRequired: 'कृपया मॉडल चुनीं।',

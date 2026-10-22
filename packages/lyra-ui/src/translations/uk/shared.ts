@@ -103,6 +103,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Спливна панель',
   details: 'Докладніше',
   map: 'Мапа',
+  model: 'Модель',
   select: 'Вибрати',
   sourceListDefaultLabel: 'Джерела',
   thinkingPanelLabel: 'Міркування',

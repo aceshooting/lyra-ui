@@ -1613,7 +1613,9 @@ export type LyraMessageKey =
   | 'mapDrawingInvalidGeometry'
   | 'mapExportUnavailable'
   | 'mapDrawingVertex'
-  | 'mapDrawingEditInstructions';
+  | 'mapDrawingEditInstructions'
+  | 'panoramaInstructions'
+  | 'panoramaHotspotsLabel';
 
 /**
  * Message-catalog input. Registration and per-instance `.strings` assignment snapshot eligible

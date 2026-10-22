@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: '地図画像をエクスポートできませんでした',
   mapDrawingVertex: '頂点 {index}',
   mapDrawingEditInstructions: '矢印キーでこの頂点を移動します。大きく移動するには Shift キーを押し続けます。Page Up キーと Page Down キーで頂点を選択します。Home キーと End キーで最初と最後の表示中の頂点を選択します。',
+  panoramaInstructions: '矢印キーで周囲を見回し、プラスとマイナスキーで拡大縮小、Homeキーで表示をリセットします。',
+  panoramaHotspotsLabel: 'パノラマの操作可能なポイント',
 };
 
 registerLyraLocale('ja', strings);

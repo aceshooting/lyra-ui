@@ -3,8 +3,14 @@ import { collectionTruncationWarningKey } from '../../../internal/collection-sna
 import { LyraGraph } from './graph.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import type { SpatialScene } from './graph-spatial.js';
+import type { GraphBuiltin3dFrame } from './graph-builtin-3d-engine.js';
 void LyraGraph;
-interface SpatialWork { hit(x: number, y: number): unknown; projectedScene(): SpatialScene; }
+interface SpatialWork {
+  hit(x: number, y: number): unknown;
+  draw(): void;
+  builtinFrame(): GraphBuiltin3dFrame;
+  builtin: { projectedScene(frame: GraphBuiltin3dFrame): SpatialScene; drawNode(...args: unknown[]): void };
+}
 
 it('coalesces a burst of 3D hover work at n=10000 and cancels it on disconnect', async () => {
   const graph = await fixture<LyraGraph>(html`<lr-graph view="3d" .nodes=${Array.from({ length: 10000 }, (_, i) => ({ id: `n${i}` }))}></lr-graph>`);
@@ -36,7 +42,7 @@ it('picks from nearby projected candidates rather than all n=10000 nodes', async
   const graph = await fixture<LyraGraph>(html`<lr-graph view="3d" .nodes=${Array.from({ length: 10000 }, (_, i) => ({ id: `n${i}` }))}></lr-graph>`);
   await nextFrame();
   const work = (graph as unknown as { spatial: SpatialWork }).spatial;
-  const scene = work.projectedScene();
+  const scene = work.builtin.projectedScene(work.builtinFrame());
   let visited = 0;
   for (const node of scene.nodes) {
     const x = node.x;
@@ -68,8 +74,8 @@ it('retains spatial paint on selection and zoom-bound updates and avoids per-nod
 it('culls projected marks outside the spatial viewport at n=10000', async () => {
   const graph = await fixture<LyraGraph>(html`<lr-graph view="3d" node-labels="none" .nodes=${Array.from({ length: 10000 }, (_, i) => ({ id: `n${i}` }))}></lr-graph>`);
   await nextFrame();
-  const work = (graph as unknown as { spatial: { draw(): void; drawNode(...args: unknown[]): void } }).spatial;
-  const marks = countCalls(work, 'drawNode');
+  const work = (graph as unknown as { spatial: SpatialWork }).spatial;
+  const marks = countCalls(work.builtin, 'drawNode');
   try {
     graph.camera = { yaw: 0, pitch: 0, distance: 500, target: { x: 1000000, y: 0, z: 0 } };
     await graph.updateComplete;
@@ -121,10 +127,10 @@ it('does not rescan an unchanged spatial visibility set per frame', async () => 
   const graph = await fixture<LyraGraph>(html`<lr-graph view="3d" .nodes=${[{ id: 'a' }, { id: 'b' }]} .edges=${[{ source: 'a', target: 'b' }]}></lr-graph>`);
   await nextFrame();
   const work = (graph as unknown as { spatial: SpatialWork & { paint: { visibleEdges: Set<string> } } }).spatial;
-  work.projectedScene();
+  work.builtin.projectedScene(work.builtinFrame());
   const scans = countCalls(work.paint.visibleEdges, Symbol.iterator);
   try {
-    work.projectedScene(); work.projectedScene();
+    work.builtin.projectedScene(work.builtinFrame()); work.builtin.projectedScene(work.builtinFrame());
     expect(scans.calls).to.equal(0);
   } finally { scans.restore(); }
 });

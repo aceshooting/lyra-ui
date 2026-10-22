@@ -54,7 +54,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Nyefee nzaghachi',
   feedbackSubmitted: 'E nyefela nzaghachi',
   suggestionsLabel: 'Arịrịọ ndị akwadoro',
-  model: 'Nlereanya',
   selectModel: 'Họrọ nlereanya…',
   modelSelectNoModels: 'Enweghị nlereanya',
   modelSelectRequired: 'Biko họrọ nlereanya.',

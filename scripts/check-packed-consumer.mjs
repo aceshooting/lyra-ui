@@ -11,6 +11,7 @@ import { PACKED_TARBALL_ENVIRONMENT, packedManifest, suppliedPackedTarball } fro
 import { checkPublishedCompatibilitySync, readCurrentCompatibilityContext } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
 import { checkPublishedFieldHistorySync } from '../packages/lyra-ui/scripts/published-field-compatibility-io.mjs';
 import { preservePackedTarball, verifyPackedMigrationConsumers, writeResolvedMigrationEntry, verifyResolvedMigrationBrowser } from './packed-migration-consumer.mjs';
+import { verifyPacked3dConsumer } from './packed-3d-consumer.mjs';
 import { verifyPackedMapConsumer } from './packed-map-consumer.mjs';
 import { verifyPackedShikiConsumer } from './packed-shiki-consumer.mjs';
 import {
@@ -81,8 +82,11 @@ const FIXTURE_OPTIONAL_PEERS = Object.freeze({
  * from both this map and `FIXTURE_OPTIONAL_PEERS` fails the coverage assertion below, so adding a
  * new optional peer forces an explicit decision instead of silently landing uncovered.
  */
+// Covered by verifyPacked3dConsumer using a local tarball and an actually absent peer.
+// This does not qualify the unpublished companion against its registry peer range.
+const PACKED_LOCAL_OPTIONAL_PEERS = ['@aceshooting/lyra-3d'];
+
 const OPTIONAL_PEER_COVERAGE_EXEMPTIONS = Object.freeze({
-  '@aceshooting/lyra-3d': 'no packed entry point imports it yet; the bundle-size gate proves every entry reaches it only through import()',
   '@aceshooting/lyra-map': 'installed from the packed workspace tarball, not the registry',
   '@aceshooting/lyra-flags': 'installed from the packed workspace tarball, not the registry',
   '@aceshooting/lyra-translations': 'installed from the packed workspace tarball, not the registry',
@@ -109,6 +113,7 @@ const OPTIONAL_PEER_COVERAGE_EXEMPTIONS = Object.freeze({
 {
   const covered = new Set([
     ...Object.keys(FIXTURE_OPTIONAL_PEERS),
+    ...PACKED_LOCAL_OPTIONAL_PEERS,
     ...Object.keys(OPTIONAL_PEER_COVERAGE_EXEMPTIONS),
   ]);
   const uncovered = optionalPeers.filter((name) => !covered.has(name));
@@ -1699,6 +1704,9 @@ async function main() {
     const mapTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.map, {
       packageDir: mapPackage, destination: tarballDir, compareExports: true,
     })) ?? await pack(mapPackage, tarballDir);
+    const engine3dTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.engine3d, {
+      packageDir: join(root, 'packages', 'lyra-3d'), destination: tarballDir, compareExports: true,
+    })) ?? await pack(join(root, 'packages', 'lyra-3d'), tarballDir);
     const docsTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.docs, {
       packageDir: docsPackage,
       destination: tarballDir,
@@ -1891,6 +1899,8 @@ async function main() {
     await run(pnpm, ['add', '--save-dev', '--save-exact', `shiki@${shikiFloor}`, '--ignore-scripts', '--config.auto-install-peers=false'],
       optionalFixture, 'Shiki peer-floor install');
     await verifyPackedShikiConsumer({ fixtureDir: optionalFixture, withShiki: true, expectedShikiVersion: shikiFloor });
+
+    await verifyPacked3dConsumer({ coreFixture, optionalFixture, engine3dTarball, optionalPeers, run, pnpm });
 
     console.log('Packed-consumer checks passed.');
   } finally {

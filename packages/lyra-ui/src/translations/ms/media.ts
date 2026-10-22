@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Imej peta tidak dapat dieksport',
   mapDrawingVertex: 'Bucu {index}',
   mapDrawingEditInstructions: 'Gunakan kekunci anak panah untuk mengalihkan bucu ini; tahan Shift untuk langkah yang lebih besar. Page Up dan Page Down memilih bucu. Home dan End memilih bucu pertama dan terakhir yang kelihatan.',
+  panoramaInstructions: 'Gunakan kekunci anak panah untuk melihat sekeliling, tambah dan tolak untuk mengezum serta Home untuk menetapkan semula paparan.',
+  panoramaHotspotsLabel: 'Titik interaktif panorama',
 };
 
 registerLyraLocale('ms', strings);

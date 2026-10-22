@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Ba a iya fitar da hoton taswira ba',
   mapDrawingVertex: 'Kusurwa {index}',
   mapDrawingEditInstructions: 'Yi amfani da maɓallan kibiyoyi don matsar da wannan kusurwa; riƙe Shift don manyan matakai. Page Up da Page Down suna zaɓar kusurwoyi. Home da End suna zaɓar kusurwa ta farko da ta ƙarshe da ake gani.',
+  panoramaInstructions: 'Yi amfani da maɓallan kibiya don kallon kewaye, ƙari da ragi don zuƙowa da nisantarwa, da Home don mayar da mahallin kallo.',
+  panoramaHotspotsLabel: 'Wuraren hulɗa a hoton faɗi',
 };
 
 registerLyraLocale('ha', strings);

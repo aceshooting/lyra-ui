@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Αναδυόμενο πλαίσιο',
   details: 'Λεπτομέρειες',
   map: 'Χάρτης',
+  model: 'Μοντέλο',
   select: 'Επιλογή',
   sourceListDefaultLabel: 'Πηγές',
   thinkingPanelLabel: 'Σκέψη',

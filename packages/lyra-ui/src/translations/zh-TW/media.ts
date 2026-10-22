@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: '無法匯出地圖影像',
   mapDrawingVertex: '頂點 {index}',
   mapDrawingEditInstructions: '使用方向鍵移動此頂點；按住 Shift 可加大移動步幅。Page Up 與 Page Down 用於選取頂點。Home 與 End 用於選取第一個與最後一個可見頂點。',
+  panoramaInstructions: '使用方向鍵環顧四周，加號和減號鍵縮放，Home 鍵重設檢視。',
+  panoramaHotspotsLabel: '全景圖互動點',
 };
 
 registerLyraLocale('zh-TW', strings);

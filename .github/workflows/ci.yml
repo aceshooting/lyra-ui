@@ -700,8 +700,10 @@ jobs:
           flags=(artifacts/packed-companions/aceshooting-lyra-flags-*.tgz)
           docs=(artifacts/packed-companions/aceshooting-lyra-docs-*.tgz)
           map=(artifacts/packed-companions/aceshooting-lyra-map-*.tgz)
+          engine3d=(artifacts/packed-companions/aceshooting-lyra-3d-*.tgz)
           translations=(artifacts/packed-companions/aceshooting-lyra-translations-*.tgz)
           ide=(artifacts/packed-companions/aceshooting-lyra-ide-*.tgz)
+          test "${#engine3d[@]}" -eq 1
           test "${#ui[@]}" -eq 1 && test "${#flags[@]}" -eq 1 && test "${#docs[@]}" -eq 1
           test "${#translations[@]}" -eq 1 && test "${#ide[@]}" -eq 1 && test "${#map[@]}" -eq 1
           {
@@ -709,6 +711,7 @@ jobs:
             echo "LYRA_PACKED_FLAGS_TARBALL=$PWD/${flags[0]}"
             echo "LYRA_PACKED_DOCS_TARBALL=$PWD/${docs[0]}"
             echo "LYRA_PACKED_MAP_TARBALL=$PWD/${map[0]}"
+            echo "LYRA_PACKED_3D_TARBALL=$PWD/${engine3d[0]}"
             echo "LYRA_PACKED_TRANSLATIONS_TARBALL=$PWD/${translations[0]}"
             echo "LYRA_PACKED_IDE_TARBALL=$PWD/${ide[0]}"
           } >> "$GITHUB_ENV"

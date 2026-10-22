@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'नकाशाची प्रतिमा निर्यात करता आली नाही',
   mapDrawingVertex: 'शिरोबिंदू {index}',
   mapDrawingEditInstructions: 'हा शिरोबिंदू हलवण्यासाठी बाण कळा वापरा; मोठ्या पावलांसाठी Shift दाबून ठेवा. Page Up आणि Page Down शिरोबिंदू निवडतात. Home आणि End पहिला आणि शेवटचा दिसणारा शिरोबिंदू निवडतात.',
+  panoramaInstructions: 'आजूबाजूला पाहण्यासाठी बाण कळा, झूम करण्यासाठी प्लस आणि मायनस व दृश्य रीसेट करण्यासाठी Home वापरा.',
+  panoramaHotspotsLabel: 'पॅनोरामामधील परस्परसंवादी बिंदू',
 };
 
 registerLyraLocale('mr', strings);

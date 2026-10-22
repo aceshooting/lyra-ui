@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   popover: 'ပေါ်လာသော အကွက်',
   details: 'အသေးစိတ်',
   map: 'မြေပုံ',
+  model: 'မော်ဒယ်',
   select: 'ရွေးရန်',
   sourceListDefaultLabel: 'အရင်းအမြစ်များ',
   thinkingPanelLabel: 'စဉ်းစားနေသည်',

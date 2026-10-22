@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Slike zemljevida ni bilo mogoče izvoziti',
   mapDrawingVertex: 'Oglišče {index}',
   mapDrawingEditInstructions: 'S puščičnimi tipkami premaknite to oglišče; za večje korake držite Shift. Page Up in Page Down izbirata oglišča. Home in End izbereta prvo in zadnje vidno oglišče.',
+  panoramaInstructions: 'S puščičnimi tipkami se razglejte, s tipkama plus in minus povečujte in pomanjšujte, s tipko Home pa ponastavite pogled.',
+  panoramaHotspotsLabel: 'Interaktivne točke panorame',
 };
 
 registerLyraLocale('sl', strings);

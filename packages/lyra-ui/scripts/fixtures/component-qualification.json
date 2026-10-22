@@ -19908,6 +19908,18 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
+              "test": "includes all visible row content in localized names while preserving the host name",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
+              "test": "supports RTL row navigation, shrinks the cursor, and exposes a populated accessible alternative",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/retrieval/embedding-explorer/embedding-explorer-spatial-scale.test.ts",
               "test": "uses localized bin names and RTL navigation without source rereads for presentation updates",
               "target": "el",
@@ -19933,8 +19945,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-spatial-scale.test.ts",
-              "test": "activates bins separately and keeps keyboard navigation shared with exact point overlays",
+              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
+              "test": "pages all columns, gives columns precedence and reaches the last row by keyboard",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -19944,8 +19956,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-spatial-scale.test.ts",
-              "test": "uses localized bin names and RTL navigation without source rereads for presentation updates",
+              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
+              "test": "supports RTL row navigation, shrinks the cursor, and exposes a populated accessible alternative",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -20014,18 +20026,24 @@
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
+              "test": "reports missing peers and mount rejection through the fallback contract",
+              "kind": "optional-peer failure-path test signal"
+            }
+          ],
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
           "applicability": "applicable",
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/embedding-explorer/embedding-explorer.class.ts",
-              "line": 282,
+              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.ts",
+              "line": 104,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20053,7 +20071,7 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
-        "The component declares no optional peer dependencies.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
         "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
@@ -20061,8 +20079,10 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-focus-regression.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-large-identity-scale.test.ts",
+          "src/components/retrieval/embedding-explorer/embedding-explorer-native.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-scale.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-spatial-scale.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer.test.ts"
@@ -25159,8 +25179,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/graph/graph-canvas-shapes.test.ts",
-              "line": 33,
+              "file": "src/components/retrieval/graph/graph-builtin-3d-engine.test.ts",
+              "line": 7,
               "kind": "320px allocation test signal"
             }
           ]
@@ -25239,8 +25259,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/graph/graph-spatial-controller.ts",
-              "line": 515,
+              "file": "src/components/retrieval/graph/graph-engine-adapter.ts",
+              "line": 32,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25277,6 +25297,7 @@
         "tests": [
           "src/components/retrieval/graph/graph-accessibility.test.ts",
           "src/components/retrieval/graph/graph-aliases.test.ts",
+          "src/components/retrieval/graph/graph-builtin-3d-engine.test.ts",
           "src/components/retrieval/graph/graph-canvas-coverage.test.ts",
           "src/components/retrieval/graph/graph-canvas-drag-scale.test.ts",
           "src/components/retrieval/graph/graph-canvas-scale.test.ts",
@@ -25284,12 +25305,14 @@
           "src/components/retrieval/graph/graph-canvas.test.ts",
           "src/components/retrieval/graph/graph-contract.test.ts",
           "src/components/retrieval/graph/graph-coverage.test.ts",
+          "src/components/retrieval/graph/graph-engine.test.ts",
           "src/components/retrieval/graph/graph-fallbacks.test.ts",
           "src/components/retrieval/graph/graph-hull.test.ts",
           "src/components/retrieval/graph/graph-identity.test.ts",
           "src/components/retrieval/graph/graph-layout.test.ts",
           "src/components/retrieval/graph/graph-lazy.test.ts",
           "src/components/retrieval/graph/graph-loader.test.ts",
+          "src/components/retrieval/graph/graph-native.test.ts",
           "src/components/retrieval/graph/graph-rebinding.test.ts",
           "src/components/retrieval/graph/graph-refresh.test.ts",
           "src/components/retrieval/graph/graph-remediation.test.ts",
@@ -25306,6 +25329,8 @@
           "src/components/retrieval/graph/graph-spatial-scale.test.ts",
           "src/components/retrieval/graph/graph-spatial.test.ts",
           "src/components/retrieval/graph/graph-virtual-cursor.test.ts",
+          "src/components/retrieval/graph/graph-webgl-component.test.ts",
+          "src/components/retrieval/graph/graph-webgl-engine.test.ts",
           "src/components/retrieval/graph/graph.test.ts",
           "src/components/retrieval/graph/retrieval-retirements.test.ts"
         ],
@@ -27534,6 +27559,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/media/image-viewer/image-viewer-panorama.test.ts",
+              "test": "keeps every admitted hotspot reachable through bounded text pages and omits invalid duplicate IDs",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/media/image-viewer/image-viewer.test.ts",
               "test": "is accessible with every active-state prop themed",
               "target": "el",
@@ -27564,8 +27595,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "test": "positions highlight boxes with physical left/top under dir=\"rtl\" so they stay over the non-mirroring image",
+              "file": "src/components/media/image-viewer/image-viewer-panorama.test.ts",
+              "test": "supports RTL look-around and zoom keys with localized instructions",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -27581,8 +27612,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/image-viewer/image-viewer-remediation.test.ts",
-              "line": 13,
+              "file": "src/components/media/image-viewer/image-viewer-native-panorama.test.ts",
+              "test": "N04 renders native image orientations and maps trusted hotspot picks",
               "kind": "320px allocation test signal"
             }
           ]
@@ -27634,16 +27665,28 @@
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/image-viewer/image-viewer.test.ts",
+              "test": "--lr-image-viewer-highlight-success-border retints one highlight tone without changing global tokens",
+              "kind": "optional-peer failure-path test signal"
+            }
+          ],
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/image-viewer/image-viewer-panorama.ts",
+              "line": 125,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -27667,8 +27710,8 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
-        "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -27676,6 +27719,8 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/image-viewer/image-viewer-highlight-geometry.test.ts",
+          "src/components/media/image-viewer/image-viewer-native-panorama.test.ts",
+          "src/components/media/image-viewer/image-viewer-panorama.test.ts",
           "src/components/media/image-viewer/image-viewer-remediation.test.ts",
           "src/components/media/image-viewer/image-viewer.test.ts"
         ],
@@ -29507,7 +29552,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 665,
+              "line": 694,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -59304,8 +59349,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/video/video.test.ts",
-              "test": "lays out at a 320px allocation and remains accessible when populated",
+              "file": "src/components/media/video/video-native-panorama.test.ts",
+              "line": 13,
               "kind": "320px allocation test signal"
             }
           ]
@@ -59379,7 +59424,7 @@
           "evidence": [
             {
               "file": "src/components/media/video/video.class.ts",
-              "line": 22,
+              "line": 26,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -59415,6 +59460,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/video/video-native-panorama.test.ts",
+          "src/components/media/video/video-panorama.test.ts",
           "src/components/media/video/video-remediation.test.ts",
           "src/components/media/video/video.test.ts"
         ],

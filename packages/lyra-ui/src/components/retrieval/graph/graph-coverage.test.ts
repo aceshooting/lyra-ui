@@ -168,7 +168,10 @@ function paintedPixels(el: LyraGraph, id: string, inner: number, outer: number, 
   return count;
 }
 
-describe('graph canvas renderer overlays and screen positions', () => {
+describe('graph canvas renderer overlays and screen positions', function () {
+  // Covers the mount, 20 s force-layout settle and follow-up waits below, so a slow engine fails
+  // on the named wait instead of the generic per-test timeout.
+  this.timeout(40_000);
   const canvasNodes: LyraGraphNode[] = [
     { id: 'a', label: 'A', radius: 12, expandable: true },
     { id: 'b', label: 'B', radius: 12 },

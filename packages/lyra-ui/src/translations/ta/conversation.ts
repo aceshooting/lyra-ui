@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'கருத்தைச் சமர்ப்பி',
   feedbackSubmitted: 'கருத்து சமர்ப்பிக்கப்பட்டது',
   suggestionsLabel: 'பரிந்துரைக்கப்பட்ட கோரிக்கைகள்',
-  model: 'மாதிரி',
   selectModel: 'ஒரு மாதிரியைத் தேர்ந்தெடு…',
   modelSelectNoModels: 'மாதிரிகள் இல்லை',
   modelSelectRequired: 'ஒரு மாதிரியைத் தேர்ந்தெடுக்கவும்.',

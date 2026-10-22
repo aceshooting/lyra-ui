@@ -426,3 +426,6 @@ test('map companion uses verified supplied tarballs and keeps native map fixture
   assert.match(checkerSource, /external: entry === 'map'\s*\? \['@aceshooting\/lyra-map'\]/u);
   assert.match(checkerSource, /MapLibre v5 consumer declaration check/u);
 });
+
+// Enroll the paired optional 3D consumer graph contracts in the existing tooling gate.
+import './packed-3d-consumer.test.mjs';

@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Aika ra’ayi',
   feedbackSubmitted: 'An aika ra’ayi',
   suggestionsLabel: 'Shawarwarin umarni',
-  model: 'Samfuri',
   selectModel: 'Zaɓi samfuri…',
   modelSelectNoModels: 'Babu samfura',
   modelSelectRequired: 'Da fatan zaɓi samfuri.',

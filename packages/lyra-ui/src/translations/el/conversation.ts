@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Υποβολή σχολίων',
   feedbackSubmitted: 'Τα σχόλια υποβλήθηκαν',
   suggestionsLabel: 'Προτεινόμενα ερωτήματα',
-  model: 'Μοντέλο',
   selectModel: 'Επιλογή μοντέλου…',
   modelSelectNoModels: 'Δεν υπάρχουν μοντέλα',
   modelSelectRequired: 'Επιλέξτε ένα μοντέλο.',

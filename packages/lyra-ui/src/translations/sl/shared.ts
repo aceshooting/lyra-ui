@@ -103,6 +103,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Pojavno okno',
   details: 'Podrobnosti',
   map: 'Zemljevid',
+  model: 'Model',
   select: 'Izberi',
   sourceListDefaultLabel: 'Viri',
   thinkingPanelLabel: 'Razmišljanje',

@@ -171,3 +171,12 @@ export const ThemedActiveStates: Story = {
     ></lr-image-viewer>
   `,
 };
+
+/** Both properties opt in; the original flat image remains available when the engine cannot load. */
+export const Panorama: Story = {
+  parameters: { docs: { description: { story: 'A projection demonstration using the local image fixture. Supply a 2:1 equirectangular photograph for a photographic panorama. Arrow keys look around, plus/minus zoom, and Home resets. Explicit region navigation returns to the flat image.' } } },
+  render: () => html`<lr-image-viewer src=${SRC} name="Panorama projection demonstration" projection="equirectangular" engine="webgl" .hotspots=${[
+    { id: 'center', yaw: 0, pitch: 0, label: 'Center' },
+    { id: 'right', yaw: Math.PI / 2, pitch: 0, label: 'Right-hand view' },
+  ]}></lr-image-viewer>`,
+};

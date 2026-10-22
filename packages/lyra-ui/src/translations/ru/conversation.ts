@@ -57,7 +57,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Отправить отзыв',
   feedbackSubmitted: 'Отзыв отправлен',
   suggestionsLabel: 'Предлагаемые запросы',
-  model: 'Модель',
   selectModel: 'Выберите модель…',
   modelSelectNoModels: 'Нет моделей',
   modelSelectRequired: 'Выберите модель.',

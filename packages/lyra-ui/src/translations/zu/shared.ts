@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Iwindi elivelayo',
   details: 'Imininingwane',
   map: 'Imephu',
+  model: 'Imodeli',
   select: 'Khetha',
   sourceListDefaultLabel: 'Imithombo',
   thinkingPanelLabel: 'Ukucabanga',

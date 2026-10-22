@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: '无法导出地图图像',
   mapDrawingVertex: '顶点 {index}',
   mapDrawingEditInstructions: '使用方向键移动此顶点；按住 Shift 可增大移动步长。Page Up 和 Page Down 用于选取顶点。Home 和 End 用于选取第一个和最后一个可见顶点。',
+  panoramaInstructions: '使用方向键环顾四周，加号和减号键缩放，Home 键重置视图。',
+  panoramaHotspotsLabel: '全景图交互点',
 };
 
 registerLyraLocale('zh-CN', strings);

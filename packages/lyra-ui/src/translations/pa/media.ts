@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'ਨਕਸ਼ੇ ਦੀ ਤਸਵੀਰ ਨਿਰਯਾਤ ਨਹੀਂ ਕੀਤੀ ਜਾ ਸਕੀ',
   mapDrawingVertex: 'ਸਿਖਰ ਬਿੰਦੂ {index}',
   mapDrawingEditInstructions: 'ਇਸ ਸਿਖਰ ਬਿੰਦੂ ਨੂੰ ਹਿਲਾਉਣ ਲਈ ਤੀਰ ਕੁੰਜੀਆਂ ਵਰਤੋ; ਵੱਡੇ ਕਦਮਾਂ ਲਈ Shift ਦਬਾਈ ਰੱਖੋ। Page Up ਅਤੇ Page Down ਸਿਖਰ ਬਿੰਦੂ ਚੁਣਦੇ ਹਨ। Home ਅਤੇ End ਪਹਿਲਾ ਅਤੇ ਆਖਰੀ ਦਿਸਦਾ ਸਿਖਰ ਬਿੰਦੂ ਚੁਣਦੇ ਹਨ।',
+  panoramaInstructions: 'ਆਲੇ-ਦੁਆਲੇ ਵੇਖਣ ਲਈ ਤੀਰ ਕੁੰਜੀਆਂ, ਵੱਡਾ ਅਤੇ ਛੋਟਾ ਕਰਨ ਲਈ ਪਲੱਸ ਅਤੇ ਮਾਈਨਸ ਅਤੇ ਦ੍ਰਿਸ਼ ਮੁੜ ਸੈੱਟ ਕਰਨ ਲਈ Home ਵਰਤੋ।',
+  panoramaHotspotsLabel: 'ਪੈਨੋਰਾਮਾ ਦੀਆਂ ਪਰਸਪਰ ਕਿਰਿਆਸ਼ੀਲ ਥਾਵਾਂ',
 };
 
 registerLyraLocale('pa', strings);

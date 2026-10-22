@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Karttakuvaa ei voitu viedä',
   mapDrawingVertex: 'Kärkipiste {index}',
   mapDrawingEditInstructions: 'Siirrä tätä kärkipistettä nuolinäppäimillä; pidä Vaihto-näppäintä painettuna suurempia askelia varten. Page Up ja Page Down valitsevat kärkipisteitä. Home ja End valitsevat ensimmäisen ja viimeisen näkyvän kärkipisteen.',
+  panoramaInstructions: 'Katsele ympärillesi nuolinäppäimillä, lähennä ja loitonna plus- ja miinusnäppäimillä ja palauta näkymä Home-näppäimellä.',
+  panoramaHotspotsLabel: 'Panoraaman vuorovaikutteiset pisteet',
 };
 
 registerLyraLocale('fi', strings);

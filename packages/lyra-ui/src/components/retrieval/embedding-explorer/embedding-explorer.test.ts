@@ -547,7 +547,7 @@ describe('lr-embedding-explorer', () => {
     rendered[0]!.dispatchEvent(
       new MouseEvent('click', { bubbles: true, composed: true })
     );
-    expect((await selected).detail).to.deep.equal({ point: first });
+    expect((await selected).detail).to.deep.equal({ point: first, id: first.id, index: 0 });
   });
 
   it('normalizes invalid collection and height inputs without retaining stale output', async () => {

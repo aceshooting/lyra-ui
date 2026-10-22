@@ -101,6 +101,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Popover',
   details: 'Dettagli',
   map: 'Mappa',
+  model: 'Modello',
   select: 'Seleziona',
   sourceListDefaultLabel: 'Fonti',
   thinkingPanelLabel: 'Ragionamento',

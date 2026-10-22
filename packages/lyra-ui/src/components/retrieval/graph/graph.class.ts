@@ -1,3 +1,7 @@
+import { ENGINE_3D_PREFERENCE, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
+import type { LyraGraphColumns } from '../../../internal/typed-columns.js';
+import { admitGraphEngineColumns, type GraphEngineColumns } from './graph-engine-columns.js';
+import { graphWebglCamera } from './graph-webgl-engine.js';
 import { GraphSourceCompositionController } from './graph-source-composition.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraGraphSource, LyraGraphRecord, LyraGraphSourceQuery, LyraGraphSourceSummary, LyraSourceRecord } from '../../../data-sources.js';
@@ -101,7 +105,7 @@ import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphFit, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodeLimit, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphOrbitDown, LYRA_DEFAULT_graphOrbitLeft, LYRA_DEFAULT_graphOrbitRight, LYRA_DEFAULT_graphOrbitUp, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphSpatialControls, LYRA_DEFAULT_graphSpatialInstructions, LYRA_DEFAULT_graphSpatialPage, LYRA_DEFAULT_graphSpatialUnavailable, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_graphView3d, LYRA_DEFAULT_graphViewList } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_loading, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Complete host-owned node/edge catalog with bounded graph scenes. Source edges require stable IDs. */
@@ -318,6 +322,7 @@ function identitySet(values: readonly string[]): ReadonlySet<string> {
 
 export interface LyraGraphEventMap {
   'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>;
+  'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
   'lr-camera-change': CustomEvent<{ camera: LyraGraphCamera }>;
   'lr-view-change': CustomEvent<{ view: LyraGraphView }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
@@ -415,6 +420,7 @@ export interface LyraGraphEventMap {
  * @event lr-node-activate - Pointer or keyboard node activation with `{ nodeId, x, y }` detail;
  *   `x` and `y` are the node's current coordinates in the graph's local drawing space.
  *   Spatial/list activation returns world x/y and adds `z`; these are never screen pixels.
+ * @event lr-engine-fallback - Renderer fell back, with `{ from, to, reason }`.
  * @event lr-camera-change - Spatial camera changed by a gesture, fit or focus, with `{ camera }`.
  *   Coalesced to one event per animation frame. Property assignments are silent.
  * @event lr-view-change - User switched the spatial toolbar view, with `{ view }`.
@@ -517,6 +523,18 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    engine3dContextLost: LYRA_DEFAULT_engine3dContextLost,
+    engine3dError: LYRA_DEFAULT_engine3dError,
+    engine3dLoading: LYRA_DEFAULT_engine3dLoading,
+    engine3dShowingBuiltin: LYRA_DEFAULT_engine3dShowingBuiltin,
+    engine3dShowingList: LYRA_DEFAULT_engine3dShowingList,
+    engine3dSoftwareRendering: LYRA_DEFAULT_engine3dSoftwareRendering,
+    engine3dUnavailable: LYRA_DEFAULT_engine3dUnavailable,
+    engine3dUnsupported: LYRA_DEFAULT_engine3dUnsupported,
     graphCommunity: LYRA_DEFAULT_graphCommunity,
     graphDataList: LYRA_DEFAULT_graphDataList,
     graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
@@ -557,14 +575,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     graphTypedNode: LYRA_DEFAULT_graphTypedNode,
     graphView3d: LYRA_DEFAULT_graphView3d,
     graphViewList: LYRA_DEFAULT_graphViewList,
+    largeDataInvalid: LYRA_DEFAULT_largeDataInvalid,
+    largeDataLimit: LYRA_DEFAULT_largeDataLimit,
     loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     neighborDirectionIn: LYRA_DEFAULT_neighborDirectionIn,
     neighborDirectionOut: LYRA_DEFAULT_neighborDirectionOut,
     next: LYRA_DEFAULT_next,
     noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
     previous: LYRA_DEFAULT_previous,
     retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     zoomIn: LYRA_DEFAULT_zoomIn,
     zoomOut: LYRA_DEFAULT_zoomOut,
   };
@@ -974,6 +998,30 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
     return this.normalizedGraphModel!;
   }
+  private _engine: Engine3dPreference = 'builtin';
+  /** Optional 3D renderer preference. The default never downloads the companion. Failures use
+   * the builtin spatial renderer, then the paginated list. Has no effect in the 2D view. */
+  @property({ converter: ENGINE_3D_PREFERENCE })
+  get engine(): Engine3dPreference { return this._engine; }
+  set engine(value: Engine3dPreference) { const old = this._engine; this._engine = ENGINE_3D_PREFERENCE.normalize(value); if (old === this._engine && this.isConnected) { this.spatial?.retryEngine(); this.requestUpdate(); } else this.requestUpdate('engine', old); }
+  private _graphColumns?: LyraGraphColumns;
+  private engineColumns?: GraphEngineColumns;
+  private engineColumnsInvalid = false;
+  /** Immutable typed columns for 3D/list views, up to 200,000 nodes and 1,000,000 links.
+   * Takes precedence over local nodes/edges; graphSource remains authoritative. Assign a new
+   * object after changes. The builtin fallback lists all rows in pages of 200 without truncation.
+   * Columns require view="3d" or view="list"; 2D reports invalid data instead of showing stale arrays.
+   * Coordinates are limited to ±10,000,000 graph units. Visual column labels are bounded by the
+   * companion; the paginated list retains full text. Column edge IDs are `column-edge-${row}`. */
+  @property({ attribute: false })
+  get graphColumns(): LyraGraphColumns | undefined { return this._graphColumns; }
+  set graphColumns(value: LyraGraphColumns | undefined) {
+    const old = this._graphColumns; if (old === value) return;
+    this._graphColumns = value; this.engineColumns = undefined; this.engineColumnsInvalid = false;
+    if (value !== undefined) { const result = admitGraphEngineColumns(value); if (result.ok) this.engineColumns = result.value; else this.engineColumnsInvalid = true; }
+    this.requestUpdate('graphColumns', old);
+    if (this.engineColumnsInvalid) this.scheduleAfterUpdate(() => { if (this.isConnected && this.graphColumns === value && this.engineColumnsInvalid && !this.sourceMode) this.announcements.announceAssertive(this.localize('largeDataInvalid')); }, 'graph-columns-error');
+  }
   private _view: LyraGraphView = '2d';
   /** Default '2d' preserves existing SVG/canvas layouts. '3d' uses perspective and true x/y/z
    * positions; 'list' provides visible paginated activation. The latter two need no optional peer. */
@@ -986,16 +1034,20 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.requestUpdate('view', old);
   }
   private _camera?: LyraGraphCamera;
+  private builtinCamera?: LyraGraphCamera;
   /** Optional spatial camera input, defensively copied. Angles are radians; distance and target
    * use graph units. Gestures update internal state and emit lr-camera-change, not this input.
-   * Omission fits the initial spatial scene. Invalid numeric fields use a safe default. */
+   * Omission fits the initial spatial scene. Invalid numeric fields use a safe default.
+   * WebGL camera distance has an independent range up to Float32 maximum / 8; camera targets
+   * remain within ±10,000,000 graph units. The builtin renderer retains its existing limits. */
   @property({ attribute: false })
-  get camera(): LyraGraphCamera | undefined { return this._camera; }
+  get camera(): LyraGraphCamera | undefined { return this.engine === 'webgl' ? this._camera : this.builtinCamera; }
   set camera(value: LyraGraphCamera | undefined) {
     const old = this._camera;
-    this._camera = value == null ? undefined : normalizeGraphCamera(value, {
+    this._camera = value == null ? undefined : graphWebglCamera(value, {
       yaw: 0, pitch: 0, distance: 500, target: { x: 0, y: 0, z: 0 },
     });
+    this.builtinCamera = value == null ? undefined : normalizeGraphCamera(value, { yaw: 0, pitch: 0, distance: 500, target: { x: 0, y: 0, z: 0 } });
     this.requestUpdate('camera', old);
   }
   private _layout: LyraGraphLayout = 'force';
@@ -1411,6 +1463,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return new Controller(this, {
     repaint: () => this.paintGraph(),
     model: () => this.graphModel,
+    columns: () => this.sourceMode ? undefined : this.engineColumns,
+    sourceMode: () => this.sourceMode,
+    engineFallback: (detail) => {
+      this.emit('lr-engine-fallback', detail);
+      this.announcements.announceAssertive(`${this.localize(ENGINE_3D_REASON_MESSAGE[detail.reason])} ${this.localize(ENGINE_3D_SHOWING_MESSAGE[detail.to])}`);
+    },
+    engineMessage: (key) => this.localize(key),
+    categoryColors: () => this.withCanvasColorResolver((resolve) => Array.from({ length: 8 }, (_, index) => resolve(categoricalPaletteColor(index)))),
     locale: () => this.effectiveLocale,
     direction: () => this.effectiveDirection,
     pageText: (values) => this.localize('graphSpatialPage', undefined, values),
@@ -2258,6 +2318,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       if (!await this.ensureSourceScene(`node:${id}`, current) || !current()) return false;
       return this.focusSceneNode(id, options, current);
     }
+    if (!this.sourceMode && this.graphColumns !== undefined && (this.engineColumnsInvalid || this.view === '2d')) return false;
     return this.focusSceneNode(id, options);
   }
 
@@ -2268,7 +2329,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       if (!this.isConnected || this._view === '2d' || !currentSource()) return false;
       const focused = this.spatial?.focusNode(id, options?.zoom);
       if (focused) {
-        const node = this.graphModel.nodes.find((candidate) => candidate.id === id);
+        const columnRow = !this.sourceMode ? this.engineColumns?.row(id) : undefined;
+        const node = columnRow === undefined ? this.graphModel.nodes.find((candidate) => candidate.id === id) : { id, label: this.engineColumns?.columns.labels?.[columnRow] };
         if (node) this.announcements.announcePolite(this.localize('graphNodeFocused', undefined, { label: this.nodeAccessibleText(node) }));
       }
       return focused ?? false;
@@ -2302,6 +2364,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  `padding` viewport-px on each side (clamped to `[minZoom, maxZoom]`). Silent -- no data
    *  changed, so no announcement. A no-op with no visible nodes. */
   fit(options?: { padding?: number }): void {
+    if (!this.sourceMode && this.graphColumns !== undefined && (this.engineColumnsInvalid || this.view === '2d')) return;
     if (this.view !== '2d') {
       if (this.spatial) this.spatial.fit(options?.padding);
       // The renderer's canvas is only measurable after the update that paints it.
@@ -4399,7 +4462,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private selectionActionAuthority(): () => boolean {
-    if (!this.sourceMode) return () => true;
+    if (!this.sourceMode) { const columns = this.graphColumns; return columns === undefined ? () => true : () => !this.sourceMode && this.graphColumns === columns && !this.engineColumnsInvalid; }
     const current = this.sourceAuthority();
     const nodes = this.selectedNodeIds, edges = this.selectedEdgeIds;
     return () => current() && nodes === this.selectedNodeIds && edges === this.selectedEdgeIds;
@@ -4415,6 +4478,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   /** Returns a node's current position in the graph's local drawing space. */
   getNodePosition(id: string): { x: number; y: number } | undefined {
+    if (!this.sourceMode && this.graphColumns !== undefined && (this.engineColumnsInvalid || this.view === '2d')) return undefined;
     if (this.view !== '2d') {
       const position = this.getNodePosition3d(id);
       return position ? { x: position.x, y: position.y } : undefined;
@@ -4428,8 +4492,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** World x/y/z in spatial/list view, or undefined for a missing/hidden node or view="2d".
    * The returned point is an immutable copy and never a projected screen position. */
   getNodePosition3d(id: string): LyraGraphPosition | undefined {
+    if (!this.sourceMode && this.graphColumns !== undefined && this.engineColumnsInvalid) return undefined;
     if (this.view === '2d') return undefined;
     if (this.spatial) return this.spatial.position(id);
+    if (!this.sourceMode && this.engineColumns) { const row = this.engineColumns.row(id), positions = this.engineColumns.data.positions; return row === undefined ? undefined : positions ? Object.freeze({ x: positions[row * 3]!, y: positions[row * 3 + 1]!, z: positions[row * 3 + 2]! }) : spatialNodePosition({ id }); }
     const node = this.visibleNodes().find(candidate => candidate.id === id);
     return node ? spatialNodePosition(node) : undefined;
   }
@@ -4438,6 +4504,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    * view, missing/hidden nodes or a spatial point behind the near plane. Add the host's viewport
    * rect left/top to anchor a viewport-positioned overlay. This method does not move the camera. */
   getNodeScreenPosition(id: string): { x: number; y: number } | undefined {
+    if (!this.sourceMode && this.graphColumns !== undefined && (this.engineColumnsInvalid || this.view === '2d')) return undefined;
     if (this.view !== '2d') return this.spatial?.screenPosition(id);
     const position = this.getNodePosition(id);
     if (!position || !this.zoomedEl || !this.d3) return undefined;
@@ -4897,8 +4964,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private renderGraph(): TemplateResult {
-    const nodeLimit = this.sourceMode ? undefined : publicCollectionTruncation(this, 'nodes');
-    const edgeLimit = this.sourceMode ? undefined : publicCollectionTruncation(this, 'edges');
+    if (!this.sourceMode && this.graphColumns !== undefined && (this.engineColumnsInvalid || this.view === '2d')) return html`<div part="base"><p part="error">${this.localize('largeDataInvalid')}</p></div>`;
+    const nodeLimit = this.sourceMode || this.graphColumns !== undefined ? undefined : publicCollectionTruncation(this, 'nodes');
+    const edgeLimit = this.sourceMode || this.graphColumns !== undefined ? undefined : publicCollectionTruncation(this, 'edges');
     const limitNotices = html`${nodeLimit ? html`<p part="limit" role="note">${this.localize('graphNodeLimit', undefined, {
       shown: getNumberFormat(this.effectiveLocale).format(nodeLimit.retained),
       total: getNumberFormat(this.effectiveLocale).format(nodeLimit.source),

@@ -27,7 +27,10 @@ import { parseProgram, visitAst } from './lib/ast.mjs';
 // Lowered 29 -> 25: `<lr-agent-run>`'s status text, the shared short-duration formatter (waterfall
 // and thinking-panel durations) and `<lr-pagination>`'s plural text now take decidable shapes (-5);
 // `<lr-qr-code>` stores its error message key and localizes it at render (+1).
-const UNRESOLVED_CEILING = 25;
+// Raised 25 -> 28: the optional-renderer controllers of `<lr-image-viewer>`, `<lr-video>` and
+// `<lr-graph>` receive `localize` as a forwarding callback whose key parameter is a closed
+// Engine3dMessageKey union (+3); their fallback notices read literal tables and stay decidable.
+const UNRESOLVED_CEILING = 28;
 
 const componentsRoot = fileURLToPath(new URL('../src/components/', import.meta.url));
 const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url));

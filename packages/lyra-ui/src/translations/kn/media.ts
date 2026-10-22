@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'ನಕ್ಷೆಯ ಚಿತ್ರವನ್ನು ರಫ್ತು ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ',
   mapDrawingVertex: 'ಶೃಂಗ {index}',
   mapDrawingEditInstructions: 'ಈ ಶೃಂಗವನ್ನು ಸರಿಸಲು ಬಾಣದ ಕೀಲಿಗಳನ್ನು ಬಳಸಿ; ದೊಡ್ಡ ಹೆಜ್ಜೆಗಳಿಗೆ Shift ಒತ್ತಿಹಿಡಿಯಿರಿ. Page Up ಮತ್ತು Page Down ಶೃಂಗಗಳನ್ನು ಆಯ್ಕೆ ಮಾಡುತ್ತವೆ. Home ಮತ್ತು End ಮೊದಲ ಮತ್ತು ಕೊನೆಯ ಗೋಚರ ಶೃಂಗವನ್ನು ಆಯ್ಕೆ ಮಾಡುತ್ತವೆ.',
+  panoramaInstructions: 'ಸುತ್ತಲೂ ನೋಡಲು ಬಾಣದ ಕೀಲಿಗಳನ್ನು, ಹಿಗ್ಗಿಸಲು ಮತ್ತು ಕುಗ್ಗಿಸಲು ಪ್ಲಸ್ ಮತ್ತು ಮೈನಸ್ ಹಾಗೂ ನೋಟ ಮರುಹೊಂದಿಸಲು Home ಬಳಸಿ.',
+  panoramaHotspotsLabel: 'ಪನೋರಮಾದ ಸಂವಾದಾತ್ಮಕ ಬಿಂದುಗಳು',
 };
 
 registerLyraLocale('kn', strings);

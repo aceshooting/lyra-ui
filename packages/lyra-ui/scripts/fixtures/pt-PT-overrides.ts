@@ -377,6 +377,7 @@ const strings: LyraLocaleStrings = {
   mapUndoDrawing: 'Anular o último vértice',
   mapDrawingVertexLimit: 'Um desenho pode conter, no máximo, {count} vértices',
   mapDrawingEditInstructions: 'Utilize as teclas de seta para mover este vértice; mantenha a tecla Shift premida para passos maiores. Page Up e Page Down selecionam vértices. Home e End selecionam o primeiro e o último vértice visível.',
+  panoramaInstructions: 'Utilize as setas para olhar em redor, mais e menos para ampliar ou reduzir e Home para repor a vista.',
 };
 
 export { strings };

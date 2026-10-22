@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Obrázek mapy se nepodařilo exportovat',
   mapDrawingVertex: 'Vrchol {index}',
   mapDrawingEditInstructions: 'Tento vrchol přesunete klávesami se šipkami; pro větší kroky podržte Shift. Klávesami Page Up a Page Down vybíráte vrcholy. Klávesami Home a End vyberete první a poslední viditelný vrchol.',
+  panoramaInstructions: 'Pomocí šipek se rozhlížejte, klávesami plus a minus přibližujte a klávesou Home obnovte zobrazení.',
+  panoramaHotspotsLabel: 'Interaktivní body panoramatu',
 };
 
 registerLyraLocale('cs', strings);

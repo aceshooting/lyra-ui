@@ -54,7 +54,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: '피드백 제출',
   feedbackSubmitted: '피드백 제출 완료',
   suggestionsLabel: '제안 프롬프트',
-  model: '모델',
   selectModel: '모델 선택...',
   modelSelectNoModels: '모델 없음',
   modelSelectRequired: '모델을 선택하십시오.',

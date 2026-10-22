@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Geri bildirim gönder',
   feedbackSubmitted: 'Geri bildirim gönderildi',
   suggestionsLabel: 'Önerilen istemler',
-  model: 'Model',
   selectModel: 'Bir model seçin…',
   modelSelectNoModels: 'Model yok',
   modelSelectRequired: 'Bir model seçin.',

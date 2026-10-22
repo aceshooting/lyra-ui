@@ -161,3 +161,12 @@ export const SafeIconOverrides: Story = {
     </lr-video>
   `,
 };
+
+/** The same native video supplies playback, captions, fullscreen and picture in picture. */
+export const Panorama: Story = {
+  parameters: { docs: { description: { story: 'Projection demonstration using the existing video fixture. Replace it with a 2:1 equirectangular video for panoramic content. Switching the renderer retains the native player and its playback settings.' } } },
+  render: () => html`<lr-video src=${VIDEO_SRC} title="Panorama video demonstration" controls="full" projection="equirectangular" engine="webgl" .hotspots=${[
+    { id: 'front', yaw: 0, pitch: 0, label: 'Front' },
+    { id: 'back', yaw: Math.PI, pitch: 0, label: 'Back' },
+  ]}></lr-video>`,
+};

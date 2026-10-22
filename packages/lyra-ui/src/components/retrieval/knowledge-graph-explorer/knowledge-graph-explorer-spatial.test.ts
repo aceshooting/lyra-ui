@@ -80,3 +80,12 @@ describe('knowledge graph spatial integration', () => {
   });
 
 });
+
+
+it('keeps the builtin default and forwards normalized explicit engine preferences', async () => {
+  const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer view="list" .nodes=${nodes}></lr-knowledge-graph-explorer>`);
+  const graph = el.shadowRoot!.querySelector<LyraGraph>('[part="graph"]')!;
+  expect(el.engine).to.equal('builtin'); expect(graph.engine).to.equal('builtin');
+  el.engine = 'webgl'; await el.updateComplete; await graph.updateComplete; expect(graph.engine).to.equal('webgl');
+  el.setAttribute('engine', 'invalid'); await el.updateComplete; await graph.updateComplete; expect(el.engine).to.equal('builtin'); expect(graph.engine).to.equal('builtin');
+});

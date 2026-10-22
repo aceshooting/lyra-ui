@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'పటం చిత్రాన్ని ఎగుమతి చేయడం సాధ్యం కాలేదు',
   mapDrawingVertex: 'శీర్షబిందువు {index}',
   mapDrawingEditInstructions: 'ఈ శీర్షబిందువును తరలించడానికి బాణం కీలను ఉపయోగించండి; పెద్ద దశల కోసం Shift నొక్కి పట్టుకోండి. Page Up మరియు Page Down శీర్షబిందువులను ఎంచుకుంటాయి. Home మరియు End మొదటి, చివరి కనిపించే శీర్షబిందువును ఎంచుకుంటాయి.',
+  panoramaInstructions: 'చుట్టూ చూడటానికి బాణం కీలను, జూమ్ చేయడానికి ప్లస్ మరియు మైనస్‌ను, వీక్షణను రీసెట్ చేయడానికి Home‌ను ఉపయోగించండి.',
+  panoramaHotspotsLabel: 'పనోరమాలోని పరస్పర చర్య బిందువులు',
 };
 
 registerLyraLocale('te', strings);

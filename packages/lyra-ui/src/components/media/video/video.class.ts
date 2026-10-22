@@ -1,3 +1,7 @@
+import { panoramaStyles } from '../image-viewer/image-viewer-panorama.styles.js';
+import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
+import { PanoramaController, PANORAMA_PROJECTION, PANORAMA_DEFAULT_CAMERA, normalizePanoramaCamera, snapshotPanoramaHotspots, type LyraMediaProjection, type LyraPanoramaCamera, type LyraPanoramaHotspot, type LyraPanoramaHotspotSelectDetail } from '../image-viewer/image-viewer-panorama.js';
+export type { LyraMediaProjection, LyraPanoramaCamera, LyraPanoramaHotspot, LyraPanoramaHotspotSelectDetail } from '../image-viewer/image-viewer-panorama.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
@@ -24,7 +28,8 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './video.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraVideoControls = 'none' | 'standard' | 'full';
@@ -40,6 +45,9 @@ export interface VideoState {
 }
 
 export interface LyraVideoEventMap {
+  'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
+  'lr-panorama-camera-change': CustomEvent<{ camera: LyraPanoramaCamera }>;
+  'lr-panorama-hotspot-select': CustomEvent<LyraPanoramaHotspotSelectDetail>;
   ended: Event;
   error: Event;
   loadedmetadata: Event;
@@ -158,6 +166,18 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * buttons. A declarative host name stays on the host while the native video uses a purpose label;
  * an explicitly empty host name is preserved exactly on the native semantic owner.
  *
+ * Panorama rendering is opt-in through projection="equirectangular" and engine="webgl".
+ * The optional companion reuses the existing native media; loading or renderer failure retains
+ * the flat view. Hotspots use unique IDs and yaw/pitch radians, with 200-item text pages.
+ * @event lr-engine-fallback - Renderer fallback detail contains from, to and reason.
+ * @event lr-panorama-camera-change - A gesture or keyboard action changed the panorama camera; detail contains camera.
+ * @event lr-panorama-hotspot-select - A hotspot was activated; detail contains hotspot, id and index.
+ * @csspart panorama - Keyboard-operable spherical viewport.
+ * @csspart panorama-engine - The optional renderer container.
+ * @csspart panorama-notice - Localized renderer loading or fallback feedback.
+ * @csspart panorama-hotspots - The paginated hotspot alternative.
+ * @csspart panorama-hotspot - One hotspot activation button.
+ * @csspart panorama-page - A hotspot page action.
  * @customElement lr-video
  * @slot - Native `<source>` and `<track>` children. Consumer nodes remain in light DOM; safe
  *   allowlisted clones are inserted into the private native video.
@@ -224,9 +244,34 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     avPlayerPlaybackRate: LYRA_DEFAULT_avPlayerPlaybackRate,
     avPlayerPosition: LYRA_DEFAULT_avPlayerPosition,
     avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
+    duration: LYRA_DEFAULT_duration,
+    engine3dContextLost: LYRA_DEFAULT_engine3dContextLost,
+    engine3dError: LYRA_DEFAULT_engine3dError,
+    engine3dLoading: LYRA_DEFAULT_engine3dLoading,
+    engine3dShowingBuiltin: LYRA_DEFAULT_engine3dShowingBuiltin,
+    engine3dShowingList: LYRA_DEFAULT_engine3dShowingList,
+    engine3dSoftwareRendering: LYRA_DEFAULT_engine3dSoftwareRendering,
+    engine3dUnavailable: LYRA_DEFAULT_engine3dUnavailable,
+    engine3dUnsupported: LYRA_DEFAULT_engine3dUnsupported,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    model: LYRA_DEFAULT_model,
+    navigation: LYRA_DEFAULT_navigation,
+    next: LYRA_DEFAULT_next,
+    open: LYRA_DEFAULT_open,
+    paginationLabel: LYRA_DEFAULT_paginationLabel,
+    panoramaHotspotsLabel: LYRA_DEFAULT_panoramaHotspotsLabel,
+    panoramaInstructions: LYRA_DEFAULT_panoramaInstructions,
     pause: LYRA_DEFAULT_pause,
     play: LYRA_DEFAULT_play,
     playbackPosition: LYRA_DEFAULT_playbackPosition,
+    previous: LYRA_DEFAULT_previous,
+    search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
     videoCaptions: LYRA_DEFAULT_videoCaptions,
     videoCaptionsOff: LYRA_DEFAULT_videoCaptionsOff,
     videoEnterFullscreen: LYRA_DEFAULT_videoEnterFullscreen,
@@ -240,7 +285,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, panoramaStyles, styles, srOnly];
 
   /** `playing` is reflected output, not input. */
   protected static readonly knownUnobservedAttributes: readonly string[] = ['playing'];
@@ -250,6 +295,67 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     // attribute names to lowercase, while Lyra's earlier kebab-case spelling remains supported as
     // a compatibility alias. Lit still owns every other observed attribute normally.
     return [...new Set([...super.observedAttributes, 'currenttime', 'current-time'])];
+  }
+
+  private panoramaRevision = 0;
+  // @renderController PanoramaController
+  private readonly panorama = new PanoramaController(this, {
+    changed: () => this.scheduleAfterUpdate(() => super.requestUpdate('panoramaState', undefined, { hasChanged: () => true }), 'panorama-state'),
+    updated: async () => { await Promise.resolve(); return this.updateComplete; },
+    localize: key => this.localize(key),
+    direction: () => this.effectiveDirection,
+    fallback: detail => this.emit('lr-engine-fallback', detail),
+    pick: detail => this.emit('lr-panorama-hotspot-select', detail),
+    camera: camera => {
+      const old = this._panoramaCamera; this._panoramaCamera = camera;
+      this.requestUpdate('panoramaCamera', old);
+      this.emit('lr-panorama-camera-change', { camera });
+    },
+  });
+  private _projection: LyraMediaProjection = 'flat';
+  /** Flat media by default. Equirectangular rendering also requires engine="webgl". */
+  @property({ converter: PANORAMA_PROJECTION, noAccessor: true })
+  get projection(): LyraMediaProjection { return this._projection; }
+  set projection(value: LyraMediaProjection) {
+    const next = PANORAMA_PROJECTION.normalize(value), old = this._projection;
+    if (next === old) return;
+    this._projection = next; this.panorama?.invalidate(); this.requestUpdate('projection', old);
+  }
+  private _engine: Engine3dPreference = 'builtin';
+  /** Preferred panorama renderer; the builtin flat view never downloads a companion. */
+  @property({ converter: ENGINE_3D_PREFERENCE, noAccessor: true })
+  get engine(): Engine3dPreference { return this._engine; }
+  set engine(value: Engine3dPreference) {
+    const next = ENGINE_3D_PREFERENCE.normalize(value), old = this._engine;
+    if (next === old) return;
+    this._engine = next; this.panorama?.invalidate(); this.requestUpdate('engine', old);
+  }
+  private _panoramaCamera: LyraPanoramaCamera = PANORAMA_DEFAULT_CAMERA;
+  /** Camera yaw/pitch in radians and vertical fieldOfView in degrees (20–100). Authored writes are silent. */
+  @property({ attribute: false, noAccessor: true })
+  get panoramaCamera(): LyraPanoramaCamera { return this._panoramaCamera; }
+  set panoramaCamera(value: LyraPanoramaCamera) {
+    const next = normalizePanoramaCamera(value), old = this._panoramaCamera;
+    if (next.yaw === old.yaw && next.pitch === old.pitch && next.fieldOfView === old.fieldOfView) return;
+    this._panoramaCamera = next; this.requestUpdate('panoramaCamera', old);
+  }
+  private _hotspots: readonly LyraPanoramaHotspot[] = Object.freeze([]);
+  private hotspotSource: unknown = this._hotspots;
+  /** Bounded clone-owned hotspot snapshot. First valid unique ID wins; reassign after changes.
+   * Angles are radians, pitch is within ±π/2, and invalid rows are omitted. */
+  @property({ attribute: false, noAccessor: true })
+  get hotspots(): readonly LyraPanoramaHotspot[] { return this._hotspots; }
+  set hotspots(value: readonly LyraPanoramaHotspot[]) {
+    if (value === this.hotspotSource || value === this._hotspots) return;
+    const old = this._hotspots; this.hotspotSource = value;
+    this._hotspots = snapshotPanoramaHotspots(value, this.ownerDocument?.defaultView ?? null);
+    this.panorama?.invalidate(); this.requestUpdate('hotspots', old);
+  }
+  private get panoramaEnabled(): boolean { return this.projection === 'equirectangular' && this.engine === 'webgl'; }
+
+  override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: Parameters<LyraElement['requestUpdate']>[2]): void {
+    if (name === 'src' && this.panorama && !Object.is(this.src, oldValue)) { this.panoramaVideoReady = false; this.panoramaRevision++; this.panorama.invalidate(); }
+    super.requestUpdate(name, oldValue, options);
   }
 
   /** Starts playback as soon as the browser's autoplay policy allows. */
@@ -299,6 +405,21 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   @state() private thumbnailPosition = 50;
 
   @query('[part~="video-wrapper"]') private wrapperEl?: HTMLElement;
+
+  private panoramaVideoReady = false;
+  private onPanoramaMediaReady = (): void => { this.panoramaVideoReady = true; this.scheduleAfterUpdate(() => super.requestUpdate('panoramaMedia', undefined, { hasChanged: () => true }), 'panorama-media'); };
+  private onPanoramaMediaReset = (): void => { this.panoramaVideoReady = false; this.panoramaRevision++; this.panorama.invalidate(); this.scheduleAfterUpdate(() => super.requestUpdate('panoramaMedia', undefined, { hasChanged: () => true }), 'panorama-media'); };
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const video = this.videoEl;
+    this.panorama.update(this.panoramaEnabled, this.panoramaVideoReady && video && (video.readyState >= 2 || this.panorama.ready || this.panorama.notice?.reason === 'context-lost') ? video : null,
+      this.panoramaRevision, this.hotspots, this.panoramaCamera, this.renderRoot.querySelector<HTMLElement>('[part="panorama-engine"]'));
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback(); this.panorama.adopted(); super.requestUpdate('panoramaAdopted', undefined, { hasChanged: () => true });
+  }
 
   private readonly mediaController = new NativeMediaController(this, {
     selectedTrackMode: 'hidden',
@@ -372,6 +493,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    super.requestUpdate('panoramaReconnect', undefined, { hasChanged: () => true });
     this.mediaController.reconnect();
     const doc = (this.listenerDocument = this.ownerDocument);
     doc.addEventListener('fullscreenchange', this.onFullscreenChange);
@@ -394,6 +516,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.panorama.disconnect();
     this.mediaController.disconnect();
     this.thumbnailGeneration += 1;
     this.thumbnailAbort?.abort();
@@ -501,6 +624,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const signature = this.sourceSignature();
     if (!force && signature === this.lastSourceSignature) return;
     this.lastSourceSignature = signature;
+    this.onPanoramaMediaReset();
     this.visibilityPaused = false;
     this.unbindCaptionTracks();
     if (this.captionTracks.length) this.captionTracks = [];
@@ -556,6 +680,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       (child) => child.localName === 'source' || child.localName === 'track',
     ))) return;
     this.visibilityPaused = false;
+    this.onPanoramaMediaReset();
     this.mediaController.unload();
     this.currentTime = 0;
     this.lastSourceSignature = undefined;
@@ -1144,10 +1269,16 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         : this.title || this.localize('videoPlayerLabel');
     const posterActive = Boolean(safePoster && this.posterVisible);
     return html`
+      ${this.panorama.renderNotice()}
       <div part="base video-wrapper">
         <video
           ${ref(this.mediaRef)}
           part="video"
+          ?data-panorama=${this.panorama.ready}
+          aria-hidden=${this.panorama.ready ? 'true' : nothing}
+          @loadeddata=${this.onPanoramaMediaReady}
+          @emptied=${this.onPanoramaMediaReset}
+          @error=${this.onPanoramaMediaReset}
           playsinline
           ?autoplay=${this.autoplay || this.autoplayMuted}
           ?loop=${this.loop}
@@ -1157,6 +1288,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
           poster=${safePoster ?? nothing}
           aria-label=${label}
         ></video>
+        ${this.panorama.renderViewport(label, this.panoramaEnabled)}
         ${posterActive
           ? html`<div part="poster-overlay">
               <img src=${safePoster} alt="">
@@ -1182,6 +1314,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         ${this.renderControls(posterActive)}
         <span hidden><slot @slotchange=${this.onSourceSlotChange}></slot></span>
       </div>
+      ${this.panorama.renderHotspots(this.projection === 'equirectangular')}
     `;
   }
 }

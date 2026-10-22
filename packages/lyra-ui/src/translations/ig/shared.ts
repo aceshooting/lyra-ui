@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Windo mmapụta',
   details: 'Nkọwa',
   map: 'Maapụ',
+  model: 'Nlereanya',
   select: 'Họrọ',
   sourceListDefaultLabel: 'Isi mmalite',
   thinkingPanelLabel: 'Echiche',

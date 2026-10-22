@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Visszajelzés küldése',
   feedbackSubmitted: 'Visszajelzés elküldve',
   suggestionsLabel: 'Javasolt promptok',
-  model: 'Modell',
   selectModel: 'Válasszon modellt…',
   modelSelectNoModels: 'Nincsenek modellek',
   modelSelectRequired: 'Válasszon modellt.',

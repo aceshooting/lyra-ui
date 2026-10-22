@@ -2,6 +2,12 @@ import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
+  [part='panorama-engine'] { inline-size: 100%; block-size: 100%; }
+  .panorama-stack { display: contents; }
+  .panorama-stack:where([data-panorama]) { display: grid; flex: 1 1 auto; min-block-size: var(--lr-size-20rem); min-inline-size: 0; }
+  .panorama-stack:where([data-panorama]) > * { grid-area: 1 / 1; }
+  [part='frame'][hidden], [part='toolbar'][hidden] { display: none; }
+
   :host {
     display: block;
     min-inline-size: 0;

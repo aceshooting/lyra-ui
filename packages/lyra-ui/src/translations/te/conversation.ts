@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'అభిప్రాయాన్ని సమర్పించండి',
   feedbackSubmitted: 'అభిప్రాయం సమర్పించారు',
   suggestionsLabel: 'సూచించిన ప్రాంప్ట్‌లు',
-  model: 'మోడల్',
   selectModel: 'మోడల్‌ను ఎంచుకోండి…',
   modelSelectNoModels: 'మోడల్‌లు లేవు',
   modelSelectRequired: 'దయచేసి మోడల్‌ను ఎంచుకోండి.',

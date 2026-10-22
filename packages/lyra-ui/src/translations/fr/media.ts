@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'L’image de la carte n’a pas pu être exportée',
   mapDrawingVertex: 'Sommet {index}',
   mapDrawingEditInstructions: 'Utilisez les touches fléchées pour déplacer ce sommet ; maintenez Maj enfoncée pour avancer par pas plus grands. Page précédente et Page suivante sélectionnent les sommets. Début et Fin sélectionnent le premier et le dernier sommet visibles.',
+  panoramaInstructions: 'Utilisez les flèches pour regarder autour de vous, plus et moins pour zoomer et Origine pour réinitialiser la vue.',
+  panoramaHotspotsLabel: 'Points interactifs du panorama',
 };
 
 registerLyraLocale('fr', strings);

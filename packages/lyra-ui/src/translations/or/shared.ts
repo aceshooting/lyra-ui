@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'ପପଓଭର୍',
   details: 'ବିବରଣୀ',
   map: 'ମାନଚିତ୍ର',
+  model: 'ମଡେଲ୍',
   select: 'ଚୟନ କରନ୍ତୁ',
   sourceListDefaultLabel: 'ଉତ୍ସଗୁଡ଼ିକ',
   thinkingPanelLabel: 'ଚିନ୍ତନ',

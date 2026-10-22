@@ -3,6 +3,10 @@ import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
+  [part='panorama-engine'] { inline-size: 100%; block-size: 100%; }
+  [part='panorama'] { position: absolute; inset: 0; min-block-size: 0; }
+  [part='video']:where([data-panorama]) { opacity: 0; }
+
   :host {
     display: block;
     color: var(--controls-color, var(--lr-color-on-strong-overlay));

@@ -167,6 +167,7 @@ import type { LyraMediaCardEventMap } from './components/media/media-card/media-
 import type { LyraPanZoomEventMap } from './components/media/pan-zoom/pan-zoom.class.js';
 import type { LyraSequencePlaybackEventMap } from './components/media/sequence-playback/sequence-playback.class.js';
 import type { LyraVideoPlaylistEventMap } from './components/media/video-playlist/video-playlist.class.js';
+import type { LyraVideoEventMap } from './components/media/video/video.class.js';
 import type { LyraZoomableFrameEventMap } from './components/media/zoomable-frame/zoomable-frame.class.js';
 import type { LyraAlertEventMap } from './components/overlays/alert/alert.class.js';
 import type { LyraTagEventMap } from './components/overlays/badge/tag.class.js';
@@ -1112,6 +1113,18 @@ export type LyraEdgeLeaveEvent = LyraGraphEventMap['lr-edge-leave'];
  * `LyraMessageActionsEventMap['lr-edit']`.
  */
 export type LyraEditEvent = LyraMessageActionsEventMap['lr-edit'];
+
+/**
+ * `lr-engine-fallback` — dispatched by 5 components: `<lr-embedding-explorer>`, `<lr-graph>`,
+ * `<lr-image-viewer>`, `<lr-knowledge-graph-explorer>`, `<lr-video>`; detail union of 5, e.g.
+ * `LyraEmbeddingExplorerEventMap['lr-engine-fallback']`.
+ */
+export type LyraEngineFallbackEvent =
+  | LyraEmbeddingExplorerEventMap['lr-engine-fallback']
+  | LyraGraphEventMap['lr-engine-fallback']
+  | LyraImageViewerEventMap['lr-engine-fallback']
+  | LyraKnowledgeGraphExplorerEventMap['lr-engine-fallback']
+  | LyraVideoEventMap['lr-engine-fallback'];
 
 /**
  * `lr-entity-activate` — dispatched by 5 components: `<lr-community-card>`, `<lr-entity-dossier>`,
@@ -2175,6 +2188,22 @@ export type LyraPageViewerStateChangeEvent =
  * `LyraNodePaletteEventMap['lr-palette-place']`.
  */
 export type LyraPalettePlaceEvent = LyraNodePaletteEventMap['lr-palette-place'];
+
+/**
+ * `lr-panorama-camera-change` — dispatched by 2 components: `<lr-image-viewer>`, `<lr-video>`;
+ * detail union of 2, e.g. `LyraImageViewerEventMap['lr-panorama-camera-change']`.
+ */
+export type LyraPanoramaCameraChangeEvent =
+  | LyraImageViewerEventMap['lr-panorama-camera-change']
+  | LyraVideoEventMap['lr-panorama-camera-change'];
+
+/**
+ * `lr-panorama-hotspot-select` — dispatched by 2 components: `<lr-image-viewer>`, `<lr-video>`;
+ * detail union of 2, e.g. `LyraImageViewerEventMap['lr-panorama-hotspot-select']`.
+ */
+export type LyraPanoramaHotspotSelectEvent =
+  | LyraImageViewerEventMap['lr-panorama-hotspot-select']
+  | LyraVideoEventMap['lr-panorama-hotspot-select'];
 
 /**
  * `lr-part-resume` — dispatched by `<lr-message-parts>`; detail
@@ -3667,6 +3696,7 @@ export interface LyraGlobalEventMap {
   'lr-edge-enter': LyraEdgeEnterEvent;
   'lr-edge-leave': LyraEdgeLeaveEvent;
   'lr-edit': LyraEditEvent;
+  'lr-engine-fallback': LyraEngineFallbackEvent;
   'lr-entity-activate': LyraEntityActivateEvent;
   'lr-entity-open': LyraEntityOpenEvent;
   'lr-entity-select': LyraEntitySelectEvent;
@@ -3804,6 +3834,8 @@ export interface LyraGlobalEventMap {
   'lr-page-select': LyraPageSelectEvent;
   'lr-page-viewer-state-change': LyraPageViewerStateChangeEvent;
   'lr-palette-place': LyraPalettePlaceEvent;
+  'lr-panorama-camera-change': LyraPanoramaCameraChangeEvent;
+  'lr-panorama-hotspot-select': LyraPanoramaHotspotSelectEvent;
   'lr-part-resume': LyraPartResumeEvent;
   'lr-part-retry': LyraPartRetryEvent;
   'lr-path-request': LyraPathRequestEvent;

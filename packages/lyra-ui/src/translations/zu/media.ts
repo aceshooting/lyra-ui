@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Isithombe semephu asikwazanga ukukhishwa',
   mapDrawingVertex: 'Ikona {index}',
   mapDrawingEditInstructions: 'Sebenzisa okhiye bemicibisholo ukuhambisa leli kona; bamba u-Shift ukuze unyakaze ngezinyathelo ezinkulu. I-Page Up ne-Page Down zikhetha amakhona. I-Home ne-End zikhetha ikona lokuqala nelokugcina elibonakalayo.',
+  panoramaInstructions: 'Sebenzisa okhiye bemicibisholo ukubheka nxazonke, ukuhlanganisa nokususa ukuze usondeze noma uhlehlise, no-Home ukusetha kabusha ukubuka.',
+  panoramaHotspotsLabel: 'Izindawo zokusebenzisana ku-panorama',
 };
 
 registerLyraLocale('zu', strings);

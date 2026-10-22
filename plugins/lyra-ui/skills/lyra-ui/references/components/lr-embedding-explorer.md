@@ -8,16 +8,31 @@
 - **Status** `stable` since `6.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
-- **Optional peers** none
-- **Themeable via** 11 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
+- **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-embedding-explorer`
 
-Dependency-free accessible 2D embedding projection viewer. Coordinates are projected by the host;
-the component only normalizes them into SVG, colors optional clusters, and emits selection events.
+Accessible embedding projection viewer with a dependency-free SVG default. Coordinates are
+projected by the host; the component normalizes them, colors clusters and emits selection events.
+
+`engine: Engine3dPreference = 'builtin'` accepts `'builtin'` or `'webgl'`; invalid values use
+`'builtin'`. WebGL lazily requests `@aceshooting/lyra-3d/points`; failure falls back to the
+built-in view and then the text alternative. `lr-engine-fallback` carries `{ from, to, reason }`,
+with reason `'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`. Source mode retains
+its density renderer and reports unsupported fallback when WebGL is requested.
+
+`pointColumns: LyraPointColumns | null = null` (property only) replaces `points`; non-null
+`source` wins over both. Columns support 1,000,000 rows with required string `ids`, Float32Array
+`x`/`y`, optional Float32Array `z`, optional Uint16Array `cluster`, and optional string arrays
+`clusters`/`labels`. Publish changes with a new immutable object; column arrays remain caller-owned.
+Validation occurs once per assignment. Empty or invalid columns do not restore stale arrays.
+Built-in/text alternatives page 200 rows; WebGL renders every admitted row. `lr-point-select`
+retains the point payload and adds `id` and admitted row `index` (`sourceIndex` in source mode).
+Additional parts: `engine`, `engine-notice`, `rows`, `row`, `pagination`, `page-button`.
 
 **Complete spatial source:** `source: LyraSpatialPointSource<EmbeddingPoint & LyraSpatialPoint>
 | null = null` (attribute: false) takes precedence over `points` without copying the complete
@@ -81,6 +96,8 @@ sourceIndex. Activating a density bin emits noncancelable `lr-spatial-bin-select
 adds `bin` and `error` parts; `limit` reports the complete global count/domain and current viewport
 count/domain with density and overlay counts distinguished. The cluster legend describes retained
 point overlays rather than certifying all global clusters.
+With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
+`'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.
 
 Reassign even the same source, or call a keyless `requestUpdate()`, after revision/state changes.
 Named style/strings updates reuse admitted data. Replacement, refresh, disconnect and adoption
@@ -128,6 +145,9 @@ cancel unfinished work, and reconnect resumes from the current source.
 `limit` (the "showing N of M" sampling notice), `empty`.
 Spatial-source parts: `bin` (a focusable density region, separate from representative point
 overlays) and `error` (invalid or unavailable spatial-source feedback).
+WebGL parts (with `engine="webgl"`): `engine` (the canvas container), `engine-notice` (localized
+loading or fallback feedback), `rows` (the paginated text alternative) with one focusable `row` per
+point, and `pagination` with its `page-button` previous and next actions.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
 `var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`

@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'የካርታውን ምስል መላክ አልተቻለም',
   mapDrawingVertex: 'ጫፍ {index}',
   mapDrawingEditInstructions: 'ይህን ጫፍ ለማንቀሳቀስ የቀስት ቁልፎችን ይጠቀሙ፤ በትልቅ ደረጃ ለማንቀሳቀስ Shift ን ይያዙ። Page Up እና Page Down ጫፎችን ይመርጣሉ። Home እና End የመጀመሪያውን እና የመጨረሻውን የሚታይ ጫፍ ይመርጣሉ።',
+  panoramaInstructions: 'ዙሪያውን ለማየት የቀስት ቁልፎችን፣ ለማቅረብና ለማራቅ የመደመርና የመቀነስ ቁልፎችን፣ እይታውን ለመመለስ Homeን ይጠቀሙ።',
+  panoramaHotspotsLabel: 'የፓኖራማ መስተጋብር ነጥቦች',
 };
 
 registerLyraLocale('am', strings);

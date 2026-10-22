@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Nie udało się wyeksportować obrazu mapy',
   mapDrawingVertex: 'Wierzchołek {index}',
   mapDrawingEditInstructions: 'Użyj klawiszy strzałek, aby przesunąć ten wierzchołek; przytrzymaj Shift, aby zwiększyć krok. Page Up i Page Down wybierają wierzchołki. Home i End wybierają pierwszy i ostatni widoczny wierzchołek.',
+  panoramaInstructions: 'Użyj strzałek do rozglądania się, plusa i minusa do powiększania i pomniejszania oraz Home do resetowania widoku.',
+  panoramaHotspotsLabel: 'Interaktywne punkty panoramy',
 };
 
 registerLyraLocale('pl', strings);

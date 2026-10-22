@@ -54,7 +54,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Gửi phản hồi',
   feedbackSubmitted: 'Đã gửi phản hồi',
   suggestionsLabel: 'Lời nhắc gợi ý',
-  model: 'Mô hình',
   selectModel: 'Chọn mô hình…',
   modelSelectNoModels: 'Không có mô hình nào',
   modelSelectRequired: 'Vui lòng chọn mô hình.',

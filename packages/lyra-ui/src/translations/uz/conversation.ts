@@ -55,7 +55,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Fikr-mulohaza yuborish',
   feedbackSubmitted: 'Fikr-mulohaza yuborildi',
   suggestionsLabel: 'Tavsiya etilgan promptlar',
-  model: 'Model',
   selectModel: 'Modelni tanlang…',
   modelSelectNoModels: 'Modellar yoʻq',
   modelSelectRequired: 'Modelni tanlang.',

@@ -107,6 +107,56 @@ export const styles = css`
   [part='bin']:active .bin-region { stroke-width: var(--lr-border-width-thick); }
   [part='error'] { color: var(--lr-color-danger); }
 
+  .engine-viewport { display: grid; min-inline-size: 0; }
+  .engine-viewport > * { grid-area: 1 / 1; }
+  [part='engine'] {
+    inline-size: 100%;
+    block-size: var(--lr-embedding-explorer-height, var(--lr-size-20rem));
+    min-block-size: var(--lr-size-12rem);
+    overflow: hidden;
+    border-radius: var(--lr-radius-xs);
+  }
+  [part='engine'][hidden] { display: none; }
+  [part='engine'] canvas { display: block; inline-size: 100%; block-size: 100%; }
+  [part='engine-notice'] { color: var(--lr-color-text-quiet); overflow-wrap: anywhere; }
+  [part='engine-notice'] p { margin: 0; }
+  [part='rows'] { display: flex; flex-direction: column; min-inline-size: 0; }
+  [part='row'] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-s);
+    align-items: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-xs);
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    color: var(--lr-color-text);
+    background: var(--lr-color-surface);
+  }
+  [part='row']:where([aria-selected='true']) { font-weight: var(--lr-font-weight-bold); }
+  [part='row']:hover { text-decoration: underline; }
+  [part='row']:focus-visible { outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset); }
+  [part='row']:active { outline: var(--lr-border-width-medium) solid var(--lr-color-brand); }
+  [part='pagination'] { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lr-space-s); }
+  [part='page-button'] {
+    transition: var(--lr-transition-interactive);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    color: var(--lr-color-text);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    font: inherit;
+    cursor: pointer;
+  }
+  [part='page-button']:hover { text-decoration: underline; }
+  [part='page-button']:focus-visible { outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset); }
+  [part='page-button']:active { border-color: var(--lr-color-brand); }
+  [part='page-button']:disabled { cursor: default; opacity: var(--lr-opacity-disabled); }
+
+
   [part='legend'] {
     display: flex;
     flex-wrap: wrap;

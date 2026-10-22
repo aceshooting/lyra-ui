@@ -99,6 +99,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Popover',
   details: 'Bal\'ina',
   map: 'Kaartaa',
+  model: 'Moodeela',
   select: 'Filadhu',
   sourceListDefaultLabel: 'Maddoota',
   thinkingPanelLabel: 'Yaada',

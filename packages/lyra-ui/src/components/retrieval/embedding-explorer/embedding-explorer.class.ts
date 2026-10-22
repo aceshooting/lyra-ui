@@ -1,3 +1,9 @@
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { ENGINE_3D_PREFERENCE, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
+import { LARGE_DATA_PAGE_SIZE, largeDataPage, validatePointColumns, typedColumnIssueMessage, type LyraPointColumns, type TypedColumnIssue } from '../../../internal/typed-columns.js';
+import { EmbeddingRows, type EmbeddingPoint } from './embedding-explorer-data.js';
+import { EmbeddingEngineController } from './embedding-explorer-engine.js';
+export type { LyraPointColumns } from '../../../internal/typed-columns.js';
 import { SpatialSourceController, spatialContains, type SpatialPoint } from '../../../internal/spatial-source-controller.js';
 import type { LyraSpatialBounds, LyraSpatialPoint, LyraSpatialPointSource, LyraSpatialBin, LyraSpatialBinSelectDetail } from '../../../utilities/data-spatial.js';
 export type { LyraSpatialBounds, LyraSpatialPointSource, LyraSpatialPoint, LyraSpatialBin, LyraSpatialQuery, LyraSpatialBinSelectDetail } from '../../../utilities/data-spatial.js';
@@ -26,6 +32,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint, LYRA_DEFAULT_embeddingExplorerPointLimit, LYRA_DEFAULT_embeddingExplorerSpatialBin, LYRA_DEFAULT_embeddingExplorerSpatialBounds, LYRA_DEFAULT_embeddingExplorerSpatialError, LYRA_DEFAULT_embeddingExplorerSpatialLoading, LYRA_DEFAULT_embeddingExplorerSpatialSummary } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const WIDTH = 640;
@@ -80,27 +87,22 @@ function validPointId(point: unknown): string | undefined {
   if (!isPlainDataRecord(point)) return undefined;
   const id = readOwnDataValue(point, 'id');
   return typeof id === 'string' && id.trim() &&
-    Number.isFinite(readOwnDataValue(point, 'x')) && Number.isFinite(readOwnDataValue(point, 'y'))
+    Number.isFinite(readOwnDataValue(point, 'x')) && Number.isFinite(readOwnDataValue(point, 'y')) &&
+    (readOwnDataValue(point, 'z') === undefined || Number.isFinite(readOwnDataValue(point, 'z')))
     ? id : undefined;
 }
 
-/** A projected embedding point. Coordinates must already be projected by the host. */
-export interface EmbeddingPoint {
-  id: string;
-  x: number;
-  y: number;
-  label?: string;
-  sourceId?: string;
-  cluster?: string | number;
-}
+export type { EmbeddingPoint } from './embedding-explorer-data.js';
 
 export interface LyraEmbeddingExplorerEventMap {
-  'lr-point-select': CustomEvent<{ point: EmbeddingPoint }>;
+  'lr-point-select': CustomEvent<{ point: EmbeddingPoint; id: string; index: number }>;
+  'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
   'lr-spatial-bin-select': CustomEvent<LyraSpatialBinSelectDetail>;
 }
 
 /**
- * `<lr-embedding-explorer>` — a dependency-free, accessible 2D embedding projection viewer. It
+ * `<lr-embedding-explorer>` — an accessible embedding projection viewer with a dependency-free
+ * builtin SVG renderer and an optional WebGL point renderer. It
  * normalizes host-provided coordinates into an SVG plot, colors optional clusters, and exposes
  * click/keyboard selection. Pointer, script, and assistive-technology focus all synchronize the
  * single roving tab stop. It does not run PCA/UMAP/t-SNE, fetch chunks, or mutate points.
@@ -116,7 +118,21 @@ export interface LyraEmbeddingExplorerEventMap {
  * visible text legend, so cluster meaning never depends on color alone.
  *
  * @customElement lr-embedding-explorer
- * @event lr-point-select - A point was activated. `detail: { point }`.
+ * Non-null source takes precedence over pointColumns, which takes precedence over points.
+ * Source mode retains its density renderer; requesting WebGL there reports an unsupported fallback.
+ * Immutable pointColumns are validated once per object assignment, support up to 1,000,000 rows,
+ * and use pages of 200 in the builtin and text alternatives. WebGL renders every admitted row;
+ * ordinary points retain their existing bounded snapshot semantics. Assign a new columns object
+ * to publish changes. Column arrays remain caller-owned and must not be mutated after assignment.
+ *
+ * @event lr-point-select - A point was activated. Detail preserves point and adds id and the admitted row index (sourceIndex in source mode).
+ * @event lr-engine-fallback - A renderer descended its fallback chain; detail contains from, to and reason.
+ * @csspart engine - The optional WebGL canvas container.
+ * @csspart engine-notice - Localized engine loading or fallback feedback.
+ * @csspart rows - The paginated text alternative.
+ * @csspart row - A focusable text point alternative.
+ * @csspart pagination - The page controls.
+ * @csspart page-button - A previous or next page action.
  * @event lr-spatial-bin-select - A density region was activated; detail contains revision, bounds and count.
  * @csspart bin - One focusable density region, distinct from representative point overlays.
  * @csspart error - Invalid or unavailable spatial source feedback.
@@ -155,6 +171,10 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
+    details: LYRA_DEFAULT_details,
     embeddingExplorerEmpty: LYRA_DEFAULT_embeddingExplorerEmpty,
     embeddingExplorerLabel: LYRA_DEFAULT_embeddingExplorerLabel,
     embeddingExplorerPoint: LYRA_DEFAULT_embeddingExplorerPoint,
@@ -164,10 +184,93 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     embeddingExplorerSpatialError: LYRA_DEFAULT_embeddingExplorerSpatialError,
     embeddingExplorerSpatialLoading: LYRA_DEFAULT_embeddingExplorerSpatialLoading,
     embeddingExplorerSpatialSummary: LYRA_DEFAULT_embeddingExplorerSpatialSummary,
+    engine3dContextLost: LYRA_DEFAULT_engine3dContextLost,
+    engine3dError: LYRA_DEFAULT_engine3dError,
+    engine3dLoading: LYRA_DEFAULT_engine3dLoading,
+    engine3dShowingBuiltin: LYRA_DEFAULT_engine3dShowingBuiltin,
+    engine3dShowingList: LYRA_DEFAULT_engine3dShowingList,
+    engine3dSoftwareRendering: LYRA_DEFAULT_engine3dSoftwareRendering,
+    engine3dUnavailable: LYRA_DEFAULT_engine3dUnavailable,
+    engine3dUnsupported: LYRA_DEFAULT_engine3dUnsupported,
+    largeDataInvalid: LYRA_DEFAULT_largeDataInvalid,
+    largeDataLimit: LYRA_DEFAULT_largeDataLimit,
+    loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    model: LYRA_DEFAULT_model,
+    next: LYRA_DEFAULT_next,
+    open: LYRA_DEFAULT_open,
+    paginationApplied: LYRA_DEFAULT_paginationApplied,
+    paginationLabel: LYRA_DEFAULT_paginationLabel,
+    previous: LYRA_DEFAULT_previous,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, specialistTokens, styles];
+
+  private readonly announcements = new AnnouncementSinkController(this);
+  private updatingRenderer = false;
+  private readonly renderer = new EmbeddingEngineController(this,
+    () => {
+      const update = () => super.requestUpdate('engineState', undefined, { hasChanged: () => true });
+      if (this.updatingRenderer) this.scheduleAfterUpdate(update, 'engine-state');
+      else update();
+    },
+    detail => {
+      this.announcements.announceAssertive(this.localize(ENGINE_3D_REASON_MESSAGE[detail.reason]));
+      this.announcements.announcePolite(this.localize(ENGINE_3D_SHOWING_MESSAGE[detail.to]));
+      this.emit('lr-engine-fallback', detail);
+    },
+    index => {
+      const point = this.rows?.point(index);
+      if (!point) return;
+      this.activeIndex = index;
+      this.select(point, index);
+    },
+  );
+  private _engine: Engine3dPreference = 'builtin';
+  /** Preferred local renderer. WebGL lazily loads the optional points companion; source mode
+   * continues to use the builtin density view and reports an unsupported fallback. */
+  @property({ converter: ENGINE_3D_PREFERENCE, noAccessor: true })
+  get engine(): Engine3dPreference { return this._engine; }
+  set engine(value: Engine3dPreference) {
+    const old = this._engine;
+    const normalized = ENGINE_3D_PREFERENCE.normalize(value);
+    if (normalized === old) return;
+    this._engine = normalized;
+    this.renderer?.invalidate();
+    this.requestUpdate('engine', old);
+  }
+
+  private _pointColumns: LyraPointColumns | null = null;
+  private columnRows: EmbeddingRows | null = null;
+  private columnIssue: TypedColumnIssue | null = null;
+  private ordinaryRows: EmbeddingRows | null = null;
+  /** Immutable typed columns, admitted once per new object. Non-null source wins; otherwise
+   * columns replace points, including empty or invalid columns. The builtin view pages 200 rows. */
+  @property({ attribute: false, noAccessor: true })
+  get pointColumns(): LyraPointColumns | null { return this._pointColumns; }
+  set pointColumns(value: LyraPointColumns | null) {
+    const old = this._pointColumns;
+    if (old === value) return;
+    this._pointColumns = value;
+    this.columnRows = null; this.columnIssue = null;
+    if (value !== null && value !== undefined) {
+      const admitted = validatePointColumns(value);
+      if (admitted.ok) {
+        const blank = admitted.columns.ids.findIndex(id => !id.trim());
+        if (blank >= 0) this.columnIssue = { code: 'invalid-id', column: 'ids', index: blank };
+        else this.columnRows = new EmbeddingRows(admitted.columns);
+      } else this.columnIssue = admitted.issue;
+    }
+    if (!this.source) this.renderer?.invalidate();
+    if (!this.source) this.activeIndex = 0;
+    this.cancelPointScan();
+    if (value == null && !this.source) this.refreshPoints();
+    this.requestUpdate('pointColumns', old);
+  }
+
+  private get rows(): EmbeddingRows | null { return this.pointColumns != null ? this.columnRows : this.ordinaryRows; }
+  private get enhanced(): boolean { return !this.source && (this.pointColumns != null || this.engine === 'webgl'); }
 
   private spatial = new SpatialSourceController(this, () => this.spatialChanged(), () => this.effectiveLocale);
   private spatialWaiters = new Set<() => void>();
@@ -179,14 +282,18 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   @property({ attribute: false, noAccessor: true })
   get source(): LyraSpatialPointSource<EmbeddingPoint & LyraSpatialPoint> | null { return this._source; }
   set source(value: LyraSpatialPointSource<EmbeddingPoint & LyraSpatialPoint> | null) {
-    const old = this._source; this._source = value; this.requestUpdate('source', old);
+    const old = this._source;
+    if (value === null && old === null) return;
+    this._source = value;
+    if (value !== old) this.renderer?.invalidate();
+    this.requestUpdate('source', old);
   }
   /** Visible coordinate bounds, or null for the full global domain. Noncollapsed global axes
    * require positive viewport spans; explicit bounds must stay inside the global domain. */
   @property({ attribute: false }) viewport: LyraSpatialBounds | null = null;
 
   private spatialChanged(): void {
-    super.requestUpdate('spatial');
+    super.requestUpdate('spatial', undefined, { hasChanged: () => true });
     if (!this.spatial?.loading || this.spatial.error) {
       for (const resolve of this.spatialWaiters ?? []) resolve();
       this.spatialWaiters?.clear();
@@ -253,7 +360,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   set points(value: readonly EmbeddingPoint[]) {
     if (Object.is(value, this.pointsSource) || Object.is(value, this._points)) return;
     this.pointsSource = value;
-    if (this.source === null) this.refreshPoints();
+    if (this.source === null && this.pointColumns == null) this.refreshPoints();
   }
 
   private cancelPointScan(): void {
@@ -263,6 +370,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   }
 
   private publishPoints(snapshot: readonly EmbeddingPoint[], sourceLength: number): void {
+    this.renderer?.invalidate();
     const previous = this._points;
     this.sampledFrom = sourceLength;
     this._points = snapshot;
@@ -327,22 +435,24 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       this.invalidateReveal();
       this.cancelPointScan();
       this.spatial.bind(this.source, this.viewport, Math.max(1, finiteCount(this.maxRenderedPoints, MAX_RENDERED_POINTS, 10000)), this.selectedPointId);
-      if (this.source === null && this.pointsSource !== undefined) this.refreshPoints();
+      if (this.source === null && this.pointColumns == null && this.pointsSource !== undefined) this.refreshPoints();
     } else if (this.source && this.spatial) {
       if (name === 'viewport' || name === 'maxRenderedPoints') this.spatial.configure(this.viewport, Math.max(1, finiteCount(this.maxRenderedPoints, MAX_RENDERED_POINTS, 10000)));
       if (name === 'selectedPointId') this.spatial.setSelected(this.selectedPointId);
-    } else if (name === undefined && this.pointsSource !== undefined) this.refreshPoints();
+    } else if (name === undefined && this.pointColumns == null && this.pointsSource !== undefined) this.refreshPoints();
     super.requestUpdate(name, oldValue, options);
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    super.requestUpdate('engineReconnect', undefined, { hasChanged: () => true });
     if (this.source) this.spatial.bind(this.source, this.viewport, Math.max(1, finiteCount(this.maxRenderedPoints, MAX_RENDERED_POINTS, 10000)), this.selectedPointId);
     else if (this.resumePointScan) this.refreshPoints();
     else this.queuePointScan();
   }
 
   override disconnectedCallback(): void {
+    this.renderer.disconnect();
     this.invalidateReveal();
     this.spatial.reset();
     this.spatialChanged();
@@ -352,6 +462,9 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   }
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.renderer.disconnect();
+    this.announcements.adopted();
+    super.requestUpdate('engineAdopted', undefined, { hasChanged: () => true });
     this.spatial.authority.adopted();
     if (this.source) this.spatial.bind(this.source, this.viewport, Math.max(1, finiteCount(this.maxRenderedPoints, MAX_RENDERED_POINTS, 10000)), this.selectedPointId);
   }
@@ -373,6 +486,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private activeIndex = 0;
   private refocusAfterUpdate = false;
+  private hasCompletedUpdate = false;
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
@@ -386,10 +500,11 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       this.validPoints = firstByRetrievalIdentity(
         Array.isArray(this.points) ? this.points : [],
         (point) =>
-          Number.isFinite(point.x) && Number.isFinite(point.y)
+          Number.isFinite(point.x) && Number.isFinite(point.y) && (point.z === undefined || Number.isFinite(point.z))
             ? point.id
             : undefined
       );
+      this.ordinaryRows = new EmbeddingRows(null, this.validPoints);
       this.pointPositions = new Map(this.validPoints.map((point, index) => [point.id, { point, index }]));
       this.bounds = extent(this.validPoints, (point) => point.x, (point) => point.y) ?? {
         minX: Infinity,
@@ -401,11 +516,25 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
         ...new Set(this.validPoints.map((point) => String(point.cluster ?? '').trim())),
       ].sort();
     }
-    if (changed.has('points') || changed.has('maxRenderedPoints')) {
+    if (this.enhanced) {
+      const rows = this.rows;
+      if (changed.has('pointColumns') || changed.has('points') || changed.has('engine') || (changed as Map<PropertyKey, unknown>).has('engineState')) {
+        const active = shadowFocusTarget(this);
+        const id = active?.getAttribute('data-id');
+        const index = id ? rows?.indices.get(id) : undefined;
+        if (index !== undefined) this.activeIndex = index;
+        this.refocusAfterUpdate = active?.getAttribute('part') === 'point' || active?.getAttribute('part') === 'row';
+      }
+      this.activeIndex = Math.min(Math.max(0, this.activeIndex), Math.max(0, (rows?.count ?? 0) - 1));
+      const page = largeDataPage(rows?.count ?? 0, Math.floor(this.activeIndex / LARGE_DATA_PAGE_SIZE));
+      this.renderedPoints = rows ? Array.from({ length: page.end - page.start }, (_, offset) => rows.point(page.start + offset)!) : [];
+      return;
+    }
+    if (changed.has('points') || changed.has('maxRenderedPoints') || changed.has('engine') || changed.has('pointColumns') || changed.has('source')) {
       this.sampledPoints = decimatePoints(this.validPoints, Math.max(1, finiteCount(this.maxRenderedPoints, MAX_RENDERED_POINTS, 10000)));
       this.sampledPointSet = new Set(this.sampledPoints);
     }
-    if (changed.has('points') || changed.has('selectedPointId') || changed.has('maxRenderedPoints')) {
+    if (changed.has('points') || changed.has('selectedPointId') || changed.has('maxRenderedPoints') || changed.has('engine') || changed.has('pointColumns') || changed.has('source')) {
       const selected = this.pointPositions.get(this.selectedPointId);
       this.renderedPoints = this.sampledPoints;
       if (selected && !this.sampledPointSet.has(selected.point)) {
@@ -432,6 +561,16 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (changed.has('height')) this.applyHeight();
+    this.updatingRenderer = true;
+    try {
+      this.renderer.update(this.engine, this.source ? null : this.rows, this.source !== null,
+        this.renderRoot.querySelector<HTMLElement>('[part="engine"]'),
+        this.rows?.indices.get(this.selectedPointId) ?? -1, this.activeIndex);
+    } finally {
+      this.updatingRenderer = false;
+    }
+    if (this.hasCompletedUpdate && changed.has('pointColumns') && this.columnIssue && !this.source) this.announcements.announceAssertive(this.columnError());
+    this.hasCompletedUpdate = true;
     if (!this.refocusAfterUpdate) return;
     this.refocusAfterUpdate = false;
     this.renderRoot
@@ -457,7 +596,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     bounds: { minX: number; maxX: number; minY: number; maxY: number }
   ): { x: number; y: number } {
     const { minX, maxX, minY, maxY } = bounds;
-    if (this.source) {
+    if (this.source || this.enhanced) {
       const ratio = (value: number, min: number, max: number): number => min === max ? 0.5 :
         Number.isFinite(max - min) ? (value - min) / (max - min) : (value / 2 - min / 2) / (max / 2 - min / 2);
       return { x: PAD + ratio(point.x, minX, maxX) * (WIDTH - PAD * 2), y: HEIGHT - PAD - ratio(point.y, minY, maxY) * (HEIGHT - PAD * 2) };
@@ -474,21 +613,22 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     return { x, y };
   }
 
-  private announceLabel(point: EmbeddingPoint, index: number): string {
+  private announceLabel(point: EmbeddingPoint, index: number, label = point.label || point.id): string {
     return this.localize('embeddingExplorerPoint', undefined, {
-      label: point.label || point.id,
+      label,
       index: getNumberFormat(this.effectiveLocale).format(index + 1),
     });
   }
 
-  private select(point: EmbeddingPoint): void {
+  private select(point: EmbeddingPoint, index?: number): void {
     if (this.source && (this.spatial.loading || this.spatial.error)) return;
-    this.emit('lr-point-select', { point });
+    const row = this.source ? (point as SpatialPoint).sourceIndex : this.rows?.indices.get(point.id) ?? index ?? -1;
+    this.emit('lr-point-select', { point, id: point.id, index: row });
   }
 
   private activatePoint(point: EmbeddingPoint, index: number): void {
     this.activeIndex = index;
-    this.select(point);
+    this.select(point, index);
   }
 
   private onPointKeyDown(
@@ -498,7 +638,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     current: () => boolean = () => true
   ): void {
     const points = this.renderedPoints;
-    const total = points.length + (this.source ? this.spatial.result?.bins.length ?? 0 : 0);
+    const total = this.enhanced ? this.rows?.count ?? 0 : points.length + (this.source ? this.spatial.result?.bins.length ?? 0 : 0);
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       if (!event.repeat) this.select(point);
@@ -544,9 +684,11 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     bounds: { minX: number; maxX: number; minY: number; maxY: number },
     clusterIndices: Map<string, number>
   ): TemplateResult {
+    const rows = this.rows;
+    const enhanced = this.enhanced;
     const current = this.source ? this.spatialActionGuard(() =>
       this.spatial.result?.points.includes(point as SpatialPoint) === true || this.spatial.selected === point || this.spatial.revealed === point
-    ) : () => true;
+    ) : () => !enhanced || this.isConnected && !this.source && rows === this.rows;
     const { x, y } = this.position(point, bounds);
     const label = this.announceLabel(point, this.source ? (point as SpatialPoint).sourceIndex : index);
     const cluster = String(point.cluster ?? '').trim();
@@ -554,12 +696,15 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     return svg`<g
       part="point"
       data-index=${index}
+      data-row=${index}
       data-id=${point.id}
       data-selected=${selected ? 'true' : 'false'}
       transform="translate(${x} ${y})"
       tabindex=${index === this.activeIndex ? '0' : '-1'}
       role="option"
       aria-selected=${selected ? 'true' : 'false'}
+      aria-posinset=${enhanced ? index + 1 : nothing}
+      aria-setsize=${enhanced ? rows?.count : nothing}
       aria-label=${label}
       aria-description=${cluster || nothing}
       @click=${(event: MouseEvent) => { if (current(event)) this.activatePoint(point, index); }}
@@ -581,7 +726,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
         vector-effect="non-scaling-stroke"
       ></line>
       <circle class="point-marker" r="6" fill=${
-        PALETTE[(clusterIndices.get(cluster) ?? 0) % PALETTE.length]
+        PALETTE[(!this.source && this.pointColumns != null ? rows?.category(index) ?? 0 : clusterIndices.get(cluster) ?? 0) % PALETTE.length]
       }></circle>
       ${nativeSvgTitle(label)}
     </g>`;
@@ -603,6 +748,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     const points = this.renderedPoints;
     const bins = model.result?.bins ?? [];
     return html`<div part="base" role="region" aria-label=${label} aria-busy=${model.loading ? 'true' : 'false'}>
+      ${this.engineNotice()}
       ${model.error ? html`<p part="error">${this.localize('embeddingExplorerSpatialError')}</p>` : nothing}
       ${view && model.result && !model.error ? html`<svg part="plot" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="listbox" aria-label=${label} aria-description=${summary} aria-disabled=${model.loading ? 'true' : 'false'}>
         ${bins.map((bin, offset) => {
@@ -630,8 +776,73 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     </div>`;
   }
 
+  private columnError(): string {
+    if (!this.columnIssue) return '';
+    const message = typedColumnIssueMessage(this.columnIssue, 'pointColumns', value => getNumberFormat(this.effectiveLocale).format(value));
+    return this.localize(message.key === 'largeDataLimit' ? 'largeDataLimit' : 'largeDataInvalid', undefined, message.values);
+  }
+
+  private engineNotice(): TemplateResult | typeof nothing {
+    const notice = this.renderer.notice;
+    if (notice) {
+      return html`<div part="engine-notice"><p>${this.localize(ENGINE_3D_REASON_MESSAGE[notice.reason])}</p><p>${this.localize(ENGINE_3D_SHOWING_MESSAGE[notice.to])}</p></div>`;
+    }
+    if (this.renderer.loading) return html`<p part="engine-notice">${this.localize('engine3dLoading')}</p>`;
+    if (this.renderer.software) return html`<p part="engine-notice">${this.localize('engine3dSoftwareRendering')}</p>`;
+    return nothing;
+  }
+
+  private movePage(delta: number): void {
+    const page = largeDataPage(this.rows?.count ?? 0, Math.floor(this.activeIndex / LARGE_DATA_PAGE_SIZE) + delta);
+    this.activeIndex = page.start;
+  }
+
+  private renderEnhanced(): TemplateResult {
+    const rows = this.rows;
+    const label = this.hasAttribute('aria-label') ? this.getAttribute('aria-label')! : this.label ?? this.accessibleLabel ?? this.localize('embeddingExplorerLabel');
+    const page = largeDataPage(rows?.count ?? 0, Math.floor(this.activeIndex / LARGE_DATA_PAGE_SIZE));
+    const number = getNumberFormat(this.effectiveLocale);
+    const clusterIndices = new Map(rows?.clusters.map((cluster, index) => [cluster, index]) ?? []);
+    const textOnly = this.renderer.ready || this.renderer.selection.renderer === 'list';
+    const current = () => this.isConnected && !this.source && rows === this.rows;
+    return html`<div part="base" role="region" aria-label=${label} aria-busy=${this.renderer.loading ? 'true' : 'false'}>
+      ${this.engineNotice()}
+      ${this.columnIssue ? html`<p part="error">${this.columnError()}</p>` : nothing}
+      ${!this.columnIssue && !rows?.count ? html`<p part="empty">${this.localize('embeddingExplorerEmpty')}</p>` : nothing}
+      ${rows?.count ? html`
+        <div class="engine-viewport">
+          ${this.engine === 'webgl' ? html`<div part="engine" aria-hidden="true" ?hidden=${this.renderer.notice !== null}></div>` : nothing}
+          ${!textOnly ? html`<svg part="plot" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="listbox" aria-label=${label}>
+            ${this.renderedPoints.map((point, offset) => this.renderPoint(point, page.start + offset, rows.bounds, clusterIndices))}
+          </svg>` : nothing}
+        </div>
+        ${textOnly ? html`<div part="rows" role="listbox" aria-label=${label}>
+          ${this.renderedPoints.map((point, offset) => {
+            const index = page.start + offset;
+            const coordinates = (point.z === undefined ? [point.x, point.y] : [point.x, point.y, point.z]).map(value => number.format(value)).join(', ');
+            const visibleLabel = [point.label || point.id, coordinates, point.cluster ?? ''].join(' ').trim();
+            return html`<div part="row" role="option" data-index=${index} data-row=${index} data-id=${point.id}
+              tabindex=${index === this.activeIndex ? '0' : '-1'} aria-selected=${point.id === this.selectedPointId ? 'true' : 'false'}
+              aria-posinset=${index + 1} aria-setsize=${rows.count}
+              aria-label=${this.announceLabel(point, index, visibleLabel)} aria-description=${String(point.cluster ?? '').trim() || nothing}
+              @focus=${() => { if (current()) this.activeIndex = index; }}
+              @click=${() => { if (current()) this.activatePoint(point, index); }}
+              @keydown=${(event: KeyboardEvent) => { if (current()) this.onPointKeyDown(event, point, index, current); }}
+            ><span>${point.label || point.id}</span> <span>${coordinates}</span> <span>${point.cluster ?? ''}</span></div>`;
+          })}
+        </div>` : nothing}
+        ${!textOnly ? html`<div part="legend" role="list">${[...new Map(this.renderedPoints.map((point, offset) => [String(point.cluster ?? ''), page.start + offset])).entries()].filter(([cluster]) => cluster.trim()).map(([cluster, index]) => html`<span part="legend-item" role="listitem"><svg part="legend-swatch" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><circle cx="6" cy="6" r="5" fill=${PALETTE[(rows.category(index)) % PALETTE.length]}></circle></svg><span part="legend-label">${cluster}</span></span>`)}</div>` : nothing}
+        <div part="pagination" role="group" aria-label=${this.localize('paginationLabel')}>
+          <button part="page-button" type="button" ?disabled=${page.page === 0} @click=${() => { if (current()) this.movePage(-1); }}>${this.localize('previous')}</button>
+          <span>${this.localize('paginationApplied', undefined, { page: number.format(page.page + 1), totalPages: number.format(page.pageCount) })}</span>
+          <button part="page-button" type="button" ?disabled=${page.page + 1 === page.pageCount} @click=${() => { if (current()) this.movePage(1); }}>${this.localize('next')}</button>
+        </div>` : nothing}
+    </div>`;
+  }
+
   override render(): TemplateResult {
     if (this.source) return this.renderSpatial();
+    if (this.enhanced) return this.renderEnhanced();
     const points = this.validPoints;
     const label = this.hasAttribute('aria-label')
       ? this.getAttribute('aria-label')!

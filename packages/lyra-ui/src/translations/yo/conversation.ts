@@ -54,7 +54,6 @@ const strings: LyraLocaleStrings = {
   feedbackSubmit: 'Fi ìdáhùn ránṣẹ́',
   feedbackSubmitted: 'A ti fi ìdáhùn ránṣẹ́',
   suggestionsLabel: 'Àwọn prompt àbá',
-  model: 'Àwòṣe',
   selectModel: 'Yan àwòṣe…',
   modelSelectNoModels: 'Kò sí àwòṣe',
   modelSelectRequired: 'Jọ̀wọ́ yan àwòṣe kan.',

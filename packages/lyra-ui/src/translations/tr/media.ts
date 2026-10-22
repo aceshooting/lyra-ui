@@ -149,6 +149,8 @@ const strings: LyraLocaleStrings = {
   mapExportUnavailable: 'Harita görüntüsü dışa aktarılamadı',
   mapDrawingVertex: 'Köşe noktası {index}',
   mapDrawingEditInstructions: 'Bu köşe noktasını taşımak için ok tuşlarını kullanın; daha büyük adımlar için Shift tuşunu basılı tutun. Page Up ve Page Down köşe noktalarını seçer. Home ve End ilk ve son görünür köşe noktasını seçer.',
+  panoramaInstructions: 'Etrafa bakmak için ok tuşlarını, yakınlaştırmak ve uzaklaştırmak için artı ve eksiyi, görünümü sıfırlamak için Home tuşunu kullanın.',
+  panoramaHotspotsLabel: 'Panoramadaki etkileşimli noktalar',
 };
 
 registerLyraLocale('tr', strings);

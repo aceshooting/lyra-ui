@@ -97,6 +97,7 @@ const strings: LyraLocaleStrings = {
   popover: 'Cửa sổ bật lên',
   details: 'Chi tiết',
   map: 'Bản đồ',
+  model: 'Mô hình',
   select: 'Chọn',
   sourceListDefaultLabel: 'Nguồn',
   thinkingPanelLabel: 'Đang suy nghĩ',

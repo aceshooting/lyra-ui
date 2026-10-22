@@ -83,10 +83,42 @@ export function runtimeModuleSpecifiers(source, file = 'component.ts') {
   return runtimeModuleSpecifiersFromProgram(parseOptionalPeerProgram(source, file));
 }
 
-const REMOTE_ICON_CAPABILITY_REGISTRATIONS = new Set([
-  path.join(packageDir, 'src/components/utility/icon/icon.ts'),
-  path.join(packageDir, 'src/components/forms/icon-button/icon-button.ts'),
-]);
+// A composed child lends an optional peer to its parent only when the parent forwards the
+// author-settable property that reaches it: a registered icon resolver routes `src`/`library`
+// through the sanitized fetch path, and each optional 3D renderer loads only once its owning
+// element enables it.
+const CAPABILITY_GATES = [
+  {
+    modules: [
+      'src/components/utility/icon/icon.ts',
+      'src/components/forms/icon-button/icon-button.ts',
+    ],
+    tags: ['icon-button', 'icon'],
+    attributes: ['src', 'library'],
+  },
+  {
+    modules: ['src/components/media/image-viewer/image-viewer-panorama.ts'],
+    tags: ['image-viewer', 'video'],
+    attributes: ['projection'],
+  },
+  {
+    modules: ['src/components/retrieval/graph/graph-engine-adapter.ts'],
+    tags: ['graph'],
+    attributes: ['engine'],
+  },
+  {
+    modules: ['src/components/retrieval/embedding-explorer/embedding-explorer-engine.ts'],
+    tags: ['embedding-explorer'],
+    attributes: ['engine'],
+  },
+].map(({ modules, tags, attributes }) => ({
+  modules: new Set(modules.map((module) => path.join(packageDir, module))),
+  startTag: new RegExp(`^<\\s*lr-(?:${tags.join('|')})(?=[\\s/>])`, 'i'),
+  binding: new RegExp(
+    `(?:^|[\\t\\n\\f\\r ])\\.?(?:${attributes.join('|')})\\s*=\\s*["']?\\s*$`,
+    'i'
+  ),
+}));
 
 function rootAuthorSettablePropertyNames(component, rootFile) {
   const names = new Set(
@@ -270,7 +302,7 @@ function currentLiveStaticStartTag(prefix) {
   return mode === 'start-tag' && start >= 0 ? prefix.slice(start) : '';
 }
 
-function programForwardsRemoteIconCapability(program, propertyNames) {
+function programForwardsCapability(program, propertyNames, gate) {
   if (propertyNames.size === 0) return false;
   let forwards = false;
   visitNodes(program, (node) => {
@@ -285,13 +317,11 @@ function programForwardsRemoteIconCapability(program, propertyNames) {
     for (let index = 0; index < expressions.length; index += 1) {
       prefix += quasis[index]?.value?.cooked ?? quasis[index]?.value?.raw ?? '';
       const openTag = currentLiveStaticStartTag(prefix);
-      const bindsRemoteCapability =
-        /^<\s*lr-(?:icon-button|icon)(?=[\s/>])/i.test(openTag) &&
-        /(?:^|[\t\n\f\r ])\.?(?:src|library)\s*=\s*["']?\s*$/i.test(
-          quasis[index]?.value?.cooked ?? quasis[index]?.value?.raw ?? ''
-        );
+      const bindsCapability =
+        gate.startTag.test(openTag) &&
+        gate.binding.test(quasis[index]?.value?.cooked ?? quasis[index]?.value?.raw ?? '');
       if (
-        bindsRemoteCapability &&
+        bindsCapability &&
         expressionReadsAuthorSettableProperty(expressions[index], propertyNames)
       ) {
         forwards = true;
@@ -308,9 +338,10 @@ export function sourceForwardsRemoteIconCapability(
   propertyNames,
   file = 'component.ts'
 ) {
-  return programForwardsRemoteIconCapability(
+  return programForwardsCapability(
     parseOptionalPeerProgram(source, file),
-    propertyNames
+    propertyNames,
+    CAPABILITY_GATES[0]
   );
 }
 
@@ -374,19 +405,23 @@ export function optionalPeersForComponent(component, packageJson) {
   const rootFile = path.join(packageDir, component.registrationModule);
   const propertyNames = rootAuthorSettablePropertyNames(component, rootFile);
   const queue = [{ file: rootFile, rootOwned: true }];
-  const deferredRemoteRegistrations = new Map();
-  const pendingRootPrograms = [];
-  let remoteCapabilityGateReached = false;
-  let forwardsRemoteIconCapability = false;
-  const checkPendingRootPrograms = () => {
-    if (forwardsRemoteIconCapability || pendingRootPrograms.length === 0) return;
-    forwardsRemoteIconCapability = pendingRootPrograms.some((program) =>
-      programForwardsRemoteIconCapability(program, propertyNames)
+  const rootPrograms = [];
+  const gates = CAPABILITY_GATES.map((gate) => ({
+    gate,
+    reached: false,
+    forwards: false,
+    deferred: new Map(),
+  }));
+  // A gate settles only once the walk reaches one of its child-owned modules: against every root
+  // program seen so far, then against each later one, re-queueing what it held back on success.
+  const settle = (state, candidates) => {
+    if (!state.reached || state.forwards) return;
+    state.forwards = candidates.some((program) =>
+      programForwardsCapability(program, propertyNames, state.gate)
     );
-    pendingRootPrograms.length = 0;
-    if (forwardsRemoteIconCapability) {
-      queue.push(...deferredRemoteRegistrations.values());
-      deferredRemoteRegistrations.clear();
+    if (state.forwards) {
+      queue.push(...state.deferred.values());
+      state.deferred.clear();
     }
   };
 
@@ -401,27 +436,28 @@ export function optionalPeersForComponent(component, packageJson) {
       programs.set(file, program);
     }
 
-    if (file !== rootFile && REMOTE_ICON_CAPABILITY_REGISTRATIONS.has(file)) {
+    if (rootOwned && file !== rootFile && programDefinesComponent(program)) {
       rootOwned = false;
-      if (!forwardsRemoteIconCapability) {
-        remoteCapabilityGateReached = true;
-        checkPendingRootPrograms();
+    }
+    const gate = rootOwned ? undefined : gates.find((state) => state.gate.modules.has(file));
+    if (gate && !gate.forwards) {
+      if (!gate.reached) {
+        gate.reached = true;
+        settle(gate, rootPrograms);
       }
-      if (!forwardsRemoteIconCapability) {
-        deferredRemoteRegistrations.set(file, { file, rootOwned, program });
+      if (!gate.forwards) {
+        gate.deferred.set(file, { file, rootOwned });
         continue;
       }
-    } else if (rootOwned && file !== rootFile && programDefinesComponent(program)) {
-      rootOwned = false;
     }
 
     const visitKey = `${rootOwned ? 'root' : 'child'}\0${file}`;
     if (seen.has(visitKey)) continue;
     seen.add(visitKey);
 
-    if (rootOwned && !forwardsRemoteIconCapability) {
-      pendingRootPrograms.push(program);
-      if (remoteCapabilityGateReached) checkPendingRootPrograms();
+    if (rootOwned) {
+      rootPrograms.push(program);
+      for (const state of gates) settle(state, [program]);
     }
 
     for (const specifier of runtimeModuleSpecifiersFromProgram(program)) {

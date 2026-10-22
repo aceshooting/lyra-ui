@@ -129,6 +129,9 @@ export const styles = css`
     touch-action: none;
     transition: var(--lr-transition-interactive);
   }
+  .webgl-surface { position: relative; }
+  .webgl-surface[hidden] { display: none; }
+  [data-graph-labels] { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none; }
   [part="spatial-list"] {
     min-block-size: 0;
     overflow: auto;
