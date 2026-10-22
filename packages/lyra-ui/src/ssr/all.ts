@@ -177,6 +177,7 @@ import '../components/conversation/message-parts/message-parts.js';
 import '../components/retrieval/mind-map/mind-map.js';
 import '../components/conversation/model-select/model-select.js';
 import '../components/conversation/model-settings-panel/model-settings-panel.js';
+import '../components/viewers/model-viewer/model-viewer.js';
 import '../components/layout/multi-split/multi-split.js';
 import '../components/utility/mutation-observer/mutation-observer.js';
 import '../components/forms/input/native-time-input.js';

@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'कागज के तुलना',
   documentCompareOldVersion: 'पुरान संस्करण',
   documentCompareNewVersion: 'नया संस्करण',
+  modelViewerLabel: '3D मॉडल',
+  modelViewerAlternative: '3D मॉडल के पूर्वावलोकन। दोसर व्यूअर में खोले खातिर सोर्स फाइल डाउनलोड करीं।',
+  modelViewerInstructions: 'घुमावे खातिर तीर वाला कुंजी, ज़ूम खातिर प्लस भा माइनस, आ मॉडल के फिट करे खातिर Home दबाईं।',
+  modelViewerReady: 'मॉडल तैयार बा।',
+  modelViewerEmpty: 'एह मॉडल में कवनो दिखे वाला ज्यामिति नइखे।',
+  modelViewerProgress: '{total} में से {loaded} बाइट लोड हो गइल।',
+  modelViewerInvalid: 'ई मॉडल देखावल ना जा सकल।',
+  modelViewerUnsupportedFormat: 'ई मॉडल फॉर्मेट सपोर्टेड नइखे।',
+  modelViewerFit: 'मॉडल के फिट करीं',
+  modelViewerRotateLeft: 'बाईं ओर घुमाईं',
+  modelViewerRotateRight: 'दाहिना ओर घुमाईं',
+  modelViewerRotateUp: 'ऊपर घुमाईं',
+  modelViewerRotateDown: 'नीचे घुमाईं',
 };
 
 registerLyraLocale('bho', strings);

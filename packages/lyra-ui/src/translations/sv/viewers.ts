@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Dokumentjämförelse',
   documentCompareOldVersion: 'Gammal version',
   documentCompareNewVersion: 'Ny version',
+  modelViewerLabel: '3D-modell',
+  modelViewerAlternative: 'Förhandsgranskning av en 3D-modell. Ladda ned källfilen för att öppna den i en annan visare.',
+  modelViewerInstructions: 'Använd piltangenterna för att rotera, plus eller minus för att zooma och Home för att anpassa modellen.',
+  modelViewerReady: 'Modellen är klar.',
+  modelViewerEmpty: 'Den här modellen innehåller ingen synlig geometri.',
+  modelViewerProgress: '{loaded} av {total} byte inlästa.',
+  modelViewerInvalid: 'Den här modellen kunde inte visas.',
+  modelViewerUnsupportedFormat: 'Det här modellformatet stöds inte.',
+  modelViewerFit: 'Anpassa modell',
+  modelViewerRotateLeft: 'Rotera åt vänster',
+  modelViewerRotateRight: 'Rotera åt höger',
+  modelViewerRotateUp: 'Rotera uppåt',
+  modelViewerRotateDown: 'Rotera nedåt',
 };
 
 registerLyraLocale('sv', strings);

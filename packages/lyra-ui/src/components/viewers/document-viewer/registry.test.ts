@@ -13,6 +13,7 @@ import {
   type LyraDocumentRendererDefinition,
   type LyraAvDocumentRendererPayload,
 } from './registry.js';
+import { snapshotLyraAvCues, snapshotLyraAvTracks } from '../../media/av-player/av-metadata.js';
 import type { LyraAnchor, LyraHighlight } from './anchors.js';
 
 const PDF_FILE: LyraDocumentFile = {
@@ -561,5 +562,19 @@ describe('LyraDocumentRendererPayload adapters', () => {
     expect(() => createDocumentRendererRegistry([
       ['application/x-invalid', { adapter, capabilities: { search: true } } as never],
     ])).to.throw(TypeError);
+  });
+});
+
+describe('shared AV metadata ownership', () => {
+  it('retains public AV snapshots through document payload normalization', () => {
+    const cues = snapshotLyraAvCues([{ cueId: 'intro', start: 0, text: 'Introduction' }]);
+    const tracks = snapshotLyraAvTracks([
+      { src: 'https://example.test/captions.vtt', kind: 'captions', srclang: 'en', label: 'English' },
+    ]);
+    const payload = snapshotLyraDocumentRendererPayload({ kind: 'av', file: PDF_FILE, cues, tracks });
+    expect(payload.kind).to.equal('av');
+    if (payload.kind !== 'av') throw new Error('Expected an AV payload');
+    expect(payload.cues).to.equal(cues);
+    expect(payload.tracks).to.equal(tracks);
   });
 });

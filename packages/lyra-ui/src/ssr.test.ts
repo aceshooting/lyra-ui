@@ -78,7 +78,7 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
     const staticSafeCount = values.filter((value) => value === 'static-safe').length;
     const hydrationRequiredCount = values.filter((value) => value === 'hydration-required').length;
     expect(staticSafeCount).to.equal(240);
-    expect(hydrationRequiredCount).to.equal(51);
+    expect(hydrationRequiredCount).to.equal(52);
     expect(staticSafeCount + hydrationRequiredCount).to.equal(LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length);
   });
 
@@ -105,6 +105,15 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
     });
     expect(getLyraSsrMode('lr-geojson-viewer')).to.equal('render-and-hydrate');
     expect(getLyraSsrStaticSafety('lr-geojson-viewer')).to.equal('hydration-required');
+  });
+
+  it('classifies the model viewer as hydration-required for its WebGL canvas and fetched model', () => {
+    expect(LYRA_SSR_TAG_CAPABILITIES['lr-model-viewer']).to.deep.equal({
+      canvas: 'after-hydration',
+      remoteContent: 'client-only',
+    });
+    expect(getLyraSsrMode('lr-model-viewer')).to.equal('render-and-hydrate');
+    expect(getLyraSsrStaticSafety('lr-model-viewer')).to.equal('hydration-required');
   });
 
   it('classifies host-owned agent state with complete server-rendered content as static-safe', () => {

@@ -241,6 +241,10 @@ export const LYRA_SSR_TAG_CAPABILITIES = Object.freeze({
   [tag('geojson-viewer')]: {
     remoteContent: 'client-only', // renders feature geometry fetched and parsed from the src document
   },
+  [tag('model-viewer')]: {
+    canvas: 'after-hydration', // paints the parsed model onto a WebGL canvas surface
+    remoteContent: 'client-only', // renders geometry fetched from the src document and parsed by the optional engine
+  },
   [tag('document-viewer')]: {
     remoteContent: 'client-only', // lazily loads and composes the renderer matching the requested document, so its body has no content until that load resolves
   },

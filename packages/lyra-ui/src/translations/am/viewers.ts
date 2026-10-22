@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'የሰነድ ንጽጽር',
   documentCompareOldVersion: 'የቀድሞ ስሪት',
   documentCompareNewVersion: 'አዲስ ስሪት',
+  modelViewerLabel: '3D ሞዴል',
+  modelViewerAlternative: 'የ3D ሞዴል ቅድመ እይታ። በሌላ መመልከቻ ለመክፈት የምንጭ ፋይሉን ያውርዱ።',
+  modelViewerInstructions: 'ለማዞር የቀስት ቁልፎችን፣ ለማጉላት ወይም ለማሳነስ ፕላስ ወይም ሚነስ፣ ሞዴሉን ለማስማማት Home ይጠቀሙ።',
+  modelViewerReady: 'ሞዴሉ ዝግጁ ነው።',
+  modelViewerEmpty: 'ይህ ሞዴል የሚታይ ጂኦሜትሪ የለውም።',
+  modelViewerProgress: '{loaded} ከ{total} ባይት ተጭኗል።',
+  modelViewerInvalid: 'ይህ ሞዴል ሊታይ አልቻለም።',
+  modelViewerUnsupportedFormat: 'ይህ የሞዴል ቅርጸት አይደገፍም።',
+  modelViewerFit: 'ሞዴሉን አስማማ',
+  modelViewerRotateLeft: 'ወደ ግራ አዙር',
+  modelViewerRotateRight: 'ወደ ቀኝ አዙር',
+  modelViewerRotateUp: 'ወደ ላይ አዙር',
+  modelViewerRotateDown: 'ወደ ታች አዙር',
 };
 
 registerLyraLocale('am', strings);

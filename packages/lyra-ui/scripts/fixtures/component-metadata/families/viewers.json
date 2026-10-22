@@ -1,7 +1,9 @@
 {
   "family": "viewers",
   "assignments": {
-    "new-component-experimental": [],
+    "new-component-experimental": [
+      "lr-model-viewer"
+    ],
     "published-stable": [
       "lr-archive-viewer",
       "lr-calendar-viewer",

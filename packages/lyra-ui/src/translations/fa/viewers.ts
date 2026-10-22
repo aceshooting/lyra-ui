@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'مقایسه اسناد',
   documentCompareOldVersion: 'نسخه قدیمی',
   documentCompareNewVersion: 'نسخه جدید',
+  modelViewerLabel: 'مدل سه‌بعدی',
+  modelViewerAlternative: 'پیش‌نمایش مدل سه‌بعدی. برای باز کردن در نمایشگر دیگر، فایل منبع را دانلود کنید.',
+  modelViewerInstructions: 'برای چرخاندن از کلیدهای جهت‌دار، برای بزرگ‌نمایی یا کوچک‌نمایی از مثبت یا منفی و برای جا دادن مدل از Home استفاده کنید.',
+  modelViewerReady: 'مدل آماده است.',
+  modelViewerEmpty: 'این مدل هندسه قابل‌مشاهده‌ای ندارد.',
+  modelViewerProgress: '{loaded} از {total} بایت بارگیری شد.',
+  modelViewerInvalid: 'نمایش این مدل ممکن نشد.',
+  modelViewerUnsupportedFormat: 'قالب این مدل پشتیبانی نمی‌شود.',
+  modelViewerFit: 'جا دادن مدل',
+  modelViewerRotateLeft: 'چرخش به چپ',
+  modelViewerRotateRight: 'چرخش به راست',
+  modelViewerRotateUp: 'چرخش به بالا',
+  modelViewerRotateDown: 'چرخش به پایین',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

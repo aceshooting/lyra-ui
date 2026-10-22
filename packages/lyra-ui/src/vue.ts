@@ -383,6 +383,8 @@ export type LyraModelSelectVueProps = LyraVueCustomElement<'lr-model-select'>;
 
 export type LyraModelSettingsPanelVueProps = LyraVueCustomElement<'lr-model-settings-panel'>;
 
+export type LyraModelViewerVueProps = LyraVueCustomElement<'lr-model-viewer'>;
+
 export type LyraMultiSplitVueProps = LyraVueCustomElement<'lr-multi-split'>;
 
 export type LyraMutationObserverVueProps = LyraVueCustomElement<'lr-mutation-observer'>;
@@ -827,6 +829,7 @@ export interface LyraVueGlobalComponents {
   'lr-mind-map': LyraMindMapVueProps;
   'lr-model-select': LyraModelSelectVueProps;
   'lr-model-settings-panel': LyraModelSettingsPanelVueProps;
+  'lr-model-viewer': LyraModelViewerVueProps;
   'lr-multi-split': LyraMultiSplitVueProps;
   'lr-mutation-observer': LyraMutationObserverVueProps;
   'lr-native-time-input': LyraNativeTimeInputVueProps;

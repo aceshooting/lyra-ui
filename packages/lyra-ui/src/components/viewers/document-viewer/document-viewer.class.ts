@@ -2,7 +2,7 @@ import { collectionSupport, snapshotPublicCollection } from '../../../internal/c
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { documentRendererRegistrySource } from './registry-ownership.js';
+import { documentRendererRegistrySource } from '../../../internal/document-renderer-registry-ownership.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import type { DialogCloseReason, LyraDialogCloseDetail } from '../../overlays/dialog/dialog.class.js';

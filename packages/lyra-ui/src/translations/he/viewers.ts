@@ -136,6 +136,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'השוואת מסמכים',
   documentCompareOldVersion: 'גרסה ישנה',
   documentCompareNewVersion: 'גרסה חדשה',
+  modelViewerLabel: 'מודל תלת-ממדי',
+  modelViewerAlternative: 'תצוגה מקדימה של מודל תלת-ממדי. הורידו את קובץ המקור כדי לפתוח אותו בצופה אחר.',
+  modelViewerInstructions: 'השתמשו במקשי החיצים לסיבוב, בפלוס או במינוס להתקרבות והתרחקות, ובמקש Home להתאמת המודל.',
+  modelViewerReady: 'המודל מוכן.',
+  modelViewerEmpty: 'במודל זה אין גאומטריה גלויה.',
+  modelViewerProgress: 'נטענו {loaded} מתוך {total} בתים.',
+  modelViewerInvalid: 'לא ניתן היה להציג מודל זה.',
+  modelViewerUnsupportedFormat: 'פורמט המודל אינו נתמך.',
+  modelViewerFit: 'התאמת המודל',
+  modelViewerRotateLeft: 'סיבוב שמאלה',
+  modelViewerRotateRight: 'סיבוב ימינה',
+  modelViewerRotateUp: 'סיבוב למעלה',
+  modelViewerRotateDown: 'סיבוב למטה',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

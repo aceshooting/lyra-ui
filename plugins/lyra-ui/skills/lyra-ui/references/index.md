@@ -2,7 +2,7 @@
 
 # Component index
 
-309 custom elements, grouped by the source family they live in.
+310 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -231,7 +231,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-box-plot` · lr-box-plot.js · `stable` since `4.0.0` — a box-and-whisker chart from precomputed five-number summaries (no raw sample data is shipped to the browser).
 - `lr-chart-3d` · lr-chart-3d.js · `experimental` since `unreleased` — a bounded three-dimensional scatter, bubble or source-order line chart over immutable typed columns, with an always-available accessible...
 
-## Document & file viewers — `components/viewers/` (22)
+## Document & file viewers — `components/viewers/` (23)
 
 - `lr-document-preview` · lr-document-preview.js · `stable` since `4.0.0` — a format-dispatching viewer for one document/ attachment, plus the visual state machine for an async server-side conversion a host app...
 - `lr-document-viewer` · lr-document-viewer.js · `stable` since `4.0.0` — A dialog-hosted document viewer with a pluggable MIME-type renderer registry.
@@ -255,6 +255,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-xml-viewer` · lr-xml-viewer.js · `stable` since `4.0.0` — Property-only treeSource takes display precedence over xml/src without parsing provider records.
 - `lr-document-compare` · lr-document-compare.js · `stable` since `4.1.0` — side-by-side or inline comparison of two document versions, composed entirely from two existing primitives rather than reimplementing...
 - `lr-geojson-viewer` · lr-geojson-viewer.js · `stable` since `9.0.0` — document-registry bridge rendering a fetched GeoJSON file through `<lr-map>`'s `dataLayers`.
+- `lr-model-viewer` · lr-model-viewer.js · `experimental` since `unreleased` — Bounded static 3D model and point-cloud viewer with a persistent text alternative.
 
 ## Conversation & chat UI — `components/conversation/` (34)
 

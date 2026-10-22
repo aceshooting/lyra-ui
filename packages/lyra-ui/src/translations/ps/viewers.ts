@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'د سند پرتله',
   documentCompareOldVersion: 'پخوانۍ نسخه',
   documentCompareNewVersion: 'نوې نسخه',
+  modelViewerLabel: '۳ بُعدي ماډل',
+  modelViewerAlternative: 'د ۳ بُعدي ماډل مخکتنه. په بل کتونکي کې د پرانیستلو لپاره د سرچینې فایل ښکته کړئ.',
+  modelViewerInstructions: 'د ګرځولو لپاره د غشي کیلي، د لوی یا کوچنی کولو لپاره پلس یا مائنس او د ماډل برابرولو لپاره Home وکاروئ.',
+  modelViewerReady: 'ماډل چمتو دی.',
+  modelViewerEmpty: 'دا ماډل هیڅ لیدونکې جیومیټري نلري.',
+  modelViewerProgress: 'له {total} بایټونو څخه {loaded} بایټه بار شول.',
+  modelViewerInvalid: 'دا ماډل نه شو ښودل کېدای.',
+  modelViewerUnsupportedFormat: 'د دې ماډل بڼه نه ملاتړ کېږي.',
+  modelViewerFit: 'ماډل برابر کړئ',
+  modelViewerRotateLeft: 'کیڼ لوري ته وګرځوئ',
+  modelViewerRotateRight: 'ښي لوري ته وګرځوئ',
+  modelViewerRotateUp: 'پورته وګرځوئ',
+  modelViewerRotateDown: 'ښکته وګرځوئ',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

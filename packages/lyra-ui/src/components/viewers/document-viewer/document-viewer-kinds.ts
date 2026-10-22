@@ -23,3 +23,4 @@ export * from '../calendar-viewer/calendar-viewer-register.js';
 export * from '../contact-viewer/contact-viewer-register.js';
 export * from '../html-viewer/html-viewer-register.js';
 export * from '../svg-viewer/svg-viewer-register.js';
+export * from '../model-viewer/model-viewer-register.js';

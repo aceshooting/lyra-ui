@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Ulinganisho wa nyaraka',
   documentCompareOldVersion: 'Toleo la zamani',
   documentCompareNewVersion: 'Toleo jipya',
+  modelViewerLabel: 'Modeli ya 3D',
+  modelViewerAlternative: 'Onyesho la awali la modeli ya 3D. Pakua faili chanzo ili kuifungua katika kitazamaji kingine.',
+  modelViewerInstructions: 'Tumia vitufe vya mishale kuzungusha, kujumlisha au kutoa ili kukuza, na Home ili kutosheleza modeli.',
+  modelViewerReady: 'Modeli iko tayari.',
+  modelViewerEmpty: 'Modeli hii haina jiometri inayoonekana.',
+  modelViewerProgress: 'Baiti {loaded} kati ya {total} zimepakiwa.',
+  modelViewerInvalid: 'Modeli hii haikuweza kuonyeshwa.',
+  modelViewerUnsupportedFormat: 'Umbizo la modeli hii halitumiki.',
+  modelViewerFit: 'Tosheleza modeli',
+  modelViewerRotateLeft: 'Zungusha kushoto',
+  modelViewerRotateRight: 'Zungusha kulia',
+  modelViewerRotateUp: 'Zungusha juu',
+  modelViewerRotateDown: 'Zungusha chini',
 };
 
 registerLyraLocale('sw', strings);

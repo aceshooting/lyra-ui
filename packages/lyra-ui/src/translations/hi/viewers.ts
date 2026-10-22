@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'दस्तावेज़ तुलना',
   documentCompareOldVersion: 'पुराना संस्करण',
   documentCompareNewVersion: 'नया संस्करण',
+  modelViewerLabel: '3D मॉडल',
+  modelViewerAlternative: '3D मॉडल का पूर्वावलोकन। किसी अन्य व्यूअर में खोलने के लिए स्रोत फ़ाइल डाउनलोड करें।',
+  modelViewerInstructions: 'घुमाने के लिए तीर कुंजियों, ज़ूम के लिए प्लस या माइनस और मॉडल को फ़िट करने के लिए Home का उपयोग करें।',
+  modelViewerReady: 'मॉडल तैयार है।',
+  modelViewerEmpty: 'इस मॉडल में कोई दिखाई देने वाली ज्यामिति नहीं है।',
+  modelViewerProgress: '{total} में से {loaded} बाइट लोड हुए।',
+  modelViewerInvalid: 'यह मॉडल प्रदर्शित नहीं किया जा सका।',
+  modelViewerUnsupportedFormat: 'यह मॉडल फ़ॉर्मेट समर्थित नहीं है।',
+  modelViewerFit: 'मॉडल फ़िट करें',
+  modelViewerRotateLeft: 'बाएँ घुमाएँ',
+  modelViewerRotateRight: 'दाएँ घुमाएँ',
+  modelViewerRotateUp: 'ऊपर घुमाएँ',
+  modelViewerRotateDown: 'नीचे घुमाएँ',
 };
 
 registerLyraLocale('hi', strings);

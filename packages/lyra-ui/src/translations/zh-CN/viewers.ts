@@ -130,6 +130,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: '文档对比',
   documentCompareOldVersion: '旧版本',
   documentCompareNewVersion: '新版本',
+  modelViewerLabel: '3D 模型',
+  modelViewerAlternative: '3D 模型预览。下载源文件即可在其他查看器中打开。',
+  modelViewerInstructions: '使用方向键旋转，使用加号或减号缩放，按 Home 键使模型适应视图。',
+  modelViewerReady: '模型已就绪。',
+  modelViewerEmpty: '此模型不包含可见的几何体。',
+  modelViewerProgress: '已加载 {loaded}/{total} 字节。',
+  modelViewerInvalid: '无法显示此模型。',
+  modelViewerUnsupportedFormat: '不支持此模型格式。',
+  modelViewerFit: '适应模型',
+  modelViewerRotateLeft: '向左旋转',
+  modelViewerRotateRight: '向右旋转',
+  modelViewerRotateUp: '向上旋转',
+  modelViewerRotateDown: '向下旋转',
 };
 
 registerLyraLocale('zh-CN', strings);

@@ -130,6 +130,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'စာတမ်း နှိုင်းယှဉ်မှု',
   documentCompareOldVersion: 'ဗားရှင်းဟောင်း',
   documentCompareNewVersion: 'ဗားရှင်းအသစ်',
+  modelViewerLabel: '3D မော်ဒယ်',
+  modelViewerAlternative: '3D မော်ဒယ်၏ အစမ်းကြည့်ရှုမှု။ အခြားကြည့်ရှုကိရိယာတွင် ဖွင့်ရန် မူရင်းဖိုင်ကို ဒေါင်းလုဒ်လုပ်ပါ။',
+  modelViewerInstructions: 'လှည့်ရန် မြှား ခလုတ်များ၊ ချဲ့ရန် သို့မဟုတ် ချုံ့ရန် အပေါင်း သို့မဟုတ် အနုတ်၊ မော်ဒယ်ကို ကွက်တိဖြစ်စေရန် Home ကို သုံးပါ။',
+  modelViewerReady: 'မော်ဒယ် အဆင်သင့်ဖြစ်ပါပြီ။',
+  modelViewerEmpty: 'ဤမော်ဒယ်တွင် မြင်နိုင်သော ဂျီအိုမေတြီ မရှိပါ။',
+  modelViewerProgress: '{total} ဘိုက်အနက် {loaded} ဘိုက် ဖွင့်ပြီးပါပြီ။',
+  modelViewerInvalid: 'ဤမော်ဒယ်ကို မပြနိုင်ပါ။',
+  modelViewerUnsupportedFormat: 'ဤမော်ဒယ်ဖော်မတ်ကို မပံ့ပိုးပါ။',
+  modelViewerFit: 'မော်ဒယ်ကို ကွက်တိဖြစ်စေရန်',
+  modelViewerRotateLeft: 'ဘယ်ဘက်သို့ လှည့်ရန်',
+  modelViewerRotateRight: 'ညာဘက်သို့ လှည့်ရန်',
+  modelViewerRotateUp: 'အပေါ်သို့ လှည့်ရန်',
+  modelViewerRotateDown: 'အောက်သို့ လှည့်ရန်',
 };
 
 registerLyraLocale('my', strings);

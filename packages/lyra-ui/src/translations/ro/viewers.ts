@@ -136,6 +136,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Comparație de documente',
   documentCompareOldVersion: 'Versiunea veche',
   documentCompareNewVersion: 'Versiunea nouă',
+  modelViewerLabel: 'Model 3D',
+  modelViewerAlternative: 'Previzualizare a unui model 3D. Descărcați fișierul sursă pentru a-l deschide într-un alt vizualizator.',
+  modelViewerInstructions: 'Folosiți tastele săgeată pentru a roti, plus sau minus pentru a mări sau a micșora și Home pentru a potrivi modelul.',
+  modelViewerReady: 'Modelul este gata.',
+  modelViewerEmpty: 'Acest model nu conține geometrie vizibilă.',
+  modelViewerProgress: '{loaded} din {total} octeți încărcați.',
+  modelViewerInvalid: 'Acest model nu a putut fi afișat.',
+  modelViewerUnsupportedFormat: 'Formatul acestui model nu este acceptat.',
+  modelViewerFit: 'Potrivește modelul',
+  modelViewerRotateLeft: 'Rotește la stânga',
+  modelViewerRotateRight: 'Rotește la dreapta',
+  modelViewerRotateUp: 'Rotește în sus',
+  modelViewerRotateDown: 'Rotește în jos',
 };
 
 registerLyraLocale('ro', strings);

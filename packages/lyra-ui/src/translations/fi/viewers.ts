@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Asiakirjavertailu',
   documentCompareOldVersion: 'Vanha versio',
   documentCompareNewVersion: 'Uusi versio',
+  modelViewerLabel: '3D-malli',
+  modelViewerAlternative: '3D-mallin esikatselu. Lataa lähdetiedosto avataksesi sen toisessa katselimessa.',
+  modelViewerInstructions: 'Käytä nuolinäppäimiä kiertämiseen, plus- tai miinusnäppäintä zoomaamiseen ja Home-näppäintä mallin sovittamiseen.',
+  modelViewerReady: 'Malli on valmis.',
+  modelViewerEmpty: 'Tässä mallissa ei ole näkyvää geometriaa.',
+  modelViewerProgress: '{loaded} / {total} tavua ladattu.',
+  modelViewerInvalid: 'Tätä mallia ei voitu näyttää.',
+  modelViewerUnsupportedFormat: 'Tätä mallimuotoa ei tueta.',
+  modelViewerFit: 'Sovita malli',
+  modelViewerRotateLeft: 'Kierrä vasemmalle',
+  modelViewerRotateRight: 'Kierrä oikealle',
+  modelViewerRotateUp: 'Kierrä ylös',
+  modelViewerRotateDown: 'Kierrä alas',
 };
 
 registerLyraLocale('fi', strings);

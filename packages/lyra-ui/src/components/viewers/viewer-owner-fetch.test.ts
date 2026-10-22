@@ -11,12 +11,14 @@ import './ebook-viewer/ebook-viewer.js';
 import './email-viewer/email-viewer.js';
 import './geojson-view/geojson-viewer.js';
 import './html-viewer/html-viewer.js';
+import './model-viewer/model-viewer.js';
 import './notebook-viewer/notebook-viewer.js';
 import './pdf-viewer/pdf-viewer.js';
 import './pptx-viewer/pptx-viewer.js';
 import './spreadsheet-viewer/spreadsheet-viewer.js';
 import './svg-viewer/svg-viewer.js';
 import './xml-viewer/xml-viewer.js';
+import { modelEngineEnvironment } from './model-viewer/model-viewer-loader.js';
 import type { LyraDocumentPreview } from './document-preview/document-preview.class.js';
 import type { LyraSvgViewer } from './svg-viewer/svg-viewer.class.js';
 
@@ -33,6 +35,7 @@ const REMOTE_VIEWER_TAGS = [
   'lr-email-viewer',
   'lr-geojson-viewer',
   'lr-html-viewer',
+  'lr-model-viewer',
   'lr-notebook-viewer',
   'lr-pdf-viewer',
   'lr-pptx-viewer',
@@ -53,6 +56,7 @@ const LOAD_METHOD_BY_TAG: Record<(typeof REMOTE_VIEWER_TAGS)[number], string> = 
   'lr-email-viewer': 'load',
   'lr-geojson-viewer': 'load',
   'lr-html-viewer': 'load',
+  'lr-model-viewer': 'load',
   'lr-notebook-viewer': 'loadFromSrc',
   'lr-pdf-viewer': 'load',
   'lr-pptx-viewer': 'mount',
@@ -96,6 +100,10 @@ it('fetches every remote viewer through its adopted iframe realm and resolves it
   const parentRequests: string[] = [];
   const originalOwnerFetch = ownerWindow.fetch;
   const originalParentFetch = window.fetch;
+  // The model viewer probes WebGL2 before it fetches; this suite is about the fetch realm, and
+  // engines without a GPU would otherwise stop before the request.
+  const originalWebgl2Probe = modelEngineEnvironment.available;
+  modelEngineEnvironment.available = () => true;
   ownerWindow.fetch = ((input: RequestInfo | URL) => {
     ownerRequests.push(String(input));
     return unresolvedResponse();
@@ -127,6 +135,7 @@ it('fetches every remote viewer through its adopted iframe realm and resolves it
         () => undefined;
       element.src = `resources/${tagName}.fixture`;
       if (tagName === 'lr-document-preview') element.mimeType = 'text/plain';
+      if (tagName === 'lr-model-viewer') (element as unknown as { format: string }).format = 'obj';
       const loadMethod = LOAD_METHOD_BY_TAG[tagName];
       const controls = element as unknown as Record<string, (...args: string[]) => Promise<void>>;
       const load = controls[loadMethod];
@@ -167,6 +176,7 @@ it('fetches every remote viewer through its adopted iframe realm and resolves it
       ).sort(),
     );
   } finally {
+    modelEngineEnvironment.available = originalWebgl2Probe;
     ownerWindow.fetch = originalOwnerFetch;
     window.fetch = originalParentFetch;
     iframe.remove();

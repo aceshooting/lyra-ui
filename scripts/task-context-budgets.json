@@ -32,7 +32,8 @@
       "published23Utf8Bytes": 14858,
       "reviewedCheckpointUtf8Bytes": 15258,
       "reviewedCheckpointProxyTokens": 4018,
-      "ceilingUtf8Bytes": 16000
+      "ceilingUtf8Bytes": 16005,
+      "$comment": "The component discovery index with the model-viewer entry measures 16,005 UTF-8 bytes for this route; its ceiling advances to that exact measurement."
     },
     "v23-v24-upgrade": {
       "published23Utf8Bytes": null,

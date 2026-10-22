@@ -130,6 +130,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'ドキュメントの比較',
   documentCompareOldVersion: '以前のバージョン',
   documentCompareNewVersion: '新しいバージョン',
+  modelViewerLabel: '3Dモデル',
+  modelViewerAlternative: '3Dモデルのプレビューです。別のビューアーで開くには、ソースファイルをダウンロードしてください。',
+  modelViewerInstructions: '矢印キーで回転、プラスまたはマイナスでズーム、Homeキーでモデルを全体表示します。',
+  modelViewerReady: 'モデルの準備ができました。',
+  modelViewerEmpty: 'このモデルには表示できるジオメトリがありません。',
+  modelViewerProgress: '{total}バイト中{loaded}バイトを読み込みました。',
+  modelViewerInvalid: 'このモデルを表示できませんでした。',
+  modelViewerUnsupportedFormat: 'このモデル形式はサポートされていません。',
+  modelViewerFit: 'モデルを全体表示',
+  modelViewerRotateLeft: '左に回転',
+  modelViewerRotateRight: '右に回転',
+  modelViewerRotateUp: '上に回転',
+  modelViewerRotateDown: '下に回転',
 };
 
 registerLyraLocale('ja', strings);

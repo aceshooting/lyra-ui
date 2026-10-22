@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Құжаттарды салыстыру',
   documentCompareOldVersion: 'Ескі нұсқа',
   documentCompareNewVersion: 'Жаңа нұсқа',
+  modelViewerLabel: '3D үлгі',
+  modelViewerAlternative: '3D үлгінің алдын ала қарауы. Басқа қарау құралында ашу үшін бастапқы файлды жүктеп алыңыз.',
+  modelViewerInstructions: 'Айналдыру үшін көрсеткі пернелерін, үлкейту немесе кішірейту үшін плюс не минусты, үлгіні сыйғызу үшін Home пернесін пайдаланыңыз.',
+  modelViewerReady: 'Үлгі дайын.',
+  modelViewerEmpty: 'Бұл үлгіде көрінетін геометрия жоқ.',
+  modelViewerProgress: '{total} байттың {loaded} байты жүктелді.',
+  modelViewerInvalid: 'Бұл үлгіні көрсету мүмкін болмады.',
+  modelViewerUnsupportedFormat: 'Бұл үлгі пішімі қолдау көрсетілмейді.',
+  modelViewerFit: 'Үлгіні сыйғызу',
+  modelViewerRotateLeft: 'Солға бұру',
+  modelViewerRotateRight: 'Оңға бұру',
+  modelViewerRotateUp: 'Жоғары бұру',
+  modelViewerRotateDown: 'Төмен бұру',
 };
 
 registerLyraLocale('kk', strings);

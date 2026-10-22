@@ -139,6 +139,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Primerjava dokumentov',
   documentCompareOldVersion: 'Stara različica',
   documentCompareNewVersion: 'Nova različica',
+  modelViewerLabel: '3D-model',
+  modelViewerAlternative: 'Predogled 3D-modela. Prenesite izvorno datoteko, da jo odprete v drugem pregledovalniku.',
+  modelViewerInstructions: 'Za vrtenje uporabite smerne tipke, za povečavo ali pomanjšavo plus ali minus, za prilagoditev modela pa tipko Home.',
+  modelViewerReady: 'Model je pripravljen.',
+  modelViewerEmpty: 'Ta model ne vsebuje vidne geometrije.',
+  modelViewerProgress: 'Naloženo {loaded} od {total} bajtov.',
+  modelViewerInvalid: 'Tega modela ni bilo mogoče prikazati.',
+  modelViewerUnsupportedFormat: 'Oblika tega modela ni podprta.',
+  modelViewerFit: 'Prilagodi model',
+  modelViewerRotateLeft: 'Zavrti v levo',
+  modelViewerRotateRight: 'Zavrti v desno',
+  modelViewerRotateUp: 'Zavrti navzgor',
+  modelViewerRotateDown: 'Zavrti navzdol',
 };
 
 registerLyraLocale('sl', strings);

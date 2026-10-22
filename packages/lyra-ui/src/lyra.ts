@@ -1151,6 +1151,7 @@ export type {
 export type {
   DirectDocumentRendererDefinition,
   DocumentRendererRegistry,
+  LazyAdaptedDocumentRendererDefinition,
   LazyDocumentRendererDefinition,
   LyraAdaptedDocumentRenderer,
   LyraAdaptedDocumentRendererDefinition,
@@ -1163,6 +1164,7 @@ export type {
   LyraDocumentRendererPayloadFor,
   LyraDocumentRendererPayloadKind,
   LyraGenericDocumentRendererPayload,
+  LyraModelDocumentRendererPayload,
   LyraResolvedDocumentRendererDefinition,
 } from './components/viewers/document-viewer/registry.js';
 export type {
@@ -1470,6 +1472,12 @@ export type {
   TextSelectRect,
 } from './components/viewers/document-viewer/anchors.js';
 export type { LyraSvgViewerEventMap } from './components/viewers/svg-viewer/svg-viewer.class.js';
+export type {
+  LyraModelCamera,
+  LyraModelFormat,
+  LyraModelFormatPreference,
+  LyraModelViewerEventMap,
+} from './components/viewers/model-viewer/model-viewer.class.js';
 export type { LyraHtmlViewerEventMap } from './components/viewers/html-viewer/html-viewer.class.js';
 export type { LyraDatasetViewerEventMap } from './components/viewers/dataset-viewer/dataset-viewer.class.js';
 export type { LyraContactViewerEventMap } from './components/viewers/contact-viewer/contact-viewer.class.js';

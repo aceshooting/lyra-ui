@@ -176,6 +176,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-mind-map': ['lr-mind-map', 'lr-virtual-list'],
   'lr-model-select': ['lr-model-select'],
   'lr-model-settings-panel': ['lr-model-select', 'lr-model-settings-panel', 'lr-slider'],
+  'lr-model-viewer': ['lr-model-viewer'],
   'lr-multi-split': ['lr-multi-split'],
   'lr-mutation-observer': ['lr-mutation-observer'],
   'lr-native-time-input': ['lr-native-time-input'],

@@ -67,6 +67,7 @@
       "lr-funnel",
       "lr-menubar",
       "lr-menubar-item",
+      "lr-model-viewer",
       "lr-navigation-menu",
       "lr-navigation-menu-item",
       "lr-permission-grant",
@@ -33214,7 +33215,7 @@
     "current": {
       "version": "29.2.2",
       "sourceCommit": null,
-      "manifestSha256": "a130be90abf674f2814b1eead6c48eae7edf35da6bccaf931efd5f50aa6f05e1",
+      "manifestSha256": "0111bfc1b1dfba8a8a0d8993a74815d6172a596f39e03ec0235a7d8cbd08b823",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -33391,6 +33392,7 @@
         "lr-mind-map",
         "lr-model-select",
         "lr-model-settings-panel",
+        "lr-model-viewer",
         "lr-multi-split",
         "lr-mutation-observer",
         "lr-native-time-input",

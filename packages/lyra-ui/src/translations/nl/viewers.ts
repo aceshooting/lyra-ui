@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Documenten vergelijken',
   documentCompareOldVersion: 'Oude versie',
   documentCompareNewVersion: 'Nieuwe versie',
+  modelViewerLabel: '3D-model',
+  modelViewerAlternative: 'Voorbeeld van een 3D-model. Download het bronbestand om het in een andere viewer te openen.',
+  modelViewerInstructions: 'Gebruik de pijltoetsen om te draaien, plus of min om te zoomen en Home om het model passend te maken.',
+  modelViewerReady: 'Model gereed.',
+  modelViewerEmpty: 'Dit model bevat geen zichtbare geometrie.',
+  modelViewerProgress: '{loaded} van {total} bytes geladen.',
+  modelViewerInvalid: 'Dit model kan niet worden weergegeven.',
+  modelViewerUnsupportedFormat: 'Dit modelformaat wordt niet ondersteund.',
+  modelViewerFit: 'Model passend maken',
+  modelViewerRotateLeft: 'Naar links draaien',
+  modelViewerRotateRight: 'Naar rechts draaien',
+  modelViewerRotateUp: 'Omhoog draaien',
+  modelViewerRotateDown: 'Omlaag draaien',
 };
 
 registerLyraLocale('nl', strings);

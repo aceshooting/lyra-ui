@@ -130,6 +130,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Ìfiwéra ìwé',
   documentCompareOldVersion: 'Ẹ̀dà àtijọ́',
   documentCompareNewVersion: 'Ẹ̀dà tuntun',
+  modelViewerLabel: 'Àwòṣe 3D',
+  modelViewerAlternative: 'Àtẹ̀wò àwòṣe 3D. Ṣe ìgbàsílẹ̀ fáìlì orísun láti ṣí i nínú olùwòran míì.',
+  modelViewerInstructions: 'Lo àwọn kọ́kọ́rọ́ ọfà láti yí i, àfikún tàbí ìyọkúrò láti sún mọ́ tàbí jìnnà, àti Home láti mú àwòṣe náà bá a mu.',
+  modelViewerReady: 'Àwòṣe náà ti ṣetán.',
+  modelViewerEmpty: 'Àwòṣe yìí kò ní ìrísí geometry tí a lè rí.',
+  modelViewerProgress: 'A ti gbé bytes {loaded} nínú {total} wọlé.',
+  modelViewerInvalid: 'A kò lè ṣàfihàn àwòṣe yìí.',
+  modelViewerUnsupportedFormat: 'A kò ṣe àtìlẹ́yìn fún ọ̀nà àwòṣe yìí.',
+  modelViewerFit: 'Mú àwòṣe bá a mu',
+  modelViewerRotateLeft: 'Yí sí òsì',
+  modelViewerRotateRight: 'Yí sí ọ̀tún',
+  modelViewerRotateUp: 'Yí sókè',
+  modelViewerRotateDown: 'Yí sísàlẹ̀',
 };
 
 registerLyraLocale('yo', strings);

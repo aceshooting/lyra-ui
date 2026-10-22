@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Kokanisa mikanda',
   documentCompareOldVersion: 'Version ya kala',
   documentCompareNewVersion: 'Version ya sika',
+  modelViewerLabel: 'Motuya ya 3D',
+  modelViewerAlternative: 'Komona liboso ya motuya ya 3D. Bwaka fisyé ya ebandeli mpo na kofungola yango na mosáleli mosusu ya komona.',
+  modelViewerInstructions: 'Salelá bitumba ya miseke mpo na kobalusa, lisusu to mwa moke mpo na kokomisa monene to moke, mpe Home mpo na kobongisa motuya.',
+  modelViewerReady: 'Motuya esili.',
+  modelViewerEmpty: 'Motuya oyo ezali na jeometri moko ya komonana te.',
+  modelViewerProgress: 'Ba-byte {loaded} na {total} ebwamaki.',
+  modelViewerInvalid: 'Motuya oyo emonisami te.',
+  modelViewerUnsupportedFormat: 'Lolenge ya motuya oyo ekokisami te.',
+  modelViewerFit: 'Bongisa motuya',
+  modelViewerRotateLeft: 'Balusa na mwambe',
+  modelViewerRotateRight: 'Balusa na mobali',
+  modelViewerRotateUp: 'Balusa na likolo',
+  modelViewerRotateDown: 'Balusa na nse',
 };
 
 registerLyraLocale('ln', strings);

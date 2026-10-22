@@ -120,21 +120,27 @@ for the native download action's hover and pressed backgrounds.
 - `LyraDocumentFile` — readonly file data `{ name, mimeType, src, anchor?, highlights?, alt? }`
   passed to renderer matching and wrapped by discriminated payloads. Adapter and legacy-render
   boundaries snapshot it; highlights use the shared trimmed, nonempty, first-wins identity projection.
-- `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av'` discriminated input wrapping an
-  immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at most 10,000
-  cues and 64 tracks, clone and freeze every retained record, and bound every retained string.
-- `LyraGenericDocumentRendererPayload` / `LyraAvDocumentRendererPayload` — the concrete
-  `kind: 'document'` and `kind: 'av'` branches. `LyraDocumentRendererPayloadKind` names their kind
-  union, and `LyraDocumentRendererPayloadFor<K>` extracts one branch for adapter authoring.
+- `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av' | 'model'` discriminated input
+  wrapping an immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at
+  most 10,000 cues and 64 tracks, clone and freeze every retained record, and bound every retained
+  string. The model branch adds an optional `format` (rejected unless it is a supported model
+  format) and an optional `camera` (copied, finite-checked and frozen like `<lr-model-viewer>`'s).
+- `LyraGenericDocumentRendererPayload` / `LyraAvDocumentRendererPayload` /
+  `LyraModelDocumentRendererPayload` — the concrete `kind: 'document'`, `kind: 'av'` and
+  `kind: 'model'` branches. `LyraDocumentRendererPayloadKind` names their kind union, and
+  `LyraDocumentRendererPayloadFor<K>` extracts one branch for adapter authoring.
 - `LyraDocumentRendererAdapterDefinition<K>` / `LyraDocumentRendererAdapter` — strongly typed
   authoring input and its factory-created, type-erased registry form. The callbacks adapt the legacy
   file to one payload kind, derive capabilities from that retained payload, and render it.
 - `LyraDocumentRendererDefinition` — a validated direct
-  `{ render, matches?, capabilities? }`, adapted `{ adapter, matches? }`, or lazy
-  `{ load, matches?, capabilities? }` definition; exactly one of `render`, `adapter`, and `load` is
-  required. Static capabilities are rejected on adapted definitions so their adapter remains the
-  single source of truth. Adapted definitions register eagerly; a lazy definition resolves a
-  legacy direct renderer, keeping the static and payload-derived capability branches distinct.
+  `{ render, matches?, capabilities? }`, adapted `{ adapter, matches? }`, lazy
+  `{ load, matches?, capabilities? }` or lazy-adapted `{ rendererKind: 'adapted', load, matches? }`
+  definition; exactly one of `render`, `adapter`, and `load` is required. Static capabilities are
+  rejected on adapted and lazy-adapted definitions so the payload adapter remains the single source
+  of truth. Adapted definitions register eagerly; a lazy definition resolves a legacy direct
+  renderer, while `LazyAdaptedDocumentRendererDefinition` declares `rendererKind: 'adapted'` and
+  resolves an adapted definition (a loaded definition of the other kind is rejected). That keeps
+  the static and payload-derived capability branches distinct.
 - `LyraAdaptedDocumentRendererDefinition` / `LyraResolvedDocumentRendererDefinition` — the adapted
   registry branch and the union of both immediately renderable branches. `LyraAdaptedDocumentRenderer`
   is the frozen payload/capabilities/render invocation returned by `adaptDocumentRenderer()`.
@@ -153,15 +159,16 @@ for the native download action's hover and pressed backgrounds.
   registry snapshots created later; it never mutates existing instances.
 - `findDocumentRenderer(file, registry?)` — checks normalized MIME essence (case-insensitive and
   parameter-independent), then the first matching `matches()` entry in registration order.
-- `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy direct definition;
-  rejected loads are retried on the next call.
+- `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy direct or lazy-adapted
+  definition; rejected loads are retried on the next call.
 
 Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-register.js`
 (`archive-viewer-register.js`, `ebook-viewer-register.js`, `pdf-viewer-register.js`,
 `docx-viewer-register.js`, `pptx-viewer-register.js`, `spreadsheet-viewer-register.js`,
 `csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`,
 `dataset-viewer-register.js`, `email-viewer-register.js`, `calendar-viewer-register.js`,
-`contact-viewer-register.js`, `html-viewer-register.js`, `svg-viewer-register.js`), which installs
+`contact-viewer-register.js`, `html-viewer-register.js`, `svg-viewer-register.js`,
+`model-viewer-register.js`), which installs
 that kind's registration — including its declared `capabilities`, available before anything loads —
 without pulling its element class module into the importing graph until a matching file is
 actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually

@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Compare di documents',
   documentCompareOldVersion: 'Version wey old',
   documentCompareNewVersion: 'Version wey new',
+  modelViewerLabel: '3D modél',
+  modelViewerAlternative: 'Prevyu fọ 3D modél. Downlod di sọs fayl so dat yu go fit open am for anoda viewa.',
+  modelViewerInstructions: 'Yuz di aro kis dem fọ turn, plọs or mainọs fọ zum, ana Home fọ fit di modél.',
+  modelViewerReady: 'Di modél don redi.',
+  modelViewerEmpty: 'Dis modél no get any geometri wey yu fit si.',
+  modelViewerProgress: '{loaded} fọ {total} bytes don lod.',
+  modelViewerInvalid: 'Wi no fit show dis modél.',
+  modelViewerUnsupportedFormat: 'Dis modél fọmat no dey sọpọt.',
+  modelViewerFit: 'Fit di modél',
+  modelViewerRotateLeft: 'Turn go left',
+  modelViewerRotateRight: 'Turn go right',
+  modelViewerRotateUp: 'Turn go up',
+  modelViewerRotateDown: 'Turn go down',
 };
 
 registerLyraLocale('pcm', strings);

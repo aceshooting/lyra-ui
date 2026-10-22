@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'పత్రాల పోలిక',
   documentCompareOldVersion: 'పాత వెర్షన్',
   documentCompareNewVersion: 'కొత్త వెర్షన్',
+  modelViewerLabel: '3D మోడల్',
+  modelViewerAlternative: '3D మోడల్ ప్రివ్యూ. మరో వీక్షకంలో తెరవడానికి మూల ఫైల్‌ను డౌన్‌లోడ్ చేయండి.',
+  modelViewerInstructions: 'తిప్పడానికి బాణం కీలను, జూమ్ చేయడానికి ప్లస్ లేదా మైనస్‌ను, మోడల్‌ను అమర్చడానికి Home‌ను ఉపయోగించండి.',
+  modelViewerReady: 'మోడల్ సిద్ధంగా ఉంది.',
+  modelViewerEmpty: 'ఈ మోడల్‌లో కనిపించే జ్యామితి లేదు.',
+  modelViewerProgress: '{total} బైట్‌లలో {loaded} బైట్‌లు లోడ్ అయ్యాయి.',
+  modelViewerInvalid: 'ఈ మోడల్‌ను ప్రదర్శించడం సాధ్యం కాలేదు.',
+  modelViewerUnsupportedFormat: 'ఈ మోడల్ ఫార్మాట్‌కు మద్దతు లేదు.',
+  modelViewerFit: 'మోడల్‌ను అమర్చండి',
+  modelViewerRotateLeft: 'ఎడమవైపు తిప్పండి',
+  modelViewerRotateRight: 'కుడివైపు తిప్పండి',
+  modelViewerRotateUp: 'పైకి తిప్పండి',
+  modelViewerRotateDown: 'కిందకు తిప్పండి',
 };
 
 registerLyraLocale('te', strings);

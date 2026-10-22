@@ -42,6 +42,7 @@ export const AUTOLOADER_OPTIONAL_PEERS: Readonly<Partial<Record<AutoloadableTagN
   'lr-markdown': ['dompurify', 'katex', 'marked', 'shiki'],
   'lr-markdown-core': ['dompurify', 'katex', 'marked', 'shiki'],
   'lr-message-parts': ['dompurify', 'katex', 'marked', 'shiki'],
+  'lr-model-viewer': ['@aceshooting/lyra-3d'],
   'lr-notebook-viewer': ['dompurify', 'katex', 'marked', 'shiki'],
   'lr-pdf-viewer': ['pdfjs-dist'],
   'lr-pie-chart': ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],

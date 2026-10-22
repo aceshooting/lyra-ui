@@ -44,7 +44,7 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 309 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 310 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
@@ -175,7 +175,7 @@ breaks in each major since v22, with the matching `lyra-ui-migrate` profile; ful
 
 ## Components
 
-309 custom elements across eleven component families. Every tag has a live, interactive example on the
+310 custom elements across eleven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -194,13 +194,13 @@ the alias stays valid if the component's internal family changes. Import
 | `conversation` | chat message, composer and viewport, structured message parts, prompt input and queue, streaming text, markdown, code block, model select, realtime session, selection toolbar, branch picker, checkpoint, message actions and feedback, push-to-talk, audio visualizer, thread list |
 | `agent-tools` | agent run and trace, thinking panel, subagent panel, MCP app, prompt studio, schema viewer, tool call chip, tool approval dialog and approval queue, task list, terminal, span waterfall, stack trace, test results, activity feed, context inspector, artifact panel, commit card, eval dataset/run/result, evaluation dashboard, policy summary |
 | `retrieval` | retrieval search and results, retrieval comparison, grounded RAG answer, claim evidence, grounding summary, RAG evaluation dashboard, citation badge, chunk inspector, knowledge base and admin, ingestion queue, knowledge-graph explorer, graph, mind map, embedding explorer, entity card/chip/dossier, provenance panel, memory panel, neighbor list, path strip |
-| `viewers` | document, PDF, DOCX, PPTX, spreadsheet, CSV, notebook, ebook, email, calendar, contact, archive, XML, SVG, HTML and GeoJSON viewers, document compare and preview, dataset viewer, highlight layer, page rail |
+| `viewers` | document, PDF, DOCX, PPTX, spreadsheet, CSV, notebook, ebook, email, calendar, contact, archive, XML, SVG, HTML, GeoJSON and 3D model viewers, document compare and preview, dataset viewer, highlight layer, page rail |
 | `media` | video and video playlist, image viewer and comparer, lightbox, sandboxed zoomable frame, pan/zoom, AV player, playback, animated image, avatar and avatar group, file icon, file input, attachment chip, map, QR code, flag |
 | `utility` | icon, format, copy and export buttons, diff view, JSON viewer, divider, live region, mention popover, tour, poll status, known date, resize/intersection/mutation observers |
 
 ## Theming, internationalization & RTL
 
-All 309 tags share three guarantees, not opt-in per component: **theming** through `--lr-*` design tokens (declared once per document and
+All 310 tags share three guarantees, not opt-in per component: **theming** through `--lr-*` design tokens (declared once per document and
 re-derived at [theme scopes](./packages/lyra-ui/llms/shared/styles-and-tokens.md#theme-scopes); a light/dark base in `theme.css`, optional looks, and an independent style API for look, surface, density, mode and accent;
 [styling guide](./packages/lyra-ui/llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density)),
 **internationalization** through one runtime (`registerLyraLocale`/`setLyraLocale` or a per-instance `.strings`

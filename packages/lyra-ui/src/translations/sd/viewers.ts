@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'دستاويز جو موازنو',
   documentCompareOldVersion: 'پراڻو ورزن',
   documentCompareNewVersion: 'نئون ورزن',
+  modelViewerLabel: '3D ماڊل',
+  modelViewerAlternative: '3D ماڊل جو اڳڀرو ڏيک. ٻئي ڏسڻ واري ۾ کولڻ لاءِ ماخذ فائل ڊائونلوڊ ڪريو.',
+  modelViewerInstructions: 'گھمائڻ لاءِ تير وارا بٽڻ، زوم لاءِ پلس يا مائنس ۽ ماڊل کي سمائڻ لاءِ Home استعمال ڪريو.',
+  modelViewerReady: 'ماڊل تيار آهي.',
+  modelViewerEmpty: 'هن ماڊل ۾ ڪا نظر ايندڙ جاميٽري ناهي.',
+  modelViewerProgress: '{total} بائيٽن مان {loaded} بائيٽ لوڊ ٿيا.',
+  modelViewerInvalid: 'هي ماڊل ڏيکاري نه سگهيو.',
+  modelViewerUnsupportedFormat: 'هي ماڊل فارميٽ سپورٽ نه ٿو ڪيو وڃي.',
+  modelViewerFit: 'ماڊل سمايو',
+  modelViewerRotateLeft: 'کاٻي طرف گھمايو',
+  modelViewerRotateRight: 'ساڄي طرف گھمايو',
+  modelViewerRotateUp: 'مٿي گھمايو',
+  modelViewerRotateDown: 'ھيٺ گھمايو',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

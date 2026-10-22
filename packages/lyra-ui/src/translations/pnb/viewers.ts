@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'دستاویز دا موازنہ',
   documentCompareOldVersion: 'پرانا ورژن',
   documentCompareNewVersion: 'نواں ورژن',
+  modelViewerLabel: '3D ماڈل',
+  modelViewerAlternative: '3D ماڈل دا پیش نظارہ۔ دوجے ویوور وچ کھولن لئی سورس فائل ڈاؤنلوڈ کرو۔',
+  modelViewerInstructions: 'گھمان لئی تیر والیاں کیاں، زوم لئی پلس یا مائنس تے ماڈل فٹ کرن لئی Home ورتو۔',
+  modelViewerReady: 'ماڈل تیار اے۔',
+  modelViewerEmpty: 'ایس ماڈل وچ کوئی دسن والی جیومیٹری نہیں۔',
+  modelViewerProgress: '{total} بائٹس وچوں {loaded} بائٹس لوڈ ہو گئے۔',
+  modelViewerInvalid: 'ایہہ ماڈل وکھایا نہیں جا سکیا۔',
+  modelViewerUnsupportedFormat: 'ایہہ ماڈل فارمیٹ سپورٹ نہیں کیتا جاندا۔',
+  modelViewerFit: 'ماڈل فٹ کرو',
+  modelViewerRotateLeft: 'کھبے گھماؤ',
+  modelViewerRotateRight: 'سجے گھماؤ',
+  modelViewerRotateUp: 'اتے گھماؤ',
+  modelViewerRotateDown: 'تھلے گھماؤ',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

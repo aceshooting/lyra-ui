@@ -139,6 +139,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Porovnání dokumentů',
   documentCompareOldVersion: 'Stará verze',
   documentCompareNewVersion: 'Nová verze',
+  modelViewerLabel: '3D model',
+  modelViewerAlternative: 'Náhled 3D modelu. Stáhněte zdrojový soubor a otevřete ho v jiném prohlížeči.',
+  modelViewerInstructions: 'K otáčení použijte šipky, k přiblížení a oddálení plus nebo mínus a klávesou Home model přizpůsobíte zobrazení.',
+  modelViewerReady: 'Model je připraven.',
+  modelViewerEmpty: 'Tento model neobsahuje žádnou viditelnou geometrii.',
+  modelViewerProgress: 'Načteno {loaded} z {total} bajtů.',
+  modelViewerInvalid: 'Tento model nelze zobrazit.',
+  modelViewerUnsupportedFormat: 'Formát tohoto modelu není podporován.',
+  modelViewerFit: 'Přizpůsobit model',
+  modelViewerRotateLeft: 'Otočit doleva',
+  modelViewerRotateRight: 'Otočit doprava',
+  modelViewerRotateUp: 'Otočit nahoru',
+  modelViewerRotateDown: 'Otočit dolů',
 };
 
 registerLyraLocale('cs', strings);

@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Walbira qabuu dokumantii',
   documentCompareOldVersion: 'Fooyya\'insa moofaa',
   documentCompareNewVersion: 'Fooyya\'insa haaraa',
+  modelViewerLabel: 'Moodela 3D',
+  modelViewerAlternative: 'Mul’ata moodela 3D. Faayila madda buusii viewer biraatti banuuf.',
+  modelViewerInstructions: 'Xiyyeeffannoo sirna rarraafachuuf qabduu xiyyaa, guddisuuf yookaan xiqqeessuuf pilasii yookaan maayinasii, moodelicha sirreessuuf immoo Home fayyadami.',
+  modelViewerReady: 'Moodelichi qophaa’eera.',
+  modelViewerEmpty: 'Moodelichi jiʼoometrii ifatti mul’atu hin qabu.',
+  modelViewerProgress: 'Baayitii {total} keessaa {loaded} fe’ameera.',
+  modelViewerInvalid: 'Moodelichi agarsiisuun hin danda’amne.',
+  modelViewerUnsupportedFormat: 'Bifti moodelichaa hin deeggaramu.',
+  modelViewerFit: 'Moodela sirreessi',
+  modelViewerRotateLeft: 'Gara bitaatti naannessi',
+  modelViewerRotateRight: 'Gara mirgaatti naannessi',
+  modelViewerRotateUp: 'Gara olitti naannessi',
+  modelViewerRotateDown: 'Gara gadiitti naannessi',
 };
 
 registerLyraLocale('om', strings);

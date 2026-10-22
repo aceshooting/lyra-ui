@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Ukuqhathanisa amadokhumenti',
   documentCompareOldVersion: 'Inguqulo endala',
   documentCompareNewVersion: 'Inguqulo entsha',
+  modelViewerLabel: 'Imodeli ye-3D',
+  modelViewerAlternative: 'Ukubuka kuqala kwemodeli ye-3D. Landa ifayela lomthombo ukuze uyivule kwesinye isibukeli.',
+  modelViewerInstructions: 'Sebenzisa okhiye bemicibisholo ukujikisa, okungeziwe noma okuthathwayo ukusondeza, ne-Home ukulinganisa imodeli.',
+  modelViewerReady: 'Imodeli isilungile.',
+  modelViewerEmpty: 'Le modeli ayinayo i-geometry ebonakalayo.',
+  modelViewerProgress: 'Ama-byte angu-{loaded} kwangu-{total} alayishiwe.',
+  modelViewerInvalid: 'Le modeli ayikwazanga ukuboniswa.',
+  modelViewerUnsupportedFormat: 'Ifomethi yale modeli ayisekelwa.',
+  modelViewerFit: 'Linganisa imodeli',
+  modelViewerRotateLeft: 'Jikisa ngakwesobunxele',
+  modelViewerRotateRight: 'Jikisa ngakwesokudla',
+  modelViewerRotateUp: 'Jikisa phezulu',
+  modelViewerRotateDown: 'Jikisa phansi',
 };
 
 registerLyraLocale('zu', strings);

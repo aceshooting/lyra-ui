@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'कागजात तुलना',
   documentCompareOldVersion: 'पुरानो संस्करण',
   documentCompareNewVersion: 'नयाँ संस्करण',
+  modelViewerLabel: '३D मोडेल',
+  modelViewerAlternative: '३D मोडेलको पूर्वावलोकन। अर्को भ्यूअरमा खोल्न स्रोत फाइल डाउनलोड गर्नुहोस्।',
+  modelViewerInstructions: 'घुमाउन एरो कुञ्जीहरू, जुम गर्न प्लस वा माइनस र मोडेल मिलाउन Home प्रयोग गर्नुहोस्।',
+  modelViewerReady: 'मोडेल तयार छ।',
+  modelViewerEmpty: 'यो मोडेलमा देखिने ज्यामिति छैन।',
+  modelViewerProgress: '{total} बाइटमध्ये {loaded} बाइट लोड भयो।',
+  modelViewerInvalid: 'यो मोडेल देखाउन सकिएन।',
+  modelViewerUnsupportedFormat: 'यो मोडेल ढाँचा समर्थित छैन।',
+  modelViewerFit: 'मोडेल मिलाउनुहोस्',
+  modelViewerRotateLeft: 'बायाँ घुमाउनुहोस्',
+  modelViewerRotateRight: 'दायाँ घुमाउनुहोस्',
+  modelViewerRotateUp: 'माथि घुमाउनुहोस्',
+  modelViewerRotateDown: 'तल घुमाउनुहोस्',
 };
 
 registerLyraLocale('ne', strings);

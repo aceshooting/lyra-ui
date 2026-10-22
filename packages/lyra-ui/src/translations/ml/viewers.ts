@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'രേഖ താരതമ്യം',
   documentCompareOldVersion: 'പഴയ പതിപ്പ്',
   documentCompareNewVersion: 'പുതിയ പതിപ്പ്',
+  modelViewerLabel: '3D മോഡൽ',
+  modelViewerAlternative: '3D മോഡലിന്റെ പ്രിവ്യൂ. മറ്റൊരു വ്യൂവറിൽ തുറക്കാൻ സോഴ്സ് ഫയൽ ഡൗൺലോഡ് ചെയ്യുക.',
+  modelViewerInstructions: 'തിരിക്കാൻ ആരോ കീകളും, സൂം ചെയ്യാൻ പ്ലസ് അല്ലെങ്കിൽ മൈനസും, മോഡൽ യോജിപ്പിക്കാൻ Home ഉം ഉപയോഗിക്കുക.',
+  modelViewerReady: 'മോഡൽ തയ്യാറാണ്.',
+  modelViewerEmpty: 'ഈ മോഡലിൽ ദൃശ്യമാകുന്ന ജ്യാമിതി ഇല്ല.',
+  modelViewerProgress: '{total} ബൈറ്റുകളിൽ {loaded} ബൈറ്റുകൾ ലോഡ് ചെയ്തു.',
+  modelViewerInvalid: 'ഈ മോഡൽ പ്രദർശിപ്പിക്കാനായില്ല.',
+  modelViewerUnsupportedFormat: 'ഈ മോഡൽ ഫോർമാറ്റ് പിന്തുണയ്ക്കുന്നില്ല.',
+  modelViewerFit: 'മോഡൽ യോജിപ്പിക്കുക',
+  modelViewerRotateLeft: 'ഇടത്തേക്ക് തിരിക്കുക',
+  modelViewerRotateRight: 'വലത്തേക്ക് തിരിക്കുക',
+  modelViewerRotateUp: 'മുകളിലേക്ക് തിരിക്കുക',
+  modelViewerRotateDown: 'താഴേക്ക് തിരിക്കുക',
 };
 
 registerLyraLocale('ml', strings);

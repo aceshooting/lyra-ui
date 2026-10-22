@@ -358,21 +358,27 @@ for the native download action's hover and pressed backgrounds.
 - `LyraDocumentFile` — readonly file data `{ name, mimeType, src, anchor?, highlights?, alt? }`
   passed to renderer matching and wrapped by discriminated payloads. Adapter and legacy-render
   boundaries snapshot it; highlights use the shared trimmed, nonempty, first-wins identity projection.
-- `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av'` discriminated input wrapping an
-  immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at most 10,000
-  cues and 64 tracks, clone and freeze every retained record, and bound every retained string.
-- `LyraGenericDocumentRendererPayload` / `LyraAvDocumentRendererPayload` — the concrete
-  `kind: 'document'` and `kind: 'av'` branches. `LyraDocumentRendererPayloadKind` names their kind
-  union, and `LyraDocumentRendererPayloadFor<K>` extracts one branch for adapter authoring.
+- `LyraDocumentRendererPayload` — readonly `kind: 'document' | 'av' | 'model'` discriminated input
+  wrapping an immutable `file`. The AV branch adds readonly `cues` and `tracks`; snapshots retain at
+  most 10,000 cues and 64 tracks, clone and freeze every retained record, and bound every retained
+  string. The model branch adds an optional `format` (rejected unless it is a supported model
+  format) and an optional `camera` (copied, finite-checked and frozen like `<lr-model-viewer>`'s).
+- `LyraGenericDocumentRendererPayload` / `LyraAvDocumentRendererPayload` /
+  `LyraModelDocumentRendererPayload` — the concrete `kind: 'document'`, `kind: 'av'` and
+  `kind: 'model'` branches. `LyraDocumentRendererPayloadKind` names their kind union, and
+  `LyraDocumentRendererPayloadFor<K>` extracts one branch for adapter authoring.
 - `LyraDocumentRendererAdapterDefinition<K>` / `LyraDocumentRendererAdapter` — strongly typed
   authoring input and its factory-created, type-erased registry form. The callbacks adapt the legacy
   file to one payload kind, derive capabilities from that retained payload, and render it.
 - `LyraDocumentRendererDefinition` — a validated direct
-  `{ render, matches?, capabilities? }`, adapted `{ adapter, matches? }`, or lazy
-  `{ load, matches?, capabilities? }` definition; exactly one of `render`, `adapter`, and `load` is
-  required. Static capabilities are rejected on adapted definitions so their adapter remains the
-  single source of truth. Adapted definitions register eagerly; a lazy definition resolves a
-  legacy direct renderer, keeping the static and payload-derived capability branches distinct.
+  `{ render, matches?, capabilities? }`, adapted `{ adapter, matches? }`, lazy
+  `{ load, matches?, capabilities? }` or lazy-adapted `{ rendererKind: 'adapted', load, matches? }`
+  definition; exactly one of `render`, `adapter`, and `load` is required. Static capabilities are
+  rejected on adapted and lazy-adapted definitions so the payload adapter remains the single source
+  of truth. Adapted definitions register eagerly; a lazy definition resolves a legacy direct
+  renderer, while `LazyAdaptedDocumentRendererDefinition` declares `rendererKind: 'adapted'` and
+  resolves an adapted definition (a loaded definition of the other kind is rejected). That keeps
+  the static and payload-derived capability branches distinct.
 - `LyraAdaptedDocumentRendererDefinition` / `LyraResolvedDocumentRendererDefinition` — the adapted
   registry branch and the union of both immediately renderable branches. `LyraAdaptedDocumentRenderer`
   is the frozen payload/capabilities/render invocation returned by `adaptDocumentRenderer()`.
@@ -391,15 +397,16 @@ for the native download action's hover and pressed backgrounds.
   registry snapshots created later; it never mutates existing instances.
 - `findDocumentRenderer(file, registry?)` — checks normalized MIME essence (case-insensitive and
   parameter-independent), then the first matching `matches()` entry in registration order.
-- `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy direct definition;
-  rejected loads are retried on the next call.
+- `loadDocumentRenderer(definition)` — resolves and identity-caches a lazy direct or lazy-adapted
+  definition; rejected loads are retried on the next call.
 
 Every built-in kind ships a lazy, register-only entry named `<kind>-viewer-register.js`
 (`archive-viewer-register.js`, `ebook-viewer-register.js`, `pdf-viewer-register.js`,
 `docx-viewer-register.js`, `pptx-viewer-register.js`, `spreadsheet-viewer-register.js`,
 `csv-viewer-register.js`, `xml-viewer-register.js`, `notebook-viewer-register.js`,
 `dataset-viewer-register.js`, `email-viewer-register.js`, `calendar-viewer-register.js`,
-`contact-viewer-register.js`, `html-viewer-register.js`, `svg-viewer-register.js`), which installs
+`contact-viewer-register.js`, `html-viewer-register.js`, `svg-viewer-register.js`,
+`model-viewer-register.js`), which installs
 that kind's registration — including its declared `capabilities`, available before anything loads —
 without pulling its element class module into the importing graph until a matching file is
 actually opened, and exports a `<KIND>_VIEWER_TAG` string constant naming the tag it eventually
@@ -2872,6 +2879,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly capabilities?: AnchorTargetCapabilities;
     readonly adapter?: never;
     readonly load?: never;
+    readonly rendererKind?: never;
     // Inherited from DocumentRendererDefinitionBase.
     readonly matches?: (file: LyraDocumentFile) => boolean;
   }`
@@ -2880,9 +2888,22 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `getDefaultDocumentRendererRegistry(): DocumentRendererRegistry`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `LazyAdaptedDocumentRendererDefinition extends DocumentRendererDefinitionBase {
+    readonly render?: never;
+    readonly adapter?: never;
+    readonly capabilities?: never;
+    readonly rendererKind: 'adapted';
+    readonly load: () => Promise<LyraAdaptedDocumentRendererDefinition | {
+      default: LyraAdaptedDocumentRendererDefinition;
+    }>;
+    // Inherited from DocumentRendererDefinitionBase.
+    readonly matches?: (file: LyraDocumentFile) => boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LazyDocumentRendererDefinition extends DocumentRendererDefinitionBase {
     readonly render?: never;
     readonly adapter?: never;
+    readonly rendererKind?: never;
     readonly capabilities?: AnchorTargetCapabilities;
     readonly load: () => Promise<DirectDocumentRendererDefinition | {
       default: DirectDocumentRendererDefinition;
@@ -2892,7 +2913,7 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `loadDocumentRenderer(candidate: DirectDocumentRendererDefinition | LazyDocumentRendererDefinition): Promise<DirectDocumentRendererDefinition>;
-  loadDocumentRenderer(candidate: LyraAdaptedDocumentRendererDefinition): Promise<LyraAdaptedDocumentRendererDefinition>;
+  loadDocumentRenderer(candidate: LyraAdaptedDocumentRendererDefinition | LazyAdaptedDocumentRendererDefinition): Promise<LyraAdaptedDocumentRendererDefinition>;
   loadDocumentRenderer(candidate: LyraDocumentRendererDefinition): Promise<LyraResolvedDocumentRendererDefinition>;`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `LyraAdaptedDocumentRendererDefinition extends DocumentRendererDefinitionBase {
@@ -2900,6 +2921,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly render?: never;
     readonly capabilities?: never;
     readonly load?: never;
+    readonly rendererKind?: never;
     // Inherited from DocumentRendererDefinitionBase.
     readonly matches?: (file: LyraDocumentFile) => boolean;
   }`
@@ -2946,7 +2968,16 @@ These named interfaces and helper signatures are available to typed integrations
     readonly file: LyraDocumentFile;
   }`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
-  `registerDocumentRenderer(key: string, definition: LyraDocumentRendererDefinition): void`
+  `LyraModelDocumentRendererPayload {
+    readonly kind: 'model';
+    readonly file: LyraDocumentFile;
+    readonly format?: LyraModelFormat;
+    readonly camera?: LyraModelCamera;
+  }`
+  Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
+  `registerDocumentRenderer(key: string, definition: DirectDocumentRendererDefinition | LazyDocumentRendererDefinition): void;
+  registerDocumentRenderer(key: string, definition: LyraAdaptedDocumentRendererDefinition | LazyAdaptedDocumentRendererDefinition): void;
+  registerDocumentRenderer(key: string, definition: LyraDocumentRendererDefinition): void;`
   Import: `@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js`.
   `snapshotLyraDocumentRendererPayload(value: LyraDocumentRendererPayload): LyraDocumentRendererPayload`
 
@@ -3086,6 +3117,20 @@ These named interfaces and helper signatures are available to typed integrations
     reason: LyraIncludeErrorReason;
     error?: unknown;
   }`
+
+- **`components-viewers-model-viewer-contracts`** — Supporting data types for `<lr-model-viewer>`.
+  Import: `@aceshooting/lyra-ui/components/viewers/model-viewer/model-viewer.class.js`.
+  `LyraModelCamera {
+    readonly yaw: number;
+    readonly pitch: number;
+    readonly distance: number;
+    readonly target: { readonly x: number; readonly y: number; readonly z: number };
+  }`
+  `LyraModelFormat` is `'gltf' | 'glb' | 'stl' | 'obj' | 'ply' | 'xyz' | 'pcd'`, and
+  `LyraModelFormatPreference` is `'auto' | LyraModelFormat`. `LyraModelViewerEventMap` types the four
+  events above.
+  `Engine3dFallbackDetail` (documented with the shared optional-renderer contracts in `retrieval.md`)
+  types the `lr-engine-fallback` detail.
 
 - **`components-viewers-page-rail-page-rail-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.class.js`.
@@ -3242,3 +3287,158 @@ These named interfaces and helper signatures are available to typed integrations
     readonly page?: number;
     readonly nodeId?: string;
   }`
+
+## `lr-model-viewer`
+
+A bounded, static 3D model and point-cloud preview for glTF, GLB, STL, OBJ, PLY, XYZ and PCD files.
+It renders with the model engine of the optional `@aceshooting/lyra-3d` companion (`pnpm add
+@aceshooting/lyra-3d`), loaded through a lazy `import('@aceshooting/lyra-3d/model')`, and only for a
+nonempty, supported, URL-policy-approved source: an empty `src`, an unsupported format, a blocked
+URL or a browser without WebGL2 downloads neither the model nor the companion. The element has no
+built-in renderer, so a visible text alternative and, whenever `src` passes the safe-download
+policy, a guarded download link stay on screen in every state (idle, loading, ready, empty, failed
+and context lost). No Lyra UI entry point reaches the companion except through that lazy import.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-model-viewer.js';
+</script>
+
+<lr-model-viewer
+  src="/models/valve.glb"
+  name="valve.glb"
+  alt="A ball valve with a red handle"
+></lr-model-viewer>
+```
+
+**Formats.** With `format="auto"` the format comes from, in order, the `mimeType` essence
+(`model/gltf+json`, `model/gltf-binary`, `model/stl`, `application/sla`, `model/obj`,
+`application/x-ply`, `application/ply`, `application/x-pcd`, `application/pcd`), then a recognized
+extension of `name`, then a recognized extension of `src` (query and fragment ignored). Only those
+own keys count: `application/octet-stream` and prototype-like values such as `constructor` never
+select a parser. XYZ has no registered MIME type and is chosen by extension or by `format="xyz"`.
+
+**Properties:** `src: string = ''` — URL of the model; `name: string = ''` — file name used for
+format detection, the download name and the region name when the host has no `aria-label`;
+`mimeType: string = ''` (attribute `mime-type`); `format: 'auto' | 'gltf' | 'glb' | 'stl' | 'obj' |
+'ply' | 'xyz' | 'pcd' = 'auto'` — an explicit format wins over detection, removing the attribute
+returns to `auto`, and any other value fails closed with the localized unsupported-format message
+before a fetch or the companion import; `alt: string = ''` — the text alternative, rendered in every
+state (a built-in sentence is used when empty); `target: string = '_blank'` and `rel: string = ''`
+— download link behavior; `camera?: LyraModelCamera` (attribute: false).
+
+Writing `src`, `name`, `mimeType` or `format` invalidates the current load synchronously: the
+in-flight request is aborted and the engine is disposed before Lit updates, so a stale response can
+never publish. A host `aria-label` (by presence, an explicitly empty one included) names the region
+and the camera surface; otherwise `name`, then the localized `3D model` label, does.
+
+`LyraModelCamera` is `{ yaw, pitch, distance, target: { x, y, z } }`, the orbit camera the engine and
+`lr-graph` share. Assignment copies own data fields only (accessors never run), requires finite
+numbers (a `TypeError` leaves the previous camera untouched) and clamps them to the engine's orbit
+ranges, so a stored camera is always safe to hand back. Assigning a camera is silent; `undefined`
+or `null` removes it and the current model returns to its automatic fit. Reading `camera` returns the
+current value, including the automatic fit and every user movement.
+
+**Methods:** `fit(): void` — refits the current model without emitting an event; it does nothing
+until a model is ready. `retry(): void` — abandons the current attempt and reloads the same source,
+including the companion import after a failed load. The failed-state button calls it.
+
+**Events:**
+
+- `lr-load` — `detail: { format: LyraModelFormat }`. The current model finished parsing, once per
+  load. A valid model with no visible geometry also emits it and shows the localized empty message
+  instead of an error. Progress is visible localized text plus a light-DOM announcement, not an event.
+- `lr-render-error` — `detail: { error: unknown }`. The source or the engine failed: blocked URL,
+  oversize source, failed request, rejected or unsupported file, missing companion or WebGL2, or a
+  failed engine call. The raw diagnostic is only in `detail`; the viewer renders localized text.
+- `lr-camera-change` — `detail: { camera: LyraModelCamera }`. The user moved the camera with a
+  pointer, a key or a toolbar button (the fit button included). Assigning `camera`, `fit()` and the
+  automatic fit are silent.
+- `lr-engine-fallback` — `detail: { from: 'webgl', to: 'list', reason }`. WebGL stopped rendering
+  and the text alternative remains; `reason` is `'unavailable'` (companion missing or incompatible),
+  `'unsupported'` (no WebGL2, or an unsupported format), `'context-lost'` or `'error'`. A lost
+  context keeps its engine so a restored context resumes rendering.
+
+All four events bubble, are composed and are not cancelable. Hover and picking are intentionally
+not exposed: the engine cannot name geometry items, so the element has no selection API. The pointer drags to orbit; Shift-drag or a secondary-button drag
+pans; the wheel keeps scrolling the page.
+
+**Slots:** default — extra descriptive content, displayed after the text alternative.
+
+**CSS parts:** `base` (the named `region`), `viewport` (the camera surface, a named `group` that is
+focusable while a model is ready and described by `instructions`), `toolbar`, `control` (each camera
+or retry button), `instructions`, `alternative`, `status` (visible loading, progress or completion
+text), `error` (visible failure or context-lost text), `footer`, and `download`. The engine canvas
+is decorative (`aria-hidden`, not focusable). Visible state text is ordinary shadow content;
+transitions are spoken through the shared document-level polite and assertive sinks.
+
+**Themeable custom properties:** `--lr-model-viewer-height` (default `var(--lr-size-20rem)`) — block
+size of `[part="viewport"]`. Surfaces, text, accent and focus colors are resolved live from the
+design tokens, including ancestor and shadow-host changes, `prefers-color-scheme`,
+`prefers-reduced-motion` and `forced-colors`.
+
+**Keyboard model.** While a model is ready the camera surface is a tab stop. `ArrowLeft` and
+`ArrowRight` orbit horizontally by 0.1 rad (mirrored under `dir="rtl"`), `ArrowUp` and `ArrowDown`
+orbit vertically, `+` or `=` zooms in (distance × 0.8), `-` zooms out (× 1.25) and `Home` refits. Keys
+with Alt, Ctrl or Meta, composing keys, events from nested targets and everything inside an `inert`
+ancestor are ignored. Seven native toolbar buttons (rotate left, right, up and down, zoom in, zoom
+out and fit) expose the same actions and stay disabled until a model is ready. The engine receives
+the live reduced-motion preference, and the only transitions the viewer adds are the shared
+interactive color transitions, which reduced motion collapses.
+
+**Security model.**
+
+- `src` passes the shared `safeFetchUrl` policy, resolved in the element's owner realm, before any
+  request; `javascript:` and other disallowed schemes render the localized "not allowed" message.
+- The body is read through the shared bounded reader with a fixed 64 MiB ceiling. A larger declared
+  `content-length` is rejected before reading, streamed bytes are counted, and a `src` string longer
+  than 64 Mi code units (an oversized inline `data:` URL) is rejected before URL parsing.
+- No model file can load an external resource or run code: the engine rejects glTF buffers and
+  images, OBJ material libraries and any other reference that is not embedded before a parser runs,
+  and no parser plugin or extension loader is enabled. The model file itself is the only data request.
+- Every asynchronous step is guarded by a generation token, the abort signal, the connection and the
+  owning document. Disconnecting or adopting the element aborts the request and disposes the engine;
+  reconnecting loads again.
+- Failure text is always a localized message, never the thrown message, and the download link stays
+  available: it uses `safeDownloadHref`, merges the author's `rel` through `resolveGuardedRel`
+  (`opener` is always removed) and adds `noopener noreferrer` whenever `target` is nonempty.
+
+**Accepted subsets and fixed ceilings.** The engine admits a conservative subset and enforces
+fixed resource ceilings before parsing: 64 MiB encoded, 256 MiB decoded (including a conservative
+estimate for geometry staging), 1,000,000 vertices, 6,000,000 indices, 256 embedded resources, 4,096
+pixels per texture axis, 16,777,216 pixels per texture and 67,108,864 pixels across all textures,
+and 4,096 entries per repeated structure (glTF arrays, drawables, OBJ object, group and smoothing
+statements, STL solids, PNG chunks and JPEG segments). glTF and GLB must be static core documents with embedded buffers and
+PNG or JPEG images (no animations, skins, cameras or extensions). OBJ and glTF material or texture
+files outside the file are rejected rather than fetched. PCD supports packed `rgb` color only (no
+`rgba` or compressed data). PLY supports its known attributes with triangles and quads. Point clouds
+with alpha or textures keep the standard materials. These are resource-admission limits, not package
+size ceilings or claims of complete format support; a file outside them shows the localized
+"could not be displayed" message and keeps the download link.
+
+**Localization.** Visible text uses `modelViewerLabel`, `modelViewerAlternative`,
+`modelViewerInstructions`, `modelViewerReady`, `modelViewerEmpty`, `modelViewerProgress`
+(`{loaded}` and `{total}` byte counts formatted for the active locale), `modelViewerInvalid`,
+`modelViewerUnsupportedFormat`, the toolbar labels `modelViewerRotateLeft`, `modelViewerRotateRight`,
+`modelViewerRotateUp`, `modelViewerRotateDown` and `modelViewerFit`, plus the shared `zoomIn`,
+`zoomOut`, `retry`, `download`, `loadingDocument`, `documentPreviewEmpty`,
+`documentPreviewResourceTooLarge`, `documentPreviewUrlNotAllowed` and `engine3d*` messages, all
+overridable through `.strings` or `registerLyraLocale()`.
+
+**Document viewer.** `model-viewer-register.js` registers the canonical MIME types and the seven
+extensions (of `name` or `src`) with `lr-document-viewer`, never `application/octet-stream`. Its lazy
+payload adapter declares `{ anchors: [], search: false, textSelect: false }` once loaded, so model
+attachments open in place; any other file keeps the existing attachment fallback.
+`LyraModelDocumentRendererPayload` (`kind: 'model'`) carries the file, an optional `format` and an
+optional `camera`; `file.alt` becomes the text alternative.
+
+```ts
+import type { LyraDocumentRendererPayload } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';
+
+const payload = {
+  kind: 'model',
+  file: { name: 'valve.glb', mimeType: 'model/gltf-binary', src: '/models/valve.glb', alt: 'A ball valve' },
+} satisfies LyraDocumentRendererPayload;
+
+html`<lr-document-viewer open .payload=${payload}></lr-document-viewer>`;
+```

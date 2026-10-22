@@ -388,6 +388,8 @@ export type LyraModelSelectReactProps = LyraReactElementProps<'lr-model-select'>
 
 export type LyraModelSettingsPanelReactProps = LyraReactElementProps<'lr-model-settings-panel'>;
 
+export type LyraModelViewerReactProps = LyraReactElementProps<'lr-model-viewer'>;
+
 export type LyraMultiSplitReactProps = LyraReactElementProps<'lr-multi-split'>;
 
 export type LyraMutationObserverReactProps = LyraReactElementProps<'lr-mutation-observer'>;
@@ -832,6 +834,7 @@ export interface LyraReactIntrinsicElements {
   'lr-mind-map': LyraMindMapReactProps;
   'lr-model-select': LyraModelSelectReactProps;
   'lr-model-settings-panel': LyraModelSettingsPanelReactProps;
+  'lr-model-viewer': LyraModelViewerReactProps;
   'lr-multi-split': LyraMultiSplitReactProps;
   'lr-mutation-observer': LyraMutationObserverReactProps;
   'lr-native-time-input': LyraNativeTimeInputReactProps;

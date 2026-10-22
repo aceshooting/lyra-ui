@@ -80,6 +80,7 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/viewers/ebook-viewer/ebook-viewer-register.ts',
   'src/components/viewers/email-viewer/email-viewer-register.ts',
   'src/components/viewers/html-viewer/html-viewer-register.ts',
+  'src/components/viewers/model-viewer/model-viewer-register.ts',
   'src/components/viewers/notebook-viewer/notebook-viewer-register.ts',
   'src/components/viewers/pdf-viewer/pdf-viewer-register.ts',
   'src/components/viewers/pptx-viewer/pptx-viewer-register.ts',
@@ -121,6 +122,9 @@ export const ACKNOWLEDGED_INTERNAL_HELPER_MODULES = Object.freeze([
   'src/components/media/qr-code/qr-code-loader.ts',
   'src/components/utility/icon/dompurify-loader.ts',
   'src/components/viewers/html-viewer/dompurify-loader.ts',
+  // The optional 3D engine loader and its platform probe are test seams consumed only by the
+  // model viewer's own class; the viewer's public contract is the element and its registration entry.
+  'src/components/viewers/model-viewer/model-viewer-loader.ts',
   'src/components/viewers/notebook-viewer/dompurify-loader.ts',
   'src/components/viewers/svg-viewer/dompurify-loader.ts',
 

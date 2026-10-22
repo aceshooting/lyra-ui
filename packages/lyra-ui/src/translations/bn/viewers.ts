@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'নথির তুলনা',
   documentCompareOldVersion: 'পুরোনো সংস্করণ',
   documentCompareNewVersion: 'নতুন সংস্করণ',
+  modelViewerLabel: 'থ্রিডি মডেল',
+  modelViewerAlternative: 'থ্রিডি মডেলের প্রিভিউ। অন্য ভিউয়ারে খুলতে সোর্স ফাইলটি ডাউনলোড করুন।',
+  modelViewerInstructions: 'ঘোরাতে তীর কী, বড় বা ছোট করতে প্লাস বা মাইনাস এবং মডেল ফিট করতে Home ব্যবহার করুন।',
+  modelViewerReady: 'মডেল প্রস্তুত।',
+  modelViewerEmpty: 'এই মডেলে দৃশ্যমান কোনো জ্যামিতি নেই।',
+  modelViewerProgress: '{total} বাইটের মধ্যে {loaded} বাইট লোড হয়েছে।',
+  modelViewerInvalid: 'এই মডেলটি প্রদর্শন করা যায়নি।',
+  modelViewerUnsupportedFormat: 'এই মডেলের ফরম্যাট সমর্থিত নয়।',
+  modelViewerFit: 'মডেল ফিট করুন',
+  modelViewerRotateLeft: 'বামে ঘোরান',
+  modelViewerRotateRight: 'ডানে ঘোরান',
+  modelViewerRotateUp: 'উপরে ঘোরান',
+  modelViewerRotateDown: 'নিচে ঘোরান',
 };
 
 registerLyraLocale('bn', strings);

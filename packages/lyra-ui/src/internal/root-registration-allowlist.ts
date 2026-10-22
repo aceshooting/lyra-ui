@@ -168,6 +168,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-mind-map',
   'lr-model-select',
   'lr-model-settings-panel',
+  'lr-model-viewer',
   'lr-multi-split',
   'lr-mutation-observer',
   'lr-native-time-input',

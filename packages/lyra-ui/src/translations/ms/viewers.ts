@@ -130,6 +130,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Perbandingan dokumen',
   documentCompareOldVersion: 'Versi lama',
   documentCompareNewVersion: 'Versi baharu',
+  modelViewerLabel: 'Model 3D',
+  modelViewerAlternative: 'Pratonton model 3D. Muat turun fail sumber untuk membukanya dalam pelihat lain.',
+  modelViewerInstructions: 'Gunakan kekunci anak panah untuk memutar, tambah atau tolak untuk zum, dan Home untuk memuatkan model.',
+  modelViewerReady: 'Model sudah sedia.',
+  modelViewerEmpty: 'Model ini tidak mengandungi geometri yang kelihatan.',
+  modelViewerProgress: '{loaded} daripada {total} bait dimuatkan.',
+  modelViewerInvalid: 'Model ini tidak dapat dipaparkan.',
+  modelViewerUnsupportedFormat: 'Format model ini tidak disokong.',
+  modelViewerFit: 'Muatkan model',
+  modelViewerRotateLeft: 'Putar ke kiri',
+  modelViewerRotateRight: 'Putar ke kanan',
+  modelViewerRotateUp: 'Putar ke atas',
+  modelViewerRotateDown: 'Putar ke bawah',
 };
 
 registerLyraLocale('ms', strings);

@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'ஆவண ஒப்பீடு',
   documentCompareOldVersion: 'பழைய பதிப்பு',
   documentCompareNewVersion: 'புதிய பதிப்பு',
+  modelViewerLabel: '3D மாதிரி',
+  modelViewerAlternative: '3D மாதிரியின் முன்னோட்டம். வேறொரு பார்வையாளரில் திறக்க மூலக் கோப்பைப் பதிவிறக்கவும்.',
+  modelViewerInstructions: 'சுழற்ற அம்புக்குறி விசைகளையும், பெரிதாக்க அல்லது சிறிதாக்க கூட்டல் அல்லது கழித்தலையும், மாதிரியைப் பொருத்த Home விசையையும் பயன்படுத்தவும்.',
+  modelViewerReady: 'மாதிரி தயார்.',
+  modelViewerEmpty: 'இந்த மாதிரியில் காணக்கூடிய வடிவவியல் இல்லை.',
+  modelViewerProgress: '{total} பைட்டுகளில் {loaded} பைட்டுகள் ஏற்றப்பட்டன.',
+  modelViewerInvalid: 'இந்த மாதிரியைக் காட்ட முடியவில்லை.',
+  modelViewerUnsupportedFormat: 'இந்த மாதிரி வடிவம் ஆதரிக்கப்படவில்லை.',
+  modelViewerFit: 'மாதிரியைப் பொருத்து',
+  modelViewerRotateLeft: 'இடப்பக்கம் சுழற்று',
+  modelViewerRotateRight: 'வலப்பக்கம் சுழற்று',
+  modelViewerRotateUp: 'மேலே சுழற்று',
+  modelViewerRotateDown: 'கீழே சுழற்று',
 };
 
 registerLyraLocale('ta', strings);

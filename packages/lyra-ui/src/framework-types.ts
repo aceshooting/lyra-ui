@@ -304,6 +304,7 @@ import type { LyraGeoJsonViewer, LyraGeoJsonViewerEventMap } from './components/
 import type { LyraHighlightLayer, LyraHighlightLayerEventMap } from './components/viewers/highlight-layer/highlight-layer.class.js';
 import type { LyraHtmlViewer, LyraHtmlViewerEventMap } from './components/viewers/html-viewer/html-viewer.class.js';
 import type { LyraInclude, LyraIncludeEventMap } from './components/viewers/include/include.class.js';
+import type { LyraModelViewer, LyraModelViewerEventMap } from './components/viewers/model-viewer/model-viewer.class.js';
 import type { LyraNotebookViewer, LyraNotebookViewerEventMap } from './components/viewers/notebook-viewer/notebook-viewer.class.js';
 import type { LyraPageRail, LyraPageRailEventMap } from './components/viewers/page-rail/page-rail.class.js';
 import type { LyraPdfViewer, LyraPdfViewerEventMap } from './components/viewers/pdf-viewer/pdf-viewer.class.js';
@@ -8102,6 +8103,32 @@ export interface LyraComponentTypeMap {
       'temperature-max'?: LyraModelSettingsPanel['temperatureMax'];
       'temperature-min'?: LyraModelSettingsPanel['temperatureMin'];
       'temperature-step'?: LyraModelSettingsPanel['temperatureStep'];
+    };
+  };
+  'lr-model-viewer': {
+    element: LyraModelViewer;
+    properties: LyraElementProperties<
+      LyraModelViewer,
+      | 'alt'
+      | 'camera'
+      | 'format'
+      | 'locale'
+      | 'mimeType'
+      | 'name'
+      | 'rel'
+      | 'src'
+      | 'strings'
+      | 'target',
+      {}
+    >;
+    events: LyraModelViewerEventMap;
+    eventNames:       | 'lr-camera-change'
+      | 'lr-engine-fallback'
+      | 'lr-load'
+      | 'lr-render-error';
+    cssNames:       | '--lr-model-viewer-height';
+    attributeAliases: {
+      'mime-type'?: LyraModelViewer['mimeType'];
     };
   };
   'lr-multi-split': {

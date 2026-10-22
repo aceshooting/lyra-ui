@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Ntụnyere akwụkwọ',
   documentCompareOldVersion: 'Ụdị mbipụta ochie',
   documentCompareNewVersion: 'Ụdị mbipụta ọhụrụ',
+  modelViewerLabel: 'Ụdị 3D',
+  modelViewerAlternative: 'Nlele ụzọ nke ụdị 3D. Budata faịlụ isi iji mepee ya na onye nlele ọzọ.',
+  modelViewerInstructions: 'Jiri mkpịsị ugodi iji tụgharịa, mgbakwunye ma ọ bụ mwepụ iji gbasaa ma ọ bụ belata, na Home iji hazie ụdị ahụ.',
+  modelViewerReady: 'Ụdị ahụ dị njikere.',
+  modelViewerEmpty: 'Ụdị a enweghị ọdịdị ọ bụla a na-ahụ anya.',
+  modelViewerProgress: 'E bubatara bytes {loaded} n’ime {total}.',
+  modelViewerInvalid: 'Enweghị ike igosi ụdị a.',
+  modelViewerUnsupportedFormat: 'Anaghị akwado usoro ụdị a.',
+  modelViewerFit: 'Hazie ụdị',
+  modelViewerRotateLeft: 'Tụgharịa aka ekpe',
+  modelViewerRotateRight: 'Tụgharịa aka nri',
+  modelViewerRotateUp: 'Tụgharịa n’elu',
+  modelViewerRotateDown: 'Tụgharịa n’ala',
 };
 
 registerLyraLocale('ig', strings);

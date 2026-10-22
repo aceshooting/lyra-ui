@@ -1,0 +1,557 @@
+import { MODEL_FORMATS, snapshotModelCamera, type LyraModelCamera, type LyraModelFormat } from './model-viewer-contract.js';
+import { rememberDocumentRendererRegistry } from './document-renderer-registry-ownership.js';
+import type { AnchorTargetCapabilities, LyraAnchor, LyraHighlight } from '../components/viewers/document-viewer/anchors.js';
+import {
+  snapshotLyraAvCues,
+  snapshotLyraAvTracks,
+  type LyraAvCue,
+  type LyraAvTrack,
+} from './av-metadata.js';
+import { snapshotLyraHighlights } from './highlight-collection.js';
+
+/** Immutable file data wrapped by a `LyraDocumentRendererPayload`. */
+export interface LyraDocumentFile {
+  readonly name: string;
+  readonly mimeType: string;
+  readonly src: string;
+  /** A string is a highlight id in `highlights`. */
+  readonly anchor?: LyraAnchor | string;
+  readonly highlights?: readonly LyraHighlight[];
+  /** Media alt text for image-like renderers. */
+  readonly alt?: string;
+}
+
+/** Generic payload used when no renderer-specific authoring data is supplied. */
+export interface LyraGenericDocumentRendererPayload {
+  readonly kind: 'document';
+  readonly file: LyraDocumentFile;
+}
+
+/** Audio/video payload carrying the metadata needed for transcript search and native tracks. */
+export interface LyraAvDocumentRendererPayload {
+  readonly kind: 'av';
+  readonly file: LyraDocumentFile;
+  readonly cues: readonly LyraAvCue[];
+  readonly tracks: readonly LyraAvTrack[];
+}
+
+/** Static model payload with an optional explicit format and copied orbit camera. */
+export interface LyraModelDocumentRendererPayload {
+  readonly kind: 'model';
+  readonly file: LyraDocumentFile;
+  readonly format?: LyraModelFormat;
+  readonly camera?: LyraModelCamera;
+}
+
+/** Built-in renderer payloads. `kind` is the renderer-family discriminator. */
+export type LyraDocumentRendererPayload =
+  | LyraGenericDocumentRendererPayload
+  | LyraAvDocumentRendererPayload
+  | LyraModelDocumentRendererPayload;
+
+export type LyraDocumentRendererPayloadKind = LyraDocumentRendererPayload['kind'];
+export type LyraDocumentRendererPayloadFor<K extends LyraDocumentRendererPayloadKind> = Extract<
+  LyraDocumentRendererPayload,
+  { kind: K }
+>;
+
+function snapshotDocumentFile(value: unknown): LyraDocumentFile {
+  if (value === null || typeof value !== 'object') {
+    throw new TypeError('A document renderer payload must provide a file object.');
+  }
+  const file = value as Record<string, unknown>;
+  if (
+    typeof file['name'] !== 'string'
+    || typeof file['mimeType'] !== 'string'
+    || typeof file['src'] !== 'string'
+  ) {
+    throw new TypeError('A document renderer payload file must provide string name, mimeType, and src fields.');
+  }
+  const highlights = file['highlights'] === undefined
+    ? undefined
+    : snapshotLyraHighlights(file['highlights']);
+  return Object.freeze({
+    name: file['name'],
+    mimeType: file['mimeType'],
+    src: file['src'],
+    ...(file['anchor'] !== undefined ? { anchor: file['anchor'] as LyraAnchor | string } : {}),
+    ...(highlights ? { highlights } : {}),
+    ...(typeof file['alt'] === 'string' ? { alt: file['alt'] } : {}),
+  });
+}
+
+/** Clones, validates, hard-bounds, and freezes a renderer payload at an assignment boundary. */
+export function snapshotLyraDocumentRendererPayload(
+  value: LyraDocumentRendererPayload,
+): LyraDocumentRendererPayload {
+  if (value === null || typeof value !== 'object') {
+    throw new TypeError('A document renderer payload must be an object.');
+  }
+  const candidate = value as LyraDocumentRendererPayload;
+  const file = snapshotDocumentFile(candidate.file);
+  if (candidate.kind === 'document') return Object.freeze({ kind: 'document', file });
+  if (candidate.kind === 'av') {
+    return Object.freeze({
+      kind: 'av',
+      file,
+      cues: snapshotLyraAvCues(candidate.cues),
+      tracks: snapshotLyraAvTracks(candidate.tracks),
+    });
+  }
+  if (candidate.kind === 'model') {
+    if (candidate.format !== undefined && !MODEL_FORMATS.includes(candidate.format)) throw new TypeError('Unsupported model payload format');
+    return Object.freeze({ kind: 'model', file, ...(candidate.format === undefined ? {} : { format: candidate.format }), ...(candidate.camera === undefined ? {} : { camera: snapshotModelCamera(candidate.camera) }) });
+  }
+  throw new TypeError('A document renderer payload has an unsupported kind.');
+}
+
+const DOCUMENT_RENDERER_ADAPTER = Symbol('document-renderer-adapter');
+const factoryAdapters = new WeakMap<object, LyraDocumentRendererAdapter>();
+
+/** Type-erased adapter created by `createDocumentRendererAdapter()`. */
+export interface LyraDocumentRendererAdapter {
+  readonly kind: LyraDocumentRendererPayloadKind;
+  readonly [DOCUMENT_RENDERER_ADAPTER]: true;
+  adapt(file: LyraDocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload;
+  capabilities(payload: LyraDocumentRendererPayload): AnchorTargetCapabilities | undefined;
+  render(payload: LyraDocumentRendererPayload): unknown;
+}
+
+/** Strongly typed authoring contract for one discriminator-specific renderer adapter. */
+export interface LyraDocumentRendererAdapterDefinition<
+  K extends LyraDocumentRendererPayloadKind,
+> {
+  readonly kind: K;
+  readonly adapt: (
+    file: LyraDocumentFile,
+    supplied?: LyraDocumentRendererPayload,
+  ) => LyraDocumentRendererPayloadFor<K>;
+  readonly capabilities: (
+    payload: LyraDocumentRendererPayloadFor<K>,
+  ) => AnchorTargetCapabilities | undefined;
+  readonly render: (payload: LyraDocumentRendererPayloadFor<K>) => unknown;
+}
+
+interface DocumentRendererDefinitionBase {
+  /** Matches files that do not have an exact normalized MIME-type registration. */
+  readonly matches?: (file: LyraDocumentFile) => boolean;
+}
+
+/** A renderer whose implementation is already available. */
+export interface DirectDocumentRendererDefinition extends DocumentRendererDefinitionBase {
+  /** Renders the file as Lit-compatible content, a DOM node, or plain text. */
+  readonly render: (file: LyraDocumentFile) => unknown;
+  /** Static legacy capability declaration. Payload adapters derive capabilities instead. */
+  readonly capabilities?: AnchorTargetCapabilities;
+  readonly adapter?: never;
+  readonly load?: never;
+  readonly rendererKind?: never;
+}
+
+/** A direct renderer driven by a typed, discriminator-specific payload adapter. */
+export interface LyraAdaptedDocumentRendererDefinition extends DocumentRendererDefinitionBase {
+  readonly adapter: LyraDocumentRendererAdapter;
+  readonly render?: never;
+  readonly capabilities?: never;
+  readonly load?: never;
+  readonly rendererKind?: never;
+}
+
+/** A resolved definition that can render immediately. */
+export type LyraResolvedDocumentRendererDefinition =
+  | DirectDocumentRendererDefinition
+  | LyraAdaptedDocumentRendererDefinition;
+
+/** A renderer whose implementation is loaded only after a matching file is opened. */
+export interface LazyDocumentRendererDefinition extends DocumentRendererDefinitionBase {
+  readonly render?: never;
+  readonly adapter?: never;
+  readonly rendererKind?: never;
+  /** Capability declaration available before the legacy direct renderer is loaded. */
+  readonly capabilities?: AnchorTargetCapabilities;
+  readonly load: () => Promise<
+    DirectDocumentRendererDefinition | { default: DirectDocumentRendererDefinition }
+  >;
+}
+
+/** Lazy payload adapter; all capabilities derive from its immutable payload after loading. */
+export interface LazyAdaptedDocumentRendererDefinition extends DocumentRendererDefinitionBase {
+  readonly render?: never;
+  readonly adapter?: never;
+  readonly capabilities?: never;
+  /** Declares that `load()` resolves to a payload adapter, not a direct renderer. */
+  readonly rendererKind: 'adapted';
+  readonly load: () => Promise<LyraAdaptedDocumentRendererDefinition | { default: LyraAdaptedDocumentRendererDefinition }>;
+}
+
+/** A validated renderer definition with exactly one of `render`, `adapter`, and `load`. */
+export type LyraDocumentRendererDefinition =
+  | DirectDocumentRendererDefinition
+  | LyraAdaptedDocumentRendererDefinition
+  | LazyDocumentRendererDefinition
+  | LazyAdaptedDocumentRendererDefinition;
+
+/** One payload-bound renderer invocation and its truthful, immutable capabilities. */
+export interface LyraAdaptedDocumentRenderer {
+  readonly payload: LyraDocumentRendererPayload;
+  readonly capabilities?: AnchorTargetCapabilities;
+  readonly render: () => unknown;
+}
+
+/** Immutable MIME/key-to-renderer registry accepted by `<lr-document-viewer>`. */
+export type DocumentRendererRegistry = ReadonlyMap<string, LyraDocumentRendererDefinition>;
+
+const builtInDefinitions = new Map<string, LyraDocumentRendererDefinition>();
+let loadCache = new WeakMap<LyraDocumentRendererDefinition, Promise<LyraResolvedDocumentRendererDefinition>>();
+let validatedDefinitionCache = new WeakMap<object, LyraDocumentRendererDefinition>();
+
+function registryKeyEssence(normalized: string): string {
+  return normalized.includes('/') ? normalized.split(';', 1)[0]!.trim() : normalized;
+}
+
+function normalizeRegistryKey(key: string): string {
+  const normalized = key.trim().toLowerCase();
+  if (!normalized) throw new TypeError('A document renderer key must not be empty.');
+  return registryKeyEssence(normalized);
+}
+
+/** Lookup-side normalisation: a missing or blank MIME type matches no key instead of throwing. */
+function lookupRegistryKey(key: string): string {
+  return typeof key === 'string' ? registryKeyEssence(key.trim().toLowerCase()) : '';
+}
+
+function freezeCapabilities(
+  capabilities: AnchorTargetCapabilities | undefined,
+): AnchorTargetCapabilities | undefined {
+  if (!capabilities) return undefined;
+  if (
+    (capabilities.anchors !== undefined && (
+      !Array.isArray(capabilities.anchors)
+      || capabilities.anchors.some((kind) => typeof kind !== 'string')
+    ))
+    || (capabilities.search !== undefined && typeof capabilities.search !== 'boolean')
+    || (capabilities.textSelect !== undefined && typeof capabilities.textSelect !== 'boolean')
+  ) {
+    throw new TypeError('A document renderer has an invalid capabilities declaration.');
+  }
+  return Object.freeze({
+    ...capabilities,
+    ...(capabilities.anchors
+      ? { anchors: Object.freeze([...capabilities.anchors]) as unknown as AnchorTargetCapabilities['anchors'] }
+      : {}),
+  });
+}
+
+/**
+ * Creates a type-safe payload adapter, then erases its discriminator-specific callback types behind
+ * runtime kind checks. Legacy `render(file)` definitions remain a separate branch.
+ */
+export function createDocumentRendererAdapter<K extends LyraDocumentRendererPayloadKind>(
+  definition: LyraDocumentRendererAdapterDefinition<K>,
+): LyraDocumentRendererAdapter {
+  const kind = definition.kind;
+  const adapt = definition.adapt;
+  const capabilities = definition.capabilities;
+  const render = definition.render;
+  if (
+    (kind !== 'document' && kind !== 'av' && kind !== 'model')
+    || typeof adapt !== 'function'
+    || typeof capabilities !== 'function'
+    || typeof render !== 'function'
+  ) {
+    throw new TypeError('A document renderer adapter definition is invalid.');
+  }
+  const assertKind = (
+    payload: LyraDocumentRendererPayload,
+  ): LyraDocumentRendererPayloadFor<K> => {
+    if (payload.kind !== kind) {
+      throw new TypeError('A document renderer adapter returned or received the wrong payload kind.');
+    }
+    return payload as LyraDocumentRendererPayloadFor<K>;
+  };
+  const adapter = Object.freeze({
+    [DOCUMENT_RENDERER_ADAPTER]: true as const,
+    kind,
+    adapt(file: LyraDocumentFile, supplied?: LyraDocumentRendererPayload): LyraDocumentRendererPayload {
+      return assertKind(snapshotLyraDocumentRendererPayload(adapt(file, supplied)));
+    },
+    capabilities(payload: LyraDocumentRendererPayload): AnchorTargetCapabilities | undefined {
+      return freezeCapabilities(capabilities(assertKind(payload)));
+    },
+    render(payload: LyraDocumentRendererPayload): unknown {
+      return render(assertKind(payload));
+    },
+  });
+  factoryAdapters.set(adapter.adapt, adapter);
+  return adapter;
+}
+
+function resolveDocumentRendererAdapter(value: unknown): LyraDocumentRendererAdapter | undefined {
+  if (value === null || typeof value !== 'object') return undefined;
+  try {
+    // Collection snapshots retain callback identities but omit private symbol properties. Match
+    // every own data field to a factory-created wrapper before recovering its frozen adapter.
+    const adapt = Object.getOwnPropertyDescriptor(value, 'adapt')?.value as unknown;
+    if (typeof adapt !== 'function') return undefined;
+    const trusted = factoryAdapters.get(adapt);
+    if (!trusted) return undefined;
+    for (const key of ['kind', 'capabilities', 'render'] as const) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !('value' in descriptor) || descriptor.value !== trusted[key]) return undefined;
+    }
+    return trusted;
+  } catch {
+    return undefined;
+  }
+}
+
+function validateDefinition(value: unknown): LyraDocumentRendererDefinition {
+  if (typeof value !== 'object' || value === null) {
+    throw new TypeError('A document renderer definition must be an object.');
+  }
+  const cached = validatedDefinitionCache.get(value);
+  if (cached) return cached;
+  const candidate = value as Partial<LyraDocumentRendererDefinition> & {
+    render?: unknown;
+    load?: unknown;
+    adapter?: unknown;
+    matches?: unknown;
+    capabilities?: AnchorTargetCapabilities;
+  };
+  const rendererKindDescriptor = Object.getOwnPropertyDescriptor(candidate, 'rendererKind');
+  if ('rendererKind' in candidate && (!rendererKindDescriptor || !('value' in rendererKindDescriptor))) {
+    throw new TypeError('A lazy renderer kind must be an own data property.');
+  }
+  const rendererKind: unknown = rendererKindDescriptor?.value;
+  const hasRender = typeof candidate.render === 'function';
+  const hasLoad = typeof candidate.load === 'function';
+  const hasAdapter = candidate.adapter !== undefined;
+  if (Number(hasRender) + Number(hasLoad) + Number(hasAdapter) !== 1) {
+    throw new TypeError('A document renderer definition must provide exactly one of render, adapter, or load.');
+  }
+  if (candidate.matches !== undefined && typeof candidate.matches !== 'function') {
+    throw new TypeError('A document renderer matcher must be a function.');
+  }
+  const adapter = hasAdapter ? resolveDocumentRendererAdapter(candidate.adapter) : undefined;
+  if (hasAdapter && !adapter) {
+    throw new TypeError('A document renderer adapter must be created with createDocumentRendererAdapter().');
+  }
+  if (hasAdapter && candidate.capabilities !== undefined) {
+    throw new TypeError('A payload adapter must derive its capabilities instead of declaring static capabilities.');
+  }
+  if (rendererKind !== undefined && (!hasLoad || rendererKind !== 'adapted')) {
+    throw new TypeError('Only a lazy payload adapter may declare rendererKind.');
+  }
+  if (hasLoad && rendererKind === 'adapted' && candidate.capabilities !== undefined) {
+    throw new TypeError('A lazy payload adapter must derive its capabilities after loading.');
+  }
+  const capabilities = freezeCapabilities(candidate.capabilities);
+  const base = {
+    ...(candidate.matches ? { matches: candidate.matches as (file: LyraDocumentFile) => boolean } : {}),
+  };
+  const validated: LyraDocumentRendererDefinition = adapter
+    ? Object.freeze({
+        ...base,
+        adapter,
+      })
+    : hasRender
+      ? Object.freeze({
+        ...base,
+        ...(capabilities ? { capabilities } : {}),
+        render: candidate.render as (file: LyraDocumentFile) => unknown,
+      })
+      : rendererKind === 'adapted'
+        ? Object.freeze({
+          ...base,
+          rendererKind: 'adapted' as const,
+          load: candidate.load as LazyAdaptedDocumentRendererDefinition['load'],
+        })
+        : Object.freeze({
+          ...base,
+          ...(capabilities ? { capabilities } : {}),
+          load: candidate.load as LazyDocumentRendererDefinition['load'],
+        });
+  validatedDefinitionCache.set(value, validated);
+  validatedDefinitionCache.set(validated, validated);
+  return validated;
+}
+
+/**
+ * Binds one resolved definition to a legacy file plus optional immutable payload. The returned
+ * invocation is the sole capability-derivation path and renders without widening legacy callbacks.
+ */
+export function adaptDocumentRenderer(
+  candidate: LyraResolvedDocumentRendererDefinition,
+  file: LyraDocumentFile,
+  supplied?: LyraDocumentRendererPayload,
+): LyraAdaptedDocumentRenderer {
+  const definition = validateDefinition(candidate);
+  if ('load' in definition && definition.load) {
+    throw new TypeError('A lazy document renderer must be loaded before it can be adapted.');
+  }
+  const immutableSupplied = supplied
+    ? snapshotLyraDocumentRendererPayload(supplied)
+    : undefined;
+  const immutableFile = snapshotDocumentFile(file);
+  if ('adapter' in definition && definition.adapter) {
+    const payload = definition.adapter.adapt(immutableFile, immutableSupplied);
+    const capabilities = definition.adapter.capabilities(payload);
+    return Object.freeze({
+      payload,
+      ...(capabilities ? { capabilities } : {}),
+      render: () => definition.adapter.render(payload),
+    });
+  }
+  const payload = immutableSupplied ?? snapshotLyraDocumentRendererPayload({
+    kind: 'document',
+    file: immutableFile,
+  });
+  return Object.freeze({
+    payload,
+    ...(definition.capabilities ? { capabilities: definition.capabilities } : {}),
+    render: () => definition.render(immutableFile),
+  });
+}
+
+/** Read-only wrapper rather than a frozen `Map` (whose mutator methods remain callable). */
+class ImmutableDocumentRendererRegistry implements ReadonlyMap<string, LyraDocumentRendererDefinition> {
+  readonly #entries: Map<string, LyraDocumentRendererDefinition>;
+
+  constructor(entries: Iterable<readonly [string, LyraDocumentRendererDefinition]>) {
+    this.#entries = new Map(entries);
+    rememberDocumentRendererRegistry(this, this.#entries);
+  }
+
+  get size(): number {
+    return this.#entries.size;
+  }
+
+  get(key: string): LyraDocumentRendererDefinition | undefined {
+    return this.#entries.get(lookupRegistryKey(key));
+  }
+
+  has(key: string): boolean {
+    return this.#entries.has(lookupRegistryKey(key));
+  }
+
+  entries(): MapIterator<[string, LyraDocumentRendererDefinition]> {
+    return this.#entries.entries();
+  }
+
+  keys(): MapIterator<string> {
+    return this.#entries.keys();
+  }
+
+  values(): MapIterator<LyraDocumentRendererDefinition> {
+    return this.#entries.values();
+  }
+
+  forEach(
+    callbackfn: (
+      value: LyraDocumentRendererDefinition,
+      key: string,
+      map: ReadonlyMap<string, LyraDocumentRendererDefinition>,
+    ) => void,
+    thisArg?: unknown,
+  ): void {
+    for (const [key, value] of this.#entries) callbackfn.call(thisArg, value, key, this);
+  }
+
+  [Symbol.iterator](): MapIterator<[string, LyraDocumentRendererDefinition]> {
+    return this.entries();
+  }
+}
+
+/**
+ * Creates an immutable registry snapshot from the built-ins registered so far plus optional
+ * per-instance overrides. Later module registrations cannot mutate an existing snapshot.
+ */
+export function createDocumentRendererRegistry(
+  overrides: Iterable<readonly [string, LyraDocumentRendererDefinition]> = [],
+): DocumentRendererRegistry {
+  const entries = new Map(builtInDefinitions);
+  for (const [key, definition] of overrides) {
+    entries.set(normalizeRegistryKey(key), validateDefinition(definition));
+  }
+  return new ImmutableDocumentRendererRegistry(entries);
+}
+
+/**
+ * Adds or replaces a built-in definition for registries created after this call. Registration
+ * modules use this during module evaluation; existing viewer instances remain isolated snapshots.
+ */
+export function registerDocumentRenderer(
+  key: string,
+  definition: DirectDocumentRendererDefinition | LazyDocumentRendererDefinition,
+): void;
+export function registerDocumentRenderer(
+  key: string,
+  definition: LyraAdaptedDocumentRendererDefinition | LazyAdaptedDocumentRendererDefinition,
+): void;
+export function registerDocumentRenderer(key: string, definition: LyraDocumentRendererDefinition): void;
+export function registerDocumentRenderer(key: string, definition: LyraDocumentRendererDefinition): void {
+  builtInDefinitions.set(normalizeRegistryKey(key), validateDefinition(definition));
+}
+
+/** Returns a fresh immutable snapshot of the built-ins registered so far. */
+export function getDefaultDocumentRendererRegistry(): DocumentRendererRegistry {
+  return createDocumentRendererRegistry();
+}
+
+/** Finds an exact normalized MIME essence (if any), then the first matching shape-based renderer. */
+export function findDocumentRenderer(
+  file: LyraDocumentFile,
+  registry: DocumentRendererRegistry = createDocumentRendererRegistry(),
+): LyraDocumentRendererDefinition | undefined {
+  const exact = registry.get(lookupRegistryKey(file.mimeType));
+  if (exact) return validateDefinition(exact);
+  for (const candidate of registry.values()) {
+    const definition = validateDefinition(candidate);
+    if (definition.matches?.(file)) return definition;
+  }
+  return undefined;
+}
+
+function unwrapLoadedDefinition(value: unknown): unknown {
+  if (typeof value === 'object' && value !== null && 'default' in value) {
+    return (value as { default: unknown }).default;
+  }
+  return value;
+}
+
+/** Resolves, validates and identity-caches a lazy renderer. Rejected loads are retried. */
+export function loadDocumentRenderer(
+  candidate: DirectDocumentRendererDefinition | LazyDocumentRendererDefinition,
+): Promise<DirectDocumentRendererDefinition>;
+export function loadDocumentRenderer(
+  candidate: LyraAdaptedDocumentRendererDefinition | LazyAdaptedDocumentRendererDefinition,
+): Promise<LyraAdaptedDocumentRendererDefinition>;
+export function loadDocumentRenderer(
+  candidate: LyraDocumentRendererDefinition,
+): Promise<LyraResolvedDocumentRendererDefinition>;
+export function loadDocumentRenderer(
+  candidate: LyraDocumentRendererDefinition,
+): Promise<LyraResolvedDocumentRendererDefinition> {
+  const definition = validateDefinition(candidate);
+  if (!('load' in definition) || !definition.load) return Promise.resolve(definition);
+  const cached = loadCache.get(definition);
+  if (cached) return cached;
+
+  const promise = definition.load().then((value) => {
+    const resolved = validateDefinition(unwrapLoadedDefinition(value));
+    if (resolved.load || Boolean(resolved.adapter) !== (definition.rendererKind === 'adapted')) {
+      throw new TypeError('A lazy renderer must resolve to its declared direct or adapted kind.');
+    }
+    return resolved;
+  });
+  loadCache.set(definition, promise);
+  promise.catch(() => loadCache.delete(definition));
+  return promise;
+}
+
+/** Clears built-in registrations and the lazy-load cache for isolated tests. */
+export function clearDocumentRenderers(): void {
+  builtInDefinitions.clear();
+  loadCache = new WeakMap();
+  validatedDefinitionCache = new WeakMap();
+}

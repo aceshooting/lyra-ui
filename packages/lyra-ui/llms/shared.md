@@ -142,7 +142,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 294
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 295
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -4857,6 +4857,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-mind-map': LyraMindMapReactProps;
   'lr-model-select': LyraModelSelectReactProps;
   'lr-model-settings-panel': LyraModelSettingsPanelReactProps;
+  'lr-model-viewer': LyraModelViewerReactProps;
   'lr-multi-split': LyraMultiSplitReactProps;
   'lr-mutation-observer': LyraMutationObserverReactProps;
   'lr-native-time-input': LyraNativeTimeInputReactProps;
@@ -5297,6 +5298,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-mind-map': LyraComponentTypeMap['lr-mind-map']['element'];
   'lr-model-select': LyraComponentTypeMap['lr-model-select']['element'];
   'lr-model-settings-panel': LyraComponentTypeMap['lr-model-settings-panel']['element'];
+  'lr-model-viewer': LyraComponentTypeMap['lr-model-viewer']['element'];
   'lr-multi-split': LyraComponentTypeMap['lr-multi-split']['element'];
   'lr-mutation-observer': LyraComponentTypeMap['lr-mutation-observer']['element'];
   'lr-native-time-input': LyraComponentTypeMap['lr-native-time-input']['element'];
@@ -5608,6 +5610,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-mind-map': LyraMindMapSvelteProps;
   'lr-model-select': LyraModelSelectSvelteProps;
   'lr-model-settings-panel': LyraModelSettingsPanelSvelteProps;
+  'lr-model-viewer': LyraModelViewerSvelteProps;
   'lr-multi-split': LyraMultiSplitSvelteProps;
   'lr-mutation-observer': LyraMutationObserverSvelteProps;
   'lr-native-time-input': LyraNativeTimeInputSvelteProps;
@@ -6066,6 +6069,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-mind-map': LyraMindMapVueProps;
   'lr-model-select': LyraModelSelectVueProps;
   'lr-model-settings-panel': LyraModelSettingsPanelVueProps;
+  'lr-model-viewer': LyraModelViewerVueProps;
   'lr-multi-split': LyraMultiSplitVueProps;
   'lr-mutation-observer': LyraMutationObserverVueProps;
   'lr-native-time-input': LyraNativeTimeInputVueProps;

@@ -130,6 +130,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: '문서 비교',
   documentCompareOldVersion: '이전 버전',
   documentCompareNewVersion: '새로운 버전',
+  modelViewerLabel: '3D 모델',
+  modelViewerAlternative: '3D 모델 미리보기입니다. 다른 뷰어에서 열려면 원본 파일을 다운로드하세요.',
+  modelViewerInstructions: '화살표 키로 회전하고, 더하기 또는 빼기 키로 확대·축소하며, Home 키로 모델을 화면에 맞춥니다.',
+  modelViewerReady: '모델이 준비되었습니다.',
+  modelViewerEmpty: '이 모델에는 표시할 수 있는 지오메트리가 없습니다.',
+  modelViewerProgress: '{total}바이트 중 {loaded}바이트를 불러왔습니다.',
+  modelViewerInvalid: '이 모델을 표시할 수 없습니다.',
+  modelViewerUnsupportedFormat: '이 모델 형식은 지원되지 않습니다.',
+  modelViewerFit: '모델 맞춤',
+  modelViewerRotateLeft: '왼쪽으로 회전',
+  modelViewerRotateRight: '오른쪽으로 회전',
+  modelViewerRotateUp: '위로 회전',
+  modelViewerRotateDown: '아래로 회전',
 };
 
 registerLyraLocale('ko', strings);

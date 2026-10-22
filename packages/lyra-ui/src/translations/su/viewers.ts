@@ -130,6 +130,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Babandingan dokumén',
   documentCompareOldVersion: 'Vérsi heubeul',
   documentCompareNewVersion: 'Vérsi anyar',
+  modelViewerLabel: 'Model 3D',
+  modelViewerAlternative: 'Pratayang model 3D. Undeur koropak sumber pikeun muka dina panempo anu sanés.',
+  modelViewerInstructions: 'Paké tombol panah pikeun muterkeun, tambah atawa kurang pikeun zoom, jeung Home pikeun nyaluyukeun model.',
+  modelViewerReady: 'Model geus siap.',
+  modelViewerEmpty: 'Model ieu teu ngandung géométri anu katingali.',
+  modelViewerProgress: '{loaded} ti {total} bait geus dimuat.',
+  modelViewerInvalid: 'Model ieu teu bisa dipintonkeun.',
+  modelViewerUnsupportedFormat: 'Format model ieu teu dirojong.',
+  modelViewerFit: 'Saluyukeun model',
+  modelViewerRotateLeft: 'Puter ka kénca',
+  modelViewerRotateRight: 'Puter ka katuhu',
+  modelViewerRotateUp: 'Puter ka luhur',
+  modelViewerRotateDown: 'Puter ka handap',
 };
 
 registerLyraLocale('su', strings);

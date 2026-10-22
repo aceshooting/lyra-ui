@@ -130,6 +130,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'So sánh tài liệu',
   documentCompareOldVersion: 'Phiên bản cũ',
   documentCompareNewVersion: 'Phiên bản mới',
+  modelViewerLabel: 'Mô hình 3D',
+  modelViewerAlternative: 'Xem trước mô hình 3D. Hãy tải tệp nguồn xuống để mở trong trình xem khác.',
+  modelViewerInstructions: 'Dùng các phím mũi tên để xoay, phím cộng hoặc trừ để thu phóng và phím Home để vừa khít mô hình.',
+  modelViewerReady: 'Mô hình đã sẵn sàng.',
+  modelViewerEmpty: 'Mô hình này không chứa hình học nhìn thấy được.',
+  modelViewerProgress: 'Đã tải {loaded} trên {total} byte.',
+  modelViewerInvalid: 'Không thể hiển thị mô hình này.',
+  modelViewerUnsupportedFormat: 'Không hỗ trợ định dạng mô hình này.',
+  modelViewerFit: 'Vừa khít mô hình',
+  modelViewerRotateLeft: 'Xoay sang trái',
+  modelViewerRotateRight: 'Xoay sang phải',
+  modelViewerRotateUp: 'Xoay lên',
+  modelViewerRotateDown: 'Xoay xuống',
 };
 
 registerLyraLocale('vi', strings);

@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Dokumentumok összehasonlítása',
   documentCompareOldVersion: 'Régi verzió',
   documentCompareNewVersion: 'Új verzió',
+  modelViewerLabel: '3D-modell',
+  modelViewerAlternative: '3D-modell előnézete. A forrásfájl letöltésével megnyithatja egy másik megjelenítőben.',
+  modelViewerInstructions: 'A nyílbillentyűkkel forgathat, a plusz és a mínusz billentyűvel nagyíthat vagy kicsinyíthet, a Home billentyűvel pedig igazíthatja a modellt.',
+  modelViewerReady: 'A modell kész.',
+  modelViewerEmpty: 'Ez a modell nem tartalmaz látható geometriát.',
+  modelViewerProgress: '{loaded} / {total} bájt betöltve.',
+  modelViewerInvalid: 'Ez a modell nem jeleníthető meg.',
+  modelViewerUnsupportedFormat: 'Ez a modellformátum nem támogatott.',
+  modelViewerFit: 'Modell illesztése',
+  modelViewerRotateLeft: 'Forgatás balra',
+  modelViewerRotateRight: 'Forgatás jobbra',
+  modelViewerRotateUp: 'Forgatás felfelé',
+  modelViewerRotateDown: 'Forgatás lefelé',
 };
 
 registerLyraLocale('hu', strings);

@@ -390,6 +390,8 @@ export type LyraModelSelectSvelteProps = LyraSvelteElementProps<'lr-model-select
 
 export type LyraModelSettingsPanelSvelteProps = LyraSvelteElementProps<'lr-model-settings-panel'>;
 
+export type LyraModelViewerSvelteProps = LyraSvelteElementProps<'lr-model-viewer'>;
+
 export type LyraMultiSplitSvelteProps = LyraSvelteElementProps<'lr-multi-split'>;
 
 export type LyraMutationObserverSvelteProps = LyraSvelteElementProps<'lr-mutation-observer'>;
@@ -834,6 +836,7 @@ export interface LyraSvelteElements {
   'lr-mind-map': LyraMindMapSvelteProps;
   'lr-model-select': LyraModelSelectSvelteProps;
   'lr-model-settings-panel': LyraModelSettingsPanelSvelteProps;
+  'lr-model-viewer': LyraModelViewerSvelteProps;
   'lr-multi-split': LyraMultiSplitSvelteProps;
   'lr-mutation-observer': LyraMutationObserverSvelteProps;
   'lr-native-time-input': LyraNativeTimeInputSvelteProps;
@@ -1146,6 +1149,7 @@ export interface LyraElementTagNameMap {
   'lr-mind-map': LyraComponentTypeMap['lr-mind-map']['element'];
   'lr-model-select': LyraComponentTypeMap['lr-model-select']['element'];
   'lr-model-settings-panel': LyraComponentTypeMap['lr-model-settings-panel']['element'];
+  'lr-model-viewer': LyraComponentTypeMap['lr-model-viewer']['element'];
   'lr-multi-split': LyraComponentTypeMap['lr-multi-split']['element'];
   'lr-mutation-observer': LyraComponentTypeMap['lr-mutation-observer']['element'];
   'lr-native-time-input': LyraComponentTypeMap['lr-native-time-input']['element'];

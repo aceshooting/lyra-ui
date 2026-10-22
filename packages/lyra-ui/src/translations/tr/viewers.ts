@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Belge karşılaştırması',
   documentCompareOldVersion: 'Eski sürüm',
   documentCompareNewVersion: 'Yeni sürüm',
+  modelViewerLabel: '3D model',
+  modelViewerAlternative: '3D model önizlemesi. Başka bir görüntüleyicide açmak için kaynak dosyayı indirin.',
+  modelViewerInstructions: 'Döndürmek için ok tuşlarını, yakınlaştırmak veya uzaklaştırmak için artı ya da eksi tuşunu, modeli sığdırmak için Home tuşunu kullanın.',
+  modelViewerReady: 'Model hazır.',
+  modelViewerEmpty: 'Bu model görünür bir geometri içermiyor.',
+  modelViewerProgress: '{total} bayttan {loaded} bayt yüklendi.',
+  modelViewerInvalid: 'Bu model görüntülenemedi.',
+  modelViewerUnsupportedFormat: 'Bu model biçimi desteklenmiyor.',
+  modelViewerFit: 'Modeli sığdır',
+  modelViewerRotateLeft: 'Sola döndür',
+  modelViewerRotateRight: 'Sağa döndür',
+  modelViewerRotateUp: 'Yukarı döndür',
+  modelViewerRotateDown: 'Aşağı döndür',
 };
 
 registerLyraLocale('tr', strings);

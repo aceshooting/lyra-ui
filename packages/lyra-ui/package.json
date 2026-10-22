@@ -1050,6 +1050,10 @@
       "types": "./dist/components/conversation/model-settings-panel/model-settings-panel.d.ts",
       "default": "./dist/components/lr-model-settings-panel.js"
     },
+    "./components/lr-model-viewer.js": {
+      "types": "./dist/components/viewers/model-viewer/model-viewer.d.ts",
+      "default": "./dist/components/lr-model-viewer.js"
+    },
     "./components/lr-multi-split.js": {
       "types": "./dist/components/layout/multi-split/multi-split.d.ts",
       "default": "./dist/components/lr-multi-split.js"
@@ -1723,6 +1727,8 @@
     "./components/viewers/html-viewer/html-viewer-register.js": "./dist/components/viewers/html-viewer/html-viewer-register.js",
     "./components/viewers/html-viewer/html-viewer.class.js": "./dist/components/viewers/html-viewer/html-viewer.class.js",
     "./components/viewers/include/include.class.js": "./dist/components/viewers/include/include.class.js",
+    "./components/viewers/model-viewer/model-viewer-register.js": "./dist/components/viewers/model-viewer/model-viewer-register.js",
+    "./components/viewers/model-viewer/model-viewer.class.js": "./dist/components/viewers/model-viewer/model-viewer.class.js",
     "./components/viewers/notebook-viewer/notebook-viewer-register.js": "./dist/components/viewers/notebook-viewer/notebook-viewer-register.js",
     "./components/viewers/notebook-viewer/notebook-viewer.class.js": "./dist/components/viewers/notebook-viewer/notebook-viewer.class.js",
     "./components/viewers/page-rail/page-rail.class.js": "./dist/components/viewers/page-rail/page-rail.class.js",
@@ -2198,6 +2204,8 @@
     "./dist/components/viewers/html-viewer/html-viewer.js",
     "./dist/components/viewers/include/include.js",
     "./dist/components/viewers/index.js",
+    "./dist/components/viewers/model-viewer/model-viewer-register.js",
+    "./dist/components/viewers/model-viewer/model-viewer.js",
     "./dist/components/viewers/notebook-viewer/notebook-viewer-register.js",
     "./dist/components/viewers/notebook-viewer/notebook-viewer.js",
     "./dist/components/viewers/page-rail/page-rail.js",
@@ -2571,6 +2579,8 @@
     "./src/components/viewers/html-viewer/html-viewer.ts",
     "./src/components/viewers/include/include.ts",
     "./src/components/viewers/index.ts",
+    "./src/components/viewers/model-viewer/model-viewer-register.ts",
+    "./src/components/viewers/model-viewer/model-viewer.ts",
     "./src/components/viewers/notebook-viewer/notebook-viewer-register.ts",
     "./src/components/viewers/notebook-viewer/notebook-viewer.ts",
     "./src/components/viewers/page-rail/page-rail.ts",

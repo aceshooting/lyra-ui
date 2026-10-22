@@ -242,6 +242,7 @@ import type { LyraGeoJsonViewerEventMap } from './components/viewers/geojson-vie
 import type { LyraHighlightLayerEventMap } from './components/viewers/highlight-layer/highlight-layer.class.js';
 import type { LyraHtmlViewerEventMap } from './components/viewers/html-viewer/html-viewer.class.js';
 import type { LyraIncludeEventMap } from './components/viewers/include/include.class.js';
+import type { LyraModelViewerEventMap } from './components/viewers/model-viewer/model-viewer.class.js';
 import type { LyraNotebookViewerEventMap } from './components/viewers/notebook-viewer/notebook-viewer.class.js';
 import type { LyraPageRailEventMap } from './components/viewers/page-rail/page-rail.class.js';
 import type { LyraPdfViewerEventMap } from './components/viewers/pdf-viewer/pdf-viewer.class.js';
@@ -491,14 +492,15 @@ export type LyraBranchChangeEvent = LyraBranchPickerEventMap['lr-branch-change']
 export type LyraCalendarGeometryChangeEvent = LyraHeatmapEventMap['lr-calendar-geometry-change'];
 
 /**
- * `lr-camera-change` — dispatched by 3 components: `<lr-chart-3d>`, `<lr-graph>`,
- * `<lr-knowledge-graph-explorer>`; detail union of 3, e.g.
+ * `lr-camera-change` — dispatched by 4 components: `<lr-chart-3d>`, `<lr-graph>`,
+ * `<lr-knowledge-graph-explorer>`, `<lr-model-viewer>`; detail union of 4, e.g.
  * `LyraChart3dEventMap['lr-camera-change']`.
  */
 export type LyraCameraChangeEvent =
   | LyraChart3dEventMap['lr-camera-change']
   | LyraGraphEventMap['lr-camera-change']
-  | LyraKnowledgeGraphExplorerEventMap['lr-camera-change'];
+  | LyraKnowledgeGraphExplorerEventMap['lr-camera-change']
+  | LyraModelViewerEventMap['lr-camera-change'];
 
 /**
  * `lr-camera-request` — dispatched by 2 components: `<lr-attachment-trigger>`,
@@ -1124,9 +1126,9 @@ export type LyraEdgeLeaveEvent = LyraGraphEventMap['lr-edge-leave'];
 export type LyraEditEvent = LyraMessageActionsEventMap['lr-edit'];
 
 /**
- * `lr-engine-fallback` — dispatched by 6 components: `<lr-chart-3d>`, `<lr-embedding-explorer>`,
- * `<lr-graph>`, `<lr-image-viewer>`, `<lr-knowledge-graph-explorer>`, `<lr-video>`; detail union
- * of 6, e.g. `LyraChart3dEventMap['lr-engine-fallback']`.
+ * `lr-engine-fallback` — dispatched by 7 components: `<lr-chart-3d>`, `<lr-embedding-explorer>`,
+ * `<lr-graph>`, `<lr-image-viewer>`, `<lr-knowledge-graph-explorer>`, `<lr-model-viewer>`,
+ * `<lr-video>`; detail union of 7, e.g. `LyraChart3dEventMap['lr-engine-fallback']`.
  */
 export type LyraEngineFallbackEvent =
   | LyraChart3dEventMap['lr-engine-fallback']
@@ -1134,6 +1136,7 @@ export type LyraEngineFallbackEvent =
   | LyraGraphEventMap['lr-engine-fallback']
   | LyraImageViewerEventMap['lr-engine-fallback']
   | LyraKnowledgeGraphExplorerEventMap['lr-engine-fallback']
+  | LyraModelViewerEventMap['lr-engine-fallback']
   | LyraVideoEventMap['lr-engine-fallback'];
 
 /**
@@ -1725,9 +1728,9 @@ export type LyraLinkActivateEvent =
   | LyraStreamingTextEventMap['lr-link-activate'];
 
 /**
- * `lr-load` — dispatched by 9 components: `<lr-animated-image>`, `<lr-av-player>`,
- * `<lr-document-viewer>`, `<lr-icon>`, `<lr-image-viewer>`, `<lr-include>`,
- * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`; detail union of 9, e.g.
+ * `lr-load` — dispatched by 10 components: `<lr-animated-image>`, `<lr-av-player>`,
+ * `<lr-document-viewer>`, `<lr-icon>`, `<lr-image-viewer>`, `<lr-include>`, `<lr-model-viewer>`,
+ * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`; detail union of 10, e.g.
  * `LyraAnimatedImageEventMap['lr-load']`.
  */
 export type LyraLoadEvent =
@@ -1737,6 +1740,7 @@ export type LyraLoadEvent =
   | LyraIconEventMap['lr-load']
   | LyraImageViewerEventMap['lr-load']
   | LyraIncludeEventMap['lr-load']
+  | LyraModelViewerEventMap['lr-load']
   | LyraNotebookViewerEventMap['lr-load']
   | LyraPdfViewerEventMap['lr-load']
   | LyraPptxViewerEventMap['lr-load'];
@@ -2506,14 +2510,15 @@ export type LyraRemoveConditionEvent = LyraConditionBuilderEventMap['lr-remove-c
 export type LyraRenameEvent = LyraConversationItemEventMap['lr-rename'];
 
 /**
- * `lr-render-error` — dispatched by 27 components: `<lr-archive-viewer>`, `<lr-av-player>`,
+ * `lr-render-error` — dispatched by 28 components: `<lr-archive-viewer>`, `<lr-av-player>`,
  * `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
  * `<lr-document-compare>`, `<lr-document-preview>`, `<lr-document-viewer>`, `<lr-docx-viewer>`,
  * `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`,
  * `<lr-image-viewer>`, `<lr-markdown-core>`, `<lr-markdown>`, `<lr-message-parts>`,
- * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`,
- * `<lr-svg-viewer>`, `<lr-tool-call-block>`, `<lr-tool-result-view>`, `<lr-widget-renderer>`,
- * `<lr-xml-viewer>`; detail union of 27, e.g. `LyraArchiveViewerEventMap['lr-render-error']`.
+ * `<lr-model-viewer>`, `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`,
+ * `<lr-spreadsheet-viewer>`, `<lr-svg-viewer>`, `<lr-tool-call-block>`, `<lr-tool-result-view>`,
+ * `<lr-widget-renderer>`, `<lr-xml-viewer>`; detail union of 28, e.g.
+ * `LyraArchiveViewerEventMap['lr-render-error']`.
  */
 export type LyraRenderErrorEvent =
   | LyraArchiveViewerEventMap['lr-render-error']
@@ -2534,6 +2539,7 @@ export type LyraRenderErrorEvent =
   | LyraMarkdownCoreEventMap['lr-render-error']
   | LyraMarkdownEventMap['lr-render-error']
   | LyraMessagePartsEventMap['lr-render-error']
+  | LyraModelViewerEventMap['lr-render-error']
   | LyraNotebookViewerEventMap['lr-render-error']
   | LyraPdfViewerEventMap['lr-render-error']
   | LyraPptxViewerEventMap['lr-render-error']

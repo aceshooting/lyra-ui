@@ -136,6 +136,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Usporedba dokumenata',
   documentCompareOldVersion: 'Stara verzija',
   documentCompareNewVersion: 'Nova verzija',
+  modelViewerLabel: '3D model',
+  modelViewerAlternative: 'Pregled 3D modela. Preuzmite izvornu datoteku kako biste je otvorili u drugom pregledniku.',
+  modelViewerInstructions: 'Za zakretanje koristite tipke sa strelicama, za zumiranje plus ili minus, a za prilagodbu modela tipku Home.',
+  modelViewerReady: 'Model je spreman.',
+  modelViewerEmpty: 'Ovaj model ne sadrži vidljivu geometriju.',
+  modelViewerProgress: 'Učitano {loaded} od {total} bajtova.',
+  modelViewerInvalid: 'Ovaj model nije moguće prikazati.',
+  modelViewerUnsupportedFormat: 'Format ovog modela nije podržan.',
+  modelViewerFit: 'Prilagodi model',
+  modelViewerRotateLeft: 'Zakreni ulijevo',
+  modelViewerRotateRight: 'Zakreni udesno',
+  modelViewerRotateUp: 'Zakreni prema gore',
+  modelViewerRotateDown: 'Zakreni prema dolje',
 };
 
 registerLyraLocale('hr', strings);

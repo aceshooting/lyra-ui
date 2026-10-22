@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **309**
-- Exact same-test/same-instance populated or open axe evidence: **308**
+- Public tags: **310**
+- Exact same-test/same-instance populated or open axe evidence: **309**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **92** tags
@@ -232,6 +232,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-mind-map`](component-integration.md#lr-mind-map) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | client-render | not enrolled | N/A | N/A | not enrolled | not verified | measured |
 | [`lr-model-select`](component-integration.md#lr-model-select) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | measured |
 | [`lr-model-settings-panel`](component-integration.md#lr-model-settings-panel) | stable | automated | not recorded | not recorded | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | measured |
+| [`lr-model-viewer`](component-integration.md#lr-model-viewer) | experimental | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | source signal | source signal | not enrolled | not verified | unmeasured |
 | [`lr-multi-split`](component-integration.md#lr-multi-split) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | pending human | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-mutation-observer`](component-integration.md#lr-mutation-observer) | stable | automated | N/A | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-native-time-input`](component-integration.md#lr-native-time-input) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | pending human | N/A | N/A | not enrolled | not verified | unmeasured |

@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Hujjatlarni taqqoslash',
   documentCompareOldVersion: 'Eski versiya',
   documentCompareNewVersion: 'Yangi versiya',
+  modelViewerLabel: '3D model',
+  modelViewerAlternative: '3D model oldindan ko‘rinishi. Boshqa ko‘rish vositasida ochish uchun manba faylni yuklab oling.',
+  modelViewerInstructions: 'Aylantirish uchun strelka tugmalaridan, masshtab uchun plyus yoki minusdan, modelni sig‘dirish uchun Home tugmasidan foydalaning.',
+  modelViewerReady: 'Model tayyor.',
+  modelViewerEmpty: 'Bu modelda ko‘rinadigan geometriya yo‘q.',
+  modelViewerProgress: '{total} baytdan {loaded} bayt yuklandi.',
+  modelViewerInvalid: 'Bu modelni ko‘rsatib bo‘lmadi.',
+  modelViewerUnsupportedFormat: 'Bu model formati qo‘llab-quvvatlanmaydi.',
+  modelViewerFit: 'Modelni sig‘dirish',
+  modelViewerRotateLeft: 'Chapga aylantirish',
+  modelViewerRotateRight: 'O‘ngga aylantirish',
+  modelViewerRotateUp: 'Yuqoriga aylantirish',
+  modelViewerRotateDown: 'Pastga aylantirish',
 };
 
 registerLyraLocale('uz', strings);

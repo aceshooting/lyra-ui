@@ -145,6 +145,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'مقارنة المستندات',
   documentCompareOldVersion: 'الإصدار القديم',
   documentCompareNewVersion: 'الإصدار الجديد',
+  modelViewerLabel: 'نموذج ثلاثي الأبعاد',
+  modelViewerAlternative: 'معاينة لنموذج ثلاثي الأبعاد. نزّل ملف المصدر لفتحه في عارض آخر.',
+  modelViewerInstructions: 'استخدم مفاتيح الأسهم للتدوير، والزائد أو الناقص للتكبير والتصغير، ومفتاح Home لملاءمة النموذج.',
+  modelViewerReady: 'النموذج جاهز.',
+  modelViewerEmpty: 'لا يحتوي هذا النموذج على أي هندسة مرئية.',
+  modelViewerProgress: 'تم تحميل {loaded} من {total} بايت.',
+  modelViewerInvalid: 'تعذّر عرض هذا النموذج.',
+  modelViewerUnsupportedFormat: 'صيغة هذا النموذج غير مدعومة.',
+  modelViewerFit: 'ملاءمة النموذج',
+  modelViewerRotateLeft: 'تدوير لليسار',
+  modelViewerRotateRight: 'تدوير لليمين',
+  modelViewerRotateUp: 'تدوير للأعلى',
+  modelViewerRotateDown: 'تدوير للأسفل',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Dokumentsammenligning',
   documentCompareOldVersion: 'Gammel versjon',
   documentCompareNewVersion: 'Ny versjon',
+  modelViewerLabel: '3D-modell',
+  modelViewerAlternative: 'Forhåndsvisning av en 3D-modell. Last ned kildefilen for å åpne den i en annen visning.',
+  modelViewerInstructions: 'Bruk piltastene til å rotere, pluss eller minus til å zoome og Home til å tilpasse modellen.',
+  modelViewerReady: 'Modellen er klar.',
+  modelViewerEmpty: 'Denne modellen inneholder ingen synlig geometri.',
+  modelViewerProgress: '{loaded} av {total} byte lastet inn.',
+  modelViewerInvalid: 'Denne modellen kunne ikke vises.',
+  modelViewerUnsupportedFormat: 'Dette modellformatet støttes ikke.',
+  modelViewerFit: 'Tilpass modell',
+  modelViewerRotateLeft: 'Roter til venstre',
+  modelViewerRotateRight: 'Roter til høyre',
+  modelViewerRotateUp: 'Roter oppover',
+  modelViewerRotateDown: 'Roter nedover',
 };
 
 registerLyraLocale('nb', strings);

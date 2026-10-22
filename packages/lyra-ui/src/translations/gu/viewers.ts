@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'દસ્તાવેજની સરખામણી',
   documentCompareOldVersion: 'જૂની આવૃત્તિ',
   documentCompareNewVersion: 'નવી આવૃત્તિ',
+  modelViewerLabel: '3D મૉડલ',
+  modelViewerAlternative: '3D મૉડલનું પૂર્વાવલોકન. બીજા વ્યૂઅરમાં ખોલવા માટે સ્રોત ફાઇલ ડાઉનલોડ કરો.',
+  modelViewerInstructions: 'ફેરવવા માટે તીર કીનો, ઝૂમ માટે પ્લસ અથવા માઇનસનો અને મૉડલ બેસાડવા માટે Home નો ઉપયોગ કરો.',
+  modelViewerReady: 'મૉડલ તૈયાર છે.',
+  modelViewerEmpty: 'આ મૉડલમાં દેખાય તેવી કોઈ ભૂમિતિ નથી.',
+  modelViewerProgress: '{total} માંથી {loaded} બાઇટ લોડ થયા.',
+  modelViewerInvalid: 'આ મૉડલ દર્શાવી શકાયું નથી.',
+  modelViewerUnsupportedFormat: 'આ મૉડલ ફોર્મેટ સમર્થિત નથી.',
+  modelViewerFit: 'મૉડલ બેસાડો',
+  modelViewerRotateLeft: 'ડાબે ફેરવો',
+  modelViewerRotateRight: 'જમણે ફેરવો',
+  modelViewerRotateUp: 'ઉપર ફેરવો',
+  modelViewerRotateDown: 'નીચે ફેરવો',
 };
 
 registerLyraLocale('gu', strings);

@@ -136,6 +136,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Comparação de documentos',
   documentCompareOldVersion: 'Versão antiga',
   documentCompareNewVersion: 'Nova versão',
+  modelViewerLabel: 'Modelo 3D',
+  modelViewerAlternative: 'Pré-visualização de um modelo 3D. Baixe o arquivo de origem para abri-lo em outro visualizador.',
+  modelViewerInstructions: 'Use as setas para girar, mais ou menos para aplicar zoom e Home para ajustar o modelo.',
+  modelViewerReady: 'Modelo pronto.',
+  modelViewerEmpty: 'Este modelo não contém geometria visível.',
+  modelViewerProgress: '{loaded} de {total} bytes carregados.',
+  modelViewerInvalid: 'Não foi possível exibir este modelo.',
+  modelViewerUnsupportedFormat: 'Este formato de modelo não é compatível.',
+  modelViewerFit: 'Ajustar modelo',
+  modelViewerRotateLeft: 'Girar para a esquerda',
+  modelViewerRotateRight: 'Girar para a direita',
+  modelViewerRotateUp: 'Girar para cima',
+  modelViewerRotateDown: 'Girar para baixo',
 };
 
 registerLyraLocale('pt-BR', strings);

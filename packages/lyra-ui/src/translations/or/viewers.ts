@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'ଦଲିଲ ତୁଳନା',
   documentCompareOldVersion: 'ପୁରୁଣା ସଂସ୍କରଣ',
   documentCompareNewVersion: 'ନୂତନ ସଂସ୍କରଣ',
+  modelViewerLabel: '3D ମଡେଲ୍',
+  modelViewerAlternative: '3D ମଡେଲ୍‌ର ପ୍ରିଭ୍ୟୁ। ଅନ୍ୟ ଭ୍ୟୁଅରରେ ଖୋଲିବାକୁ ସୋର୍ସ ଫାଇଲ୍ ଡାଉନଲୋଡ୍ କରନ୍ତୁ।',
+  modelViewerInstructions: 'ଘୁରାଇବାକୁ ତୀର କି, ଜୁମ୍ ପାଇଁ ପ୍ଲସ୍ କିମ୍ବା ମାଇନସ୍ ଏବଂ ମଡେଲ୍ ଫିଟ୍ କରିବାକୁ Home ବ୍ୟବହାର କରନ୍ତୁ।',
+  modelViewerReady: 'ମଡେଲ୍ ପ୍ରସ୍ତୁତ।',
+  modelViewerEmpty: 'ଏହି ମଡେଲ୍‌ରେ ଦୃଶ୍ୟମାନ ଜ୍ୟାମିତି ନାହିଁ।',
+  modelViewerProgress: '{total} ବାଇଟ୍‌ରୁ {loaded} ବାଇଟ୍ ଲୋଡ୍ ହୋଇଛି।',
+  modelViewerInvalid: 'ଏହି ମଡେଲ୍ ଦେଖାଯାଇପାରିଲା ନାହିଁ।',
+  modelViewerUnsupportedFormat: 'ଏହି ମଡେଲ୍ ଫର୍ମାଟ୍ ସମର୍ଥିତ ନୁହେଁ।',
+  modelViewerFit: 'ମଡେଲ୍ ଫିଟ୍ କରନ୍ତୁ',
+  modelViewerRotateLeft: 'ବାମକୁ ଘୁରାନ୍ତୁ',
+  modelViewerRotateRight: 'ଡାହାଣକୁ ଘୁରାନ୍ତୁ',
+  modelViewerRotateUp: 'ଉପରକୁ ଘୁରାନ୍ତୁ',
+  modelViewerRotateDown: 'ତଳକୁ ଘୁରାନ୍ତୁ',
 };
 
 registerLyraLocale('or', strings);

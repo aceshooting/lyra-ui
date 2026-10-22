@@ -1683,6 +1683,19 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   chart3dXAxis: 'X',
   chart3dYAxis: 'Y',
   chart3dZAxis: 'Z',
+  modelViewerLabel: '3D model',
+  modelViewerAlternative: '3D model preview. Download the source file for another viewer.',
+  modelViewerInstructions: 'Use arrow keys to rotate, plus or minus to zoom, and Home to fit the model.',
+  modelViewerReady: 'Model ready.',
+  modelViewerEmpty: 'This model contains no visible geometry.',
+  modelViewerProgress: '{loaded} of {total} bytes loaded.',
+  modelViewerInvalid: 'This model could not be displayed.',
+  modelViewerUnsupportedFormat: 'This model format is not supported.',
+  modelViewerFit: 'Fit model',
+  modelViewerRotateLeft: 'Rotate left',
+  modelViewerRotateRight: 'Rotate right',
+  modelViewerRotateUp: 'Rotate up',
+  modelViewerRotateDown: 'Rotate down',
 };
 
 export {

@@ -253,6 +253,7 @@ import type { LyraGeoJsonViewerEventMap } from '../components/viewers/geojson-vi
 import type { LyraHighlightLayerEventMap } from '../components/viewers/highlight-layer/highlight-layer.class.js';
 import type { LyraHtmlViewerEventMap } from '../components/viewers/html-viewer/html-viewer.class.js';
 import type { LyraIncludeEventMap } from '../components/viewers/include/include.class.js';
+import type { LyraModelViewerEventMap } from '../components/viewers/model-viewer/model-viewer.class.js';
 import type { LyraNotebookViewerEventMap } from '../components/viewers/notebook-viewer/notebook-viewer.class.js';
 import type { LyraPageRailEventMap } from '../components/viewers/page-rail/page-rail.class.js';
 import type { LyraPdfViewerEventMap } from '../components/viewers/pdf-viewer/pdf-viewer.class.js';
@@ -415,6 +416,7 @@ export interface LyraTagEventTypes {
   'lr-mind-map': LyraMindMapEventMap;
   'lr-model-select': LyraModelSelectEventMap;
   'lr-model-settings-panel': LyraModelSettingsPanelEventMap;
+  'lr-model-viewer': LyraModelViewerEventMap;
   'lr-multi-split': LyraMultiSplitEventMap;
   'lr-mutation-observer': LyraMutationObserverEventMap;
   'lr-navigation-menu': LyraNavigationMenuEventMap;

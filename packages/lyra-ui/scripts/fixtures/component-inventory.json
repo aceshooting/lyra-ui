@@ -90500,6 +90500,333 @@
       }
     },
     {
+      "tag": "lr-model-viewer",
+      "family": "viewers",
+      "classModule": "src/components/viewers/model-viewer/model-viewer.class.ts",
+      "registrationModule": "src/components/viewers/model-viewer/model-viewer.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [
+        "@aceshooting/lyra-3d"
+      ],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "alt",
+            "property": "alt",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "format",
+            "property": "format",
+            "type": "LyraModelFormatPreference",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "mime-type",
+            "property": "mimeType",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "property": "name",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "rel",
+            "property": "rel",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "src",
+            "property": "src",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "target",
+            "property": "target",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "_blank"
+          }
+        ],
+        "properties": [
+          {
+            "name": "alt",
+            "attribute": "alt",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "camera",
+            "attribute": null,
+            "type": "LyraModelCamera | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "format",
+            "attribute": "format",
+            "type": "LyraModelFormatPreference",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "mimeType",
+            "attribute": "mime-type",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "name",
+            "attribute": "name",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "rel",
+            "attribute": "rel",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "src",
+            "attribute": "src",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "target",
+            "attribute": "target",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "_blank"
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-camera-change",
+            "type": "CustomEvent<{ readonly camera: LyraModelCamera }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-engine-fallback",
+            "type": "CustomEvent<Engine3dFallbackDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-load",
+            "type": "CustomEvent<{ readonly format: LyraModelFormat }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-render-error",
+            "type": "CustomEvent<{ readonly error: unknown }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "alternative",
+            "deprecated": null
+          },
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "control",
+            "deprecated": null
+          },
+          {
+            "name": "download",
+            "deprecated": null
+          },
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "footer",
+            "deprecated": null
+          },
+          {
+            "name": "instructions",
+            "deprecated": null
+          },
+          {
+            "name": "status",
+            "deprecated": null
+          },
+          {
+            "name": "toolbar",
+            "deprecated": null
+          },
+          {
+            "name": "viewport",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-model-viewer-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "fit",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "retry",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [
+            "name"
+          ],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-multi-split",
       "family": "layout",
       "classModule": "src/components/layout/multi-split/multi-split.class.ts",

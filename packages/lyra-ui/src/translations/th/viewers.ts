@@ -130,6 +130,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'เปรียบเทียบเอกสาร',
   documentCompareOldVersion: 'เวอร์ชันเก่า',
   documentCompareNewVersion: 'เวอร์ชันใหม่',
+  modelViewerLabel: 'โมเดล 3 มิติ',
+  modelViewerAlternative: 'ตัวอย่างโมเดล 3 มิติ ดาวน์โหลดไฟล์ต้นฉบับเพื่อเปิดในโปรแกรมดูอื่น',
+  modelViewerInstructions: 'ใช้ปุ่มลูกศรเพื่อหมุน ปุ่มบวกหรือลบเพื่อซูม และปุ่ม Home เพื่อปรับโมเดลให้พอดี',
+  modelViewerReady: 'โมเดลพร้อมแล้ว',
+  modelViewerEmpty: 'โมเดลนี้ไม่มีรูปทรงเรขาคณิตที่มองเห็นได้',
+  modelViewerProgress: 'โหลดแล้ว {loaded} จาก {total} ไบต์',
+  modelViewerInvalid: 'ไม่สามารถแสดงโมเดลนี้ได้',
+  modelViewerUnsupportedFormat: 'ไม่รองรับรูปแบบโมเดลนี้',
+  modelViewerFit: 'ปรับโมเดลให้พอดี',
+  modelViewerRotateLeft: 'หมุนไปทางซ้าย',
+  modelViewerRotateRight: 'หมุนไปทางขวา',
+  modelViewerRotateUp: 'หมุนขึ้น',
+  modelViewerRotateDown: 'หมุนลง',
 };
 
 registerLyraLocale('th', strings);

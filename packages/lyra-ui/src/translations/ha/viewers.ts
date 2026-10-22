@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Kwatanta takardu',
   documentCompareOldVersion: 'Tsohuwar siga',
   documentCompareNewVersion: 'Sabuwar siga',
+  modelViewerLabel: 'Samfurin 3D',
+  modelViewerAlternative: 'Duba samfurin 3D. Zazzage fayil ɗin tushe don buɗe shi a wani mai dubawa.',
+  modelViewerInstructions: 'Yi amfani da maɓallan kibiya don juyawa, ƙari ko ragi don zuƙowa, da Home don daidaita samfurin.',
+  modelViewerReady: 'Samfurin ya shirya.',
+  modelViewerEmpty: 'Wannan samfurin ba shi da wani siffa da ake gani.',
+  modelViewerProgress: 'An ɗora bytes {loaded} daga {total}.',
+  modelViewerInvalid: 'Ba a iya nuna wannan samfurin ba.',
+  modelViewerUnsupportedFormat: 'Ba a goyi bayan tsarin wannan samfurin ba.',
+  modelViewerFit: 'Daidaita samfurin',
+  modelViewerRotateLeft: 'Juya hagu',
+  modelViewerRotateRight: 'Juya dama',
+  modelViewerRotateUp: 'Juya sama',
+  modelViewerRotateDown: 'Juya ƙasa',
 };
 
 registerLyraLocale('ha', strings);

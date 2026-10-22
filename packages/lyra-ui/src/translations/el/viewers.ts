@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Σύγκριση εγγράφων',
   documentCompareOldVersion: 'Παλαιότερη έκδοση',
   documentCompareNewVersion: 'Νεότερη έκδοση',
+  modelViewerLabel: 'Τρισδιάστατο μοντέλο',
+  modelViewerAlternative: 'Προεπισκόπηση τρισδιάστατου μοντέλου. Κατεβάστε το αρχείο προέλευσης για να το ανοίξετε σε άλλο πρόγραμμα προβολής.',
+  modelViewerInstructions: 'Χρησιμοποιήστε τα βέλη για περιστροφή, το συν ή το πλην για ζουμ και το Home για προσαρμογή του μοντέλου.',
+  modelViewerReady: 'Το μοντέλο είναι έτοιμο.',
+  modelViewerEmpty: 'Αυτό το μοντέλο δεν περιέχει ορατή γεωμετρία.',
+  modelViewerProgress: 'Φορτώθηκαν {loaded} από {total} byte.',
+  modelViewerInvalid: 'Δεν ήταν δυνατή η προβολή αυτού του μοντέλου.',
+  modelViewerUnsupportedFormat: 'Αυτή η μορφή μοντέλου δεν υποστηρίζεται.',
+  modelViewerFit: 'Προσαρμογή μοντέλου',
+  modelViewerRotateLeft: 'Περιστροφή αριστερά',
+  modelViewerRotateRight: 'Περιστροφή δεξιά',
+  modelViewerRotateUp: 'Περιστροφή πάνω',
+  modelViewerRotateDown: 'Περιστροφή κάτω',
 };
 
 registerLyraLocale('el', strings);

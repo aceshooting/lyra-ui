@@ -139,6 +139,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Сравнение документов',
   documentCompareOldVersion: 'Старая версия',
   documentCompareNewVersion: 'Новая версия',
+  modelViewerLabel: '3D-модель',
+  modelViewerAlternative: 'Предпросмотр 3D-модели. Скачайте исходный файл, чтобы открыть его в другой программе просмотра.',
+  modelViewerInstructions: 'Стрелки вращают модель, плюс и минус изменяют масштаб, клавиша Home вписывает модель в область просмотра.',
+  modelViewerReady: 'Модель готова.',
+  modelViewerEmpty: 'В этой модели нет видимой геометрии.',
+  modelViewerProgress: 'Загружено {loaded} из {total} байт.',
+  modelViewerInvalid: 'Не удалось отобразить эту модель.',
+  modelViewerUnsupportedFormat: 'Формат этой модели не поддерживается.',
+  modelViewerFit: 'Вписать модель',
+  modelViewerRotateLeft: 'Повернуть влево',
+  modelViewerRotateRight: 'Повернуть вправо',
+  modelViewerRotateUp: 'Повернуть вверх',
+  modelViewerRotateDown: 'Повернуть вниз',
 };
 
 registerLyraLocale('ru', strings);

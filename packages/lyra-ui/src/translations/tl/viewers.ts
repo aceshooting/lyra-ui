@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Paghahambing ng dokumento',
   documentCompareOldVersion: 'Lumang bersyon',
   documentCompareNewVersion: 'Bagong bersyon',
+  modelViewerLabel: '3D na modelo',
+  modelViewerAlternative: 'Preview ng isang 3D na modelo. I-download ang source file para buksan ito sa ibang viewer.',
+  modelViewerInstructions: 'Gamitin ang mga arrow key para umikot, plus o minus para mag-zoom, at Home para ibagay ang modelo.',
+  modelViewerReady: 'Handa na ang modelo.',
+  modelViewerEmpty: 'Walang nakikitang geometry ang modelong ito.',
+  modelViewerProgress: '{loaded} sa {total} byte ang na-load.',
+  modelViewerInvalid: 'Hindi maipakita ang modelong ito.',
+  modelViewerUnsupportedFormat: 'Hindi sinusuportahan ang format ng modelong ito.',
+  modelViewerFit: 'Ibagay ang modelo',
+  modelViewerRotateLeft: 'Iikot pakaliwa',
+  modelViewerRotateRight: 'Iikot pakanan',
+  modelViewerRotateUp: 'Iikot pataas',
+  modelViewerRotateDown: 'Iikot pababa',
 };
 
 registerLyraLocale('tl', strings);

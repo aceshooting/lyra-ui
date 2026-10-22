@@ -179,6 +179,7 @@ export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promi
   'lr-mind-map': () => import('../components/retrieval/mind-map/mind-map.class.js').then((module) => module.LyraMindMap),
   'lr-model-select': () => import('../components/conversation/model-select/model-select.class.js').then((module) => module.LyraModelSelect),
   'lr-model-settings-panel': () => import('../components/conversation/model-settings-panel/model-settings-panel.class.js').then((module) => module.LyraModelSettingsPanel),
+  'lr-model-viewer': () => import('../components/viewers/model-viewer/model-viewer.class.js').then((module) => module.LyraModelViewer),
   'lr-multi-split': () => import('../components/layout/multi-split/multi-split.class.js').then((module) => module.LyraMultiSplit),
   'lr-mutation-observer': () => import('../components/utility/mutation-observer/mutation-observer.class.js').then((module) => module.LyraMutationObserver),
   'lr-native-time-input': () => import('../components/forms/input/native-time-input.class.js').then((module) => module.LyraNativeTimeInput),

@@ -58,14 +58,14 @@ test('caps the full core graph with an exact binary allowance and tightly measur
       .map((match) => [match.groups.name, Number(match.groups.value.replaceAll('_', ''))]),
   );
   assert.deepEqual(terms, {
-    reviewedCoreMeasurementBytes: 5_596_366,
+    reviewedCoreMeasurementBytes: 5_614_630,
     reviewedRequiredShikiAssetBytes: 466_610,
     selectedRegressionHeadroomBytes: 60,
   });
   const nonAssetCeiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
   const ceiling = nonAssetCeiling + terms.reviewedRequiredShikiAssetBytes;
-  assert.equal(nonAssetCeiling, 5_596_426);
-  assert.equal(ceiling, 6_063_036);
+  assert.equal(nonAssetCeiling, 5_614_690);
+  assert.equal(ceiling, 6_081_300);
   assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedCoreMeasurementBytes < 0.005,
     'the selected raw regression headroom must remain below 0.5%');
   assert.match(

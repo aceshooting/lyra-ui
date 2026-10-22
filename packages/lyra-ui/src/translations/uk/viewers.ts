@@ -139,6 +139,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'Порівняння документів',
   documentCompareOldVersion: 'Попередня версія',
   documentCompareNewVersion: 'Нова версія',
+  modelViewerLabel: '3D-модель',
+  modelViewerAlternative: 'Попередній перегляд 3D-моделі. Завантажте вихідний файл, щоб відкрити його в іншій програмі перегляду.',
+  modelViewerInstructions: 'Стрілки обертають модель, плюс і мінус змінюють масштаб, а клавіша Home вписує модель в область перегляду.',
+  modelViewerReady: 'Модель готова.',
+  modelViewerEmpty: 'Ця модель не містить видимої геометрії.',
+  modelViewerProgress: 'Завантажено {loaded} із {total} байтів.',
+  modelViewerInvalid: 'Не вдалося показати цю модель.',
+  modelViewerUnsupportedFormat: 'Формат цієї моделі не підтримується.',
+  modelViewerFit: 'Вписати модель',
+  modelViewerRotateLeft: 'Повернути ліворуч',
+  modelViewerRotateRight: 'Повернути праворуч',
+  modelViewerRotateUp: 'Повернути вгору',
+  modelViewerRotateDown: 'Повернути вниз',
 };
 
 registerLyraLocale('uk', strings);

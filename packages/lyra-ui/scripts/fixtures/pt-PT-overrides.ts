@@ -381,6 +381,13 @@ const strings: LyraLocaleStrings = {
   chart3dEmpty: 'Não existem dados visíveis no gráfico.',
   chart3dInstructions: 'Utilize as teclas de seta para se deslocar entre linhas, Home e End para a primeira e a última linha e Page Up e Page Down para mudar de página. Prima Enter ou Espaço para selecionar uma linha.',
   chart3dFit: 'Ajustar gráfico à vista',
+  modelViewerAlternative: 'Pré-visualização de um modelo 3D. Transfira o ficheiro de origem para o abrir noutro visualizador.',
+  modelViewerInstructions: 'Utilize as teclas de seta para rodar, mais ou menos para ampliar ou reduzir e Home para ajustar o modelo.',
+  modelViewerInvalid: 'Não foi possível apresentar este modelo.',
+  modelViewerRotateLeft: 'Rodar para a esquerda',
+  modelViewerRotateRight: 'Rodar para a direita',
+  modelViewerRotateUp: 'Rodar para cima',
+  modelViewerRotateDown: 'Rodar para baixo',
 };
 
 export { strings };

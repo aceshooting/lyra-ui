@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'ಡಾಕ್ಯುಮೆಂಟ್ ಹೋಲಿಕೆ',
   documentCompareOldVersion: 'ಹಳೆಯ ಆವೃತ್ತಿ',
   documentCompareNewVersion: 'ಹೊಸ ಆವೃತ್ತಿ',
+  modelViewerLabel: '3D ಮಾದರಿ',
+  modelViewerAlternative: '3D ಮಾದರಿಯ ಪೂರ್ವವೀಕ್ಷಣೆ. ಬೇರೆ ವೀಕ್ಷಕದಲ್ಲಿ ತೆರೆಯಲು ಮೂಲ ಫೈಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ.',
+  modelViewerInstructions: 'ತಿರುಗಿಸಲು ಬಾಣದ ಕೀಲಿಗಳನ್ನು, ಜೂಮ್ ಮಾಡಲು ಪ್ಲಸ್ ಅಥವಾ ಮೈನಸ್ ಅನ್ನು ಮತ್ತು ಮಾದರಿಯನ್ನು ಹೊಂದಿಸಲು Home ಅನ್ನು ಬಳಸಿ.',
+  modelViewerReady: 'ಮಾದರಿ ಸಿದ್ಧವಾಗಿದೆ.',
+  modelViewerEmpty: 'ಈ ಮಾದರಿಯಲ್ಲಿ ಕಾಣುವ ಜ್ಯಾಮಿತಿ ಇಲ್ಲ.',
+  modelViewerProgress: '{total} ಬೈಟ್‌ಗಳಲ್ಲಿ {loaded} ಬೈಟ್‌ಗಳು ಲೋಡ್ ಆಗಿವೆ.',
+  modelViewerInvalid: 'ಈ ಮಾದರಿಯನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
+  modelViewerUnsupportedFormat: 'ಈ ಮಾದರಿ ಸ್ವರೂಪಕ್ಕೆ ಬೆಂಬಲವಿಲ್ಲ.',
+  modelViewerFit: 'ಮಾದರಿಯನ್ನು ಹೊಂದಿಸಿ',
+  modelViewerRotateLeft: 'ಎಡಕ್ಕೆ ತಿರುಗಿಸಿ',
+  modelViewerRotateRight: 'ಬಲಕ್ಕೆ ತಿರುಗಿಸಿ',
+  modelViewerRotateUp: 'ಮೇಲಕ್ಕೆ ತಿರುಗಿಸಿ',
+  modelViewerRotateDown: 'ಕೆಳಕ್ಕೆ ತಿರುಗಿಸಿ',
 };
 
 registerLyraLocale('kn', strings);

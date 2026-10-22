@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'ਦਸਤਾਵੇਜ਼ ਤੁਲਨਾ',
   documentCompareOldVersion: 'ਪੁਰਾਣਾ ਵਰਜਨ',
   documentCompareNewVersion: 'ਨਵਾਂ ਵਰਜਨ',
+  modelViewerLabel: '3D ਮਾਡਲ',
+  modelViewerAlternative: '3D ਮਾਡਲ ਦੀ ਝਲਕ। ਹੋਰ ਵਿਊਅਰ ਵਿੱਚ ਖੋਲ੍ਹਣ ਲਈ ਸਰੋਤ ਫ਼ਾਈਲ ਡਾਊਨਲੋਡ ਕਰੋ।',
+  modelViewerInstructions: 'ਘੁੰਮਾਉਣ ਲਈ ਤੀਰ ਕੁੰਜੀਆਂ, ਜ਼ੂਮ ਲਈ ਪਲੱਸ ਜਾਂ ਮਾਈਨਸ ਅਤੇ ਮਾਡਲ ਨੂੰ ਫਿੱਟ ਕਰਨ ਲਈ Home ਵਰਤੋ।',
+  modelViewerReady: 'ਮਾਡਲ ਤਿਆਰ ਹੈ।',
+  modelViewerEmpty: 'ਇਸ ਮਾਡਲ ਵਿੱਚ ਕੋਈ ਦਿਸਣ ਵਾਲੀ ਜਿਓਮੈਟਰੀ ਨਹੀਂ ਹੈ।',
+  modelViewerProgress: '{total} ਬਾਈਟਾਂ ਵਿੱਚੋਂ {loaded} ਬਾਈਟ ਲੋਡ ਹੋਏ।',
+  modelViewerInvalid: 'ਇਹ ਮਾਡਲ ਦਿਖਾਇਆ ਨਹੀਂ ਜਾ ਸਕਿਆ।',
+  modelViewerUnsupportedFormat: 'ਇਹ ਮਾਡਲ ਫਾਰਮੈਟ ਸਮਰਥਿਤ ਨਹੀਂ ਹੈ।',
+  modelViewerFit: 'ਮਾਡਲ ਫਿੱਟ ਕਰੋ',
+  modelViewerRotateLeft: 'ਖੱਬੇ ਘੁੰਮਾਓ',
+  modelViewerRotateRight: 'ਸੱਜੇ ਘੁੰਮਾਓ',
+  modelViewerRotateUp: 'ਉੱਪਰ ਘੁੰਮਾਓ',
+  modelViewerRotateDown: 'ਹੇਠਾਂ ਘੁੰਮਾਓ',
 };
 
 registerLyraLocale('pa', strings);

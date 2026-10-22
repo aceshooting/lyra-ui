@@ -1157,6 +1157,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-mind-map': LyraMindMapReactProps;
   'lr-model-select': LyraModelSelectReactProps;
   'lr-model-settings-panel': LyraModelSettingsPanelReactProps;
+  'lr-model-viewer': LyraModelViewerReactProps;
   'lr-multi-split': LyraMultiSplitReactProps;
   'lr-mutation-observer': LyraMutationObserverReactProps;
   'lr-native-time-input': LyraNativeTimeInputReactProps;
@@ -1597,6 +1598,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-mind-map': LyraComponentTypeMap['lr-mind-map']['element'];
   'lr-model-select': LyraComponentTypeMap['lr-model-select']['element'];
   'lr-model-settings-panel': LyraComponentTypeMap['lr-model-settings-panel']['element'];
+  'lr-model-viewer': LyraComponentTypeMap['lr-model-viewer']['element'];
   'lr-multi-split': LyraComponentTypeMap['lr-multi-split']['element'];
   'lr-mutation-observer': LyraComponentTypeMap['lr-mutation-observer']['element'];
   'lr-native-time-input': LyraComponentTypeMap['lr-native-time-input']['element'];
@@ -1908,6 +1910,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-mind-map': LyraMindMapSvelteProps;
   'lr-model-select': LyraModelSelectSvelteProps;
   'lr-model-settings-panel': LyraModelSettingsPanelSvelteProps;
+  'lr-model-viewer': LyraModelViewerSvelteProps;
   'lr-multi-split': LyraMultiSplitSvelteProps;
   'lr-mutation-observer': LyraMutationObserverSvelteProps;
   'lr-native-time-input': LyraNativeTimeInputSvelteProps;
@@ -2366,6 +2369,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-mind-map': LyraMindMapVueProps;
   'lr-model-select': LyraModelSelectVueProps;
   'lr-model-settings-panel': LyraModelSettingsPanelVueProps;
+  'lr-model-viewer': LyraModelViewerVueProps;
   'lr-multi-split': LyraMultiSplitVueProps;
   'lr-mutation-observer': LyraMutationObserverVueProps;
   'lr-native-time-input': LyraNativeTimeInputVueProps;

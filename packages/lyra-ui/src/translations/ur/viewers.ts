@@ -133,6 +133,19 @@ const strings: LyraLocaleStrings = {
   documentCompareLabel: 'دستاویز کا موازنہ',
   documentCompareOldVersion: 'پرانا ورژن',
   documentCompareNewVersion: 'نیا ورژن',
+  modelViewerLabel: 'تھری ڈی ماڈل',
+  modelViewerAlternative: 'تھری ڈی ماڈل کا پیش منظر۔ کسی دوسرے ویور میں کھولنے کے لیے ماخذ فائل ڈاؤن لوڈ کریں۔',
+  modelViewerInstructions: 'گھمانے کے لیے تیر والی کیز، زوم کے لیے پلس یا مائنس اور ماڈل کو فٹ کرنے کے لیے Home استعمال کریں۔',
+  modelViewerReady: 'ماڈل تیار ہے۔',
+  modelViewerEmpty: 'اس ماڈل میں کوئی نظر آنے والی جیومیٹری نہیں ہے۔',
+  modelViewerProgress: '{total} بائٹس میں سے {loaded} بائٹس لوڈ ہو گئے۔',
+  modelViewerInvalid: 'یہ ماڈل ظاہر نہیں کیا جا سکا۔',
+  modelViewerUnsupportedFormat: 'اس ماڈل کی فارمیٹ سپورٹ نہیں کی جاتی۔',
+  modelViewerFit: 'ماڈل فٹ کریں',
+  modelViewerRotateLeft: 'بائیں گھمائیں',
+  modelViewerRotateRight: 'دائیں گھمائیں',
+  modelViewerRotateUp: 'اوپر گھمائیں',
+  modelViewerRotateDown: 'نیچے گھمائیں',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

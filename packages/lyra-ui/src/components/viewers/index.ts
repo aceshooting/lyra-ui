@@ -14,6 +14,7 @@ export { LyraGeojsonView } from './geojson-view/geojson-view.class.js';
 export * from './highlight-layer/highlight-layer.js';
 export * from './html-viewer/html-viewer.js';
 export * from './include/include.js';
+export * from './model-viewer/model-viewer.js';
 export * from './notebook-viewer/notebook-viewer.js';
 export * from './page-rail/page-rail.js';
 export * from './pdf-viewer/pdf-viewer.js';
