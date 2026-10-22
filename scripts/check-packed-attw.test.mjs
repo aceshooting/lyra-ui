@@ -22,13 +22,15 @@ const manifest = JSON.parse(
 
 test('checks every live typed export while preserving blocked retired routes', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 752, 'the reviewed package has 752 live typed exports (the locale catalogs publish from @aceshooting/lyra-translations)');
+  assert.equal(entrypoints.length, 754, 'the reviewed package has 754 live typed exports (the locale catalogs publish from @aceshooting/lyra-translations)');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
   assert.ok(entrypoints.includes('./theme/looks/shadcn.js'), 'current look routes remain checked');
   assert.ok(entrypoints.includes('./components/lr-currency-picker.js'));
   assert.ok(entrypoints.includes('./components/forms/currency-picker/currency-picker.class.js'));
+  assert.ok(entrypoints.includes('./components/lr-chart-3d.js'), 'the chart-3d registration is checked');
+  assert.ok(entrypoints.includes('./components/charts/chart-3d/chart-3d.class.js'), 'the chart-3d class is checked');
   for (const name of ['country-picker', 'time-zone-picker', 'unit-picker']) {
     assert.ok(entrypoints.includes(`./components/lr-${name}.js`), `${name} stable registration is checked`);
     assert.ok(entrypoints.includes(`./components/forms/${name}/${name}.class.js`), `${name} class is checked`);
