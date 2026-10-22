@@ -9,6 +9,11 @@ updates:
         dependency-type: "development"
       production-dependencies:
         dependency-type: "production"
+    ignore:
+      # Node type definitions follow the oldest supported Node major (package engines and .nvmrc);
+      # scripts/upgrade.sh takes their latest minor and patch releases.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 10
 
   - package-ecosystem: "github-actions"
