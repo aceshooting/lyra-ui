@@ -44,16 +44,29 @@ export function watchPanoramaVideo(video: HTMLVideoElement, document: Document, 
     }, 250);
   };
   const refresh = () => { if (!disposed && visible && !document.hidden && video.readyState >= 2) update(); schedule(); };
+  // A seek can complete before its frame is ready to upload, and a paused video schedules no
+  // further frames, so a paused seek also updates once its frame is presented.
+  const presented = () => { if (visible && !document.hidden) update(); schedule(); };
+  const settle = () => {
+    if (!video.paused) return;
+    const token = generation;
+    if (native) {
+      if (pending === undefined) pending = video.requestVideoFrameCallback(() => { if (token === generation) { pending = undefined; presented(); } });
+    } else if (animation === undefined) {
+      animation = view?.requestAnimationFrame(() => { if (token === generation) { animation = undefined; presented(); } });
+    }
+  };
   const resume = () => { blocked = false; refresh(); };
   const stop = () => { blocked = true; cancel(); };
   const visibility = () => { cancel(); if (!document.hidden) refresh(); };
   const starts = ['play', 'playing', 'seeked', 'loadeddata', 'durationchange'];
   const stops = ['pause', 'ended', 'waiting', 'emptied'];
   for (const name of starts) video.addEventListener(name, resume);
+  video.addEventListener('seeked', settle);
   for (const name of stops) video.addEventListener(name, stop);
   document.addEventListener('visibilitychange', visibility); schedule();
   return {
     setVisible(value: boolean) { visible = value; cancel(); if (value) refresh(); },
-    dispose() { if (disposed) return; disposed = true; cancel(); for (const name of starts) video.removeEventListener(name, resume); for (const name of stops) video.removeEventListener(name, stop); document.removeEventListener('visibilitychange', visibility); },
+    dispose() { if (disposed) return; disposed = true; cancel(); for (const name of starts) video.removeEventListener(name, resume); for (const name of stops) video.removeEventListener(name, stop); video.removeEventListener('seeked', settle); document.removeEventListener('visibilitychange', visibility); },
   };
 }

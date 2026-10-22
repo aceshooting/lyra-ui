@@ -83,3 +83,35 @@ test('missing native frame API uses only animation frames and preserves caller p
   assert.equal(f.frames.size, 1); assert.equal(f.timers.size, 0); assert.equal(f.video.paused, false);
   watcher.dispose(); assert.equal(f.frames.size, 0); assert.equal(f.video.currentTime, 0);
 });
+
+test('a paused seek updates again once its frame is presented and resumes playback observation', () => {
+  let updates = 0; const f = fixture(() => updates++);
+  f.video.dispatchEvent(new Event('seeked')); assert.equal(f.native.size, 1, 'a playing seek keeps its single frame loop');
+  updates = 0; f.video.paused = true; f.video.dispatchEvent(new Event('pause'));
+  assert.equal(f.native.size + f.frames.size + f.timers.size, 0);
+  f.video.currentTime = 1.4; f.video.dispatchEvent(new Event('seeked'));
+  assert.equal(updates, 1, 'the seek completion updates immediately');
+  assert.equal(f.native.size, 1, 'and waits for the frame the seek presents');
+  f.video.dispatchEvent(new Event('seeked')); assert.equal(f.native.size, 1, 'repeated seeks share one request');
+  const late = [...f.native.values()][0]; f.video.dispatchEvent(new Event('waiting'));
+  late(); assert.equal(updates, 2, 'a stopped watcher ignores the late frame');
+  f.video.dispatchEvent(new Event('seeked')); updates = 1;
+  f.fire(f.native); assert.equal(updates, 2);
+  assert.equal(f.native.size + f.frames.size + f.timers.size, 0, 'a paused video schedules nothing more');
+  f.video.dispatchEvent(new Event('seeked')); f.video.paused = false; f.video.dispatchEvent(new Event('play'));
+  f.fire(f.native); assert.equal(f.native.size, 1, 'playback observation continues from the presented frame');
+  f.watcher.dispose(); assert.equal(f.native.size + f.frames.size + f.timers.size, 0);
+});
+
+test('a paused seek without the native frame API updates on the next animation frame', () => {
+  const f = fixture(); f.watcher.dispose();
+  delete f.video.requestVideoFrameCallback; delete f.video.cancelVideoFrameCallback;
+  let updates = 0; const watcher = watchPanoramaVideo(f.video, f.document, () => updates++);
+  f.frames.clear(); f.video.paused = true; f.video.dispatchEvent(new Event('pause'));
+  f.video.dispatchEvent(new Event('seeked')); assert.equal(updates, 1); assert.equal(f.frames.size, 1);
+  f.video.dispatchEvent(new Event('seeked')); assert.equal(updates, 2); assert.equal(f.frames.size, 1, 'repeated seeks share one frame');
+  updates = 1; f.fire(f.frames); assert.equal(updates, 2); assert.equal(f.frames.size, 0);
+  f.video.dispatchEvent(new Event('seeked')); const late = [...f.frames.values()][0];
+  f.video.dispatchEvent(new Event('emptied')); late(); assert.equal(updates, 3, 'a stopped watcher ignores the late frame');
+  watcher.dispose(); assert.equal(f.frames.size, 0);
+});

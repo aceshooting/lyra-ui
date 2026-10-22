@@ -76,7 +76,9 @@ test('native video textures use video upload without owning dimensions or frame 
   const version = texture.version;
   texture.update(); assert.equal(texture.version, version); assert.equal(video.frames.size, 0);
   video.dispatchEvent(new Event('seeked'));
-  assert.ok(texture.version > version); assert.equal(video.frames.size, 0);
+  assert.ok(texture.version > version); assert.equal(video.frames.size, 1, 'one request for the frame the seek presents');
+  const seeked = texture.version; const [[id, presented]] = video.frames; video.frames.delete(id); presented();
+  assert.ok(texture.version > seeked); assert.equal(video.frames.size, 0, 'a paused video never starts a frame loop');
   assert.equal(video.width, 0); assert.equal(video.height, 0); assert.equal(video.paused, true);
   engine.dispose(); assert.equal(video.frames.size, 0); assert.equal(video.paused, true);
 });
@@ -95,11 +97,13 @@ test('video scheduling cancels on pause/hidden/dispose and ignores retired frame
   watcher.dispose(); video.dispatchEvent(new Event('playing')); assert.equal(video.frames.size, 0);
 });
 
-test('paused seek refreshes once without starting playback or a frame loop', () => {
+test('paused seek refreshes on completion and on its presented frame without starting playback or a frame loop', () => {
   const video = new Video(); video.paused = true; const doc = new OwnerDocument(); let updates = 0;
   const watcher = watchPanoramaVideo(video, doc, () => updates++);
   assert.equal(video.frames.size, 0);
-  video.dispatchEvent(new Event('seeked')); assert.equal(updates, 1); assert.equal(video.frames.size, 0);
+  video.dispatchEvent(new Event('seeked')); assert.equal(updates, 1); assert.equal(video.frames.size, 1);
+  const [[id, presented]] = video.frames; video.frames.delete(id); presented();
+  assert.equal(updates, 2); assert.equal(video.frames.size, 0); assert.equal(video.paused, true);
   watcher.dispose();
 });
 
