@@ -531,6 +531,8 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.equal(findings.length, 1);
   assert.match(findings[0], /2 file\(s\) that ship in a companion package: custom-elements\.json, dist\/translations\/fr\.js/u);
 
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.unpackedBytes, 4_006_848);
+
   const ide = ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'].map((path) => file(path));
   assert.deepEqual(companionBudgetFindings({ packedBytes: 1, unpackedBytes: 1, fileCount: 4, files: ide }, '@aceshooting/lyra-ide', actualBudgets), []);
   assert.deepEqual(
