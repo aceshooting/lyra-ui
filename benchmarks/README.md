@@ -97,6 +97,25 @@ A baseline is measured evidence, not a promise that all engines or assertions pa
 
 The result schema is an allowlist: only fixed workload/assertion IDs, numeric samples/counts, known status/error codes, approved versions and anonymous environment fields are accepted. Results contain no project labels, machine names, package directories, request URLs, raw console output or error stacks. Unexpected fixture fields fail closed. Review both the JSON and the intended public diff before committing a baseline. The machine metadata contains no unique machine identifier but may still distinguish broad hardware configurations.
 
+## Real-GPU frame rates
+
+Headless CI renders WebGL in software, so the frame-rate targets of the optional WebGL renderers are measured
+separately on a machine with a GPU. Build first, then run:
+
+```sh
+pnpm build
+pnpm benchmark:gpu                         # quick profile: graph 10k nodes / 30k edges, 100k points
+pnpm benchmark:gpu --profile stress        # graph 30k / 90k, 1M points
+pnpm benchmark:gpu --modes gpu --cpu-profile  # adds the hottest main-thread functions per scenario
+```
+
+Each mode launches headless Chromium once: `gpu` renders on the host GPU through ANGLE over EGL (with the NVIDIA
+EGL vendor file when present), `software` through SwiftShader. `lr-graph` orbits its camera every frame with pinned
+positions, so the force layout is excluded; `lr-embedding-explorer` rotates under a pointer drag. Every result
+records the WebGL renderer string that drew it, so a software frame never passes as a GPU one, and the share of
+animation frames that issued WebGL draw calls, so an idle frame never passes as a rendered one. Results are written
+to `benchmarks/gpu/results/`. `--cpu-profile` builds without minification so function names stay readable.
+
 ## Validate the tooling
 
 ```sh
