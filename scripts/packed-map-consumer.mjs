@@ -53,8 +53,8 @@ export default defineConfig({ plugins: [lyraMapWorkerPlugin()], build: { rollupO
 `);
   await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], fixture, 'lyra-map packed fixture install');
   await run(process.execPath, ['load.mjs'], fixture, 'lyra-map server-safe public exports');
-  await run(pnpm, ['exec', 'tsc', '--noEmit', '--skipLibCheck', 'false', '--strict', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', 'consumer.ts'], fixture, 'lyra-map packed declaration check');
-  await run(pnpm, ['exec', 'vite', 'build'], fixture, 'lyra-map packed worker bundle');
+  await run(pnpm, ['--config.auto-install-peers=false', 'exec', 'tsc', '--noEmit', '--skipLibCheck', 'false', '--strict', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', 'consumer.ts'], fixture, 'lyra-map packed declaration check');
+  await run(pnpm, ['--config.auto-install-peers=false', 'exec', 'vite', 'build'], fixture, 'lyra-map packed worker bundle');
   const assets = await readdir(join(fixture, 'dist', 'assets'));
   assert.ok(assets.some(file => /worker.*\.js$/u.test(file)), 'the packed Vite plugin must emit its own worker');
   const scripts = await Promise.all(assets.filter(file => file.endsWith('.js')).map(file => readFile(join(fixture, 'dist', 'assets', file), 'utf8')));
