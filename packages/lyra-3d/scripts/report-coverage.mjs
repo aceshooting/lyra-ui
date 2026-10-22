@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const REPORTERS = ['json', 'json-summary', 'lcovonly', 'html', 'text'];
 
 /** Line and statement floor for a complete run: the Node unit tests, plus the Chromium suite unless it was left out. */
-export const LYRA_3D_COVERAGE_FLOOR = 95;
+export const LYRA_3D_COVERAGE_FLOOR = 100;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 

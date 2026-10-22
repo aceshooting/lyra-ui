@@ -758,9 +758,9 @@ export async function openEigenpalDocument(
               if (!after.ok) return after;
               if (!capable.ok) return { ok: false, code: 'unsupported' };
               result = active.exec(qualified.value.command);
-            } else if (qualified.value.plan) {
+            } else {
               result = surface.applyTableCommandPlan(qualified.value.plan);
-            } else return { ok: false, code: 'unsupported' };
+            }
             if (!destroyed) refreshState();
             return result.ok ? { ok: true, value: undefined } : { ok: false, code: 'unsupported' };
           } finally { suppressSelection--; executingGuarded = false; }

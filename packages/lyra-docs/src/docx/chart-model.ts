@@ -39,11 +39,12 @@ function tree(xml: string): Node | null {
   parser.on('text', text => { if (!failed && stack.length > 1) stack.at(-1)!.text += text.slice(0, LIMITS.text); });
   parser.on('closetag', () => { if (!failed) stack.pop(); });
   try { parser.write(xml).close(); } catch { return null; }
-  return failed ? null : root.children[0] ?? null;
+  // Without a failure the parser has seen exactly one root element: a missing one is an error it reports.
+  return failed ? null : root.children[0]!;
 }
 
 const child = (node: Node | undefined, uri: string, name: string) => node?.children.find(entry => entry.uri === uri && entry.name === name);
-const children = (node: Node | undefined, uri: string, name: string) => node?.children.filter(entry => entry.uri === uri && entry.name === name) ?? [];
+const children = (node: Node, uri: string, name: string) => node.children.filter(entry => entry.uri === uri && entry.name === name);
 function descendants(node: Node | undefined, uri: string, name: string, found: Node[] = []): Node[] {
   for (const entry of node?.children ?? []) {
     if (entry.uri === uri && entry.name === name) found.push(entry);

@@ -39,7 +39,9 @@ outcomes of its record without comparing timings. The report writes these files
 into the same `coverage/` reports and records them as `tooling` and `combined` in
 `coverage-metadata.json`; the gated `total` stays the TypeScript runtime. Tooling has
 its own lines/statements floor. Bodies of functions that a script hands to
-`page.evaluate` run inside Chromium and are not visible to Node coverage. Every
+`page.evaluate` run inside Chromium and are not visible to Node coverage, so
+`scripts/performance.test.mjs` runs the performance harness's page-side functions
+in Node against a scripted page, which is what measures them. Every
 JavaScript file under `scripts/` must be classified in `scripts/coverage.mjs` as
 measured or as a test or browser suite, so a new script cannot silently leave the
 report. Scripts that find their inputs from their own path are exercised through

@@ -36,6 +36,21 @@ test('image layout refuses missing duplicate hidden and malformed target positio
   assert.equal(qualifyImageLayout(layout([hidden]), target).ok, false);
 });
 
+test('image layout refuses a target that is also anchored to the page, header or footer', () => {
+  const inline = { kind: 'paragraph', lines: [line(0, 1, true)] };
+  const anchored = (place: 'page' | 'header' | 'footer', id: string) => {
+    const drawings = [{ drawingNodeId: id }];
+    const page: Record<string, unknown> = { fragments: [inline] };
+    if (place === 'page') page['anchoredDrawings'] = drawings;
+    else page[place] = { fragments: [], anchoredDrawings: drawings };
+    return { pages: [page] } as unknown as SemanticLayout;
+  };
+  for (const place of ['page', 'header', 'footer'] as const) {
+    assert.deepEqual(qualifyImageLayout(anchored(place, 'image'), target), { ok: false, code: 'unsupported' }, place);
+    assert.deepEqual(qualifyImageLayout(anchored(place, 'another-image'), target), { ok: true, value: undefined }, place);
+  }
+});
+
 test('image layout array budgets refuse before walking oversized arrays', () => {
   for (const key of ['pages', 'fragments', 'lines', 'spans', 'drawings']) {
     const value = layout([line(0, 1, true)]) as unknown as { pages: { fragments: { lines: Record<string, unknown>[] }[] }[] };

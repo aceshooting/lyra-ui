@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { STAGED_RECORD_EXTENSION } from './scratch-package.mjs';
 
 /** Line and statement floor for a complete run (unit tests, build, checks and the browser driver). */
-export const LYRA_MAP_COVERAGE_FLOOR = 95;
+export const LYRA_MAP_COVERAGE_FLOOR = 100;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 

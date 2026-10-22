@@ -60,10 +60,10 @@ function embeddedGlb(input: ModelParserInput, imageUris: ReadonlyMap<number, str
   for (const resource of buffers) { offsets.push(length); length += Math.ceil(resource.bytes.length / 4) * 4; }
   requireValid(length <= LIMIT.encodedBytes + LIMIT.resources * 3);
   const views = (document['bufferViews'] ?? []) as Record<string, unknown>[];
-  for (const view of views) { view['byteOffset'] = (offsets[view['buffer'] as number] ?? invalid()) + ((view['byteOffset'] ?? 0) as number); view['buffer'] = 0; }
+  for (const view of views) { view['byteOffset'] = offsets[view['buffer'] as number]! + ((view['byteOffset'] ?? 0) as number); view['buffer'] = 0; }
   document['buffers'] = length ? [{ byteLength: length }] : [];
   for (const [index, image] of ((document['images'] ?? []) as Record<string, unknown>[]).entries()) {
-    delete image['bufferView']; image['uri'] = imageUris.get(index) ?? invalid();
+    delete image['bufferView']; image['uri'] = imageUris.get(index)!;
     image['mimeType'] = input.resources.find((resource) => resource.kind === 'image' && resource.index === index)!.mimeType;
   }
   const json = new TextEncoder().encode(JSON.stringify(document)); const jsonLength = Math.ceil(json.length / 4) * 4;
@@ -103,6 +103,7 @@ export async function parseModel(admission: ModelAdmission, options: ModelParseO
   const images = new Set<ImageBitmap>(); const textures = new Set<Texture>(); const roots: Object3D[] = [];
   let handler: EmbeddedTextureLoader | undefined;
   let transferred = false;
+  let parsed: ParsedModel;
   try {
     const manager = new LoadingManager(); manager.setURLModifier(() => { throw new ModelAdmissionError('external-resource'); });
     let object: Object3D;
@@ -130,7 +131,7 @@ export async function parseModel(admission: ModelAdmission, options: ModelParseO
     aborted(options.signal); const allScenes = validateParsedModel(roots, admission);
     const measured = roots.length === 1 ? allScenes : validateParsedModel([object], admission);
     let disposed = false; transferred = true;
-    return { object, ...measured, dispose() { if (!disposed) { disposed = true; handler?.retire(); disposeObjects(roots, textures, images); } } };
+    parsed = { object, ...measured, dispose() { if (!disposed) { disposed = true; handler?.retire(); disposeObjects(roots, textures, images); } } };
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
     if (error instanceof ModelAdmissionError) throw error;
@@ -142,4 +143,5 @@ export async function parseModel(admission: ModelAdmission, options: ModelParseO
       try { disposeObjects(roots, textures, images); } catch { /* Every owned resource was attempted. */ }
     }
   }
+  return parsed;
 }

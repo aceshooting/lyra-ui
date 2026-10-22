@@ -68,7 +68,7 @@ test('the command line measures its own package and fails the run when the floor
   const result = run();
   assert.equal(result.status, 1, result.stderr);
   assert.match(result.stdout, /@aceshooting\/lyra-translations coverage - lines \d+(?:\.\d+)?% \(\d+\/\d+\)/u);
-  assert.match(result.stderr, /lines coverage \d+\.\d{3}% is below 95%/u);
+  assert.match(result.stderr, new RegExp(`lines coverage \\d+\\.\\d{3}% is below ${SCOPE.floor}%`, 'u'));
   const metadata = JSON.parse(readFileSync(join(own, 'coverage/coverage-metadata.json'), 'utf8'));
   assert.equal(metadata.package, '@aceshooting/lyra-translations');
   assert.equal(metadata.complete, true);

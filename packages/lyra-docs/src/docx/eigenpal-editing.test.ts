@@ -124,3 +124,13 @@ test('disposing private match state invalidates retained handles', () => {
   access.dispose();
   assert.deepEqual(access.selectMatch(match.token), { ok: false, code: 'stale-search' });
 });
+
+test('replacing through an unknown or superseded handle neither selects nor edits', () => {
+  const { f, access } = fixture();
+  assert.deepEqual(access.replaceMatch({}, 'text'), { ok: false, code: 'stale-search' });
+  const earlier = access.find('alpha', { matchCase: false, wholeWord: false, limit: 2 }).matches[0]!;
+  access.find('beta', { matchCase: false, wholeWord: false, limit: 2 });
+  assert.deepEqual(access.replaceMatch(earlier.token, 'text'), { ok: false, code: 'stale-search' });
+  assert.equal(f.selections, 0);
+  assert.deepEqual(f.commands, []);
+});

@@ -159,7 +159,7 @@ export async function addPreparedFeatures(map, input, options = {}) {
       return result;
     };
     planOrder();
-    let detach = () => {};
+    let detach;
     const cancelled = new Promise((_resolve, reject) => {
       const listener = () => reject(new DOMException('Prepared map mutation cancelled.', 'AbortError'));
       controller.signal.addEventListener('abort', listener, { once: true });

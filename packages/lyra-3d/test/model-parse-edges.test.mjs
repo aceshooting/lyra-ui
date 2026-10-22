@@ -86,3 +86,19 @@ test('an embedded texture handler stops loading once its parse was aborted', asy
   assert.deepEqual(outcomes, ['AbortError']);
   assert.equal(loader.failed, true);
 });
+
+test('disposal releases every material of a mesh that carries several', async () => {
+  const parsed = await parseModel(admitModel(OBJ, 'obj'));
+  let mesh;
+  parsed.object.traverse((object) => { if (object instanceof Mesh) mesh = object; });
+  const original = mesh.material;
+  const extra = new MeshStandardMaterial();
+  mesh.material = [original, extra];
+  const released = [];
+  original.addEventListener('dispose', () => released.push('original'));
+  extra.addEventListener('dispose', () => released.push('extra'));
+  parsed.dispose();
+  assert.deepEqual(released.sort(), ['extra', 'original']);
+  parsed.dispose();
+  assert.equal(released.length, 2, 'a second disposal releases nothing again');
+});

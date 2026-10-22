@@ -83,7 +83,6 @@ export function graphChargeForces(tree: GraphOctree, strength: number, theta: nu
     let fy = 0;
     let fz = 0;
     const add = (cx: number, cy: number, cz: number, mass: number, salt: number) => {
-      if (mass <= 0) return;
       let dx = x - cx;
       let dy = y - cy;
       let dz = z - cz;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeImageInsertion } from './image-insertion-input.js';
+import { imageInsertionAborted, listenImageInsertionAbort, normalizeImageInsertion, normalizeImageReplacement } from './image-insertion-input.js';
 import { imageFixture } from '../../test/corpus.js';
 import { unzipSync } from 'fflate';
 import type { DocxResult } from './types.js';
@@ -101,4 +101,64 @@ test('insertion expected revision is an independently copied own-data record wit
   } });
   assert.deepEqual(normalizeImageInsertion(guardedSource, { expectedRevision: hostile }, () => stale ? { ok: false, code: 'stale-selection' } : valid()), { ok: false, code: 'stale-selection' });
   assert.equal(sourceReads, 0);
+});
+
+test('insertion stops at the owner refusal before reflecting on any caller object', () => {
+  const gone = (): DocxResult<void> => ({ ok: false, code: 'destroyed' });
+  let reflections = 0;
+  const hostile = new Proxy({}, { getPrototypeOf() { reflections++; return null; }, ownKeys() { reflections++; return []; } });
+  assert.deepEqual(normalizeImageInsertion(source(), hostile, gone), { ok: false, code: 'destroyed' });
+  assert.deepEqual(normalizeImageReplacement(png(), hostile, gone), { ok: false, code: 'destroyed' });
+  assert.equal(reflections, 0);
+});
+
+test('bytes that are not an acceptable image keep the inspection refusal', () => {
+  const header = new Uint8Array(33), view = new DataView(header.buffer);
+  header.set([137, 80, 78, 71, 13, 10, 26, 10]); view.setUint32(8, 13); header.set([73, 72, 68, 82], 12);
+  view.setUint32(16, 8193); view.setUint32(20, 1);
+  for (const [bytes, code] of [
+    [Uint8Array.of(1, 2, 3), 'invalid-document'], [png().slice(0, 40), 'invalid-document'], [header, 'resource-limit'],
+  ] as const) {
+    assert.deepEqual(normalizeImageInsertion({ ...source(), bytes }, {}, valid), { ok: false, code }, code);
+    assert.deepEqual(normalizeImageReplacement(bytes, {}, valid), { ok: false, code }, code);
+  }
+});
+
+test('an abort that arrives while the options are authorized refuses the insertion', () => {
+  const controller = new AbortController();
+  const abortWhileAuthorizing = () => { controller.abort(); return valid(); };
+  assert.deepEqual(normalizeImageInsertion(source(), { signal: controller.signal }, valid, abortWhileAuthorizing), { ok: false, code: 'aborted' });
+  const later = new AbortController();
+  assert.deepEqual(normalizeImageReplacement(png(), { signal: later.signal }, valid, () => { later.abort(); return valid(); }), { ok: false, code: 'aborted' });
+  const idle = new AbortController();
+  assert(normalizeImageInsertion(source(), { signal: idle.signal }, valid, valid).ok);
+});
+
+test('a retained selection is passed through by reference and any other selection value is refused', () => {
+  const selection = { release() {} }; let authorized: unknown;
+  const accepted = normalizeImageInsertion(source(), { selection }, valid, options => { authorized = options; return valid(); });
+  assert(accepted.ok); assert.equal(accepted.value.options.selection, selection);
+  assert(Object.isFrozen(accepted.value.options)); assert.equal(authorized, accepted.value.options);
+  for (const value of [null, undefined, 0, '', false, 'lease', 5, () => undefined]) {
+    assert.deepEqual(normalizeImageInsertion(source(), { selection: value }, valid), { ok: false, code: 'invalid-option' }, String(value));
+  }
+  const bare = normalizeImageInsertion(source(), {}, valid); assert(bare.ok); assert.equal('selection' in bare.value.options, false);
+});
+
+test('abort observation uses the native signal members and can be detached', () => {
+  const controller = new AbortController(), calls: string[] = [];
+  const stop = listenImageInsertionAbort(controller.signal, () => calls.push('observer'));
+  listenImageInsertionAbort(controller.signal, () => calls.push('detached'))();
+  assert.equal(imageInsertionAborted(controller.signal), false);
+  controller.abort();
+  assert.equal(imageInsertionAborted(controller.signal), true);
+  controller.signal.dispatchEvent(new Event('abort'));
+  assert.deepEqual(calls, ['observer']);
+  stop();
+  const forged = new AbortController(); let forgedCalls = 0;
+  Object.defineProperties(forged.signal, { aborted: { value: true }, addEventListener: { value() { throw new Error('forged listener registration'); } } });
+  assert.equal(imageInsertionAborted(forged.signal), false);
+  listenImageInsertionAbort(forged.signal, () => { forgedCalls++; });
+  forged.abort();
+  assert.equal(forgedCalls, 1);
 });

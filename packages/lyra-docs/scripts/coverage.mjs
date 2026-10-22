@@ -32,9 +32,9 @@ export const TOOLING = Object.freeze({
 
 /** Unit suites that run beside the compiled `src` suites: they need no built `dist` of their own. */
 const UNIT_SUITES = [
-  'scripts/package.test.mjs', 'scripts/coverage.test.mjs', 'scripts/node-coverage.test.mjs', 'scripts/source-preparation.test.mjs',
-  'scripts/static-files.test.mjs', 'scripts/build-engine.test.mjs', 'scripts/engine/source.test.mjs',
-  'scripts/engine/distribution.test.mjs', 'test/xml.test.mjs',
+  'scripts/package.test.mjs', 'scripts/check-package.test.mjs', 'scripts/coverage.test.mjs', 'scripts/node-coverage.test.mjs',
+  'scripts/performance.test.mjs', 'scripts/source-preparation.test.mjs', 'scripts/static-files.test.mjs', 'scripts/build-engine.test.mjs',
+  'scripts/engine/source.test.mjs', 'scripts/engine/distribution.test.mjs', 'test/xml.test.mjs',
 ];
 
 export function runCommand(root, command, arguments_, environment = {}) {
@@ -43,7 +43,7 @@ export function runCommand(root, command, arguments_, environment = {}) {
   });
   if (result.error) throw result.error;
   if (result.signal) throw new Error(`${command} terminated by ${result.signal}`);
-  return result.status ?? 1;
+  return result.status;
 }
 
 /**

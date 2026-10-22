@@ -237,20 +237,21 @@ test('simple core revision decisions preserve the opposite outcome through undo 
   }
 });
 
-function harness() {
-  const session = headless();
-  const state = { generation: 0, calls: [] as string[], mode: 'editing' as 'editing' | 'suggesting', author: '', mutation: () => {}, guard: (): DocxResult<void> => ({ ok: true, value: undefined }) };
-  const result: ExecResult = { ok: true, changed: true };
+function harness(options: { body?: string; dependencies?: typeof store } = {}) {
+  const session = headless(options.body);
+  const state = { generation: 0, calls: [] as string[], mode: 'editing' as 'editing' | 'suggesting', author: '', mutation: () => {}, guard: (): DocxResult<void> => ({ ok: true, value: undefined }),
+    result: { ok: true, changed: true } as ExecResult, detached: false };
+  const surface = { session };
   const editor = {
-    surface: { session }, get mountGeneration() { return state.generation; }, getEditingMode: () => state.mode,
+    get surface() { return state.detached ? null : surface; }, get mountGeneration() { return state.generation; }, getEditingMode: () => state.mode,
     setAuthor(author: string) { state.author = author; },
-    exec(command: EditorCommand) { state.calls.push(command.type); if (command.type === 'setEditingMode' && command.mode !== 'viewing') state.mode = command.mode; return result; },
-    setActiveReviewItem() { state.calls.push('navigate'); return result; },
-    acceptReviewItem() { state.calls.push('accept'); return result; }, rejectReviewItem() { state.calls.push('reject'); return result; },
-    addComment() { state.calls.push('add'); return result; }, replyToReviewItem() { state.calls.push('reply'); return result; },
-    setCommentResolved() { state.calls.push('resolve'); return result; }, deleteReviewItem() { state.calls.push('delete'); return result; },
+    exec(command: EditorCommand) { state.calls.push(command.type); if (state.result.ok && command.type === 'setEditingMode' && command.mode !== 'viewing') state.mode = command.mode; return state.result; },
+    setActiveReviewItem() { state.calls.push('navigate'); return state.result; },
+    acceptReviewItem() { state.calls.push('accept'); return state.result; }, rejectReviewItem() { state.calls.push('reject'); return state.result; },
+    addComment() { state.calls.push('add'); return state.result; }, replyToReviewItem() { state.calls.push('reply'); return state.result; },
+    setCommentResolved() { state.calls.push('resolve'); return state.result; }, deleteReviewItem() { state.calls.push('delete'); return state.result; },
   } as unknown as DocxEditorInstance;
-  const helper = createEigenpalReview(() => editor, { navigate: run => run(), mutate: run => { state.mutation(); return run(); }, guard: () => state.guard() }, store);
+  const helper = createEigenpalReview(() => editor, { navigate: run => run(), mutate: run => { state.mutation(); return run(); }, guard: () => state.guard() }, options.dependencies ?? store);
   return { helper, state, session, editor };
 }
 test('private review targets are copied and invalidate after commits, generation changes and disposal', () => {
@@ -315,4 +316,160 @@ test('review normalization rejects accessors and XML-invalid author text', () =>
   assert.equal(normalizeDocxReviewAction({ type: 'add-comment', text: 'Text', author: '\u0000' }).ok, false);
   assert.equal(normalizeDocxReviewAction({ type: 'review-decision', id: 'target', decision: { toString() { reads++; return 'accept'; } } }).ok, false);
   assert.equal(reads, 0);
+});
+
+test('a command the engine rejects is reported as unsupported for navigation, decisions, comments and tracking', () => {
+  const h = harness(), token = h.helper.query().items[0]!.token;
+  h.state.result = { ok: false, code: 'unsupported', reason: 'refused by the engine' };
+  for (const [label, run] of [
+    ['navigate', () => h.helper.navigate(token)], ['accept', () => h.helper.decide(token, 'accept')],
+    ['comment', () => h.helper.addComment('Note', 'Writer')], ['tracking', () => h.helper.setTracking(true, 'Writer')],
+  ] as const) assert.deepEqual(run(), { ok: false, code: 'unsupported' }, label);
+  assert.deepEqual(h.state.calls, ['navigate', 'accept', 'add', 'setEditingMode']);
+  assert.equal(h.helper.query().enabled, false);
+  h.state.result = { ok: true, changed: true };
+  assert.deepEqual(h.helper.addComment('Note', 'Writer'), { ok: true, value: undefined });
+  assert.deepEqual(h.state.calls.slice(-1), ['add']);
+});
+
+test('review text is clipped to its ceilings without dividing a surrogate pair', () => {
+  const pair = '\u{1F600}';
+  // The pair straddles each ceiling, so a cut that keeps its first unit would leave a lone surrogate.
+  const straddling = (limit: number) => `${'a'.repeat(limit - 1)}${pair}tail`;
+  const body = `<w:p><w:r><w:t>Base </w:t></w:r>${revision('1', straddling(128), straddling(4096), 'ins', straddling(64))}<w:r><w:t> gap </w:t></w:r>${revision('2', 'b'.repeat(128), 'c'.repeat(4097))}</w:p>`;
+  const h = harness({ body }), items = h.helper.query().items;
+  assert.deepEqual(items.map(item => [item.author.length, item.text.length, item.date?.length]), [[127, 4095, 63], [128, 4096, undefined]]);
+  assert.deepEqual(items.map(item => [item.author.at(-1), item.text.at(-1), item.date?.at(-1)]), [['a', 'a', 'a'], ['b', 'c', undefined]]);
+  const paragraphId = h.session.paragraphIds()[0]!;
+  assert(h.session.replyToComment(null, { paragraphId, start: 0, end: 4 }, straddling(4096), straddling(128)) !== null);
+  const note = h.helper.query().items.find(item => item.kind === 'comment')!;
+  assert.deepEqual([note.author.length, note.text.length, note.author.at(-1), note.text.at(-1)], [127, 4095, 'a', 'a']);
+});
+
+test('a helper without a document surface reports nothing and refuses every operation', () => {
+  const h = harness(), token = h.helper.query().items[0]!.token;
+  assert.deepEqual(h.helper.setTracking(true, 'Writer'), { ok: true, value: undefined });
+  h.state.detached = true;
+  const report = h.helper.query();
+  assert.deepEqual(report, { items: [], truncated: false, hasUnsupported: false, trackingSupported: false, enabled: false, author: 'Writer' });
+  assert(Object.isFrozen(report) && Object.isFrozen(report.items));
+  assert.deepEqual(h.helper.can({ type: 'add-comment', text: 'Note', author: 'Writer' }), { enabled: false, reason: 'unsupported' });
+  assert.deepEqual(h.helper.addComment('Note', 'Writer'), { ok: false, code: 'unsupported' });
+  assert.deepEqual(h.helper.setTracking(false, 'Writer'), { ok: false, code: 'unsupported' });
+  assert.deepEqual(h.helper.decide(token, 'accept'), { ok: false, code: 'stale-revision' });
+  assert.deepEqual(h.state.calls, ['setEditingMode']);
+});
+
+test('a disposed helper reports an empty queue and destroyed results, but still validates arguments first', () => {
+  const h = harness(), token = h.helper.query().items[0]!.token;
+  assert.deepEqual(h.helper.setTracking(true, 'Writer'), { ok: true, value: undefined });
+  h.helper.dispose();
+  assert.deepEqual(h.helper.query(), { items: [], truncated: false, hasUnsupported: false, trackingSupported: false, enabled: false, author: null });
+  assert.deepEqual(h.helper.can({ type: 'add-comment', text: 'Note', author: 'Writer' }), { enabled: false, reason: 'destroyed' });
+  assert.deepEqual(h.helper.can({ type: 'add-comment', text: ' ', author: 'Writer' }), { enabled: false, reason: 'invalid-option' });
+  assert.deepEqual(h.helper.addComment('Note', 'Writer'), { ok: false, code: 'destroyed' });
+  assert.deepEqual(h.helper.addComment('', 'Writer'), { ok: false, code: 'invalid-option' });
+  assert.deepEqual(h.helper.setTracking(false, 'Writer'), { ok: false, code: 'destroyed' });
+  assert.deepEqual(h.helper.reply(token, 'Answer', 'Writer'), { ok: false, code: 'destroyed' });
+  assert.deepEqual(h.state.calls, ['setEditingMode']);
+});
+
+test('comment and tracking arguments are validated before the engine is touched', () => {
+  const h = harness(), token = h.helper.query().items[0]!.token;
+  for (const [text, writer, code] of [['', 'Writer', 'invalid-option'], ['Note', '  ', 'invalid-option'], ['\ud800', 'Writer', 'invalid-option'],
+    ['x'.repeat(4097), 'Writer', 'resource-limit'], ['Note', 'x'.repeat(129), 'resource-limit']] as const) {
+    assert.deepEqual(h.helper.addComment(text, writer), { ok: false, code }, `${text.length}/${writer.length}`);
+    assert.deepEqual(h.helper.reply(token, text, writer), { ok: false, code }, `${text.length}/${writer.length}`);
+    assert.deepEqual(h.helper.can({ type: 'add-comment', text, author: writer }), { enabled: false, reason: code }, `${text.length}/${writer.length}`);
+  }
+  assert.deepEqual(h.helper.setTracking(true, 'x'.repeat(129)), { ok: false, code: 'resource-limit' });
+  assert.deepEqual(h.state.calls, []);
+});
+
+test('a review queue past the item ceiling is shown in part but allows neither decisions nor new authoring', () => {
+  const body = Array.from({ length: 1001 }, (_, index) => `<w:p>${revision(String(index + 1))}</w:p>`).join('');
+  const h = harness({ body }), report = h.helper.query();
+  assert.equal(report.items.length, 100); assert.equal(report.truncated, true); assert.equal(report.trackingSupported, false);
+  for (const action of [{ type: 'add-comment', text: 'Note', author: 'Writer' }, { type: 'track-changes', enabled: true, author: 'Writer' },
+    { type: 'review-decision', id: 'opaque', decision: 'accept' }] as const) {
+    assert.deepEqual(h.helper.can(action, report.items[0]!.token), { enabled: false, reason: 'resource-limit' }, action.type);
+  }
+  // Switching tracking off stays possible: it removes authoring, it never adds any.
+  assert.deepEqual(h.helper.can({ type: 'track-changes', enabled: false, author: 'Writer' }), { enabled: true, active: false });
+  assert.deepEqual(h.helper.decide(report.items[0]!.token, 'accept'), { ok: false, code: 'unsupported' });
+  assert.deepEqual(h.helper.addComment('Note', 'Writer'), { ok: false, code: 'unsupported' });
+  assert.deepEqual(h.helper.setTracking(true, 'Writer'), { ok: false, code: 'unsupported' });
+  assert.deepEqual(h.state.calls, []);
+});
+
+test('decision availability needs a live private target', () => {
+  const h = harness(), decision = { type: 'review-decision', id: 'opaque', decision: 'accept' } as const;
+  const token = h.helper.query().items[0]!.token;
+  assert.deepEqual(h.helper.can(decision, token), { enabled: true });
+  assert.deepEqual(h.helper.can(decision), { enabled: false, reason: 'stale-revision' });
+  assert.deepEqual(h.helper.can(decision, {}), { enabled: false, reason: 'stale-revision' });
+  assert.deepEqual(h.helper.can({ ...decision, decision: 'resolve' }, token), { enabled: false, reason: 'unsupported' });
+  h.helper.invalidate();
+  assert.deepEqual(h.helper.can(decision, token), { enabled: false, reason: 'stale-revision' });
+});
+
+test('tracking changes and new comments yield to the ownership gate and to any change that lands while they are prepared', () => {
+  let onDerive = () => {}, derivations = 0;
+  const dependencies = { ...store, collectReviewItems: (...args: Parameters<typeof store.collectReviewItems>) => { derivations++; onDerive(); return store.collectReviewItems(...args); } };
+  const h = harness({ dependencies });
+  const operations = [['tracking', () => h.helper.setTracking(true, 'Writer')], ['comment', () => h.helper.addComment('Note', 'Writer')]] as const;
+  h.state.guard = () => ({ ok: false, code: 'composing' });
+  for (const [label, run] of operations) assert.deepEqual(run(), { ok: false, code: 'composing' }, label);
+  h.state.guard = () => ({ ok: true, value: undefined });
+  h.state.mutation = () => h.helper.invalidate();
+  for (const [label, run] of operations) assert.deepEqual(run(), { ok: false, code: 'stale-revision' }, label);
+  // A preparation that is already stale does no derivation work.
+  assert.equal(derivations, 0);
+  h.state.mutation = () => {};
+  // A change that lands while the review is derived retires the preparation just as an earlier one does.
+  for (const [label, run] of operations) {
+    h.helper.invalidate();
+    onDerive = () => { h.state.generation++; };
+    assert.deepEqual(run(), { ok: false, code: 'stale-revision' }, label);
+    onDerive = () => {}; h.state.generation = 0;
+  }
+  assert.deepEqual(h.state.calls, []); assert.equal(h.state.author, ''); assert.equal(h.helper.query().author, null);
+  assert.deepEqual(h.helper.setTracking(true, 'Writer'), { ok: true, value: undefined });
+});
+
+test('derivation refuses an element that carries more attributes than the node budget allows', () => {
+  const crowded = reviewInput('<w:p w:a="1" w:b="2" w:c="3" w:d="4" w:e="5"/>');
+  assert.deepEqual(deriveLyraReview(crowded, store, { nodes: 4 }), { items: [], truncated: true, trackingSupported: false, hasUnsupported: true });
+  const fits = deriveLyraReview(crowded, store, { nodes: 5 });
+  assert.equal(fits.truncated, false); assert.equal(fits.trackingSupported, true);
+});
+
+test('tracked authoring is offered only for a document with one plain body', () => {
+  const simple = '<w:p><w:r><w:t>Words</w:t></w:r></w:p>';
+  const document = (inner: string) => `<w:document xmlns:w="${W}">${inner}</w:document>`;
+  const supported = (xml: string) => deriveLyraReview({ storyPart: xmlPart(xml, '/word/document.xml') }, store).trackingSupported;
+  assert.equal(supported(document(`<w:body>${simple}</w:body>`)), true);
+  for (const [label, xml] of [
+    ['a part that is not a document, even when it wraps a body', `<w:hdr xmlns:w="${W}"><w:body>${simple}</w:body></w:hdr>`],
+    ['a document without a body', document('')],
+    ['a document with two bodies', document(`<w:body>${simple}</w:body><w:body>${simple}</w:body>`)],
+    ['a document with content beside its body', document(`<w:body>${simple}</w:body><w:background/>`)],
+    ['a document whose only child is not a body', document('<w:background/>')],
+  ] as const) assert.equal(supported(xml), false, label);
+});
+
+test('a revision that wraps a whole part is listed but never offered as a decision', () => {
+  const wrapped = xmlPart(`<w:ins xmlns:w="${W}" w:id="1" w:author="Writer"><w:r><w:t>wrapped</w:t></w:r></w:ins>`, '/word/document.xml');
+  const result = deriveLyraReview({ storyPart: wrapped }, store), item = result.items[0]!;
+  assert.equal(result.items.length, 1); assert.equal(item.kind, 'revision');
+  assert.equal(item.kind === 'revision' && item.readOnly, true);
+  assert.equal(result.hasUnsupported, true); assert.equal(result.trackingSupported, false);
+});
+
+test('ambiguous comment identifiers receive synthetic identities that never collide with authored ones', () => {
+  const input = reviewInput(anchored, comment('dup', 'First') + comment('dup', 'Second') + comment('lyra-ambiguous-0', 'Third'));
+  const result = deriveLyraReview(input, store);
+  assert.deepEqual(result.items.map(item => item.kind === 'comment' ? item.id : null), ['_lyra-ambiguous-0', 'lyra-ambiguous-1', 'lyra-ambiguous-0']);
+  assert.equal(new Set(result.items.map(item => store.reviewItemKey(item))).size, 3);
+  assert(result.items.every(item => item.kind === 'comment' && item.orphaned));
 });

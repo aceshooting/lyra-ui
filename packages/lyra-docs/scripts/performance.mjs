@@ -20,19 +20,23 @@ const summarize = values => {
   };
 };
 
-async function environment(browser) {
-  const status = platform() === 'linux' ? await readFile('/proc/self/status', 'utf8').catch(() => '') : '';
-  const cpuMax = platform() === 'linux' ? await readFile('/sys/fs/cgroup/cpu.max', 'utf8').catch(() => '') : '';
-  const memoryMax = platform() === 'linux' ? await readFile('/sys/fs/cgroup/memory.max', 'utf8').catch(() => '') : '';
+const hostSystem = { platform, arch, cpus, availableParallelism, totalmem, readFile };
+
+/** The machine the figures were taken on; `system` stands in for the host so each platform shape can be verified. */
+export async function environment(browser, system = hostSystem) {
+  const read = file => system.platform() === 'linux' ? system.readFile(file, 'utf8').catch(() => '') : '';
+  const status = await read('/proc/self/status');
+  const cpuMax = await read('/sys/fs/cgroup/cpu.max');
+  const memoryMax = await read('/sys/fs/cgroup/memory.max');
   const [quota, period] = cpuMax.trim().split(/\s+/);
   return {
-    platform: platform(), arch: arch(), node: process.version,
-    cpuModel: cpus()[0]?.model ?? null,
-    logicalCpusVisible: cpus().length,
-    processParallelism: availableParallelism(),
+    platform: system.platform(), arch: system.arch(), node: process.version,
+    cpuModel: system.cpus()[0]?.model ?? null,
+    logicalCpusVisible: system.cpus().length,
+    processParallelism: system.availableParallelism(),
     cpuAffinity: status.match(/^Cpus_allowed_list:\s*(.+)$/m)?.[1] ?? null,
     cgroupCpuQuotaCores: quota && quota !== 'max' && Number(period) > 0 ? round(Number(quota) / Number(period)) : null,
-    memoryGiB: round(totalmem() / 1024 ** 3),
+    memoryGiB: round(system.totalmem() / 1024 ** 3),
     cgroupMemoryGiB: memoryMax.trim() && memoryMax.trim() !== 'max' ? round(Number(memoryMax.trim()) / 1024 ** 3) : null,
     browserVersion: browser.version()
   };

@@ -24,6 +24,15 @@ async function imageResources(page, bytes) {
 }
 
 export async function runImageExtensions(page, check, { createEditor, saveEditor }) {
+  await check('a Windows metafile picture opens as a placeholder and its bytes are saved unchanged', async () => {
+    const id = 'image-metafile', source = await createEditor(page, id, 'image-metafile');
+    assert.equal(await host(page, id).evaluate(element => element.snapshot().status), 'ready');
+    const metafile = parts(source)['word/media/pixel.emf'];
+    assert.equal(String.fromCharCode(...metafile.slice(40, 44)), ' EMF', 'the fixture picture carries the enhanced metafile signature');
+    assert.deepEqual(parts(await saveEditor(page, id))['word/media/pixel.emf'], metafile);
+    await host(page, id).evaluate(element => element.remove());
+  });
+
   for (const table of [false, true]) await check(`image insertion into a styled ${table ? 'plain table cell' : 'body paragraph'} preserves caret, styles and one undo`, async () => {
     const id = `image-styled-${table}`; await createEditor(page, id);
     const blank = await saveEditor(page, id), entries = unzipSync(Uint8Array.from(blank));

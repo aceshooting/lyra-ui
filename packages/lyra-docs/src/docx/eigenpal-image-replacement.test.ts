@@ -2,33 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { OoxmlNode, OoxmlPackage } from '@docx-editor.dev/core/store';
 const store = await import('@docx-editor.dev/core/store');
-const { blankDocumentBytes } = await import('@docx-editor.dev/core/editor');
-import { imageFixture, imageInsertionBytes } from '../../test/corpus.js';
-import { deriveImageInsertionEngine } from './engine-image-insertion-loader.js';
+import { decodePort, engine as dependencies, replacementFixture as fixture, replacementSource as input, valid } from '../../test/image-preflight-harness.js';
+import { imageInsertionBytes } from '../../test/corpus.js';
 import { normalizeImageReplacement } from './image-insertion-input.js';
 import { preflightImageReplacement } from './eigenpal-image-replacement.js';
 import { imageCandidatesInPackage } from './eigenpal-images.js';
 import type { DocxResult } from './types.js';
 import { DRAWING_MAIN_NS, OFFICE_REL_NS, resolveOoxmlPart } from './ooxml.js';
-
-const valid = (): DocxResult<void> => ({ ok: true, value: undefined });
-const dependencies = deriveImageInsertionEngine(blankDocumentBytes, store)!;
-function fixture(kind = 'image-simple') {
-  const read = store.readOoxmlPackage(imageFixture(kind)); assert(read.ok);
-  const pkg = read.package, candidates = imageCandidatesInPackage(pkg, pkg.parts.get(pkg.mainDocumentPart)!); assert(candidates.ok);
-  const stack: { node: OoxmlNode; paragraphId: string }[] = [{ node: pkg.parts.get(pkg.mainDocumentPart)!.root, paragraphId: '' }];
-  while (stack.length) {
-    const { node, paragraphId } = stack.pop()!; if (node.kind === 'textValue') continue;
-    if (node.localName === 'drawing') return { pkg, target: candidates.value.find(value => value.drawingId === node.id) ??
-      { drawingId: node.id, paragraphId, width: 0, height: 0, title: '', description: '' } };
-    for (const child of [...node.children].reverse()) stack.push({ node: child, paragraphId: node.localName === 'p' ? node.id : paragraphId });
-  }
-  throw new Error('missing drawing');
-}
-function input(kind: 'png' | 'jpeg' | 'gif' = 'png') {
-  const result = normalizeImageReplacement(imageInsertionBytes(kind), {}, valid); assert(result.ok); return result.value.source;
-}
-const decodePort = { async decode() { return { pixelWidth: 64, pixelHeight: 32, dpiX: 96, dpiY: 96 }; } };
 
 function drawingMedia(pkg: OoxmlPackage, drawingId: string): Uint8Array {
   const part = pkg.parts.get(pkg.mainDocumentPart)!;

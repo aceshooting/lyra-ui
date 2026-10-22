@@ -262,3 +262,125 @@ test('public core table store operations preserve existing records and produce c
     assert.deepEqual(cells.map(cell => cell.children.filter(node => node.kind !== 'textValue' && node.localName === 'p').length), [2, 1, 1, 1]);
   }
 });
+
+type Fixture = ReturnType<typeof fixture>;
+const cellParagraph = (h: Fixture, row: number, column = 0) => children(children(h.rows[row]!)[column]!)[1] as OoxmlElement;
+const tableProperties = (h: Fixture) => children(h.table)[0] as OoxmlElement;
+
+test('a selection that resolves outside the qualified part is refused', () => {
+  const h = fixture();
+  assert.equal(h.qualify().ok, true);
+  Object.assign(h.part, { root: h.el('document', [h.el('body')]) });
+  assert.deepEqual(h.qualify(), { ok: false, code: 'unsupported' });
+});
+
+test('a selection whose readers place the table under another body than the document body is refused', () => {
+  const h = fixture(), impostor = h.el('body', [h.table]);
+  h.rebuild();
+  const readers = { findNode: h.readers.findNode, parentNodeOf: (part: OoxmlPart, id: string) =>
+    id === h.table.id ? impostor : id === impostor.id ? h.root : h.readers.parentNodeOf(part, id) };
+  assert.deepEqual(qualifyTableCommand(h.editor, readers, { type: 'delete-table' }), { ok: false, code: 'unsupported' });
+  assert.equal(qualifyTableCommand(h.editor, h.readers, { type: 'delete-table' }).ok, true);
+});
+
+test('canonical reads judge the size of the document top level before its structure, and bound the depth inside the table', () => {
+  const crowded = fixture();
+  children(crowded.root).push(crowded.el('bookmarkStart'));
+  assert.deepEqual(crowded.qualify(), { ok: false, code: 'unsupported' });
+  assert.deepEqual(crowded.qualify(undefined, { nodes: 1 }), { ok: false, code: 'resource-limit' });
+  const h = fixture();
+  children(cellParagraph(h, 1, 1)).push(h.el('r'));
+  assert.equal(h.qualify(undefined, { depth: 7 }).ok, true);
+  assert.deepEqual(h.qualify(undefined, { depth: 6 }), { ok: false, code: 'resource-limit' });
+  assert.equal(fixture().qualify(undefined, { depth: 6 }).ok, true);
+});
+
+test('formatting actions report a stale selection when the package changes while they are qualified', () => {
+  for (const action of [
+    { type: 'table-header-row', enabled: true }, { type: 'table-width', widthPoints: 100 },
+    { type: 'table-cell-alignment', value: 'center' }, { type: 'table-cell-shading', color: '#ABCDEF' },
+    { type: 'table-cell-borders', target: 'all', style: 'none' },
+  ] as const) {
+    const h = fixture();
+    assert.equal(h.qualify(action).ok, true, action.type);
+    h.f.onPackage = () => { h.f.revision++; };
+    assert.deepEqual(h.qualify(action), { ok: false, code: 'stale-selection' }, action.type);
+  }
+});
+
+test('an element that repeats an attribute is refused, while the same name in another namespace is kept', () => {
+  const attribute = (value: string, namespaceUri = WORD) => ({ kind: 'genericExtension', namespaceUri, localName: 'val', value, prefix: 'x' });
+  const withAttributes = (...attributes: object[]) => {
+    const h = fixture();
+    children(children(h.rows[1]!)[1]!)[0] = Object.assign(h.el('tcPr'), { attributes });
+    return h;
+  };
+  assert.equal(withAttributes(attribute('1'), attribute('2', 'urn:other')).qualify().ok, true);
+  assert.deepEqual(withAttributes(attribute('1'), attribute('2')).qualify(), { ok: false, code: 'unsupported' });
+});
+
+test('text and foreign extension elements inside a cell paragraph are kept unless they imitate table structure', () => {
+  const h = fixture();
+  const text = { id: 'cell-text', kind: 'textValue', value: 'Cell text' } as unknown as OoxmlNode;
+  // A foreign element is judged by its namespace, so a borders-like name with repeated children is not a table record.
+  children(cellParagraph(h, 1)).push(text, h.el('widget', [h.el('part', [], 'urn:foreign')], 'urn:foreign'),
+    h.el('tcBorders', [h.el('top'), h.el('top')], 'urn:foreign'));
+  assert.equal(h.qualify().ok, true);
+  for (const name of ['tbl', 'tr', 'tc', 'tblGrid', 'gridCol']) {
+    const imitation = fixture();
+    children(cellParagraph(imitation, 1)).push(imitation.el(name, [], 'urn:foreign'));
+    assert.deepEqual(imitation.qualify(), { ok: false, code: 'unsupported' }, name);
+  }
+});
+
+test('table structure outside the parent it requires is refused', () => {
+  const cell = (h: Fixture) => h.el('tc', [h.el('tcPr'), h.el('p')]);
+  const misplaced: [string, (h: Fixture) => void][] = [
+    ['a table inside a paragraph', h => children(cellParagraph(h, 1)).push(h.el('tbl'))],
+    ['a row beside the table properties', h => children(tableProperties(h)).push(h.el('tr', [cell(h), cell(h)]))],
+    ['a cell beside the table properties', h => children(tableProperties(h)).push(cell(h))],
+    ['a second grid inside the table properties', h => children(tableProperties(h)).push(h.el('tblGrid'))],
+    ['a grid column inside the table properties', h => { children(h.grid).pop(); children(tableProperties(h)).push(h.el('gridCol')); }],
+  ];
+  assert.equal(fixture().qualify().ok, true);
+  for (const [label, place] of misplaced) {
+    const h = fixture();
+    place(h);
+    assert.deepEqual(h.qualify(), { ok: false, code: 'unsupported' }, label);
+  }
+});
+
+test('text placed directly inside table structure is refused', () => {
+  const text = { id: 'stray-text', kind: 'textValue', value: 'stray' } as unknown as OoxmlNode;
+  const containers: [string, (h: Fixture) => OoxmlNode][] = [['table', h => h.table], ['row', h => h.rows[0]!], ['cell', h => children(h.rows[0]!)[0]!], ['grid', h => h.grid]];
+  for (const [label, container] of containers) {
+    const h = fixture();
+    children(container(h)).push(text);
+    assert.deepEqual(h.qualify(), { ok: false, code: 'unsupported' }, label);
+  }
+});
+
+test('a table without a declared grid takes its width from its rows and addresses columns by position', () => {
+  const h = fixture(2, 3);
+  children(h.table).splice(1, 1);
+  const insert = h.qualify({ type: 'insert-table-column', where: 'right' }), remove = h.qualify({ type: 'delete-table-column' });
+  assert.deepEqual(insert.ok && insert.value.command, { type: 'insertColumn', where: 'right' });
+  assert.deepEqual(remove.ok && remove.value.command, { type: 'deleteColumn' });
+  const row = h.qualify({ type: 'delete-table-row' });
+  assert.equal(row.ok && row.value.command?.type, 'deleteRow');
+  const single = fixture(2, 1);
+  children(single.table).splice(1, 1);
+  const only = single.qualify({ type: 'delete-table-column' });
+  assert.deepEqual(only.ok && only.value.command, { type: 'deleteTable' });
+  children(h.rows[1]!).pop();
+  assert.deepEqual(h.qualify(), { ok: false, code: 'unsupported' });
+});
+
+test('a table whose first row has no cells and which declares no grid has no width to qualify against', () => {
+  const h = fixture();
+  children(h.table).splice(1, 1);
+  h.f.paragraphId = cellParagraph(h, 1).id;
+  assert.equal(h.qualify().ok, true);
+  children(h.rows[0]!).length = 0;
+  assert.deepEqual(h.qualify(), { ok: false, code: 'unsupported' });
+});

@@ -141,6 +141,34 @@ export async function runReview(page, check, { createEditor, saveEditor }) {
     }
   });
 
+  await check('a comment whose anchor is gone is listed as orphaned and cannot be navigated to or answered', async () => {
+    const entries = unzipSync(Uint8Array.from(await page.evaluate(() => window.__docxTest.fixture('review'))));
+    // The comment part carries a second comment that no range in the body marks.
+    entries['word/comments.xml'] = strToU8(strFromU8(entries['word/comments.xml']).replace('</w:comments>',
+      '<w:comment w:id="9" w:author="Fourth reviewer"><w:p><w:r><w:t>Anchor removed.</w:t></w:r></w:p></w:comment></w:comments>'));
+    const id = 'review-orphan';
+    assert.equal(await page.evaluate(async ({ id, bytes }) => {
+      const element = document.createElement('lr-docx-editor'); element.id = id;
+      document.querySelector('#fixture').append(element); return (await element.open(Uint8Array.from(bytes))).ok;
+    }, { id, bytes: [...zipSync(entries)] }), true);
+    try {
+      const before = await saveEditor(page, id), current = await report(page, id);
+      const orphan = current.items.find(item => item.kind === 'comment' && item.text === 'Anchor removed.');
+      assert.ok(orphan); assert.equal(orphan.orphaned, true); assert.equal(orphan.navigable, false);
+      const navigation = await page.locator(`#${id}`).evaluate((element, target) => {
+        const before = element.snapshot(), result = element.selectReviewItem(target.id, { expectedRevision: target.revision });
+        return { result, before, after: element.snapshot() };
+      }, { id: orphan.id, revision: current.revision });
+      assert.deepEqual(navigation.result, { ok: false, code: 'unsupported' });
+      assert.deepEqual(navigation.after.revision, navigation.before.revision);
+      assert.equal(navigation.after.dirty, navigation.before.dirty);
+      const reply = await act(page, id, { type: 'reply-comment', id: orphan.id, author: 'Responder', text: 'Too late.' }, current.revision);
+      assert.equal(reply.can.enabled, false); assert.deepEqual(reply.result, { ok: false, code: 'unsupported' });
+      assert.deepEqual(reply.after, reply.before);
+      assert.deepEqual(zipParts(await saveEditor(page, id)), zipParts(before));
+    } finally { await remove(page, id); }
+  });
+
   await check('public session navigates comments without edits and protects retained comment selection', async () => {
     const id = 'review-session';
     const opened = await page.evaluate(async id => {

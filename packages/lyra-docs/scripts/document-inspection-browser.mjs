@@ -19,6 +19,26 @@ export async function runDocumentInspection(page, check, { createEditor, saveEdi
   await page.evaluate(() => document.querySelector('#fixture').replaceChildren());
   const seed = await createEditor(page, 'inspection-seed', 'basic-editing');
   await page.locator('#inspection-seed').evaluate(element => element.remove());
+  await check('queries refuse a document whose paragraph styles are ambiguous instead of guessing a heading level', async () => {
+    const entries = unzipSync(Uint8Array.from(seed));
+    const styles = strFromU8(entries['word/styles.xml']);
+    const duplicate = '<w:style w:type="paragraph" w:styleId="Duplicate"><w:name w:val="Duplicate"/></w:style>';
+    entries['word/styles.xml'] = strToU8(styles.replace('</w:styles>', `${duplicate}${duplicate}</w:styles>`));
+    const id = 'inspection-ambiguous';
+    const opened = await page.evaluate(async ({ id, bytes }) => {
+      const element = document.createElement('lr-docx-editor'); element.id = id;
+      document.querySelector('#fixture').append(element); return element.open(Uint8Array.from(bytes));
+    }, { id, bytes: [...zipSync(entries, { level: 6 })] });
+    assert.equal(opened.ok, true, JSON.stringify(opened));
+    await page.locator(`#${id} .docx-pages`).waitFor({ state: 'visible' });
+    const report = await page.locator(`#${id}`).evaluate(element => ({
+      before: element.snapshot(), outline: element.outline(), inspection: element.inspectDocument(), after: element.snapshot(),
+    }));
+    assert.deepEqual(report.outline, { ok: false, code: 'unsupported' });
+    assert.deepEqual(report.inspection, { ok: false, code: 'unsupported' });
+    assert.deepEqual(report.after, report.before, 'a refused query changes nothing');
+    await page.locator(`#${id}`).evaluate(element => element.remove());
+  });
   const bytes = withHeadings(seed);
   for (const readOnly of [false, true]) {
     await check(`body outline and metadata diagnostics are bounded readonly queries (${readOnly ? 'viewing' : 'editing'})`, async () => {

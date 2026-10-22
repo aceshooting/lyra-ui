@@ -154,3 +154,50 @@ test('hidden heading/image content and non-picture inline payloads produce cover
   assert.equal(report.value.diagnostics.some(item => item.rule === 'image-description-missing'), false);
   assert.equal(report.value.capabilities[0]!.refused, true); assert.equal(report.value.capabilities[1]!.refused, true);
 });
+
+test('malformed or ambiguous node records fail closed in every query', () => {
+  type Harness = ReturnType<typeof fixture>;
+  const unsupported = { ok: false, code: 'unsupported' };
+  const heading = (h: Harness) => h.body.children[0] as OoxmlElement;
+  const outlineLevel = (h: Harness) => (heading(h).children[0] as OoxmlElement).children[0] as OoxmlElement;
+  const textValue = (h: Harness) => ((heading(h).children[1] as OoxmlElement).children[0] as OoxmlElement).children[0] as OoxmlElement;
+  const attribute = (localName: unknown, value: unknown, namespaceUri: unknown = W) => ({ localName, namespaceUri, value });
+  const cases: [string, (h: Harness) => void][] = [
+    ['a child that is null', h => { (h.body.children as unknown[])[0] = null; }],
+    ['a child that is a string', h => { (h.body.children as unknown[])[0] = 'paragraph'; }],
+    ['children that are not an array', h => { Object.assign(heading(h), { children: 'text' }); }],
+    ['attributes that are not an array', h => { Object.assign(outlineLevel(h), { attributes: { val: '0' } }); }],
+    ['an attribute that is not an object', h => { Object.assign(outlineLevel(h), { attributes: ['val'] }); }],
+    ['a text value that is not a string', h => { Object.assign(textValue(h), { value: 7 }); }],
+    ['an element name that is not a string', h => { Object.assign(heading(h), { localName: 5 }); }],
+    ['an element name past its ceiling', h => { Object.assign(heading(h), { localName: 'x'.repeat(257) }); }],
+    ['an element namespace that is not a string', h => { Object.assign(heading(h), { namespaceUri: 7 }); }],
+    ['an element namespace past its ceiling', h => { Object.assign(heading(h), { namespaceUri: 'x'.repeat(1025) }); }],
+    ['an attribute name that is not a string', h => { Object.assign(outlineLevel(h), { attributes: [attribute(5, '0')] }); }],
+    ['an attribute name past its ceiling', h => { Object.assign(outlineLevel(h), { attributes: [attribute('x'.repeat(257), '0')] }); }],
+    ['an attribute namespace that is not a string', h => { Object.assign(outlineLevel(h), { attributes: [attribute('val', '0', 7)] }); }],
+    ['an attribute namespace past its ceiling', h => { Object.assign(outlineLevel(h), { attributes: [attribute('val', '0', 'x'.repeat(1025))] }); }],
+    ['an attribute value that is not a string', h => { Object.assign(outlineLevel(h), { attributes: [attribute('val', 0)] }); }],
+    ['a repeated attribute', h => { Object.assign(outlineLevel(h), { attributes: [attribute('val', '0'), attribute('val', '1')] }); }],
+    ['two property records on one paragraph', h => { (heading(h).children as OoxmlNode[]).unshift(el('pPr')); }],
+    ['two bodies', h => { ((h.part.root as OoxmlElement).children as OoxmlNode[]).push(el('body')); }],
+  ];
+  for (const [label, change] of cases) {
+    const h = fixture();
+    change(h);
+    assert.deepEqual(h.helper.outline(), unsupported, label);
+    assert.deepEqual(h.helper.inspectDocument(), unsupported, label);
+  }
+  const control = fixture();
+  assert.equal(control.helper.outline().ok, true);
+  assert.equal(control.helper.inspectDocument().ok, true);
+});
+
+test('attribute values count against the text budget like text does', () => {
+  const h = fixture([el('p', [], { val: 'abcdef' })]);
+  const within = createDocumentInspection(() => h.editor, run => run(), { text: 6 }), beyond = createDocumentInspection(() => h.editor, run => run(), { text: 5 });
+  assert.equal(within.outline().ok, true);
+  assert.equal(within.inspectDocument().ok, true);
+  assert.deepEqual(beyond.outline(), { ok: false, code: 'resource-limit' });
+  assert.deepEqual(beyond.inspectDocument(), { ok: false, code: 'resource-limit' });
+});

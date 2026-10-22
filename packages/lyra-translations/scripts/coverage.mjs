@@ -13,7 +13,7 @@ import { runNodeCoverage } from '../../lyra-docs/scripts/lib/node-coverage.mjs';
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const SCOPE = Object.freeze({
   label: '@aceshooting/lyra-translations',
-  floor: 95,
+  floor: 100,
   include: ['scripts/build.mjs', 'scripts/check-package.mjs', 'scripts/coverage.mjs'],
   exclude: [
     { pattern: /\.test\.mjs$/u, reason: 'test' },

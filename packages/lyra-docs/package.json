@@ -72,7 +72,7 @@
     "build": "node scripts/build.mjs",
     "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm build",
     "lint": "tsc --noEmit -p tsconfig.test.json && node scripts/check-package.mjs",
-    "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/*.test.js scripts/package.test.mjs scripts/coverage.test.mjs scripts/node-coverage.test.mjs scripts/source-preparation.test.mjs scripts/static-files.test.mjs scripts/build-engine.test.mjs scripts/engine/source.test.mjs scripts/engine/distribution.test.mjs scripts/editor-command-lifecycle.test.mjs test/xml.test.mjs",
+    "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/*.test.js scripts/package.test.mjs scripts/check-package.test.mjs scripts/coverage.test.mjs scripts/node-coverage.test.mjs scripts/performance.test.mjs scripts/source-preparation.test.mjs scripts/static-files.test.mjs scripts/build-engine.test.mjs scripts/engine/source.test.mjs scripts/engine/distribution.test.mjs scripts/editor-command-lifecycle.test.mjs test/xml.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",
     "test:performance": "node scripts/performance-browser.mjs",
     "test:coverage": "node scripts/coverage.mjs"

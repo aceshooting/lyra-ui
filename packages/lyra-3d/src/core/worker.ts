@@ -170,7 +170,6 @@ function startMainThreadTask<Input, Output>(
   };
   const slice = () => {
     timer = undefined;
-    if (stopped) return;
     const deadline = performance.now() + sliceMs;
     let latest: Lyra3dTaskStep<Output> | undefined;
     try {

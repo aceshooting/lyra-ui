@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { tag } from '@aceshooting/lyra-ui/utilities/prefix.js';
-import { LyraDocxEditor } from './docx-editor.class.js';
-import type { DocxImageDirection, DocxRefusalCode, DocxResult, DocxSession } from './types.js';
+import { editor, flush, refusal, session, type Internals } from '../../test/docx-editor-harness.js';
+import type { DocxRefusalCode, DocxResult } from './types.js';
 
 /**
  * The editor's failure and race guards, driven in Node on a real, unconnected element. Each test replaces
@@ -10,76 +10,6 @@ import type { DocxImageDirection, DocxRefusalCode, DocxResult, DocxSession } fro
  * released, and which focus or announcement is withheld. The browser suites cover the same flows end to end;
  * these cover the refusals they cannot provoke from the outside.
  */
-
-const refusal = (code: DocxRefusalCode): DocxResult<never> => ({ ok: false, code });
-const flush = () => new Promise<void>(resolve => setTimeout(resolve, 0));
-const session = (value: Record<string, unknown> = {}) => value as unknown as DocxSession;
-
-type Stub = (...args: never[]) => unknown;
-
-/** The private surface these tests read and replace, named as the element declares it. */
-interface Internals {
-  isConnected: boolean;
-  renderRoot: unknown;
-  session: DocxSession | null;
-  sourceReadSequence: number;
-  insertionIntent: unknown;
-  insertionGeneration: number;
-  insertionAwaitingPicker: boolean;
-  imageIntent: unknown;
-  imageDialogGeneration: number;
-  imageDrag: unknown;
-  imagePreview: unknown;
-  imageNavigationEmpty: boolean;
-  imageReplacementIntent: unknown;
-  announcementsArmed: boolean;
-  politeSink: unknown;
-  currentSnapshot: unknown;
-  editError: unknown;
-  mount: unknown;
-  commandsOpen: boolean;
-  imageFrameRequest: number;
-  insertionPhase: string;
-  toolbarKey: string;
-  openPanelTrigger: string | null;
-  selectedCommand: unknown;
-  commandSources: unknown;
-  commandIntent: unknown;
-  openInProgress: boolean;
-  settleCommand(operation: () => Promise<DocxResult<unknown>>): Promise<DocxResult<unknown>>;
-  openImageInsertionPicker(): void;
-  cancelImageInsertion(returnFocus: boolean): void;
-  readImageInsertionFile(event: Event): Promise<void>;
-  navigateImage(direction: DocxImageDirection): void;
-  openImageDialog(event: Event, kind: 'resize' | 'description'): void;
-  runImageEdit(action: unknown, fromDialog?: boolean): Promise<void>;
-  endImageDrag(event: PointerEvent): Promise<void>;
-  commandAvailability(item: unknown): unknown;
-  onHostKeyDown(event: KeyboardEvent): void;
-  scheduleImageFrame(): void;
-  onCommandSelected(event: unknown): void;
-  onToolbarPanelShow(event: unknown): void;
-  onToolbarPanelHidden(event: unknown): void;
-  onToolbarFocusIn(event: unknown): void;
-  onFileSelected(event: unknown): void;
-  onImageInsertionKey(event: KeyboardEvent): void;
-  onImageActivationKey(event: KeyboardEvent): void;
-  newFromToolbar(): void;
-  prepareImageReplacement(): void;
-  replacementFeedback(code: DocxRefusalCode): string;
-  [name: string]: unknown;
-}
-
-/** A real element that was never connected: its fields and handlers exist, rendering never starts. */
-function editor(state: Partial<Internals> = {}) {
-  const element = new LyraDocxEditor();
-  Object.defineProperty(element, 'isConnected', { value: true, writable: true, configurable: true });
-  Object.defineProperty(element, 'updateComplete', { get: () => Promise.resolve(true), configurable: true });
-  const internals = element as unknown as Internals;
-  Object.assign(internals, state);
-  const stub = (name: string, implementation: Stub) => { internals[name] = implementation; };
-  return { i: internals, stub };
-}
 
 test('a command that rejects settles as an engine failure instead of escaping', async () => {
   const { i } = editor();
@@ -189,6 +119,33 @@ test('the description dialog is refused, and its image intent released, when the
   assert.deepEqual(calls, ['prevent', 'release', 'refuse:unsupported']);
 });
 
+test('the image dialogs do not open for a missing or stale image intent, and the intent is released', () => {
+  for (const kind of ['resize', 'description'] as const) {
+    for (const [name, stale] of [['no intent was captured', false], ['the intent went stale', true]] as const) {
+      const calls: string[] = [];
+      const intent = stale ? { valid: () => false, release: () => { calls.push('release'); } } : null;
+      const { i } = editor({ session: session(), imageIntent: intent, imageDialog: null, imageDialogGeneration: 4 });
+      i.openImageDialog({ preventDefault: () => { calls.push('prevent'); } } as unknown as Event, kind);
+      // The dialog stays closed: the popover is told not to open and no dialog generation is started.
+      assert.deepEqual([calls, i.imageIntent, i.imageDialog, i.imageDialogGeneration], [stale ? ['prevent', 'release'] : ['prevent'], null, null, 4], `${kind}: ${name}`);
+    }
+  }
+});
+
+test('an image edit without a captured intent is refused as stale, once', async () => {
+  for (const fromDialog of [false, true]) {
+    const calls: string[] = [];
+    const { i, stub } = editor({ session: session(), sourceReadSequence: 7, imageDialogGeneration: 2, imageIntent: null });
+    stub('syncSession', () => { calls.push('sync'); });
+    stub('reportEditRefusal', (code: DocxRefusalCode) => { calls.push(`refuse:${code}`); });
+    stub('releaseImageIntent', () => { calls.push('release'); });
+    stub('closeImageDialog', () => { calls.push('close'); });
+    stub('focusEditor', () => { calls.push('focus'); });
+    await i.runImageEdit({ type: 'delete-image' }, fromDialog);
+    assert.deepEqual(calls, fromDialog ? ['sync', 'refuse:stale-selection'] : ['sync', 'refuse:stale-selection', 'release'], String(fromDialog));
+  }
+});
+
 test('a refused image edit reports the refusal, keeps focus where it was and drops a toolbar intent', async () => {
   for (const fromDialog of [false, true]) {
     const calls: string[] = [];
@@ -247,6 +204,28 @@ test('a refused drag resize reports the refusal once and leaves focus where it w
   assert.equal(i.imagePreview, null);
 });
 
+test('a drag that ends without a preview or back at the original size releases its intent and runs no command', async () => {
+  const original = { widthPoints: 100, heightPoints: 50 };
+  const box = { left: 0, top: 0, width: 40, height: 20 };
+  const cases: [string, unknown][] = [
+    ['without a preview', null],
+    ['at the original size', { ...box, ...original }],
+    // Sizes are stored in whole EMUs, so a difference below one EMU is no change at all.
+    ['within the same stored size', { ...box, widthPoints: 100.00001, heightPoints: 50.00001 }],
+  ];
+  for (const [name, preview] of cases) {
+    const calls: string[] = [];
+    const intent = { image: original, execute: async () => { calls.push('execute'); return refusal('stale-revision'); }, release: () => { calls.push('release'); } };
+    const { i, stub } = editor({ session: session(), sourceReadSequence: 1, imageDrag: { pointerId: 5, intent }, imagePreview: preview });
+    stub('syncSession', () => { calls.push('sync'); });
+    stub('reportEditRefusal', (code: DocxRefusalCode) => { calls.push(`refuse:${code}`); });
+    stub('focusEditor', () => { calls.push('focus'); });
+    await i.endImageDrag({ pointerId: 5, preventDefault: () => { calls.push('prevent'); } } as unknown as PointerEvent);
+    assert.deepEqual(calls, ['prevent', 'release'], name);
+    assert.deepEqual([i.imageDrag, i.imagePreview], [null, null], name);
+  }
+});
+
 test('only history commands stay available without a text selection', () => {
   const snapshot = { status: 'ready', readOnly: false, activity: null, composing: false };
   for (const lease of [null, {}]) {
@@ -257,6 +236,30 @@ test('only history commands stay available without a text selection', () => {
     assert.deepEqual(availability('bold'), lease ? { enabled: true } : { enabled: false, reason: 'no-selection' }, `bold with${lease ? '' : 'out'} a selection`);
     assert.deepEqual(availability('undo'), { enabled: true });
     assert.deepEqual(availability('redo'), { enabled: true });
+  }
+});
+
+test('commands are held back while a document opens or an operation runs, and while text is composed', () => {
+  const ready = { status: 'ready', readOnly: false, activity: null, composing: false };
+  const busy = { enabled: false, reason: 'busy' }, composing = { enabled: false, reason: 'composing' };
+  const cases: [string, Record<string, unknown>, boolean, boolean, unknown, unknown][] = [
+    // name, snapshot, document opening, selection still current, command, expected availability
+    ['a document is opening', ready, true, true, { action: 'bold' }, busy],
+    ['an operation is running', { ...ready, activity: 'saving' }, false, true, { action: 'bold' }, busy],
+    ['text is being composed', { ...ready, composing: true }, false, true, { action: 'bold' }, composing],
+    ['an operation outranks composition', { ...ready, activity: 'saving', composing: true }, false, true, { action: 'bold' }, busy],
+    ['New waits for the operation too', { ...ready, activity: 'saving' }, false, true, { intent: 'new' }, busy],
+    ['Open waits for composition', { ...ready, composing: true }, false, true, { intent: 'open' }, composing],
+    ['a moved selection outranks both', { ...ready, activity: 'saving', composing: true }, true, false, { action: 'bold' }, { enabled: false, reason: 'stale-selection' }],
+    ['an idle editor offers New', ready, false, true, { intent: 'new' }, { enabled: true }],
+  ];
+  for (const [name, snapshot, openInProgress, current, item, expected] of cases) {
+    let consulted = 0;
+    const { i, stub } = editor({ currentSnapshot: snapshot, openInProgress });
+    stub('commandIntentValid', () => current);
+    stub('can', () => { consulted++; return { enabled: true }; });
+    assert.deepEqual(i.commandAvailability(item), expected, name);
+    assert.equal(consulted, 0, `${name}: the document is not asked`);
   }
 });
 
@@ -455,6 +458,75 @@ test('Alt+F10 holds the selection and focuses Bold, else the first enabled tool,
   }
 });
 
+test('Alt+F10 on a first tool that has no readable key hands the roving stop to Bold', context => {
+  withPageGlobals(context);
+  const focused: string[] = [];
+  const { i, stub, keydown } = chordEditor(idle, { toolbarKey: 'italic' });
+  stub('retainToolbarSelection', () => {});
+  stub('enabledToolbarButtons', () => [{ getAttribute: () => null, focus: () => { focused.push('keyless'); } }]);
+  const { event, trace } = keyEvent({ key: 'F10', altKey: true });
+  keydown(event);
+  assert.deepEqual([focused, i.toolbarKey, trace], [['keyless'], 'bold', { prevented: 1, stopped: 1 }]);
+});
+
+/** A toolbar tool that records being focused. */
+class Tool extends DoubleElement {
+  constructor(readonly key: string, private readonly focused: string[]) { super({ 'data-tool-key': key }); }
+  focus() { this.focused.push(this.key); }
+}
+
+/** A toolbar editor whose focus sits on a tool of its own toolbar, in the given reading direction. */
+function toolbarEditor(direction: 'ltr' | 'rtl', enabled: () => unknown[]) {
+  const { i, stub, keydown } = chordEditor(idle, { toolbarKey: 'b', renderRoot: { querySelector: () => null, contains: () => true } });
+  Object.defineProperty(i, 'effectiveDirection', { value: direction, configurable: true });
+  stub('enabledToolbarButtons', enabled);
+  return { i, keydown };
+}
+
+test('arrow keys, Home and End move focus between the enabled tools, wrap around and mirror under right-to-left', context => {
+  withPageGlobals(context);
+  const cases: [string, string, 'ltr' | 'rtl', number, string][] = [
+    // name, key, reading direction, index of the focused tool, key of the tool that receives focus
+    ['ArrowRight moves forward', 'ArrowRight', 'ltr', 1, 'c'],
+    ['ArrowLeft moves back', 'ArrowLeft', 'ltr', 1, 'a'],
+    ['ArrowRight wraps from the last tool', 'ArrowRight', 'ltr', 2, 'a'],
+    ['ArrowLeft wraps from the first tool', 'ArrowLeft', 'ltr', 0, 'c'],
+    ['Home goes to the first tool', 'Home', 'ltr', 1, 'a'],
+    ['End goes to the last tool', 'End', 'ltr', 1, 'c'],
+    ['ArrowLeft moves forward under right-to-left', 'ArrowLeft', 'rtl', 1, 'c'],
+    ['ArrowRight moves back under right-to-left', 'ArrowRight', 'rtl', 1, 'a'],
+  ];
+  for (const [name, key, direction, from, expected] of cases) {
+    const focused: string[] = [];
+    const tools = ['a', 'b', 'c'].map(toolKey => new Tool(toolKey, focused));
+    const { i, keydown } = toolbarEditor(direction, () => tools);
+    const { event, trace } = keyEvent({ key }, [tools[from]!]);
+    keydown(event);
+    assert.deepEqual([focused, i.toolbarKey, trace.prevented], [[expected], expected, 1], name);
+  }
+});
+
+test('arrow keys on a toolbar tool keep their default action while no tool is enabled', context => {
+  withPageGlobals(context);
+  for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End']) {
+    const focused: string[] = [];
+    const { i, keydown } = toolbarEditor('ltr', () => []);
+    const { event, trace } = keyEvent({ key }, [new Tool('b', focused)]);
+    keydown(event);
+    assert.deepEqual([focused, i.toolbarKey, trace], [[], 'b', { prevented: 0, stopped: 0 }], key);
+  }
+});
+
+test('arrow navigation onto a tool without a readable key hands the roving stop to Bold', context => {
+  withPageGlobals(context);
+  const focused: string[] = [];
+  const keyless = { getAttribute: () => null, focus: () => { focused.push('keyless'); } };
+  const { i, keydown } = toolbarEditor('ltr', () => [keyless]);
+  const { event, trace } = keyEvent({ key: 'ArrowRight' }, [new Tool('italic', focused)]);
+  keydown(event);
+  assert.deepEqual([focused, i.toolbarKey, trace.prevented], [['keyless'], 'bold', 1]);
+});
+
 test('Escape is claimed by an active image drag, and by the open insertion dialog, before anything else', context => {
   withPageGlobals(context);
   const drag = chordEditor(idle, { imageDrag: { pointerId: 1 } });
@@ -596,6 +668,18 @@ test('focus entering the toolbar remembers the focused tool for the roving tab s
   focusIn({ composedPath: () => [plain] });
   focusIn({ composedPath: () => [outside] });
   assert.equal(i.toolbarKey, 'italic', 'focus on a non-tool or on a tool outside this toolbar keeps the stop');
+});
+
+test('focus entering a tool whose key cannot be read hands the roving stop to Bold', context => {
+  withPageGlobals(context);
+  // Tools are found by their key attribute; this one claims the attribute but has no value to read.
+  class UnreadableTool extends DoubleElement {
+    override hasAttribute(): boolean { return true; }
+    override getAttribute(): string | null { return null; }
+  }
+  const { i } = editor({ toolbarKey: 'italic', renderRoot: { contains: () => true } });
+  i.onToolbarFocusIn({ composedPath: () => [new UnreadableTool()] });
+  assert.equal(i.toolbarKey, 'bold');
 });
 
 test('a picked document file opens once, then focuses the document or the Open button, unless superseded', async () => {

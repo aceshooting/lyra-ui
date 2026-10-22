@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, relative, resolve } from 'node:path';
+import { delimiter, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { TOOLING, runCommand, runCoverage } from './coverage.mjs';
 import { sourceInventory as scriptInventory } from './lib/node-coverage.mjs';
+import { stageScripts } from './lib/staged-script.mjs';
 import {
   DOCX_LINE_COVERAGE_FLOOR, DOCX_TOOLING_COVERAGE_FLOOR, assertCoverageTarget, assertToolingTarget, reportCoverage, sourceInventory,
 } from './report-coverage.mjs';
@@ -235,6 +237,76 @@ test('test failures mark diagnostic coverage as incomplete', async context => {
   assert.equal(metadata.browserStatus, 1);
 });
 
+test('only TypeScript is classified: declarations are excluded and other files are not sources', async context => {
+  const root = await fixture(context);
+  await write(resolve(root, 'src/ambient.d.ts'), 'declare const ambient: number;\n');
+  await write(resolve(root, 'src/theme.css'), ':host { color: red; }\n');
+  const inventory = await sourceInventory(root);
+  assert.deepEqual(inventory.included.map(entry => relative(root, entry.source)),
+    ['src/editor.ts', 'src/node.ts', 'src/untouched.ts', 'src/view.styles.ts']);
+  assert.deepEqual(inventory.excluded.filter(entry => entry.reason === 'type declaration'),
+    [{ source: 'src/ambient.d.ts', reason: 'type declaration' }]);
+  assert.equal(inventory.excluded.some(entry => entry.source === 'src/theme.css'), false, 'a stylesheet is neither measured nor excluded');
+});
+
+test('Node dumps of built-in modules and of compiled tests do not enter the census', async context => {
+  const plain = await reportCoverage({ root: await fixture(context) });
+  const root = await fixture(context);
+  const dumps = resolve(root, 'coverage/node-v8/node.json');
+  const dump = JSON.parse(await readFile(dumps, 'utf8'));
+  const unused = [{ functionName: '', isBlockCoverage: true, ranges: [{ startOffset: 0, endOffset: 1, count: 1 }] }];
+  dump.result.push(
+    { url: 'node:internal/process/execution', functions: unused },
+    { url: pathToFileURL(resolve(root, '.coverage-output/src/view.test.js')).href, functions: unused },
+  );
+  await write(dumps, JSON.stringify(dump));
+  const metadata = await reportCoverage({ root });
+  assert.equal(metadata.nodeModules, 1, 'only the compiled runtime module was measured');
+  assert.deepEqual(metadata.total, plain.total);
+});
+
+test('browser entries that are not scripts served by the test server are ignored', async context => {
+  const root = await fixture(context);
+  const file = resolve(root, 'coverage/browser-v8.json');
+  const entries = JSON.parse(await readFile(file, 'utf8'));
+  const unused = [{ functionName: '', isBlockCoverage: true, ranges: [{ startOffset: 0, endOffset: 1, count: 1 }] }];
+  await write(file, JSON.stringify([...entries,
+    { url: 'about:blank', functions: unused },
+    { url: 'chrome-extension://abcdef/inject.js', functions: unused },
+    { url: 'http://127.0.0.1:1234/test/browser.html', functions: unused },
+  ]));
+  const metadata = await reportCoverage({ root });
+  assert.equal(metadata.browserModules, 1);
+  assert.deepEqual(metadata.generatedBrowserHelpers, []);
+  assert.deepEqual(metadata.generatedBrowserFacades, []);
+});
+
+test('a source map that exists but cannot be read is an error, not an unmapped chunk', async context => {
+  const root = await fixture(context);
+  const map = resolve(root, '.browser-output/assets/editor.js.map');
+  await rm(map);
+  await mkdir(map);
+  await assert.rejects(reportCoverage({ root }), { code: 'EISDIR' });
+});
+
+test('a mapped browser chunk whose sources are all outside the census contributes nothing', async context => {
+  const root = await fixture(context);
+  const file = resolve(root, 'coverage/browser-v8.json');
+  const entries = JSON.parse(await readFile(file, 'utf8'));
+  const vendor = 'export const vendor = 1;\n';
+  const script = resolve(root, '.browser-output/assets/vendor.js');
+  await write(script, `${vendor}//# sourceMappingURL=vendor.js.map\n`);
+  await write(`${script}.map`, JSON.stringify({
+    version: 3, sources: ['../../node_modules/vendor/index.js'], sourcesContent: [vendor], names: [], mappings: 'AAAA',
+  }));
+  await write(file, JSON.stringify([...entries, { url: 'http://127.0.0.1:1234/assets/vendor.js',
+    functions: [{ functionName: '', isBlockCoverage: true, ranges: [{ startOffset: 0, endOffset: vendor.length, count: 1 }] }] }]));
+  const plain = await reportCoverage({ root: await fixture(context) });
+  const metadata = await reportCoverage({ root });
+  assert.equal(metadata.browserModules, 1, 'the vendor chunk is not counted as a measured companion module');
+  assert.deepEqual(metadata.total, plain.total);
+});
+
 const floorCount = Math.round(DOCX_LINE_COVERAGE_FLOOR * 1000);
 function targetMeasurement() {
   return {
@@ -410,7 +482,7 @@ test('a coverage run clears earlier output, builds under coverage, runs both sui
   for (const suite of unit.args.slice(4)) {
     assert.equal(existsSync(resolve(packageRoot, suite)), true, `${suite} must exist in the package`);
   }
-  for (const suite of ['scripts/package.test.mjs', 'scripts/coverage.test.mjs', 'scripts/node-coverage.test.mjs', 'scripts/engine/source.test.mjs', 'test/xml.test.mjs']) {
+  for (const suite of ['scripts/package.test.mjs', 'scripts/check-package.test.mjs', 'scripts/coverage.test.mjs', 'scripts/node-coverage.test.mjs', 'scripts/performance.test.mjs', 'scripts/engine/source.test.mjs', 'test/xml.test.mjs']) {
     assert.ok(unit.args.includes(suite), `${suite} runs under coverage`);
   }
 
@@ -482,9 +554,10 @@ const toolingMeasurement = (covered, total = 1000) => ({
 test('the tooling floor gates the tooling counters alone, with the same exact arithmetic', () => {
   const floor = DOCX_TOOLING_COVERAGE_FLOOR * 10;
   assert.doesNotThrow(() => assertToolingTarget(toolingMeasurement(floor)));
-  assert.throws(() => assertToolingTarget(toolingMeasurement(floor - 1)), new RegExp(`lines coverage 79\\.900% is below ${DOCX_TOOLING_COVERAGE_FLOOR}%`, 'u'));
+  const justBelow = (DOCX_TOOLING_COVERAGE_FLOOR - 0.1).toFixed(3);
+  assert.throws(() => assertToolingTarget(toolingMeasurement(floor - 1)), new RegExp(`lines coverage ${justBelow.replace('.', '\\.')}% is below ${DOCX_TOOLING_COVERAGE_FLOOR}%`, 'u'));
   // A perfect TypeScript runtime cannot compensate for weak tooling.
-  assert.throws(() => assertToolingTarget(toolingMeasurement(0)), /below 80%/u);
+  assert.throws(() => assertToolingTarget(toolingMeasurement(0)), new RegExp(`below ${DOCX_TOOLING_COVERAGE_FLOOR}%`, 'u'));
 });
 
 test('the tooling floor needs measured tooling and a complete run', () => {
@@ -512,4 +585,27 @@ test('commands run in the package with the extra environment and report their ex
   assert.equal(runCommand(root, process.execPath, ['-e', 'process.exit(process.cwd() === process.argv[1] ? 0 : 4)', root]), 0);
   assert.throws(() => node('-e', 'process.kill(process.pid, "SIGKILL")'), /terminated by SIGKILL/u);
   assert.throws(() => runCommand(root, 'lyra-docs-no-such-command', []), { code: 'ENOENT' });
+});
+
+test('started as a script, the entry point adopts the exit status of the run and leaves nothing behind', async context => {
+  const root = realpathSync(await mkdtemp(resolve(tmpdir(), 'lyra-docs-entry-')));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const [entry] = stageScripts({ from: packageRoot, to: root, files: [
+    'scripts/coverage.mjs', 'scripts/report-coverage.mjs', 'scripts/lib/node-coverage.mjs',
+    'scripts/lib/static-files.mjs', 'scripts/lib/staged-script.mjs',
+  ] });
+  await symlink(resolve(packageRoot, 'node_modules'), resolve(root, 'node_modules'));
+  // A stand-in package manager: it records its arguments and fails the first build step.
+  const log = resolve(root, 'pnpm.log');
+  const pnpm = resolve(root, 'bin/pnpm');
+  await write(pnpm, `#!/bin/sh\necho "$@" >> '${log}'\nexit 7\n`);
+  chmodSync(pnpm, 0o755);
+  await write(resolve(root, 'coverage/stale.txt'), 'from an earlier run');
+  const result = spawnSync(process.execPath, [entry], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, PATH: `${resolve(root, 'bin')}${delimiter}${process.env.PATH}` },
+  });
+  assert.equal(result.status, 7, result.stderr);
+  assert.equal(await readFile(log, 'utf8'), 'run build\n', 'the run stopped at the failing build step');
+  assert.equal(existsSync(resolve(root, 'coverage/stale.txt')), false, 'earlier output was cleared');
+  assert.equal(existsSync(resolve(root, 'coverage/tmp')), false, 'the scratch directory was removed');
 });

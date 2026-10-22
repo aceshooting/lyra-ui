@@ -16,7 +16,7 @@ export const GENERATED_BANNER = '// AUTO-GENERATED FILE. Do not edit by hand.\n'
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const SCOPE = Object.freeze({
   label: '@aceshooting/lyra-flags',
-  floor: 95,
+  floor: 100,
   include: [
     'index.js', 'standard.js', 'compact.js', 'detailed.js',
     'scripts/build-compact.mjs', 'scripts/coverage.mjs', 'scripts/generate-index.mjs', 'scripts/optimize-flags.mjs',

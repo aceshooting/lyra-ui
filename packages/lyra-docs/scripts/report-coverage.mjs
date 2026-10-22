@@ -9,8 +9,8 @@ import reports from 'istanbul-reports';
 import { enrollUnloaded, measureNodeCoverage, sourceInventory as scriptInventory } from './lib/node-coverage.mjs';
 import { filesUnder } from './lib/static-files.mjs';
 
-export const DOCX_LINE_COVERAGE_FLOOR = 99.6;
-export const DOCX_TOOLING_COVERAGE_FLOOR = 80;
+export const DOCX_LINE_COVERAGE_FLOOR = 100;
+export const DOCX_TOOLING_COVERAGE_FLOOR = 100;
 
 /** The verified whole-source target gates lines and their native V8 statement counters. */
 export function assertCoverageTarget(metadata, floor = DOCX_LINE_COVERAGE_FLOOR) {

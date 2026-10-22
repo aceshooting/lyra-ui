@@ -3,26 +3,10 @@ import test from 'node:test';
 import { crc32 } from 'node:zlib';
 import type { OoxmlPackage } from '@docx-editor.dev/core/store';
 const store = await import('@docx-editor.dev/core/store');
-const { blankDocumentBytes } = await import('@docx-editor.dev/core/editor');
-import { docxFixture } from '../../test/admission-fixtures.js';
-import { imageInsertionBytes } from '../../test/corpus.js';
-import { deriveImageInsertionEngine } from './engine-image-insertion-loader.js';
+import { insertionFixture as fixture, insertionSource as input, valid } from '../../test/image-preflight-harness.js';
 import { normalizeImageInsertion } from './image-insertion-input.js';
 import { preflightImageInsertion } from './eigenpal-image-insertion.js';
 import type { DocxResult } from './types.js';
-
-const valid = (): DocxResult<void> => ({ ok: true, value: undefined });
-function fixture() {
-  const read = store.readOoxmlPackage(docxFixture({ 'word/document.xml': '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body><w:p w14:paraId="00000001" w14:textId="00000001"><w:r><w:t>alpha</w:t></w:r></w:p></w:body></w:document>' })); assert(read.ok);
-  const pkg = read.package, body = pkg.parts.get(pkg.mainDocumentPart)!.root.children[0]!; assert(body.kind !== 'textValue');
-  const paragraph = body.children[0]!;
-  const dependencies = deriveImageInsertionEngine(blankDocumentBytes, store); assert(dependencies);
-  return { pkg, dependencies, target: { paragraphId: paragraph.id, offset: 2 }, signal: new AbortController().signal };
-}
-const input = (kind: 'png' | 'jpeg' | 'gif' = 'png') => {
-  const checked = normalizeImageInsertion({ bytes: imageInsertionBytes(kind), widthPoints: 48, heightPoints: 24, title: 'A & 😀', description: 'one\ntwo' }, {}, valid);
-  assert(checked.ok); return checked.value.source;
-};
 
 test('isolated insertion preflight accepts declared raster paths and preserves the original package', async () => {
   for (const kind of ['png', 'jpeg', 'gif'] as const) {

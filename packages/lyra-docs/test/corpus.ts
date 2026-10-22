@@ -162,6 +162,16 @@ export function imageFixture(kind = 'image-simple'): Uint8Array {
     entries['word/_rels/document.xml.rels'] = strToU8(strFromU8(entries['word/_rels/document.xml.rels']!).replace('pixel.png', 'pixel.jpeg'));
     entries['[Content_Types].xml'] = strToU8(strFromU8(entries['[Content_Types].xml']!).replace('Extension="png" ContentType="image/png"', 'Extension="jpeg" ContentType="image/jpeg"'));
   }
+  if (kind === 'image-metafile') {
+    // A Windows metafile picture: browsers never decode it, so the editor keeps a placeholder and the bytes untouched.
+    const header = new Uint8Array(88);
+    header.set([1, 0, 0, 0, 88, 0, 0, 0]);
+    header.set([0x20, 0x45, 0x4d, 0x46], 40);
+    entries['word/media/pixel.emf'] = header;
+    delete entries['word/media/pixel.png'];
+    entries['word/_rels/document.xml.rels'] = strToU8(strFromU8(entries['word/_rels/document.xml.rels']!).replace('pixel.png', 'pixel.emf'));
+    entries['[Content_Types].xml'] = strToU8(strFromU8(entries['[Content_Types].xml']!).replace('Extension="png" ContentType="image/png"', 'Extension="emf" ContentType="image/x-emf"'));
+  }
   if (kind === 'image-gif') {
     entries['word/media/pixel.gif'] = Uint8Array.from(atob('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='), char => char.charCodeAt(0));
     delete entries['word/media/pixel.png'];

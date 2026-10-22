@@ -1,26 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { crc32, deflateSync } from 'node:zlib';
+import { pngChunk as chunk, pngCompressed as compressed, pngEnd as end, pngFile as png, pngHeader as header } from '../../test/png-fixtures.js';
 import { inspectDocxImage, inspectDocxImageForInsertion, isDocxMetafileSignature, isDocxRasterSignature } from './image-bytes.js';
 
 const invalid = { ok: false, code: 'invalid-document' };
-const signature = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
-function chunk(name: string, data = new Uint8Array()): Uint8Array {
-  const bytes = new Uint8Array(data.length + 12), view = new DataView(bytes.buffer);
-  view.setUint32(0, data.length);
-  bytes.set(new TextEncoder().encode(name), 4); bytes.set(data, 8);
-  view.setUint32(bytes.length - 4, crc32(bytes.subarray(4, bytes.length - 4)));
-  return bytes;
-}
-function header(depth = 8, color = 6, compression = 0, filter = 0, interlace = 0): Uint8Array {
-  const data = Uint8Array.of(0, 0, 0, 1, 0, 0, 0, 1, depth, color, compression, filter, interlace);
-  return chunk('IHDR', data);
-}
-const compressed = new Uint8Array(deflateSync(Uint8Array.of(0, 0, 0, 0, 255)));
-const end = () => chunk('IEND');
-function png(parts = [header(), chunk('IDAT', compressed), end()]): Uint8Array {
-  return new Uint8Array(Buffer.concat([signature, ...parts]));
-}
 const accepted = { ok: true, value: { pixels: 1, pixelWidth: 1, pixelHeight: 1, mimeType: 'image/png', hasJpegApp1: false } };
 
 test('checksummed static PNG inspection preserves a nonzero-offset input view', () => {

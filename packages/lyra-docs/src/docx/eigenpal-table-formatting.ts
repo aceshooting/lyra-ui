@@ -5,11 +5,11 @@ import { WORD_NS as WORD } from './ooxml.js';
 
 type FormattingAction = Extract<DocxTableAction, { type: 'table-header-row' | 'table-width' | 'table-cell-alignment' | 'table-cell-shading' | 'table-cell-borders' }>;
 type TableCommandPlan = Parameters<NonNullable<DocxEditorInstance['surface']>['applyTableCommandPlan']>[0];
-export interface TableFormatting {
-  readonly command?: EditorCommand;
-  readonly plan?: TableCommandPlan;
-  readonly unchanged?: boolean;
-}
+/** One table edit: exactly one engine step, a command or a command plan, and whether it would change nothing. */
+export type TableFormatting = { readonly unchanged?: boolean } & (
+  | { readonly command: EditorCommand; readonly plan?: never }
+  | { readonly plan: TableCommandPlan; readonly command?: never }
+);
 const child = (node: OoxmlElement | undefined, name: string): OoxmlElement | undefined =>
   (node?.children as readonly OoxmlNode[] | undefined)?.find((value): value is OoxmlElement => value.kind !== 'textValue' && value.namespaceUri === WORD && value.localName === name);
 const attribute = (node: OoxmlElement | undefined, name: string) =>

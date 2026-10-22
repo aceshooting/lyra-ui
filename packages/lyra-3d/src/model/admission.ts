@@ -2,6 +2,7 @@ import { MODEL_LIMITS as LIMIT } from './limits.js';
 import type { ModelAdmission, ModelAdmissionFailure, ModelEmbeddedResource, ModelFormat, ModelParserInput } from './types.js';
 
 type RecordValue = Record<string, unknown>;
+type ImageMime = 'image/png' | 'image/jpeg';
 interface Budget { decoded: number; vertices: number; indices: number; pixels: number; resources: ModelEmbeddedResource[] }
 interface Accessor { count: number; components: number; component: number; normalized: boolean; max: number; type: string; bounds: boolean }
 interface BufferView { bytes: Uint8Array<ArrayBuffer>; stride: number; offset: number }
@@ -73,7 +74,7 @@ function json(bytes: Uint8Array): RecordValue {
   check(depth === 0 && !quoted);
   try { return object(JSON.parse(text(bytes))); } catch (error) { if (error instanceof ModelAdmissionError) throw error; return fail(); }
 }
-function dataUri(value: unknown, mimes: string[], budget: Budget): { bytes: Uint8Array<ArrayBuffer>; mime: string; uri: string } {
+function dataUri<Mime extends string>(value: unknown, mimes: readonly Mime[], budget: Budget): { bytes: Uint8Array<ArrayBuffer>; mime: Mime; uri: string } {
   check(typeof value === 'string', 'external-resource');
   const comma = value.indexOf(',');
   const header = value.slice(0, comma);
@@ -100,7 +101,7 @@ function dataUri(value: unknown, mimes: string[], budget: Budget): { bytes: Uint
   }
   return { bytes, mime, uri: value };
 }
-function imageMetadata(bytes: Uint8Array, mime: string, budget: Budget): { width: number; height: number } {
+function imageMetadata(bytes: Uint8Array, mime: ImageMime, budget: Budget): { width: number; height: number } {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let width = 0; let height = 0;
   if (mime === 'image/png') {
@@ -126,7 +127,7 @@ function imageMetadata(bytes: Uint8Array, mime: string, budget: Budget): { width
       offset += 12 + length;
     }
     check(ended);
-  } else if (mime === 'image/jpeg') {
+  } else {
     check(bytes.length >= 4 && bytes[0] === 255 && bytes[1] === 216);
     let offset = 2; let scan = false; let segments = 0;
     while (offset < bytes.length) {
@@ -163,7 +164,7 @@ function imageMetadata(bytes: Uint8Array, mime: string, budget: Budget): { width
       }
     }
     check(scan && bytes[bytes.length - 2] === 255 && bytes[bytes.length - 1] === 217);
-  } else fail('unsupported');
+  }
   integer(width, LIMIT.textureAxis, 1); integer(height, LIMIT.textureAxis, 1);
   const pixels = width * height; check(pixels <= LIMIT.imagePixels, 'limit');
   budget.pixels += pixels; check(budget.pixels <= LIMIT.totalImagePixels, 'limit');
@@ -246,7 +247,7 @@ function gltf(bytes: Uint8Array<ArrayBuffer>, format: 'gltf' | 'glb', budget: Bu
   });
   const images = imageDefs.map((value, index) => {
     const entry = fields(value, ['uri', 'bufferView', 'mimeType']);
-    let data: Uint8Array<ArrayBuffer>; let uri: string | null = null; let mimeType: string;
+    let data: Uint8Array<ArrayBuffer>; let uri: string | null = null; let mimeType: ImageMime;
     if (entry['uri'] !== undefined) {
       check(entry['bufferView'] === undefined);
       const embedded = dataUri(entry['uri'], ['image/png', 'image/jpeg'], budget);

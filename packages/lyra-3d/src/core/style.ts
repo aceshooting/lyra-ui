@@ -48,8 +48,7 @@ const HEX = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/iu;
 const NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?(%?)$/iu;
 
 /** Parses one channel: a number on `scale` (255 for rgb, 1 for color()) or a percentage. */
-function channel(token: string | undefined, scale: number): number | null {
-  if (token === undefined) return null;
+function channel(token: string, scale: number): number | null {
   if (token === 'none') return 0;
   const match = NUMBER.exec(token);
   if (!match) return null;
@@ -84,7 +83,7 @@ export function parseCssColor(value: unknown): Lyra3dRgba | null {
   if (text === 'transparent') return Object.freeze({ r: 0, g: 0, b: 0, a: 0 });
   const hex = HEX.exec(text);
   if (hex) {
-    const digits = hex[1] ?? '';
+    const digits = hex[1] as string;
     const expanded = digits.length <= 4 ? [...digits].map((digit) => digit + digit).join('') : digits;
     const byte = (index: number) => Number.parseInt(expanded.slice(index * 2, index * 2 + 2), 16) / 255;
     return Object.freeze({ r: byte(0), g: byte(1), b: byte(2), a: expanded.length === 8 ? byte(3) : 1 });
