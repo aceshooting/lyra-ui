@@ -10,8 +10,8 @@ import {
 } from '../../lyra-ui/scripts/translations-companion.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
-const source = join(packageDir, '..', 'lyra-ui', 'dist', 'translations');
-const target = join(packageDir, 'dist');
+const defaultSource = join(packageDir, '..', 'lyra-ui', 'dist', 'translations');
+const defaultTarget = join(packageDir, 'dist');
 
 function catalogFiles(directory, prefix = '') {
   const files = [];
@@ -24,7 +24,7 @@ function catalogFiles(directory, prefix = '') {
   return files;
 }
 
-export function buildTranslations() {
+export function buildTranslations({ source = defaultSource, target = defaultTarget } = {}) {
   if (!existsSync(source)) {
     throw new Error('packages/lyra-ui/dist/translations is missing; run `pnpm --filter @aceshooting/lyra-ui build` first.');
   }
