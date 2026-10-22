@@ -771,7 +771,7 @@ export type {
   LyraMapFeatureValue,
   LyraMapGeolocationErrorCode,
 } from './components/media/map/map.class.js';
-export { LyraMapImageExportError } from './components/media/map/map.class.js';
+export { LyraMapImageExportError } from './components/media/map/map-image-export.js';
 export { LYRA_MAP_EMPTY_STYLE } from './components/media/map/map-empty-style.js';
 export type { MapLibreSourceDataDiff } from './components/media/map/map-loader.js';
 export {

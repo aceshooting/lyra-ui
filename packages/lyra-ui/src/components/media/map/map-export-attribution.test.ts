@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { collectMapExportAttribution, type MapExportAttributionContext } from './map-export-attribution.js';
-import { MapImageExportError } from './map-image-export.js';
+import { LyraMapImageExportError } from './map-image-export.js';
 
 const peer = (attribution: unknown = 'Provider') => ({
   getStyle: () => ({ sources: { tiles: { attribution } } }),
@@ -10,8 +10,8 @@ const context = (extra: Partial<MapExportAttributionContext> = {}): MapExportAtt
 async function failure(work: Promise<string>, code: string) {
   let caught: unknown;
   try { await work; } catch (error) { caught = error; }
-  expect(caught instanceof MapImageExportError).to.equal(true);
-  expect((caught as MapImageExportError).code).to.equal(code);
+  expect(caught instanceof LyraMapImageExportError).to.equal(true);
+  expect((caught as LyraMapImageExportError).code).to.equal(code);
   expect((caught as Error).message).not.to.include('native diagnostic sentinel');
 }
 describe('map export attribution collection', () => {

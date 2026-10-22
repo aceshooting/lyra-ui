@@ -1,7 +1,7 @@
 import { getInheritedPropertyDescriptor } from '../../../internal/data-descriptors.js';
 import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
-import { MapImageExportError } from './map-image-export.js';
+import { LyraMapImageExportError } from './map-image-export.js';
 
 export interface MapExportAttributionPeer {
   getStyle(): unknown;
@@ -17,11 +17,11 @@ export interface MapExportAttributionContext {
 const MAX_SOURCES = 256, MAX_TEXT = 4096;
 /** Collect public style and resolved provider credits independently of native control visibility. */
 export async function collectMapExportAttribution(peer: MapExportAttributionPeer, context: MapExportAttributionContext): Promise<string> {
-  const fail = (): never => { throw new MapImageExportError('attribution-failed'); };
+  const fail = (): never => { throw new LyraMapImageExportError('attribution-failed'); };
   const check = (): void => {
     let valid = false;
     try { valid = !context.signal?.aborted && context.current(); } catch { /* A failed owner check cancels collection. */ }
-    if (!valid || context.signal?.aborted) throw new MapImageExportError('cancelled');
+    if (!valid || context.signal?.aborted) throw new LyraMapImageExportError('cancelled');
   };
   const read = (value: unknown, key: PropertyKey): unknown => {
     check();
@@ -86,7 +86,7 @@ export async function collectMapExportAttribution(peer: MapExportAttributionPeer
     check(); return result;
   } catch (error) {
     check();
-    if (error instanceof MapImageExportError) throw error;
+    if (error instanceof LyraMapImageExportError) throw error;
     return fail();
   }
 }

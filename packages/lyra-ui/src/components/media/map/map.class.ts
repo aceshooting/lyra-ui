@@ -92,9 +92,9 @@ export type { LyraMapControlPosition, LyraMapScaleUnit, LyraMapNavigationControl
 import { MapControlsLifecycle, type MapControlLifecyclePeer } from './map-controls-lifecycle.js';
 import { MapEngineEvents } from './map-engine-events.js';
 import { MapReadiness } from './map-readiness.js';
-import { exportMapImage, MapImageExportError, type MapImageExportServices, type LyraMapImageExportOptions, type LyraMapImageExportErrorCode } from './map-image-export.js';
+import { exportMapImage, LyraMapImageExportError, type MapImageExportServices, type LyraMapImageExportOptions, type LyraMapImageExportErrorCode } from './map-image-export.js';
 import { collectMapExportAttribution } from './map-export-attribution.js';
-export { MapImageExportError as LyraMapImageExportError } from './map-image-export.js';
+export { LyraMapImageExportError } from './map-image-export.js';
 export type { LyraMapImageExportOptions, LyraMapImageExportType, LyraMapImageExportErrorCode } from './map-image-export.js';
 export interface LyraMapImageExportErrorDetail { readonly code: LyraMapImageExportErrorCode; }
 import { createMapConstructionScheduler, type MapConstructionScheduler, type LyraMapInitialization } from './map-construction-scheduler.js';
@@ -4289,7 +4289,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this.announcements.announceAssertive(this.localize('mapExportUnavailable'));
         this.emit('lr-map-export-error', Object.freeze({ code: 'not-ready' } satisfies LyraMapImageExportErrorDetail));
       }
-      return Promise.reject(new MapImageExportError('not-ready'));
+      return Promise.reject(new LyraMapImageExportError('not-ready'));
     }
     let owner = this.exportOwner;
     if (!owner || owner.controller.signal.aborted || owner.map !== map || owner.style !== style || owner.connection !== connection) {
@@ -4303,30 +4303,30 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const services: MapImageExportServices = {
         current,
         ready: async signal => {
-          if (!current() || signal.aborted) throw new MapImageExportError('cancelled');
+          if (!current() || signal.aborted) throw new LyraMapImageExportError('cancelled');
           if (!this.exportIdleWait) {
             const pending = this.whenIdle();
             this.exportIdleWait = pending;
             void pending.finally(() => { if (this.exportIdleWait === pending) this.exportIdleWait = undefined; }).catch(() => undefined);
           }
           await this.exportIdleWait;
-          if (!current() || signal.aborted) throw new MapImageExportError('cancelled');
-          if (typeof map.triggerRepaint !== 'function' || typeof map.off !== 'function' || typeof map.loaded !== 'function') throw new MapImageExportError('not-ready');
+          if (!current() || signal.aborted) throw new LyraMapImageExportError('cancelled');
+          if (typeof map.triggerRepaint !== 'function' || typeof map.off !== 'function' || typeof map.loaded !== 'function') throw new LyraMapImageExportError('not-ready');
           request.attributionFailed = false;
           attribution = '';
           if (request.attribution) {
             try {
-              if (typeof map.getStyle !== 'function') throw new MapImageExportError('attribution-failed');
+              if (typeof map.getStyle !== 'function') throw new LyraMapImageExportError('attribution-failed');
               const normalized = normalizeMapControlOptions(this.controls);
               const customAttribution = normalized.controls.get('attribution')?.options['customAttribution'];
               attribution = await collectMapExportAttribution({ getStyle: () => map.getStyle!(), getSource: id => map.getSource(id) },
                 { document: this.ownerDocument, customAttribution, signal, current });
             } catch (error) {
-              request.attributionFailed = error instanceof MapImageExportError && error.code === 'attribution-failed';
+              request.attributionFailed = error instanceof LyraMapImageExportError && error.code === 'attribution-failed';
               throw error;
             }
           }
-          if (!current() || signal.aborted) throw new MapImageExportError('cancelled');
+          if (!current() || signal.aborted) throw new LyraMapImageExportError('cancelled');
         },
         onRender: callback => this.peerEvents.subscribe(map, 'render', () => {
           if (!current()) { callback(); return; }
@@ -4341,8 +4341,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             callback();
           } catch { controller.abort(); }
         }),
-        requestRender: () => { if (!current()) throw new MapImageExportError('cancelled'); map.triggerRepaint!(); },
-        canvas: () => { if (!current()) throw new MapImageExportError('cancelled'); return map.getCanvas(); },
+        requestRender: () => { if (!current()) throw new LyraMapImageExportError('cancelled'); map.triggerRepaint!(); },
+        canvas: () => { if (!current()) throw new LyraMapImageExportError('cancelled'); return map.getCanvas(); },
         attributionText: () => attribution,
         createCanvas: () => this.ownerDocument.createElement('canvas'),
       };
@@ -4350,7 +4350,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.exportOwner = owner;
     }
     const active = owner, admitted = !owner.busy;
-    let admittedOptions: unknown, admissionFailure: MapImageExportError | undefined;
+    let admittedOptions: unknown, admissionFailure: LyraMapImageExportError | undefined;
     if (admitted) {
       active.busy = true;
       active.request.features = this.featureGeneration;
@@ -4359,25 +4359,25 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       active.request.attribution = true;
       try {
         if (options !== undefined) {
-          if (!isPlainDataRecord(options)) throw new MapImageExportError('invalid-options');
+          if (!isPlainDataRecord(options)) throw new LyraMapImageExportError('invalid-options');
           const keys = Reflect.ownKeys(options);
-          if (keys.length > 2 || keys.some(key => key !== 'type' && key !== 'attribution')) throw new MapImageExportError('invalid-options');
+          if (keys.length > 2 || keys.some(key => key !== 'type' && key !== 'attribution')) throw new LyraMapImageExportError('invalid-options');
           const snapshot: Record<string, unknown> = {};
           for (const key of keys) {
             const descriptor = getOwnDataDescriptor(options, key);
-            if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) throw new MapImageExportError('invalid-options');
+            if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) throw new LyraMapImageExportError('invalid-options');
             snapshot[String(key)] = descriptor.value;
           }
           admittedOptions = Object.freeze(snapshot);
           active.request.attribution = snapshot['attribution'] !== false;
         }
-      } catch { admissionFailure = new MapImageExportError('invalid-options'); }
+      } catch { admissionFailure = new LyraMapImageExportError('invalid-options'); }
       this.publishExportIssue(false);
     }
-    const work = !admitted ? Promise.reject(new MapImageExportError('busy')) : admissionFailure
+    const work = !admitted ? Promise.reject(new LyraMapImageExportError('busy')) : admissionFailure
       ? Promise.reject(admissionFailure) : exportMapImage(admittedOptions, active.services, active.controller.signal);
     return work.catch(error => {
-      const code = error instanceof MapImageExportError
+      const code = error instanceof LyraMapImageExportError
         ? error.code === 'not-ready' && active.request.attributionFailed ? 'attribution-failed' : error.code : 'capture-failed';
       if (this.exportOwner === active && this.isConnected) {
         if (code !== 'cancelled') {
@@ -4386,7 +4386,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         }
         this.emit('lr-map-export-error', Object.freeze({ code } satisfies LyraMapImageExportErrorDetail));
       }
-      throw error instanceof MapImageExportError && error.code === code ? error : new MapImageExportError(code);
+      throw error instanceof LyraMapImageExportError && error.code === code ? error : new LyraMapImageExportError(code);
     }).finally(() => { if (admitted) active.busy = false; });
   }
 
