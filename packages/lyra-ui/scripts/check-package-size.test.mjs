@@ -238,16 +238,29 @@ test('checks the 3D companion archive against its own required files and budget'
   const directory = mkdtempSync(join(tmpdir(), 'lyra-package-size-'));
   const tarball = join(directory, '3d.tgz');
   const companion = JSON.parse(readFileSync(new URL('../../lyra-3d/package.json', import.meta.url), 'utf8'));
+  const engineFiles = [
+    'dist/graph/index.js', 'dist/graph/index.d.ts',
+    'dist/points/index.js', 'dist/points/index.d.ts',
+    'dist/panorama/index.js', 'dist/panorama/index.d.ts',
+    'dist/model/index.js', 'dist/model/index.d.ts',
+    'dist/graph/layout.worker.js',
+  ];
   const contents = {
     ...Object.fromEntries(requiredTarballFiles.map((file) => [file, null])),
     ...Object.fromEntries([
-      'dist/core/index.js', 'dist/core/index.d.ts', 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
+      'dist/core/index.js', 'dist/core/index.d.ts', ...engineFiles, 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
     ].map((file) => [file, 'public package content'])),
   };
   try {
     const actualBudgets = JSON.parse(readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'));
     writeFileSync(tarball, archiveFixture(companion, contents));
     assert.deepEqual(companionBudgetFindings(await readTarballMetrics(tarball, companion), companion.name, actualBudgets), []);
+    for (const file of engineFiles) {
+      writeFileSync(tarball, archiveFixture(companion, { ...contents, [file]: null }));
+      assert.deepEqual(companionBudgetFindings(await readTarballMetrics(tarball, companion), companion.name, actualBudgets), [
+        `published tarball is missing required file: ${file}`,
+      ]);
+    }
     writeFileSync(tarball, archiveFixture(companion, { ...contents, 'dist/core/index.js': null, 'src/core/index.ts': 'source' }));
     assert.deepEqual(companionBudgetFindings(await readTarballMetrics(tarball, companion), companion.name, actualBudgets), [
       'published tarball is missing required file: dist/core/index.js',

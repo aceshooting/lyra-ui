@@ -39,6 +39,22 @@
       "types": "./dist/core/index.d.ts",
       "default": "./dist/core/index.js"
     },
+    "./graph": {
+      "types": "./dist/graph/index.d.ts",
+      "default": "./dist/graph/index.js"
+    },
+    "./points": {
+      "types": "./dist/points/index.d.ts",
+      "default": "./dist/points/index.js"
+    },
+    "./panorama": {
+      "types": "./dist/panorama/index.d.ts",
+      "default": "./dist/panorama/index.js"
+    },
+    "./model": {
+      "types": "./dist/model/index.d.ts",
+      "default": "./dist/model/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

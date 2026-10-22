@@ -28,13 +28,13 @@
       "maximum": {
         "packedBytes": 100000,
         "unpackedBytes": 400000,
-        "fileCount": 40
+        "fileCount": 87
       }
     },
     "@aceshooting/lyra-map": {
       "maximum": {
         "packedBytes": 1000000,
-        "unpackedBytes": 4000000,
+        "unpackedBytes": 4006670,
         "fileCount": 675
       }
     },

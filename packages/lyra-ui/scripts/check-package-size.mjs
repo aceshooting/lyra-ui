@@ -29,7 +29,14 @@ const COMPANIONS = Object.freeze({
   '@aceshooting/lyra-translations': { directory: 'lyra-translations', required: ['dist/side-effect-only.d.ts', 'dist/fr.js', 'dist/fr/forms.js'] },
   '@aceshooting/lyra-ide': { directory: 'lyra-ide', required: ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'] },
   '@aceshooting/lyra-map': { directory: 'lyra-map', required: ['dist/index.mjs', 'dist/index.d.ts', 'dist/worker.mjs', 'dist/vite.mjs', 'dist/map.css', 'dist/provenance.json', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'UPSTREAM.json'] },
-  '@aceshooting/lyra-3d': { directory: 'lyra-3d', required: ['dist/core/index.js', 'dist/core/index.d.ts', 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md'] },
+  '@aceshooting/lyra-3d': { directory: 'lyra-3d', required: [
+    'dist/core/index.js', 'dist/core/index.d.ts',
+    'dist/graph/index.js', 'dist/graph/index.d.ts',
+    'dist/points/index.js', 'dist/points/index.d.ts',
+    'dist/panorama/index.js', 'dist/panorama/index.d.ts',
+    'dist/model/index.js', 'dist/model/index.d.ts',
+    'dist/graph/layout.worker.js', 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
+  ] },
 });
 // The trailing segment is matched with a single unbounded class after the literal marker rather
 // than `[^/]+(?:\.[^/]+)+$`: those two quantifiers can both consume the same dots, so a path like

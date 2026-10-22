@@ -12,6 +12,12 @@ import {
 import { countingKernel } from './kernel.mjs';
 import { cleanupViewport, viewportCases, viewportPointerCases, viewportPointerCheckpoint } from './viewport.mjs';
 
+import { cleanupGraph, graphCases, graphPointerCases, graphPointerCheckpoint } from './graph.mjs';
+import { cleanupGraphSpatial, graphSpatialCases } from './graph-spatial.mjs';
+import { cleanupPoints, pointsCases, pointsPointerCases, pointsPointerCheckpoint, pointsGpuCases } from './points.mjs';
+import { cleanupPanorama, panoramaCases, panoramaPointerCases, panoramaPointerCheckpoint } from './panorama.mjs';
+import { cleanupModel, modelCases } from './model.mjs';
+
 const WIDTH = 480;
 const HEIGHT = 320;
 const BACKGROUND = 'rgb(10, 20, 30)';
@@ -113,9 +119,14 @@ function screenPoints(viewport) {
 
 let active;
 const cleanup = () => {
-  active?.viewport.dispose();
+  const old = active;
   active = undefined;
-  cleanupViewport();
+  let failed = false;
+  let failure;
+  for (const release of [() => old?.viewport.dispose(), cleanupViewport, cleanupGraph, cleanupGraphSpatial, cleanupPoints, cleanupPanorama, cleanupModel]) {
+    try { release(); } catch (error) { if (!failed) { failed = true; failure = error; } }
+  }
+  if (failed) throw failure;
 };
 
 const cases = {
@@ -382,8 +393,9 @@ const pointerCases = {
   },
 };
 
-Object.assign(cases, viewportCases);
-Object.assign(pointerCases, viewportPointerCases);
+Object.assign(cases, viewportCases, graphCases, graphSpatialCases, pointsCases, panoramaCases, modelCases);
+Object.assign(performanceCases, pointsGpuCases);
+Object.assign(pointerCases, viewportPointerCases, graphPointerCases, pointsPointerCases, panoramaPointerCases);
 
 window.fixture = {
   async run(name) {
@@ -400,6 +412,10 @@ window.fixture = {
     cleanup();
     return pointerCases[name]();
   },
+  graphCheckpoint: graphPointerCheckpoint,
+  pointsCheckpoint: pointsPointerCheckpoint,
+  panoramaCheckpoint: panoramaPointerCheckpoint,
+  performanceCaseNames: Object.keys(performanceCases),
   checkpoint(name) {
     return viewportPointerCheckpoint(name);
   },

@@ -29,9 +29,12 @@ assert.deepEqual(manifest.publishConfig, { access: 'public' });
 assert.equal(manifest.repository.directory, 'packages/lyra-3d');
 assert.deepEqual(manifest.sideEffects, ['./dist/**/*.worker.js']);
 assert.deepEqual(manifest.files, ['dist', 'README.md', 'CHANGELOG.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md']);
-// Engine entry points (graph, points, panorama, model) join this map together with their engines.
 assert.deepEqual(manifest.exports, {
   './core': { types: './dist/core/index.d.ts', default: './dist/core/index.js' },
+  './graph': { types: './dist/graph/index.d.ts', default: './dist/graph/index.js' },
+  './points': { types: './dist/points/index.d.ts', default: './dist/points/index.js' },
+  './panorama': { types: './dist/panorama/index.d.ts', default: './dist/panorama/index.js' },
+  './model': { types: './dist/model/index.d.ts', default: './dist/model/index.js' },
   './package.json': './package.json',
 });
 assert.deepEqual(Object.keys(manifest.dependencies), ['three']);

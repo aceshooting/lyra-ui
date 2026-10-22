@@ -1,7 +1,9 @@
 # WebGL 3D views (`@aceshooting/lyra-3d`)
 
-Status (2026-10-21): phase 0 is done and phase 1's shared foundation is merged; component
-engines and views in phases 2 to 5, and release qualification in phase 6, remain pending. Nothing has shipped. Today `lr-graph`
+Status (2026-10-22): phase 0 and the shared foundation are complete. The four companion engines
+are implemented, with 217 passing unit tests and 80 passing browser cases in each of Chromium,
+Firefox and WebKit. Component integration in phases 2 to 5, real-GPU performance, application
+coverage and release qualification remain pending. Nothing has shipped. Today `lr-graph`
 `view="3d"` is a zero-dependency Canvas 2D perspective mode with no 3D force solver, intended for low
 hundreds of nodes; `lr-embedding-explorer` draws an SVG scatter that renders at most 1,000 points (an
 evenly spaced sample of larger inputs); no component shows 3D models, point clouds or 360° media.
@@ -142,7 +144,7 @@ Exit: written contract, measured spike, and a go or narrow decision.
 
 - [ ] Extract `lr-graph`'s Canvas 3D drawing behind the contract (the built-in fallback), keeping
   selection, events and keyboard handling unchanged.
-- [ ] `lyra-3d/graph`: 3D force layout in a module worker (Barnes-Hut octree), instanced nodes and
+- [x] `lyra-3d/graph`: 3D force layout in a module worker (Barnes-Hut octree), instanced nodes and
   edges, labels, arrows, node dragging with pinning, directional link particles; explicit node
   positions stay pinned.
 - [ ] `engine` on `lr-graph`, forwarded by `lr-knowledge-graph-explorer`; events, getters,
@@ -152,7 +154,7 @@ Exit: the fallback chain works in all three engines and meets the 10k-node targe
 
 ### 3. Points engine (M)
 
-- [ ] `lyra-3d/points`: instanced point cloud with picking, category colors and 2D or 3D cameras.
+- [x] `lyra-3d/points`: instanced point cloud with picking, category colors and 2D or 3D cameras.
 - [ ] `lr-embedding-explorer`: `engine`, optional `z` coordinate, a keyboard cursor and paginated
   list for large point sets, every point rendered up to the documented limit.
 - [ ] `lr-chart-3d`: 3D scatter, bubble and line charts with axes, gridlines and tick labels.
@@ -162,13 +164,15 @@ Exit: meets the 100k-point target; the fallback chain works in all three engines
 
 ### 4. Panorama engine (S)
 
-- [ ] `lyra-3d/panorama`: equirectangular sphere with drag and keyboard look-around, field of view
+- [x] `lyra-3d/panorama`: equirectangular sphere with pointer look-around, field of view
   zoom and hotspot picking.
-- [ ] Opt-in 360° mode on `lr-image-viewer` and `lr-video`; playback state and controls stay in
-  `lr-video`; the flat image or video is the fallback.
+- [ ] Opt-in 360° mode and keyboard look-around on `lr-image-viewer` and `lr-video`; playback
+  state and controls stay in `lr-video`; the flat image or video is the fallback.
 
 ### 5. Model viewer (M)
 
+- [x] `lyra-3d/model`: bounded model-file admission and rendering for glTF/GLB, STL, OBJ, PLY,
+  XYZ and PCD, embedded-resource handling, orbit camera, picking and owned-resource disposal.
 - [ ] New `lr-model-viewer` tag (viewers family): glTF/GLB, STL, OBJ and point-cloud files, orbit,
   fit, lighting from tokens, progress, loading and error states, a text alternative and a download
   link.

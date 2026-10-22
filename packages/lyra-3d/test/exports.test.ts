@@ -41,3 +41,19 @@ const engineModule: Lyra3dEngineModule<{ readonly count: number }, Lyra3dOrbitCa
   },
 };
 void [contract, pointSize, engineModule];
+
+import { createEngine as createGraphEngine, type GraphEngineData } from '@aceshooting/lyra-3d/graph';
+const graphModule: Lyra3dEngineModule<GraphEngineData, Lyra3dOrbitCamera> = { createEngine: createGraphEngine };
+void graphModule;
+
+import { createEngine as createPointsEngine, type PointsEngineData } from '@aceshooting/lyra-3d/points';
+const pointsModule: Lyra3dEngineModule<PointsEngineData, Lyra3dOrbitCamera> = { createEngine: createPointsEngine };
+void pointsModule;
+
+import { createEngine as createPanoramaEngine, type PanoramaData, type PanoramaCamera } from '@aceshooting/lyra-3d/panorama';
+const panoramaModule: Lyra3dEngineModule<PanoramaData, PanoramaCamera> = { createEngine: createPanoramaEngine };
+void panoramaModule;
+
+import { createEngine as createModelEngine, type ModelEngineData } from '@aceshooting/lyra-3d/model';
+const modelModule: Lyra3dEngineModule<ModelEngineData, Lyra3dOrbitCamera> = { createEngine: createModelEngine };
+void modelModule;

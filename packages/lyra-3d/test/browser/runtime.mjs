@@ -123,6 +123,39 @@ async function runPointerCase(name) {
         await page.evaluate((caseName) => window.fixture.checkpoint(caseName), name);
       }
       await page.mouse.up();
+    } else if (name.startsWith('graph-')) {
+      await page.mouse.move(points.start.x, points.start.y);
+      if (name === 'graph-pick') {
+        await page.mouse.click(points.start.x, points.start.y);
+        await page.mouse.dblclick(points.end.x, points.end.y);
+      } else {
+        await page.mouse.down();
+        await page.mouse.move(points.end.x, points.end.y, { steps: 8 });
+        const action = { 'graph-drag-pin': 'moved', 'graph-drag-cancel': 'cancel', 'graph-drag-replace': 'replace' }[name];
+        if (action) await page.evaluate(([n, a]) => window.fixture.graphCheckpoint(n, a), [name, action]);
+        await page.mouse.up();
+        if (name === 'graph-drag-replace') await page.mouse.move(points.end.x + 30, points.end.y + 10);
+      }
+    } else if (name.startsWith('points-') && prepared.action === 'drag' || name === 'panorama-orbit') {
+      const modifiers = prepared.modifiers ?? [];
+      await page.mouse.move(points.start.x, points.start.y);
+      for (const key of modifiers) await page.keyboard.down(key);
+      try {
+        await page.mouse.down({ button: prepared.button ?? 'left' });
+        await page.mouse.move(points.end.x, points.end.y, { steps: prepared.steps ?? 12 });
+        await page.evaluate((n) => n.startsWith('points-') ? window.fixture.pointsCheckpoint(n, 'moved') : window.fixture.panoramaCheckpoint(n, 'moved'), name);
+        await page.mouse.up({ button: prepared.button ?? 'left' });
+      } finally {
+        for (const key of modifiers.reverse()) await page.keyboard.up(key);
+      }
+    } else if (name === 'points-hover-click' || name === 'panorama-hotspot-click') {
+      await page.mouse.move(points.hover.x, points.hover.y, { steps: 4 });
+      await page.waitForTimeout(150);
+      await page.mouse.click(points.click.x, points.click.y);
+      const double = points.double ?? points.click;
+      await page.mouse.dblclick(double.x, double.y);
+      await page.keyboard.down('Shift');
+      try { await page.mouse.click(points.empty.x, points.empty.y); } finally { await page.keyboard.up('Shift'); }
     } else if (name === 'orbit') {
       await page.mouse.move(points.start.x, points.start.y);
       await page.mouse.down();
@@ -147,10 +180,15 @@ async function runPointerCase(name) {
 const { page: probe, context: probeContext } = await openPage();
 const caseNames = await probe.evaluate(() => window.fixture.caseNames);
 const pointerCaseNames = await probe.evaluate(() => window.fixture.pointerCaseNames);
+const performanceCaseNames = await probe.evaluate(() => window.fixture.performanceCaseNames);
 await probeContext.close();
 const selected = process.env.LYRA_3D_TEST_CASES?.split(',');
-const results = [];
-for (const name of gpu ? ['frame-rate'] : [...caseNames, ...pointerCaseNames]) {
+const inventory = [...caseNames, ...pointerCaseNames, ...performanceCaseNames];
+// Unknown selections use the normal receipt/teardown path too.
+const results = (selected ?? []).filter((name) => !inventory.includes(name)).map((name) => ({
+  name, passed: false, error: 'Unknown selected browser case', errors: [],
+}));
+for (const name of gpu ? performanceCaseNames : [...caseNames, ...pointerCaseNames]) {
   if (selected && !selected.includes(name)) continue;
   let result;
   try {

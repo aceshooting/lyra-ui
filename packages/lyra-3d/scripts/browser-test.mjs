@@ -32,9 +32,10 @@ try {
   // The archive's runtime dependency, linked from this workspace's install instead of the registry.
   await symlink(await realpath(resolve(root, 'node_modules/three')), resolve(scratch, 'node_modules/three'), 'dir');
   await writeFile(resolve(scratch, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
-  for (const name of ['fixture.mjs', 'kernel.mjs', 'kernel.worker.mjs', 'viewport.mjs']) {
+  for (const name of ['fixture.mjs', 'kernel.mjs', 'kernel.worker.mjs', 'viewport.mjs', 'graph.mjs', 'graph-spatial.mjs', 'points.mjs', 'panorama.mjs', 'model.mjs']) {
     await copyFile(resolve(root, 'test/browser', name), resolve(scratch, name));
   }
+  await copyFile(resolve(root, '../lyra-ui/src/components/media/media-card/fixtures/sample.mp4'), resolve(scratch, 'panorama-video.mp4'));
   await writeFile(resolve(scratch, 'index.html'),
     '<!doctype html><link rel="icon" href="data:,"><body style="margin:0"><script type="module" src="./fixture.mjs"></script></body>');
   const output = resolve(scratch, 'out');

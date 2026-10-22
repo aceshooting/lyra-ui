@@ -18,11 +18,27 @@ resolves one shared copy.
 | Entry point | Contents |
 | --- | --- |
 | `@aceshooting/lyra-3d/core` | The engine contract, renderer setup, orbit camera, GPU picking, style input and worker tasks shared by every engine |
+| `@aceshooting/lyra-3d/graph` | Graph rendering, worker-backed layout, decorations and graph appearance |
+| `@aceshooting/lyra-3d/points` | Point clouds, line segments and axes in two or three dimensions |
+| `@aceshooting/lyra-3d/panorama` | Equirectangular images or existing video elements, with camera controls and hotspots |
+| `@aceshooting/lyra-3d/model` | Bounded model admission and rendering for glTF/GLB, OBJ, STL, PLY, XYZ and PCD |
 
-The engine entry points `./graph`, `./points`, `./panorama` and `./model` join the package together
-with their engines, each exporting `createEngine()` and its data and camera types. Until an entry
-point exists, a component that asks for it falls back to its built-in renderer with a localized
-notice.
+Each engine entry point exports `createEngine()` and its data types. Graph, points and model
+engines use the core orbit camera; panorama exports its own yaw/pitch/field-of-view camera.
+Import an individual engine entry to avoid loading the other engines. Component integration and
+accessible alternatives remain the responsibility of the host.
+
+The panorama engine uses an already-loaded image or the host's existing video element; it does
+not fetch media or create a second player. The model engine accepts model bytes, rejects
+external resources before parsing, and enforces the exported `MODEL_LIMITS`. Its `admitModel()`
+helper reports admission failures through `ModelAdmissionError`; it does not fetch URLs.
+
+PLY headers must use consistent LF or CRLF line endings, exact `ply` and `end_header` lines,
+and no lone carriage returns. Header comments and metadata must not contain `end_header` text.
+Both binary byte orders and ASCII bodies are supported. OBJ
+point (`p`) and line (`l`) records require single ASCII spaces between the directive and
+references; repeated internal spaces and tabs are rejected. Positive and negative references
+remain supported. These restrictions keep admission and format-loader token boundaries aligned.
 
 ## Engine contract
 
@@ -45,6 +61,11 @@ import { LYRA_3D_CONTRACT, type Lyra3dEngine, type Lyra3dHost } from '@aceshooti
   browser only offers software rasterization, and `restored()` after a lost context came back.
   Software rendering counts as detected when the browser refuses a context without a major
   performance caveat or the renderer names a software rasterizer (`isSoftwareRendererName`).
+
+Graph, points and panorama numeric columns require typed arrays backed by ordinary `ArrayBuffer`
+objects. Shared-memory buffers are unsupported: admission rejects them before inspecting or copying
+their elements. Accepted numeric columns are copied for the engine revision; application callbacks
+and native media objects remain caller-owned integrations.
 
 ## Core building blocks
 
