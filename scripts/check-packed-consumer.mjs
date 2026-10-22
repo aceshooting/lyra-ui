@@ -319,8 +319,9 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // Scoped theme observation measures about 396.9 KiB raw; the next 64-byte boundary.
-    maxRawBytes: 406_528,
+    // The optional WebGL engine adapter, typed columns and builtin 3D renderer measure 429.0 KiB
+    // raw (at most 439,347 bytes); the next 64-byte boundary.
+    maxRawBytes: 439_360,
   },
 };
 
