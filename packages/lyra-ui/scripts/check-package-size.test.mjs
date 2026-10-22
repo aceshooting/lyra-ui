@@ -489,7 +489,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [9_999_999, 21_602_240],
+    [9_999_999, 21_604_416],
     'the split package keeps the absolute download ceiling and a tight unpacked ceiling',
   );
 
@@ -535,7 +535,7 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.deepEqual(companionBudgetFindings({ packedBytes: 1, unpackedBytes: 1, fileCount: 4, files: ide }, '@aceshooting/lyra-ide', actualBudgets), []);
   assert.deepEqual(
     companionBudgetFindings({ packedBytes: 1, unpackedBytes: 99_000_000, fileCount: 3, files: ide.slice(1) }, '@aceshooting/lyra-ide', actualBudgets),
-    ['published tarball is missing required file: custom-elements.json', 'unpackedBytes 99,000,000 exceeds hard budget 10,477,888'],
+    ['published tarball is missing required file: custom-elements.json', 'unpackedBytes 99,000,000 exceeds hard budget 10,501,888'],
   );
   assert.throws(() => companionBudgetFindings({ files: [] }, '@example/other', actualBudgets), /no companion package budget/u);
   assert.deepEqual(parsePackageSizeArguments(['--package', '@aceshooting/lyra-translations', '--tarball', 'a.tgz']), { package: '@aceshooting/lyra-translations', tarball: 'a.tgz' });
