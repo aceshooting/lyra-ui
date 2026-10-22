@@ -55,9 +55,10 @@
  * behavior — see `flags/loaders/*.js`.
  *
  * Run via `pnpm run generate` (wired into `prepack`, so it also runs before publish). The
- * generated files are committed — do not hand-edit them, re-run this script instead.
+ * generated files are committed — do not hand-edit them, re-run this script instead. Loader modules
+ * whose flag was removed or renamed are deleted, so the loader directories always mirror the assets.
  */
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -148,6 +149,16 @@ function collectCompactCodes(allCodes) {
   }
 
   return codes;
+}
+
+/** Deletes loader modules whose asset no longer exists, so the loader trees are a pure function of the
+ *  assets and removing or renaming a flag never leaves an orphaned loader in the published package. */
+function pruneLoaders(directory, codes) {
+  if (!existsSync(directory)) return;
+  const current = new Set(codes);
+  for (const name of readdirSync(directory)) {
+    if (name.endsWith('.js') && !current.has(name.slice(0, -'.js'.length))) rmSync(path.join(directory, name));
+  }
 }
 
 function banner() {
@@ -288,6 +299,7 @@ function main() {
   for (const code of codes) {
     writeFileSync(path.join(loadersDir, `${code}.js`), renderLoaderJs(code));
   }
+  pruneLoaders(loadersDir, codes);
   writeFileSync(path.join(flagsDir, 'generated.js'), renderGeneratedJs(codes));
   writeFileSync(path.join(flagsDir, 'generated.d.ts'), renderGeneratedDts());
   writeFileSync(path.join(flagsDir, 'eager.js'), renderEagerJs(codes));
@@ -297,6 +309,7 @@ function main() {
   for (const code of detailedCodes) {
     writeFileSync(path.join(detailedLoadersDir, `${code}.js`), renderDetailedLoaderJs(code));
   }
+  pruneLoaders(detailedLoadersDir, detailedCodes);
   writeFileSync(path.join(flagsDir, 'generated-detailed.js'), renderGeneratedDetailedJs(detailedCodes));
   writeFileSync(path.join(flagsDir, 'generated-detailed.d.ts'), renderGeneratedDetailedDts());
 
@@ -304,6 +317,7 @@ function main() {
   for (const code of compactCodes) {
     writeFileSync(path.join(compactLoadersDir, `${code}.js`), renderCompactLoaderJs(code));
   }
+  pruneLoaders(compactLoadersDir, compactCodes);
   writeFileSync(path.join(flagsDir, 'generated-compact.js'), renderGeneratedCompactJs(compactCodes));
   writeFileSync(path.join(flagsDir, 'generated-compact.d.ts'), renderGeneratedCompactDts());
 

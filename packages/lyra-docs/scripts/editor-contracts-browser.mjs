@@ -48,6 +48,27 @@ export async function runEditorContracts(page, check, { createEditor }) {
     await remove(id);
   });
 
+  await check('an abort signal that throws when observed is refused once as open-failed and leaves the editor usable', async () => {
+    const id = 'contracts-bad-signal';
+    await page.evaluate(id => {
+      const element = document.createElement('lr-docx-editor');
+      element.id = id;
+      document.querySelector('#fixture').append(element);
+    }, id);
+    const outcome = await host(id).evaluate(async element => {
+      const errors = [];
+      element.addEventListener('lr-error', event => errors.push(event.detail.code));
+      const signal = { aborted: false, addEventListener() { throw new Error('private signal diagnostics'); }, removeEventListener() {} };
+      const refused = await element.newDocument({ signal });
+      return { refused, status: element.snapshot()?.status ?? null, errors: [...errors] };
+    });
+    assert.deepEqual(outcome, { refused: { ok: false, code: 'open-failed' }, status: 'idle', errors: ['open-failed'] });
+    const reopened = await host(id).evaluate(element => element.newDocument());
+    assert.equal(reopened.ok, true, JSON.stringify(reopened));
+    await page.waitForFunction(id => document.getElementById(id).snapshot()?.status === 'ready', id);
+    await remove(id);
+  });
+
   await check('typing keeps formatting controls enabled and the remembered toolbar stop', async () => {
     const id = 'contracts-typing';
     await createEditor(page, id);

@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { stageScripts } from '../../lyra-docs/scripts/lib/staged-script.mjs';
 import { buildTranslations } from './build.mjs';
 import {
   relativeSpecifiersOutsideCatalog,
@@ -74,15 +76,23 @@ test('assembles nested catalogs with public imports and replaces stale output', 
   }
 });
 
+const ownPackage = dirname(dirname(fileURLToPath(import.meta.url)));
+
+/** The assembler and its lyra-ui helper staged into `packages/*` of a scratch repository. */
+function stagedAssembler(root) {
+  const packageDir = join(root, 'packages', 'lyra-translations');
+  const [builder] = stageScripts({ from: ownPackage, to: packageDir, files: ['scripts/build.mjs'] });
+  stageScripts({
+    from: join(ownPackage, '..', 'lyra-ui'), to: join(root, 'packages', 'lyra-ui'),
+    files: ['scripts/translations-companion.mjs'],
+  });
+  return { packageDir, builder, catalogs: join(root, 'packages', 'lyra-ui', 'dist', 'translations') };
+}
+
 test('the CLI assembles catalogs using its default package paths', context => {
   const { source: root } = assemblyFixture(context);
-  const packageDir = join(root, 'packages', 'lyra-translations');
-  const builder = join(packageDir, 'scripts', 'build.mjs');
-  const helper = join(root, 'packages', 'lyra-ui', 'scripts', 'translations-companion.mjs');
-  const catalogs = join(root, 'packages', 'lyra-ui', 'dist', 'translations');
-  for (const directory of [dirname(builder), dirname(helper), catalogs]) mkdirSync(directory, { recursive: true });
-  copyFileSync(new URL('./build.mjs', import.meta.url), builder);
-  copyFileSync(new URL('../../lyra-ui/scripts/translations-companion.mjs', import.meta.url), helper);
+  const { packageDir, builder, catalogs } = stagedAssembler(root);
+  mkdirSync(catalogs, { recursive: true });
   writeFileSync(join(catalogs, 'fr.js'), 'export {};\n');
 
   assert.equal(execFileSync(process.execPath, [builder], { encoding: 'utf8' }), 'Locale catalogs assembled: 1 modules.\n');
@@ -114,3 +124,34 @@ for (const file of ['fr.js', 'de-CH/forms.js']) {
     assert.equal(existsSync(join(target, 'side-effect-only.d.ts')), false);
   });
 }
+
+test('the CLI exits non-zero and names the build to run when lyra-ui has not been built', context => {
+  const { source: root } = assemblyFixture(context);
+  const { packageDir, builder } = stagedAssembler(root);
+  const result = spawnSync(process.execPath, [builder], { encoding: 'utf8' });
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, '');
+  assert.match(result.stderr, /packages\/lyra-ui\/dist\/translations is missing; run `pnpm --filter @aceshooting\/lyra-ui build` first/u);
+  assert.equal(existsSync(join(packageDir, 'dist')), false);
+});
+
+test('only a top-level pseudo directory stays in lyra-ui; a nested one is an ordinary slice', context => {
+  const { source, target } = assemblyFixture(context, {
+    'pseudo/ar-XB.js': 'export {};\n',
+    'fr/pseudo/forms.js': 'export const slice = 1;\n',
+    'fr.js': 'export {};\n',
+  });
+  assert.equal(buildTranslations({ source, target }), 2);
+  assert.equal(existsSync(join(target, 'pseudo')), false);
+  assert.equal(readFileSync(join(target, 'fr/pseudo/forms.js'), 'utf8'), 'export const slice = 1;\n');
+});
+
+test('reports the first offending catalog in name order and writes nothing after it', context => {
+  const { source, target } = assemblyFixture(context, {
+    'z.js': `export { value } from '../../z-outside.js';\n`,
+    'm.js': 'export {};\n',
+    'a.js': `export { value } from '../../a-outside.js';\n`,
+  });
+  assert.throws(() => buildTranslations({ source, target }), /a\.js imports outside the catalog tree: \.\.\/\.\.\/a-outside\.js/u);
+  for (const file of ['a.js', 'm.js', 'z.js', 'side-effect-only.d.ts']) assert.equal(existsSync(join(target, file)), false, file);
+});

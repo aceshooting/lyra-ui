@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, relative, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
-import { DOCX_LINE_COVERAGE_FLOOR, assertCoverageTarget, reportCoverage, sourceInventory } from './report-coverage.mjs';
+import { TOOLING, runCommand, runCoverage } from './coverage.mjs';
+import { sourceInventory as scriptInventory } from './lib/node-coverage.mjs';
+import {
+  DOCX_LINE_COVERAGE_FLOOR, DOCX_TOOLING_COVERAGE_FLOOR, assertCoverageTarget, assertToolingTarget, reportCoverage, sourceInventory,
+} from './report-coverage.mjs';
 
 async function write(file, content) {
   await mkdir(dirname(file), { recursive: true });
@@ -273,4 +278,238 @@ test('coverage target refuses empty or malformed totals', () => {
     metadata.total.lines = counts;
     assert.throws(() => assertCoverageTarget(metadata), /Invalid lines coverage counts/u);
   }
+});
+
+const TOOL = 'export function used() {\n  return 1;\n}\nused();\n';
+
+/** Original Node tooling beside the TypeScript, with one script the Node dumps cover and one nothing loads. */
+async function addTooling(root, { executed = true } = {}) {
+  const tool = resolve(root, 'scripts/tool.mjs');
+  await write(tool, TOOL);
+  await write(resolve(root, 'scripts/untouched.mjs'), 'export const never = 1;\n');
+  await write(resolve(root, 'scripts/tool.test.mjs'), 'export {};\n');
+  if (executed) {
+    const dumps = resolve(root, 'coverage/node-v8/node.json');
+    const dump = JSON.parse(await readFile(dumps, 'utf8'));
+    dump.result.push({ url: pathToFileURL(tool).href, functions: [{ functionName: '', isBlockCoverage: true,
+      ranges: [{ startOffset: 0, endOffset: TOOL.length, count: 1 }] }] });
+    await write(dumps, JSON.stringify(dump));
+  }
+  return { directories: ['scripts'], include: ['scripts/tool.mjs', 'scripts/untouched.mjs'],
+    exclude: [{ pattern: /\.test\.mjs$/u, reason: 'test' }] };
+}
+
+test('tooling is measured from the same Node dumps and joins the reports without changing the gated total', async context => {
+  const plain = await reportCoverage({ root: await fixture(context) });
+  const root = await fixture(context);
+  const tooling = await addTooling(root);
+  const metadata = await reportCoverage({ root, tooling });
+  assert.deepEqual(metadata.total, plain.total, 'the coverage target keeps gating the TypeScript runtime alone');
+  assert.deepEqual(metadata.tooling.included, ['scripts/tool.mjs', 'scripts/untouched.mjs']);
+  assert.deepEqual(metadata.tooling.excluded.map(({ reason, count }) => ({ reason, count })), [{ reason: 'test', count: 1 }]);
+  assert.deepEqual(metadata.tooling.unloaded, ['scripts/untouched.mjs']);
+  assert.equal(metadata.tooling.modules, 1);
+  assert.equal(metadata.tooling.stagedRuns, 0);
+  assert.deepEqual(metadata.tooling.fullMetricEnumeration, { statements: true, lines: true, branches: false, functions: false });
+  assert.deepEqual({ covered: metadata.tooling.total.lines.covered, total: metadata.tooling.total.lines.total }, { covered: 4, total: 5 });
+  assert.equal(metadata.combined.lines.total, plain.total.lines.total + 5);
+  assert.equal(metadata.combined.lines.covered, plain.total.lines.covered + 4);
+
+  const final = JSON.parse(await readFile(resolve(root, 'coverage/coverage-final.json'), 'utf8'));
+  assert.equal(Object.keys(final).length, 6);
+  assert.ok(Object.values(final[resolve(root, 'scripts/tool.mjs')].s).every(count => count > 0));
+  assert.ok(Object.values(final[resolve(root, 'scripts/untouched.mjs')].s).every(count => count === 0));
+  const gaps = JSON.parse(await readFile(resolve(root, 'coverage/coverage-gaps.json'), 'utf8'));
+  assert.deepEqual(gaps['scripts/untouched.mjs'].uncoveredLines, ['1']);
+  assert.deepEqual(gaps['scripts/tool.mjs'].uncoveredLines, []);
+});
+
+test('tooling that no Node process executed refuses a report that only looks complete', async context => {
+  const root = await fixture(context);
+  const tooling = await addTooling(root, { executed: false });
+  await assert.rejects(reportCoverage({ root, tooling }), /did not measure any tooling modules/u);
+});
+
+test('a script nobody classified refuses the tooling census', async context => {
+  const root = await fixture(context);
+  const tooling = await addTooling(root);
+  await write(resolve(root, 'scripts/new.mjs'), 'export {};\n');
+  await assert.rejects(reportCoverage({ root, tooling }), /Unclassified JavaScript source: scripts\/new\.mjs/u);
+});
+
+const here = dirname(fileURLToPath(import.meta.url));
+const packageRoot = resolve(here, '..');
+
+test('every script of the package is either measured or excluded for a stated reason', async () => {
+  const { included, excluded } = await scriptInventory({ root: packageRoot, ...TOOLING });
+  assert.deepEqual(included.map(entry => entry.name), [...TOOLING.include].sort());
+  assert.deepEqual(excluded.map(group => group.reason).sort(), ['browser test suite/harness', 'test']);
+  assert.ok(excluded.find(group => group.reason === 'browser test suite/harness').count >= 14);
+});
+
+/** A package root plus doubles for the run's collaborators; `statuses[n]` is the exit status of command n. */
+async function recordedRun(context, { statuses = {}, compiledTests = ['b.test.js', 'a.test.js', 'helper.js'] } = {}) {
+  const root = await mkdtemp(resolve(tmpdir(), 'lyra-docs-run-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await write(resolve(root, 'coverage/stale.txt'), 'from an earlier run');
+  await write(resolve(root, '.coverage-output/stale.txt'), 'from an earlier run');
+  const calls = [];
+  const reported = [];
+  const targets = [];
+  const toolingTargets = [];
+  const emitSync = file => {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, 'export {};\n');
+  };
+  const run = (cwd, command, args, environment) => {
+    calls.push({ cwd, command, args, environment, scratchExisted: existsSync(resolve(root, 'coverage/tmp')) });
+    if (args.includes('tsconfig.test.json')) {
+      for (const name of compiledTests) emitSync(resolve(root, '.coverage-output/src/docx', name));
+    }
+    return statuses[calls.length - 1] ?? 0;
+  };
+  const metadata = { fake: true };
+  return {
+    root, calls, reported, targets, toolingTargets, metadata,
+    options: {
+      root, run,
+      report: async options => { reported.push(options); return metadata; },
+      assertTarget: measurement => { targets.push(measurement); },
+      assertTooling: measurement => { toolingTargets.push(measurement); },
+    },
+  };
+}
+
+test('a coverage run clears earlier output, builds under coverage, runs both suites and gates the result', async context => {
+  const { root, calls, reported, targets, toolingTargets, metadata, options } = await recordedRun(context);
+  const nodeV8 = resolve(root, 'coverage/node-v8');
+  const scratch = resolve(root, 'coverage/tmp');
+  const base = { NODE_V8_COVERAGE: nodeV8, TMPDIR: scratch, TMP: scratch, TEMP: scratch };
+  assert.deepEqual(await runCoverage(options), { exitCode: 0, metadata });
+  assert.equal(existsSync(scratch), false, 'the scratch directory does not outlive the run');
+  assert.deepEqual(calls.map(call => call.scratchExisted), [true, true, true, true, true, true], 'every command ran with its scratch directory in place');
+  assert.equal(existsSync(resolve(root, 'coverage/stale.txt')), false);
+  assert.equal(existsSync(resolve(root, '.coverage-output/stale.txt')), false);
+  assert.equal(existsSync(nodeV8), true);
+  assert.deepEqual(calls.map(call => [call.command, ...call.args]).slice(0, 3), [
+    ['pnpm', 'run', 'build'],
+    ['pnpm', 'exec', 'tsc', '--noEmit', '-p', 'tsconfig.exports.json'],
+    ['pnpm', 'exec', 'tsc', '-p', 'tsconfig.test.json', '--outDir', '.coverage-output', '--sourceMap', '--inlineSources'],
+  ]);
+  assert.ok(calls.every(call => call.cwd === root), 'every command runs in the package');
+  assert.deepEqual(calls[0].environment, base, 'the build and its package contract are measured');
+  assert.deepEqual(calls[1].environment, { TMPDIR: scratch });
+  assert.deepEqual(calls[2].environment, { TMPDIR: scratch });
+
+  const unit = calls[3];
+  assert.equal(unit.command, process.execPath);
+  assert.deepEqual(unit.args.slice(0, 4), ['--test', '--test-concurrency=2',
+    resolve(root, '.coverage-output/src/docx/a.test.js'), resolve(root, '.coverage-output/src/docx/b.test.js')]);
+  assert.equal(unit.args.includes(resolve(root, '.coverage-output/src/docx/helper.js')), false, 'only test files run');
+  assert.deepEqual(unit.environment, base);
+  for (const suite of unit.args.slice(4)) {
+    assert.equal(existsSync(resolve(packageRoot, suite)), true, `${suite} must exist in the package`);
+  }
+  for (const suite of ['scripts/package.test.mjs', 'scripts/coverage.test.mjs', 'scripts/node-coverage.test.mjs', 'scripts/engine/source.test.mjs', 'test/xml.test.mjs']) {
+    assert.ok(unit.args.includes(suite), `${suite} runs under coverage`);
+  }
+
+  const browser = calls[4];
+  assert.deepEqual([browser.command, ...browser.args], [process.execPath, 'scripts/browser-test.mjs']);
+  assert.deepEqual(browser.environment, {
+    ...base, DOCX_COVERAGE: '1', DOCX_BROWSERS: 'chromium', DOCX_PERFORMANCE: '0',
+    DOCX_LAYOUT_ONLY: '', DOCX_FORMATTING_ONLY: '', DOCX_INSERTION_ONLY: '', DOCX_IMAGES_ONLY: '', DOCX_DOCUMENT_TOOLS_ONLY: '',
+  });
+  const performance = calls[5];
+  assert.deepEqual([performance.command, ...performance.args], [process.execPath, 'scripts/performance-browser.mjs']);
+  assert.deepEqual(performance.environment, base, 'the performance harness is measured, never timed under the suite');
+  assert.equal(calls.length, 6);
+  assert.deepEqual(reported, [{ root, unitStatus: 0, browserStatus: 0, tooling: TOOLING }]);
+  assert.deepEqual(targets, [metadata]);
+  assert.deepEqual(toolingTargets, [metadata]);
+});
+
+test('a failing build step ends the run with its status before anything else executes', async context => {
+  for (const step of [0, 1, 2]) {
+    const { root, calls, reported, targets, options } = await recordedRun(context, { statuses: { [step]: 3 + step } });
+    assert.deepEqual(await runCoverage(options), { exitCode: 3 + step });
+    assert.equal(calls.length, step + 1);
+    assert.deepEqual([reported, targets], [[], []]);
+    assert.equal(existsSync(resolve(root, 'coverage/tmp')), false, 'an early exit still removes the scratch directory');
+  }
+});
+
+test('failed suites still produce a diagnostic report but never reach the coverage target', async context => {
+  // [statuses by command index, exit code, commands run, browser-side status reported]
+  const cases = [
+    [{ 3: 2 }, 2, 6, 0],
+    [{ 4: 5 }, 5, 5, 5],
+    [{ 3: 2, 4: 5 }, 2, 5, 5],
+    [{ 5: 6 }, 6, 6, 6],
+    [{ 3: 2, 5: 6 }, 2, 6, 6],
+  ];
+  for (const [statuses, exitCode, commands, browserStatus] of cases) {
+    const { calls, reported, targets, toolingTargets, metadata, options } = await recordedRun(context, { statuses });
+    assert.deepEqual(await runCoverage(options), { exitCode, metadata }, JSON.stringify(statuses));
+    assert.equal(calls.length, commands, `${JSON.stringify(statuses)}: the browser suite runs after a unit failure; the performance run only after a passing suite`);
+    assert.deepEqual(reported.map(entry => [entry.unitStatus, entry.browserStatus]), [[statuses[3] ?? 0, browserStatus]]);
+    assert.deepEqual([targets, toolingTargets], [[], []]);
+  }
+});
+
+test('a run without compiled unit tests is refused instead of measuring nothing', async context => {
+  const { root, calls, reported, options } = await recordedRun(context, { compiledTests: ['helper.js'] });
+  await assert.rejects(runCoverage(options), /Coverage cannot run without unit test files/u);
+  assert.equal(calls.length, 3);
+  assert.deepEqual(reported, []);
+  assert.equal(existsSync(resolve(root, 'coverage/tmp')), false, 'a refused run still removes the scratch directory');
+});
+
+test('a missed coverage target fails the run, for the source and for the tooling alike', async context => {
+  const { options } = await recordedRun(context);
+  await assert.rejects(runCoverage({ ...options, assertTarget: () => { throw new Error('lines coverage 90% is below 99.6%'); } }),
+    /lines coverage 90% is below 99\.6%/u);
+  await assert.rejects(runCoverage({ ...options, assertTooling: () => { throw new Error('lines coverage 70% is below 80%'); } }),
+    /lines coverage 70% is below 80%/u);
+});
+
+const toolingMeasurement = (covered, total = 1000) => ({
+  complete: true,
+  total: { lines: { covered: 1, total: 1 }, statements: { covered: 1, total: 1 } },
+  tooling: { fullMetricEnumeration: { lines: true, statements: true }, total: { lines: { covered, total }, statements: { covered, total } } },
+});
+
+test('the tooling floor gates the tooling counters alone, with the same exact arithmetic', () => {
+  const floor = DOCX_TOOLING_COVERAGE_FLOOR * 10;
+  assert.doesNotThrow(() => assertToolingTarget(toolingMeasurement(floor)));
+  assert.throws(() => assertToolingTarget(toolingMeasurement(floor - 1)), new RegExp(`lines coverage 79\\.900% is below ${DOCX_TOOLING_COVERAGE_FLOOR}%`, 'u'));
+  // A perfect TypeScript runtime cannot compensate for weak tooling.
+  assert.throws(() => assertToolingTarget(toolingMeasurement(0)), /below 80%/u);
+});
+
+test('the tooling floor needs measured tooling and a complete run', () => {
+  assert.throws(() => assertToolingTarget({ complete: true, total: {} }), /Tooling coverage was not measured/u);
+  assert.throws(() => assertToolingTarget({ ...toolingMeasurement(1000), complete: false }), /Incomplete test runs/u);
+  const partial = toolingMeasurement(1000);
+  partial.tooling.fullMetricEnumeration.lines = false;
+  assert.throws(() => assertToolingTarget(partial), /Incomplete lines source census/u);
+});
+
+test('an explicit floor overrides the source default', () => {
+  const measurement = { complete: true, fullMetricEnumeration: { lines: true, statements: true },
+    total: { lines: { covered: 900, total: 1000 }, statements: { covered: 900, total: 1000 } } };
+  assert.doesNotThrow(() => assertCoverageTarget(measurement, 90));
+  assert.throws(() => assertCoverageTarget(measurement), new RegExp(`is below ${DOCX_LINE_COVERAGE_FLOOR}%`, 'u'));
+});
+
+test('commands run in the package with the extra environment and report their exit status', async context => {
+  const root = await mkdtemp(resolve(tmpdir(), 'lyra-docs-command-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const node = (...args) => runCommand(root, process.execPath, args);
+  assert.equal(node('-e', 'process.exit(0)'), 0);
+  assert.equal(node('-e', 'process.exit(7)'), 7);
+  assert.equal(runCommand(root, process.execPath, ['-e', 'process.exit(process.env.RUN_COMMAND_FLAG === "yes" ? 0 : 9)'], { RUN_COMMAND_FLAG: 'yes' }), 0);
+  assert.equal(runCommand(root, process.execPath, ['-e', 'process.exit(process.cwd() === process.argv[1] ? 0 : 4)', root]), 0);
+  assert.throws(() => node('-e', 'process.kill(process.pid, "SIGKILL")'), /terminated by SIGKILL/u);
+  assert.throws(() => runCommand(root, 'lyra-docs-no-such-command', []), { code: 'ENOENT' });
 });

@@ -56,7 +56,8 @@
     "assemble": "node scripts/build.mjs",
     "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm assemble",
     "lint": "node scripts/check-package.mjs",
-    "test": "node --test scripts/package.test.mjs"
+    "test": "node --test scripts/package.test.mjs scripts/check-package.test.mjs scripts/coverage.test.mjs",
+    "test:coverage": "node scripts/coverage.mjs"
   },
   "peerDependencies": {
     "@aceshooting/lyra-ui": "workspace:^"

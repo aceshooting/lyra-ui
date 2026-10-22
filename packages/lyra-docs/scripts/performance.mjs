@@ -161,7 +161,8 @@ async function measureTablePerformance(browser, url) {
     const fixture = performanceTableFixture();
     const opened = await run.page.evaluate(bytes => document.querySelector('#performance-editor').open(Uint8Array.from(bytes)), [...fixture]);
     assert.equal(opened.ok, true, JSON.stringify(opened));
-    await run.page.locator('#performance-editor .docx-pages').getByText('T1_1', { exact: true }).click();
+    // The 360-twip columns wrap longer labels, so the runs `T1_10`..`T1_19` also contain a `T1_1` run; the cell itself comes first.
+    await run.page.locator('#performance-editor .docx-pages').getByText('T1_1', { exact: true }).first().click();
     await run.page.keyboard.press('ArrowLeft');
     const measurements = await run.page.evaluate(async () => {
       const element = document.querySelector('#performance-editor');
@@ -186,7 +187,7 @@ async function measureTablePerformance(browser, url) {
       }
       return { advisory1000Ms, executeMs, undoMs };
     });
-    await run.page.locator('#performance-editor .docx-pages').getByText('T1_1', { exact: true }).click();
+    await run.page.locator('#performance-editor .docx-pages').getByText('T1_1', { exact: true }).first().click();
     await run.page.keyboard.press('ArrowLeft');
     await run.page.evaluate(() => {
       const element = document.querySelector('#performance-editor'); window.__tablePaintSamples = [];

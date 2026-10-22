@@ -63,6 +63,28 @@ export async function runFormattingTools(page, check, { saveEditor }) {
     }, id);
   });
 
+  await check('arrow keys choose a text color swatch and Enter applies it once without a second click edit', async () => {
+    await fresh('Keyboard colors');
+    const before = await revision();
+    await part('text-color').click();
+    await part('text-color-popover').locator('[part~="popup"]').waitFor({ state: 'visible', timeout: 5000 });
+    const swatches = part('text-color-swatches');
+    const initial = await swatches.evaluate(picker => picker.value);
+    await swatches.getByRole('radio').first().focus();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    const chosen = await swatches.evaluate(picker => picker.value);
+    assert.match(chosen, /^#[0-9A-F]{6}$/u);
+    assert.notEqual(chosen, initial, 'the arrow keys moved the selection to another swatch');
+    assert.equal(await revision(), before, 'moving between swatches does not edit the document');
+    await page.keyboard.press('Enter');
+    await settled(before);
+    assert.match(await documentXml(), new RegExp(`<w:color w:val="${chosen.slice(1)}"/>`, 'u'));
+    await page.waitForFunction(id => !document.getElementById(id).shadowRoot.querySelector('[part="text-color-popover"]').open, id);
+    await page.waitForTimeout(150);
+    assert.equal(await revision(), before + 1, 'Enter commits one edit; the synthesized click is suppressed');
+  });
+
   await check('Automatic color writes auto over an explicit color and closes the panel', async () => {
     await selectLine();
     const before = await revision();
@@ -106,6 +128,27 @@ export async function runFormattingTools(page, check, { saveEditor }) {
     await part('highlight-none').click();
     await settled(before);
     assert.doesNotMatch(await documentXml(), /<w:highlight w:val="cyan"/u);
+  });
+
+  await check('arrow keys choose a highlight swatch and Space applies its Word highlight name once', async () => {
+    await fresh('Keyboard highlight');
+    const before = await revision();
+    await part('highlight').click();
+    await part('highlight-popover').locator('[part~="popup"]').waitFor({ state: 'visible', timeout: 5000 });
+    const swatches = part('highlight-swatches');
+    const initial = await swatches.evaluate(picker => picker.value);
+    await swatches.getByRole('radio').first().focus();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    const chosen = await swatches.evaluate(picker => picker.value);
+    assert.notEqual(chosen, initial, 'the arrow keys moved the selection to another swatch');
+    assert.equal(await revision(), before, 'moving between swatches does not edit the document');
+    await page.keyboard.press(' ');
+    await settled(before);
+    assert.match(await documentXml(), new RegExp(`<w:highlight w:val="${chosen}"/>`, 'u'));
+    await page.waitForFunction(id => !document.getElementById(id).shadowRoot.querySelector('[part="highlight-popover"]').open, id);
+    await page.waitForTimeout(150);
+    assert.equal(await revision(), before + 1, 'Space commits one edit; the synthesized click is suppressed');
   });
 
   await check('line spacing, indent and page break edit paragraphs as single undoable steps', async () => {

@@ -136,6 +136,30 @@ test('factory or synchronous load failures destroy only the owned surface and re
   }
 });
 
+test('an engine that replays readiness while the open subscribes settles it once and stays usable', async () => {
+  const h = harness();
+  const subscribe = h.engine.on.bind(h.engine);
+  let replays = 0;
+  // Only the readiness observer (named `check` in the adapter) is replayed; the other observers must not run before the adapter exists.
+  h.engine.on = ((event: keyof EditorEvents, listener: (payload?: unknown) => void) => {
+    const unsubscribe = subscribe(event, listener);
+    if (event === 'selectionChange' && listener.name === 'check') { replays++; listener(); }
+    return unsubscribe;
+  }) as typeof h.engine.on;
+  const controller = new AbortController();
+  const opened = await openEigenpalDocument({ mount: h.mount }, { kind: 'blank' },
+    { readOnly: false, signal: controller.signal }, () => true, h.loader);
+  assert.equal(replays, 1, 'the readiness observer was replayed while subscribing');
+  assert.equal(opened.ok, true);
+  if (!opened.ok) return;
+  assert.equal(h.loadCount(), 1);
+  controller.abort();
+  h.emit('selectionChange');
+  assert.equal(h.destroyCount(), 0, 'a late abort or selection change cannot tear down the settled document');
+  opened.value.destroy();
+  assert.equal(h.destroyCount(), 1);
+});
+
 test('command and replacement observers receive formatting finalized after the change callback', async () => {
   for (const replace of [false, true]) {
     const h = harness();
@@ -627,6 +651,33 @@ test('replacement adapter refuses read-only and missing image contexts without a
   assert.deepEqual(h.port.beginImageReplacement?.(), { ok: false, code: 'no-selection' });
   const input = new Event('beforeinput', { cancelable: true }); h.child.dispatchEvent(input);
   assert.equal(input.defaultPrevented, false); h.port.destroy();
+});
+
+test('a replacement capture that fails after authority was taken releases it and names the failure', async () => {
+  // A capture reads the package for the image description and once more to validate it; count both reads on an untouched twin.
+  const twin = await imageHarness(undefined, true), reads = twin.f.packages;
+  const probe = twin.port.beginImageReplacement?.(); assert(probe?.ok);
+  const validateRead = twin.f.packages - reads;
+  probe.value.release(); twin.port.destroy();
+  assert.ok(validateRead >= 2, 'the capture validates against a second package read');
+  for (const [failure, expected] of [['engine fault', 'engine-failed'], ['owner lost', 'destroyed'], ['destroyed', 'destroyed']] as const) {
+    const h = await imageHarness(undefined, true), start = h.f.packages;
+    h.f.onPackage = () => {
+      if (h.f.packages !== start + validateRead) return;
+      if (failure === 'owner lost') h.f.owned = false;
+      if (failure === 'destroyed') h.port.destroy();
+      throw new Error('package unavailable');
+    };
+    assert.deepEqual(h.port.beginImageReplacement?.(), { ok: false, code: expected }, failure);
+    h.f.onPackage = () => {}; h.f.owned = true;
+    if (failure === 'destroyed') continue;
+    // The failed capture left no barrier behind: input is not blocked and a new capture is accepted.
+    const input = new Event('beforeinput', { cancelable: true }); h.child.dispatchEvent(input);
+    assert.equal(input.defaultPrevented, false, failure);
+    const retry = h.port.beginImageReplacement?.();
+    assert(retry?.ok, `${failure}: the editor is not left busy`);
+    retry.value.release(); h.port.destroy();
+  }
 });
 
 async function replacementHarness() {

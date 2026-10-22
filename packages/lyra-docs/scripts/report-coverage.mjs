@@ -6,12 +6,14 @@ import v8ToIstanbul from 'v8-to-istanbul';
 import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
+import { enrollUnloaded, measureNodeCoverage, sourceInventory as scriptInventory } from './lib/node-coverage.mjs';
 import { filesUnder } from './lib/static-files.mjs';
 
 export const DOCX_LINE_COVERAGE_FLOOR = 99.6;
+export const DOCX_TOOLING_COVERAGE_FLOOR = 80;
 
 /** The verified whole-source target gates lines and their native V8 statement counters. */
-export function assertCoverageTarget(metadata) {
+export function assertCoverageTarget(metadata, floor = DOCX_LINE_COVERAGE_FLOOR) {
   assert.equal(metadata.complete, true, 'Incomplete test runs cannot satisfy the coverage target');
   for (const metric of ['lines', 'statements']) {
     assert.equal(metadata.fullMetricEnumeration?.[metric], true, `Incomplete ${metric} source census`);
@@ -20,9 +22,14 @@ export function assertCoverageTarget(metadata) {
       Number.isSafeInteger(counts.covered) && counts.covered >= 0 && counts.covered <= counts.total,
     `Invalid ${metric} coverage counts`);
     const percentage = counts.covered / counts.total * 100;
-    assert.ok(percentage >= DOCX_LINE_COVERAGE_FLOOR,
-      `${metric} coverage ${percentage.toFixed(3)}% is below ${DOCX_LINE_COVERAGE_FLOOR}%`);
+    assert.ok(percentage >= floor, `${metric} coverage ${percentage.toFixed(3)}% is below ${floor}%`);
   }
+}
+
+/** The original Node tooling has its own, lower floor over the same exact line and statement counters. */
+export function assertToolingTarget(metadata) {
+  assert.ok(metadata.tooling, 'Tooling coverage was not measured');
+  assertCoverageTarget({ complete: metadata.complete, ...metadata.tooling }, DOCX_TOOLING_COVERAGE_FLOOR);
 }
 
 /** Count every emitted runtime module; the compiler decides which source is type-only. */
@@ -83,8 +90,33 @@ async function convert(entry, script, eligible) {
   return converter.toIstanbul();
 }
 
-/** Merge native Node and Chromium ranges onto original TypeScript, including untouched files. */
-export async function reportCoverage({ root, unitStatus = 0, browserStatus = 0 }) {
+/**
+ * Measure the package's original Node tooling (plain JavaScript, no source maps) from the same V8 dumps
+ * the TypeScript sources are measured from. `tooling` is a `sourceInventory` census of `scripts/`.
+ */
+async function measureScripts({ root, directory, tooling }) {
+  const inventory = await scriptInventory({ root, ...tooling });
+  const { map, modules, stagedRuns } = await measureNodeCoverage({ directory, included: inventory.included });
+  assert.ok(modules > 0, 'Node coverage did not measure any tooling modules');
+  const unloaded = await enrollUnloaded(map, inventory.included);
+  return {
+    map,
+    metadata: {
+      modules, stagedRuns, included: inventory.included.map(entry => relative(root, entry.source).replaceAll(sep, '/')),
+      excluded: inventory.excluded, unloaded,
+      fullMetricEnumeration: { statements: true, lines: true, branches: unloaded.length === 0, functions: unloaded.length === 0 },
+      total: map.getCoverageSummary().toJSON(),
+    },
+  };
+}
+
+/**
+ * Merge native Node and Chromium ranges onto original TypeScript, including untouched files. With
+ * `tooling`, the original Node scripts are measured too and appear in the written reports, but
+ * `total` (what the coverage target gates) stays the TypeScript runtime alone; the tooling and the
+ * whole package are reported separately as `tooling` and `combined`.
+ */
+export async function reportCoverage({ root, unitStatus = 0, browserStatus = 0, tooling = null }) {
   root = resolve(root);
   const output = resolve(root, 'coverage');
   const inventory = await sourceInventory(root);
@@ -160,6 +192,9 @@ export async function reportCoverage({ root, unitStatus = 0, browserStatus = 0 }
     map.merge(empty);
   }
   assert.deepEqual(map.files().sort(), [...eligible].sort(), 'Coverage omits or adds source modules');
+  const sourceTotal = map.getCoverageSummary().toJSON();
+  const scripts = tooling ? await measureScripts({ root, directory: resolve(output, 'node-v8'), tooling }) : null;
+  if (scripts) map.merge(scripts.map);
   await mkdir(output, { recursive: true });
   const context = libReport.createContext({ dir: output, coverageMap: map });
   for (const reporter of ['json', 'json-summary', 'lcovonly', 'html', 'text']) {
@@ -174,7 +209,8 @@ export async function reportCoverage({ root, unitStatus = 0, browserStatus = 0 }
     included: inventory.included.map(entry => relative(root, entry.source).replaceAll(sep, '/')),
     excluded: inventory.excluded, unloaded,
     fullMetricEnumeration: { statements: true, lines: true, branches: unloaded.length === 0, functions: unloaded.length === 0 },
-    total: map.getCoverageSummary().toJSON(),
+    total: sourceTotal,
+    ...scripts ? { tooling: scripts.metadata, combined: map.getCoverageSummary().toJSON() } : {},
   };
   if (unloaded.length) console.error(`Coverage includes ${unloaded.length} unloaded runtime module(s) at zero lines. Function and branch percentages describe loaded modules only; consult coverage-metadata.json.`);
   await writeFile(resolve(output, 'coverage-metadata.json'), `${JSON.stringify(metadata, null, 2)}\n`);

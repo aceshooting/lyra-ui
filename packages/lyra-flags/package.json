@@ -37,7 +37,8 @@
     "optimize": "node scripts/optimize-flags.mjs",
     "build-compact": "node scripts/build-compact.mjs",
     "check:public-api": "node ../lyra-ui/scripts/public-api-diff.mjs --current .",
-    "test": "node scripts/test.mjs",
+    "test": "node scripts/test.mjs && node --test scripts/api.test.mjs scripts/coverage.test.mjs scripts/generate-index.test.mjs scripts/optimize-flags.test.mjs scripts/build-compact.test.mjs",
+    "test:coverage": "node scripts/coverage.mjs",
     "prepack": "pnpm run generate"
   },
   "files": [

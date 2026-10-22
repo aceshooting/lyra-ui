@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { eagerEngineImports } from './lib/engine-imports.mjs';
 import { renderedControlTags } from './lib/editor-tags.mjs';
 
@@ -128,6 +129,15 @@ test('a static import or reexport reaching the engine fails the lazy boundary', 
       [entry, source],
       [facade, "import * as source from '#lyra-docx-engine/store'; export const capabilities = source;"],
     ]))), [{ file: facade, specifier: '#lyra-docx-engine/store' }]);
+  }
+});
+
+test('an absolute path or file URL specifier is followed like a relative one', () => {
+  for (const specifier of [facade, pathToFileURL(facade).href]) {
+    assert.deepEqual(eagerEngineImports([entry], read(new Map([
+      [entry, `import ${JSON.stringify(specifier)};`],
+      [facade, "import * as source from '#lyra-docx-engine/core'; export const capabilities = source;"],
+    ]))), [{ file: facade, specifier: '#lyra-docx-engine/core' }], specifier);
   }
 });
 
