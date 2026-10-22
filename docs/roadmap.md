@@ -23,19 +23,24 @@ still open.
 
 ## 30.0.0 preparation checkpoint
 
-As of 2026-10-22, the four companion 3D engines and prepared map source/layer batches are
-committed. UI coverage is 99.7722% on the latest measured source; the release remains unpublished.
-The remaining work, in order:
+As of 2026-10-22 evening, main carries the immutable identity collections, the map adoption work with
+lr-map's optional features loaded on demand, the opt-in WebGL views (graph, knowledge-graph explorer,
+embedding explorer, image and video panoramas), `lr-chart-3d`, full line coverage of every companion
+package, and the oxlint, dependency-cruiser, fast-check, Stryker and Quality tools gates. The release
+remains unpublished. Real-GPU measurements meet the point targets (100k and 1M points at 60 fps); the
+graph target (10k nodes and 30k edges at 60 fps) is not met yet. The remaining work, in order:
 
-1. Finish map component qualification: the current candidate passes 1,158 Chromium tests with
-   one overlapping-image hit-priority failure. Resolve it, then complete Firefox, WebKit,
-   generated documentation, lint, package budgets and consumer checks before integration.
-2. Finish the component 3D opt-ins, `lr-model-viewer` and `lr-chart-3d`, including accessible
-   fallbacks and documentation.
-3. Run the real-GPU performance benchmarks and application prototypes. Single-GPU rendering
-   was verified; frame-rate targets remain unmeasured.
-4. Refresh companion coverage and shard timing measurements, then prepare versions and budgets
-   and complete all browser, visual, SSR and exact-commit release gates.
+1. Integrate the prepared work: the supply-chain and spelling checks with Lit template linting,
+   `lr-model-viewer`, GPU-side graph projection, the removal of every deprecated API with migration
+   rewrites, and the map release-gate items below.
+2. Close the map release gate ([map adoption](roadmap/map-adoption.md)): large styled GeoJSON,
+   zoom limits, hash compatibility, image capacity, then the interaction, theming, geolocation,
+   drawing, pointer and basemap items, the remaining items, documentation and application prototypes.
+3. Speed up CI and report per-package coverage; reduce bundle size where code can load on demand;
+   upgrade all dependencies.
+4. Review the complete 30.0.0 change set, close every finding and verify every roadmap item against
+   its tests, stories and documentation; then prepare versions and budgets and pass all browser,
+   full-engine, Quality tools and exact-commit release gates.
 
 ## Shipped
 

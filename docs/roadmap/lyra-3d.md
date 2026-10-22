@@ -157,7 +157,7 @@ Exit: the fallback chain works in all three engines and meets the 10k-node targe
 - [x] `lyra-3d/points`: instanced point cloud with picking, category colors and 2D or 3D cameras.
 - [x] `lr-embedding-explorer`: `engine`, optional `z` coordinate, a keyboard cursor and paginated
   list for large point sets, every point rendered up to the documented limit.
-- [ ] `lr-chart-3d`: 3D scatter, bubble and line charts with axes, gridlines and tick labels.
+- [x] `lr-chart-3d`: 3D scatter, bubble and line charts with axes, gridlines and tick labels.
 - [ ] Point-cloud files (PLY, XYZ, PCD) through the model viewer's file pipeline.
 
 Exit: meets the 100k-point target; the fallback chain works in all three engines.
