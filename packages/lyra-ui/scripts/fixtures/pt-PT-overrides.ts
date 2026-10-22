@@ -378,6 +378,9 @@ const strings: LyraLocaleStrings = {
   mapDrawingVertexLimit: 'Um desenho pode conter, no máximo, {count} vértices',
   mapDrawingEditInstructions: 'Utilize as teclas de seta para mover este vértice; mantenha a tecla Shift premida para passos maiores. Page Up e Page Down selecionam vértices. Home e End selecionam o primeiro e o último vértice visível.',
   panoramaInstructions: 'Utilize as setas para olhar em redor, mais e menos para ampliar ou reduzir e Home para repor a vista.',
+  chart3dEmpty: 'Não existem dados visíveis no gráfico.',
+  chart3dInstructions: 'Utilize as teclas de seta para se deslocar entre linhas, Home e End para a primeira e a última linha e Page Up e Page Down para mudar de página. Prima Enter ou Espaço para selecionar uma linha.',
+  chart3dFit: 'Ajustar gráfico à vista',
 };
 
 export { strings };

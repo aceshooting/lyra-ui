@@ -309,6 +309,7 @@
     "country-picker": "forms",
     "time-zone-picker": "forms",
     "unit-picker": "forms",
-    "signature-pad": "forms"
+    "signature-pad": "forms",
+    "chart-3d": "charts"
   }
 }

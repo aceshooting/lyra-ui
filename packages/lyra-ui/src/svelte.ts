@@ -126,6 +126,8 @@ export type LyraChangeReviewSvelteProps = LyraSvelteElementProps<'lr-change-revi
 
 export type LyraChartSvelteProps = LyraSvelteElementProps<'lr-chart'>;
 
+export type LyraChart3dSvelteProps = LyraSvelteElementProps<'lr-chart-3d'>;
+
 export type LyraChatComposerSvelteProps = LyraSvelteElementProps<'lr-chat-composer'>;
 
 export type LyraChatMessageSvelteProps = LyraSvelteElementProps<'lr-chat-message'>;
@@ -700,6 +702,7 @@ export interface LyraSvelteElements {
   'lr-carousel-item': LyraCarouselItemSvelteProps;
   'lr-change-review': LyraChangeReviewSvelteProps;
   'lr-chart': LyraChartSvelteProps;
+  'lr-chart-3d': LyraChart3dSvelteProps;
   'lr-chat-composer': LyraChatComposerSvelteProps;
   'lr-chat-message': LyraChatMessageSvelteProps;
   'lr-chat-viewport': LyraChatViewportSvelteProps;
@@ -1011,6 +1014,7 @@ export interface LyraElementTagNameMap {
   'lr-carousel-item': LyraComponentTypeMap['lr-carousel-item']['element'];
   'lr-change-review': LyraComponentTypeMap['lr-change-review']['element'];
   'lr-chart': LyraComponentTypeMap['lr-chart']['element'];
+  'lr-chart-3d': LyraComponentTypeMap['lr-chart-3d']['element'];
   'lr-chat-composer': LyraComponentTypeMap['lr-chat-composer']['element'];
   'lr-chat-message': LyraComponentTypeMap['lr-chat-message']['element'];
   'lr-chat-viewport': LyraComponentTypeMap['lr-chat-viewport']['element'];

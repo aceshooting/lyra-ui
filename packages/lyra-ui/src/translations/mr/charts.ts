@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'बॉक्स प्लॉट दाखवण्यासाठी या घटकाला पर्यायी बॉक्स-प्लॉट आलेख पॅकेज स्थापित करणे आवश्यक आहे.',
   chartInputLimit: 'इनपुट मर्यादा गाठल्यामुळे आलेखातील काही डेटा वगळला आहे. वगळलेली मूल्ये दर्शवण्यासाठी लहान किंवा आधीच एकत्रित केलेला डेटासेट द्या.',
   histogramInputLimit: 'फक्त सर्वात नवीन 10,000 नमुने ठेवले जातात. मोठे वितरण दर्शवण्यासाठी आधीच वर्गांमध्ये गटबद्ध केलेल्या संख्या lr-chart ला द्या.',
+  chart3dLabel: '3D आलेख',
+  chart3dEmpty: 'आलेखात दिसणारा कोणताही डेटा नाही.',
+  chart3dRow: '{label}, {total} पैकी ओळ {index}',
+  chart3dInstructions: 'ओळींमध्ये फिरण्यासाठी बाण कळा, पहिल्या आणि शेवटच्या ओळीसाठी Home आणि End, पृष्ठे बदलण्यासाठी Page Up आणि Page Down वापरा. ओळ निवडण्यासाठी Enter किंवा स्पेस दाबा.',
+  chart3dFit: 'आलेख दृश्यात बसवा',
+  chart3dName: 'लेबल',
+  chart3dSize: 'व्यास (CSS पिक्सेल)',
+  chart3dCategory: 'वर्ग',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('mr', strings);

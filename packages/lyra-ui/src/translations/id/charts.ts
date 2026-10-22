@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Komponen ini memerlukan paket bagan diagram kotak opsional agar diagram kotak dapat ditampilkan.',
   chartInputLimit: 'Sebagian data bagan dihilangkan karena batas masukan tercapai. Berikan kumpulan data yang lebih kecil atau sudah diagregasi untuk mewakili nilai yang dihilangkan.',
   histogramInputLimit: 'Hanya 10.000 sampel terbaru yang disimpan. Berikan jumlah yang sudah dikelompokkan ke dalam interval kepada lr-chart untuk mewakili distribusi yang lebih besar.',
+  chart3dLabel: 'Bagan 3D',
+  chart3dEmpty: 'Tidak ada data bagan yang terlihat.',
+  chart3dRow: '{label}, baris {index} dari {total}',
+  chart3dInstructions: 'Gunakan tombol panah untuk berpindah antarbaris, Home dan End untuk baris pertama dan terakhir, serta Page Up dan Page Down untuk berganti halaman. Tekan Enter atau Spasi untuk memilih baris.',
+  chart3dFit: 'Sesuaikan bagan',
+  chart3dName: 'Label',
+  chart3dSize: 'Diameter (piksel CSS)',
+  chart3dCategory: 'Kategori',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('id', strings);

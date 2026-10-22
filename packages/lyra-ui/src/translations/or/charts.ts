@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'ବକ୍ସ ପ୍ଲଟ୍ ଦେଖାଇବାକୁ ବୈକଳ୍ପିକ ବକ୍ସ-ପ୍ଲଟ୍ ଚାର୍ଟ ପ୍ୟାକେଜ୍ ଇନ୍‌ଷ୍ଟଲ୍ କରିବା ଆବଶ୍ୟକ।',
   chartInputLimit: 'ଇନପୁଟ୍ ସୀମାରେ ପହଞ୍ଚିଥିବାରୁ କିଛି ଚାର୍ଟ ତଥ୍ୟ ବାଦ ଦିଆଯାଇଛି। ବାଦ ପଡ଼ିଥିବା ମୂଲ୍ୟଗୁଡ଼ିକୁ ଦର୍ଶାଇବାକୁ ଏକ ଛୋଟ କିମ୍ବା ଆଗରୁ ଏକତ୍ରିତ ତଥ୍ୟସମୂହ ଦିଅନ୍ତୁ।',
   histogramInputLimit: 'କେବଳ ସବୁଠୁ ନୂଆ 10,000ଟି ନମୁନା ରଖାଯାଏ। ଏକ ବଡ଼ ବିତରଣ ଦର୍ଶାଇବାକୁ ଆଗରୁ ଅନ୍ତରାଳ ଅନୁସାରେ ଗୋଷ୍ଠୀବଦ୍ଧ ଗଣନାଗୁଡ଼ିକ lr-chartକୁ ଦିଅନ୍ତୁ।',
+  chart3dLabel: '3D ଚାର୍ଟ',
+  chart3dEmpty: 'ଚାର୍ଟରେ କୌଣସି ଦୃଶ୍ୟମାନ ତଥ୍ୟ ନାହିଁ।',
+  chart3dRow: '{label}, {total}ଟିରୁ ଧାଡ଼ି {index}',
+  chart3dInstructions: 'ଧାଡ଼ିଗୁଡ଼ିକ ମଧ୍ୟରେ ଯିବା ପାଇଁ ତୀର କୀ, ପ୍ରଥମ ଓ ଶେଷ ଧାଡ଼ି ପାଇଁ Home ଓ End, ଏବଂ ପୃଷ୍ଠା ବଦଳାଇବା ପାଇଁ Page Up ଓ Page Down ବ୍ୟବହାର କରନ୍ତୁ। ଧାଡ଼ି ବାଛିବା ପାଇଁ Enter କିମ୍ବା ସ୍ପେସ୍ ଦବାନ୍ତୁ।',
+  chart3dFit: 'ଚାର୍ଟକୁ ଦୃଶ୍ୟରେ ଖାପ ଖୁଆନ୍ତୁ',
+  chart3dName: 'ଲେବଲ୍',
+  chart3dSize: 'ବ୍ୟାସ (CSS ପିକ୍ସେଲ)',
+  chart3dCategory: 'ଶ୍ରେଣୀ',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('or', strings);

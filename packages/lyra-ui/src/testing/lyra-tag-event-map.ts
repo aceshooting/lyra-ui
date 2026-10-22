@@ -45,6 +45,7 @@ import type { LyraToolResultViewEventMap } from '../components/agent-tools/tool-
 import type { LyraToolSelectDialogEventMap } from '../components/agent-tools/tool-select-dialog/tool-select-dialog.class.js';
 import type { LyraToolTimelineEventMap } from '../components/agent-tools/tool-timeline/tool-timeline.class.js';
 import type { LyraTraceTreeEventMap } from '../components/agent-tools/trace-tree/trace-tree.class.js';
+import type { LyraChart3dEventMap } from '../components/charts/chart-3d/chart-3d.class.js';
 import type { LyraBoxPlotEventMap } from '../components/charts/chart/box-plot.class.js';
 import type { LyraChartEventMap } from '../components/charts/chart/chart.class.js';
 import type { LyraLiteChartEventMap } from '../components/charts/chart/lite-chart.class.js';
@@ -300,6 +301,7 @@ export interface LyraTagEventTypes {
   'lr-carousel': LyraCarouselEventMap;
   'lr-change-review': LyraChangeReviewEventMap;
   'lr-chart': LyraChartEventMap;
+  'lr-chart-3d': LyraChart3dEventMap;
   'lr-chat-composer': LyraChatComposerEventMap;
   'lr-chat-message': LyraChatMessageEventMap;
   'lr-chat-viewport': LyraChatViewportEventMap;

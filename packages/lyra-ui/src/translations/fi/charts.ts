@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Tämä komponentti tarvitsee valinnaisen laatikkokaaviopaketin laatikkokaavioiden piirtämiseen.',
   chartInputLimit: 'Osa kaavion tiedoista jätettiin pois syöterajan täyttymisen vuoksi. Anna pienempi tai ennalta koostettu tietojoukko, jotta pois jätetyt arvot voidaan esittää.',
   histogramInputLimit: 'Vain uusimmat 10 000 havaintoa säilytetään. Anna lr-chart-komponentille ennalta luokkaväleihin ryhmitellyt lukumäärät suuremman jakauman esittämiseksi.',
+  chart3dLabel: '3D-kaavio',
+  chart3dEmpty: 'Ei näkyviä kaaviotietoja.',
+  chart3dRow: '{label}, rivi {index}/{total}',
+  chart3dInstructions: 'Siirry rivien välillä nuolinäppäimillä, ensimmäiselle ja viimeiselle riville Home- ja End-näppäimillä ja vaihda sivua Page Up- ja Page Down -näppäimillä. Valitse rivi painamalla Enter tai välilyöntiä.',
+  chart3dFit: 'Sovita kaavio',
+  chart3dName: 'Tunniste',
+  chart3dSize: 'Halkaisija (CSS-pikseliä)',
+  chart3dCategory: 'Luokka',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('fi', strings);

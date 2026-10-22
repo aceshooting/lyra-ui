@@ -124,6 +124,8 @@ export type LyraChangeReviewReactProps = LyraReactElementProps<'lr-change-review
 
 export type LyraChartReactProps = LyraReactElementProps<'lr-chart'>;
 
+export type LyraChart3dReactProps = LyraReactElementProps<'lr-chart-3d'>;
+
 export type LyraChatComposerReactProps = LyraReactElementProps<'lr-chat-composer'>;
 
 export type LyraChatMessageReactProps = LyraReactElementProps<'lr-chat-message'>;
@@ -698,6 +700,7 @@ export interface LyraReactIntrinsicElements {
   'lr-carousel-item': LyraCarouselItemReactProps;
   'lr-change-review': LyraChangeReviewReactProps;
   'lr-chart': LyraChartReactProps;
+  'lr-chart-3d': LyraChart3dReactProps;
   'lr-chat-composer': LyraChatComposerReactProps;
   'lr-chat-message': LyraChatMessageReactProps;
   'lr-chat-viewport': LyraChatViewportReactProps;

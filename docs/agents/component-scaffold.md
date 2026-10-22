@@ -7,9 +7,10 @@ pnpm create:component --family utility --name status-panel
 ```
 
 `--name` is always the unprefixed kebab-case name. The example creates `lr-status-panel` and
-registers it with `defineElement('status-panel', ...)`. Inputs beginning with `lr-`, `wa-`, or
-`sl-` are rejected so the command cannot accidentally produce a doubled prefix or enroll an
-upstream-branded tag. `--family` must name one of the 11 authored families in
+registers it with `defineElement('status-panel', ...)`. The first segment starts with a letter;
+later segments may start with a digit, so `--name chart-3d` creates `lr-chart-3d`. Inputs
+beginning with `lr-`, `wa-`, or `sl-` are rejected so the command cannot accidentally produce a
+doubled prefix or enroll an upstream-branded tag. `--family` must name one of the 11 authored families in
 `packages/lyra-ui/scripts/component-families.json`.
 
 ## What the command creates

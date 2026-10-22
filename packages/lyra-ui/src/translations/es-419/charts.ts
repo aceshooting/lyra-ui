@@ -7,7 +7,7 @@ import { registerLyraLocaleDelta } from '../../internal/localization-runtime.js'
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-
+  chart3dInstructions: 'Use las flechas para moverse entre filas, Inicio y Fin para ir a la primera y la última fila, y Re Pág y Av Pág para cambiar de página. Presione Enter o la barra espaciadora para seleccionar una fila.',
 };
 
 registerLyraLocaleDelta('es-419', 'es', strings, { dir: 'ltr' });

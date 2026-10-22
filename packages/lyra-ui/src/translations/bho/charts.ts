@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'बॉक्स प्लॉट देखावे खातिर एह कॉम्पोनेंट में वैकल्पिक box-plot chart पैकेज इंस्टॉल होखे के चाहीं।',
   chartInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से चार्ट के कुछ डेटा छोड़ दिहल गइल बा। छूटल मान देखावे खातिर छोट भा पहिले से समेकित डेटा सेट दीं।',
   histogramInputLimit: 'खाली सबसे नया 10,000 नमूना रखल जाला। बड़ वितरण देखावे खातिर पहिले से अंतराल में बाँटल गिनती lr-chart के दीं।',
+  chart3dLabel: '3D चार्ट',
+  chart3dEmpty: 'चार्ट में कवनो डाटा देखाई नइखे देत।',
+  chart3dRow: '{label}, {total} में से पंक्ति {index}',
+  chart3dInstructions: 'पंक्ति के बीच जाए खातिर तीर कुंजी, पहिला आ आखिरी पंक्ति खातिर Home आ End, आ पन्ना बदले खातिर Page Up आ Page Down इस्तेमाल करीं। पंक्ति चुने खातिर Enter भा स्पेस दबाईं।',
+  chart3dFit: 'चार्ट के दृश्य में समाईं',
+  chart3dName: 'लेबल',
+  chart3dSize: 'व्यास (CSS पिक्सेल)',
+  chart3dCategory: 'श्रेणी',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('bho', strings);

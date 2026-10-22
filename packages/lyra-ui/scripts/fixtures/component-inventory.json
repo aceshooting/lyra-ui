@@ -21564,6 +21564,340 @@
       }
     },
     {
+      "tag": "lr-chart-3d",
+      "family": "charts",
+      "classModule": "src/components/charts/chart-3d/chart-3d.class.ts",
+      "registrationModule": "src/components/charts/chart-3d/chart-3d.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [
+        "@aceshooting/lyra-3d"
+      ],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "engine",
+            "property": "engine",
+            "type": "Engine3dPreference",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "selected-id",
+            "property": "selectedId",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "type",
+            "property": "type",
+            "type": "Chart3dType",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "camera",
+            "attribute": null,
+            "type": "LyraChart3dCamera | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "data",
+            "attribute": null,
+            "type": "LyraChart3dColumns | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "engine",
+            "attribute": "engine",
+            "type": "Engine3dPreference",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "hiddenCategories",
+            "attribute": null,
+            "type": "ReadonlySet<number>",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "selectedId",
+            "attribute": "selected-id",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "type",
+            "attribute": "type",
+            "type": "Chart3dType",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "xAxis",
+            "attribute": null,
+            "type": "LyraChart3dAxis",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "yAxis",
+            "attribute": null,
+            "type": "LyraChart3dAxis",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "zAxis",
+            "attribute": null,
+            "type": "LyraChart3dAxis",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [],
+        "events": [
+          {
+            "name": "lr-camera-change",
+            "type": "CustomEvent<{ readonly camera: LyraChart3dCamera }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-chart-row-select",
+            "type": "CustomEvent<LyraChart3dSelectDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-engine-fallback",
+            "type": "CustomEvent<Engine3dFallbackDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "cursor",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "engine",
+            "deprecated": null
+          },
+          {
+            "name": "engine-notice",
+            "deprecated": null
+          },
+          {
+            "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "fit-button",
+            "deprecated": null
+          },
+          {
+            "name": "instructions",
+            "deprecated": null
+          },
+          {
+            "name": "page-button",
+            "deprecated": null
+          },
+          {
+            "name": "pagination",
+            "deprecated": null
+          },
+          {
+            "name": "row",
+            "deprecated": null
+          },
+          {
+            "name": "row-button",
+            "deprecated": null
+          },
+          {
+            "name": "table",
+            "deprecated": null
+          },
+          {
+            "name": "table-container",
+            "deprecated": null
+          },
+          {
+            "name": "toolbar",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-chart-3d-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "24rem"
+          },
+          {
+            "name": "--lr-chart-3d-line-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1px"
+          },
+          {
+            "name": "--lr-chart-3d-point-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "0.5rem"
+          }
+        ],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "fit",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focusRow",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "id",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [
+            "type"
+          ],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-chat-composer",
       "family": "conversation",
       "classModule": "src/components/conversation/chat-composer/chat-composer.class.ts",

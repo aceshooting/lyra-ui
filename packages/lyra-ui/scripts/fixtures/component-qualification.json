@@ -62,8 +62,8 @@
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
   ],
   "summary": {
-    "componentCount": 308,
-    "automatedAccessibility": 307,
+    "componentCount": 309,
+    "automatedAccessibility": 308,
     "accessibilityExemptions": 1,
     "accessibilityMissing": 0,
     "visualEnrolled": 92,
@@ -8829,6 +8829,244 @@
           "src/components/charts/chart/lite-chart.test.ts",
           "src/components/charts/chart/public-parity.test.ts",
           "src/components/charts/chart/subclasses.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
+      "tag": "lr-chart-3d",
+      "family": "charts",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "scale",
+          "visual",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "scale": {
+          "applicability": "applicable",
+          "status": "unmeasured",
+          "scenarios": [],
+          "measuredAt": null,
+          "evidence": [],
+          "limitation": "No deterministic scale budget has been measured for this tag."
+        },
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/charts/chart-3d/chart-3d-engine.test.ts",
+              "test": "mounts once, resolves the tokens and fits when no camera was authored",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d-engine.test.ts",
+              "test": "probes WebGL2 before downloading and descends straight to the table with a visible, announced notice",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "adds the diameter column for bubble charts, names categories and renders both aria-pressed values",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "contains long content inside a 320px allocation and keeps every control reachable",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "moves one cursor through every row, paging the table with it, and selects with Enter",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "names the group, scrollable region and caption from the host aria-label, then label, then the localized default",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "renders the accessible table by default, loads no renderer and passes axe on populated data",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "reports an empty, fully filtered and invalid state separately and recovers when valid data arrives",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "reports an empty, fully filtered and invalid state separately and recovers when valid data arrives",
+              "target": "el",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "moves one cursor through every row, paging the table with it, and selects with Enter",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "swaps the horizontal arrows under RTL and leaves them in LTR order otherwise",
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "collapses its interaction transition under reduced motion and keeps it otherwise",
+              "kind": "reduced-motion test signal"
+            }
+          ]
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/charts/chart-3d/chart-3d.test.ts",
+              "test": "contains long content inside a 320px allocation and keeps every control reachable",
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "axes": [],
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No visual-regression story is enrolled for this tag."
+        },
+        "peerFailure": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/charts/chart-3d/chart-3d-engine.test.ts",
+              "line": 82,
+              "kind": "optional-peer failure-path test signal"
+            }
+          ],
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
+        },
+        "security": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/charts/chart-3d/chart-3d-engine.ts",
+              "line": 124,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "No deterministic scale budget has been measured for this tag.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "No visual-regression story is enrolled for this tag.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/charts/chart-3d/chart-3d-data.test.ts",
+          "src/components/charts/chart-3d/chart-3d-engine.test.ts",
+          "src/components/charts/chart-3d/chart-3d-native.test.ts",
+          "src/components/charts/chart-3d/chart-3d.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"

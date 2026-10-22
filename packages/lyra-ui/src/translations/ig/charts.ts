@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Akụkụ a chọrọ ka etinye ngwungwu eserese igbe nhọrọ iji gosipụta eserese igbe.',
   chartInputLimit: 'A hapụrụ ụfọdụ data eserese n\'ihi na e ruru oke ntinye. Nye obere nchịkọta data ma ọ bụ nke a chịkọtara tupu oge eruo iji gosipụta uru ndị a hapụrụ.',
   histogramInputLimit: 'Naanị atụ 10,000 kachasị ọhụrụ ka a na-edobe. Nye lr-chart ọnụọgụ ndị a kewara n\'ime ìgwè dịka oke uru ha tupu oge eruo iji gosipụta nkesa ka ukwuu.',
+  chart3dLabel: 'Eserese 3D',
+  chart3dEmpty: 'Enweghị data eserese a na-ahụ anya.',
+  chart3dRow: '{label}, ahịrị {index} n’ime {total}',
+  chart3dInstructions: 'Jiri igodo akụ gaa n’etiti ahịrị, Home na End maka ahịrị mbụ na nke ikpeazụ, na Page Up na Page Down iji gbanwee peeji. Pịa Enter ma ọ bụ Space iji họrọ ahịrị.',
+  chart3dFit: 'Mee ka eserese dabara na nlele',
+  chart3dName: 'Akara',
+  chart3dSize: 'Diameter (CSS pikselụ)',
+  chart3dCategory: 'Otu',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ig', strings);

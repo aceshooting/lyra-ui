@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'כדי להציג תרשימי קופסה, יש להתקין את חבילת התרשימים האופציונלית המתאימה.',
   chartInputLimit: 'חלק מנתוני התרשים הושמטו משום שהקלט הגיע למגבלה. יש לספק מערך נתונים קטן יותר או נתונים שאוגדו מראש כדי לייצג את הערכים שהושמטו.',
   histogramInputLimit: 'רק 10,000 הדגימות החדשות ביותר נשמרות. יש להעביר ל-lr-chart ספירות שקובצו מראש לטווחים כדי לייצג התפלגות גדולה יותר.',
+  chart3dLabel: 'תרשים תלת־ממדי',
+  chart3dEmpty: 'אין נתוני תרשים גלויים.',
+  chart3dRow: '{label}, שורה {index} מתוך {total}',
+  chart3dInstructions: 'השתמשו במקשי החצים למעבר בין שורות, ב־Home וב־End למעבר לשורה הראשונה והאחרונה, וב־Page Up וב־Page Down למעבר בין עמודים. הקישו Enter או רווח כדי לבחור שורה.',
+  chart3dFit: 'התאמת התרשים לתצוגה',
+  chart3dName: 'תווית',
+  chart3dSize: 'קוטר (פיקסלי CSS)',
+  chart3dCategory: 'קטגוריה',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

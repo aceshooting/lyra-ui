@@ -45,6 +45,7 @@ import '../components/layout/carousel/carousel.js';
 import '../components/layout/carousel/carousel-item.js';
 import '../components/agent-tools/change-review/change-review.js';
 import '../components/charts/chart/chart.js';
+import '../components/charts/chart-3d/chart-3d.js';
 import '../components/conversation/chat-composer/chat-composer.js';
 import '../components/conversation/chat-message/chat-message.js';
 import '../components/conversation/chat-viewport/chat-viewport.js';

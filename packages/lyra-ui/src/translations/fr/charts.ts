@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Ce composant nécessite le paquet optionnel de boîtes à moustaches pour les afficher.',
   chartInputLimit: 'Certaines données du graphique ont été omises car une limite d’entrée a été atteinte. Fournissez un jeu de données plus petit ou préalablement agrégé pour représenter les valeurs omises.',
   histogramInputLimit: 'Seuls les 10 000 échantillons les plus récents sont conservés. Fournissez à lr-chart des effectifs préalablement regroupés par classes pour représenter une distribution plus étendue.',
+  chart3dLabel: 'Graphique 3D',
+  chart3dEmpty: 'Aucune donnée de graphique visible.',
+  chart3dRow: '{label}, ligne {index} sur {total}',
+  chart3dInstructions: 'Utilisez les touches fléchées pour passer d’une ligne à l’autre, Début et Fin pour atteindre la première et la dernière ligne, et Page précédente et Page suivante pour changer de page. Appuyez sur Entrée ou Espace pour sélectionner une ligne.',
+  chart3dFit: 'Ajuster le graphique',
+  chart3dName: 'Étiquette',
+  chart3dSize: 'Diamètre (pixels CSS)',
+  chart3dCategory: 'Catégorie',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('fr', strings);

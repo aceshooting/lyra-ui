@@ -10,3 +10,4 @@ export * from './chart/pie-chart.js';
 export * from './chart/polar-area-chart.js';
 export * from './chart/radar-chart.js';
 export * from './chart/scatter-chart.js';
+export * from './chart-3d/chart-3d.js';

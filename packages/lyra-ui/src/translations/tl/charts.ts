@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Kailangang mai-install ang opsyonal na package para sa box-plot chart upang maipakita ang mga box plot.',
   chartInputLimit: 'May ilang datos ng tsart na hindi isinama dahil naabot ang limitasyon sa input. Magbigay ng mas maliit o paunang pinagsama-samang dataset upang katawanin ang mga halagang hindi isinama.',
   histogramInputLimit: 'Ang pinakabagong 10,000 sample lang ang pinananatili. Magbigay sa lr-chart ng mga bilang na paunang pinangkat ayon sa pagitan upang katawanin ang mas malaking distribusyon.',
+  chart3dLabel: '3D na tsart',
+  chart3dEmpty: 'Walang nakikitang datos ng tsart.',
+  chart3dRow: '{label}, row {index} sa {total}',
+  chart3dInstructions: 'Gamitin ang mga arrow key upang lumipat sa mga row, Home at End para sa una at huling row, at Page Up at Page Down upang magpalit ng pahina. Pindutin ang Enter o Space upang piliin ang row.',
+  chart3dFit: 'Ipagkasya ang tsart sa tanaw',
+  chart3dName: 'Label',
+  chart3dSize: 'Diyametro (CSS pixel)',
+  chart3dCategory: 'Kategorya',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('tl', strings);

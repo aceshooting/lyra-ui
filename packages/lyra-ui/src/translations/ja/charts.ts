@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'このコンポーネントで箱ひげ図を表示するには、オプションの箱ひげ図チャートパッケージをインストールしてください。',
   chartInputLimit: '入力上限に達したため、グラフデータの一部が省略されました。省略された値を表すには、より小さいデータセット、または事前に集計したデータセットを指定してください。',
   histogramInputLimit: '最新の10,000件のサンプルのみが保持されます。より大きな分布を表すには、あらかじめ階級ごとに集計した度数をlr-chartに渡してください。',
+  chart3dLabel: '3D チャート',
+  chart3dEmpty: '表示されているチャートデータはありません。',
+  chart3dRow: '{label}、{total} 行中 {index} 行目',
+  chart3dInstructions: '矢印キーで行間を移動し、Home と End で最初と最後の行に移動し、Page Up と Page Down でページを切り替えます。Enter またはスペースキーで行を選択します。',
+  chart3dFit: 'チャート全体を表示',
+  chart3dName: 'ラベル',
+  chart3dSize: '直径（CSS ピクセル）',
+  chart3dCategory: 'カテゴリ',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ja', strings);

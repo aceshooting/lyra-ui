@@ -43,6 +43,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-carousel',
   'lr-carousel-item',
   'lr-change-review',
+  'lr-chart-3d',
   'lr-chat-composer',
   'lr-chat-message',
   'lr-chat-viewport',

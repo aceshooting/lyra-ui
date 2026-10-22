@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Komponen ini memerlukan pakej carta plot kotak pilihan dipasang untuk memaparkan plot kotak.',
   chartInputLimit: 'Sebahagian data carta telah digugurkan kerana had input dicapai. Berikan set data yang lebih kecil atau yang telah diagregatkan untuk mewakili nilai yang digugurkan.',
   histogramInputLimit: 'Hanya 10,000 sampel terkini dikekalkan. Berikan bilangan yang telah dikelompokkan mengikut sela kepada lr-chart untuk mewakili taburan yang lebih besar.',
+  chart3dLabel: 'Carta 3D',
+  chart3dEmpty: 'Tiada data carta yang kelihatan.',
+  chart3dRow: '{label}, baris {index} daripada {total}',
+  chart3dInstructions: 'Gunakan kekunci anak panah untuk bergerak antara baris, Home dan End untuk baris pertama dan terakhir, serta Page Up dan Page Down untuk menukar halaman. Tekan Enter atau Space untuk memilih baris.',
+  chart3dFit: 'Muatkan carta dalam paparan',
+  chart3dName: 'Label',
+  chart3dSize: 'Diameter (piksel CSS)',
+  chart3dCategory: 'Kategori',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ms', strings);

@@ -45,6 +45,7 @@ export const AUTOLOADER_TAGS = [
   'lr-carousel-item',
   'lr-change-review',
   'lr-chart',
+  'lr-chart-3d',
   'lr-chat-composer',
   'lr-chat-message',
   'lr-chat-viewport',

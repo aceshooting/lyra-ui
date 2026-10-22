@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'ബോക്സ് പ്ലോട്ടുകൾ കാണിക്കാൻ ഈ ഘടകത്തിൽ ഐച്ഛിക box-plot chart പാക്കേജ് ഇൻസ്റ്റാൾ ചെയ്യണം.',
   chartInputLimit: 'ഇൻപുട്ട് പരിധിയിലെത്തിയതിനാൽ ചാർട്ടിലെ ചില ഡാറ്റ ഒഴിവാക്കി. ഒഴിവാക്കിയ മൂല്യങ്ങൾ പ്രതിനിധീകരിക്കാൻ ചെറുതോ മുൻകൂട്ടി സംഗ്രഹിച്ചതോ ആയ ഡാറ്റാസെറ്റ് നൽകുക.',
   histogramInputLimit: 'ഏറ്റവും പുതിയ 10,000 സാമ്പിളുകൾ മാത്രമേ സൂക്ഷിക്കൂ. വലിയൊരു വിതരണം പ്രതിനിധീകരിക്കാൻ മുൻകൂട്ടി ഇടവേളകളായി തരംതിരിച്ച എണ്ണങ്ങൾ lr-chart-ന് നൽകുക.',
+  chart3dLabel: '3D ചാർട്ട്',
+  chart3dEmpty: 'ദൃശ്യമായ ചാർട്ട് ഡാറ്റ ഒന്നുമില്ല.',
+  chart3dRow: '{label}, {total} വരികളിൽ {index}-ാമത്തെ വരി',
+  chart3dInstructions: 'വരികൾക്കിടയിൽ നീങ്ങാൻ ആരോ കീകളും, ആദ്യത്തെയും അവസാനത്തെയും വരിയിലേക്ക് പോകാൻ Home, End എന്നിവയും, പേജുകൾ മാറ്റാൻ Page Up, Page Down എന്നിവയും ഉപയോഗിക്കുക. വരി തിരഞ്ഞെടുക്കാൻ Enter അല്ലെങ്കിൽ സ്പേസ് അമർത്തുക.',
+  chart3dFit: 'ചാർട്ട് കാഴ്ചയിൽ ഒതുക്കുക',
+  chart3dName: 'ലേബൽ',
+  chart3dSize: 'വ്യാസം (CSS പിക്സൽ)',
+  chart3dCategory: 'വിഭാഗം',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ml', strings);

@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'A dobozdiagramok megjelenítéséhez ennek az összetevőnek szüksége van az opcionális dobozdiagram-csomagra.',
   chartInputLimit: 'A bemeneti korlát elérése miatt egyes diagramadatok kimaradtak. A kimaradt értékek megjelenítéséhez adjon meg kisebb vagy előzetesen összesített adathalmazt.',
   histogramInputLimit: 'Csak a legújabb 10 000 minta marad meg. Nagyobb eloszlás megjelenítéséhez adjon át előzetesen osztályközökbe csoportosított darabszámokat az lr-chart számára.',
+  chart3dLabel: '3D diagram',
+  chart3dEmpty: 'Nincsenek látható diagramadatok.',
+  chart3dRow: '{label}, {index}. sor összesen {total} sorból',
+  chart3dInstructions: 'A nyílbillentyűkkel léphet a sorok között, a Home és az End az első és az utolsó sorra ugrik, a Page Up és a Page Down pedig lapoz. Sor kijelöléséhez nyomja meg az Enter vagy a szóköz billentyűt.',
+  chart3dFit: 'Diagram igazítása',
+  chart3dName: 'Címke',
+  chart3dSize: 'Átmérő (CSS-képpont)',
+  chart3dCategory: 'Kategória',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('hu', strings);

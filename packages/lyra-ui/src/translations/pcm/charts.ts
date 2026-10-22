@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Dis component need make you install di optional box-plot chart package before e fit show box plots.',
   chartInputLimit: 'Some chart data no enter because di input don reach im limit. Give smaller data set or data wey dem don summarize before, make e fit represent di values wey no enter.',
   histogramInputLimit: 'Na only di newest 10,000 samples dem dey keep. Give lr-chart counts wey dem don group into ranges, make e fit represent bigger distribution.',
+  chart3dLabel: '3D chart',
+  chart3dEmpty: 'No chart data dey show.',
+  chart3dRow: '{label}, row {index} out of {total}',
+  chart3dInstructions: 'Use arrow keys to move between rows, Home and End for di first and last row, and Page Up and Page Down to change page. Press Enter or Space to choose di row.',
+  chart3dFit: 'Make chart fit',
+  chart3dName: 'Label',
+  chart3dSize: 'Diameter (CSS pixels)',
+  chart3dCategory: 'Kind',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('pcm', strings);

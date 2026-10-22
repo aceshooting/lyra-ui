@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Această componentă necesită pachetul opțional pentru diagrame box plot instalat pentru a le afișa.',
   chartInputLimit: 'Unele date ale graficului au fost omise deoarece s-a atins o limită de intrare. Furnizați un set de date mai mic sau agregat în prealabil pentru a reprezenta valorile omise.',
   histogramInputLimit: 'Sunt păstrate doar cele mai recente 10.000 de eșantioane. Furnizați către lr-chart numărul de observații calculat în prealabil pentru fiecare interval pentru a reprezenta o distribuție mai mare.',
+  chart3dLabel: 'Grafic 3D',
+  chart3dEmpty: 'Nu există date vizibile în grafic.',
+  chart3dRow: '{label}, rândul {index} din {total}',
+  chart3dInstructions: 'Folosiți tastele săgeată pentru a vă deplasa între rânduri, Home și End pentru primul și ultimul rând și Page Up și Page Down pentru a schimba pagina. Apăsați Enter sau Spațiu pentru a selecta un rând.',
+  chart3dFit: 'Încadrează graficul',
+  chart3dName: 'Etichetă',
+  chart3dSize: 'Diametru (pixeli CSS)',
+  chart3dCategory: 'Categorie',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ro', strings);

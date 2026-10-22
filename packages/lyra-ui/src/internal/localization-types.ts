@@ -1615,7 +1615,18 @@ export type LyraMessageKey =
   | 'mapDrawingVertex'
   | 'mapDrawingEditInstructions'
   | 'panoramaInstructions'
-  | 'panoramaHotspotsLabel';
+  | 'panoramaHotspotsLabel'
+  | 'chart3dLabel'
+  | 'chart3dEmpty'
+  | 'chart3dRow'
+  | 'chart3dInstructions'
+  | 'chart3dFit'
+  | 'chart3dName'
+  | 'chart3dSize'
+  | 'chart3dCategory'
+  | 'chart3dXAxis'
+  | 'chart3dYAxis'
+  | 'chart3dZAxis';
 
 /**
  * Message-catalog input. Registration and per-instance `.strings` assignment snapshot eligible

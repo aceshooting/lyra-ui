@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'ਬਾਕਸ ਪਲਾਟ ਦਿਖਾਉਣ ਲਈ ਇਸ ਕੰਪੋਨੈਂਟ ਵਿੱਚ ਵਿਕਲਪਿਕ ਬਾਕਸ-ਪਲਾਟ ਚਾਰਟ ਪੈਕੇਜ ਸਥਾਪਤ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ।',
   chartInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਚਾਰਟ ਦਾ ਕੁਝ ਡਾਟਾ ਛੱਡ ਦਿੱਤਾ ਗਿਆ ਹੈ। ਛੱਡੇ ਗਏ ਮੁੱਲਾਂ ਨੂੰ ਦਰਸਾਉਣ ਲਈ ਛੋਟਾ ਜਾਂ ਪਹਿਲਾਂ ਤੋਂ ਜੋੜ ਕੇ ਸੰਖੇਪ ਕੀਤਾ ਡਾਟਾਸੈੱਟ ਦਿਓ।',
   histogramInputLimit: 'ਸਿਰਫ਼ ਸਭ ਤੋਂ ਨਵੇਂ 10,000 ਨਮੂਨੇ ਰੱਖੇ ਜਾਂਦੇ ਹਨ। ਵੱਡੀ ਵੰਡ ਦਰਸਾਉਣ ਲਈ ਪਹਿਲਾਂ ਤੋਂ ਅੰਤਰਾਲਾਂ ਵਿੱਚ ਵੰਡੀਆਂ ਗਿਣਤੀਆਂ lr-chart ਨੂੰ ਦਿਓ।',
+  chart3dLabel: '3D ਚਾਰਟ',
+  chart3dEmpty: 'ਚਾਰਟ ਵਿੱਚ ਕੋਈ ਦਿਖਾਈ ਦੇਣ ਵਾਲਾ ਡਾਟਾ ਨਹੀਂ ਹੈ।',
+  chart3dRow: '{label}, {total} ਵਿੱਚੋਂ ਕਤਾਰ {index}',
+  chart3dInstructions: 'ਕਤਾਰਾਂ ਵਿਚਕਾਰ ਜਾਣ ਲਈ ਤੀਰ ਕੁੰਜੀਆਂ, ਪਹਿਲੀ ਅਤੇ ਆਖ਼ਰੀ ਕਤਾਰ ਲਈ Home ਅਤੇ End, ਅਤੇ ਪੰਨੇ ਬਦਲਣ ਲਈ Page Up ਅਤੇ Page Down ਵਰਤੋ। ਕਤਾਰ ਚੁਣਨ ਲਈ Enter ਜਾਂ ਸਪੇਸ ਦਬਾਓ।',
+  chart3dFit: 'ਚਾਰਟ ਨੂੰ ਦ੍ਰਿਸ਼ ਵਿੱਚ ਫਿੱਟ ਕਰੋ',
+  chart3dName: 'ਲੇਬਲ',
+  chart3dSize: 'ਵਿਆਸ (CSS ਪਿਕਸਲ)',
+  chart3dCategory: 'ਸ਼੍ਰੇਣੀ',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('pa', strings);

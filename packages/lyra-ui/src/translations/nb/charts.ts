@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Denne komponenten krever at den valgfrie boksplottpakken er installert for å vise boksplott.',
   chartInputLimit: 'Noen diagramdata ble utelatt fordi en inndatagrense ble nådd. Oppgi et mindre eller forhåndsaggregert datasett for å representere de utelatte verdiene.',
   histogramInputLimit: 'Bare de nyeste 10 000 målingene beholdes. Oppgi antall som allerede er gruppert i intervaller, til lr-chart for å representere en større fordeling.',
+  chart3dLabel: '3D-diagram',
+  chart3dEmpty: 'Ingen synlige diagramdata.',
+  chart3dRow: '{label}, rad {index} av {total}',
+  chart3dInstructions: 'Bruk piltastene til å flytte mellom rader, Home og End for første og siste rad og Page Up og Page Down for å bytte side. Trykk på Enter eller mellomrom for å velge en rad.',
+  chart3dFit: 'Tilpass diagram',
+  chart3dName: 'Etikett',
+  chart3dSize: 'Diameter (CSS-piksler)',
+  chart3dCategory: 'Kategori',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('nb', strings);

@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Wannan ɓangaren yana buƙatar a girka fakitin zaɓin jadawalin akwatin don nuna jadawalin akwatin.',
   chartInputLimit: 'An bar wasu bayanan zane saboda an kai iyakar shigarwa. Bayar da ƙaramin rukunin bayanai ko wanda aka taƙaita tun farko don nuna ƙimomin da aka bari.',
   histogramInputLimit: 'Sabbin samfurori 10,000 kawai ake riƙewa. Bayar da adadin da aka riga aka haɗa zuwa rukunan tazara ga lr-chart don nuna rarrabawa mafi girma.',
+  chart3dLabel: 'Jadawalin 3D',
+  chart3dEmpty: 'Babu bayanan jadawali da ake gani.',
+  chart3dRow: '{label}, layi na {index} cikin {total}',
+  chart3dInstructions: 'Yi amfani da maɓallan kibiya don matsawa tsakanin layuka, Home da End don layi na farko da na ƙarshe, da Page Up da Page Down don canza shafi. Danna Enter ko Space don zaɓar layi.',
+  chart3dFit: 'Daidaita jadawali',
+  chart3dName: 'Alama',
+  chart3dSize: 'Diamita (CSS pixels)',
+  chart3dCategory: 'Rukuni',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ha', strings);

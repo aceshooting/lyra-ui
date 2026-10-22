@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Aby wyświetlać wykresy pudełkowe, zainstaluj opcjonalny pakiet wykresów pudełkowych.',
   chartInputLimit: 'Część danych wykresu pominięto z powodu osiągnięcia limitu danych wejściowych. Podaj mniejszy lub wstępnie zagregowany zbiór danych, aby uwzględnić pominięte wartości.',
   histogramInputLimit: 'Zachowywanych jest tylko 10 000 najnowszych próbek. Przekaż do lr-chart liczebności pogrupowane wcześniej w przedziały, aby przedstawić większy rozkład.',
+  chart3dLabel: 'Wykres 3D',
+  chart3dEmpty: 'Brak widocznych danych wykresu.',
+  chart3dRow: '{label}, wiersz {index} z {total}',
+  chart3dInstructions: 'Użyj klawiszy strzałek, aby przechodzić między wierszami, Home i End, aby przejść do pierwszego i ostatniego wiersza, oraz Page Up i Page Down, aby zmieniać strony. Naciśnij Enter lub spację, aby wybrać wiersz.',
+  chart3dFit: 'Dopasuj wykres',
+  chart3dName: 'Etykieta',
+  chart3dSize: 'Średnica (piksele CSS)',
+  chart3dCategory: 'Kategoria',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('pl', strings);

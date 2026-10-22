@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'ಬಾಕ್ಸ್ ಪ್ಲಾಟ್‌ಗಳನ್ನು ರೆಂಡರ್ ಮಾಡಲು ಈ ಘಟಕಕ್ಕೆ ಐಚ್ಛಿಕ box-plot ಚಾರ್ಟ್ ಪ್ಯಾಕೇಜ್ ಸ್ಥಾಪಿಸಬೇಕು.',
   chartInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಚಾರ್ಟ್‌ನ ಕೆಲವು ಡೇಟಾವನ್ನು ಬಿಡಲಾಗಿದೆ. ಬಿಟ್ಟ ಮೌಲ್ಯಗಳನ್ನು ಪ್ರತಿನಿಧಿಸಲು ಚಿಕ್ಕದಾದ ಅಥವಾ ಮೊದಲೇ ಒಟ್ಟುಗೂಡಿಸಿದ ಡೇಟಾಸೆಟ್ ನೀಡಿ.',
   histogramInputLimit: 'ಅತ್ಯಂತ ಹೊಸ 10,000 ಮಾದರಿಗಳನ್ನು ಮಾತ್ರ ಉಳಿಸಿಕೊಳ್ಳಲಾಗುತ್ತದೆ. ದೊಡ್ಡ ವಿತರಣೆಯನ್ನು ಪ್ರತಿನಿಧಿಸಲು ಮೊದಲೇ ಮಧ್ಯಂತರಗಳಾಗಿ ಗುಂಪುಮಾಡಿದ ಎಣಿಕೆಗಳನ್ನು lr-chart ಗೆ ನೀಡಿ.',
+  chart3dLabel: '3D ಚಾರ್ಟ್',
+  chart3dEmpty: 'ಗೋಚರ ಚಾರ್ಟ್ ಡೇಟಾ ಇಲ್ಲ.',
+  chart3dRow: '{label}, {total}ರಲ್ಲಿ ಸಾಲು {index}',
+  chart3dInstructions: 'ಸಾಲುಗಳ ನಡುವೆ ಚಲಿಸಲು ಬಾಣದ ಕೀಗಳನ್ನು, ಮೊದಲ ಮತ್ತು ಕೊನೆಯ ಸಾಲಿಗೆ ಹೋಗಲು Home ಮತ್ತು End, ಪುಟಗಳನ್ನು ಬದಲಿಸಲು Page Up ಮತ್ತು Page Down ಬಳಸಿ. ಸಾಲನ್ನು ಆಯ್ಕೆ ಮಾಡಲು Enter ಅಥವಾ ಸ್ಪೇಸ್ ಒತ್ತಿ.',
+  chart3dFit: 'ಚಾರ್ಟ್ ಅನ್ನು ನೋಟಕ್ಕೆ ಹೊಂದಿಸಿ',
+  chart3dName: 'ಲೇಬಲ್',
+  chart3dSize: 'ವ್ಯಾಸ (CSS ಪಿಕ್ಸೆಲ್‌ಗಳು)',
+  chart3dCategory: 'ವರ್ಗ',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('kn', strings);

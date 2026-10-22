@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Ẹ̀yà yìí nílò àpò àwòrán apótí àṣàyàn láti fi àwọn àwòrán àpótí hàn.',
   chartInputLimit: 'A fi díẹ̀ lára dátà àwòrán sílẹ̀ nítorí pé a ti dé ààlà ìwọlé. Pèsè àkójọpọ̀ dátà tó kéré sí i tàbí èyí tí a ti ṣàkópọ̀ tẹ́lẹ̀ láti ṣojú àwọn iye tí a fi sílẹ̀.',
   histogramInputLimit: 'Àwọn àpẹẹrẹ 10,000 tuntun jù lọ nìkan ni a ń pa mọ́. Pèsè àwọn iye tí a ti pín sí ẹgbẹ́ gẹ́gẹ́ bí àárín tẹ́lẹ̀ fún lr-chart láti ṣojú ìpínkiri tó tóbi sí i.',
+  chart3dLabel: 'Àwòrán 3D',
+  chart3dEmpty: 'Kò sí dátà àwòrán tí a lè rí.',
+  chart3dRow: '{label}, ìlà {index} nínú {total}',
+  chart3dInstructions: 'Lo àwọn kọ́kọ́rọ́ ọfà láti lọ láàárín àwọn ìlà, Home àti End fún ìlà àkọ́kọ́ àti ìkẹyìn, àti Page Up àti Page Down láti yí ojúewé padà. Tẹ Enter tàbí Space láti yan ìlà.',
+  chart3dFit: 'Mú àwòrán bá ààyè ìwò mu',
+  chart3dName: 'Àmì',
+  chart3dSize: 'Ìwọ̀n diameter (CSS píksẹ́lì)',
+  chart3dCategory: 'Ẹ̀ka',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('yo', strings);

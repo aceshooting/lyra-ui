@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Den här komponenten behöver det valfria lådagramspaketet för att kunna rita lådagram.',
   chartInputLimit: 'Vissa diagramdata utelämnades eftersom en indatagräns nåddes. Ange en mindre eller föraggregerad datamängd för att representera de utelämnade värdena.',
   histogramInputLimit: 'Endast de senaste 10 000 mätvärdena behålls. Ange antal som redan grupperats i intervall till lr-chart för att representera en större fördelning.',
+  chart3dLabel: '3D-diagram',
+  chart3dEmpty: 'Inga synliga diagramdata.',
+  chart3dRow: '{label}, rad {index} av {total}',
+  chart3dInstructions: 'Använd piltangenterna för att flytta mellan rader, Home och End för den första och sista raden och Page Up och Page Down för att byta sida. Tryck på Enter eller mellanslag för att välja en rad.',
+  chart3dFit: 'Anpassa diagram',
+  chart3dName: 'Etikett',
+  chart3dSize: 'Diameter (CSS-pixlar)',
+  chart3dCategory: 'Kategori',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('sv', strings);

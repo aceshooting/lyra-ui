@@ -1868,6 +1868,156 @@ loads are memoized per page.
   assertive sink.
 
 ---
+
+## `lr-chart-3d`
+
+A bounded three-dimensional scatter, bubble or line chart over immutable typed columns. It always
+renders an accessible data table and, only when asked, a WebGL view from the optional
+`@aceshooting/lyra-3d` companion. It does not use Chart.js and has no other peer dependency.
+
+The default view is the table: nothing is downloaded and every row is reachable by keyboard.
+`engine="webgl"` additionally asks for the graphical renderer. The table stays available while the
+renderer loads and whenever it is unavailable, unsupported, lost or failed. There is no built-in
+graphical renderer, so a failed WebGL view descends straight to the table.
+
+**Data contract:**
+- `data: LyraChart3dColumns | null = null` (attribute: false) — up to 1,000,000 rows as typed
+  columns. Required: `ids` (unique, non-empty strings) and Float32Array `x`, `y` and `z`, all as
+  long as `ids` and finite. Optional: Float32Array `size`, Uint16Array `category` with a
+  `categories` name array (at most 65,536 names), and a `labels` string array. Column order is
+  row order: row `i` of every column describes row `i`.
+- The columns are immutable by contract. Admission runs once per assigned object, so publish a
+  change by assigning a new object; mutating arrays afterwards is not observed. Numeric buffers
+  stay caller-owned and are never copied (string columns are snapshotted into frozen arrays), and
+  accessor properties on the object you pass are never called.
+- Invalid columns — a missing coordinate, a duplicate or empty ID, a length mismatch, a
+  non-finite coordinate, a negative or oversized `size`, a category index with no name, or more
+  than 1,000,000 rows — are never drawn. The chart shows a localized `error` message that names the
+  offending column (`data.x`) or the row ceiling, and announces it. Valid but empty data, and data
+  whose rows are all hidden by `hiddenCategories`, show the separate `empty` message.
+- `selectedId: string = ''` (attribute `selected-id`) — the selected source row. Programmatic
+  writes are silent and move the keyboard cursor and table page to that row when it is visible.
+- `label?: string` — the chart's accessible name. A non-blank host `aria-label` wins; unset uses the
+  localized default. The name labels the group, the scrollable table region and the table caption.
+
+**Size, type and axes:**
+- `type: Chart3dType = 'scatter'` — `'scatter'` draws uniform dots, `'bubble'` draws dots sized by
+  the `size` column and adds a diameter column to the table, and `'line'` joins each pair of
+  adjacent source rows, independent of category. Any other value normalizes to `'scatter'`.
+- `size` holds CSS-pixel diameters from 0 to 1024 and affects only `'bubble'`. Scatter and line
+  points use `--lr-chart-3d-point-size`; lines use `--lr-chart-3d-line-width`.
+- `xAxis`, `yAxis`, `zAxis: LyraChart3dAxis = {}` (attribute: false) — `label` and `unit`
+  (at most 128 and 64 characters). The title is `label (unit)`; an unset label shows the localized
+  `X`, `Y` or `Z`. Each axis spans the visible rows' extrema with five locale-aware ticks (one tick
+  when the extrema are equal). Coordinates are normalized uniformly across all three axes so the
+  data keeps its proportions, and Y is inverted so a larger source value is drawn higher. The table
+  and the events always keep the source values. Equal-content assignments are no-ops, so an inline
+  object literal in a template does not restart the renderer.
+
+**Camera:**
+- `camera?: LyraChart3dCamera` (attribute: false) — a bounded orbit camera in the chart's normalized
+  world: `yaw` and `pitch` in radians (pitch is kept short of the poles), a positive `distance`
+  and a `target` point; every field is clamped and non-finite values fall back to the defaults
+  (yaw 0, pitch 0, distance 5, target at the origin). Y increases downward. Unset, the renderer
+  frames all visible rows when it mounts. Writes are silent.
+- A user gesture in the graphical view, or the Fit control, updates `camera` and emits
+  `lr-camera-change`. `fit()` and `focusRow(id)` are silent and work without a renderer.
+
+**Filtering and paging:**
+- `hiddenCategories: ReadonlySet<number>` — category indices (the values of `data.category`) to hide.
+  Hidden rows leave the table and the renderer, but the rows that remain keep their IDs and original
+  source indices, and a line breaks at a hidden row instead of bridging it. Assign a new set to
+  publish a change; values that are not integers from 0 to 65,535 are ignored, and the getter
+  returns a detached copy.
+- The table shows 200 rows per page, with previous/next controls and a page summary, so no per-row
+  DOM exists beyond the current page. The page follows the keyboard cursor and the selected row.
+
+**Keyboard and selection:** one `cursor` button names the current row and reaches every visible row.
+Arrow keys move one row (horizontal arrows swap under right-to-left layouts), Home and End jump to
+the first and last row, Page Up and Page Down move by one page, and Enter or Space selects the
+cursor's row. Keys pressed with Alt, Ctrl or Meta are left to the browser. Each table row also has
+a native `row-button` whose `aria-pressed` is `"true"` or `"false"`. Cursor moves are announced politely.
+
+**Optional WebGL renderer:**
+- `engine: Engine3dPreference = 'builtin'` — `'builtin'` shows only the table. `'webgl'` lazily
+  requests `@aceshooting/lyra-3d/points`; any other value normalizes to `'builtin'`, so a typo never
+  opts an application into a download. Install the companion with `pnpm add @aceshooting/lyra-3d`.
+- The renderer mounts the first time the chart is on screen and exposed to users (not `hidden`,
+  `inert` or `aria-hidden`), after a WebGL2 capability probe and before anything is downloaded.
+  It receives all visible rows, so there is no sampling.
+- A failure emits `lr-engine-fallback` with `{ from: 'webgl', to: 'list', reason }`, frozen, once per
+  step: `'unavailable'` (companion missing), `'unsupported'` (no WebGL2), `'context-lost'` or `'error'`.
+  A visible localized notice (`engine-notice`) and an assertive announcement accompany it. A lost
+  context keeps its renderer so a restore can resume it; any other failure retires the renderer
+  until an input that restarts the renderer changes. Software rendering is reported the same way.
+- The renderer is replaced when the data, `type`, `hiddenCategories`, the resolved axis titles or the
+  locale change. Colors, fonts, point size and line width come from live tokens and are re-resolved
+  when an ancestor's attributes, the box size or a color-scheme, forced-colors or reduced-motion
+  preference changes. Categories use `--lr-color-chart-1` to `--lr-color-chart-8` and wrap after eight.
+
+**Events:** `lr-chart-row-select` (`detail: { id, index }`, frozen — the activated row's ID and its
+original zero-based index in the source columns; user activation only), `lr-camera-change`
+(`detail: { camera: LyraChart3dCamera }`, frozen — user gestures and the Fit control; programmatic
+`camera`, `fit()` and `focusRow()` are silent) and `lr-engine-fallback`
+(`detail: { from, to, reason }`, frozen). All bubble and are composed.
+
+**Methods:** `fit()` frames every visible row; `focusRow(id: string): boolean` moves the cursor and
+table page to a visible row and aims the camera at it, returning `false` for an unknown or hidden ID.
+
+**Slots:** none.
+
+**CSS parts:** `base` (the named group), `engine` (the graphical viewport, only with `engine="webgl"`),
+`engine-notice` (loading, fallback or software-rendering feedback), `toolbar`, `cursor`, `fit-button`
+(only while the renderer is ready), `instructions`, `table-container`, `table`, `row`, `row-button`,
+`pagination`, `page-button`, `empty` and `error`.
+
+**Themeable custom properties:** `--lr-chart-3d-height` (default `var(--lr-size-24rem)`, the
+viewport's block size), `--lr-chart-3d-point-size` (default `var(--lr-space-s)`) and
+`--lr-chart-3d-line-width` (default `var(--lr-border-width-thin)`). Category colors use the chart
+palette (`--lr-color-chart-1` to `--lr-color-chart-8`, themed through `--lr-theme-color-chart-*`).
+
+**Localization:** `chart3dLabel`, `chart3dEmpty`, `chart3dRow` (`{label}`, `{index}`, `{total}`),
+`chart3dInstructions`, `chart3dFit`, `chart3dName`, `chart3dSize`, `chart3dCategory`, `chart3dXAxis`,
+`chart3dYAxis` and `chart3dZAxis`, plus the shared `engine3d*`, `largeDataInvalid`,
+`largeDataLimit`, `paginationLabel`, `paginationApplied`, `previous` and `next` messages. Numbers,
+ticks and page counts use the effective locale.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-chart-3d.js';
+</script>
+
+<lr-chart-3d id="samples" label="Sample measurements" type="bubble" engine="webgl"></lr-chart-3d>
+<script>
+  const chart = document.getElementById('samples');
+  chart.xAxis = { label: 'Distance', unit: 'km' };
+  chart.data = {
+    ids: ['north', 'east', 'south'],
+    labels: ['North sample', 'East sample', 'South sample'],
+    x: new Float32Array([1, 4, 2]),
+    y: new Float32Array([3, 1, 4]),
+    z: new Float32Array([2, 5, 1]),
+    size: new Float32Array([12, 20, 16]),
+    category: new Uint16Array([0, 1, 0]),
+    categories: ['Control', 'Treatment'],
+  };
+  chart.addEventListener('lr-chart-row-select', (event) => console.log(event.detail.id));
+</script>
+```
+
+**Known gotchas:**
+- Assign a new `data` object to publish a change; re-assigning the same object, or mutating its
+  arrays, does nothing. Hidden-category and axis writes with unchanged content are no-ops too.
+- `size` is ignored unless `type="bubble"`, and `category` indices must stay inside `categories`
+  when names are given.
+- The cursor label ("row 3 of 40") counts visible rows, while `lr-chart-row-select` reports the
+  original source index, which differs whenever categories are hidden.
+- The table, not the canvas, is the accessible alternative: keep `label` meaningful and do not hide
+  the table behind application CSS.
+- Importing the component never loads `@aceshooting/lyra-3d`; only an explicit `engine="webgl"` does.
+
+---
+
 ## Formatted labels in right-to-left layouts
 
 Every formatted chart label is bidi-isolated: it paints in the direction of its own first strong
@@ -2244,6 +2394,44 @@ These named interfaces and helper signatures are available to typed integrations
     index: number;
     label: string;
     seriesLabel: string | null;
+  }`
+
+- **`components-charts-chart-3d-chart-3d-contracts`** — Data, axis, camera and event types for `lr-chart-3d`.
+  `Chart3dType` is `'scatter' | 'bubble' | 'line'`. Import the types with `import type` from
+  `@aceshooting/lyra-ui`, or from `@aceshooting/lyra-ui/components/charts/chart-3d/chart-3d.class.js`.
+  `LyraChart3dColumns {
+    readonly ids: readonly string[];
+    readonly x: Float32Array;
+    readonly y: Float32Array;
+    readonly z: Float32Array;
+    readonly size?: Float32Array;
+    readonly category?: Uint16Array;
+    readonly categories?: readonly string[];
+    readonly labels?: readonly string[];
+  }`
+  `LyraChart3dAxis {
+    readonly label?: string;
+    readonly unit?: string;
+  }`
+  `LyraChart3dCamera {
+    readonly yaw: number;
+    readonly pitch: number;
+    readonly distance: number;
+    readonly target: { readonly x: number; readonly y: number; readonly z: number };
+  }`
+  `LyraChart3dRow {
+    readonly id: string;
+    readonly index: number;
+    readonly label: string;
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
+    readonly size?: number;
+    readonly category?: string;
+  }`
+  `LyraChart3dSelectDetail {
+    readonly id: string;
+    readonly index: number;
   }`
 
 ## Optional chart palette foundations

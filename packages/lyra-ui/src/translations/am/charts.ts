@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'የሳጥን ግራፎችን ለማሳየት ይህ ክፍል አማራጭ የሳጥን ግራፍ ጥቅል እንዲጫን ይፈልጋል።',
   chartInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ የገበታ ውሂብ ተወግዷል። የተወገዱትን እሴቶች ለማካተት ያነሰ ወይም አስቀድሞ የተጠቃለለ የውሂብ ስብስብ ያቅርቡ።',
   histogramInputLimit: 'የቅርብ ጊዜዎቹ 10,000 ናሙናዎች ብቻ ይቀመጣሉ። ሰፊ ስርጭትን ለማሳየት አስቀድሞ በክፍሎች የተመደቡ ብዛቶችን ለlr-chart ያቅርቡ።',
+  chart3dLabel: '3D ገበታ',
+  chart3dEmpty: 'ምንም የሚታይ የገበታ ውሂብ የለም።',
+  chart3dRow: '{label}፣ ከ{total} ረድፎች ረድፍ {index}',
+  chart3dInstructions: 'በረድፎች መካከል ለመንቀሳቀስ የቀስት ቁልፎችን፣ ወደ መጀመሪያው እና መጨረሻው ረድፍ ለመሄድ Home እና End፣ ገጾችን ለመቀየር Page Up እና Page Down ይጠቀሙ። ረድፍ ለመምረጥ Enter ወይም Space ይጫኑ።',
+  chart3dFit: 'ገበታውን ከእይታው ጋር አስማማ',
+  chart3dName: 'መለያ',
+  chart3dSize: 'ዲያሜትር (CSS ፒክሰሎች)',
+  chart3dCategory: 'ምድብ',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('am', strings);

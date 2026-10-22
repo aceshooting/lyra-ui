@@ -1672,6 +1672,17 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   mapDrawingEditInstructions: 'Use arrow keys to move this vertex; hold Shift for larger steps. Page Up and Page Down select vertices. Home and End select the first and last visible vertex.',
   panoramaInstructions: 'Use arrow keys to look around, plus and minus to zoom, and Home to reset the view.',
   panoramaHotspotsLabel: 'Panorama hotspots',
+  chart3dLabel: 'Three-dimensional chart',
+  chart3dEmpty: 'No visible chart data.',
+  chart3dRow: '{label}, row {index} of {total}',
+  chart3dInstructions: 'Use arrow keys to move between rows, Home and End for the first and last row, and Page Up and Page Down to change pages. Press Enter or Space to select a row.',
+  chart3dFit: 'Fit chart',
+  chart3dName: 'Label',
+  chart3dSize: 'Diameter (CSS pixels)',
+  chart3dCategory: 'Category',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 export {

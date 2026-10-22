@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Za prikaz kutijastih dijagrama ova komponenta zahtijeva instaliran izborni paket za kutijaste dijagrame.',
   chartInputLimit: 'Neki podaci grafikona izostavljeni su jer je dosegnuto ograničenje ulaza. Za prikaz izostavljenih vrijednosti dostavite manji ili unaprijed agregirani skup podataka.',
   histogramInputLimit: 'Zadržava se samo najnovijih 10.000 uzoraka. Za prikaz veće distribucije dostavite komponenti lr-chart brojeve uzoraka unaprijed grupirane u razrede.',
+  chart3dLabel: '3D grafikon',
+  chart3dEmpty: 'Nema vidljivih podataka grafikona.',
+  chart3dRow: '{label}, redak {index} od {total}',
+  chart3dInstructions: 'Tipkama sa strelicama pomičite se između redaka, tipkama Home i End prijeđite na prvi i posljednji redak, a tipkama Page Up i Page Down mijenjajte stranice. Tipkom Enter ili razmaknicom odaberite redak.',
+  chart3dFit: 'Prilagodi grafikon',
+  chart3dName: 'Oznaka',
+  chart3dSize: 'Promjer (CSS pikseli)',
+  chart3dCategory: 'Kategorija',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('hr', strings);

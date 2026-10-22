@@ -656,6 +656,15 @@ export type {
   LyraBoxPlotEventMap,
 } from './components/charts/chart/box-plot.class.js';
 export type {
+  Chart3dType,
+  LyraChart3dAxis,
+  LyraChart3dCamera,
+  LyraChart3dColumns,
+  LyraChart3dEventMap,
+  LyraChart3dRow,
+  LyraChart3dSelectDetail,
+} from './components/charts/chart-3d/chart-3d.class.js';
+export type {
   LyraGraphCamera,
   GraphSource,
   LyraGraphCommunity,

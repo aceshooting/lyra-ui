@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Ta komponenta za izris škatlastih diagramov potrebuje nameščen izbirni paket za škatlaste diagrame.',
   chartInputLimit: 'Nekateri podatki grafikona so bili izpuščeni, ker je bila dosežena omejitev vnosa. Za prikaz izpuščenih vrednosti podajte manjši ali vnaprej združen nabor podatkov.',
   histogramInputLimit: 'Ohrani se samo najnovejših 10.000 vzorcev. Za prikaz večje porazdelitve podajte v lr-chart vnaprej izračunano število vzorcev za vsak interval.',
+  chart3dLabel: '3D-grafikon',
+  chart3dEmpty: 'Ni vidnih podatkov grafikona.',
+  chart3dRow: '{label}, vrstica {index} od {total}',
+  chart3dInstructions: 'S puščičnimi tipkami se premikate med vrsticami, s Home in End pridete do prve ali zadnje vrstice, s Page Up in Page Down pa se pomikate med stranmi. Z Enter ali preslednico izberete vrstico.',
+  chart3dFit: 'Prilagodi grafikon',
+  chart3dName: 'Oznaka',
+  chart3dSize: 'Premer (slikovne pike CSS)',
+  chart3dCategory: 'Kategorija',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('sl', strings);

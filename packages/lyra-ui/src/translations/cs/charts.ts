@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Tato komponenta vyžaduje k vykreslení krabicových grafů nainstalovaný volitelný balíček pro krabicové grafy.',
   chartInputLimit: 'Některá data grafu byla vynechána kvůli dosažení limitu vstupu. Pro zobrazení vynechaných hodnot zadejte menší nebo předem agregovanou datovou sadu.',
   histogramInputLimit: 'Uchovává se pouze nejnovějších 10 000 vzorků. Pro zobrazení většího rozdělení zadejte do lr-chart četnosti předem seskupené do intervalů.',
+  chart3dLabel: '3D graf',
+  chart3dEmpty: 'Žádná viditelná data grafu.',
+  chart3dRow: '{label}, řádek {index} z {total}',
+  chart3dInstructions: 'Mezi řádky se pohybujte šipkami, na první a poslední řádek přejděte klávesami Home a End a stránky přepínejte klávesami Page Up a Page Down. Řádek vyberete klávesou Enter nebo mezerníkem.',
+  chart3dFit: 'Přizpůsobit graf',
+  chart3dName: 'Popisek',
+  chart3dSize: 'Průměr (CSS pixely)',
+  chart3dCategory: 'Kategorie',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('cs', strings);

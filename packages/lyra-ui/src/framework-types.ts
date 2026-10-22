@@ -45,6 +45,7 @@ import type { LyraToolResultView, LyraToolResultViewEventMap } from './component
 import type { LyraToolSelectDialog, LyraToolSelectDialogEventMap } from './components/agent-tools/tool-select-dialog/tool-select-dialog.class.js';
 import type { LyraToolTimeline, LyraToolTimelineEventMap } from './components/agent-tools/tool-timeline/tool-timeline.class.js';
 import type { LyraTraceTree, LyraTraceTreeEventMap } from './components/agent-tools/trace-tree/trace-tree.class.js';
+import type { LyraChart3d, LyraChart3dEventMap } from './components/charts/chart-3d/chart-3d.class.js';
 import type { LyraBarChart } from './components/charts/chart/bar-chart.class.js';
 import type { LyraBoxPlot, LyraBoxPlotEventMap } from './components/charts/chart/box-plot.class.js';
 import type { LyraBubbleChart } from './components/charts/chart/bubble-chart.class.js';
@@ -2207,6 +2208,35 @@ export interface LyraComponentTypeMap {
       'x-label'?: LyraChart['xLabel'];
       'y-label'?: LyraChart['yLabel'];
       'y2-label'?: LyraChart['y2Label'];
+    };
+  };
+  'lr-chart-3d': {
+    element: LyraChart3d;
+    properties: LyraElementProperties<
+      LyraChart3d,
+      | 'camera'
+      | 'data'
+      | 'engine'
+      | 'hiddenCategories'
+      | 'label'
+      | 'locale'
+      | 'selectedId'
+      | 'strings'
+      | 'type'
+      | 'xAxis'
+      | 'yAxis'
+      | 'zAxis',
+      {}
+    >;
+    events: LyraChart3dEventMap;
+    eventNames:       | 'lr-camera-change'
+      | 'lr-chart-row-select'
+      | 'lr-engine-fallback';
+    cssNames:       | '--lr-chart-3d-height'
+      | '--lr-chart-3d-line-width'
+      | '--lr-chart-3d-point-size';
+    attributeAliases: {
+      'selected-id'?: LyraChart3d['selectedId'];
     };
   };
   'lr-chat-composer': {

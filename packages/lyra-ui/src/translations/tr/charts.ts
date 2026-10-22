@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Kutu grafiklerini görüntülemek için bu bileşenin isteğe bağlı kutu grafiği paketine ihtiyacı vardır.',
   chartInputLimit: 'Girdi sınırına ulaşıldığı için bazı grafik verileri atlandı. Atlanan değerleri temsil etmek için daha küçük veya önceden toplulaştırılmış bir veri kümesi sağlayın.',
   histogramInputLimit: 'Yalnızca en yeni 10.000 örnek saklanır. Daha büyük bir dağılımı temsil etmek için lr-chart bileşenine önceden aralıklara göre gruplandırılmış sayımlar sağlayın.',
+  chart3dLabel: '3B grafik',
+  chart3dEmpty: 'Görünür grafik verisi yok.',
+  chart3dRow: '{label}, {total} satırdan {index}. satır',
+  chart3dInstructions: 'Satırlar arasında gezinmek için ok tuşlarını, ilk ve son satır için Home ve End, sayfayı değiştirmek için Page Up ve Page Down kullanın. Satırı seçmek için Enter veya Boşluk tuşuna basın.',
+  chart3dFit: 'Grafiği sığdır',
+  chart3dName: 'Etiket',
+  chart3dSize: 'Çap (CSS pikseli)',
+  chart3dCategory: 'Kategori',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('tr', strings);

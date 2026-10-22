@@ -143,7 +143,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 293
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 294
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -4726,6 +4726,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-carousel-item': LyraCarouselItemReactProps;
   'lr-change-review': LyraChangeReviewReactProps;
   'lr-chart': LyraChartReactProps;
+  'lr-chart-3d': LyraChart3dReactProps;
   'lr-chat-composer': LyraChatComposerReactProps;
   'lr-chat-message': LyraChatMessageReactProps;
   'lr-chat-viewport': LyraChatViewportReactProps;
@@ -5165,6 +5166,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-carousel-item': LyraComponentTypeMap['lr-carousel-item']['element'];
   'lr-change-review': LyraComponentTypeMap['lr-change-review']['element'];
   'lr-chart': LyraComponentTypeMap['lr-chart']['element'];
+  'lr-chart-3d': LyraComponentTypeMap['lr-chart-3d']['element'];
   'lr-chat-composer': LyraComponentTypeMap['lr-chat-composer']['element'];
   'lr-chat-message': LyraComponentTypeMap['lr-chat-message']['element'];
   'lr-chat-viewport': LyraComponentTypeMap['lr-chat-viewport']['element'];
@@ -5475,6 +5477,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-carousel-item': LyraCarouselItemSvelteProps;
   'lr-change-review': LyraChangeReviewSvelteProps;
   'lr-chart': LyraChartSvelteProps;
+  'lr-chart-3d': LyraChart3dSvelteProps;
   'lr-chat-composer': LyraChatComposerSvelteProps;
   'lr-chat-message': LyraChatMessageSvelteProps;
   'lr-chat-viewport': LyraChatViewportSvelteProps;
@@ -5932,6 +5935,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-carousel-item': LyraCarouselItemVueProps;
   'lr-change-review': LyraChangeReviewVueProps;
   'lr-chart': LyraChartVueProps;
+  'lr-chart-3d': LyraChart3dVueProps;
   'lr-chat-composer': LyraChatComposerVueProps;
   'lr-chat-message': LyraChatMessageVueProps;
   'lr-chat-viewport': LyraChatViewportVueProps;

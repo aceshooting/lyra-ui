@@ -78,7 +78,7 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
     const staticSafeCount = values.filter((value) => value === 'static-safe').length;
     const hydrationRequiredCount = values.filter((value) => value === 'hydration-required').length;
     expect(staticSafeCount).to.equal(240);
-    expect(hydrationRequiredCount).to.equal(50);
+    expect(hydrationRequiredCount).to.equal(51);
     expect(staticSafeCount + hydrationRequiredCount).to.equal(LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length);
   });
 
@@ -122,6 +122,12 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
 
   it('classifies a canvas-painted chart as hydration-required', () => {
     expect(getLyraSsrStaticSafety('lr-chart')).to.equal('hydration-required');
+  });
+
+  it('classifies the WebGL-backed lr-chart-3d as hydration-required while its data table stays server-rendered', () => {
+    expect(getLyraSsrMode('lr-chart-3d')).to.equal('render-and-hydrate');
+    expect(getLyraSsrStaticSafety('lr-chart-3d')).to.equal('hydration-required');
+    expect(LYRA_SSR_TAG_CAPABILITIES['lr-chart-3d']).to.deep.equal({ canvas: 'after-hydration' });
   });
 
   it('classifies the SVG fit-layout chart lr-lite-chart as hydration-required for its ResizeObserver-measured geometry, not canvas', () => {

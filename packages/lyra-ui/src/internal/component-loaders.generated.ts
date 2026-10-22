@@ -47,6 +47,7 @@ export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promi
   'lr-carousel-item': () => import('../components/layout/carousel/carousel-item.class.js').then((module) => module.LyraCarouselItem),
   'lr-change-review': () => import('../components/agent-tools/change-review/change-review.class.js').then((module) => module.LyraChangeReview),
   'lr-chart': () => import('../components/charts/chart/chart.class.js').then((module) => module.LyraChart),
+  'lr-chart-3d': () => import('../components/charts/chart-3d/chart-3d.class.js').then((module) => module.LyraChart3d),
   'lr-chat-composer': () => import('../components/conversation/chat-composer/chat-composer.class.js').then((module) => module.LyraChatComposer),
   'lr-chat-message': () => import('../components/conversation/chat-message/chat-message.class.js').then((module) => module.LyraChatMessage),
   'lr-chat-viewport': () => import('../components/conversation/chat-viewport/chat-viewport.class.js').then((module) => module.LyraChatViewport),

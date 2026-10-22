@@ -37,7 +37,7 @@ for the page.
 
 | Peer | Range | Needed by |
 |---|---|---|
-| `@aceshooting/lyra-3d` | `^0.0.0` | `lr-embedding-explorer`, `lr-graph`, `lr-image-viewer`, `lr-knowledge-graph-explorer`, `lr-video` |
+| `@aceshooting/lyra-3d` | `^0.0.0` | `lr-chart-3d`, `lr-embedding-explorer`, `lr-graph`, `lr-image-viewer`, `lr-knowledge-graph-explorer`, `lr-video` |
 | `@aceshooting/lyra-flags` | `^2.3.0` | _(loaded by a shared internal module)_ |
 | `@aceshooting/lyra-map` | `^1.2.0` | `lr-geojson-viewer`, `lr-map` |
 | `@aceshooting/lyra-translations` | `^29.2.2` | _(not referenced by any component)_ |

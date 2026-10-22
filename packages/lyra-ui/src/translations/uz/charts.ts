@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Quti diagrammalarini chiqarish uchun ixtiyoriy box-plot paketini oʻrnatish kerak.',
   chartInputLimit: 'Kiritish chegarasiga yetilgani uchun ayrim diagramma maʼlumotlari tashlab ketildi. Tashlab ketilgan qiymatlarni ifodalash uchun kichikroq yoki oldindan umumlashtirilgan maʼlumotlar toʻplamini taqdim eting.',
   histogramInputLimit: 'Faqat eng yangi 10 000 ta namuna saqlanadi. Kattaroq taqsimotni ifodalash uchun lr-chartʼga oldindan oraliqlar boʻyicha guruhlangan miqdorlarni taqdim eting.',
+  chart3dLabel: '3D diagramma',
+  chart3dEmpty: 'Koʻrinadigan diagramma maʼlumotlari yoʻq.',
+  chart3dRow: '{label}, {total} tadan {index}-qator',
+  chart3dInstructions: 'Qatorlar orasida yurish uchun yoʻnalish tugmalaridan, birinchi va oxirgi qator uchun Home va End, sahifani almashtirish uchun Page Up va Page Down tugmalaridan foydalaning. Qatorni tanlash uchun Enter yoki Probel tugmasini bosing.',
+  chart3dFit: 'Diagrammani koʻrinishga sigʻdirish',
+  chart3dName: 'Yorliq',
+  chart3dSize: 'Diametr (CSS piksel)',
+  chart3dCategory: 'Turkum',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('uz', strings);

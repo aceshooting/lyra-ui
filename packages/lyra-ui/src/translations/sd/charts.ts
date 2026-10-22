@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'باڪس پلاٽ ڏيکارڻ لاءِ هن جزو کي اختياري باڪس پلاٽ چارٽ پيڪيج گهربل آهي.',
   chartInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب چارٽ جي ڪجهه ڊيٽا ڇڏي وئي آهي. ڇڏيل قدرن کي ڏيکارڻ لاءِ ننڍو يا اڳواٽ گڏ ڪري مختصر ڪيل ڊيٽا سيٽ ڏيو.',
   histogramInputLimit: 'صرف سڀ کان نوان 10,000 نمونا رکيا وڃن ٿا. وڏي ورڇ ڏيکارڻ لاءِ اڳواٽ وقفن ۾ ورهايل ڳڻپون lr-chart کي ڏيو.',
+  chart3dLabel: '3D چارٽ',
+  chart3dEmpty: 'چارٽ ۾ ڪو به ڏسڻ ۾ ايندڙ ڊيٽا ناهي.',
+  chart3dRow: '{label}، {total} مان قطار {index}',
+  chart3dInstructions: 'قطارن وچ ۾ وڃڻ لاءِ تير وارين ڪنجين، پهرين ۽ آخري قطار لاءِ Home ۽ End، ۽ صفحا بدلائڻ لاءِ Page Up ۽ Page Down استعمال ڪريو. قطار چونڊڻ لاءِ Enter يا اسپيس دٻايو.',
+  chart3dFit: 'چارٽ کي ڏيک ۾ پورو ڪريو',
+  chart3dName: 'ليبل',
+  chart3dSize: 'قطر (CSS پکسل)',
+  chart3dCategory: 'زمرو',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

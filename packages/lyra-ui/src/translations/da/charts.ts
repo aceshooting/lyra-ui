@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Denne komponent kræver, at den valgfrie boksplotpakke er installeret, for at kunne vise boksplot.',
   chartInputLimit: 'Nogle diagramdata blev udeladt, fordi en grænse for input blev nået. Angiv et mindre eller på forhånd aggregeret datasæt for at repræsentere de udeladte værdier.',
   histogramInputLimit: 'Kun de nyeste 10.000 målinger bevares. Angiv antal, der på forhånd er grupperet i intervaller, til lr-chart for at repræsentere en større fordeling.',
+  chart3dLabel: '3D-diagram',
+  chart3dEmpty: 'Ingen synlige diagramdata.',
+  chart3dRow: '{label}, række {index} af {total}',
+  chart3dInstructions: 'Brug piletasterne til at flytte mellem rækker, Home og End til den første og sidste række og Page Up og Page Down til at skifte side. Tryk på Enter eller mellemrum for at vælge en række.',
+  chart3dFit: 'Tilpas diagram',
+  chart3dName: 'Etiket',
+  chart3dSize: 'Diameter (CSS-pixel)',
+  chart3dCategory: 'Kategori',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('da', strings);

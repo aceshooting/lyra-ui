@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'คอมโพเนนต์นี้ต้องติดตั้งแพ็กเกจแผนภาพกล่องเสริมเพื่อแสดงแผนภาพกล่อง',
   chartInputLimit: 'ละข้อมูลแผนภูมิบางส่วนไว้เนื่องจากถึงขีดจำกัดข้อมูลนำเข้า โปรดใช้ชุดข้อมูลที่เล็กลงหรือสรุปรวมไว้ล่วงหน้าเพื่อแสดงค่าที่ถูกละไว้',
   histogramInputLimit: 'เก็บเฉพาะตัวอย่างล่าสุด 10,000 รายการเท่านั้น โปรดส่งจำนวนที่จัดกลุ่มตามช่วงไว้ล่วงหน้าให้ lr-chart เพื่อแสดงการแจกแจงที่ใหญ่ขึ้น',
+  chart3dLabel: 'แผนภูมิ 3D',
+  chart3dEmpty: 'ไม่มีข้อมูลแผนภูมิที่มองเห็น',
+  chart3dRow: '{label}, แถวที่ {index} จาก {total}',
+  chart3dInstructions: 'ใช้ปุ่มลูกศรเพื่อย้ายระหว่างแถว Home และ End เพื่อไปยังแถวแรกและแถวสุดท้าย และ Page Up และ Page Down เพื่อเปลี่ยนหน้า กด Enter หรือ Space เพื่อเลือกแถว',
+  chart3dFit: 'ปรับแผนภูมิให้พอดี',
+  chart3dName: 'ป้ายกำกับ',
+  chart3dSize: 'เส้นผ่านศูนย์กลาง (พิกเซล CSS)',
+  chart3dCategory: 'หมวดหมู่',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('th', strings);

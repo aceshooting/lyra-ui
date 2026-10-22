@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'برای نمایش نمودار جعبه‌ای، بستهٔ اختیاری نمودار جعبه‌ای را نصب کنید.',
   chartInputLimit: 'برخی داده‌های نمودار به‌دلیل رسیدن به حد ورودی حذف شدند. برای نمایش مقادیر حذف‌شده، یک مجموعهٔ دادهٔ کوچک‌تر یا از پیش جمع‌بندی‌شده فراهم کنید.',
   histogramInputLimit: 'تنها تازه‌ترین ۱۰٬۰۰۰ نمونه نگهداری می‌شوند. برای نمایش یک توزیع بزرگ‌تر، شمارهای از پیش گروه‌بندی‌شده در بازه‌ها را به lr-chart بدهید.',
+  chart3dLabel: 'نمودار سه‌بعدی',
+  chart3dEmpty: 'هیچ اطلاعات قابل دیدی در نمودار وجود ندارد.',
+  chart3dRow: '{label}، ردیف {index} از {total}',
+  chart3dInstructions: 'برای حرکت میان ردیف‌ها از کلیدهای جهت‌نما، برای رفتن به نخستین و آخرین ردیف از Home و End و برای تغییر صفحه از Page Up و Page Down استفاده کنید. برای انتخاب یک ردیف Enter یا کلید فاصله را فشار دهید.',
+  chart3dFit: 'جا دادن نمودار در نما',
+  chart3dName: 'برچسب',
+  chart3dSize: 'قطر (پیکسل CSS)',
+  chart3dCategory: 'دسته‌بندی',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

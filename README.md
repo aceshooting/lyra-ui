@@ -44,7 +44,7 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 308 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 309 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
@@ -175,7 +175,7 @@ breaks in each major since v22, with the matching `lyra-ui-migrate` profile; ful
 
 ## Components
 
-308 custom elements across eleven component families. Every tag has a live, interactive example on the
+309 custom elements across eleven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -200,7 +200,7 @@ the alias stays valid if the component's internal family changes. Import
 
 ## Theming, internationalization & RTL
 
-All 308 tags share three guarantees, not opt-in per component: **theming** through `--lr-*` design tokens (declared once per document and
+All 309 tags share three guarantees, not opt-in per component: **theming** through `--lr-*` design tokens (declared once per document and
 re-derived at [theme scopes](./packages/lyra-ui/llms/shared/styles-and-tokens.md#theme-scopes); a light/dark base in `theme.css`, optional looks, and an independent style API for look, surface, density, mode and accent;
 [styling guide](./packages/lyra-ui/llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density)),
 **internationalization** through one runtime (`registerLyraLocale`/`setLyraLocale` or a per-instance `.strings`

@@ -247,7 +247,11 @@ test('creates a complete populated component scaffold and runs focused three-eng
     readFileSync(join(packageDir, 'src/components/utility/index.ts'), 'utf8'),
     /\.\/status-panel\/status-panel\.js/,
   );
-  assert.match(readFileSync(join(packageDir, 'llms/utility.md'), 'utf8'), /## `lr-status-panel`/);
+  const docs = readFileSync(join(packageDir, 'llms/utility.md'), 'utf8');
+  assert.match(docs, /## `lr-status-panel`/);
+  // The documentation example must import through the stable tag alias, the registration route the exports map lists.
+  assert.match(docs, /import '@aceshooting\/lyra-ui\/components\/lr-status-panel\.js';/);
+  assert.doesNotMatch(docs, /components\/utility\/status-panel\/status-panel\.js/);
   const families = JSON.parse(readFileSync(join(packageDir, 'scripts/component-families.json'), 'utf8'));
   assert.equal(families.directories['status-panel'], 'utility');
 
@@ -349,6 +353,30 @@ test('rejects invalid, traversal, and already-prefixed names before writing', as
       request.pattern,
     );
     assert.equal(existsSync(join(packageDir, 'src/components/utility/status-panel')), false);
+  }
+});
+
+test('accepts a digit-leading suffix segment such as chart-3d and still rejects a leading digit or empty segments', async () => {
+  const packageDir = fixturePackage();
+  let classSource = '';
+  await assert.rejects(
+    scaffoldComponent({
+      packageDir, family: 'utility', name: 'chart-3d',
+      runStep(step) {
+        classSource = readFileSync(join(packageDir, 'src/components/utility/chart-3d/chart-3d.class.ts'), 'utf8');
+        throw new Error(`stopped at ${step.id}`);
+      },
+    }),
+    /stopped at manifest/,
+  );
+  assert.match(classSource, /export class LyraChart3d extends LyraElement/);
+  assert.match(classSource, /@customElement lr-chart-3d/);
+  assert.equal(existsSync(join(packageDir, 'src/components/utility/chart-3d')), false);
+  for (const name of ['3d-chart', 'chart--3d', 'chart-', '-3d']) {
+    await assert.rejects(
+      scaffoldComponent({ packageDir: fixturePackage(), family: 'utility', name, runStep: () => assert.fail('runner must not execute') }),
+      /Invalid component name/,
+    );
   }
 });
 

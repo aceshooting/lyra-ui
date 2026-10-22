@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'બૉક્સ પ્લૉટ દેખાડવા માટે વૈકલ્પિક બૉક્સ-પ્લૉટ ચાર્ટ પૅકેજ ઇન્સ્ટોલ કરવું જરૂરી છે.',
   chartInputLimit: 'ઇનપુટ મર્યાદા પહોંચી જવાથી ચાર્ટનો કેટલોક ડેટા છોડી દેવાયો છે. છોડી દેવાયેલા મૂલ્યો દર્શાવવા નાનો અથવા અગાઉથી એકત્રિત કરેલો ડેટાસેટ આપો.',
   histogramInputLimit: 'ફક્ત સૌથી નવા 10,000 નમૂનાઓ જ રાખવામાં આવે છે. વધુ મોટું વિતરણ દર્શાવવા અગાઉથી અંતરાલોમાં જૂથબદ્ધ કરેલી ગણતરીઓ lr-chart ને આપો.',
+  chart3dLabel: '3D ચાર્ટ',
+  chart3dEmpty: 'ચાર્ટમાં કોઈ દેખાતો ડેટા નથી.',
+  chart3dRow: '{label}, {total}માંથી પંક્તિ {index}',
+  chart3dInstructions: 'પંક્તિઓ વચ્ચે જવા તીર કી, પ્રથમ અને છેલ્લી પંક્તિ માટે Home અને End અને પૃષ્ઠ બદલવા Page Up અને Page Down વાપરો. પંક્તિ પસંદ કરવા Enter અથવા સ્પેસ દબાવો.',
+  chart3dFit: 'ચાર્ટને દૃશ્યમાં સમાવો',
+  chart3dName: 'લેબલ',
+  chart3dSize: 'વ્યાસ (CSS પિક્સેલ)',
+  chart3dCategory: 'શ્રેણી',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('gu', strings);

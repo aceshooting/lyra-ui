@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: '박스 플롯을 렌더링하려면 선택적 박스 플롯 차트 패키지를 설치해야 합니다.',
   chartInputLimit: '입력 한도에 도달하여 일부 차트 데이터가 생략되었습니다. 생략된 값을 나타내려면 더 작거나 미리 집계된 데이터 세트를 제공하세요.',
   histogramInputLimit: '최신 샘플 10,000개만 유지됩니다. 더 큰 분포를 나타내려면 구간별로 미리 집계한 개수를 lr-chart에 제공하세요.',
+  chart3dLabel: '3D 차트',
+  chart3dEmpty: '표시되는 차트 데이터가 없습니다.',
+  chart3dRow: '{label}, {total}개 중 {index}번째 행',
+  chart3dInstructions: '방향키로 행 사이를 이동하고, Home 및 End로 첫 번째와 마지막 행으로 이동하며, Page Up 및 Page Down으로 페이지를 변경하세요. Enter 또는 스페이스 키로 행을 선택하세요.',
+  chart3dFit: '차트 전체 맞춤',
+  chart3dName: '레이블',
+  chart3dSize: '지름(CSS 픽셀)',
+  chart3dCategory: '카테고리',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ko', strings);

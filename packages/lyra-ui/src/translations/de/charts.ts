@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Für diese Komponente muss das optionale Boxplot-Diagrammpaket installiert sein, um Boxplots darzustellen.',
   chartInputLimit: 'Einige Diagrammdaten wurden ausgelassen, weil eine Eingabegrenze erreicht wurde. Übergeben Sie einen kleineren oder vorab aggregierten Datensatz, um die ausgelassenen Werte darzustellen.',
   histogramInputLimit: 'Nur die neuesten 10.000 Messwerte werden beibehalten. Übergeben Sie vorab in Klassen zusammengefasste Häufigkeiten an lr-chart, um eine größere Verteilung darzustellen.',
+  chart3dLabel: '3D-Diagramm',
+  chart3dEmpty: 'Keine sichtbaren Diagrammdaten.',
+  chart3dRow: '{label}, Zeile {index} von {total}',
+  chart3dInstructions: 'Mit den Pfeiltasten zwischen Zeilen wechseln, mit Pos1 und Ende zur ersten und letzten Zeile springen und mit Bild auf und Bild ab die Seite wechseln. Mit der Eingabetaste oder der Leertaste eine Zeile auswählen.',
+  chart3dFit: 'Diagramm einpassen',
+  chart3dName: 'Beschriftung',
+  chart3dSize: 'Durchmesser (CSS-Pixel)',
+  chart3dCategory: 'Kategorie',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('de', strings);

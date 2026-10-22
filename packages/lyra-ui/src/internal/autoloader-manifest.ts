@@ -12,6 +12,7 @@ export const AUTOLOADER_OPTIONAL_PEERS: Readonly<Partial<Record<AutoloadableTagN
   'lr-calendar-viewer': ['ical.js'],
   'lr-change-review': ['shiki'],
   'lr-chart': ['chart.js', 'chartjs-plugin-annotation', 'chartjs-plugin-datalabels', 'chartjs-plugin-zoom'],
+  'lr-chart-3d': ['@aceshooting/lyra-3d'],
   'lr-code-block': ['shiki'],
   'lr-code-block-core': ['shiki'],
   'lr-csv-viewer': ['papaparse'],

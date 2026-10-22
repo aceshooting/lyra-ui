@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Cần cài gói biểu đồ hộp tùy chọn để hiển thị biểu đồ hộp.',
   chartInputLimit: 'Một số dữ liệu biểu đồ đã bị bỏ qua vì đạt giới hạn đầu vào. Hãy cung cấp tập dữ liệu nhỏ hơn hoặc đã được tổng hợp trước để biểu diễn các giá trị bị bỏ qua.',
   histogramInputLimit: 'Chỉ giữ lại 10.000 mẫu mới nhất. Hãy cung cấp cho lr-chart số lượng đã được nhóm trước theo các khoảng để biểu diễn phân phối lớn hơn.',
+  chart3dLabel: 'Biểu đồ 3D',
+  chart3dEmpty: 'Không có dữ liệu biểu đồ nào hiển thị.',
+  chart3dRow: '{label}, hàng {index} trên {total}',
+  chart3dInstructions: 'Dùng phím mũi tên để di chuyển giữa các hàng, Home và End cho hàng đầu và hàng cuối, và Page Up và Page Down để đổi trang. Nhấn Enter hoặc Phím cách để chọn hàng.',
+  chart3dFit: 'Vừa biểu đồ với khung nhìn',
+  chart3dName: 'Nhãn',
+  chart3dSize: 'Đường kính (pixel CSS)',
+  chart3dCategory: 'Danh mục',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('vi', strings);

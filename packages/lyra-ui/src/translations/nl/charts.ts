@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Voor het weergeven van boxplots moet het optionele boxplotpakket zijn geïnstalleerd.',
   chartInputLimit: 'Sommige grafiekgegevens zijn weggelaten omdat een invoerlimiet is bereikt. Geef een kleinere of vooraf geaggregeerde gegevensset op om de weggelaten waarden weer te geven.',
   histogramInputLimit: 'Alleen de nieuwste 10.000 meetwaarden worden bewaard. Geef vooraf in klassen gegroepeerde aantallen door aan lr-chart om een grotere verdeling weer te geven.',
+  chart3dLabel: '3D-grafiek',
+  chart3dEmpty: 'Geen zichtbare grafiekgegevens.',
+  chart3dRow: '{label}, rij {index} van {total}',
+  chart3dInstructions: 'Gebruik de pijltoetsen om tussen rijen te bewegen, Home en End voor de eerste en laatste rij en Page Up en Page Down om van pagina te wisselen. Druk op Enter of spatie om een rij te selecteren.',
+  chart3dFit: 'Grafiek passend maken',
+  chart3dName: 'Label',
+  chart3dSize: 'Diameter (CSS-pixels)',
+  chart3dCategory: 'Categorie',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('nl', strings);

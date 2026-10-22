@@ -176,6 +176,7 @@
     "./components/agent-tools/trace-tree/span.js": "./dist/components/agent-tools/trace-tree/span.js",
     "./components/agent-tools/trace-tree/trace-tree.class.js": "./dist/components/agent-tools/trace-tree/trace-tree.class.js",
     "./components/charts": "./dist/components/charts/index.js",
+    "./components/charts/chart-3d/chart-3d.class.js": "./dist/components/charts/chart-3d/chart-3d.class.js",
     "./components/charts/chart/bar-chart.class.js": "./dist/components/charts/chart/bar-chart.class.js",
     "./components/charts/chart/box-plot.class.js": "./dist/components/charts/chart/box-plot.class.js",
     "./components/charts/chart/bubble-chart.class.js": "./dist/components/charts/chart/bubble-chart.class.js",
@@ -516,6 +517,10 @@
     "./components/lr-change-review.js": {
       "types": "./dist/components/agent-tools/change-review/change-review.d.ts",
       "default": "./dist/components/lr-change-review.js"
+    },
+    "./components/lr-chart-3d.js": {
+      "types": "./dist/components/charts/chart-3d/chart-3d.d.ts",
+      "default": "./dist/components/lr-chart-3d.js"
     },
     "./components/lr-chart.js": {
       "types": "./dist/components/charts/chart/chart.d.ts",
@@ -1899,6 +1904,7 @@
     "./dist/components/agent-tools/tool-select-dialog/tool-select-dialog.js",
     "./dist/components/agent-tools/tool-timeline/tool-timeline.js",
     "./dist/components/agent-tools/trace-tree/trace-tree.js",
+    "./dist/components/charts/chart-3d/chart-3d.js",
     "./dist/components/charts/chart/bar-chart.js",
     "./dist/components/charts/chart/box-plot.js",
     "./dist/components/charts/chart/bubble-chart.js",
@@ -2271,6 +2277,7 @@
     "./src/components/agent-tools/tool-select-dialog/tool-select-dialog.ts",
     "./src/components/agent-tools/tool-timeline/tool-timeline.ts",
     "./src/components/agent-tools/trace-tree/trace-tree.ts",
+    "./src/components/charts/chart-3d/chart-3d.ts",
     "./src/components/charts/chart/bar-chart.ts",
     "./src/components/charts/chart/box-plot.ts",
     "./src/components/charts/chart/bubble-chart.ts",

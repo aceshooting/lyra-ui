@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Kipengele hiki kinahitaji kifurushi cha hiari cha chati za kisanduku kisakinishwe ili kuchora michoro ya kisanduku.',
   chartInputLimit: 'Baadhi ya data ya chati imeachwa kwa sababu kikomo cha ingizo kimefikiwa. Toa mkusanyiko mdogo wa data au uliojumlishwa mapema ili kuwakilisha thamani zilizoachwa.',
   histogramInputLimit: 'Ni sampuli mpya zaidi 10,000 pekee zinazohifadhiwa. Toa kwa lr-chart hesabu zilizowekwa katika makundi ya vipindi mapema ili kuwakilisha usambazaji mkubwa zaidi.',
+  chart3dLabel: 'Chati ya 3D',
+  chart3dEmpty: 'Hakuna data ya chati inayoonekana.',
+  chart3dRow: '{label}, safu mlalo {index} kati ya {total}',
+  chart3dInstructions: 'Tumia vitufe vya mishale kusonga kati ya safu mlalo, Home na End kwa safu mlalo ya kwanza na ya mwisho, na Page Up na Page Down kubadilisha kurasa. Bonyeza Enter au Space kuchagua safu mlalo.',
+  chart3dFit: 'Tosheleza chati',
+  chart3dName: 'Lebo',
+  chart3dSize: 'Kipenyo (pikseli za CSS)',
+  chart3dCategory: 'Kategoria',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('sw', strings);

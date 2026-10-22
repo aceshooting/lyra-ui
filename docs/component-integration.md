@@ -9,7 +9,7 @@ is an explicit evidence gap, not a zero-byte claim. Each tag’s stable registra
 Raw byte counts and bundle SHA-256 digests are in
 `packages/lyra-ui/scripts/fixtures/component-integration.json`, keyed by tag, not repeated below.
 
-Coverage: **308 tags**, **308 measured gzip entries**, **0 not measured**.
+Coverage: **309 tags**, **309 measured gzip entries**, **0 not measured**.
 
 Dependency meaning: direct edges are tags rendered by this component or registration entries it
 imports directly. Transitive edges are other registrations reachable through those direct edges.
@@ -59,6 +59,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-carousel-item"></a>`lr-carousel-item` | layout | `import '@aceshooting/lyra-ui/components/lr-carousel-item.js';` | none | none | none | 22.2 KiB |
 | <a id="lr-change-review"></a>`lr-change-review` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-change-review.js';` | `shiki` | `lr-diff-view` | none | 49.2 KiB |
 | <a id="lr-chart"></a>`lr-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-skeleton` | none | 83.8 KiB |
+| <a id="lr-chart-3d"></a>`lr-chart-3d` | charts | `import '@aceshooting/lyra-ui/components/lr-chart-3d.js';` | `@aceshooting/lyra-3d` | none | none | 37.9 KiB |
 | <a id="lr-chat-composer"></a>`lr-chat-composer` | conversation | `import '@aceshooting/lyra-ui/components/lr-chat-composer.js';` | none | none | none | 37.4 KiB |
 | <a id="lr-chat-message"></a>`lr-chat-message` | conversation | `import '@aceshooting/lyra-ui/components/lr-chat-message.js';` | none | none | none | 29.2 KiB |
 | <a id="lr-chat-viewport"></a>`lr-chat-viewport` | conversation | `import '@aceshooting/lyra-ui/components/lr-chat-viewport.js';` | none | none | none | 38.3 KiB |

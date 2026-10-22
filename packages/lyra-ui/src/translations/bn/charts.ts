@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'বক্স প্লট দেখাতে এই কম্পোনেন্টের ঐচ্ছিক বক্স-প্লট চার্ট প্যাকেজটি ইনস্টল থাকা প্রয়োজন।',
   chartInputLimit: 'ইনপুটের সীমা পূর্ণ হওয়ায় চার্টের কিছু তথ্য বাদ দেওয়া হয়েছে। বাদ পড়া মানগুলি দেখাতে আরও ছোট বা আগে থেকে একত্রিত করা ডেটাসেট দিন।',
   histogramInputLimit: 'শুধু সবচেয়ে সাম্প্রতিক 10,000টি নমুনা রাখা হয়। আরও বড় বণ্টন দেখাতে আগে থেকে ব্যবধান অনুযায়ী গোষ্ঠীবদ্ধ সংখ্যা lr-chart-এ দিন।',
+  chart3dLabel: '3D চার্ট',
+  chart3dEmpty: 'চার্টে দৃশ্যমান কোনো ডেটা নেই।',
+  chart3dRow: '{label}, {total}টির মধ্যে সারি {index}',
+  chart3dInstructions: 'সারিগুলির মধ্যে যেতে তীর কী, প্রথম ও শেষ সারিতে যেতে Home ও End এবং পাতা বদলাতে Page Up ও Page Down ব্যবহার করুন। সারি নির্বাচন করতে Enter বা স্পেস চাপুন।',
+  chart3dFit: 'চার্ট মানানসই করুন',
+  chart3dName: 'লেবেল',
+  chart3dSize: 'ব্যাস (CSS পিক্সেল)',
+  chart3dCategory: 'বিভাগ',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('bn', strings);

@@ -161,6 +161,9 @@ export const LYRA_SSR_TAG_CAPABILITIES = Object.freeze({
   [tag('knowledge-graph-explorer')]: {
     canvas: 'after-hydration', // composes lr-graph, whose canvas renderer owns the visible node/edge content
   },
+  [tag('chart-3d')]: {
+    canvas: 'after-hydration', // with engine="webgl" the optional renderer paints a WebGL canvas; the data table needs no script
+  },
   [tag('heatmap')]: {
     canvas: 'after-hydration', // paints its matrix cells onto a 2D canvas surface
   },

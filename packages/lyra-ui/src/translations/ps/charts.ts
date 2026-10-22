@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'د بکس چارټ د ښودلو لپاره د بکس چارټ اختیاري بسته نصب کړئ.',
   chartInputLimit: 'د ننوتو حد ته د رسېدو له امله د چارټ ځینې معلومات پرېښودل شوي دي. د پرېښودل شوو ارزښتونو د ښودلو لپاره یو کوچنی یا له مخکې لنډیز شوی معلوماتي ټولګی ورکړئ.',
   histogramInputLimit: 'یوازې تر ټولو نوي 10,000 نمونې ساتل کېږي. د لوی وېش د ښودلو لپاره lr-chart ته له مخکې په واټنونو کې ډلبندي شوي شمېرونه ورکړئ.',
+  chart3dLabel: 'درې‌بعدي چارټ',
+  chart3dEmpty: 'په چارټ کې هیڅ ښکاره معلومات نشته.',
+  chart3dRow: '{label}، له {total} څخه کتار {index}',
+  chart3dInstructions: 'د کتارونو ترمنځ د تګ لپاره د غشو کیلي، د لومړي او وروستي کتار لپاره Home او End، د پاڼې د بدلولو لپاره Page Up او Page Down وکاروئ. د کتار د ټاکلو لپاره Enter یا Space کېکاږئ.',
+  chart3dFit: 'چارټ په لید کې ځایول',
+  chart3dName: 'نوم',
+  chart3dSize: 'قطر (CSS پېکسل)',
+  chart3dCategory: 'ډول',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

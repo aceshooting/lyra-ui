@@ -22,7 +22,9 @@ const PROFILE_RATIONALE =
   'This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.';
 const PROFILE_GRADUATION =
   'Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.';
-const NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*$/;
+// The first segment starts with a letter; later segments may start with a digit so a dimension suffix
+// such as `chart-3d` scaffolds (`lr-chart-3d` is a valid custom element name).
+const NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 let temporaryFileCounter = 0;
 
 function usage() {
@@ -121,9 +123,9 @@ function addIndexExport(source, name) {
   return `${lines.join('\n')}\n`;
 }
 
-function appendDocs(source, { tag, family, name, displayName }) {
+function appendDocs(source, { tag, name, displayName }) {
   const prefix = source.endsWith('\n') ? source : `${source}\n`;
-  return `${prefix}\n## \`${tag}\`\n\nA themeable ${displayName} content surface. Use the default slot for the component's main content.\n\n**Slots:** default — main content.\n\n**CSS parts:** \`base\` — the content container.\n\n\`\`\`html\n<script type="module">\n  import '@aceshooting/lyra-ui/components/${family}/${name}/${name}.js';\n</script>\n\n<${tag}>Populated ${displayName} content</${tag}>\n\`\`\`\n`;
+  return `${prefix}\n## \`${tag}\`\n\nA themeable ${displayName} content surface. Use the default slot for the component's main content.\n\n**Slots:** default — main content.\n\n**CSS parts:** \`base\` — the content container.\n\n\`\`\`html\n<script type="module">\n  import '@aceshooting/lyra-ui/components/lr-${name}.js';\n</script>\n\n<${tag}>Populated ${displayName} content</${tag}>\n\`\`\`\n`;
 }
 
 function classTemplate({ tag, name, className, displayName }) {

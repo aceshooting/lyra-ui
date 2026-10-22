@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت حزمة المخطط الصندوقي الاختيارية لعرض المخططات الصندوقية.',
   chartInputLimit: 'حُذفت بعض بيانات المخطط لبلوغ حد الإدخال. قدّم مجموعة بيانات أصغر أو مُجمّعة مسبقًا لتمثيل القيم المحذوفة.',
   histogramInputLimit: 'يُحتفظ بأحدث 10,000 عينة فقط. قدّم أعدادًا مجمّعة مسبقًا في فئات إلى lr-chart لتمثيل توزيع أكبر.',
+  chart3dLabel: 'مخطط ثلاثي الأبعاد',
+  chart3dEmpty: 'لا توجد بيانات مرئية في المخطط.',
+  chart3dRow: '{label}، الصف {index} من أصل {total}',
+  chart3dInstructions: 'استخدم مفاتيح الأسهم للتنقل بين الصفوف، وHome وEnd للانتقال إلى الصف الأول والأخير، وPage Up وPage Down لتغيير الصفحات. اضغط Enter أو مفتاح المسافة لتحديد صف.',
+  chart3dFit: 'ملاءمة المخطط',
+  chart3dName: 'التسمية',
+  chart3dSize: 'القطر (بكسل CSS)',
+  chart3dCategory: 'الفئة',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

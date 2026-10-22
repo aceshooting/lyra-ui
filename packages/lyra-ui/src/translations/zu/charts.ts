@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Le ngxenye idinga iphakheji yeshadi lesakhiwo sebhokisi ukuze ibonise izakhiwo zamabhokisi.',
   chartInputLimit: 'Enye idatha yeshadi ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka. Nikeza isethi yedatha encane noma ehlanganiswe kusengaphambili ukuze imele amanani ashiyiwe.',
   histogramInputLimit: 'Kugcinwa amasampula amasha kakhulu angu-10,000 kuphela. Nikeza lr-chart izibalo eseziqoqwe ngezikhawu kusengaphambili ukuze imele ukusatshalaliswa okukhulu.',
+  chart3dLabel: 'Ishadi le-3D',
+  chart3dEmpty: 'Ayikho idatha yeshadi ebonakalayo.',
+  chart3dRow: '{label}, umugqa {index} kwezingu-{total}',
+  chart3dInstructions: 'Sebenzisa okhiye bemicibisholo ukuhamba phakathi kwemigqa, Home no-End ukuya emgqeni wokuqala nowokugcina, ne-Page Up ne-Page Down ukushintsha amakhasi. Cindezela u-Enter noma i-Space ukuze ukhethe umugqa.',
+  chart3dFit: 'Linganisa ishadi',
+  chart3dName: 'Ilebula',
+  chart3dSize: 'Idayamitha (amaphikseli e-CSS)',
+  chart3dCategory: 'Isigaba',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('zu', strings);

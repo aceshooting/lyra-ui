@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'باکس پلاٹ وکھاؤن لئی ایس جزو نوں اختیاری باکس پلاٹ چارٹ پیکیج چاہیدا اے۔',
   chartInputLimit: 'اِن پُٹ دی حد پوری ہون کارن چارٹ دا کجھ ڈیٹا چھڈ دتا گیا اے۔ چھڈیاں قدراں نوں وکھاؤن لئی چھوٹا یا پہلاں توں خلاصہ کیتا ڈیٹاسیٹ دیو۔',
   histogramInputLimit: 'صرف سب توں نویں 10,000 نمونے رکھے جاندے نیں۔ وڈی ونڈ وکھاؤن لئی پہلاں توں وقفیاں وچ ونڈیاں گنتیاں lr-chart نوں دیو۔',
+  chart3dLabel: '3D چارٹ',
+  chart3dEmpty: 'چارٹ وچ نظر آؤن والا کوئی ڈیٹا نئیں۔',
+  chart3dRow: '{label}، {total} وچوں قطار {index}',
+  chart3dInstructions: 'قطاراں وچکار جان لئی تیر والیاں کنجیاں، پہلی تے آخری قطار لئی Home تے End، تے صفحہ بدلن لئی Page Up تے Page Down ورتو۔ قطار چنن لئی Enter یا سپیس دباؤ۔',
+  chart3dFit: 'چارٹ نوں منظر وچ فٹ کرو',
+  chart3dName: 'لیبل',
+  chart3dSize: 'قطر (CSS پکسل)',
+  chart3dCategory: 'زمرہ',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

@@ -44,6 +44,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-carousel-item': ['lr-carousel-item'],
   'lr-change-review': ['lr-change-review', 'lr-diff-view'],
   'lr-chart': ['lr-chart', 'lr-skeleton'],
+  'lr-chart-3d': ['lr-chart-3d'],
   'lr-chat-composer': ['lr-chat-composer'],
   'lr-chat-message': ['lr-chat-message'],
   'lr-chat-viewport': ['lr-chat-viewport'],

@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Este componente necesita el paquete opcional de diagramas de caja instalado para representarlos.',
   chartInputLimit: 'Se omitieron algunos datos del gráfico porque se alcanzó un límite de entrada. Proporcione un conjunto de datos más pequeño o agregado previamente para representar los valores omitidos.',
   histogramInputLimit: 'Solo se conservan las 10.000 muestras más recientes. Proporcione a lr-chart recuentos agrupados previamente en intervalos para representar una distribución mayor.',
+  chart3dLabel: 'Gráfico 3D',
+  chart3dEmpty: 'No hay datos visibles en el gráfico.',
+  chart3dRow: '{label}, fila {index} de {total}',
+  chart3dInstructions: 'Use las flechas para moverse entre filas, Inicio y Fin para ir a la primera y la última fila, y Re Pág y Av Pág para cambiar de página. Pulse Intro o la barra espaciadora para seleccionar una fila.',
+  chart3dFit: 'Ajustar gráfico',
+  chart3dName: 'Etiqueta',
+  chart3dSize: 'Diámetro (píxeles CSS)',
+  chart3dCategory: 'Categoría',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('es', strings);

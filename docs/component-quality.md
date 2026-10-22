@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **308**
-- Exact same-test/same-instance populated or open axe evidence: **307**
+- Public tags: **309**
+- Exact same-test/same-instance populated or open axe evidence: **308**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **92** tags
@@ -100,6 +100,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-carousel-item`](component-integration.md#lr-carousel-item) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-change-review`](component-integration.md#lr-change-review) | experimental | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | not recorded | not recorded | not enrolled | not verified | unmeasured |
 | [`lr-chart`](component-integration.md#lr-chart) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | pending human | source signal | source signal | visual enrolled | not verified | measured |
+| [`lr-chart-3d`](component-integration.md#lr-chart-3d) | experimental | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | source signal | source signal | not enrolled | not verified | unmeasured |
 | [`lr-chat-composer`](component-integration.md#lr-chat-composer) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-chat-message`](component-integration.md#lr-chat-message) | stable | automated | not recorded | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-chat-viewport`](component-integration.md#lr-chat-viewport) | stable | automated | source signal | source signal | source signal | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified | measured |

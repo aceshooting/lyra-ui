@@ -2,7 +2,7 @@
 
 # Component index
 
-308 custom elements, grouped by the source family they live in.
+309 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -215,7 +215,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-video` · lr-video.js · `experimental` since `8.0.0` — a native, inline video player with three custom-control presets, selectable captions, fullscreen and picture-in-picture capability gates,...
 - `lr-video-playlist` · lr-video-playlist.js · `experimental` since `8.0.0` — a direct-child `<lr-video>` playlist with a navigable current-item list.
 
-## Charts — `components/charts/` (12)
+## Charts — `components/charts/` (13)
 
 - `lr-chart` · lr-chart.js · `stable` since `4.0.0` — the core Chart.js wrapper used directly and by the typed Chart.js tags plus `<lr-histogram>`.
 - `lr-lite-chart` · lr-lite-chart.js · `stable` since `4.0.0` — a dependency-free bar/line chart, plain SVG/DOM rendering with zero peer dependencies (unlike `lr-chart`, which wraps `chart.js`).
@@ -229,6 +229,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-scatter-chart` · lr-scatter-chart.js · `stable` since `4.0.0` — `<lr-chart>` with a `"scatter"` default and the mirrored writable type.
 - `lr-histogram` · lr-histogram.js · `stable` since `4.0.0` — bins `values` into `bins` equal-width buckets and renders them as a bar chart.
 - `lr-box-plot` · lr-box-plot.js · `stable` since `4.0.0` — a box-and-whisker chart from precomputed five-number summaries (no raw sample data is shipped to the browser).
+- `lr-chart-3d` · lr-chart-3d.js · `experimental` since `unreleased` — a bounded three-dimensional scatter, bubble or source-order line chart over immutable typed columns, with an always-available accessible...
 
 ## Document & file viewers — `components/viewers/` (22)
 

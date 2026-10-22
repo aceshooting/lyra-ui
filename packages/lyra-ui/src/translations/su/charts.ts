@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Komponén ieu merlukeun paket bagan box-plot opsional pikeun dipasang supaya bagan kotak bisa dipintonkeun.',
   chartInputLimit: 'Sababaraha data grafik teu diasupkeun lantaran wates input geus kahontal. Pasihkeun kumpulan data nu leuwih leutik atawa geus diringkes saméméhna pikeun ngagambarkeun nilai nu teu diasupkeun.',
   histogramInputLimit: 'Ngan 10.000 sampel panganyarna nu disimpen. Pasihkeun cacah nu geus dikelompokkeun dumasar interval ka lr-chart pikeun ngagambarkeun sebaran nu leuwih gedé.',
+  chart3dLabel: 'Bagan 3D',
+  chart3dEmpty: 'Teu aya data bagan anu katingali.',
+  chart3dRow: '{label}, baris {index} tina {total}',
+  chart3dInstructions: 'Paké kenop panah pikeun pindah antarbaris, Home jeung End pikeun baris kahiji jeung pamungkas, sarta Page Up jeung Page Down pikeun ngarobah kaca. Pencét Enter atawa Spasi pikeun milih baris.',
+  chart3dFit: 'Paskeun bagan kana tampilan',
+  chart3dName: 'Label',
+  chart3dSize: 'Diaméter (piksel CSS)',
+  chart3dCategory: 'Kategori',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('su', strings);

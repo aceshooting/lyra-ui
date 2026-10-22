@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Chaartii sanduuqaa agarsiisuuf paakeejii chaartii sanduuqaa filannoo fe\'uun barbaachisa.',
   chartInputLimit: 'Daangaan galtee waan gaʼameef daataan chaartii tokko tokko hafee jira. Gatiiwwan hafan bakka buusuuf tuuta daataa xiqqaa ykn dursee walitti qabame kenni.',
   histogramInputLimit: 'Saamuda haaraa 10,000 qofa kuufamu. Raabsa guddaa bakka buusuuf lakkoofsota dursee gareewwan daangaa keessatti ramadaman lr-chartʼf kenni.',
+  chart3dLabel: 'Chaartii 3D',
+  chart3dEmpty: 'Odeeffannoon chaartii mul\'atu hin jiru.',
+  chart3dRow: '{label}, tarree {index} kan {total}',
+  chart3dInstructions: 'Tarreewwan gidduu socho\'uuf furtuuwwan xiyyaa, tarree jalqabaa fi dhumaatiif Home fi End, fuula jijjiiruuf Page Up fi Page Down fayyadami. Tarree filachuuf Enter yookaan Space dhiibi.',
+  chart3dFit: 'Chaartii mul\'atatti madaqsiisi',
+  chart3dName: 'Maqaa',
+  chart3dSize: 'Diyaameetirii (CSS piikselii)',
+  chart3dCategory: 'Ramaddii',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('om', strings);

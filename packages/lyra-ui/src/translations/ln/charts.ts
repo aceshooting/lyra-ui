@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: 'Composant oyo esengaka paquet ya graphique box-plot ya option mpo na kolakisa ba graphique ya boîte.',
   chartInputLimit: 'Balongoli ndambo ya ba données ya graphique mpo motango ya kokɔtisa ekómi na ndelo. Pesa etuluku ya ba données ya moke to oyo esangisami liboso mpo na komonisa ba valeurs oyo balongoli.',
   histogramInputLimit: 'Kaka ba échantillons 10 000 ya sika koleka nde ebatelami. Pesa lr-chart mitángo oyo ekabolami liboso na bituluku ya ba intervalles mpo na komonisa distribution ya monene koleka.',
+  chart3dLabel: 'Graphique ya 3D',
+  chart3dEmpty: 'Data ya graphique ezali komonana te.',
+  chart3dRow: '{label}, molɔngɔ {index} kati na {total}',
+  chart3dInstructions: 'Salela ba touches ya flèche mpo na kokende kati na milɔngɔ, Home mpe End mpo na molɔngɔ ya liboso mpe ya nsuka, mpe Page Up mpe Page Down mpo na kobongola lokasa. Finá Enter to Space mpo na kopona molɔngɔ.',
+  chart3dFit: 'Kokisa graphique',
+  chart3dName: 'Nkombo',
+  chart3dSize: 'Diamètre (pixel CSS)',
+  chart3dCategory: 'Catégorie',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('ln', strings);

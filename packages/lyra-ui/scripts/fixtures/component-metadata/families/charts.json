@@ -1,7 +1,9 @@
 {
   "family": "charts",
   "assignments": {
-    "new-component-experimental": [],
+    "new-component-experimental": [
+      "lr-chart-3d"
+    ],
     "published-stable": [
       "lr-bar-chart",
       "lr-box-plot",

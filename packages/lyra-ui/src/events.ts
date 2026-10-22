@@ -42,6 +42,7 @@ import type { LyraToolResultViewEventMap } from './components/agent-tools/tool-r
 import type { LyraToolSelectDialogEventMap } from './components/agent-tools/tool-select-dialog/tool-select-dialog.class.js';
 import type { LyraToolTimelineEventMap } from './components/agent-tools/tool-timeline/tool-timeline.class.js';
 import type { LyraTraceTreeEventMap } from './components/agent-tools/trace-tree/trace-tree.class.js';
+import type { LyraChart3dEventMap } from './components/charts/chart-3d/chart-3d.class.js';
 import type { LyraBoxPlotEventMap } from './components/charts/chart/box-plot.class.js';
 import type { LyraChartEventMap } from './components/charts/chart/chart.class.js';
 import type { LyraLiteChartEventMap } from './components/charts/chart/lite-chart.class.js';
@@ -490,10 +491,12 @@ export type LyraBranchChangeEvent = LyraBranchPickerEventMap['lr-branch-change']
 export type LyraCalendarGeometryChangeEvent = LyraHeatmapEventMap['lr-calendar-geometry-change'];
 
 /**
- * `lr-camera-change` — dispatched by 2 components: `<lr-graph>`, `<lr-knowledge-graph-explorer>`;
- * detail union of 2, e.g. `LyraGraphEventMap['lr-camera-change']`.
+ * `lr-camera-change` — dispatched by 3 components: `<lr-chart-3d>`, `<lr-graph>`,
+ * `<lr-knowledge-graph-explorer>`; detail union of 3, e.g.
+ * `LyraChart3dEventMap['lr-camera-change']`.
  */
 export type LyraCameraChangeEvent =
+  | LyraChart3dEventMap['lr-camera-change']
   | LyraGraphEventMap['lr-camera-change']
   | LyraKnowledgeGraphExplorerEventMap['lr-camera-change'];
 
@@ -639,6 +642,12 @@ export type LyraChangeRequestEvent =
   | LyraPromptStudioEventMap['lr-change-request']
   | LyraSelectEventMap['lr-change-request']
   | LyraToolSelectDialogEventMap['lr-change-request'];
+
+/**
+ * `lr-chart-row-select` — dispatched by `<lr-chart-3d>`; detail
+ * `LyraChart3dEventMap['lr-chart-row-select']`.
+ */
+export type LyraChartRowSelectEvent = LyraChart3dEventMap['lr-chart-row-select'];
 
 /**
  * `lr-checkbox-group-toggle-request` — dispatched by `<lr-checkbox-group>`; detail
@@ -1115,11 +1124,12 @@ export type LyraEdgeLeaveEvent = LyraGraphEventMap['lr-edge-leave'];
 export type LyraEditEvent = LyraMessageActionsEventMap['lr-edit'];
 
 /**
- * `lr-engine-fallback` — dispatched by 5 components: `<lr-embedding-explorer>`, `<lr-graph>`,
- * `<lr-image-viewer>`, `<lr-knowledge-graph-explorer>`, `<lr-video>`; detail union of 5, e.g.
- * `LyraEmbeddingExplorerEventMap['lr-engine-fallback']`.
+ * `lr-engine-fallback` — dispatched by 6 components: `<lr-chart-3d>`, `<lr-embedding-explorer>`,
+ * `<lr-graph>`, `<lr-image-viewer>`, `<lr-knowledge-graph-explorer>`, `<lr-video>`; detail union
+ * of 6, e.g. `LyraChart3dEventMap['lr-engine-fallback']`.
  */
 export type LyraEngineFallbackEvent =
+  | LyraChart3dEventMap['lr-engine-fallback']
   | LyraEmbeddingExplorerEventMap['lr-engine-fallback']
   | LyraGraphEventMap['lr-engine-fallback']
   | LyraImageViewerEventMap['lr-engine-fallback']
@@ -3638,6 +3648,7 @@ export interface LyraGlobalEventMap {
   'lr-change-decision': LyraChangeDecisionEvent;
   'lr-change-decision-request': LyraChangeDecisionRequestEvent;
   'lr-change-request': LyraChangeRequestEvent;
+  'lr-chart-row-select': LyraChartRowSelectEvent;
   'lr-checkbox-group-toggle-request': LyraCheckboxGroupToggleRequestEvent;
   'lr-checkbox-toggle-request': LyraCheckboxToggleRequestEvent;
   'lr-chip-change': LyraChipChangeEvent;

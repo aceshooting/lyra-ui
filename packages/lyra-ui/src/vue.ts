@@ -119,6 +119,8 @@ export type LyraChangeReviewVueProps = LyraVueCustomElement<'lr-change-review'>;
 
 export type LyraChartVueProps = LyraVueCustomElement<'lr-chart'>;
 
+export type LyraChart3dVueProps = LyraVueCustomElement<'lr-chart-3d'>;
+
 export type LyraChatComposerVueProps = LyraVueCustomElement<'lr-chat-composer'>;
 
 export type LyraChatMessageVueProps = LyraVueCustomElement<'lr-chat-message'>;
@@ -693,6 +695,7 @@ export interface LyraVueGlobalComponents {
   'lr-carousel-item': LyraCarouselItemVueProps;
   'lr-change-review': LyraChangeReviewVueProps;
   'lr-chart': LyraChartVueProps;
+  'lr-chart-3d': LyraChart3dVueProps;
   'lr-chat-composer': LyraChatComposerVueProps;
   'lr-chat-message': LyraChatMessageVueProps;
   'lr-chat-viewport': LyraChatViewportVueProps;

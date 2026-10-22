@@ -63,6 +63,17 @@ const strings: LyraLocaleStrings = {
   boxPlotMissingLibrary: '此元件需要安裝可選的箱線圖擴充套件包才能渲染箱線圖。',
   chartInputLimit: '由於達到輸入限制，部分圖表資料已被省略。請提供較小或預先彙總的資料集，以呈現被省略的值。',
   histogramInputLimit: '僅保留最新的 10,000 個樣本。請向 lr-chart 提供預先依區間分組的計數，以呈現更大規模的分布。',
+  chart3dLabel: '3D 圖表',
+  chart3dEmpty: '沒有可見的圖表資料。',
+  chart3dRow: '{label}，第 {index} 行，共 {total} 行',
+  chart3dInstructions: '使用方向鍵在行之間移動，Home 與 End 跳至第一行與最後一行，Page Up 與 Page Down 切換頁面。按回車或空白鍵選取行。',
+  chart3dFit: '縮放至完整圖表',
+  chart3dName: '標籤',
+  chart3dSize: '直徑（CSS 畫素）',
+  chart3dCategory: '類別',
+  chart3dXAxis: 'X',
+  chart3dYAxis: 'Y',
+  chart3dZAxis: 'Z',
 };
 
 registerLyraLocale('zh-TW', strings);
