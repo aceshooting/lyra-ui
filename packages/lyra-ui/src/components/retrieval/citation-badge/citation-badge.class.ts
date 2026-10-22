@@ -267,7 +267,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   private onKeyDown = (e: KeyboardEvent): void => {
     // Space normally activates a <button> the same as Enter, but this
     // component gives the two keys distinct meanings (Enter = activate,
-    // Space = open) — so Space's native click-on-keyup must be pre-empted
+    // Space = open) — so Space's native click-on-keyup must be preempted
     // here (preventDefault on keydown suppresses it) rather than left to
     // fire alongside this. Enter deliberately gets no such handling: its
     // native immediate click already reaches onClick below.

@@ -5411,7 +5411,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
               data-sortable=${sortable ? '' : nothing}
               data-pin=${normalizePinSide(this.getColumnPin(id)) || nothing}
               style=${styleMap(this.columnStyle(column, id))}
-              .draggable=${canMove}
+              .draggable=${Boolean(canMove)}
               @focus=${() => {
                 this.focusedRow = -1;
                 this.focusedColumn = position;

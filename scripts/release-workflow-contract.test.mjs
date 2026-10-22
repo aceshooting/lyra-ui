@@ -353,10 +353,13 @@ test('standalone release assets come from immutable source and reject incomplete
     git('add', '.');
     git('commit', '--quiet', '-m', 'Fixture source');
     const sourceSha = git('rev-parse', 'HEAD');
-    const args = { expected, sourceSha, repositoryRoot: fixture };
+    // The SBOM generator reads the installed workspace; its reproduction is covered by release-sbom.test.mjs.
+    const sbom = () => Buffer.from('{"bomFormat":"CycloneDX"}\n');
+    const args = { expected, sourceSha, repositoryRoot: fixture, sbom };
     const downloads = path.join(fixture, 'downloads');
     const spec = collectReleaseAssets({ ...args, directory: downloads });
     assert.equal(spec.sourceName, 'lyra-ui-1.2.3-source.tar');
+    assert.equal(spec.sbomName, 'lyra-ui-1.2.3.cdx.json');
     assert.equal(spec.standalone.length, 4);
     writeFileSync(path.join(downloads, spec.tarballName), 'separately validated package bytes');
     // Local generated drift must not become signed source or standalone evidence.
@@ -367,7 +370,8 @@ test('standalone release assets come from immutable source and reject incomplete
     const manifest = readFileSync(path.join(verified, 'SHA256SUMS'));
     assert.equal(result.manifestSha256, createHash('sha256').update(manifest).digest('hex'));
     assert.equal(readFileSync(path.join(verified, 'llms.txt'), 'utf8'), 'committed llms.txt\n');
-    assert.equal(manifest.toString().trim().split('\n').length, 5);
+    assert.equal(manifest.toString().trim().split('\n').length, 6, 'source, four standalone assets and the SBOM');
+    assert.equal(readFileSync(path.join(verified, spec.sbomName), 'utf8'), '{"bomFormat":"CycloneDX"}\n');
     const sourceEntry = spawnSync('tar', ['-xOf', path.join(verified, spec.sourceName), `lyra-ui-${sourceSha}/packages/lyra-ui/llms.txt`], { encoding: 'utf8' });
     assert.equal(sourceEntry.status, 0, sourceEntry.stderr);
     assert.equal(sourceEntry.stdout, 'committed llms.txt\n');
@@ -376,7 +380,7 @@ test('standalone release assets come from immutable source and reject incomplete
     assert.throws(() => collectReleaseAssets({ ...args, expected: { ...expected, version: '1.2.4' }, directory: verified }), /tagged package identity/);
     let count = 0;
     const check = (pattern) => assert.throws(() => verifyReleaseAssets({ ...args, directory: downloads, outputDirectory: path.join(fixture, `rejected-${count++}`) }), pattern);
-    for (const name of [...spec.standalone, spec.sourceName]) {
+    for (const name of [...spec.standalone, spec.sbomName, spec.sourceName]) {
       const file = path.join(downloads, name);
       const original = readFileSync(file);
       writeFileSync(file, Buffer.concat([original, Buffer.from('tampered')]));

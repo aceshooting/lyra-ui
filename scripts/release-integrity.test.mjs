@@ -1475,7 +1475,11 @@ test('deploys the docs CI built and checked, only after that CI run succeeded, w
   assert.match(deployJob, /permissions:\n\s+pages: write\n\s+id-token: write/u);
   assert.doesNotMatch(buildJob, /pnpm docs:build|pnpm install|actions\/checkout/u);
   assert.match(workflow, /on:\n  workflow_run:\n    workflows: \[CI\]\n    types: \[completed\]\n    branches: \[main\]/u);
-  assert.match(buildJob, /github\.event\.workflow_run\.conclusion == 'success' && github\.event\.workflow_run\.event == 'push'/u);
+  // Only a successful push run of CI on main from this repository may reach the privileged Pages path.
+  assert.match(
+    buildJob,
+    /github\.event\.workflow_run\.conclusion == 'success'\s+&& github\.event\.workflow_run\.event == 'push'\s+&& github\.event\.workflow_run\.head_branch == 'main'\s+&& github\.event\.workflow_run\.head_repository\.full_name == github\.repository/u,
+  );
   assert.match(buildJob, /name: storybook-static[\s\S]*run-id: \$\{\{ github\.event\.workflow_run\.id \}\}/u);
   assert.match(buildJob, /permissions:\n\s+actions: read\n\s+contents: read/u);
   assert.match(buildJob, /commits\/main" --jq \.sha/u);
@@ -3209,7 +3213,7 @@ test('static and local CI run the release-tooling self-tests and package-manager
   const toolingCommand = rootPackage.scripts['check:release-tooling'];
   assert.equal(
     toolingCommand,
-    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/sync-playwright-images.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
+    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/sync-playwright-images.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs scripts/quality-tools.test.mjs scripts/release-sbom.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
     'one root command must keep all release-tooling unit tests and synchronized package-manager prose together',
   );
 

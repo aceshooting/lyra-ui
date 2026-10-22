@@ -1,0 +1,150 @@
+# Spell check for `pnpm check:spelling` (crate-ci/typos, pinned in scripts/lib/pinned-tool.mjs).
+# scripts/check-spelling.mjs keeps the findings in tracked files only. Fix a genuine typo; extend
+# this file only for a real domain term (default.extend-words), for deliberately foreign or
+# misspelled test and story text (type.fixtures), or for data that is not English prose
+# (files.extend-exclude).
+
+[files]
+# Check hidden directories too: .github/, .changeset/ and .storybook/ hold authored prose.
+ignore-hidden = false
+extend-exclude = [
+  ".git/",
+
+  # Multilingual UI catalogs and the localization review data derived from them.
+  "packages/lyra-ui/src/translations/",
+  "packages/lyra-ui/scripts/fixtures/translation-reviews*",
+  "packages/lyra-ui/scripts/fixtures/pt-PT-overrides.ts",
+
+  # Generated outputs: fix the source and regenerate instead.
+  "packages/lyra-ui/custom-elements.json",
+  "packages/lyra-ui/web-types.json",
+  "packages/lyra-ui/vscode-*-data.json",
+  "packages/lyra-ui/locales.json",
+  "packages/lyra-ui/llms-full.txt",
+  "packages/lyra-ui/llms/index.md",
+  "packages/lyra-ui/llms/components/",
+  "packages/lyra-ui/scripts/fixtures/component-inventory.json",
+  "packages/lyra-ui/scripts/fixtures/component-metadata*",
+  "packages/lyra-ui/scripts/fixtures/llms-source-contracts.json",
+  "packages/lyra-flags/flags/",
+  "plugins/lyra-ui/skills/lyra-ui/references/",
+  "pnpm-lock.yaml",
+
+  # Release history and recorded evidence: commit hashes, historical wording, tool output.
+  "CHANGELOG.md",
+  "docs/changelog/",
+  "docs/evidence/",
+  "packages/lyra-flags/THIRD_PARTY_NOTICES.md",
+
+  # Seeds deliberately misspelled words to prove the spelling filter.
+  "scripts/quality-tools.test.mjs",
+]
+
+[default]
+extend-ignore-re = [
+  '\bmis-[a-z]+',              # hyphenated "mis-" compounds in comments (mis-parsed, mis-set)
+  'propert\$\{',               # plural stems built in template strings: propert${n === 1 ? 'y' : 'ies'}
+  'categor\(y\|ies\)',          # "category|categories" written as a pattern in a message
+  'cancell\?able',              # regex matching both spellings: cancelable and cancellable
+  '\|styl\)',                  # Stylus file extension in an extension alternation
+]
+
+[default.extend-words]
+# Web-platform and file-format vocabulary.
+cancelability = "cancelability"  # US spelling of the Event.cancelable concept used across the API docs
+Cancelability = "Cancelability"
+CANCELABILITY = "CANCELABILITY"
+seeked = "seeked"                # HTMLMediaElement `seeked` event
+Seeked = "Seeked"
+intoto = "intoto"                # `.intoto.jsonl`, the in-toto provenance file suffix
+opf = "opf"                      # EPUB package document extension
+ser = "ser"                      # OOXML chart series element (`c:ser`)
+Nd = "Nd"                        # Unicode general category "decimal number" (`\p{Nd}`)
+ALPH = "ALPH"                    # WebP alpha chunk identifier
+
+# ISO 3166 country, ISO 4217 currency and ISO 15924 script codes.
+BA = "BA"                        # Bosnia and Herzegovina
+FO = "FO"                        # Faroe Islands
+PN = "PN"                        # Pitcairn Islands
+JOD = "JOD"                      # Jordanian dinar
+Beng = "Beng"                    # Bengali script
+
+# Accepted spelling variants used consistently across the API text.
+unparseable = "unparseable"
+Unparseable = "Unparseable"
+browseable = "browseable"
+togglable = "togglable"
+transitionable = "transitionable"
+uncatalogued = "uncatalogued"
+
+# Tool and project names.
+sherif = "sherif"                # npm workspace dependency linter (package.json)
+Zink = "Zink"                    # Mesa's OpenGL-on-Vulkan driver
+ZINK = "ZINK"
+
+[type.fixtures]
+# Tests, stories and type tests (matched by file name): UI strings in several languages (the localization contract),
+# partial words used as search input, and deliberately misspelled names.
+extend-glob = ["*.test.ts", "*.test.mjs", "*.stories.ts", "emit.ts", "corpus.ts"]
+
+[type.fixtures.extend-words]
+# French, German and Polish sample strings (localization overrides under test).
+sur = "sur"
+Sur = "Sur"
+invalide = "invalide"
+cours = "cours"
+copie = "copie"
+Commandes = "Commandes"
+commandes = "commandes"
+pris = "pris"
+Pris = "Pris"
+environnement = "environnement"
+objet = "objet"
+exemple = "exemple"
+exemples = "exemples"
+incomplet = "incomplet"
+Certains = "Certains"
+Collecte = "Collecte"
+Comparaison = "Comparaison"
+Groupe = "Groupe"
+Maintenant = "Maintenant"
+maintenant = "maintenant"
+Maintenir = "Maintenir"
+Origines = "Origines"
+Transfert = "Transfert"
+correspondance = "correspondance"
+correspondant = "correspondant"
+mesure = "mesure"
+seconde = "seconde"
+visibles = "visibles"
+Adresse = "Adresse"
+limite = "limite"
+presse = "presse"
+bord = "bord"
+Elemente = "Elemente"
+Aktive = "Aktive"
+Alle = "Alle"
+Diagramm = "Diagramm"
+Referenz = "Referenz"
+Horizontale = "Horizontale"
+elementy = "elementy"
+ist = "ist"                      # German word, and the id of the Istanbul catalog entry
+
+# Partial words typed as search input, escape-sequence text and short variable names.
+hel = "hel"
+Hel = "Hel"
+iz = "iz"
+Caf = "Caf"
+caf = "caf"
+ths = "ths"                      # the table header cells
+Ue = "Ue"                        # mixed-case "TrUe" attribute value
+Aafter = "Aafter"
+Kend = "Kend"
+unparented = "unparented"
+
+# Deliberately misspelled names that must be rejected or reported.
+chnage = "chnage"
+valu = "valu"
+kown = "kown"
+opne = "opne"
+relese = "relese"

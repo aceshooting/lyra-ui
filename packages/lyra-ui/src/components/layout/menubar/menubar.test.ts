@@ -47,6 +47,17 @@ async function click(target: HTMLElement): Promise<void> {
 describe('lr-menubar', () => {
   afterEach(async () => { await resetMouse(); });
 
+  it('is declared in HTMLElementTagNameMap, so DOM lookups return the component classes', () => {
+    // Compile-time contract (checked by `check:test-types`): neither line type-checks without the
+    // declarations at the end of menubar.class.ts and menubar-item.class.ts.
+    const bar: HTMLElementTagNameMap['lr-menubar'] = document.createElement('lr-menubar');
+    const entry: HTMLElementTagNameMap['lr-menubar-item'] = document.createElement('lr-menubar-item');
+    entry.id = 'typed-entry';
+    bar.append(entry);
+    const found: LyraMenubarItem | null = bar.querySelector('lr-menubar-item');
+    expect(found?.id).to.equal('typed-entry');
+  });
+
   it('renders the menubar role, literal disclosure states and one roving stop', async () => {
     const bar = await sample();
     expect(bar.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('menubar');

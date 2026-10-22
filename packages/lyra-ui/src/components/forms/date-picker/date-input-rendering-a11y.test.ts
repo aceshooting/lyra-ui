@@ -2054,7 +2054,7 @@ describe('coverage-gap fixes', () => {
     };
     expect(priv.validatorAttributeObserver).to.not.equal(undefined);
     const revisionBefore = priv.validityRevision;
-    // A differently-identitied binding with a real (no-op) observer, so the
+    // A differently-identified binding with a real (no-op) observer, so the
     // guard's `!==` check trips while fixture cleanup can still safely call
     // `.observer.disconnect()` on it afterwards.
     priv.validatorAttributeObserver = { observer: { disconnect() {} } };

@@ -20,6 +20,7 @@ import {
   rewriteSharedLinksForRoot,
   splitSections,
   TYPE_ONLY_DECLARATION_PEERS,
+  truncatePurpose,
   validateCompoundUsageRegistrations,
 } from './build-llms.mjs';
 import {
@@ -371,6 +372,35 @@ const currentManifest = JSON.parse(
   readFileSync(new URL('../custom-elements.json', import.meta.url), 'utf8'),
 );
 const currentTagFacts = readTagFacts(currentManifest);
+
+// One-line purposes are cut at a word boundary: never mid-word, never inside an inline-code span.
+assert.equal(truncatePurpose('A short sentence.'), 'A short sentence.');
+assert.equal(
+  truncatePurpose(
+    'a virtualized data grid for client or server data, with sorting, filtering, grouping, trees, ' +
+      'paging, pinning, resizing, reordering, selection, editing and much more beyond that.',
+  ),
+  'a virtualized data grid for client or server data, with sorting, filtering, grouping, trees, ' +
+    'paging, pinning, resizing, reordering...',
+);
+assert.equal(truncatePurpose('x'.repeat(200)).length, 140, 'one over-long token is still cut to the limit');
+{
+  const padding = 'word '.repeat(26).trimEnd();
+  const inCodeSpan = truncatePurpose(`${padding} \`abc def ghi\` and a tail that pushes it over the limit.`);
+  assert.equal(inCodeSpan, `${padding}...`, 'a cut inside an inline-code span drops the whole span');
+}
+for (const mod of currentManifest.modules ?? []) {
+  for (const decl of mod.declarations ?? []) {
+    const purpose = decl.tagName ? currentTagFacts.get(decl.tagName)?.purpose : undefined;
+    if (!purpose?.endsWith('...')) continue;
+    const lastWord = purpose.slice(0, -3).match(/([\p{L}\p{N}_-]+)\W*$/u)?.[1];
+    assert.ok(
+      lastWord && new RegExp(`(?<![\\p{L}\\p{N}_-])${lastWord.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}(?![\\p{L}\\p{N}_-])`, 'u').test(decl.description),
+      `${decl.tagName}: the shortened purpose must end on a whole word ("${lastWord}")`,
+    );
+    assert.equal((purpose.match(/`/gu) ?? []).length % 2, 0, `${decl.tagName}: unbalanced inline code in the purpose`);
+  }
+}
 const focusedPeerTags = [
   'lr-video',
   'lr-video-playlist',

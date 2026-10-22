@@ -54,7 +54,7 @@ it('reflects the pinned Web Awesome disabled property in both directions', async
   expect(el.disabled).to.equal(false);
 });
 
-it('keeps owner synchronization pristine and clears consumer selectedness dirtyness on reset', async () => {
+it('keeps owner synchronization pristine and clears consumer selectedness dirtiness on reset', async () => {
   const el = (await fixture(html`<lr-option value="a">Alpha</lr-option>`)) as LyraOption;
 
   el[SET_OPTION_SELECTED_FROM_OWNER](false);
@@ -67,7 +67,7 @@ it('keeps owner synchronization pristine and clears consumer selectedness dirtyn
 
   el[RESET_OPTION_SELECTED_FROM_OWNER](false);
   el.defaultSelected = true;
-  expect(el.selected, 'reset clears dirtyness so later defaults reach live state again').to.be.true;
+  expect(el.selected, 'reset clears dirtiness so later defaults reach live state again').to.be.true;
 });
 
 it('resolves label from the label attribute when present', async () => {

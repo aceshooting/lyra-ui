@@ -14,6 +14,31 @@ packageExtensions:
   dependency-cruiser:
     dependencies:
       typescript: npm:typescript@6.0.3
+  # The Lit template plugins run on oxlint's own parser and never load ESLint, so their eslint peer
+  # is optional (otherwise pnpm installs eslint and about 80 packages for nothing).
+  eslint-plugin-lit:
+    peerDependenciesMeta:
+      eslint:
+        optional: true
+  eslint-plugin-wc:
+    peerDependenciesMeta:
+      eslint:
+        optional: true
+# `pnpm install` warns about deprecated dependencies. node-domexception@1.0.0 is the final release
+# (the platform provides DOMException now). It is reached only through the dev-only chain
+# @lit-labs/ssr > node-fetch@3 > fetch-blob, and the newest fetch-blob still depends on it.
+allowedDeprecatedVersions:
+  node-domexception: 1.0.0
+# `pnpm peers check` (run by `pnpm check:lockfile`) must stay clean; these are its reviewed exceptions.
+peerDependencyRules:
+  allowedVersions:
+    # The Storybook docs build runs this Codecov plugin on Vite 8, while its newest release (2.0.1)
+    # still declares `4.x || 5.x || 6.x`.
+    '@codecov/vite-plugin>vite': '8'
+  allowAny:
+    # lyra-ui's optional xlsx peer is `>=0.20.3 <0.21.0`. The only maintained 0.20 build is the
+    # SheetJS CDN tarball, whose resolved version is a URL that pnpm cannot compare with a range.
+    - xlsx
 overrides:
   '@xmldom/xmldom': ^0.8.15
   'epubjs@0.3.93>@types/localforage': '-'
@@ -139,7 +164,6 @@ minimumReleaseAgeExclude:
   - '@img/sharp-win32-x64@0.35.5'
   - sharp@0.35.5
   - '@types/d3-zoom@3.0.9'
-  - '@types/node@26.6.4 || 26.6.5'
   - '@docx-editor.dev/core@2.25.0 || 2.26.0 || 2.27.0 || 2.28.0 || 2.29.0 || 2.30.0 || 2.31.0'
   - '@docx-editor.dev/i18n@2.25.0 || 2.26.0 || 2.27.0 || 2.28.0 || 2.29.0 || 2.30.0 || 2.31.0'
   - '@pnpm/exe.android-arm64@12.9.1'

@@ -20,6 +20,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       # Flags newly introduced vulnerable or license-incompatible dependencies at PR time -- the
       # one supply-chain gap this repo's otherwise-thorough setup (SHA-pinned actions, Scorecard,
       # CodeQL, Sigstore-signed releases) left uncovered: CodeQL analyzes code semantics, Scorecard

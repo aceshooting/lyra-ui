@@ -51,8 +51,8 @@ The shell stores provider references by identity without inspecting their revisi
 rows or totals, querying them or cloning them. An inactive assignment only stores the reference;
 it neither reads that provider nor refreshes the active child. Only the mounted active child
 receives its matching provider and owns validation, requests, bounded page data, loading, errors,
-retry and global totals, as described by [knowledge-base](#lr-knowledge-base) and
-[ingestion-queue](#lr-ingestion-queue). The shell adds no `sourcePage`, `sourcePageSize` or
+retry and global totals, as described by [knowledge-base](./lr-knowledge-base.md) and
+[ingestion-queue](./lr-ingestion-queue.md). The shell adds no `sourcePage`, `sourcePageSize` or
 `sourceTotal` API and keeps no page cache or inactive child instance.
 
 An active provider assignment, including the same reference, synchronously forwards one refresh;

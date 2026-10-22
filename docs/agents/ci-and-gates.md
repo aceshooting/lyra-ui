@@ -18,7 +18,9 @@ first: local `pnpm lint` and the CI lint sharder both derive their inventory fro
 (`ts.SyntaxKind` and `ts.createProgram` are `undefined`). The declaration-link checker uses the
 explicitly unstable `typescript/unstable/sync`, `/fs` and `/ast` interfaces for that one narrow
 check; this does not establish compatibility for `type-coverage`, type-aware `typescript-eslint`,
-`ts-morph`, Stryker's TypeScript checker or other compiler-API tools. Verify a proposed tool against
+`ts-morph`, Stryker's TypeScript checker or other compiler-API tools. `lit-analyzer` is one of them:
+it throws while loading under the pinned package (it needs the legacy `ts.ScriptTarget` API and a
+TypeScript 5 program), so Lit templates cannot be checked with it. Verify a proposed tool against
 the pinned package first, or use options needing no compiler API: `tsc`'s strict flags, bespoke
 `check-*.mjs` scanners, `secretlint`, `knip`, `cspell`, oxlint (its type-aware backend is
 typescript-go, which reads the TS 7 `tsconfig.json` natively), Stryker without a checker (the mutated
@@ -40,6 +42,17 @@ both are also root scripts, and a finding fails `lint`:
   generated docs quote verbatim (for example a documented return-kind union). The six component
   directories under `ignorePatterns` ("covered separately") are excluded until their rework lands:
   remove the entries then and fix what surfaces.
+- The same oxlint run lints Lit templates with `eslint-plugin-lit` and `eslint-plugin-wc` as oxlint
+  JS plugins (alpha; pin exact versions). They run on oxlint's own parser, so they need neither
+  TypeScript (which rules out `lit-analyzer`) nor ESLint (their `eslint` peer is optional in
+  `pnpm-workspace.yaml`). They only treat a class as a Lit element when it is `LitElement`, a
+  `@customElement`, or named in `settings.lit/wc.elementBaseClasses`, so a missing name silently
+  disables the class-level rules: `check:lit-bases` recomputes the list from the AST and
+  `test:lit-lint` seeds one defect per enabled rule in `scripts/fixtures/lit-lint-canary.fixture.ts`
+  and fails if any stops firing. Both are `contract-policy` members. The per-file exceptions in the
+  config's `overrides` are the reviewed false positives (`html` imported from `lit/static-html.js`,
+  hidden-input `.value` order, the documented `currentTime` and `value=` bindings). The plugins
+  check only tagged templates named `html`; `svg` and `staticHtml` templates are not analysed.
 - `check:architecture` (`pnpm check:architecture`, about 16 s) runs dependency-cruiser with
   `packages/lyra-ui/.dependency-cruiser.cjs` over `src`. Errors: a static or type-only import cycle (the
   contract of `check:cycles`, which stays), a shipped module importing a test, story, fixture or
@@ -180,9 +193,10 @@ real data dependencies, so a red check names the phase to reproduce:
    longest measured first, on every core but two (`scripts/local-parallelism.mjs`, capped at 2 GiB
    of available memory per worker), printing failing output whole and reporting every failure in
    one pass. No lane needs Playwright or a build.
-2. **`static-checks`** needs neither a library build nor a docs build: workflow syntax, the generated
-   release-qualification manifest, release-integrity, public-API, pinned-upstream, other-package,
-   dead-code and secret checks, then regenerate-and-diff of registrations, the manifest, editor data,
+2. **`static-checks`** needs neither a library build nor a docs build: workflow syntax and security,
+   spelling, Markdown link, shell script, workspace-dependency, lockfile and SBOM-generator checks ([below](#repository-hygiene-checks)),
+   the generated release-qualification manifest, release-integrity, public-API, pinned-upstream,
+   other-package, dead-code and secret checks, then regenerate-and-diff of registrations, the manifest, editor data,
    README status, plugin references, skill archives and Storybook theme contracts. Copy the failing
    job's steps from `ci.yml`. `pnpm readme:check` covers root `README.md` and
    `packages/lyra-ui/README.md` (the npm page); keep their badge rows in sync by hand and state only
@@ -351,7 +365,7 @@ before they measure); re-rolling to get past a broken test or a benchmark interv
 
 ## Local aggregate: `scripts/ci.sh`
 
-`./scripts/ci.sh` consolidates the six primary jobs into one Node 22/Chromium run. It requires the exact Node patch recorded in `.nvmrc` and pnpm to match `package.json#packageManager`, so a green run under another patch is not mistaken for CI; run `nvm use` first. It reuses one install, one library build and one Storybook build, and omits the external Codecov and artifact-upload actions (the blocking local equivalents of bundle-size, coverage and visual regression still run; `codecov:bundle` is reporting only). It includes the networked, content-addressed pinned-upstream-manifest check (an unavailable registry or changed artifact fails the run rather than falling back to a clone-generated manifest) and the checksum-pinned actionlint workflow gate.
+`./scripts/ci.sh` consolidates the six primary jobs into one Node 22/Chromium run. It requires the exact Node patch recorded in `.nvmrc` and pnpm to match `package.json#packageManager`, so a green run under another patch is not mistaken for CI; run `nvm use` first. It reuses one install, one library build and one Storybook build, and omits the external Codecov and artifact-upload actions (the blocking local equivalents of bundle-size, coverage and visual regression still run; `codecov:bundle` is reporting only). It includes the networked, content-addressed pinned-upstream-manifest check (an unavailable registry or changed artifact fails the run rather than falling back to a clone-generated manifest), the checksum-pinned actionlint workflow gate and the [repository hygiene checks](#repository-hygiene-checks).
 
 - `./scripts/ci.sh --platform` adds the unsharded `test:platform` browser sweep under the active
   Node 22/pnpm 12 toolchain. The 5-browser Node 22 sweep is Firefox, Chromium, Chrome, Edge, and
@@ -481,9 +495,9 @@ remain advisory evidence; the deterministic scale counters are the automated reg
    `workflow_dispatch`/`main` runs of the two browser workflows and of Quality tools. A credential-free job packs each
    tarball with the pinned Node and pnpm (the same command publish verification rebuilds with) and
    fails if packing changes tracked files. A job with no checkout then pushes the annotated tags
-   atomically, creates each GitHub Release with the tarball, canonical source archive and `CHANGELOG.md` (plus
-   `custom-elements.json`, `llms.txt` and `llms-full.txt` for packages with a manifest generator) and
-   dispatches `publish.yml` per tag. A release made with `GITHUB_TOKEN` emits no `release: published`
+   atomically, creates each GitHub Release with the tarball, canonical source archive, `CHANGELOG.md` and the
+   package's CycloneDX SBOM (plus `custom-elements.json`, `llms.txt` and `llms-full.txt` for packages
+   with a manifest generator) and dispatches `publish.yml` per tag. A release made with `GITHUB_TOKEN` emits no `release: published`
    event, so that dispatch is the only publish trigger.
 4. **Publish.** Approve the `npm-publish` environment on each Publish run. UI releases also need a
    website deployment so `release-feed-freshness.yml` can confirm the upgrade feed matches npm;
@@ -531,10 +545,14 @@ Git archive of the exact tagged commit, prefixed `lyra-ui-<source-sha>/`. GitHub
 these attestations. Git tags themselves remain unsigned.
 
 Every release payload has `.sigstore.json` and `.intoto.jsonl` sidecars: the package `.tgz`, canonical
-source `.tar`, `CHANGELOG.md`, and, for packages with a manifest generator, `custom-elements.json`,
-`llms.txt` and `llms-full.txt`. The standalone assets byte-match their committed versions at the
-qualified source SHA. The verifier rejects missing or unknown payloads and accepts sidecars only
-for declared payloads. Additional files require an explicit inventory change and qualification.
+source `.tar`, `CHANGELOG.md`, the CycloneDX SBOM `<package>-<version>.cdx.json`, and, for packages
+with a manifest generator, `custom-elements.json`, `llms.txt` and `llms-full.txt`. The standalone
+assets byte-match their committed versions at the qualified source SHA. The SBOM is not committed:
+`scripts/release-artifacts.mjs` derives it from the tagged checkout (`pnpm sbom --prod` for the
+package, sorted, with a serial number and timestamp taken from the commit), so the pack job writes it
+and the read-only verification job regenerates it and compares bytes like every other payload. The
+verifier rejects missing or unknown payloads and accepts sidecars only for declared payloads.
+Additional files require an explicit inventory change and qualification.
 
 The shared read-only verifier recreates the source archive, compares standalone downloads and
 transfers them with a SHA-256 manifest bound to a job output. Both protected jobs validate that
@@ -683,6 +701,42 @@ regenerates `vscode-html-data.json`, `vscode-css-data.json` and `web-types.json`
 type and LLM freshness are enforced inside `pnpm lint`. Whenever you touch the public surface (JSDoc,
 attributes, parts, CSS properties), run `pnpm regen` and commit the whole set; one generator alone
 leaves downstream outputs stale.
+
+## Repository hygiene checks
+
+Seven root scripts cover what the package gates cannot see: workflow security, spelling, links, shell
+scripts, workspace dependencies, the lockfile and the release SBOM generator. They are repo-wide, so
+like `check:workflows` and `check:secrets` they run in `static-checks` and `scripts/ci.sh` (about ten
+seconds together), not in `contract-policy`. Each exits non-zero on any finding; fix the finding, and
+extend a config only for a reviewed exception with its reason beside it.
+
+| Script | Tool | Config and scope |
+|---|---|---|
+| `check:workflow-security` | zizmor (offline, default persona) | `.github/zizmor.yml`; `.github/workflows`. Reviewed exceptions live in the config, each with its reason. |
+| `check:spelling` | typos | `_typos.toml`; the tracked tree. Excludes translation catalogs and generated outputs, allows domain terms, and scopes foreign-language and deliberately misspelled strings to tests and stories (`[type.fixtures]`). |
+| `check:links` | lychee (offline) | `lychee.toml`; tracked `*.md`. Relative links, root-relative links and heading fragments must resolve, which includes the generated `llms/` and plugin reference pages: fix such a link in the authored `llms/<family>.md` or the generator, never in the output. |
+| `check:shell` | shellcheck | Tracked `*.sh`/`*.bash` and extensionless shell-shebang scripts. An exception is an inline `# shellcheck disable=SCxxxx` with its reason. |
+| `check:workspace-deps` | sherif | `package.json#sherif`. One dependency range per workspace dependency (Node types follow the oldest supported Node major), sorted dependency blocks. `maplibre-gl` is ignored on purpose: lyra-map pins the exact release it is built from. |
+| `check:lockfile` | `pnpm dedupe --check`, `pnpm peers check` | `pnpm-workspace.yaml`. The reviewed peer and deprecation exceptions live there with their reasons. |
+| `check:sbom` | `pnpm sbom` through `scripts/release-artifacts.mjs` | Every publishable package: the release SBOM generator runs on the installed workspace, describes the package and gives identical bytes twice, so a pnpm update cannot break the release path unseen. |
+
+zizmor, typos, lychee and shellcheck are not npm packages. `scripts/lib/pinned-tool.mjs` pins the
+version, URL and SHA-256 of each Linux x86_64 release archive, downloads it once into
+`~/.cache/lyra-ui-tools` (`LYRA_TOOLS_CACHE` overrides), verifies the checksum before unpacking
+anything, and prefers an installed copy that reports the exact pinned version (other platforms
+install that version themselves, as for actionlint). To bump one, change its version, URL and
+SHA-256 together; GitHub lists each asset's SHA-256 on the release page. sherif is a root
+devDependency, so the lockfile pins it.
+
+`zizmor` runs offline so a push never depends on a token or the network, which skips its few audits
+that query GitHub (impostor commits, known-vulnerable actions); Dependabot keeps action versions
+current. The config holds two reviewed exceptions: the `self-repository` rule is off because actionlint
+1.7.12 rejects its `$/` spelling, and `deploy-docs.yml` keeps its `workflow_run` trigger behind an `if`
+that accepts only a successful `push` run of CI on `main` from this repository (asserted in
+`scripts/release-integrity.test.mjs`).
+
+`.github/workflows/external-links.yml` runs `node scripts/check-links.mjs --external` weekly (and on
+demand): it requests every http(s) link, so a third-party outage surfaces there, never in a push.
 
 ## Other package-local gates
 

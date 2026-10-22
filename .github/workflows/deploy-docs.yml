@@ -1,6 +1,12 @@
 name: Deploy docs
 
 # Deploys the Storybook a green main-push CI run built, while its commit is still the head of main.
+#
+# A `workflow_run` workflow runs in the privileged default-branch context (`deploy` holds
+# `pages: write` and `id-token: write`) whoever triggered the upstream run, so the guards are
+# load-bearing: `build` accepts only a successful `push` run of CI on `main` whose head commit
+# lives in this repository (never a pull request, a fork or a tag), checks nothing out, and
+# consumes only the artifact that exact run uploaded.
 on:
   workflow_run:
     workflows: [CI]
@@ -16,7 +22,11 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.head_branch == 'main'
+      && github.event.workflow_run.head_repository.full_name == github.repository }}
     runs-on: ubuntu-latest
     permissions:
       actions: read

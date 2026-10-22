@@ -5,6 +5,15 @@
   // purpose; do not re-enable one without auditing its findings first.
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc"],
+  // Lit template and web-component rules run as JS plugins on oxlint's own parser (no TypeScript, no
+  // ESLint). The plugins only recognise a class as a Lit element when it is LitElement, a
+  // @customElement, or listed in settings.*.elementBaseClasses; check:lit-bases keeps that list
+  // equal to the repo's real base classes and test:lit-lint proves every enabled rule still fires.
+  "jsPlugins": ["eslint-plugin-lit", "eslint-plugin-wc"],
+  "settings": {
+    "lit": { "elementBaseClasses": ["CatalogPickerElement", "ColorPickerBase", "EmojiPickerBase", "LyraAvPlayerBase", "LyraBadge", "LyraCalendarViewerBase", "LyraCatalogPickerBase", "LyraCatalogPickerElement", "LyraChart", "LyraChatComposerBase", "LyraCheckboxBase", "LyraCodeBlockBase", "LyraCodeEditorBase", "LyraContactViewerBase", "LyraCsvViewerBase", "LyraDatasetViewerBase", "LyraDateInputBase", "LyraDialog", "LyraDiffViewBase", "LyraDocxViewerBase", "LyraEbookViewerBase", "LyraElement", "LyraEmailViewerBase", "LyraFormControlElement", "LyraGeoJsonViewer", "LyraGeoJsonViewerBase", "LyraHtmlViewerBase", "LyraImageViewerBase", "LyraIncludeBase", "LyraInput", "LyraInputBase", "LyraInputShared", "LyraKnownDateBase", "LyraMarkdownRuntimeElement", "LyraMenuItem", "LyraNotebookViewerBase", "LyraOtpInputBase", "LyraPdfViewerBase", "LyraPhoneInputBase", "LyraPopover", "LyraPptxViewerBase", "LyraProgressBase", "LyraRadio", "LyraRadioBase", "LyraSliderBase", "LyraSourceCardBase", "LyraSpreadsheetViewerBase", "LyraSvgViewerBase", "LyraSwitchBase", "LyraTextareaBase", "LyraTimeInputBase", "LyraXmlViewerBase", "MarkdownRuntimeBase", "StreamingTextRuntimeBase"] },
+    "wc": { "elementBaseClasses": ["CatalogPickerElement", "ColorPickerBase", "EmojiPickerBase", "LyraAvPlayerBase", "LyraBadge", "LyraCalendarViewerBase", "LyraCatalogPickerBase", "LyraCatalogPickerElement", "LyraChart", "LyraChatComposerBase", "LyraCheckboxBase", "LyraCodeBlockBase", "LyraCodeEditorBase", "LyraContactViewerBase", "LyraCsvViewerBase", "LyraDatasetViewerBase", "LyraDateInputBase", "LyraDialog", "LyraDiffViewBase", "LyraDocxViewerBase", "LyraEbookViewerBase", "LyraElement", "LyraEmailViewerBase", "LyraFormControlElement", "LyraGeoJsonViewer", "LyraGeoJsonViewerBase", "LyraHtmlViewerBase", "LyraImageViewerBase", "LyraIncludeBase", "LyraInput", "LyraInputBase", "LyraInputShared", "LyraKnownDateBase", "LyraMarkdownRuntimeElement", "LyraMenuItem", "LyraNotebookViewerBase", "LyraOtpInputBase", "LyraPdfViewerBase", "LyraPhoneInputBase", "LyraPopover", "LyraPptxViewerBase", "LyraProgressBase", "LyraRadio", "LyraRadioBase", "LyraSliderBase", "LyraSourceCardBase", "LyraSpreadsheetViewerBase", "LyraSvgViewerBase", "LyraSwitchBase", "LyraTextareaBase", "LyraTimeInputBase", "LyraXmlViewerBase", "MarkdownRuntimeBase", "StreamingTextRuntimeBase"] }
+  },
   "categories": { "correctness": "error" },
   "env": { "browser": true, "es2022": true },
   "ignorePatterns": [
@@ -55,6 +64,12 @@
     "unicorn/no-useless-fallback-in-spread": "off"
   },
   "overrides": [
+    {"files": ["packages/*/src/**/*.ts"], "excludeFiles": ["**/*.test.ts", "**/*.stories.ts", "**/*.d.ts"], "rules": {"lit/attribute-names": "error", "lit/attribute-value-entities": "error", "lit/binding-positions": "error", "lit/lifecycle-super": "error", "lit/no-duplicate-template-bindings": "error", "lit/no-invalid-escape-sequences": "error", "lit/no-invalid-html": "error", "lit/no-legacy-imports": "error", "lit/no-legacy-template-syntax": "error", "lit/no-property-change-update": "error", "lit/no-template-bind": "error", "lit/no-useless-template-literals": "error", "lit/no-value-attribute": "error", "lit/prefer-static-styles": "error", "lit/quoted-expressions": "error", "lit/value-after-constraints": "error", "wc/attach-shadow-constructor": "error", "wc/no-closed-shadow-root": "error", "wc/no-constructor-attributes": "error", "wc/no-constructor-params": "error", "wc/no-self-class": "error", "wc/no-typos": "error"}},
+    {"files": ["packages/lyra-ui/src/components/forms/catalog-picker-base.ts", "packages/lyra-docs/src/docx/docx-editor.class.ts"], "rules": {"lit/binding-positions": "off", "lit/no-invalid-html": "off"}},
+    {"files": ["packages/lyra-ui/src/components/utility/known-date/known-date.class.ts", "packages/lyra-ui/src/components/forms/otp-input/otp-input.class.ts", "packages/lyra-ui/src/components/forms/input/time-input.class.ts"], "rules": {"lit/value-after-constraints": "off"}},
+    {"files": ["packages/lyra-ui/src/components/media/video/video.class.ts"], "rules": {"lit/attribute-names": "off"}},
+    {"files": ["packages/lyra-ui/src/components/data/table/table.class.ts"], "rules": {"lit/no-value-attribute": "off"}},
+    {"files": ["packages/lyra-ui/src/components/conversation/code-block/code-block-shared.ts"], "rules": {"lit/no-useless-template-literals": "off"}},
     {
       // The benchmark harness is content-hashed into every recorded result (benchmarks/compare.mjs
       // refuses to compare runs from different harness hashes), so editing it forces the previous

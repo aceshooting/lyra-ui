@@ -146,6 +146,8 @@ jobs:
         with:
           node-version: ${{ needs.verify.outputs.node_version }}
           registry-url: 'https://registry.npmjs.org'
+          # This job publishes npm packages: it must never restore a package-manager cache.
+          package-manager-cache: false
 
       - name: Update npm CLI (trusted publishing needs >=11.5.1)
         run: |

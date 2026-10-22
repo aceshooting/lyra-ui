@@ -1,0 +1,24 @@
+# Link check for `pnpm check:links` (lychee, pinned in scripts/lib/pinned-tool.mjs). It reads the
+# tracked Markdown files and works offline: relative links, root-relative links and heading
+# fragments are verified without network access. External URLs are checked by the scheduled
+# external-links workflow instead, whose command line overrides `offline`.
+offline = true
+no_progress = true
+include_fragments = "full"
+
+exclude_path = [
+  # Authored fragment that build-llms.mjs assembles into packages/lyra-ui/llms.txt; its relative
+  # links are written for that file's location (the package root), not for llms/.
+  '^packages/lyra-ui/llms/00-llms-txt-intro\.md$',
+]
+
+# Remote URLs are only requested by the weekly external run (scripts/check-links.mjs --external).
+exclude = [
+  # npmjs.com answers automated requests with 403 (bot protection); registry.npmjs.org stays checked.
+  '^https://www\.npmjs\.com/',
+  # Verbatim upstream attribution in packages/lyra-map/THIRD_PARTY_NOTICES.md; that SVN server is gone.
+  '^http://svn\.webkit\.org/',
+  # The archived v1 release notes name 0.1.3 as the pre-tag baseline; no such tag exists, and the
+  # archive is immutable history.
+  '^https://github\.com/aceshooting/lyra-ui/releases/tag/0\.1\.3$',
+]

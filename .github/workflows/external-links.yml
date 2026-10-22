@@ -1,0 +1,33 @@
+name: External links
+
+# Requests every http(s) link of the tracked Markdown once a week. The per-push `pnpm check:links`
+# runs offline (relative links and heading fragments); this sweep needs the network, so a third-party
+# outage never blocks a change and shows up here instead.
+on:
+  schedule:
+    - cron: '41 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  external-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      # lychee reads GITHUB_TOKEN for github.com links, so the sweep is not rate limited.
+      - run: node scripts/check-links.mjs --external
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

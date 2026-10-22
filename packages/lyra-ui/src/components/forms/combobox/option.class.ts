@@ -173,7 +173,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.setLiveSelected(next, false);
   }
 
-  /** Clears selectedness dirtyness at form reset and restores the owner's reset selection.
+  /** Clears selectedness dirtiness at form reset and restores the owner's reset selection.
    * @internal */
   [RESET_OPTION_SELECTED_FROM_OWNER](next: boolean): void {
     this.selectedDirty = false;

@@ -216,6 +216,7 @@ _run_with_toolchain_worker() {
   local selected_node_proxy_parent="${TMPDIR:-/tmp}"
   local selected_command_pid=""
 
+  # shellcheck disable=SC2329 # runs through the EXIT trap below
   cleanup_selected_toolchain() {
     local original_status="$1"
     local cleanup_status=0
@@ -239,6 +240,7 @@ _run_with_toolchain_worker() {
   }
   trap 'cleanup_selected_toolchain "$?"' EXIT
 
+  # shellcheck disable=SC2329 # runs through the HUP, INT and TERM traps below
   terminate_selected_command() {
     local signal_name="$1"
     local signal_status="$2"
@@ -307,6 +309,7 @@ _run_with_toolchain_worker() {
   # nested command from a different cwd. The wrapper is itself found through
   # the selected directory and re-prepends that absolute directory before the
   # selected pnpm shebang is evaluated again.
+  # shellcheck disable=SC2016 # the single-quoted lines are the generated script's text: expanded when it runs
   if ! printf '%s\n' \
       '#!/bin/sh' \
       'set -eu' \
@@ -320,6 +323,7 @@ _run_with_toolchain_worker() {
     return 1
   fi
   chmod 700 "$selected_node_proxy_dir/pnpm"
+  # shellcheck disable=SC2016 # the single-quoted lines are the generated script's text: expanded when it runs
   if ! printf '%s\n' \
       '#!/bin/sh' \
       'set -eu' \
@@ -418,6 +422,27 @@ pnpm lint
 
 step "workflow syntax and policy"
 pnpm check:workflows
+
+step "workflow security audit"
+pnpm check:workflow-security
+
+step "spelling"
+pnpm check:spelling
+
+step "Markdown links"
+pnpm check:links
+
+step "shell scripts"
+pnpm check:shell
+
+step "workspace dependency consistency"
+pnpm check:workspace-deps
+
+step "lockfile deduplication and peer dependencies"
+pnpm check:lockfile
+
+step "release SBOM generator"
+pnpm check:sbom
 
 step "release qualification manifest and workflow contract"
 pnpm check:release-qualification
@@ -589,6 +614,7 @@ fi
 
 if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
   platform_failures=0
+  # shellcheck disable=SC2043 # one Node major is supported today; keeping a loop makes adding another a one-word change
   for node_version in 22; do
     node_bin="$(resolve_node_for_version "$node_version")"
     if [[ -z "$node_bin" ]]; then

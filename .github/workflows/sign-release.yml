@@ -173,13 +173,14 @@ jobs:
       - name: Upload provenance to GitHub release
         env:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          EXPECTED_TAG_SHA: ${{ needs.verify.outputs.tag_sha }}
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.verify.outputs.tag }}
           TARBALL: ${{ steps.release_asset.outputs.path }}
         run: |
           set -euo pipefail
           remote_sha="$(git ls-remote --tags "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$TAG^{}" | cut -f1)"
-          if [[ "$remote_sha" != "${{ needs.verify.outputs.tag_sha }}" ]]; then
+          if [[ "$remote_sha" != "$EXPECTED_TAG_SHA" ]]; then
             echo "::error::Release tag moved before provenance upload."
             exit 1
           fi

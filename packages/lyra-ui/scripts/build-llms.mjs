@@ -85,6 +85,22 @@ export const COMPOUND_USAGE_REGISTRATIONS = Object.freeze({
 // Manifest facts: tag -> family, declaring module, and the registration entry point to import.
 // ---------------------------------------------------------------------------------------------
 
+const PURPOSE_MAX_LENGTH = 140;
+
+/**
+ * Shorten `sentence` to at most `maxLength` characters, ending in "...". The cut lands on a word
+ * boundary (a purpose never ends mid-word) and never inside an inline-code span, whose closing
+ * backtick would otherwise be lost and swallow the rest of the line.
+ */
+export function truncatePurpose(sentence, maxLength = PURPOSE_MAX_LENGTH) {
+  if (sentence.length <= maxLength) return sentence;
+  const room = maxLength - 3;
+  let head = sentence.slice(0, room);
+  if (!/\s/u.test(sentence[room])) head = head.replace(/\s+\S*$/u, '');
+  while ((head.match(/`/gu) ?? []).length % 2 === 1) head = head.slice(0, head.lastIndexOf('`'));
+  return `${head.replace(/[\s,;:(\u2013\u2014-]+$/u, '')}...`;
+}
+
 /**
  * One-line purpose from a class's JSDoc: drop the leading "`<lr-x>` — " restatement, unwrap the
  * source's hard line breaks, and keep the first sentence (or the first clause, when the JSDoc opens
@@ -94,7 +110,7 @@ function summarize(description) {
   const flat = description.split('\n\n')[0].replace(/\s+/g, ' ').trim();
   const body = flat.replace(/^`?<?lr-[a-z0-9-]+>?`?\s*[—-]\s*/i, '');
   const sentence = body.match(/^(.+?\.)(?:\s|$)/)?.[1] ?? body;
-  return sentence.length > 140 ? `${sentence.slice(0, 137).trimEnd()}...` : sentence;
+  return truncatePurpose(sentence);
 }
 
 export function readTagFacts(manifest) {

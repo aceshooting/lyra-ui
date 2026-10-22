@@ -310,3 +310,9 @@ export class LyraMenubar extends LyraElement<LyraMenubarEventMap> {
     return html`<div part="base" role="menubar" aria-label=${this.getAttribute('aria-label') ?? this.label ?? this.localize('menuLabel')}><slot @slotchange=${this.syncItems}></slot></div>`;
   }
 }
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-menubar': LyraMenubar;
+  }
+}

@@ -576,7 +576,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           .name=${part.invocation.name}
           .displayName=${invocationDisplayName(part.invocation)}
           .status=${part.invocation.status}
-          .summary=${summary ?? ''}
+          .summary=${typeof summary === 'string' ? summary : ''}
         ></lr-tool-call-chip>`;
       }
       case 'tool-result': {

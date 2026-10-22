@@ -124,6 +124,10 @@ Qualification ledger and evidence rules: **[docs/agents/component-qualification.
   `ls packages/lyra-ui/scripts/check-*.mjs` is the real inventory.
 - Outside `contract-policy`: `check:build-artifacts` (in `build`; no maps in `dist`) and
   `check:coverage-floors` (after `test:coverage`; regenerate with `--write-floors`).
+- Repo-wide hygiene runs in `static-checks` and `scripts/ci.sh`, not `pnpm lint`:
+  `check:workflow-security`, `check:spelling`, `check:links`, `check:shell`, `check:workspace-deps`,
+  `check:lockfile` and `check:sbom`. Fix the finding; extend `_typos.toml` only for a real domain term
+  ([detail](docs/agents/ci-and-gates.md#repository-hygiene-checks)).
 
 ## Coding conventions — digest
 

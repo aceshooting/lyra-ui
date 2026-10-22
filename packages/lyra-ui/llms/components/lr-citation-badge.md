@@ -122,7 +122,7 @@ no background tint, for citations that carry no confidence/verification signal a
 **Known gotchas:**
 
 - Enter and Space are given distinct meanings (Enter = activate via native `<button>` click, Space =
-  open) — Space's native click-on-keyup is pre-empted with `preventDefault()` on keydown so it fires
+  open) — Space's native click-on-keyup is preempted with `preventDefault()` on keydown so it fires
   `lr-citation-open` instead of triggering a second `lr-citation-activate`.
 - Escape closes the popover but calls `stopPropagation()`, so it won't also close a surrounding
   `<lr-dialog>` that has its own Escape-to-close handler.

@@ -258,3 +258,9 @@ export class LyraMenubarItem extends LyraElement {
     return html`<span part="base"><span part="label" aria-hidden="true" inert><slot @slotchange=${() => this.syncLabel()}></slot></span></span><span class="menu" ?hidden=${!this.attached} inert><slot name="menu" @slotchange=${this.syncMenu}></slot></span>`;
   }
 }
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'lr-menubar-item': LyraMenubarItem;
+  }
+}

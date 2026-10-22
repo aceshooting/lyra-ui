@@ -1032,7 +1032,7 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
   Falls back to the built-in "nice numbers" formatter when unset. The returned string is painted
   bidi-isolated, so `2.4 MiB/s` keeps its number-unit order under `dir="rtl"` (see
-  [Formatted labels in right-to-left layouts](#formatted-labels-in-right-to-left-layouts)).
+  [Formatted labels in right-to-left layouts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#formatted-labels-in-right-to-left-layouts)).
 - `formatter?: LyraChartFormatter` (attribute: false) — family-wide context-object formatter used
   by visual/tooltips, spoken text, legends, tables, and CSV export. It takes precedence over the
   older surface-specific hooks, which remain available as compatibility fallbacks.

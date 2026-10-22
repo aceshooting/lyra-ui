@@ -789,7 +789,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           .loading=${this.sourceMode && this.sourcePages.state.pending}
           .error=${this.sourceMode && !!(this.sourceFailure || this.sourcePages.state.error)}
           .sortMode=${this.sourceMode ? 'server' : 'client'}
-          .sortKey=${this.sourceMode ? this.sourceSortKey : null}
+          .sortKey=${(this.sourceMode ? this.sourceSortKey : null) ?? ''}
           .sortDir=${this.sourceMode ? this.sourceSortDir : 'asc'}
           .selectionMode=${this.disabled || this.sourceBlocked ? 'none' : 'single'}
           .columns=${this.buildColumns()}

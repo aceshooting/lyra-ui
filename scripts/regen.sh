@@ -24,6 +24,7 @@ cd "$(dirname "$0")/.."
 node scripts/check-node-version.mjs
 
 read_expected_pnpm_version() {
+  # shellcheck disable=SC2016 # JavaScript source: its template literal must reach node unexpanded
   node -e '
     const value = require("./package.json").packageManager;
     const match = /^pnpm@((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/.exec(String(value ?? ""));
@@ -249,4 +250,5 @@ CHANGED_PATHS=(
   packages/lyra-ui/visual-baselines/
 )
 git status --short -- "${CHANGED_PATHS[@]}"
+# shellcheck disable=SC2016 # the backticks are literal Markdown-style quoting in the message
 printf '\n\033[32mRegeneration complete.\033[0m Review the diff above, then run ./scripts/ci.sh (or at least `pnpm lint`) before committing.\n'

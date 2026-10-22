@@ -1,0 +1,14 @@
+# zizmor configuration for `pnpm check:workflow-security` (offline audit of .github/workflows with
+# the default persona; any finding fails the check).
+rules:
+  # GitHub's `$/path` self-repository spelling is rejected by actionlint 1.7.12, the version pinned
+  # in scripts/check-workflows.sh, which only accepts `./path`. Re-enable this audit when the pinned
+  # actionlint understands `$/`.
+  self-repository:
+    disable: true
+  # deploy-docs.yml publishes the Storybook that CI built, so it must react to CI's completion. Its
+  # build job's `if` accepts only a successful `push` run of CI on main from this repository, and it
+  # checks nothing out; the contract is asserted in scripts/release-integrity.test.mjs.
+  dangerous-triggers:
+    ignore:
+      - deploy-docs.yml
