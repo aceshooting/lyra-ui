@@ -32,7 +32,7 @@ test('stalled native observation falls back, deduplicates time and recovers nati
 });
 
 test('every observation stop cancels watchdog, native and fallback handles and retires late callbacks', () => {
-  for (const stop of ['pause', 'waiting', 'ended', 'emptied', 'hidden', 'invisible', 'dispose']) {
+  for (const stop of ['pause', 'waiting', 'ended', 'emptied', 'seeking', 'hidden', 'invisible', 'dispose']) {
     let updates = 0; const f = fixture(() => updates++);
     const lateTimer = [...f.timers.values()][0]; f.fire(f.timers);
     const lateFrame = [...f.frames.values()][0], lateNative = [...f.native.values()][0];
@@ -114,4 +114,88 @@ test('a paused seek without the native frame API updates on the next animation f
   f.video.dispatchEvent(new Event('seeked')); const late = [...f.frames.values()][0];
   f.video.dispatchEvent(new Event('emptied')); late(); assert.equal(updates, 3, 'a stopped watcher ignores the late frame');
   watcher.dispose(); assert.equal(f.frames.size, 0);
+});
+
+test('a paused frame callback during a later seek waits until the video is readable', () => {
+  let updates = 0; const f = fixture(() => updates++);
+  try {
+    f.video.paused = true; f.video.dispatchEvent(new Event('pause'));
+    f.video.currentTime = 1.4; f.video.dispatchEvent(new Event('seeked'));
+    assert.equal(updates, 1); assert.equal(f.native.size, 1);
+    f.video.currentTime = 0; f.video.readyState = 1; f.video.seeking = true;
+    f.fire(f.native);
+    assert.equal(updates, 1, 'a frame from the previous seek must not upload unreadable media');
+    assert.equal(f.native.size, 0);
+    f.video.readyState = 2; f.video.seeking = false; f.video.dispatchEvent(new Event('seeked'));
+    assert.equal(updates, 2, 'the completed seek uploads its readable frame');
+    assert.equal(f.native.size, 1);
+    f.fire(f.native);
+    assert.equal(updates, 3, 'presentation of the completed seek still refreshes the texture');
+  } finally { f.watcher.dispose(); }
+});
+
+test('starting a seek retires paused frame observation and ignores its late callback', () => {
+  let updates = 0; const f = fixture(() => updates++);
+  try {
+    f.video.paused = true; f.video.dispatchEvent(new Event('pause'));
+    f.video.currentTime = 1.4; f.video.dispatchEvent(new Event('seeked'));
+    const late = [...f.native.values()][0];
+    f.video.seeking = true; f.video.dispatchEvent(new Event('seeking'));
+    assert.equal(f.native.size + f.frames.size + f.timers.size, 0);
+    late(); assert.equal(updates, 1);
+    f.video.currentTime = 0; f.video.seeking = false; f.video.dispatchEvent(new Event('seeked'));
+    assert.equal(updates, 2); assert.equal(f.native.size, 1);
+  } finally { f.watcher.dispose(); }
+});
+
+test('a stalled paused frame notification refreshes once and retires its native request', () => {
+  let updates = 0; const f = fixture(() => updates++);
+  try {
+    f.video.paused = true; f.video.dispatchEvent(new Event('pause'));
+    f.video.currentTime = 1.4; f.video.dispatchEvent(new Event('seeked'));
+    assert.equal(updates, 1); assert.equal(f.native.size, 1);
+    assert.equal(f.timers.size, 1, 'a paused seek has a bounded fallback for missing native delivery');
+    const late = [...f.native.values()][0];
+    f.fire(f.timers);
+    assert.equal(updates, 2, 'the fallback refreshes the now-readable frame');
+    assert.equal(f.native.size + f.frames.size + f.timers.size, 0, 'paused media does not start a polling loop');
+    late(); assert.equal(updates, 2, 'a late native notification cannot repeat the retired update');
+    assert.equal(f.video.paused, true); assert.equal(f.video.currentTime, 1.4);
+  } finally { f.watcher.dispose(); }
+});
+
+test('native presentation and observation stops retire late paused fallback callbacks', () => {
+  for (const stop of ['native', 'pause', 'waiting', 'ended', 'emptied', 'seeking', 'hidden', 'invisible', 'dispose']) {
+    let updates = 0; const f = fixture(() => updates++);
+    try {
+      f.video.paused = true; f.video.dispatchEvent(new Event('pause'));
+      f.video.currentTime = 1.4; f.video.dispatchEvent(new Event('seeked'));
+      const lateTimer = [...f.timers.values()][0], lateNative = [...f.native.values()][0];
+      if (stop === 'native') f.fire(f.native);
+      else if (stop === 'hidden') { f.document.hidden = true; f.document.dispatchEvent(new Event('visibilitychange')); }
+      else if (stop === 'invisible') f.watcher.setVisible(false);
+      else if (stop === 'dispose') f.watcher.dispose();
+      else f.video.dispatchEvent(new Event(stop));
+      const settled = updates;
+      assert.equal(f.native.size + f.frames.size + f.timers.size, 0, stop);
+      lateTimer(); lateNative(); assert.equal(updates, settled, stop);
+      assert.equal(f.native.size + f.frames.size + f.timers.size, 0, stop);
+    } finally { f.watcher.dispose(); }
+  }
+});
+
+test('playback resuming before a paused fallback retains stalled-native recovery', () => {
+  let updates = 0; const f = fixture(() => updates++);
+  try {
+    f.video.paused = true; f.video.dispatchEvent(new Event('pause'));
+    f.video.currentTime = 1.4; f.video.dispatchEvent(new Event('seeked'));
+    f.video.paused = false; f.video.dispatchEvent(new Event('play'));
+    f.fire(f.timers);
+    assert.equal(f.native.size, 1); assert.equal(f.frames.size, 1);
+    f.video.currentTime = 1.5; f.fire(f.frames);
+    assert.equal(updates, 3);
+    f.fire(f.native);
+    assert.equal(f.frames.size, 0); assert.equal(f.native.size, 1); assert.equal(f.timers.size, 1);
+    assert.equal(f.video.paused, false); assert.equal(f.video.currentTime, 1.5);
+  } finally { f.watcher.dispose(); }
 });

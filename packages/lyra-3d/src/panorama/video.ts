@@ -5,7 +5,8 @@ export function watchPanoramaVideo(video: HTMLVideoElement, document: Document, 
   const native = typeof video.requestVideoFrameCallback === 'function' && typeof video.cancelVideoFrameCallback === 'function';
   let pending: number | undefined, animation: number | undefined, watchdog: number | undefined;
   let lastTime = video.currentTime;
-  const eligible = () => !disposed && visible && !document.hidden && !blocked && !video.paused && !video.ended && video.readyState >= 2;
+  const readable = () => video.readyState >= 2 && !video.seeking;
+  const eligible = () => !disposed && visible && !document.hidden && !blocked && !video.paused && !video.ended && readable();
   const cancelFallback = () => {
     if (animation !== undefined) view?.cancelAnimationFrame(animation);
     if (watchdog !== undefined) view?.clearTimeout(watchdog);
@@ -43,24 +44,33 @@ export function watchPanoramaVideo(video: HTMLVideoElement, document: Document, 
       watchdog = undefined; fallback();
     }, 250);
   };
-  const refresh = () => { if (!disposed && visible && !document.hidden && video.readyState >= 2) update(); schedule(); };
+  const refresh = () => { if (!disposed && visible && !document.hidden && readable()) update(); schedule(); };
   // A seek can complete before its frame is ready to upload, and a paused video schedules no
   // further frames, so a paused seek also updates once its frame is presented.
-  const presented = () => { if (visible && !document.hidden) update(); schedule(); };
   const settle = () => {
     if (!video.paused) return;
     const token = generation;
     if (native) {
-      if (pending === undefined) pending = video.requestVideoFrameCallback(() => { if (token === generation) { pending = undefined; presented(); } });
+      if (pending === undefined) pending = video.requestVideoFrameCallback(() => {
+        if (token !== generation) return;
+        pending = undefined; generation++; cancelFallback(); refresh();
+      });
+      // Paused media may not deliver a native notification. Retry once and release the
+      // outstanding request without starting a polling loop for a stationary video.
+      if (watchdog === undefined) watchdog = view?.setTimeout(() => {
+        if (token !== generation) return;
+        watchdog = undefined;
+        if (video.paused) { cancel(); refresh(); } else fallback();
+      }, 250);
     } else if (animation === undefined) {
-      animation = view?.requestAnimationFrame(() => { if (token === generation) { animation = undefined; presented(); } });
+      animation = view?.requestAnimationFrame(() => { if (token === generation) { animation = undefined; refresh(); } });
     }
   };
   const resume = () => { blocked = false; refresh(); };
   const stop = () => { blocked = true; cancel(); };
   const visibility = () => { cancel(); if (!document.hidden) refresh(); };
   const starts = ['play', 'playing', 'seeked', 'loadeddata', 'durationchange'];
-  const stops = ['pause', 'ended', 'waiting', 'emptied'];
+  const stops = ['pause', 'ended', 'waiting', 'emptied', 'seeking'];
   for (const name of starts) video.addEventListener(name, resume);
   video.addEventListener('seeked', settle);
   for (const name of stops) video.addEventListener(name, stop);
