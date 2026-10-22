@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Bahaging naka-highlight {index} sa {total}',
   tokensIn: 'Mga token na input',
   tokensOut: 'Mga token na output',
+  duration: 'Tagal',
   comparePanel: 'Paghahambing',
   treeNodeMoved: 'Inilipat ang {label} sa posisyong {index} sa {total}',
   gitStatusAdded: 'Idinagdag',

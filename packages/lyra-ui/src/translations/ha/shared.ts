@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Abu mai haske {index} cikin {total}',
   tokensIn: 'Token ɗin da aka shigar',
   tokensOut: 'Token ɗin da aka fitar',
+  duration: 'Tsawon lokaci',
   comparePanel: 'Kwatantawa',
   treeNodeMoved: 'An matsar da {label} zuwa matsayi na {index} cikin {total}',
   gitStatusAdded: 'An ƙara',

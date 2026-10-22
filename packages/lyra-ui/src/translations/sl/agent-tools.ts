@@ -155,7 +155,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Vdelava',
   spanKindOther: 'Drugo',
   cost: 'Strošek',
-  duration: 'Trajanje',
   spanWaterfall: 'Časovnica razponov',
   spanStartedAtOffset: 'začetek pri +{value}',
   compareResponseA: 'Odgovor A',

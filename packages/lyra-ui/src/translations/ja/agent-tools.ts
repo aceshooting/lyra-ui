@@ -149,7 +149,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: '埋め込み',
   spanKindOther: 'その他',
   cost: 'コスト',
-  duration: '所要時間',
   spanWaterfall: 'スパンのタイムライン',
   spanStartedAtOffset: '+{value} に開始',
   compareResponseA: '回答 A',

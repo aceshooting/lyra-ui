@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Isticanje {index} od {total}',
   tokensIn: 'Ulazni tokeni',
   tokensOut: 'Izlazni tokeni',
+  duration: 'Trajanje',
   comparePanel: 'Usporedba',
   treeNodeMoved: 'Stavka {label} premještena na položaj {index} od {total}',
   gitStatusAdded: 'Dodano',

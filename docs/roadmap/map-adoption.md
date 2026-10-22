@@ -1,6 +1,7 @@
 # Map adoption (`lr-map`, `@aceshooting/lyra-map` 1.3.0)
 
-Status: planned for lyra-ui 30.0.0 with lyra-map 1.3.0. Applications using `lr-map` still reach into
+Status (2026-10-22): camera, overlays and most raw-engine items are on main for lyra-ui 30.0.0
+with lyra-map 1.3.0; the application-coverage gate below records the remaining gaps. Applications using `lr-map` still reach into
 the engine through the `map` getter, or keep workaround code, for camera moves, padding, popups,
 fitting and missing data. This plan closes those gaps so map screens share one accessible, themed
 component and applications delete their workarounds.
@@ -42,42 +43,44 @@ Some applications build their map directly on the `@aceshooting/lyra-map` engine
 layers, vector tiles, sprites, feature state, drawing) because `lr-map` lacks what they need. These
 items let them move to `lr-map`, or at least drop their workarounds on the engine:
 
-- [ ] Overlays survive a `mapStyle` swap (basemap or theme change): data layers, markers, custom
+- [x] Overlays survive a `mapStyle` swap (basemap or theme change): data layers, markers, custom
   sources and images are re-applied automatically, instead of every layer re-adding itself on style
   load.
-- [ ] A readiness primitive: `whenStyleReady()` / `whenIdle()` and matching `lr-map-style-load` and
+- [x] A readiness primitive: `whenStyleReady()` / `whenIdle()` and matching `lr-map-style-load` and
   `lr-map-idle` events, instead of guarding `isStyleLoaded()` and racing style loads.
 - [ ] Data-layer ordering: a band or `before` option on data layers instead of a hand-maintained
-  z-order table re-applied after each style swap.
-- [ ] `styleOverrides`: paint and layout overrides for basemap style layers, re-applied after style
+  z-order table re-applied after each style swap. Owned overlays and external data layers accept
+  `before`; GeoJSON `dataLayers` entries still append in array order.
+- [x] `styleOverrides`: paint and layout overrides for basemap style layers, re-applied after style
   loads.
-- [ ] `images` property accepting SVG markup or URLs, rasterized portably (engines cannot decode SVG
+- [x] `images` property accepting SVG markup or URLs, rasterized portably (engines cannot decode SVG
   blobs everywhere), for symbol layers.
-- [ ] Modular engine: load the feature modules implied by `addLayer`/`addSource` automatically, or a
+- [x] Modular engine: load the feature modules implied by `addLayer`/`addSource` automatically, or a
   documented shorthand, instead of preparing dummy sources and layers.
-- [ ] Controls: geolocate (with localized error and out-of-bounds events), attribution options, a
+- [x] Controls: geolocate (with localized error and out-of-bounds events), attribution options, a
   scale `unit`, and control text that follows `lang` changes live.
-- [ ] `hash` and `maxBounds` properties, with initial fitting that yields to a URL hash.
-- [ ] Pointer workflows: `lr-map-contextmenu` event, a pick mode (crosshair cursor emitting
+- [x] `hash` and `maxBounds` properties, with initial fitting that yields to a URL hash.
+- [x] Pointer workflows: `lr-map-contextmenu` event, a pick mode (crosshair cursor emitting
   `lr-map-pick`), and a polygon/line draw mode with `lr-map-draw-*` events (area, length, centroid).
-- [ ] Anchored content clamps under fixed application chrome (boundary and safe-area insets),
+- [x] Anchored content clamps under fixed application chrome (boundary and safe-area insets),
   stacks above other popups, and has a localized close label.
-- [ ] `exportImage({ type, attribution })` returning a `Blob` of the current view.
-- [ ] Document that the modular engine shapes right-to-left text without a plugin, so applications
+- [x] `exportImage({ type, attribution })` returning a `Blob` of the current view.
+- [x] Document that the modular engine shapes right-to-left text without a plugin, so applications
   drop runtime plugin fetches from third-party CDNs.
-- [ ] Data layers backed by vector tile sources (tiles URL with per-source-layer paint) and by image
+- [x] Data layers backed by vector tile sources (tiles URL with per-source-layer paint) and by image
   or raster sources (canvas or data URL on corner coordinates, updated in place), surviving style
   swaps.
-- [ ] Interactive data layers: hit priority across overlays (topmost wins; background click only
+- [x] Interactive data layers: hit priority across overlays (topmost wins; background click only
   when nothing is hit), a hover cursor that yields to pick mode, a feature-state API, and opt-in of
   basemap style layers (for example building footprints) into `lr-map-click`.
 - [ ] Per-data-layer `minZoom`/`maxZoom` and symbol text labels (line-placed labels, point names,
-  halo, colors from theme tokens).
+  halo, colors from theme tokens). External data layers and labels are done; GeoJSON `dataLayers`
+  entries still lack a zoom range.
 - [ ] Repaint after paint changes applied through data layers on every engine (WebKit otherwise
   skips a frame).
 - [ ] First-class lazy construction (build on visibility or idle with a built-in control
   placeholder), so applications stop deferring the map behind timers.
-- [ ] Worker plugin defaults for chunk naming, and documentation of the single-instance requirement
+- [x] Worker plugin defaults for chunk naming, and documentation of the single-instance requirement
   when a workspace re-exports the plugin.
 
 ## Documentation
@@ -92,12 +95,28 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
 ## Release gate: application coverage
 
 30.0.0 is not released until `lr-map` covers every map need of the maintained applications that
-use it or the raw engine (the photo-mapping application, the main site, the world site, and the
-regional site that shares the main site's map package):
+use it or the raw engine (the timeline application, the main site, the world site, and the
+regional site, whose map package is a separate fork of the main site's):
 
-- [ ] Re-audit each application's map code against the final `lr-map` API and record, per need,
+- [x] Re-audit each application's map code against the final `lr-map` API and record, per need,
   the `lr-map` feature that covers it (with evidence: a test, story or prototype), or why it stays
-  application-specific.
+  application-specific. The 2026-10-22 audit recorded 122 needs; the open ones follow.
+- [ ] Large styled GeoJSON overlays: native paint expressions, zoom ranges, `before` ordering and
+  symbol layers on data beyond the current `overlays` admission limits.
+- [ ] `minZoom`/`maxZoom` camera limits.
+- [ ] `hash` compatibility with the engine's unnamed `#zoom/lat/lng` fragment, and a documented
+  rule for whether any fragment suppresses the initial fit.
+- [ ] Image capacity for sprite catalogs (more than 64 images, `sdf`, a missing-image provider)
+  without re-adding every owned layer on an image change.
+- [ ] Lazy construction on first interaction or after a delay, with an interactive placeholder.
+- [ ] Theme tokens in `overlays` paint.
+- [ ] A geolocation success event carrying the position.
+- [ ] Drawing parity: closing snap, rubber band, measurement labels, map-level Backspace/Enter,
+  surviving a style swap, a drag-end signal and a color option.
+- [ ] Pointer events with `{ lngLat, point }` and feature geometry on hover events.
+- [ ] Basemap layer selectors and a read-only style-layer list.
+- [ ] Canvas redraw signal and `data:`/`blob:` image URLs for image layers; in-place updates of owned
+  layers; owner-scoped composition; control order within a corner and linked custom attribution.
 - [ ] Prototype each raw-engine application on `lr-map` against the release candidate build and
   confirm the same behavior (basemap and theme switching, overlays, popups, drawing, geolocation,
   URL hash, right-to-left, translations, mobile layout).
@@ -112,7 +131,7 @@ timers and engine CSS overrides):
 
 - [ ] Main site application and its shared map package.
 - [ ] World site application.
-- [ ] Regional site application (same map package as the main site).
+- [ ] Regional site application (a separate fork of the main site's map package; re-sync first).
 - [ ] Applications already on `lr-map` drop the workarounds listed in the sections above.
 
 ## Exit

@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Saka wakilcin vector',
   spanKindOther: 'Sauran',
   cost: 'Kuɗi',
-  duration: 'Tsawon lokaci',
   spanWaterfall: 'Jadawalin lokacin tazara',
   spanStartedAtOffset: 'ya fara a +{value}',
   compareResponseA: 'Amsa A',

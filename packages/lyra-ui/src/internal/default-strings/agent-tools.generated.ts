@@ -106,7 +106,6 @@ export const LYRA_DEFAULT_contextInspectorSegmentTokens: LyraMessage = '{tokens}
 export const LYRA_DEFAULT_contextInspectorTruncated: LyraMessage = 'Truncated';
 export const LYRA_DEFAULT_contextInspectorTruncatedCount: LyraMessage = 'Truncated — {count} tokens omitted';
 export const LYRA_DEFAULT_cost: LyraMessage = 'Cost';
-export const LYRA_DEFAULT_duration: LyraMessage = 'Duration';
 export const LYRA_DEFAULT_edit: LyraMessage = 'Edit';
 export const LYRA_DEFAULT_evalDatasetAddExample: LyraMessage = 'Add example';
 export const LYRA_DEFAULT_evalDatasetColumnExpectedOutput: LyraMessage = 'Expected output';

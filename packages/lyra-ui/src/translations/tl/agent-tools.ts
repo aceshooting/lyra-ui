@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Pag-embed',
   spanKindOther: 'Iba pa',
   cost: 'Gastos',
-  duration: 'Tagal',
   spanWaterfall: 'Daloy ng mga span',
   spanStartedAtOffset: 'nagsimula sa +{value}',
   compareResponseA: 'Tugon A',

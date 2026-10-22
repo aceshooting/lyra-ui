@@ -2,24 +2,24 @@
   "locale": "es-419",
   "direction": "ltr",
   "source": {
-    "keyCount": 1541,
-    "sha256": "sha256:84fb00728395d0d05d7f9b8b4f5ae46be9230cf47ebee2dd081045271324fc82"
+    "keyCount": 1574,
+    "sha256": "sha256:dfd5062eaa9ac9efeda55ade8f300e5f99921e1ad4a8813dc3b1582ba6277a06"
   },
   "catalog": {
-    "keyCount": 1541,
-    "sha256": "sha256:2283075c3d1f90e226400021dc11eeb45670944a860abdfc70b023ff02999acc"
+    "keyCount": 1574,
+    "sha256": "sha256:01f84ae090b035afc55fe7036f4b543daf2a0c6f9b185c1b79616b167e2503cf"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-10-19",
-    "evidence": "Original es-419 (Latin American Spanish) difference catalog: 61 regional overrides drafted over Spanish (es) for Latin American terminology and verb usage (celular, video, ingrese, presione, Enter, simple past for completed events such as \"No se pudo cargar\"). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification."
+    "evidence": "Original es-419 (Latin American Spanish) difference catalog: 61 regional overrides drafted over Spanish (es) for Latin American terminology and verb usage (celular, video, ingrese, presione, Enter, simple past for completed events such as \"No se pudo cargar\"). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
     "reviewedAt": "2026-10-21",
-    "evidence": "AI-assisted review of the es-419 (Latin American Spanish) regional overrides checked each override for meaning, regional register, terminology consistency with the parent catalog, placeholder preservation and plural forms, and confirmed that no override merely repeats its parent value. Inherited messages were not re-reviewed beyond the parent catalog's own record. No human, native-speaker or independent human review is claimed. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification."
+    "evidence": "AI-assisted review of the es-419 (Latin American Spanish) regional overrides checked each override for meaning, regional register, terminology consistency with the parent catalog, placeholder preservation and plural forms, and confirmed that no override merely repeats its parent value. Inherited messages were not re-reviewed beyond the parent catalog's own record. No human, native-speaker or independent human review is claimed. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits es without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review."
   },
   "englishIdenticalAllowlist": [
     {
@@ -257,6 +257,26 @@
     {
       "messagePath": "liteChartBarLabel",
       "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', : ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "mapScaleFeet",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
+    },
+    {
+      "messagePath": "mapScaleKilometers",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
+    },
+    {
+      "messagePath": "mapScaleMeters",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
+    },
+    {
+      "messagePath": "mapScaleMiles",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
+    },
+    {
+      "messagePath": "mapScaleNauticalMiles",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
     },
     {
       "messagePath": "neighborGroupHeader",

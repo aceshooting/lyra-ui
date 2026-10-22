@@ -31042,8 +31042,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map.test.ts",
-              "test": "gives an interactive marker a pointer cursor and ${treatment === 'solid' ? 'an ancestor theme focus input' : 'a direct public focus override under Glass'}",
+              "file": "src/components/media/map/map-anchor-component.test.ts",
+              "test": "opens declaratively without focus theft and leaves the default anchor passive on Escape",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -31053,8 +31053,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-legend-scroll.test.ts",
-              "line": 9,
+              "file": "src/components/media/map/map-anchor-component.test.ts",
+              "test": "maps logical safe areas under RTL at 320px and wraps long slotted content inside allocation",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -31070,8 +31070,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-legend-scroll.test.ts",
-              "test": "keeps a bounded scrolling legend accessible with a stable gutter in ${surface}/${direction}",
+              "file": "src/components/media/map/map-anchor-component.test.ts",
+              "line": 21,
               "kind": "320px allocation test signal"
             }
           ]
@@ -31138,8 +31138,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-engine-preparation.test.ts",
-              "test": "contains an asynchronous preparation failure in localized visible and light-DOM feedback",
+              "file": "src/components/media/map/map-anchor-component.test.ts",
+              "test": "invalidates placement when native projection reentry retires the coordinate request",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -31150,8 +31150,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map.class.ts",
-              "line": 3782,
+              "file": "src/components/media/map/map-construction-scheduler.ts",
+              "line": 27,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31187,23 +31187,61 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/map/map-anchor-component.test.ts",
+          "src/components/media/map/map-anchor-options.test.ts",
           "src/components/media/map/map-camera.test.ts",
+          "src/components/media/map/map-construction-scheduler.test.ts",
+          "src/components/media/map/map-control-options.test.ts",
+          "src/components/media/map/map-controls-component.test.ts",
+          "src/components/media/map/map-controls-lifecycle.test.ts",
+          "src/components/media/map/map-cursor.test.ts",
+          "src/components/media/map/map-data-layer-model.test.ts",
           "src/components/media/map/map-data-layers.test.ts",
+          "src/components/media/map/map-drawing-component.test.ts",
+          "src/components/media/map/map-drawing-gesture.test.ts",
+          "src/components/media/map/map-drawing-pan.test.ts",
+          "src/components/media/map/map-drawing-pointer.test.ts",
+          "src/components/media/map/map-drawing.test.ts",
+          "src/components/media/map/map-engine-events.test.ts",
           "src/components/media/map/map-engine-preparation.test.ts",
+          "src/components/media/map/map-export-attribution.test.ts",
+          "src/components/media/map/map-export-initialization-component.test.ts",
+          "src/components/media/map/map-external-component.test.ts",
+          "src/components/media/map/map-feature-state-routes.test.ts",
+          "src/components/media/map/map-feature-state.test.ts",
           "src/components/media/map/map-glass.test.ts",
+          "src/components/media/map/map-hash-owner.test.ts",
+          "src/components/media/map/map-hash.test.ts",
+          "src/components/media/map/map-hit-test.test.ts",
+          "src/components/media/map/map-image-export.test.ts",
+          "src/components/media/map/map-image-metadata.test.ts",
+          "src/components/media/map/map-images-browser.test.ts",
+          "src/components/media/map/map-images.test.ts",
+          "src/components/media/map/map-interaction-component.test.ts",
+          "src/components/media/map/map-interaction-options.test.ts",
           "src/components/media/map/map-large-source-replacement-scale.test.ts",
+          "src/components/media/map/map-layer-order.test.ts",
           "src/components/media/map/map-legend-icon-border.test.ts",
           "src/components/media/map/map-legend-icon.test.ts",
           "src/components/media/map/map-legend-scroll.test.ts",
           "src/components/media/map/map-loader.test.ts",
+          "src/components/media/map/map-native.test.ts",
           "src/components/media/map/map-overlays-coverage.test.ts",
           "src/components/media/map/map-overlays.test.ts",
+          "src/components/media/map/map-owned-component.test.ts",
+          "src/components/media/map/map-owned-features.test.ts",
+          "src/components/media/map/map-owned-resources.test.ts",
           "src/components/media/map/map-peer-recovery.test.ts",
           "src/components/media/map/map-public-boundaries.test.ts",
+          "src/components/media/map/map-readiness.test.ts",
           "src/components/media/map/map-remediation.test.ts",
           "src/components/media/map/map-resource-lifecycle.test.ts",
           "src/components/media/map/map-scale.test.ts",
+          "src/components/media/map/map-source-updates.test.ts",
           "src/components/media/map/map-style-failure-supersession.test.ts",
+          "src/components/media/map/map-style-input.test.ts",
+          "src/components/media/map/map-style-lifecycle.test.ts",
+          "src/components/media/map/map-style-overrides.test.ts",
           "src/components/media/map/map-tile-source-scale.test.ts",
           "src/components/media/map/map.test.ts"
         ],

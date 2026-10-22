@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Upotus',
   spanKindOther: 'Muu',
   cost: 'Kustannus',
-  duration: 'Kesto',
   spanWaterfall: 'Jännevälien aikajana',
   spanStartedAtOffset: 'alkoi kohdassa +{value}',
   compareResponseA: 'Vastaus A',

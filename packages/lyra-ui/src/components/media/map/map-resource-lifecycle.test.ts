@@ -59,11 +59,12 @@ it('waits for a positive intersection and tolerates empty observer notifications
   const originalGetContext = HTMLCanvasElement.prototype.getContext;
   let intersection: IntersectionObserverCallback | undefined;
   let observerDisconnected = false;
+  let observedTarget: Element | undefined;
   class ControlledIntersectionObserver {
     constructor(callback: IntersectionObserverCallback) {
       intersection = callback;
     }
-    observe(): void {}
+    observe(target: Element): void { observedTarget = target; }
     disconnect(): void { observerDisconnected = true; }
     takeRecords(): IntersectionObserverEntry[] { return []; }
     unobserve(): void {}
@@ -97,11 +98,11 @@ it('waits for a positive intersection and tolerates empty observer notifications
     const notifyIntersection = intersection;
     if (!notifyIntersection) throw new Error('The map must observe its allocated container.');
     expect(() => notifyIntersection([], {} as IntersectionObserver)).to.not.throw();
-    notifyIntersection([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+    notifyIntersection([{ target: observedTarget, isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
     await element.updateComplete;
     expect(element.map === undefined).to.be.true;
 
-    notifyIntersection([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+    notifyIntersection([{ target: observedTarget, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
     await waitUntil(() => element.map !== undefined);
     expect(DelayedLoadMap.instances.length).to.equal(1);
   } finally {

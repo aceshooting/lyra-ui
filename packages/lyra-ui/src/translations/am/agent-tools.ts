@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'ኤምቤዲንግ',
   spanKindOther: 'ሌላ',
   cost: 'ወጪ',
-  duration: 'ቆይታ',
   spanWaterfall: 'የክፍተት የጊዜ ሰሌዳ',
   spanStartedAtOffset: 'በ+{value} ተጀምሯል',
   compareResponseA: 'ምላሽ A',

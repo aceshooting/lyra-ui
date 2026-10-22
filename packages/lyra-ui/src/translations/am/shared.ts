@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'ከ{total} ደምቆች {index}ኛ',
   tokensIn: 'የግቤት ቶከኖች',
   tokensOut: 'የውጤት ቶከኖች',
+  duration: 'ቆይታ',
   comparePanel: 'ንጽጽር',
   treeNodeMoved: '{label} ከ{total} ቦታዎች {index}ኛ ቦታ ተንቀሳቅሷል',
   gitStatusAdded: 'ታክሏል',

@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Белгі {index}, барлығы {total}',
   tokensIn: 'Кіріс токендері',
   tokensOut: 'Шығыс токендері',
+  duration: 'Ұзақтығы',
   comparePanel: 'Салыстыру',
   treeNodeMoved: '{label} жылжытылды: орын {index}, барлығы {total}',
   gitStatusAdded: 'Қосылды',

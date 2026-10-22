@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: '{total} tadan {index}-ajratilgan',
   tokensIn: 'Kiritilgan tokenlar',
   tokensOut: 'Chiqarilgan tokenlar',
+  duration: 'Davomiylik',
   comparePanel: 'Taqqoslash',
   treeNodeMoved: '{label} {total} tadan {index}-oʻringa koʻchirildi',
   gitStatusAdded: 'Qoʻshildi',

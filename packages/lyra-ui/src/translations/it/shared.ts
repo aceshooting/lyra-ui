@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Evidenziazione {index} di {total}',
   tokensIn: 'Token in ingresso',
   tokensOut: 'Token in uscita',
+  duration: 'Durata',
   comparePanel: 'Confronto',
   treeNodeMoved: '{label} spostato in posizione {index} di {total}',
   gitStatusAdded: 'Aggiunto',

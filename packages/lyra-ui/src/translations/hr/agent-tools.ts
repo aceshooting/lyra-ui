@@ -153,7 +153,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Ugrađivanje',
   spanKindOther: 'Ostalo',
   cost: 'Trošak',
-  duration: 'Trajanje',
   spanWaterfall: 'Vremenska crta raspona',
   spanStartedAtOffset: 'početak: +{value}',
   compareResponseA: 'Odgovor A',

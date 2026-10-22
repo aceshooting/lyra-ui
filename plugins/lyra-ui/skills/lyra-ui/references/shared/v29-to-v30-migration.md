@@ -126,7 +126,7 @@ that already replaces state immutably needs no change.
 | `lr-eval-dataset`, `lr-eval-run` | `examples` |
 | `lr-grounding-summary` | `citations` |
 | `lr-ingestion-queue`, `lr-node-palette`, `lr-prompt-queue`, `lr-task-list`, `lr-virtual-list`, `lr-mention-popover`, `lr-swatch-picker` | `items` |
-| `lr-map` | `markers`, `dataLayers` |
+| `lr-map` | `markers`, `dataLayers`, `images`, `styleOverrides` |
 | `lr-memory-panel` | `shortTerm`, `longTerm` |
 | `lr-retrieval-results` | `chunks` |
 | `lr-test-results` | `suites` |

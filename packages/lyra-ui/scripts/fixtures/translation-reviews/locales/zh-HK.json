@@ -2,24 +2,24 @@
   "locale": "zh-HK",
   "direction": "ltr",
   "source": {
-    "keyCount": 1541,
-    "sha256": "sha256:84fb00728395d0d05d7f9b8b4f5ae46be9230cf47ebee2dd081045271324fc82"
+    "keyCount": 1574,
+    "sha256": "sha256:dfd5062eaa9ac9efeda55ade8f300e5f99921e1ad4a8813dc3b1582ba6277a06"
   },
   "catalog": {
-    "keyCount": 1541,
-    "sha256": "sha256:e30c2fc6f0b262d0d589071b47032a6de8b7fbf8019ce459a8559b72244624f3"
+    "keyCount": 1574,
+    "sha256": "sha256:caa03421a37335a2dfaa0038839d3739370ca318f92fe8f698d3a51f4457b488"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
     "completedAt": "2026-10-19",
-    "evidence": "Original zh-HK (Hong Kong Traditional Chinese) difference catalog: 21 regional overrides drafted over Traditional Chinese for Taiwan (zh-TW) for Hong Kong terminology (用戶, 智能體, 互聯網, 項目, 點擊, 發送, 相片). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification."
+    "evidence": "Original zh-HK (Hong Kong Traditional Chinese) difference catalog: 21 regional overrides drafted over Traditional Chinese for Taiwan (zh-TW) for Hong Kong terminology (用戶, 智能體, 互聯網, 項目, 點擊, 發送, 相片). Every other message resolves through the declared parent. Overrides keep the DEFAULT_STRINGS key order, exact placeholders, plural categories and ICU syntax. No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits zh-TW without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
     "reviewedAt": "2026-10-21",
-    "evidence": "AI-assisted review of the zh-HK (Hong Kong Traditional Chinese) regional overrides checked each override for meaning, regional register, terminology consistency with the parent catalog, placeholder preservation and plural forms, and confirmed that no override merely repeats its parent value. Inherited messages were not re-reviewed beyond the parent catalog's own record. No human, native-speaker or independent human review is claimed. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification."
+    "evidence": "AI-assisted review of the zh-HK (Hong Kong Traditional Chinese) regional overrides checked each override for meaning, regional register, terminology consistency with the parent catalog, placeholder preservation and plural forms, and confirmed that no override merely repeats its parent value. Inherited messages were not re-reviewed beyond the parent catalog's own record. No human, native-speaker or independent human review is claimed. Bounded 2026-10-21 AI-assisted independent review checked ten foundation messages for engine loading, context loss, software rendering, list fallback, data limits, scripts and placeholders. Reviewed corrections were applied before this catalog snapshot. This increment does not claim a full-catalog re-review or human/native-speaker qualification. Bounded 2026-10-21 AI-assisted enrollment of thirty-three map control, scale, drawing, vertex-edit and export messages: this catalog inherits zh-TW without new regional overrides. Exact values and placeholders were checked against the prepared bounded inputs. This increment does not claim full-catalog, human or native-speaker review."
   },
   "englishIdenticalAllowlist": [
     {
@@ -137,6 +137,26 @@
     {
       "messagePath": "kbdTabWord",
       "rationale": "'Tab' is the conventional printed/spoken name of the Tab key; Traditional Chinese keyboards and screen readers keep this key name unlocalized, the same way this catalog already keeps Ctrl/Esc/Tab unchanged."
+    },
+    {
+      "messagePath": "mapScaleFeet",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
+    },
+    {
+      "messagePath": "mapScaleKilometers",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
+    },
+    {
+      "messagePath": "mapScaleMeters",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
+    },
+    {
+      "messagePath": "mapScaleMiles",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
+    },
+    {
+      "messagePath": "mapScaleNauticalMiles",
+      "rationale": "Conventional compact map-distance unit symbol; identical spelling does not represent untranslated prose."
     },
     {
       "messagePath": "notebookViewerInPrompt",

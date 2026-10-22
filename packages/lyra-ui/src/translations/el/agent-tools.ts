@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Ενσωμάτωση',
   spanKindOther: 'Άλλο',
   cost: 'Κόστος',
-  duration: 'Διάρκεια',
   spanWaterfall: 'Χρονολόγιο τμημάτων',
   spanStartedAtOffset: 'έναρξη στο +{value}',
   compareResponseA: 'Απάντηση A',

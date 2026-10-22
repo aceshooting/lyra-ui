@@ -8,7 +8,7 @@
 - **Status** `stable` since `9.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
-- **Optional peers** `@aceshooting/lyra-map`, `maplibre-gl` — see `llms/peers.md`
+- **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
 - **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

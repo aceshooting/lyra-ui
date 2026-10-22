@@ -1748,9 +1748,76 @@ export type LyraLocationChangeEvent =
   | LyraEbookViewerEventMap['lr-location-change'];
 
 /**
+ * `lr-map-anchor-close` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-anchor-close']`.
+ */
+export type LyraMapAnchorCloseEvent = LyraMapEventMap['lr-map-anchor-close'];
+
+/**
  * `lr-map-click` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-click']`.
  */
 export type LyraMapClickEvent = LyraMapEventMap['lr-map-click'];
+
+/**
+ * `lr-map-contextmenu` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-contextmenu']`.
+ */
+export type LyraMapContextmenuEvent = LyraMapEventMap['lr-map-contextmenu'];
+
+/**
+ * `lr-map-draw-cancel` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-draw-cancel']`.
+ */
+export type LyraMapDrawCancelEvent = LyraMapEventMap['lr-map-draw-cancel'];
+
+/**
+ * `lr-map-draw-change` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-draw-change']`.
+ */
+export type LyraMapDrawChangeEvent = LyraMapEventMap['lr-map-draw-change'];
+
+/**
+ * `lr-map-draw-complete` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-draw-complete']`.
+ */
+export type LyraMapDrawCompleteEvent = LyraMapEventMap['lr-map-draw-complete'];
+
+/**
+ * `lr-map-draw-start` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-draw-start']`.
+ */
+export type LyraMapDrawStartEvent = LyraMapEventMap['lr-map-draw-start'];
+
+/**
+ * `lr-map-export-error` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-export-error']`.
+ */
+export type LyraMapExportErrorEvent = LyraMapEventMap['lr-map-export-error'];
+
+/**
+ * `lr-map-feature-enter` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-feature-enter']`.
+ */
+export type LyraMapFeatureEnterEvent = LyraMapEventMap['lr-map-feature-enter'];
+
+/**
+ * `lr-map-feature-leave` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-feature-leave']`.
+ */
+export type LyraMapFeatureLeaveEvent = LyraMapEventMap['lr-map-feature-leave'];
+
+/**
+ * `lr-map-geolocate-error` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-geolocate-error']`.
+ */
+export type LyraMapGeolocateErrorEvent = LyraMapEventMap['lr-map-geolocate-error'];
+
+/**
+ * `lr-map-geolocate-out-of-bounds` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-geolocate-out-of-bounds']`.
+ */
+export type LyraMapGeolocateOutOfBoundsEvent = LyraMapEventMap['lr-map-geolocate-out-of-bounds'];
+
+/**
+ * `lr-map-idle` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-idle']`.
+ */
+export type LyraMapIdleEvent = LyraMapEventMap['lr-map-idle'];
 
 /**
  * `lr-map-legend-panel-toggle-request` — dispatched by `<lr-map>`; detail
@@ -1779,6 +1846,16 @@ export type LyraMapMarkerActivateEvent = LyraMapEventMap['lr-map-marker-activate
  * `lr-map-move` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-move']`.
  */
 export type LyraMapMoveEvent = LyraMapEventMap['lr-map-move'];
+
+/**
+ * `lr-map-pick` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-pick']`.
+ */
+export type LyraMapPickEvent = LyraMapEventMap['lr-map-pick'];
+
+/**
+ * `lr-map-style-load` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-style-load']`.
+ */
+export type LyraMapStyleLoadEvent = LyraMapEventMap['lr-map-style-load'];
 
 /**
  * `lr-map-view-change` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-view-change']`.
@@ -3659,12 +3736,26 @@ export interface LyraGlobalEventMap {
   'lr-load-error': LyraLoadErrorEvent;
   'lr-load-more': LyraLoadMoreEvent;
   'lr-location-change': LyraLocationChangeEvent;
+  'lr-map-anchor-close': LyraMapAnchorCloseEvent;
   'lr-map-click': LyraMapClickEvent;
+  'lr-map-contextmenu': LyraMapContextmenuEvent;
+  'lr-map-draw-cancel': LyraMapDrawCancelEvent;
+  'lr-map-draw-change': LyraMapDrawChangeEvent;
+  'lr-map-draw-complete': LyraMapDrawCompleteEvent;
+  'lr-map-draw-start': LyraMapDrawStartEvent;
+  'lr-map-export-error': LyraMapExportErrorEvent;
+  'lr-map-feature-enter': LyraMapFeatureEnterEvent;
+  'lr-map-feature-leave': LyraMapFeatureLeaveEvent;
+  'lr-map-geolocate-error': LyraMapGeolocateErrorEvent;
+  'lr-map-geolocate-out-of-bounds': LyraMapGeolocateOutOfBoundsEvent;
+  'lr-map-idle': LyraMapIdleEvent;
   'lr-map-legend-panel-toggle-request': LyraMapLegendPanelToggleRequestEvent;
   'lr-map-legend-toggle-request': LyraMapLegendToggleRequestEvent;
   'lr-map-load': LyraMapLoadEvent;
   'lr-map-marker-activate': LyraMapMarkerActivateEvent;
   'lr-map-move': LyraMapMoveEvent;
+  'lr-map-pick': LyraMapPickEvent;
+  'lr-map-style-load': LyraMapStyleLoadEvent;
   'lr-map-view-change': LyraMapViewChangeEvent;
   'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;
   'lr-matrix-range-select': LyraMatrixRangeSelectEvent;

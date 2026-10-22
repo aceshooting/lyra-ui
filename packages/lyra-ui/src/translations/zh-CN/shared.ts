@@ -122,6 +122,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: '第{index}处高亮，共{total}处',
   tokensIn: '输入 token',
   tokensOut: '输出 token',
+  duration: '时长',
   comparePanel: '对比',
   treeNodeMoved: '已将{label}移到第{index}位，共{total}位',
   gitStatusAdded: '已添加',

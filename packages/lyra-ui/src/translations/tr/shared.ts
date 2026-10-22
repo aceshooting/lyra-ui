@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: '{total} vurgudan {index}.',
   tokensIn: 'Girdi belirteçleri',
   tokensOut: 'Çıktı belirteçleri',
+  duration: 'Süre',
   comparePanel: 'Karşılaştırma',
   treeNodeMoved: '{label}, {total} öğe içinden {index}. sıraya taşındı',
   gitStatusAdded: 'Eklendi',

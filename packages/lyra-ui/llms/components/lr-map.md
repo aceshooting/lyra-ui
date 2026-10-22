@@ -8,8 +8,8 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
-- **Optional peers** `@aceshooting/lyra-map`, `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 30 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
+- **Themeable via** 46 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,6 +55,76 @@ Live ancestor theme or token changes resolve the choropleth's stop colors and ex
 step base color again, as well as its opacity. These are paint-only updates on the existing fill
 layer: the map instance, source, layer and viewport are preserved. Linear, logarithmic and step
 modes use the same expression semantics at initial render and after a theme change.
+
+**Readiness and declarative resources:** `whenStyleReady()` waits for the current style and
+wrapper-owned resources for that style generation. After changing layer or source data on the same
+style, await `whenIdle()` for the current resource and rendering work. Observe
+`lr-map-style-load` and `lr-map-idle` for lifecycle notifications. Await these promises and handle
+rejection when replacing styles or disconnecting; a returned `true` from a synchronous command
+means admission, not asynchronous completion.
+
+`overlays: LyraMapOverlays = {}` owns native `sources` (`{ id, source }`) and `layers`
+(`{ layer, before?, interactive?, priority? }`). `images: readonly LyraMapImage[] = []` registers
+bounded image descriptors (`id`, `source`, `width`, `height`, `pixelRatio`), with SVG markup or a
+safe URL as the source. These resources are restored after style replacement; keep IDs distinct
+from basemap and generated resources. `styleOverrides: readonly LyraMapStyleOverride[] = []`
+applies `paint` and `layout` records by `layerId` to existing unowned style layers. Reassign fresh
+descriptors to change desired state; unsupported or conflicting resources fail closed.
+
+`LyraMapDataLayer` includes GeoJSON and explicitly discriminated `vector`, `raster`, `image`, and
+`canvas` descriptors. Tile descriptors use `source`; vector descriptors also require `sourceLayer`
+and `render`. Image descriptors use `url` and canvas descriptors retain an `HTMLCanvasElement`;
+both require four `coordinates` ordered top-left, top-right, bottom-right, bottom-left. External
+layers accept `before`, `minZoom`, `maxZoom`, `opacity`, and `category`. GeoJSON and vector labels
+use `label: LyraMapLabelOptions` with exactly one `field` or `expression`; text needs a style with
+a glyph provider. Image/canvas interaction tests the full four-corner footprint, including
+transparent pixels, and reports `sourceId` without inventing feature identity or `sourceLayer`.
+
+**Interactions:** opt in with `interactive` and optional `priority` on a data layer, choropleth or
+owned overlay layer; `interactiveBasemapLayers = []` explicitly enrolls basemap layers.
+`lr-map-click`, `lr-map-contextmenu`, `lr-map-feature-enter`, and `lr-map-feature-leave` report routed interaction data;
+legacy `lr-map-click` and cluster payloads remain available. `pickMode = false` enables a temporary
+coordinate-picking session when set to true; `lr-map-pick` also supports keyboard center selection.
+`setFeatureState(target, patch)`, `getFeatureState(target)`, and `removeFeatureState(target, key?)`
+use stable source/feature IDs and an optional `origin` (`choropleth`, `data-layer`, `overlay`, or
+`basemap`). Check boolean admission and retain application state across source identity changes.
+`hash = false` opts out of URL camera synchronization; use true or a distinct string key to opt in.
+`controls` also supports `geolocate` and `attribution` options; geolocation errors are sanitized in
+`lr-map-geolocate-error`, and out-of-bounds reports use `lr-map-geolocate-out-of-bounds`.
+
+**Drawing:** `drawMode: LyraMapDrawingMode = 'none'` arms `line` or `polygon` drawing. Pointer
+vertices and the keyboard center/undo/finish/cancel controls share one temporary session.
+`undoDrawing()`, `completeDrawing()`, and `cancelDrawing()` return boolean admission.
+`lr-map-draw-start`, `lr-map-draw-change`, `lr-map-draw-complete`, and `lr-map-draw-cancel` carry
+immutable `LyraMapDrawingSnapshot` data (cancel adds a reason). Completion supplies geometry and
+metrics: length in metres, area in square metres, and a geographic centroid. The 512-vertex cap
+and simple-geometry, polar and antimeridian validation reject unsupported shapes. Persist the
+completed snapshot in application state: temporary drawing resources are not a durable layer.
+`editDrawing(snapshot)` explicitly starts editing a completed snapshot; completion does not
+implicitly reopen it. Keyboard vertex handles and pointer edits update the same session.
+Use `whenIdle()` to await temporary rendering work.
+
+**Anchored content:** `anchorLngLat` is the sole declarative open request for the `anchor` slot.
+`anchorBoundary?: LyraMapAnchorBoundary` accepts connected same-document elements (one element or
+a dense array of at most 32). `anchorSafeArea?: LyraMapAnchorSafeArea` adds nonnegative finite
+logical CSS-pixel edges (`blockStart`, `inlineEnd`, `blockEnd`, `inlineStart`); omitted edges are
+zero, explicitly invalid edges fail closed. Placement intersects boundaries with the allocation
+and retains its 8px padding. `anchorClosable = false` leaves content passive; enabling it adds a
+close button and nonmodal Escape handling. `focusAnchor()` explicitly focuses eligible visible
+content synchronously; `closeAnchor()` closes a currently visible anchor. Both return booleans.
+`lr-map-anchor-close` reports `api`, `close-button`, or `escape`; focus return respects ownership.
+The close button is exposed as `anchor-close`.
+
+**Initialization and image export:** `initialization: LyraMapInitialization = 'visible'` defers
+construction until visible; `idle` schedules idle construction and `eager` requests immediate
+construction. Deferred UI exposes `initialization-placeholder` and `initialization-control`.
+Static `LyraMap.preload(engine)` loads the engine without constructing a map.
+`exportImage(options?: LyraMapImageExportOptions): Promise<Blob>` captures the current native
+frame with `type` of `image/png` (default), `image/jpeg`, or `image/webp`. Attribution is included
+by default, including admitted source credits and custom attribution; preserve required credits
+when sharing an export. DOM markers, popups and slotted overlays are excluded. Export waits for
+current-frame readiness; handle rejection as `LyraMapImageExportError` with a sanitized `code`.
+`lr-map-export-error` carries `LyraMapImageExportErrorDetail`, never raw renderer errors.
 
 **Properties:**
 
@@ -294,7 +364,9 @@ string; geojson: GeoJSON.FeatureCollection; field: string; stops: [number, strin
   Enter, and Space emit `lr-map-marker-activate`; Space suppresses its page-scroll default while
   preserving MapLibre's popup toggle. A popup-bearing marker additionally exposes
   `aria-haspopup="dialog"`, `aria-controls`, and explicit `aria-expanded`.
-- `dataLayers: LyraMapGeoJsonDataLayer[] = []` (attribute: false) —
+- `dataLayers: readonly LyraMapDataLayer[] = []` (attribute: false) accepts GeoJSON, vector,
+  raster, image and canvas entries. The external-source forms are described under
+  **Readiness and declarative resources** above. The GeoJSON form is
   `LyraMapGeoJsonDataLayer { sourceId: string; geojson: GeoJSON.Feature |
 GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
 'danger' | 'neutral'; color?: string; strokeColor?: string; line?: LyraMapLineOptions;
@@ -302,7 +374,7 @@ point?: LyraMapPointOptions; kind?: LyraMapDataLayerKind;
 heatmap?: LyraMapHeatmapOptions; cluster?: LyraMapClusterOptions }`. `sourceId` is trimmed and must be nonempty; the first layer for a
   `sourceId` that is successfully admitted wins. Only the first 100 entries are inspected; blank,
   malformed, and later duplicate records are
-  ignored without reserving an identity for a valid later sibling. Each retained entry adds one
+  ignored without reserving an identity for a valid later sibling. Each retained GeoJSON entry adds one
   GeoJSON source plus three geometry-filtered layers
   (fill, line, and circle, so a mixed `FeatureCollection` renders correctly), colored from the
   matching `--lr-color-*` token (`tone` defaults to `'accent'` → `--lr-color-brand`).
@@ -523,8 +595,10 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   failure boundary, so a peer whose damaged transform already throws from `getZoom()` or
   `getCenter()` is also reduced to an unconstrained map instead of leaking through Lit's update.
   A malformed box is rejected rather than clamped
-- `controls?: LyraMapControls` (attribute: false) — `LyraMapControls { navigation?: boolean |
-  LyraMapNavigationControlOptions; scale?: boolean | LyraMapScaleControlOptions }`, with
+- `controls?: Readonly<LyraMapControls>` (attribute: false) — `LyraMapControls { navigation?: boolean |
+  LyraMapNavigationControlOptions; scale?: boolean | LyraMapScaleControlOptions;
+  geolocate?: boolean | LyraMapGeolocateControlOptions;
+  attribution?: boolean | LyraMapAttributionControlOptions }`, with
   `LyraMapNavigationControlOptions { position?: LyraMapControlPosition }`,
   `LyraMapScaleControlOptions { position?: LyraMapControlPosition; unit?: LyraMapScaleUnit }`,
   `LyraMapControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'` and
@@ -532,10 +606,13 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   the map exists, replaces one whose options changed, keeps an unchanged one and removes one that
   is dropped, so an application no longer imports control classes and calls `map.addControl()`.
   `true` takes the defaults (navigation `'top-right'`, scale `'bottom-left'` and `'metric'`); an
-  unknown position or unit falls back to its default. The control code comes from the selected
-  engine (`maplibre-gl`, or `@aceshooting/lyra-map/controls/navigation` and `/scale`, imported
-  only for a control that is declared); a control that cannot be loaded is skipped with a console
-  warning and the map is unaffected. Button names come from `zoomIn`, `zoomOut` and `mapResetNorth`
+  unknown navigation/scale position or unit falls back to its default. Malformed geolocate or
+  attribution options are rejected with localized feedback. The control code comes from the selected
+  engine (`maplibre-gl`, or the companion's granular control entries). Requested controls load
+  on demand; unavailable controls show localized feedback while the map remains usable. Geolocation
+  starts only on user activation. Attribution is enabled by default; set `attribution: false` to
+  disable it. Attribution options accept `position`, `compact`, and plain-text `customAttribution`.
+  Button names come from `zoomIn`, `zoomOut` and `mapResetNorth`
   and are re-applied whenever `lang`, `locale` or `strings` change, so they follow a live language
   switch. Controls survive a `mapStyle` swap and are dropped with the map on disconnect, then added
   again to the next one. Parts `navigation`, `zoom-in`, `zoom-out`, `compass`, `scale`.
@@ -603,11 +680,10 @@ direct engine mutation that must be visible without further interaction (a scree
 export), call the narrowed engine's `map.triggerRepaint()` once. `lr-map` does not force a
 repaint after every idle, because that would re-render forever.
 
-After `lr-map-load`, use the narrowed peer's `queryRenderedFeatures(point, { layers: [...] })`
-for identities painted by style-owned vector layers; `point` is a screen position, which can be
-obtained with the peer's `project([longitude, latitude])`. Attach peer interaction listeners when
-the host needs those layers' hits. `lr-map-click` queries only the component-generated choropleth
-and `dataLayers` layers described below; it does not query arbitrary layer IDs from `mapStyle`.
+For style-owned layers, set `interactiveBasemapLayers` to opt their IDs into the component's
+hit routing and `lr-map-click` events. For queries outside that routing, narrow `.map` to the
+selected engine's type and call `queryRenderedFeatures(point, { layers: [...] })`; `point` is a
+screen position available from `project([longitude, latitude])`.
 
 `markersTruncated: boolean` (read-only) is true when authored marker entries exceed the 2,000-entry
 inspection ceiling; it does not count malformed rows skipped within that prefix.
@@ -817,6 +893,27 @@ once more when the move ends so the last position is never missed. It reports th
 not a settled intent: use `lr-map-view-change` for where the camera came to rest, and this event to
 keep an overlay in step with the map while it travels (pair it with `project()`). It stops when the
 element disconnects.
+Readiness: `lr-map-style-load` (frozen `LyraMapReadinessDetail { generation }`) fires once per
+connection and style after generated and registered overlays, images, style overrides and their
+asynchronous preparation are restored; `lr-map-idle` (same detail) fires after style readiness
+whenever the peer and current component work are idle, including after later camera or source
+updates. `generation` increases monotonically across reconnects and style replacements.
+Interactions: `lr-map-feature-enter` and `lr-map-feature-leave` (frozen `LyraMapInteractionDetail
+{ lngLat, hit? }`) report the pointer entering a different admitted feature and leaving the previous
+one; `lr-map-contextmenu` (same detail) reports a secondary click without preventing the native
+context menu; `lr-map-pick` (frozen `LyraMapPickDetail { lngLat, hit?, trigger }`, `trigger` being
+`'pointer' | 'keyboard'`) reports a pick-mode selection, a keyboard pick using the camera center.
+`lr-map-anchor-close` (frozen `LyraMapAnchorCloseDetail { reason }`) fires after an open anchor
+closes by `closeAnchor()`, its close button or Escape.
+Drawing: `lr-map-draw-start` (after the first accepted vertex), `lr-map-draw-change` (after an
+accepted vertex, undo or vertex edit) and `lr-map-draw-complete` (valid geometry with spherical
+metrics) carry a frozen `LyraMapDrawingSnapshot`; `lr-map-draw-cancel` carries
+`LyraMapDrawingCancelDetail`, the cancelled snapshot plus a stable `reason`.
+Failures: `lr-map-geolocate-error` (frozen `LyraMapGeolocateErrorDetail { code }`, a
+`LyraMapGeolocationErrorCode`) and `lr-map-geolocate-out-of-bounds` (`{ code: 'out-of-bounds' }`)
+expose no coordinates or native messages; `lr-map-export-error` (frozen
+`LyraMapImageExportErrorDetail { code }`) reports a sanitized `exportImage()` failure. None of these
+events is cancelable; all bubble and are composed.
 
 The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
@@ -844,9 +941,15 @@ which only reaches rows projected from `legend`.
 **CSS parts:** `base`, `container`, `legend`, `legend-disclosure`, `legend-disclosure-icon`,
 `legend-group`, `legend-group-heading`, `legend-swatch`, `legend-toggle`,
 `legend-toggle-hidden`, `legend-gradient`, `legend-lo`,
-`legend-hi`, `legend-ticks`, `legend-tick`, `legend-derived`, `legend-limit`, `anchor`, `marker`, `popup`,
-`popup-content`, `popup-close-button`, `attribution`, `attribution-toggle`, `navigation`,
-`zoom-in`, `zoom-out`, `compass`, `scale`, `error`.
+`legend-hi`, `legend-ticks`, `legend-tick`, `legend-derived`, `legend-limit`, `anchor`,
+`anchor-close`, `marker`, `popup`, `popup-content`, `popup-close-button`, `attribution`,
+`attribution-toggle`, `navigation`, `zoom-in`, `zoom-out`, `compass`, `scale`, `geolocate`,
+`configuration-error`, `error`.
+Before native construction, `initialization-placeholder` is the stable noninteractive surface and
+`initialization-control` outlines each requested control. Pick mode renders `pick-controls` with
+`pick-center` and `pick-cancel`; draw mode renders `drawing-controls` with `drawing-add`,
+`drawing-undo`, `drawing-complete`, `drawing-cancel` and the `drawing-status` vertex count, and
+vertex editing renders `drawing-handles` containing one `drawing-vertex` per editable vertex.
 The compact attribution summary has a decorative, current-color information glyph and retains
 MapLibre's accessible name, keyboard/touch disclosure behavior and attribution links. To make
 only this control compact, scope the shared target-size token to its public wrapper:
@@ -923,11 +1026,11 @@ share the available width, so expanded attribution wraps without covering a scal
 control on the other side; controls stay aligned to their logical edge in both text directions.
 Prefer the declarative `controls` property (`controls = { navigation: true, scale: { unit: 'metric' } }`),
 which does the dynamic import, `addControl()` and removal for you; the imperative route below stays
-supported for controls it does not cover (attribution, geolocate, fullscreen).
+supported for controls it does not cover, such as fullscreen.
 Navigation exposes `navigation`, `zoom-in`, `zoom-out`, and `compass` parts; the scale exposes `scale`.
 Button names update through `zoomIn`, `zoomOut`, and `mapResetNorth` locale strings. MapLibre retains
 keyboard activation, compass rotation, zoom limits, scale units and viewport updates. No controls
-are created until the application declares them in `controls` or adds them itself.
+other than default attribution are created until declared in `controls` or added by the application.
 
 Navigation, scale, attribution and the legend follow the surrounding Glass or Solid surface
 treatment. Their decorative filtering leaves native control behavior and map data paint intact.
@@ -973,6 +1076,10 @@ import { defineConfig } from 'vite';
 import { lyraMapWorkerPlugin } from '@aceshooting/lyra-map/vite';
 export default defineConfig({ plugins: [lyraMapWorkerPlugin()] });
 ```
+
+The plugin needs no runtime pre-import or readiness gate. Use `LyraMap.preload()` to warm the
+selected engine without constructing a map. Configure one plugin instance per application build,
+including when a workspace re-exports it.
 
 The plugin disables document module-preload helpers for chunks also imported by workers. See the
 companion README for Rollup/Rolldown integration or the explicit `setWorkerUrl()` override. Missing
@@ -1053,10 +1160,9 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   `Marker` has no `setColor()`) rather than mutated in place — this also closes any popup the user
   currently has open on that marker (a fresh, closed `Popup` is built for the new instance); an
   accepted side effect of the reconstruction fallback, not a bug.
-- No click-select visual highlight on choropleth features (no `setFeatureState` call) — clicking
-  only fires the event, no built-in visual feedback. Popups are still only reachable declaratively
-  through `markers`' `unsafeHtml`/`label` — a choropleth-feature click still has no built-in popup,
-  only the raw `lr-map-click` event.
+- Clicking does not select or highlight a feature automatically. Use `setFeatureState()` with
+  feature-state-aware paint for application-owned selection, or assign `anchorLngLat` and slotted
+  anchor content to show feature details. Marker popups remain available through `unsafeHtml`/`label`.
 - `LyraMapLegendEntry.color` is validated against a strict CSS-color-syntax allowlist before being applied
   to the legend swatch's `background-color`, rejecting anything that isn't recognizable color syntax
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
@@ -1066,13 +1172,11 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   decorative `<lr-skeleton shape="rect" announce="false">` in place of the map container.
   Ordinary sr-only text preserves the localized `loading` label without creating a shadow live
   region.
-- construction of the real `maplibregl.Map` (and its WebGL context) is additionally gated on this
-  element being observed intersecting the viewport (`IntersectionObserver`), independent of whether
-  the `maplibre-gl` peer has already loaded — an off-screen `<lr-map>` swaps its skeleton for the
-  empty `[part="container"]` div as soon as the peer resolves, but `map` stays `undefined` and
-  `lr-map-load` never fires until the element is actually scrolled into view. Deliberate: caps
-  concurrent WebGL contexts when many `<lr-map>`s sit in one dashboard/grid. Skipped entirely
-  (constructs immediately once the peer loads) when `IntersectionObserver` itself is unavailable.
+- `initialization='visible'` (the default) waits for the element to intersect the viewport before
+  constructing its map and WebGL context. `idle` and `eager` select the other admission modes.
+  Deferred construction shows the localized initialization placeholder; `map` remains undefined
+  and `lr-map-load` waits for construction. Without `IntersectionObserver`, visible admission
+  proceeds once the peer and caller inputs are ready.
 - Once constructed, the owner realm's `ResizeObserver` watches the rendered map container and calls
   the current peer's `resize()` on allocation changes. It is replaced on reconnect/adoption and
   disconnected before peer teardown, so a stale delivery cannot resize a removed map. Browsers

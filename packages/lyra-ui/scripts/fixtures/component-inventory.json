@@ -64076,6 +64076,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "@aceshooting/lyra-map",
+        "dompurify",
         "maplibre-gl"
       ],
       "maturity": {
@@ -81530,6 +81531,7 @@
       "rootExclusion": "optional-peer-family",
       "optionalPeers": [
         "@aceshooting/lyra-map",
+        "dompurify",
         "maplibre-gl"
       ],
       "maturity": {
@@ -81561,6 +81563,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "anchor-closable",
+            "property": "anchorClosable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "center",
             "property": "center",
             "type": "readonly [number, number]",
@@ -81580,6 +81592,16 @@
             "default": false
           },
           {
+            "name": "draw-mode",
+            "property": "drawMode",
+            "type": "LyraMapDrawingMode",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
             "name": "engine",
             "property": "engine",
             "type": "LyraMapEngine",
@@ -81588,6 +81610,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "modular"
+          },
+          {
+            "name": "initialization",
+            "property": "initialization",
+            "type": "LyraMapInitialization",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "label",
@@ -81668,6 +81700,16 @@
             "default": ""
           },
           {
+            "name": "pick-mode",
+            "property": "pickMode",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "zoom",
             "property": "zoom",
             "type": "number",
@@ -81680,9 +81722,37 @@
         ],
         "properties": [
           {
+            "name": "anchorBoundary",
+            "attribute": null,
+            "type": "LyraMapAnchorBoundary | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "anchorClosable",
+            "attribute": "anchor-closable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "anchorLngLat",
             "attribute": null,
             "type": "readonly [number, number] | null | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "anchorSafeArea",
+            "attribute": null,
+            "type": "LyraMapAnchorSafeArea | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -81737,12 +81807,22 @@
           {
             "name": "dataLayers",
             "attribute": null,
-            "type": "readonly LyraMapGeoJsonDataLayer[]",
+            "type": "readonly LyraMapDataLayer[]",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "drawMode",
+            "attribute": "draw-mode",
+            "type": "LyraMapDrawingMode",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
           },
           {
             "name": "engine",
@@ -81755,6 +81835,16 @@
             "default": "modular"
           },
           {
+            "name": "hash",
+            "attribute": null,
+            "type": "boolean | string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "hiddenCategories",
             "attribute": null,
             "type": "readonly string[]",
@@ -81762,6 +81852,36 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "images",
+            "attribute": null,
+            "type": "readonly LyraMapImage[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
+            "name": "initialization",
+            "attribute": "initialization",
+            "type": "LyraMapInitialization",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
+            "name": "interactiveBasemapLayers",
+            "attribute": null,
+            "type": "readonly LyraMapBasemapInteraction[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "label",
@@ -81925,6 +82045,26 @@
             "default": null
           },
           {
+            "name": "overlays",
+            "attribute": null,
+            "type": "LyraMapOverlays",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "{}"
+          },
+          {
+            "name": "pickMode",
+            "attribute": "pick-mode",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "renderWorldCopies",
             "attribute": null,
             "type": "boolean | undefined",
@@ -81932,6 +82072,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "styleOverrides",
+            "attribute": null,
+            "type": "readonly LyraMapStyleOverride[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "zoom",
@@ -81960,10 +82110,83 @@
         ],
         "events": [
           {
-            "name": "lr-map-click",
-            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: 'choropleth' | 'data-layer' | 'cluster' | undefined; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; /** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData` * is configured; absent otherwise. */ readonly noData?: true; }>",
+            "name": "lr-map-anchor-close",
+            "type": "CustomEvent<LyraMapAnchorCloseDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-click",
+            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: LyraMapFeatureOrigin | 'cluster' | undefined; readonly hit?: LyraMapFeatureHit; readonly target?: LyraMapResolvedFeatureStateTarget; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; /** Native vector source layer containing the hit; absent for other source families. */ readonly sourceLayer?: string; /** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData` * is configured; absent otherwise. */ readonly noData?: true; }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-contextmenu",
+            "type": "CustomEvent<LyraMapInteractionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-draw-cancel",
+            "type": "CustomEvent<LyraMapDrawingCancelDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-draw-change",
+            "type": "CustomEvent<LyraMapDrawingSnapshot>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-draw-complete",
+            "type": "CustomEvent<LyraMapDrawingSnapshot>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-draw-start",
+            "type": "CustomEvent<LyraMapDrawingSnapshot>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-export-error",
+            "type": "CustomEvent<LyraMapImageExportErrorDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-feature-enter",
+            "type": "CustomEvent<LyraMapInteractionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-feature-leave",
+            "type": "CustomEvent<LyraMapInteractionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-geolocate-error",
+            "type": "CustomEvent<LyraMapGeolocateErrorDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-geolocate-out-of-bounds",
+            "type": "CustomEvent<LyraMapGeolocateOutOfBoundsDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-idle",
+            "type": "CustomEvent<LyraMapReadinessDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "composed": true
           },
           {
             "name": "lr-map-legend-panel-toggle-request",
@@ -81996,6 +82219,18 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-map-pick",
+            "type": "CustomEvent<LyraMapPickDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-style-load",
+            "type": "CustomEvent<LyraMapReadinessDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-map-view-change",
             "type": "CustomEvent<LyraMapViewChangeDetail>",
             "cancelable": "never",
@@ -82005,6 +82240,10 @@
         "parts": [
           {
             "name": "anchor",
+            "deprecated": null
+          },
+          {
+            "name": "anchor-close",
             "deprecated": null
           },
           {
@@ -82024,11 +82263,59 @@
             "deprecated": null
           },
           {
+            "name": "configuration-error",
+            "deprecated": null
+          },
+          {
             "name": "container",
             "deprecated": null
           },
           {
+            "name": "drawing-add",
+            "deprecated": null
+          },
+          {
+            "name": "drawing-cancel",
+            "deprecated": null
+          },
+          {
+            "name": "drawing-complete",
+            "deprecated": null
+          },
+          {
+            "name": "drawing-controls",
+            "deprecated": null
+          },
+          {
+            "name": "drawing-handles",
+            "deprecated": null
+          },
+          {
+            "name": "drawing-status",
+            "deprecated": null
+          },
+          {
+            "name": "drawing-undo",
+            "deprecated": null
+          },
+          {
+            "name": "drawing-vertex",
+            "deprecated": null
+          },
+          {
             "name": "error",
+            "deprecated": null
+          },
+          {
+            "name": "geolocate",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-control",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-placeholder",
             "deprecated": null
           },
           {
@@ -82097,6 +82384,18 @@
           },
           {
             "name": "navigation",
+            "deprecated": null
+          },
+          {
+            "name": "pick-cancel",
+            "deprecated": null
+          },
+          {
+            "name": "pick-center",
+            "deprecated": null
+          },
+          {
+            "name": "pick-controls",
             "deprecated": null
           },
           {
@@ -82177,6 +82476,33 @@
         "cssStates": [],
         "methods": [
           {
+            "name": "cancelDrawing",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "closeAnchor",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "completeDrawing",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
             "name": "easeTo",
             "overloads": [
               {
@@ -82189,6 +82515,38 @@
                   }
                 ],
                 "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "editDrawing",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "snapshot",
+                    "type": "LyraMapDrawingSnapshot",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "exportImage",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "LyraMapImageExportOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Promise<Blob>"
               }
             ]
           },
@@ -82249,6 +82607,31 @@
             ]
           },
           {
+            "name": "focusAnchor",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "getFeatureState",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "target",
+                    "type": "LyraMapFeatureStateTarget",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "LyraMapFeatureState | undefined"
+              }
+            ]
+          },
+          {
             "name": "jumpTo",
             "overloads": [
               {
@@ -82277,6 +82660,59 @@
                   }
                 ],
                 "returnType": "LyraMapPoint | undefined"
+              }
+            ]
+          },
+          {
+            "name": "removeFeatureState",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "target",
+                    "type": "LyraMapFeatureStateTarget",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "key",
+                    "type": "string",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "setFeatureState",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "target",
+                    "type": "LyraMapFeatureStateTarget",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "patch",
+                    "type": "LyraMapFeatureState",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "undoDrawing",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
               }
             ]
           },
@@ -82315,6 +82751,24 @@
                   }
                 ],
                 "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "whenIdle",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<void>"
+              }
+            ]
+          },
+          {
+            "name": "whenStyleReady",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<void>"
               }
             ]
           }

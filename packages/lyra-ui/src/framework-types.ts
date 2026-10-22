@@ -7355,15 +7355,23 @@ export interface LyraComponentTypeMap {
     element: LyraMap;
     properties: LyraElementProperties<
       LyraMap,
+      | 'anchorBoundary'
+      | 'anchorClosable'
       | 'anchorLngLat'
+      | 'anchorSafeArea'
       | 'cameraPadding'
       | 'center'
       | 'choropleth'
       | 'choroplethLegend'
       | 'controls'
       | 'dataLayers'
+      | 'drawMode'
       | 'engine'
+      | 'hash'
       | 'hiddenCategories'
+      | 'images'
+      | 'initialization'
+      | 'interactiveBasemapLayers'
       | 'label'
       | 'legend'
       | 'legendCollapsible'
@@ -7379,18 +7387,35 @@ export interface LyraComponentTypeMap {
       | 'mapStyle'
       | 'markers'
       | 'maxBounds'
+      | 'overlays'
+      | 'pickMode'
       | 'renderWorldCopies'
       | 'strings'
+      | 'styleOverrides'
       | 'zoom',
       {}
     >;
     events: LyraMapEventMap;
-    eventNames:       | 'lr-map-click'
+    eventNames:       | 'lr-map-anchor-close'
+      | 'lr-map-click'
+      | 'lr-map-contextmenu'
+      | 'lr-map-draw-cancel'
+      | 'lr-map-draw-change'
+      | 'lr-map-draw-complete'
+      | 'lr-map-draw-start'
+      | 'lr-map-export-error'
+      | 'lr-map-feature-enter'
+      | 'lr-map-feature-leave'
+      | 'lr-map-geolocate-error'
+      | 'lr-map-geolocate-out-of-bounds'
+      | 'lr-map-idle'
       | 'lr-map-legend-panel-toggle-request'
       | 'lr-map-legend-toggle-request'
       | 'lr-map-load'
       | 'lr-map-marker-activate'
       | 'lr-map-move'
+      | 'lr-map-pick'
+      | 'lr-map-style-load'
       | 'lr-map-view-change';
     cssNames:       | '--lr-map-choropleth-fill-opacity'
       | '--lr-map-height'
@@ -7401,13 +7426,16 @@ export interface LyraComponentTypeMap {
       | '--lr-map-popup-close-button-hover-bg'
       | '--lr-map-popup-close-button-hover-color';
     attributeAliases: {
+      'anchor-closable'?: LyraMap['anchorClosable'];
       'choropleth-legend'?: LyraMap['choroplethLegend'];
+      'draw-mode'?: LyraMap['drawMode'];
       'legend-collapsible'?: LyraMap['legendCollapsible'];
       'legend-control-role'?: LyraMap['legendControlRole'];
       'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];
       'legend-gradient-lo-label'?: LyraMap['legendGradientLoLabel'];
       'legend-interactive'?: LyraMap['legendInteractive'];
       'legend-open'?: LyraMap['legendOpen'];
+      'pick-mode'?: LyraMap['pickMode'];
     };
   };
   'lr-markdown': {

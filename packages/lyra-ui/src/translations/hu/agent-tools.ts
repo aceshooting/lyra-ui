@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Beágyazás',
   spanKindOther: 'Egyéb',
   cost: 'Költség',
-  duration: 'Időtartam',
   spanWaterfall: 'Szakaszok idővonala',
   spanStartedAtOffset: 'kezdés: +{value}',
   compareResponseA: 'A válasz',

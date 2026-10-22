@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Kotya na esika ya motuya',
   spanKindOther: 'Mosusu',
   cost: 'Coût',
-  duration: 'Durée',
   spanWaterfall: 'Calendrier ya span',
   spanStartedAtOffset: 'ebandaki na +{value}',
   compareResponseA: 'Eyano A',

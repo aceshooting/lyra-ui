@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Calaqqisa {index} / {total}',
   tokensIn: 'Tokkenota galan',
   tokensOut: 'Tokkenota bahan',
+  duration: 'Turtii',
   comparePanel: 'Walbira qabuu',
   treeNodeMoved: '{label} gara iddoo {index} / {total}tti socho\'e',
   gitStatusAdded: 'Dabalame',

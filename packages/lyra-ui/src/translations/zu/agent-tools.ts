@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Ukushumeka',
   spanKindOther: 'Okunye',
   cost: 'Izindleko',
-  duration: 'Isikhathi',
   spanWaterfall: 'Umugqa wesikhathi wesigaba',
   spanStartedAtOffset: 'kuqale ngo-+{value}',
   compareResponseA: 'Impendulo A',

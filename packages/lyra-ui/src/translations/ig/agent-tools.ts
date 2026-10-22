@@ -150,7 +150,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Ntinye vector',
   spanKindOther: 'Ndị ọzọ',
   cost: 'Ọnụ ahịa',
-  duration: 'Ogologo oge',
   spanWaterfall: 'Usoro oge oghere',
   spanStartedAtOffset: 'malitere na +{value}',
   compareResponseA: 'Nzaghachi A',

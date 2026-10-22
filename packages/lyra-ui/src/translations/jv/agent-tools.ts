@@ -149,7 +149,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Embedding',
   spanKindOther: 'Liyane',
   cost: 'Biaya',
-  duration: 'Suwene',
   spanWaterfall: 'Garis wektu span',
   spanStartedAtOffset: 'diwiwiti ing +{value}',
   compareResponseA: 'Wangsulan A',

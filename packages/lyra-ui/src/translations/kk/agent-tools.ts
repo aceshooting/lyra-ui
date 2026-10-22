@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Эмбеддинг',
   spanKindOther: 'Басқа',
   cost: 'Құны',
-  duration: 'Ұзақтығы',
   spanWaterfall: 'Аралықтар уақыт шкаласы',
   spanStartedAtOffset: 'басталуы: +{value}',
   compareResponseA: 'А жауабы',

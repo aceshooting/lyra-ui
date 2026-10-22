@@ -9811,10 +9811,340 @@
       }
     },
     {
+      "module": "src/components/media/map/map-anchor-options.ts",
+      "exportName": "LyraMapAnchorSafeArea",
+      "kind": "interface",
+      "fingerprint": "8f4707b1a1f7ce989fa8",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapAnchorSafeArea"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-data-layer-model.ts",
+      "exportName": "LyraMapCanvasDataLayer",
+      "kind": "interface",
+      "fingerprint": "5c5624ede7d2e585e3f3",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapCanvasDataLayer"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-data-layer-model.ts",
+      "exportName": "LyraMapExternalDataLayerOptions",
+      "kind": "interface",
+      "fingerprint": "aec6fb840e24f67f8f14",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapExternalDataLayerOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-data-layer-model.ts",
+      "exportName": "LyraMapImageDataLayer",
+      "kind": "interface",
+      "fingerprint": "1d68e5ff6410315a46e4",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapImageDataLayer"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-data-layer-model.ts",
+      "exportName": "LyraMapLabelOptions",
+      "kind": "interface",
+      "fingerprint": "c5938f84194739e4aa36",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapLabelOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-data-layer-model.ts",
+      "exportName": "LyraMapRasterDataLayer",
+      "kind": "interface",
+      "fingerprint": "3886839e2fe72b4dd83f",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapRasterDataLayer"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-data-layer-model.ts",
+      "exportName": "LyraMapTileSource",
+      "kind": "interface",
+      "fingerprint": "ed9a4870d6d0987b53fa",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapTileSource"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-data-layer-model.ts",
+      "exportName": "LyraMapVectorDataLayer",
+      "kind": "interface",
+      "fingerprint": "59845c879837dc1f09b5",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapVectorDataLayer"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-drawing.ts",
+      "exportName": "LyraMapDrawingMetrics",
+      "kind": "interface",
+      "fingerprint": "bc1cc1d965fec22685a5",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapDrawingMetrics"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-drawing.ts",
+      "exportName": "LyraMapDrawingSnapshot",
+      "kind": "interface",
+      "fingerprint": "c7d3aa1810a6a9759c59",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapDrawingSnapshot"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-feature-state-routes.ts",
+      "exportName": "LyraMapFeatureStateTarget",
+      "kind": "interface",
+      "fingerprint": "54ebbbbdaed48cf2506a",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapFeatureStateTarget"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-feature-state-routes.ts",
+      "exportName": "LyraMapResolvedFeatureStateTarget",
+      "kind": "interface",
+      "fingerprint": "98419bbe7a6049c9985e",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapResolvedFeatureStateTarget"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-image-export.ts",
+      "exportName": "LyraMapImageExportOptions",
+      "kind": "interface",
+      "fingerprint": "4686b1d91a3abb933c45",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapImageExportOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-interaction-options.ts",
+      "exportName": "LyraMapBasemapInteraction",
+      "kind": "interface",
+      "fingerprint": "53569af6eb2e4faa1809",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapBasemapInteraction"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-interaction-options.ts",
+      "exportName": "LyraMapInteractionOptions",
+      "kind": "interface",
+      "fingerprint": "87ddd0b9ecf343f962e0",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapInteractionOptions"
+      }
+    },
+    {
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "8039726747a74b1a102c",
+      "fingerprint": "298b80c90e866fa97867",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9862,7 +10192,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "6a3f803f2fd7fdfaa73a",
+      "fingerprint": "3e08532ef563e6ad7df3",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9878,7 +10208,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "3245fcab22a616dae608",
+      "fingerprint": "a1f86975c2806aa727a6",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9894,7 +10224,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "4c7c15d2bd6a17a10cb7",
+      "fingerprint": "c010d10ad150966f85b4",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -9943,9 +10273,31 @@
     },
     {
       "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapAnchorCloseDetail",
+      "kind": "interface",
+      "fingerprint": "e72703d46e5a36bdd87f",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapAnchorCloseDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapChoroplethLayer",
       "kind": "interface",
-      "fingerprint": "81b70c3f39e038f30813",
+      "fingerprint": "1ab5daebcfb8de0950d1",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -9987,9 +10339,53 @@
     },
     {
       "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapDrawingCancelDetail",
+      "kind": "interface",
+      "fingerprint": "bcbabcf375149977059e",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapDrawingCancelDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapFeatureHit",
+      "kind": "interface",
+      "fingerprint": "48a3410846a0332976a4",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapFeatureHit"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapGeoJsonDataLayer",
       "kind": "interface",
-      "fingerprint": "4ca82bcec7902531a39e",
+      "fingerprint": "b1b36a3110b8e50294b5",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -10005,6 +10401,50 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapGeoJsonDataLayer"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapGeolocateErrorDetail",
+      "kind": "interface",
+      "fingerprint": "9da2bfd6b0f64a0bc223",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapGeolocateErrorDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapGeolocateOutOfBoundsDetail",
+      "kind": "interface",
+      "fingerprint": "21239735a67ecb98e908",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapGeolocateOutOfBoundsDetail"
       }
     },
     {
@@ -10031,6 +10471,28 @@
     },
     {
       "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapImageExportErrorDetail",
+      "kind": "interface",
+      "fingerprint": "121f043eb99c3d693742",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapImageExportErrorDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapInstance",
       "kind": "interface",
       "fingerprint": "002e58083bc5d98f0042",
@@ -10049,6 +10511,28 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapInstance"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapInteractionDetail",
+      "kind": "interface",
+      "fingerprint": "f5d13360dee00dc83a15",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapInteractionDetail"
       }
     },
     {
@@ -10141,6 +10625,28 @@
     },
     {
       "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapOverlays",
+      "kind": "interface",
+      "fingerprint": "4664e00f48b43eea55de",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapOverlays"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapPadding",
       "kind": "interface",
       "fingerprint": "1699a752d00096592293",
@@ -10181,6 +10687,50 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapFitBoundsOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapPickDetail",
+      "kind": "interface",
+      "fingerprint": "eed5ce66f6fdad3d81b0",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapPickDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapReadinessDetail",
+      "kind": "interface",
+      "fingerprint": "b4b095b5f646e96e07b5",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapReadinessDetail"
       }
     },
     {
@@ -14145,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "d2e1b22aab553ea64b43",
+      "fingerprint": "8ff056c690e4de279dda",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15052,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "7c00f623d150910d5231",
+      "fingerprint": "32203947359a1c24fa7e",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15186,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "6b50e50ffccee939469a",
+      "fingerprint": "3de08d168df49c8ba5cc",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15770,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "3ec4346e665fe5b8c91f",
+      "fingerprint": "d50ee7e7690339f94eec",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15786,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "bcb0ef98867027a25de5",
+      "fingerprint": "6da39c006d2a8b543a6f",
       "routes": [
         "src/svelte.ts"
       ],
@@ -15802,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "20a0c731a9d0fec62975",
+      "fingerprint": "a05bfbf5c9ef9ce549c6",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16329,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "cb0f98ffb36db8444706",
+      "fingerprint": "c49b0b6c14aea273341d",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16346,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "5f6f7fd61b9301136215",
+      "fingerprint": "40040e4feee40f4d9e37",
       "routes": [
         "src/vue.ts"
       ],
@@ -16755,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "3709bb23e1f9d4475e56",
+      "fingerprint": "59c19a25198520d333f3",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16780,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "241d87aded6325da7d17",
+      "fingerprint": "34b940ff96d151e604d7",
       "routes": [
         "src/localization.ts"
       ],
@@ -18192,7 +18742,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadModularMap",
       "kind": "function",
-      "fingerprint": "85f405790ec60091b630",
+      "fingerprint": "87f9e171157fd4ca5107",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18231,7 +18781,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "ModularMapModule",
       "kind": "interface",
-      "fingerprint": "da92cc380287c5f9bbfb",
+      "fingerprint": "47104a68261ae9573123",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -20403,7 +20953,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapControls",
       "kind": "interface",
-      "fingerprint": "5c674d0f9f3729d0e741",
+      "fingerprint": "3469ac1307ce267de948",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -20444,10 +20994,10 @@
       }
     },
     {
-      "module": "src/components/media/map/map.class.ts",
+      "module": "src/components/media/map/map-control-options.ts",
       "exportName": "LyraMapNavigationControlOptions",
       "kind": "interface",
-      "fingerprint": "2579f095c460dbe97328",
+      "fingerprint": "68261ce0266569bb150a",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -20466,10 +21016,10 @@
       }
     },
     {
-      "module": "src/components/media/map/map.class.ts",
+      "module": "src/components/media/map/map-control-options.ts",
       "exportName": "LyraMapScaleControlOptions",
       "kind": "interface",
-      "fingerprint": "fcc7475fdd564f6b6303",
+      "fingerprint": "9608bbb589cc2e54ef33",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -20485,6 +21035,160 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapScaleControlOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-control-options.ts",
+      "exportName": "LyraMapAttributionControlOptions",
+      "kind": "interface",
+      "fingerprint": "8129ec267b5bb1b5f80c",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapAttributionControlOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-control-options.ts",
+      "exportName": "LyraMapGeolocateControlOptions",
+      "kind": "interface",
+      "fingerprint": "2b0d773f5448cd78d1b7",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapGeolocateControlOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-feature-state.ts",
+      "exportName": "LyraMapFeatureIdentifier",
+      "kind": "interface",
+      "fingerprint": "53f2ecdcf2711d4c7851",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapFeatureIdentifier"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-images.ts",
+      "exportName": "LyraMapImage",
+      "kind": "interface",
+      "fingerprint": "8954a91d433a95d80251",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapImage"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-owned-resources.ts",
+      "exportName": "LyraMapOverlayLayer",
+      "kind": "interface",
+      "fingerprint": "91745040ca20eeb2fa1f",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapOverlayLayer"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-owned-resources.ts",
+      "exportName": "LyraMapOverlaySource",
+      "kind": "interface",
+      "fingerprint": "d78a0ec1d4549120f439",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapOverlaySource"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-style-overrides.ts",
+      "exportName": "LyraMapStyleOverride",
+      "kind": "interface",
+      "fingerprint": "cadb939e995ad0901d24",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapStyleOverride"
       }
     }
   ],

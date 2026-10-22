@@ -153,7 +153,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'הטבעה',
   spanKindOther: 'אחר',
   cost: 'עלות',
-  duration: 'משך',
   spanWaterfall: 'ציר זמן של מקטעים',
   spanStartedAtOffset: 'התחיל ב-+{value}',
   compareResponseA: "תגובה א'",

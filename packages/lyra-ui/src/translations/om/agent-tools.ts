@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Embedding',
   spanKindOther: 'Kan biraa',
   cost: 'Baasii',
-  duration: 'Turtii',
   spanWaterfall: 'Tarree yeroo kutaa',
   spanStartedAtOffset: '+{value} irratti jalqabe',
   compareResponseA: 'Deebii A',

@@ -4,6 +4,7 @@ import { ref } from 'lit/directives/ref.js';
 import type {
   LyraMap,
   LyraMapBounds,
+  LyraMapCanvasDataLayer,
   LyraMapChoroplethLayer,
   LyraMapGeoJsonDataLayer,
   LyraMapLegendEntry,
@@ -1173,4 +1174,176 @@ export const BoundsAtWholeWorldZoom: Story = {
       .mapStyle=${OFFLINE_RASTER_STYLE}
     ></lr-map>
   `,
+};
+
+/** Canvas clicks use the declared corners, including transparent pixels. */
+export const CanvasFootprint: Story = {
+  render: () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = storyColor('brand');
+    context.fillRect(0, 0, 32, 64);
+    const layer: LyraMapCanvasDataLayer = {
+      kind: 'canvas', sourceId: 'local-heat', canvas, animate: false,
+      coordinates: [[-5, 5], [5, 5], [5, -5], [-5, -5]],
+      interactive: true, category: 'heat', priority: 1,
+    };
+    let map: LyraMap | undefined;
+    let status: HTMLElement | undefined;
+    return html`
+      <p>The full four-corner footprint is clickable, including its transparent half.</p>
+      <lr-button @click=${() => { if (map) map.hiddenCategories = map.hiddenCategories.length ? [] : ['heat']; }}>Toggle category</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Canvas footprint interaction" center="[0, 0]" zoom="3" style="block-size: 22rem"
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE} .dataLayers=${[layer]}
+        .legend=${[{ value: 'heat', label: 'Heat footprint', color: storyColor('brand'), pattern: 'solid' }]}
+        @lr-map-click=${(event: CustomEvent<{ sourceId?: string }>) => {
+          if (status) status.textContent = event.detail.sourceId ?? 'Map background';
+        }}
+      ></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Click the footprint or the surrounding map.</p>
+    `;
+  },
+};
+
+export const OwnedResourcesAndReadiness: Story = {
+  render: () => {
+    let status: HTMLElement | undefined;
+    return html`
+      <p>Owned native resources survive style replacement; overrides style the base layer.</p>
+      <lr-map label="Owned native resources" initialization="eager" style="block-size: 22rem"
+        .mapStyle=${{ version: 8, sources: {}, layers: [{ id: 'background', type: 'background' }] }}
+        .overlays=${{
+          sources: [{ id: 'local-shape', source: { type: 'geojson', data: {
+            type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[-5, 0], [5, 0]] },
+          } } }],
+          layers: [{ layer: { id: 'local-line', type: 'line', source: 'local-shape',
+            paint: { 'line-color': storyColor('brand'), 'line-width': 4 } }, interactive: true }],
+        }}
+        .images=${[{ id: 'local-icon', source: { kind: 'svg', markup: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="currentColor"/></svg>' }, width: 32, height: 32, pixelRatio: 1 }]}
+        .styleOverrides=${[{ layerId: 'background', paint: { 'background-color': storyColor('brand') } }]}
+        @lr-map-style-load=${async (event: Event) => {
+          try { await (event.currentTarget as LyraMap).whenIdle(); if (status) status.textContent = 'Current resources are idle'; }
+          catch { if (status) status.textContent = 'Readiness was interrupted'; }
+        }}
+      ></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Waiting for style readiness</p>
+    `;
+  },
+};
+
+export const PickingAndFeatureState: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let status: HTMLElement | undefined;
+    return html`
+      <lr-button @click=${() => { if (map) map.pickMode = !map.pickMode; }}>Toggle coordinate picking</lr-button>
+      <lr-button @click=${() => {
+        const accepted = map?.setFeatureState({ origin: 'data-layer', source: 'site', id: 1 }, { selected: true });
+        if (status) status.textContent = accepted ? JSON.stringify(map?.getFeatureState({ source: 'site', id: 1 })) : 'State was not admitted';
+      }}>Set and read feature state</lr-button>
+      <lr-button @click=${() => map?.removeFeatureState({ source: 'site', id: 1 })}>Clear feature state</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Picking and feature state" style="block-size: 22rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        .controls=${{ navigation: true, scale: true, geolocate: false, attribution: true }}
+        .hash=${false} .interactiveBasemapLayers=${[]}
+        .dataLayers=${[{ sourceId: 'site', interactive: true, priority: 2, geojson: {
+          type: 'FeatureCollection', features: [{ type: 'Feature', id: 1, properties: {}, geometry: { type: 'Point', coordinates: [0, 0] } }],
+        } }]}
+        @lr-map-pick=${(event: CustomEvent) => { if (status) status.textContent = JSON.stringify(event.detail); }}
+        @lr-map-contextmenu=${(event: CustomEvent) => { if (status) status.textContent = JSON.stringify(event.detail); }}
+      ></lr-map>
+      <p>Hash synchronization is disabled in this embedded demo. Set a distinct string key to enroll a map.</p>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Pick a coordinate or open the map context menu.</p>
+    `;
+  },
+};
+
+export const DrawingAndExplicitEditing: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let completed: import('./map.js').LyraMapDrawingSnapshot | undefined;
+    let status: HTMLElement | undefined;
+    return html`
+      <lr-button @click=${() => { if (map) map.drawMode = 'line'; }}>Draw line</lr-button>
+      <lr-button @click=${() => { if (map) map.drawMode = 'polygon'; }}>Draw polygon</lr-button>
+      <lr-button @click=${() => map?.undoDrawing()}>Undo</lr-button>
+      <lr-button @click=${() => map?.completeDrawing()}>Finish</lr-button>
+      <lr-button @click=${() => map?.cancelDrawing()}>Cancel</lr-button>
+      <lr-button @click=${() => { if (completed) map?.editDrawing(completed); }}>Edit completed shape</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Line and polygon drawing" style="block-size: 22rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        @lr-map-draw-complete=${(event: CustomEvent<import('./map.js').LyraMapDrawingSnapshot>) => {
+          completed = event.detail; if (status) status.textContent = JSON.stringify(event.detail);
+        }}
+        @lr-map-draw-cancel=${(event: CustomEvent) => { if (status) status.textContent = JSON.stringify(event.detail); }}
+      ></lr-map>
+      <p>Use pointer vertices or the map's keyboard center controls. Editing begins only with the explicit edit action.</p>
+      <pre role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Complete a shape to inspect geometry and metrics.</pre>
+    `;
+  },
+};
+
+export const AnchorBoundaryAndFocus: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    return html`
+      <lr-button @click=${() => { if (map) { map.anchorLngLat = [0, 0]; map.anchorBoundary = map; } }}>Open within map boundary</lr-button>
+      <lr-button @click=${() => { if (map) map.anchorClosable = !map.anchorClosable; }}>Toggle close affordance</lr-button>
+      <lr-button @click=${() => map?.focusAnchor()}>Focus anchor</lr-button>
+      <lr-button @click=${() => map?.closeAnchor()}>Close anchor</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Bounded anchor" style="block-size: 22rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        .anchorSafeArea=${{ inlineStart: 24, blockEnd: 24 }}>
+        <div slot="anchor"><p>Anchored details</p><button type="button">Inspect location</button></div>
+      </lr-map>
+    `;
+  },
+};
+
+export const InitializationAndImageExport: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let status: HTMLElement | undefined;
+    return html`
+      <p>The first map constructs when visible; the others request idle and eager construction.</p>
+      <lr-button @click=${async () => {
+        if (!map) return;
+        try {
+          const blob = await map.exportImage({ type: 'image/png', attribution: true });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a'); link.href = url; link.download = 'map.png'; link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          if (status) status.textContent = 'PNG exported with attribution';
+        } catch { if (status) status.textContent = 'Image export unavailable'; }
+      }}>Download PNG with attribution</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Visible initialization and image export" initialization="visible"
+        style="block-size: 18rem" .mapStyle=${OFFLINE_RASTER_STYLE}></lr-map>
+      <lr-map label="Idle initialization" initialization="idle" style="block-size: 12rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}></lr-map>
+      <lr-map label="Eager initialization" initialization="eager" style="block-size: 12rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>The export includes the native frame; DOM overlays are excluded.</p>
+    `;
+  },
+};
+
+export const CanvasSourceZoomAndOpacity: Story = {
+  render: () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = storyColor('brand');
+    context.fillRect(0, 0, 64, 64);
+    const layer: LyraMapCanvasDataLayer = {
+      kind: 'canvas', sourceId: 'local-canvas', canvas, animate: false,
+      coordinates: [[-5, 5], [5, 5], [5, -5], [-5, -5]],
+      minZoom: 0, maxZoom: 12, opacity: 0.5, category: 'canvas', interactive: true, priority: 1,
+    };
+    return html`
+      <p>The local canvas source has explicit zoom limits, opacity and category identity.</p>
+      <lr-map label="Local canvas source options" style="block-size: 22rem" zoom="3"
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE} .dataLayers=${[layer]}></lr-map>
+    `;
+  },
 };

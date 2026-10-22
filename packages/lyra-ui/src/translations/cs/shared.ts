@@ -128,6 +128,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Zvýraznění {index} z {total}',
   tokensIn: 'Vstupní tokeny',
   tokensOut: 'Výstupní tokeny',
+  duration: 'Doba trvání',
   comparePanel: 'Porovnání',
   treeNodeMoved: 'Položka {label} přesunuta na pozici {index} z {total}',
   gitStatusAdded: 'Přidáno',

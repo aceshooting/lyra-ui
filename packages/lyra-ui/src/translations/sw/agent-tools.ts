@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Uwakilishaji wa vekta',
   spanKindOther: 'Nyingine',
   cost: 'Gharama',
-  duration: 'Muda',
   spanWaterfall: 'Ratiba ya vipindi',
   spanStartedAtOffset: 'ilianza baada ya +{value}',
   compareResponseA: 'Jibu A',

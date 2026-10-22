@@ -149,7 +149,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Ìfìsínú',
   spanKindOther: 'Òmíràn',
   cost: 'Ìnáwó',
-  duration: 'Àkókò',
   spanWaterfall: 'Ìlà àkókò àárín',
   spanStartedAtOffset: 'bẹ̀rẹ̀ ní +{value}',
   compareResponseA: 'Ìdáhùn A',

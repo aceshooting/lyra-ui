@@ -155,7 +155,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Векторне подання',
   spanKindOther: 'Інше',
   cost: 'Вартість',
-  duration: 'Тривалість',
   spanWaterfall: 'Часова шкала інтервалів',
   spanStartedAtOffset: 'початок через +{value}',
   compareResponseA: 'Відповідь A',

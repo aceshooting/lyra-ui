@@ -132,6 +132,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'التمييز {index} من {total}',
   tokensIn: 'الرموز الواردة',
   tokensOut: 'الرموز الصادرة',
+  duration: 'المدة',
   comparePanel: 'المقارنة',
   treeNodeMoved: 'تم نقل {label} إلى الموضع {index} من {total}',
   gitStatusAdded: 'مُضاف',

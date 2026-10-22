@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'له {total} څخه روښانه شوې برخه {index}',
   tokensIn: 'دننه ټوکنونه',
   tokensOut: 'بهرني ټوکنونه',
+  duration: 'موده',
   comparePanel: 'پرتله کول',
   treeNodeMoved: '{label} له {total} څخه {index} ځای ته ولېږدول شو',
   gitStatusAdded: 'زیات شوی',

@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: '{index}/{total}. kiemelés',
   tokensIn: 'Bemeneti tokenek',
   tokensOut: 'Kimeneti tokenek',
+  duration: 'Időtartam',
   comparePanel: 'Összehasonlítás',
   treeNodeMoved: 'Áthelyezve: {label}, új pozíció: {index}/{total}',
   gitStatusAdded: 'Hozzáadva',

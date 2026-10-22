@@ -122,6 +122,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: '전체 {total}개 중 {index}번째 하이라이트',
   tokensIn: '입력 토큰',
   tokensOut: '출력 토큰',
+  duration: '소요 시간',
   comparePanel: '비교',
   treeNodeMoved: '{label}을(를) 전체 {total}개 위치 중 {index}번째로 이동했습니다.',
   gitStatusAdded: '추가됨',

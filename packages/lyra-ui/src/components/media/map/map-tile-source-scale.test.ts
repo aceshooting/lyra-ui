@@ -7,6 +7,8 @@ import type { LyraMap } from './map.class.js';
 import type { Feature, Point } from 'geojson';
 
 it('reaches first middle and final million-catalog features through real modular vector tiles and bounded overlays', async function () {
+  // The real engine needs a WebGL2 context; a browser without one shows the map's fallback instead.
+  if (!document.createElement('canvas').getContext('webgl2')) this.skip();
   this.timeout(30000);
   const previousWorkerUrl = getWorkerUrl();
   setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href);

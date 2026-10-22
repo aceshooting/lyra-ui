@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Επισήμανση {index} από {total}',
   tokensIn: 'Εισερχόμενα tokens',
   tokensOut: 'Εξερχόμενα tokens',
+  duration: 'Διάρκεια',
   comparePanel: 'Σύγκριση',
   treeNodeMoved: 'Το {label} μετακινήθηκε στη θέση {index} από {total}',
   gitStatusAdded: 'Προστέθηκε',

@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Okugqanyisiwe {index} kokungu-{total}',
   tokensIn: 'Amathokheni angenayo',
   tokensOut: 'Amathokheni aphumayo',
+  duration: 'Isikhathi',
   comparePanel: 'Ukuqhathanisa',
   treeNodeMoved: '{label} iyiswe endaweni {index} kokungu-{total}',
   gitStatusAdded: 'Kwengeziwe',

@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Markering {index} van {total}',
   tokensIn: 'Invoertokens',
   tokensOut: 'Uitvoertokens',
+  duration: 'Duur',
   comparePanel: 'Vergelijking',
   treeNodeMoved: '{label} verplaatst naar positie {index} van {total}',
   gitStatusAdded: 'Toegevoegd',

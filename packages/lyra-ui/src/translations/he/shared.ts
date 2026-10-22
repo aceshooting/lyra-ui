@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'הדגשה {index} מתוך {total}',
   tokensIn: 'אסימוני קלט',
   tokensOut: 'אסימוני פלט',
+  duration: 'משך',
   comparePanel: 'השוואה',
   treeNodeMoved: 'הפריט {label} הועבר למיקום {index} מתוך {total}',
   gitStatusAdded: 'נוסף',

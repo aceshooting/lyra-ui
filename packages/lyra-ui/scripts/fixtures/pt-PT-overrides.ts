@@ -363,6 +363,20 @@ const strings: LyraLocaleStrings = {
   engine3dShowingList: 'É apresentada uma lista em alternativa.',
   largeDataInvalid: 'Não é possível apresentar os dados porque {column} é inválido.',
   largeDataLimit: 'Não é possível apresentar os dados porque excedem o limite de {limit}.',
+  mapGeolocateFindLocation: 'Encontrar a minha localização',
+  mapGeolocateUnavailable: 'A localização não está disponível',
+  mapGeolocatePermissionDenied: 'O acesso à localização foi recusado',
+  mapGeolocatePositionUnavailable: 'Não foi possível determinar a sua localização',
+  mapGeolocateTimeout: 'O pedido de localização excedeu o tempo limite',
+  mapGeolocateError: 'Não foi possível mostrar a sua localização',
+  mapGeolocateOutOfBounds: 'A sua localização está fora dos limites do mapa',
+  mapHashConflict: 'Outro mapa está a utilizar este campo do URL',
+  mapHashInvalid: 'O nome do campo do URL do mapa é inválido',
+  mapControlUnavailable: 'Não foi possível carregar um controlo do mapa',
+  mapDrawingControls: 'Controlos de desenho',
+  mapUndoDrawing: 'Anular o último vértice',
+  mapDrawingVertexLimit: 'Um desenho pode conter, no máximo, {count} vértices',
+  mapDrawingEditInstructions: 'Utilize as teclas de seta para mover este vértice; mantenha a tecla Shift premida para passos maiores. Page Up e Page Down selecionam vértices. Home e End selecionam o primeiro e o último vértice visível.',
 };
 
 export { strings };

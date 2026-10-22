@@ -153,7 +153,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Vectorizare',
   spanKindOther: 'Altele',
   cost: 'Cost',
-  duration: 'Durată',
   spanWaterfall: 'Cronologia span-urilor',
   spanStartedAtOffset: 'început la +{value}',
   compareResponseA: 'Răspuns A',

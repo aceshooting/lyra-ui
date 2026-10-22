@@ -122,6 +122,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Sorotan {index} tina {total}',
   tokensIn: 'Token asup',
   tokensOut: 'Token kaluar',
+  duration: 'Lilana',
   comparePanel: 'Babandingan',
   treeNodeMoved: '{label} dipindahkeun ka posisi {index} tina {total}',
   gitStatusAdded: 'Ditambahkeun',

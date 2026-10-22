@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: '{total} ମଧ୍ୟରୁ ହାଇଲାଇଟ୍ {index}',
   tokensIn: 'ଇନପୁଟ୍ ଟୋକେନ୍',
   tokensOut: 'ଆଉଟପୁଟ୍ ଟୋକେନ୍',
+  duration: 'ଅବଧି',
   comparePanel: 'ତୁଳନା',
   treeNodeMoved: '{label}କୁ {total} ମଧ୍ୟରୁ {index}ତମ ସ୍ଥାନକୁ ଘୁଞ୍ଚାଗଲା',
   gitStatusAdded: 'ଯୋଡ଼ାଗଲା',

@@ -34,6 +34,7 @@ export const LYRA_DEFAULT_details: LyraMessage = 'Details';
 export const LYRA_DEFAULT_documentPreviewEmpty: LyraMessage = 'No {type} to display.';
 export const LYRA_DEFAULT_documentPreviewTypeImage: LyraMessage = 'image';
 export const LYRA_DEFAULT_download: LyraMessage = 'Download';
+export const LYRA_DEFAULT_duration: LyraMessage = 'Duration';
 export const LYRA_DEFAULT_durationMilliseconds: LyraMessage = '{value}ms';
 export const LYRA_DEFAULT_durationSeconds: LyraMessage = '{value}s';
 export const LYRA_DEFAULT_engine3dContextLost: LyraMessage = 'The 3D view lost its graphics context.';

@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Ihe pụtara ìhè {index} n’ime {total}',
   tokensIn: 'Token ndị e tinyere',
   tokensOut: 'Token ndị e wepụtara',
+  duration: 'Ogologo oge',
   comparePanel: 'Ntụnyere',
   treeNodeMoved: 'Ebugara {label} n’ọnọdụ {index} n’ime {total}',
   gitStatusAdded: 'Agbakwunyere',

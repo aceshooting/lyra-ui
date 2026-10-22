@@ -39,7 +39,7 @@ export const IMMUTABLE_COLLECTION_PAIRS = Object.freeze([
   { tag: 'lr-eval-run', className: 'LyraEvalRun', properties: ['examples'] },
   { tag: 'lr-grounding-summary', className: 'LyraGroundingSummary', properties: ['citations'] },
   { tag: 'lr-ingestion-queue', className: 'LyraIngestionQueue', properties: ['items'] },
-  { tag: 'lr-map', className: 'LyraMap', properties: ['dataLayers', 'markers'] },
+  { tag: 'lr-map', className: 'LyraMap', properties: ['dataLayers', 'images', 'markers', 'styleOverrides'] },
   { tag: 'lr-memory-panel', className: 'LyraMemoryPanel', properties: ['longTerm', 'shortTerm'] },
   { tag: 'lr-mention-popover', className: 'LyraMentionPopover', properties: ['items'] },
   { tag: 'lr-node-palette', className: 'LyraNodePalette', properties: ['items'] },

@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Angazia {index} kati ya {total}',
   tokensIn: 'Tokeni zinazoingia',
   tokensOut: 'Tokeni zinazotoka',
+  duration: 'Muda',
   comparePanel: 'Ulinganisho',
   treeNodeMoved: 'Imehamisha {label} hadi nafasi {index} kati ya {total}',
   gitStatusAdded: 'Imeongezwa',

@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Innbygging',
   spanKindOther: 'Anna',
   cost: 'Kostnad',
-  duration: 'Varigheit',
   spanWaterfall: 'Tidslinje for spenn',
   spanStartedAtOffset: 'starta ved +{value}',
   compareResponseA: 'Svar A',

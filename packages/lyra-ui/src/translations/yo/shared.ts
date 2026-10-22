@@ -122,6 +122,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Àfihàn {index} nínú {total}',
   tokensIn: 'Àwọn àmì tí a fi sínú rẹ̀',
   tokensOut: 'Àwọn àmì tó jáde',
+  duration: 'Àkókò',
   comparePanel: 'Ìfiwéra',
   treeNodeMoved: 'A gbé {label} sí ipò {index} nínú {total}',
   gitStatusAdded: 'A fi kún un',

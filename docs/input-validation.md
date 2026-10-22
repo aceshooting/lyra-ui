@@ -34,6 +34,28 @@ escapes script delimiters and Unicode line separators before embedding them in g
 [Round-trip and transform tests](../packages/lyra-map/test/code-serialization.test.mjs) verify
 that these values remain data and preserve generated import paths.
 
+## Map descriptors and resources
+
+Map preparation, component-owned images and native renderer resources have separate boundaries.
+The prepared companion API and the declarative `lr-map` properties apply their own limits.
+
+| Input | Constraints and failure boundary | Source and tests |
+|---|---|---|
+| Prepared companion mutations | `addPreparedFeatures()` copies bounded own-data source/layer descriptors before asynchronous preparation. Counts, depth, text, identifiers and ordering work are limited; missing dependencies, cycles and collisions reject. Cancellation and style/intent checks prevent stale commits. Synchronous commit failure has best-effort rollback while ownership remains current; later worker/network errors and application callback effects are outside that guarantee. | [prepared mutation admission](../packages/lyra-map/scripts/prepared-mutations.mjs), [unit tests](../packages/lyra-map/test/prepared-mutations.test.mjs), [native preparation tests](../packages/lyra-map/test/browser/prepared-adversarial.mjs), [API contract](../packages/lyra-map/README.md) |
+| Owned overlays, overrides and feature state | `lr-map` snapshots bounded own-data source/layer/paint records before preparation. Feature-state targets preserve string/number IDs and resolve explicit logical origins/source layers; retained patches and copied hit properties have separate limits. Source identity and generation checks retire stale work, and state removal touches owned keys only. | [owned resources](../packages/lyra-ui/src/components/media/map/map-owned-resources.ts), [override admission](../packages/lyra-ui/src/components/media/map/map-style-overrides.ts), [resource tests](../packages/lyra-ui/src/components/media/map/map-owned-resources.test.ts), [state routing](../packages/lyra-ui/src/components/media/map/map-feature-state-routes.ts), [state tests](../packages/lyra-ui/src/components/media/map/map-feature-state-routes.test.ts), [hit tests](../packages/lyra-ui/src/components/media/map/map-hit-test.test.ts) |
+| Registered map images | Component-owned image URLs require credential-free HTTP(S), CORS fetch without credentials or redirects, and bounded response reads. SVG always passes DOMPurify and passive-resource filtering; static raster container metadata is checked before native decoding. Encoded bytes, dimensions, aggregate decoded pixels and decode time are limited. Decoded dimensions and current ownership are checked before installation; replacement caches share the aggregate budget. | [image admission and loading](../packages/lyra-ui/src/components/media/map/map-images.ts), [raster metadata](../packages/lyra-ui/src/components/media/map/map-image-metadata.ts), [cache ownership](../packages/lyra-ui/src/components/media/map/map-owned-features.ts), [image tests](../packages/lyra-ui/src/components/media/map/map-images.test.ts), [native decoder tests](../packages/lyra-ui/src/components/media/map/map-images-browser.test.ts) |
+| External sources and labels | Vector/raster/image/canvas descriptors constrain own fields, URL templates, credential-free HTTP(S), finite geographic corners and label-expression complexity. Canvas handles require a native brand. Image/canvas picking uses bounded anonymous footprint geometry without inventing a feature ID or state target. Native rendering and hit behavior remain renderer operations. | [source and label admission](../packages/lyra-ui/src/components/media/map/map-data-layer-model.ts), [admission tests](../packages/lyra-ui/src/components/media/map/map-data-layer-model.test.ts), [native footprint tests](../packages/lyra-ui/src/components/media/map/map-native.test.ts) |
+| Map image export | Own-data options select supported encodings; canvas dimensions/pixels, output bytes and attribution text are bounded. Attribution is sanitized to plain text. Capture requires a current fresh render and releases temporary resources on completion or cancellation. | [export](../packages/lyra-ui/src/components/media/map/map-image-export.ts), [attribution](../packages/lyra-ui/src/components/media/map/map-export-attribution.ts), [export tests](../packages/lyra-ui/src/components/media/map/map-image-export.test.ts), [native capture tests](../packages/lyra-ui/src/components/media/map/map-native.test.ts) |
+
+Prepared companion mutations preserve native canvas handles and the documented custom-layer
+`render`, `prerender`, `onAdd` and `onRemove` callbacks. Those callbacks, registered protocols and
+supplied loaders/workers are application code. Canvas allocation, content and playback remain
+caller/browser-owned. Renderer-fetched style, tile, TileJSON and external image URLs use the
+renderer transport and schema policies; the registered-image response/decode limits above do not
+apply to those requests or to a caller's already-created canvas. Descriptor ownership checks do
+not sandbox executable proxies or callbacks, and metadata admission does not replace native
+raster decoding.
+
 ## 3D engine data, media and model bytes
 
 The engine entry points accept different input kinds. Graph and points use application-created

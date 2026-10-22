@@ -78,6 +78,8 @@ export interface MapLibreMapCapability {
   getCanvas(): HTMLCanvasElement;
   getCenter(): { lng: number; lat: number };
   getZoom(): number;
+  getBearing?(): number;
+  getPitch?(): number;
   setCenter(center: [number, number]): unknown;
   setZoom(zoom: number): unknown;
   resize(): unknown;
@@ -93,6 +95,11 @@ export interface MapLibreMapCapability {
   ): unknown;
   /** Optional and feature-detected: whether an animation or a gesture is moving the camera now. */
   isMoving?(): boolean;
+  /** Optional readiness probes. Older compatible peers use ready/idle events instead. */
+  isStyleLoaded?(): boolean;
+  loaded?(): boolean;
+  /** Optional cleanup; listeners on older peers become inert until remove() releases them. */
+  off?(type: string, listener: () => void): this;
   /** Optional and feature-detected camera commands. The peer merges `eventData` into every
    *  movement event the command fires, which is how its `moveend` is attributed. */
   flyTo?(options: Record<string, unknown>, eventData?: Record<string, unknown>): unknown;
@@ -110,7 +117,7 @@ export interface MapLibreMapCapability {
   getBounds?(): { getWest(): number; getSouth(): number; getEast(): number; getNorth(): number };
   remove(): void;
   on(type: 'error', listener: (event: { error?: unknown }) => void): this;
-  on(type: 'load', listener: () => void): this;
+  on(type: 'render' | 'load' | 'style.load' | 'idle' | 'dataloading' | 'movestart' | 'move' | 'error', listener: () => void): this;
   on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
   on(type: 'move', listener: () => void): this;
   on(type: 'boxzoomend', listener: () => void): this;
@@ -121,11 +128,20 @@ export interface MapLibreMapCapability {
   }) => void): this;
   once(type: 'style.load', listener: () => void): this;
   setStyle(style: unknown): this;
+  /** Optional native style capabilities, required only for declarative owned overlays/overrides. */
+  getStyle?(): { readonly layers?: readonly { readonly id: string }[] };
+  moveLayer?(id: string, before?: string): unknown;
+  getPaintProperty?(id: string, property: string): unknown;
+  getLayoutProperty?(id: string, property: string): unknown;
+  setLayoutProperty?(id: string, property: string, value: unknown): unknown;
+  setFeatureState?(target: import('./map-feature-state.js').LyraMapFeatureIdentifier, state: import('./map-feature-state.js').LyraMapFeatureState): unknown;
+  removeFeatureState?(target: import('./map-feature-state.js').LyraMapFeatureIdentifier, key: string): unknown;
+  triggerRepaint?(): unknown;
   getSource(id: string): MapLibreGeoJsonSource | undefined;
   addSource(id: string, source: unknown): this;
   removeSource(id: string): this;
   getLayer(id: string): unknown;
-  addLayer(layer: unknown): this;
+  addLayer(layer: unknown, before?: string): this;
   removeLayer(id: string): this;
   setPaintProperty(layerId: string, name: string, value: unknown): this;
   /** Optional image-atlas capabilities; point circles remain usable when a partial peer lacks these. */
@@ -147,6 +163,8 @@ export interface MaplibreModule {
   /** Present on the full engine; the modular engine ships each control as its own subpath. */
   NavigationControl?: MapLibreControlConstructor;
   ScaleControl?: MapLibreControlConstructor;
+  GeolocateControl?: MapLibreControlConstructor;
+  AttributionControl?: MapLibreControlConstructor;
 }
 
 const MAP_METHODS = [
@@ -316,7 +334,7 @@ export function loadModularMap(): Promise<ModularMapModule | null> {
 }
 
 /** The standard peer controls `<lr-map controls>` can add, by kind. */
-export type MapControlKind = 'navigation' | 'scale';
+export type MapControlKind = 'navigation' | 'scale' | 'geolocate' | 'attribution';
 
 /**
  * Loads one standard control constructor for the selected engine. The full engine carries every
@@ -329,14 +347,16 @@ export async function loadMapControl(
   engine: 'modular' | 'maplibre',
   module: MaplibreModule | undefined,
 ): Promise<MapLibreControlConstructor | null> {
-  const name = kind === 'navigation' ? 'NavigationControl' : 'ScaleControl';
+  const name = ({ navigation: 'NavigationControl', scale: 'ScaleControl', geolocate: 'GeolocateControl', attribution: 'AttributionControl' } as const)[kind];
   const provided = module?.[name];
   if (isConstructor(provided)) return provided as MapLibreControlConstructor;
   if (engine !== 'modular') return null;
   try {
     const source: unknown = kind === 'navigation'
       ? await import('@aceshooting/lyra-map/controls/navigation')
-      : await import('@aceshooting/lyra-map/controls/scale');
+      : kind === 'scale' ? await import('@aceshooting/lyra-map/controls/scale')
+      : kind === 'geolocate' ? await import('@aceshooting/lyra-map/controls/geolocate')
+      : await import('@aceshooting/lyra-map/controls/attribution');
     const candidate = unwrapOptionalPeerDefault(source);
     const control = isObjectLike(candidate) ? candidate[name] : undefined;
     return isConstructor(control) ? control as MapLibreControlConstructor : null;

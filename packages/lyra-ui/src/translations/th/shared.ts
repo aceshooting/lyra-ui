@@ -122,6 +122,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'ไฮไลต์ {index} จาก {total}',
   tokensIn: 'โทเค็นขาเข้า',
   tokensOut: 'โทเค็นขาออก',
+  duration: 'ระยะเวลา',
   comparePanel: 'การเปรียบเทียบ',
   treeNodeMoved: 'ย้าย {label} ไปยังตำแหน่ง {index} จาก {total} แล้ว',
   gitStatusAdded: 'เพิ่มแล้ว',

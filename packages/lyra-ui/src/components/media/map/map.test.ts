@@ -676,7 +676,7 @@ it('does not construct the underlying maplibregl.Map (and its WebGL context) unt
     expect(el.map == null).to.be.true;
 
     // Now simulate the element scrolling into view.
-    callbacks[0]!([{ isIntersecting: true } as unknown as IntersectionObserverEntry], new OriginalIO(() => {}));
+    callbacks[0]!([{ target: observedTargets[0], isIntersecting: true } as unknown as IntersectionObserverEntry], new OriginalIO(() => {}));
     await waitUntil(() => el.map != null, 'map never constructed after becoming visible', { timeout: 2000 });
     expect(el.map != null).to.be.true;
   } finally {
@@ -1465,16 +1465,20 @@ it('does not leak a second maplibregl.Map when disconnected and reconnected befo
   }
 });
 
-it('fires lr-map-load once the underlying map loads', async function () {
+it('fires lr-map-load exactly once when the underlying map loads', async function () {
   if (!hasWebGL2) this.skip();
-  const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
+  const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+  const el = document.createElement('lr-map') as LyraMap;
+  el.engine = 'maplibre';
   el.mapStyle = LOCAL_STYLE;
-  await el.updateComplete;
-  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
-  let fired = false;
-  el.addEventListener('lr-map-load', () => (fired = true));
+  let loads = 0;
+  el.addEventListener('lr-map-load', () => { loads++; });
+  wrapper.append(el);
+  await waitUntil(() => loads === 1, 'map never emitted its initial load', { timeout: 2000 });
+  expect(el.map != null).to.be.true;
   el.map!.fire('load');
-  expect(fired).to.be.true;
+  await el.whenStyleReady();
+  expect(loads).to.equal(1);
 });
 
 it('renders a legend swatch per entry', async () => {
@@ -2627,10 +2631,14 @@ it('updates fill opacity when existing choropleth and data layers are reused', a
     const privateMap = el as unknown as {
       _map?: unknown;
       _appliedDataLayerIds: Map<string, string>;
+      _appliedChoroplethSourceId?: string;
+      _appliedFillLayerId?: string;
       applyChoropleth(): void;
       applyDataLayers(): void;
     };
     privateMap._map = fakeMap;
+    privateMap._appliedChoroplethSourceId = 'regions';
+    privateMap._appliedFillLayerId = 'regions-fill';
     privateMap._appliedDataLayerIds = new Map([['zones', 'lr-data-layer-0']]);
     el.choropleth = choropleth('regions', [[0, '#000000'], [10, '#ffffff']]);
     el.dataLayers = [{
@@ -2907,6 +2915,8 @@ it('fires lr-map-click with the lngLat and no feature when there is no choroplet
   el.mapStyle = LOCAL_STYLE;
   await el.updateComplete;
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  // Pointer interaction starts once the style can be hit-tested.
+  await el.whenStyleReady();
 
   let detail: { lngLat: [number, number]; feature?: unknown } | undefined;
   el.addEventListener('lr-map-click', (e) => (detail = (e as CustomEvent).detail));
@@ -2966,6 +2976,7 @@ it('attaches the clicked choropleth feature to lr-map-click when one exists at t
     type: 'Feature',
     properties: { value: 5 },
     geometry: { type: 'Point', coordinates: [0, 0] },
+    layer: { id: 'click-choropleth-fill' },
   };
   el.map!.queryRenderedFeatures = (() => [fakeFeature]) as TestMapInstance['queryRenderedFeatures'];
 
@@ -7880,6 +7891,7 @@ it('clusters sized categories, restores filled and stroked icons after a style r
   await waitUntil(() => [10, 12, 16].every((radius, index) => radiusMatches(index, radius)),
     'radius scale restored after style reload', { timeout: 5000 });
   const entry = el.dataLayers[0]!;
+  if (!('geojson' in entry)) throw new Error('Expected the GeoJSON point fixture.');
   const geojson = { type: 'FeatureCollection' as const, features: categories.map((category, index) => ({
     type: 'Feature' as const, id: index, properties: { category, visits: [5, 'invalid', Infinity][index] },
     geometry: { type: 'Point' as const, coordinates: [index * 0.00015, 0] },
@@ -9049,11 +9061,12 @@ describe('fitBounds and lr-map-view-change', () => {
     it('applies a fit queued while off-screen once the map scrolls into view', async () => {
       preferReducedMotion(false);
       const callbacks: IntersectionObserverCallback[] = [];
+      let observedTarget: Element | undefined;
       class FakeIntersectionObserver {
         constructor(callback: IntersectionObserverCallback) {
           callbacks.push(callback);
         }
-        observe(): void {}
+        observe(target: Element): void { observedTarget = target; }
         unobserve(): void {}
         disconnect(): void {}
         takeRecords(): IntersectionObserverEntry[] {
@@ -9078,7 +9091,7 @@ describe('fitBounds and lr-map-view-change', () => {
       // back inside that update cycle (strict console turns Lit's warning into a failure).
       const changed = oneEvent(el, 'lr-map-view-change');
       callbacks[0]!(
-        [{ isIntersecting: true } as unknown as IntersectionObserverEntry],
+        [{ target: observedTarget, isIntersecting: true } as unknown as IntersectionObserverEntry],
         new OriginalIntersectionObserver(() => {}),
       );
       const engine = await loaded;

@@ -151,7 +151,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'एम्बेडिंग',
   spanKindOther: 'इतर',
   cost: 'खर्च',
-  duration: 'कालावधी',
   spanWaterfall: 'स्पॅन कालरेषा',
   spanStartedAtOffset: '+{value} येथे सुरू झाले',
   compareResponseA: 'प्रतिसाद A',

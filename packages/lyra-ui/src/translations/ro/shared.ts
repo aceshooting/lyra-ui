@@ -126,6 +126,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Evidențierea {index} din {total}',
   tokensIn: 'Tokenuri intrare',
   tokensOut: 'Tokenuri ieșire',
+  duration: 'Durată',
   comparePanel: 'Comparație',
   treeNodeMoved: '{label} deplasat la poziția {index} din {total}',
   gitStatusAdded: 'Adăugat',

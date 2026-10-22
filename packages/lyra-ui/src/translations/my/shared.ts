@@ -122,6 +122,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'အသားပေးချက် {total} ခုအနက် {index} ခုမြောက်',
   tokensIn: 'အဝင် တိုကင်များ',
   tokensOut: 'အထွက် တိုကင်များ',
+  duration: 'ကြာချိန်',
   comparePanel: 'နှိုင်းယှဉ်ချက်',
   treeNodeMoved: '{label} ကို {total} ခုအနက် {index} နေရာသို့ ရွှေ့လိုက်သည်',
   gitStatusAdded: 'ထည့်ပြီး',

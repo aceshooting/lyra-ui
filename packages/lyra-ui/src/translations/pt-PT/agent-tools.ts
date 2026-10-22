@@ -152,7 +152,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Embedding',
   spanKindOther: 'Outro',
   cost: 'Custo',
-  duration: 'Duração',
   spanWaterfall: 'Cronologia dos spans',
   spanStartedAtOffset: 'iniciou em +{value}',
   compareResponseA: 'Resposta A',

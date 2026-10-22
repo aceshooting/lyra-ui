@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Utheving {index} av {total}',
   tokensIn: 'Tokener inn',
   tokensOut: 'Tokener ut',
+  duration: 'Varighet',
   comparePanel: 'Sammenligning',
   treeNodeMoved: 'Flyttet {label} til posisjon {index} av {total}',
   gitStatusAdded: 'Lagt til',

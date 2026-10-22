@@ -122,6 +122,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Mục đánh dấu {index} trên {total}',
   tokensIn: 'Token đầu vào',
   tokensOut: 'Token đầu ra',
+  duration: 'Thời lượng',
   comparePanel: 'So sánh',
   treeNodeMoved: 'Đã chuyển {label} đến vị trí {index} trên {total}',
   gitStatusAdded: 'Đã thêm',

@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Korostus {index}/{total}',
   tokensIn: 'Syötetyt tokenit',
   tokensOut: 'Tuotetut tokenit',
+  duration: 'Kesto',
   comparePanel: 'Vertailu',
   treeNodeMoved: '{label} siirretty kohtaan {index}/{total}',
   gitStatusAdded: 'Lisätty',

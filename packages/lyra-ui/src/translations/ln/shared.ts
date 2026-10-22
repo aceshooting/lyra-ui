@@ -124,6 +124,7 @@ const strings: LyraLocaleStrings = {
   highlightOfTotal: 'Emoniseli {index} kati na {total}',
   tokensIn: 'Ba token oyo ekoti',
   tokensOut: 'Ba token oyo ebimi',
+  duration: 'Durée',
   comparePanel: 'Kokanisa',
   treeNodeMoved: '{label} ekendaki na esika ya {index} kati na {total}',
   gitStatusAdded: 'Bakisami',

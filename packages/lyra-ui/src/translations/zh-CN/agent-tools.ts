@@ -149,7 +149,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: '嵌入',
   spanKindOther: '其他',
   cost: '费用',
-  duration: '时长',
   spanWaterfall: '跨度时间线',
   spanStartedAtOffset: '开始于 +{value}',
   compareResponseA: '回复 A',

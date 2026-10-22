@@ -149,7 +149,6 @@ const strings: LyraLocaleStrings = {
   spanKindEmbedding: 'Đang tạo embedding',
   spanKindOther: 'Khác',
   cost: 'Chi phí',
-  duration: 'Thời lượng',
   spanWaterfall: 'Dòng thời gian span',
   spanStartedAtOffset: 'bắt đầu lúc +{value}',
   compareResponseA: 'Câu trả lời A',

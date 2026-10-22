@@ -10,6 +10,55 @@ export const styles = css`
     inline-size: 100%;
     block-size: var(--lr-map-height, var(--lr-size-24rem));
   }
+  [part='initialization-placeholder'] { position: absolute; inset: 0; pointer-events: none; }
+  .initialization-skeleton { inline-size: 100%; block-size: 100%; }
+  .initialization-controls { position: absolute; inset-block-start: var(--lr-space-s); inset-inline-end: var(--lr-space-s); display: flex; flex-direction: column; gap: var(--lr-space-xs); }
+  [part='initialization-control'] { inline-size: var(--lr-icon-button-size); block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
+  [part='pick-controls'], [part='drawing-controls'] {
+    position: absolute;
+    inset-inline: var(--lr-space-s);
+    inset-block-end: var(--lr-space-s);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-xs);
+    pointer-events: none;
+  }
+  [part='pick-center'], [part='pick-cancel'], [part='drawing-add'], [part='drawing-undo'], [part='drawing-complete'], [part='drawing-cancel'], [part='anchor-close'] {
+    ${iconHitTarget}
+    pointer-events: auto;
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-button);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font: inherit;
+    cursor: pointer;
+  }
+  [part='pick-center']:where(:hover), [part='pick-cancel']:where(:hover), [part='drawing-add']:where(:hover), [part='drawing-undo']:where(:hover), [part='drawing-complete']:where(:hover), [part='drawing-cancel']:where(:hover), [part='anchor-close']:where(:hover) {
+    background: var(--lr-color-surface-raised);
+  }
+  [part='pick-center']:where(:active), [part='pick-cancel']:where(:active), [part='drawing-add']:where(:active), [part='drawing-undo']:where(:active), [part='drawing-complete']:where(:active), [part='drawing-cancel']:where(:active), [part='anchor-close']:where(:active) {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='pick-center']:focus-visible, [part='pick-cancel']:focus-visible, [part='drawing-add']:focus-visible, [part='drawing-undo']:focus-visible, [part='drawing-complete']:focus-visible, [part='drawing-cancel']:focus-visible, [part='anchor-close']:focus-visible { ${focusRing} }
+  [part='pick-center']:where(:disabled), [part='pick-cancel']:where(:disabled), [part='drawing-add']:where(:disabled), [part='drawing-undo']:where(:disabled), [part='drawing-complete']:where(:disabled), [part='drawing-cancel']:where(:disabled), [part='anchor-close']:where(:disabled) { cursor: default; }
+  [part='drawing-controls'] { z-index: 2; }
+  [part='drawing-handles'] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  [part='drawing-vertex'] {
+    ${iconHitTarget}
+    position: absolute; transform: translate(-50%, -50%); pointer-events: auto;
+    display: grid; place-items: center; touch-action: none; padding: 0; border: 0; background: transparent; color: var(--lr-color-text); cursor: grab;
+  }
+  [part='drawing-vertex'] > span { inline-size: var(--lr-space-s); block-size: var(--lr-space-s); border-radius: var(--lr-radius-pill); background: var(--lr-color-brand); border: var(--lr-border-width-thin) solid var(--lr-color-surface); }
+  [part='drawing-vertex']:where(:hover) > span { background: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-surface) 20%); }
+  [part='drawing-vertex']:where(:active) { cursor: grabbing; }
+  [part='drawing-vertex']:where(:active) > span { background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='drawing-vertex']:focus-visible { ${focusRing} }
+  [part='drawing-vertex']:where(:disabled) { cursor: default; }
+  [part='drawing-status'] { color: var(--lr-color-text); background: var(--lr-color-surface); padding: var(--lr-space-xs); overflow-wrap: anywhere; }
   [part='base'] {
     position: relative;
     inline-size: 100%;
@@ -209,7 +258,7 @@ export const styles = css`
   }
   /* Mirrors docx-viewer.styles.ts's identical [part='error'] treatment for the same
      missing-optional-peer-dependency failure shape. */
-  [part='error'] {
+  [part='error'], [part='configuration-error'] {
     margin: 0;
     padding: var(--lr-space-l);
     color: var(--lr-color-danger);
@@ -220,13 +269,15 @@ export const styles = css`
      marker popup, and the layer sits above the legend and controls so anchored content is never
      covered by them. Its size never depends on the placement's published available-size variables:
      the placement observes this element, and a size that tracked them would loop. */
+  .anchor-boundary { position: absolute; inset: 0; pointer-events: none; }
+  [part='anchor-close'] { display: block; margin-inline-start: auto; margin-block-start: var(--lr-space-xs); }
   [part='anchor'] {
     position: absolute;
     z-index: calc(var(--lr-layer-content) + 1);
     box-sizing: border-box;
     inline-size: max-content;
-    max-inline-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
-    max-block-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
+    max-inline-size: var(--lr-positioner-available-inline-size, calc(100% - var(--lr-space-s) - var(--lr-space-s)));
+    max-block-size: var(--lr-positioner-available-block-size, calc(100% - var(--lr-space-s) - var(--lr-space-s)));
     overflow: auto;
     padding: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
@@ -653,6 +704,9 @@ export const styles = css`
   }
   .maplibregl-ctrl-compass .maplibregl-ctrl-icon::before {
     content: '▲';
+  }
+  .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon::before {
+    content: '◎';
   }
   .maplibregl-ctrl-scale {
     position: relative;

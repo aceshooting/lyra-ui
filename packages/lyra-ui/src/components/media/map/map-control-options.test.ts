@@ -1,0 +1,60 @@
+import { expect } from '@open-wc/testing';
+import { normalizeMapControlOptions, mapGeolocationErrorCode } from './map-control-options.js';
+
+describe('map control option projection', () => {
+  it('keeps unset and disabled controls absent, with legacy navigation and scale defaults', () => {
+    for (const input of [undefined, null, false, {}, { navigation: false, scale: false, geolocate: false, attribution: false }]) expect(normalizeMapControlOptions(input).controls.size).to.equal(0);
+    const { controls } = normalizeMapControlOptions({ navigation: true, scale: true });
+    expect(controls.get('navigation')).to.deep.equal({ kind: 'navigation', position: 'top-right', unit: undefined, options: {}, key: 'top-right:' });
+    expect(controls.get('scale')).to.deep.equal({ kind: 'scale', position: 'bottom-left', unit: 'metric', options: { unit: 'metric' }, key: 'bottom-left:metric' });
+  });
+  it('preserves legacy position/unit fallback and does not call option getters', () => {
+    let reads = 0;
+    const options = Object.defineProperty({ unit: 'unknown' }, 'position', { get() { reads++; return 'top-left'; } });
+    const { controls } = normalizeMapControlOptions({ navigation: { position: 'bottom-right' }, scale: options });
+    expect(controls.get('navigation')!.position).to.equal('bottom-right'); expect(controls.get('scale')!.key).to.equal('bottom-left:metric'); expect(reads).to.equal(0);
+    expect(normalizeMapControlOptions({ scale: { unit: 'imperial', position: 'top-left' } }).controls.get('scale')!.unit).to.equal('imperial');
+  });
+  it('admits geolocate as inert constructor data with bounded explicit options', () => {
+    const first = normalizeMapControlOptions({ geolocate: true }).controls.get('geolocate')!;
+    expect(first.options).to.deep.equal({ trackUserLocation: false, showUserLocation: true, showAccuracyCircle: true, positionOptions: { enableHighAccuracy: false, timeout: 6000, maximumAge: 0 }, fitBoundsOptions: { maxZoom: 15 } });
+    const input = { geolocate: { trackUserLocation: true, positionOptions: { timeout: 0, maximumAge: 123, enableHighAccuracy: true }, fitBoundsOptions: { maxZoom: 17 }, showUserLocation: false, zoomToUserAccuracy: false } };
+    const entry = normalizeMapControlOptions(input).controls.get('geolocate')!;
+    input.geolocate.positionOptions.timeout = 999;
+    expect(entry.options['positionOptions']).to.deep.equal({ enableHighAccuracy: true, timeout: 0, maximumAge: 123 });
+    expect(entry.options['showAccuracyCircle']).to.equal(false); expect(Object.isFrozen(entry.options['positionOptions'])).to.equal(true);
+    expect(Object.keys(entry.options)).not.to.include('trigger');
+  });
+  it('rejects invalid new-control values without affecting valid legacy controls', () => {
+    for (const geolocate of [{ trackUserLocation: 'yes' }, { positionOptions: { timeout: Infinity } }, { positionOptions: { maximumAge: -1 } }, { fitBoundsOptions: { maxZoom: 25 } }, { position: 'invalid' }]) {
+      const result = normalizeMapControlOptions({ navigation: true, geolocate });
+      expect(result.controls.has('navigation')).to.equal(true); expect(result.controls.has('geolocate')).to.equal(false); expect(result.diagnostics[0]?.kind).to.equal('geolocate');
+    }
+  });
+  it('escapes bounded plain attribution text and preserves automatic compact mode', () => {
+    const plain = normalizeMapControlOptions({ attribution: true }).controls.get('attribution')!;
+    expect(Object.hasOwn(plain.options, 'compact')).to.equal(false);
+    const input = ['<img src=x onerror=alert(1)>', 'A & B'];
+    const entry = normalizeMapControlOptions({ attribution: { customAttribution: input, compact: false } }).controls.get('attribution')!;
+    input[0] = 'changed'; expect(entry.options['customAttribution']).to.deep.equal(['&lt;img src=x onerror=alert(1)&gt;', 'A &amp; B']); expect(entry.options['compact']).to.equal(false);
+    expect(normalizeMapControlOptions({ attribution: { customAttribution: Array(33).fill('x') } }).controls.size).to.equal(0);
+    expect(normalizeMapControlOptions({ attribution: { customAttribution: 'x'.repeat(4097) } }).controls.size).to.equal(0);
+  });
+  it('does not forward inherited, accessor-backed or executable new options', () => {
+    let reads = 0; const getter = Object.defineProperty({}, 'trackUserLocation', { enumerable: true, get() { reads++; return true; } });
+    expect(normalizeMapControlOptions({ geolocate: getter }).controls.size).to.equal(0);
+    expect(normalizeMapControlOptions({ geolocate: Object.create({ trackUserLocation: true }) }).controls.size).to.equal(0);
+    const entry = normalizeMapControlOptions({ geolocate: { unknown: () => true } }).controls.get('geolocate')!;
+    expect(Object.keys(entry.options)).not.to.include('unknown'); expect(reads).to.equal(0);
+  });
+  it('makes configuration identity stable across property order and sensitive to changes', () => {
+    const a = normalizeMapControlOptions({ geolocate: { trackUserLocation: true, position: 'bottom-left' } }).controls.get('geolocate')!;
+    const b = normalizeMapControlOptions({ geolocate: { position: 'bottom-left', trackUserLocation: true } }).controls.get('geolocate')!;
+    const c = normalizeMapControlOptions({ geolocate: { position: 'bottom-left', trackUserLocation: false } }).controls.get('geolocate')!;
+    expect(a.key).to.equal(b.key); expect(a.key).not.to.equal(c.key);
+  });
+  it('maps geolocation errors to stable codes without reading arbitrary error objects', () => {
+    expect([1, 2, 3, 0, Infinity].map(mapGeolocationErrorCode)).to.deep.equal(['permission-denied', 'position-unavailable', 'timeout', 'unknown', 'unknown']);
+    let reads = 0; expect(mapGeolocationErrorCode({ get code() { reads++; return 1; } })).to.equal('unknown'); expect(reads).to.equal(0);
+  });
+});
