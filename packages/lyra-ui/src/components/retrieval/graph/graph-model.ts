@@ -115,24 +115,32 @@ export interface NormalizedGraphModel {
 
 /** The stable controlled identity used by selection/dimming and by the graph's keyed render. */
 const graphLinkIdentityOverrides = new WeakMap<object, string>();
+// The simulation swaps endpoint ids for node objects; an endpoint object without an id still
+// gets a key of its own, so distinct endpoints never share one link identity.
+const anonymousEndpointKeys = new WeakMap<object, string>();
+let anonymousEndpointCount = 0;
+
+function linkEndpointIdentity(endpoint: unknown): string {
+  if (typeof endpoint !== 'object' || endpoint === null) return String(endpoint);
+  const id = (endpoint as { readonly id?: unknown }).id;
+  if (id !== undefined && id !== null) return String(id);
+  let key = anonymousEndpointKeys.get(endpoint);
+  if (key === undefined) {
+    key = `anonymous-endpoint:${++anonymousEndpointCount}`;
+    anonymousEndpointKeys.set(endpoint, key);
+  }
+  return key;
+}
 
 export function graphLinkIdentity(link: {
   readonly id?: string;
   readonly source: unknown;
   readonly target: unknown;
 }): string {
-  const source =
-    typeof link.source === 'object' && link.source !== null
-      ? (link.source as { readonly id?: unknown }).id ?? String(link.source)
-      : link.source;
-  const target =
-    typeof link.target === 'object' && link.target !== null
-      ? (link.target as { readonly id?: unknown }).id ?? String(link.target)
-      : link.target;
   return (
     graphLinkIdentityOverrides.get(link as object) ??
     link.id ??
-    `${source}->${target}`
+    `${linkEndpointIdentity(link.source)}->${linkEndpointIdentity(link.target)}`
   );
 }
 

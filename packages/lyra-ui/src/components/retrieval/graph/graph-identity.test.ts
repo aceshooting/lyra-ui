@@ -121,6 +121,18 @@ it('keeps an explicit link id distinct from an implicit endpoint identity', () =
   ]);
 });
 
+it('keys object endpoints by their id and never collapses distinct anonymous endpoints', () => {
+  const first = { label: 'first' };
+  const second = { label: 'second' };
+  const target = { id: 'b' };
+  const firstIdentity = graphLinkIdentity({ source: first, target });
+
+  expect(graphLinkIdentity({ source: { id: 'a' }, target })).to.equal('a->b');
+  expect(firstIdentity).to.not.include('[object Object]');
+  expect(graphLinkIdentity({ source: first, target })).to.equal(firstIdentity);
+  expect(graphLinkIdentity({ source: second, target })).to.not.equal(firstIdentity);
+});
+
 it('projects the same canonical graph model through the explorer and graph', async () => {
   const explorer = await fixture<LyraKnowledgeGraphExplorer>(
     html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`
