@@ -1,8 +1,9 @@
 # Test health: coverage, speed and flakiness
 
-Status (2026-10-21): shard balancing and polling improvements are merged. A complete successful
-main CI run covered 504,568 of 505,721 lines (99.77%) across 1,412 files and finished in 13 minutes;
-the 99.75% stored floor is on main. The 99.80% coverage target and sustained speed work remain open.
+Status (2026-10-22): the complete successful main CI run at `39d0cf0e0` covered 505,798 of
+506,953 UI lines (99.7722%) across 1,415 ordinary test files plus a separate native-scrollbar
+check, and finished in 13m53s. The stored line and statement floor is 99.75%. The 99.80%
+coverage target and sustained speed work remain open.
 The baseline below is from the last green main commit before 30.0.0 work (Codecov and GitHub Actions data).
 
 ## Baseline
@@ -23,7 +24,8 @@ The baseline below is from the last green main commit before 30.0.0 work (Codeco
 ### Coverage (target: at least 99.80% of lines)
 
 - [x] Restore coverage strictly above 99.74% after the collections and map camera work. A complete
-  successful main run covered 504,568 of 505,721 lines (99.7720%) in 1,412 executed files.
+  successful main run covered 505,798 of 506,953 UI lines (99.7722%) in 1,415 ordinary test files
+  plus the native-scrollbar check.
 - [ ] Cover the most-missed modules with behavioural tests (no forged internals). Earlier
   baseline counts identified `lr-map` (41 lines), `lr-chart` (30), `lr-graph` (26),
   `internal/aria-controls` (23), `lr-data-grid` (21), `lr-push-to-talk` (16), `ssr` (16),
@@ -36,13 +38,16 @@ The baseline below is from the last green main commit before 30.0.0 work (Codeco
 
 ### Speed (target: CI wall-clock under 15 minutes)
 
-- [x] Observe a [complete successful main CI run](https://github.com/aceshooting/lyra-ui/actions/runs/39597376194)
-  under 15 minutes: 13m00s across 37 jobs. This is one measured run, so keep tracking variation.
+- [x] Observe a [complete successful main CI run](https://github.com/aceshooting/lyra-ui/actions/runs/39750951606)
+  under 15 minutes: 13m53s across 37 jobs. Its four coverage test steps took 10m06s, 8m11s,
+  9m12s and 8m07s in shard order. Measured costs are refreshed; runner variation and the
+  remaining duration spread still need tracking.
 
 - [x] Refresh measured per-file costs and use median observations for browser shard balancing.
 - [x] Reduce default condition polling from 50 ms to 10 ms while preserving explicit caller
   intervals and timeouts.
-- [ ] Speed up the slowest files without losing assertions: `lifecycle-contracts` (59 s),
+- [ ] Speed up previously profiled files without losing assertions. Earlier timings included
+  `lifecycle-contracts` (59 s),
   `virtual-list` (42 s), `navigation-menu` (40 s for 152 tests), `map` (34 s), `package-entrypoints`
   (one test takes 14 s), `chart`, `lite-chart`, `thread-list`, `glass-contrast`, `pdf-viewer`,
   `context-menu`, `markdown-code-header`, `poll-status`, `generation-metrics`, `toast-item`.
