@@ -847,10 +847,33 @@ export function validateRootComponentClassDeprecations(
       if (parsed.errors.length) fail(`cannot parse re-export source ${file}`);
       const imports = new Map(); const classes = new Map(); const classExpressions = new Set();
       const identifierAliases = new Map();
+      const valueBindings = new Set();
+      const bind = pattern => {
+        if (!pattern) return;
+        if (pattern.type === 'Identifier') valueBindings.add(pattern.name);
+        else if (pattern.type === 'ObjectPattern') for (const property of pattern.properties) bind(property.type === 'RestElement' ? property.argument : property.value);
+        else if (pattern.type === 'ArrayPattern') for (const element of pattern.elements) bind(element);
+        else if (pattern.type === 'AssignmentPattern') bind(pattern.left);
+        else if (pattern.type === 'RestElement') bind(pattern.argument);
+      };
+      const bindHoisted = node => {
+        if (!node || typeof node !== 'object') return;
+        if (['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression', 'ClassDeclaration', 'ClassExpression', 'TSModuleDeclaration'].includes(node.type)) return;
+        if (node.type === 'VariableDeclaration' && node.kind === 'var') for (const declaration of node.declarations) bind(declaration.id);
+        for (const value of Object.values(node)) {
+          if (Array.isArray(value)) for (const child of value) bindHoisted(child);
+          else bindHoisted(value);
+        }
+      };
       for (const statement of parsed.program.body) {
+        bindHoisted(statement);
+        if (statement.type === 'ImportDeclaration') for (const specifier of statement.specifiers) bind(specifier.local);
         const declaration = ['ExportNamedDeclaration', 'ExportDefaultDeclaration'].includes(statement.type) ? statement.declaration : statement;
+        if (['ClassDeclaration', 'FunctionDeclaration', 'TSDeclareFunction', 'TSEnumDeclaration', 'TSModuleDeclaration'].includes(declaration?.type)) bind(declaration.id);
+        if (declaration?.type === 'TSImportEqualsDeclaration') bind(declaration.id);
         if (declaration?.type === 'ClassDeclaration' && declaration.id) classes.set(declaration.id.name, declaration);
         if (declaration?.type === 'VariableDeclaration') for (const binding of declaration.declarations) {
+          bind(binding.id);
           if (binding.id.type === 'Identifier' && binding.init?.type === 'ClassExpression') classExpressions.add(binding.id.name);
           if (binding.id.type === 'Identifier' && binding.init?.type === 'Identifier') {
             identifierAliases.set(binding.id.name, { kind: declaration.kind, target: binding.init.name });
@@ -863,7 +886,7 @@ export function validateRootComponentClassDeprecations(
           } else if (specifier.type !== 'ImportSpecifier') imports.set(specifier.local.name, { unsupported: true });
         }
       }
-      const result = { parsed, imports, classes, classExpressions, identifierAliases };
+      const result = { parsed, imports, classes, classExpressions, identifierAliases, valueBindings };
       parsedModules.set(file, result);
       return result;
     };
@@ -941,7 +964,7 @@ export function validateRootComponentClassDeprecations(
     const parentFor = identity => {
       if (parents.has(identity)) return parents.get(identity);
       const [file, name] = JSON.parse(identity);
-      const { classes, imports } = moduleFor(file);
+      const { classes, imports, valueBindings } = moduleFor(file);
       const declaration = classes.get(name);
       if (!declaration) fail(`unresolved class declaration ${name} in ${file}`);
       let parent = null;
@@ -956,6 +979,11 @@ export function validateRootComponentClassDeprecations(
         if (classes.has(base)) parent = identityFor(file, base);
         else {
           const imported = imports.get(base);
+          // The unshadowed native Error is not a component constructor.
+          if (base === 'Error' && !imported && !valueBindings.has(base)) {
+            parents.set(identity, null);
+            return null;
+          }
           if (!imported || imported.unsupported) fail(`unresolved superclass ${base} in ${file}`);
           // External bases cannot be one of this package's manifest-anchored constructors.
           // A component-module subclass must still resolve entirely within the package.

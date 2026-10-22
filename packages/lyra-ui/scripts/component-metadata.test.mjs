@@ -181,6 +181,75 @@ function overloadedRootHelperFixture() {
   return state;
 }
 
+function rootErrorFixture(declaration = 'export class ExportError extends Error {}') {
+  const state = rootClassFixture();
+  const module = 'src/components/utility/widget/export-error.ts';
+  state.sources[module] = declaration;
+  state.sources['src/lyra.ts'] += `\nexport { ExportError } from './components/utility/widget/export-error.js';`;
+  state.options.manifest.modules.push({ path: module, declarations: [{ kind: 'class', name: 'ExportError' }] });
+  return state;
+}
+
+test('root constructor completeness accepts native Error subclasses without hiding components', () => {
+  const { metadata, options } = rootErrorFixture();
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
+  metadata.exportDeprecations = [];
+  assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), [
+    'root component class Renamed: expected exactly one class deprecation policy',
+  ]);
+});
+
+test('root constructor completeness keeps nested lexical and function bindings separate from native Error', () => {
+  for (const prefix of [
+    '{ let Error = factory(); }',
+    'for (const Error of constructors) {}',
+    'function helper() { var Error = factory(); }',
+    'const helper = () => { var Error = factory(); };',
+    'class Helper { method() { var Error = factory(); } }',
+  ]) {
+    const { metadata, options } = rootErrorFixture(`${prefix} export class ExportError extends Error {}`);
+    assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
+  }
+});
+
+test('root constructor completeness follows imported or local classes named Error', () => {
+  for (const prefix of [
+    `import { Widget as Error } from './widget.class.js';`,
+    `import { Widget } from './widget.class.js'; class Error extends Widget {}`,
+  ]) {
+    const { metadata, options } = rootErrorFixture(`${prefix} export class ExportError extends Error {}`);
+    assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), [
+      'root component class ExportError: expected exactly one class deprecation policy',
+    ]);
+  }
+});
+
+test('root constructor completeness rejects unresolved bindings shadowing native Error', () => {
+  for (const prefix of [
+    'function Error() {}',
+    'declare function Error(): void;',
+    'if (enabled) { var Error = factory(); }',
+    'for (var Error of constructors) {}',
+    'try {} catch { var Error = factory(); }',
+    'switch (kind) { case 1: var Error = factory(); }',
+    'import type { Error } from "external";',
+    'import type Error from "external";',
+    'const Error = factory();',
+    'const Error = class {};',
+    'const { Error } = constructors;',
+    'const { constructor: Error = factory() } = constructors;',
+    'const [Error] = constructors;',
+    'const [...Error] = constructors;',
+    'const { ...Error } = constructors;',
+    'enum Error { Value }',
+    'namespace Error { export const value = 1; }',
+    'import Error = require("external");',
+  ]) {
+    const { metadata, options } = rootErrorFixture(`${prefix} export class ExportError extends Error {}`);
+    assert.match(validateRootComponentClassDeprecations(metadata, options).join('\n'), /unresolved superclass Error/);
+  }
+});
+
 test('root constructor completeness accepts overloaded helpers without skipping component policies', () => {
   const { metadata, options } = overloadedRootHelperFixture();
   assert.deepEqual(validateRootComponentClassDeprecations(metadata, options), []);
