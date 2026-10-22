@@ -58,6 +58,12 @@ test('leaves unrelated modules unchanged', () => {
   assert.equal(lyraMapWorkerPlugin().transform('export const value = 1;'), undefined);
 });
 
+test('an empty package name leaves dependency optimization exclusions empty', () => {
+  const configuration = lyraMapWorkerPlugin({ packageName: '' }).config();
+  assert.equal(configuration.build.modulePreload, false);
+  assert.deepEqual(configuration.optimizeDeps.exclude, []);
+});
+
 test('resets worker bridge state for each watch rebuild without hiding same-build duplicates', () => {
   const plugin = lyraMapWorkerPlugin({ workerEntry: '/engine/worker.mjs' });
   plugin.configResolved({ command: 'build' });

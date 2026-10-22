@@ -147,6 +147,45 @@ test('retains input order for default placement and siblings sharing an anchor',
   }
 });
 
+test('preserves native resources and stable order across many siblings and forward anchors', async () => {
+  const map = harness(), retained = source(), base = { id: 'base', type: 'background' };
+  map.addSource('retained', retained); map.addLayer(base); map.calls.length = 0;
+  let release;
+  map.prepareFeatures = requirements => {
+    map.calls.push(['prepare', requirements]);
+    return new Promise(resolve => { release = resolve; });
+  };
+  const input = {
+    sources: { points: source() },
+    layers: [
+      { layer: { id: 'pin', type: 'background' }, before: 'alpha' },
+      ...['zeta', 'alpha', 'omega', 'beta', 'gamma', 'delta'].map(id => ({
+        layer: id === 'zeta' ? { id, type: 'circle', source: 'points' } : { id, type: 'background' },
+        before: 'labels'
+      })),
+      { layer: { id: 'tail', type: 'background' } }
+    ]
+  };
+
+  const pending = addPreparedFeatures(map, input);
+  await Promise.resolve();
+  assert.equal(typeof release, 'function');
+  assert.deepEqual(map.getLayersOrder(), ['labels', 'base']);
+  assert.equal(map.getSource('points'), undefined);
+  assert.equal(map.getSource('retained'), retained);
+  release();
+  assert.equal(await pending, map);
+
+  assert.deepEqual(map.getLayersOrder(), ['pin', 'zeta', 'alpha', 'omega', 'beta', 'gamma', 'delta', 'labels', 'base', 'tail']);
+  assert.equal(map.getLayer('base'), base);
+  assert.equal(map.getSource('retained'), retained);
+  assert.deepEqual(map.getSource('points'), input.sources.points);
+  assert.equal(map.getLayer('zeta').source, 'points');
+  assert.equal(map.calls[0][0], 'prepare');
+  assert.deepEqual(map.calls.filter(call => call[0] === 'source').map(call => call[1]), ['points']);
+  assert.equal(map.listenerCount(), 0);
+});
+
 test('reports rollback limits without hiding a failed native cleanup', async () => {
   const map = harness(); map.addLayer = () => { throw Error('native'); }; map.removeSource = () => { throw Error('cleanup'); };
   await assert.rejects(addPreparedFeatures(map, batch()), { code: 'rollback-failure' }); assert.equal(map.listenerCount(), 0);
