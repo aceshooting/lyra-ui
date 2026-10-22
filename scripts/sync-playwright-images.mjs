@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultRoot = path.resolve(path.dirname(scriptPath), '..');
-const WORKFLOW_NAMES = ['ci.yml', 'full-engine.yml', 'test-all-browsers.yml'];
+const WORKFLOW_NAMES = ['ci.yml', 'full-engine.yml', 'quality-tools.yml', 'test-all-browsers.yml'];
 
 export function pinnedPlaywright(repoRoot = defaultRoot) {
   const pkg = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));

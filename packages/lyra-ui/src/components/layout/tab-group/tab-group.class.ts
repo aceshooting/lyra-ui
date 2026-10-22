@@ -540,8 +540,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   private waitForDescriptorUpdate(tab: LyraTab): boolean {
     if (tab.hasUpdated === true) return false;
-    const updateComplete = tab.updateComplete;
-    if (!updateComplete) {
+    // An un-upgraded <lr-tab> has no `updateComplete` yet, whatever its declared type says.
+    const updateComplete: Promise<boolean> | undefined = tab.updateComplete;
+    if (updateComplete == null) {
       this.descriptorUpgrades.observeElement(tab);
       return false;
     }

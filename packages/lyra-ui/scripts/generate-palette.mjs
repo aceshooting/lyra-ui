@@ -98,13 +98,6 @@ export function contrastRatio(a, b) {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
-/** The better of near-black / near-white against `background`, so `on-*` always clears 4.5:1. */
-function onColor(background, ramps) {
-  const dark = ramps.neutral[0].hex; // step 5
-  const light = ramps.neutral[ramps.neutral.length - 1].hex; // step 95
-  return contrastRatio(background, dark) >= contrastRatio(background, light) ? dark : light;
-}
-
 // --- the 45-slot semantic grid ------------------------------------------------------------------
 // 5 variants x {fill, border, on} x {quiet, normal, loud}. This is the layer components consume;
 // no component references a ramp step directly, so the ramp can be regenerated without touching a
@@ -131,7 +124,7 @@ const SLOTS = {
   },
 };
 
-/** Which ramp step `onColor` picked for the semantic grid. */
+/** The ramp step of the better of near-black / near-white against `background`, for the semantic grid's `on-*` slots. */
 function onStep(background, ramps) {
   const dark = ramps.neutral[0];
   const light = ramps.neutral[ramps.neutral.length - 1];

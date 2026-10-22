@@ -13,7 +13,7 @@ interface EpubSearchResult {
 }
 
 interface EpubSpineItem {
-  load(request?: unknown): Promise<unknown> | unknown;
+  load(request?: unknown): unknown;
   find(query: string): Promise<EpubSearchResult[]> | EpubSearchResult[];
   unload(): void;
 }

@@ -529,7 +529,7 @@ async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'ret
       publicTypeRouteByDeclaration.set(fieldDeclarationKey(declaration.key), exposure.key.tag);
     }
     assert.equal(exposure.role, exposure.key.event.endsWith('-request') ? 'request' : 'settled', `Published event role drift: ${exposureKey}`);
-    const typeRoute = await readInstalledPackagePath(installedRoot, exposure.publicDeclarationPath);
+    await readInstalledPackagePath(installedRoot, exposure.publicDeclarationPath);
     const runtimeRoute = await readInstalledPackagePath(installedRoot, exposure.publicRuntimePath);
     const tagExport = packageJson.exports?.[`./components/${exposure.key.tag}.js`];
     assert.ok(tagExport && typeof tagExport === 'object', `Installed package lacks public registration export for ${exposure.key.tag}`);
@@ -537,7 +537,7 @@ async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'ret
     assert.equal(tagExport.default, `./${exposure.publicRuntimePath.slice('package/'.length)}`, `Installed runtime route changed for ${exposure.key.tag}`);
     assert.ok(runtimeRoute.length > 0, `Installed runtime route is empty: ${exposure.publicRuntimePath}`);
     const emitterDeclaration = await readInstalledPackagePath(installedRoot, exposure.emitterPackedPath.replace(/\.js$/u, '.d.ts'));
-    const eventType = new RegExp(`['\"]${escapeRegExp(exposure.key.event)}['\"]\\s*:\\s*CustomEvent<${escapeRegExp(exposure.key.declaration.detailType)}>`,'u');
+    const eventType = new RegExp(`['"]${escapeRegExp(exposure.key.event)}['"]\\s*:\\s*CustomEvent<${escapeRegExp(exposure.key.declaration.detailType)}>`,'u');
     assert.match(emitterDeclaration, eventType, `Installed event map lost ${exposure.key.tag}/${exposure.key.event}`);
   }
   assert.equal(seenExposures.size, 20, 'Candidate exposure set is incomplete');

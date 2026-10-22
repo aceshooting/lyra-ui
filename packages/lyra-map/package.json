@@ -96,7 +96,8 @@
     "lint": "node scripts/check-package.mjs && tsc --noEmit -p tsconfig.test.json",
     "test": "node --test test/*.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",
-    "test:coverage": "node scripts/coverage.mjs"
+    "test:coverage": "node scripts/coverage.mjs",
+    "test:mutation": "stryker run"
   },
   "dependencies": {
     "@mapbox/point-geometry": "1.1.0",
@@ -115,6 +116,8 @@
     }
   },
   "devDependencies": {
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/tap-runner": "10.0.0",
     "@types/node": "26.6.5",
     "maplibre-gl": "6.15.0",
     "rolldown": "1.2.14",

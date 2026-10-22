@@ -35,7 +35,7 @@ import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js'
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleLimit, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunToolTraceHeading } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleLimit, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_taskListStepIncompleteAnnounce } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -158,6 +158,12 @@ const exampleId = (example: EvalExampleResult): unknown => example.id;
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
+ * After the first render, a change of an example's status is announced politely (assertively for
+ * `error`) through the shared live region: `running`, `done`, `error`, `cancelled`, `waiting-input`
+ * and `waiting-approval` have their own sentences, `queued`, `collecting` and application-defined
+ * statuses announce "{label}: {status}" with the status's localized name or its `label`, and `idle`
+ * is silent.
+ *
  * @customElement lr-eval-run
  * @event lr-example-toggle - An example's disclosure was expanded or collapsed. `detail: { exampleId,
  *   expanded }`.
@@ -245,6 +251,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
+    taskListStepIncompleteAnnounce: LYRA_DEFAULT_taskListStepIncompleteAnnounce,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -392,6 +399,17 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
           break;
         case 'idle':
           break; // Not a meaningful transition to announce -- mirrors task-list's own silence here.
+        case 'queued':
+        case 'collecting':
+        default:
+          // `queued`, `collecting` and application-defined kinds have no dedicated sentence: announce the
+          // localized status name beside the example, in the same `{label}: {status}` shape task-list
+          // uses for its own residual states.
+          region.mode = 'polite';
+          region.announce(
+            this.localize('taskListStepIncompleteAnnounce', undefined, { label, status: this.statusText(example.status) }),
+            { force: true },
+          );
       }
     });
     this.previousStatusById = nextStatusById;

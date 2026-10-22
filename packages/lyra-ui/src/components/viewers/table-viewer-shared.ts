@@ -13,7 +13,7 @@ import { prefersReducedMotion } from '../../internal/motion.js';
 import { OwnerAnimationFrameWaiter } from '../../internal/owner-animation-frame.js';
 import type { LyraSearchChangeDetail } from '../../internal/text-viewer-target.js';
 import { ViewerSearchState } from '../../internal/viewer-search.js';
-import { DeferredTeardown } from './document-viewer/deferred-teardown.js';
+import { DeferredTeardown } from '../../internal/deferred-teardown.js';
 import type { LyraHighlight } from './document-viewer/anchors.js';
 import { ViewerAnnouncementController } from './viewer-announcements.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from './viewer-search-limits.js';

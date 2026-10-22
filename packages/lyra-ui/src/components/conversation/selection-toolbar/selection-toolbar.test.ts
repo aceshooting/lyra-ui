@@ -251,13 +251,16 @@ it("uses visualViewport offsets and dimensions for LTR and RTL collision bounds"
       '[part="toolbar"]'
     ) as HTMLElement;
     const runtime = el as unknown as { updateToolbarPosition(): void };
+    const clamp = (value: number, low: number, high: number): number =>
+      Math.min(high, Math.max(low, value));
 
     for (const direction of ["ltr", "rtl"] as const) {
       el.dir = direction;
       await el.updateComplete;
       runtime.updateToolbarPosition();
-      const inlineAnchor = Math.min(420, Math.max(100, 910));
-      const blockAnchor = Math.min(290, Math.max(50, 700));
+      // The rect's inline centre (900 + 20 / 2) and block start (700) clamped into the viewport.
+      const inlineAnchor = clamp(910, viewport.offsetLeft, viewport.offsetLeft + viewport.width);
+      const blockAnchor = clamp(700, viewport.offsetTop, viewport.offsetTop + viewport.height);
       const desiredLeft = inlineAnchor - toolbar.offsetWidth / 2;
       const positionedLeft =
         desiredLeft +

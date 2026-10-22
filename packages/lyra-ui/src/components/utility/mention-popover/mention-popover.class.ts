@@ -620,7 +620,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
       }
       if (this._ownsFocus) {
-        if (!active && this.anchor?.isConnected) this.restoreFocus();
+        if (!active && this.anchor?.isConnected) void this.restoreFocus();
         else void this.restoreFocus(true);
       }
     }

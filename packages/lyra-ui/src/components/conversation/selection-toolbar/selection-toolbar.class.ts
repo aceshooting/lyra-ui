@@ -466,11 +466,10 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     const request = ++this.rovingGeneration;
     if (!owner || !this.isConnected) return undefined;
     const roots = this.actionRoots();
+    // An action root that is not upgraded yet has no `updateComplete`; Promise.resolve() settles it at once.
     await Promise.all(
-      roots.map(
-        (root) =>
-          (root as Element & { updateComplete?: Promise<unknown> })
-            .updateComplete
+      roots.map((root) =>
+        Promise.resolve((root as Element & { updateComplete?: Promise<unknown> }).updateComplete)
       )
     );
     await Promise.resolve();

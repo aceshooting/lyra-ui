@@ -78,6 +78,8 @@ pnpm install        # workspace install
 pnpm build          # -r; lyra-ui's build chains check:build-artifacts
 pnpm test           # -r; builds lyra-ui first, then wtr
 pnpm lint           # -r; full contract-policy chain + every tsc contract
+pnpm lint:oxlint    # oxlint: type-aware over src, syntax-only over the .mjs tooling (also a contract-policy gate)
+pnpm check:architecture # dependency-cruiser layering rules (also a contract-policy gate)
 pnpm manifest       # custom-elements.json
 pnpm registrations  # all.ts imports, tag aliases, allowlist, sideEffects, subpath exports
 pnpm plugin:sync    # lyra-ui version -> agent manifests + Claude marketplace entry
@@ -98,12 +100,21 @@ Qualification ledger and evidence rules: **[docs/agents/component-qualification.
   run for this release; never run it concurrently), commit the verified dependency update, then
   `pnpm release:prepare`. No dependency changes after release qualification
   ([detail](docs/agents/ci-and-gates.md#release-integrity)).
+- **Quality tools** (`quality-tools.yml`) is release qualification, like Test All Browsers and the
+  full-engine suite: flake hunt (a test failing its first attempt in 2 of 3 runs fails; one failure
+  warns), a full Stryker run over `lyra-map`, bundle composition, and the tachometer A/B benchmark
+  against the latest published release (fails when a workload's 95% interval lies entirely above a 10%
+  slowdown). Dispatch it once on the release candidate before `pnpm release:prepare` to see problems
+  while a fix is still a plain commit; the run that qualifies is the one on the release commit
+  ([detail](docs/agents/ci-and-gates.md#quality-tools-quality-toolsyml)).
 - Release flow: `pnpm release:prepare`, `pnpm release:budgets` (version-stamped size budgets), review,
-  commit `chore(release): <pkg>@<version>`, push to
-  main; push CI, all Test All Browsers aggregates and all full-engine shards must pass on that exact
-  commit; then `gh workflow run release.yml --ref main` tags, releases and dispatches `publish.yml`
-  (approve `npm-publish` per package; lyra-ui, lyra-ide and lyra-translations version together,
-  so each lyra-ui release publishes all three). Nothing is tagged or published locally
+  commit `chore(release): <pkg>@<version>`, push to main, then dispatch `test-all-browsers.yml`,
+  `full-engine.yml` and `quality-tools.yml` together on main for that exact commit (default inputs:
+  the Quality tools run must include the A/B benchmark). Push CI, all Test All Browsers aggregates,
+  all full-engine shards and all four Quality tools jobs must pass on that exact commit; then
+  `gh workflow run release.yml --ref main` requires all of them, tags, releases and dispatches
+  `publish.yml` (approve `npm-publish` per package; lyra-ui, lyra-ide and lyra-translations version
+  together, so each lyra-ui release publishes all three). Nothing is tagged or published locally
   ([release integrity](docs/agents/ci-and-gates.md#release-integrity)).
 - `./scripts/test.sh` sizes engine and coverage shards to every core but two; pin
   `TEST_SH_ENGINE_SHARDS` (a count) so a failing CI shard reproduces as the same-numbered local
@@ -119,6 +130,9 @@ Qualification ledger and evidence rules: **[docs/agents/component-qualification.
 Full rules: **[docs/agents/coding-conventions.md](docs/agents/coding-conventions.md)**.
 
 - Extend `LyraElement` (`src/internal/lyra-element.ts`), never `LitElement`.
+- A deliberately unawaited promise is `void p` (`lint:oxlint` fails a floating or misused one). Code
+  two components share lives in `src/internal`, never in one component's directory
+  (`check:architecture` reports new cross-component imports).
 - Never hard-code `"lr-"`: `tag()` / `defineElement()` (`src/internal/prefix.ts`).
 - Style values are `--lr-*` tokens (`internal/tokens.styles.ts`); raw hex/px only for
   algorithm literals, tokenized when data-driven.
@@ -306,6 +320,9 @@ Full rules and incidents: **[docs/agents/testing.md](docs/agents/testing.md)**.
 - Adversarial fixtures: focused keyboard activation, `dir="rtl"`, unsorted, dangling refs,
   shrinking data, pointercancel, reconnect.
 - A reported failure already failed twice: fix or quarantine, never re-run and shrug.
+  `WTR_RETRIES=0` shows first-attempt failures (only the flake hunt of Quality tools sets it).
+- Pure validators, parsers and numeric helpers get a colocated `<name>.property.test.ts` (fast-check
+  with `test/property-options.ts`: fixed seed, 200 runs, plain-data generators only).
 - Never let a failing assertion carry a DOM node (the file hangs); compare ids/lengths.
 - `?attr=${false}` can't reset a `true` default; use `.prop=${false}`.
 - No `@sinonjs/fake-timers` under wtr; real timers with margins.

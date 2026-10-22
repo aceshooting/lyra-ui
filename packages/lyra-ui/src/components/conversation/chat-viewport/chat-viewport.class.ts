@@ -689,7 +689,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         (typeof pending !== 'object' && typeof pending !== 'function') ||
         typeof (pending as { then?: unknown }).then !== 'function'
       ) return;
-      await pending;
+      await (pending as PromiseLike<unknown>);
     } catch {
       return;
     }

@@ -71,7 +71,7 @@ export function getOwnDataDescriptor(
 
 /** Read an own data value without invoking an accessor. Missing and unsafe descriptors yield
  * `undefined`; callers needing that distinction should use `getOwnDataDescriptor()` directly. */
-export function readOwnDataValue(target: object, key: PropertyKey): unknown | undefined {
+export function readOwnDataValue(target: object, key: PropertyKey): unknown {
   const descriptor = getOwnDataDescriptor(target, key);
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
     ? undefined

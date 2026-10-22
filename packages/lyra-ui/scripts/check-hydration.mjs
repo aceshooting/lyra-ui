@@ -59,7 +59,7 @@ const hydrationTag = hydrationTagArg?.slice('--tag='.length);
 // `--tag=lr-markdown-streaming-progressive` would fail that guard before ever reaching the fixture.
 const markdownStreamingProgressiveFixtureTag = 'lr-markdown-streaming-progressive';
 const hydrationMatrix = await renderSsrMatrix();
-const { inventory, loader, elementRenderers } = hydrationMatrix;
+const { inventory, elementRenderers } = hydrationMatrix;
 const entries = hydrationTag
   ? hydrationMatrix.entries.filter(({ tag }) => tag === hydrationTag)
   : hydrationMatrix.entries;

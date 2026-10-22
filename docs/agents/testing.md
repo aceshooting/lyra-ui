@@ -92,7 +92,14 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
 - **A red test is reproducible, not noise:** the runner retries each failed test once (mocha
   `retries` in `web-test-runner.config.js`), so a failure that reaches the report already failed
   twice in a row. Flaky tests get fixed, or explicitly quarantined with a tracked reason — never
-  re-run until green and shrugged at.
+  re-run until green and shrugged at. The retry also hides a test that only passes on its second
+  attempt; `WTR_RETRIES=0` switches it off (default 1), and the flake hunt
+  (`scripts/flake-hunt.mjs`, [Quality tools](ci-and-gates.md#quality-tools-quality-toolsyml)) runs
+  the 40 most expensive files that way three times: a test failing its first attempt in two or more
+  runs is broken and fails the release-qualifying job, one failing once is flaky and warns. Reproduce a
+  candidate with `WTR_RETRIES=0 pnpm exec wtr --files <file>`, repeatedly and under CPU pressure
+  (`taskset`, below). The test lanes of `ci.yml`, `full-engine.yml` and `test-all-browsers.yml` never
+  set it (a policy test enforces that); only the flake hunt does.
 - **Reproducing a CI-only timing flake:** `taskset -c 0,1 <command>` (or similar CPU-count
   pinning) approximates GitHub Actions' constrained runners on a full-core dev machine — useful
   when two subsystems only race under CPU pressure. Separately, if a fix's own CI run fails on a
@@ -259,6 +266,28 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   rather than proving the absence of a behavior change; `multi-split.test.ts`'s
   `'defaults to "container", leaving committed behavior unchanged'` and `heatmap.test.ts`'s
   equivalent are the pattern to match.
+
+## Property tests (fast-check)
+
+Pure validators, parsers, normalizers and numeric helpers get a colocated `<name>.property.test.ts`
+beside their example tests (`ansi`, `numbers`, `step-value` and `color-core` today). A property states
+what must hold for every input ("splitting the stream anywhere never changes the output", "a clamped
+value stays on its step grid", "an unterminated string cannot swallow later output") and fast-check
+searches for the input that breaks it, which is how it finds the classes of input a hand-written table
+forgets.
+
+- Pass `propertyRuns()` from `test/property-options.ts` to `fc.assert`: a fixed seed makes every run
+  replay the same inputs, so a failure reproduces anywhere and can never present as flake, and 200 runs
+  keep the whole property suite near two seconds. fast-check prints the seed, the path and the shrunk
+  counterexample on failure; while investigating, pass a larger `numRuns` or another seed in a scratch
+  run, then fix the code and keep the counterexample as a plain example test too (a table of concrete
+  inputs documents the bug, the property keeps the whole class closed).
+- Generate plain data only. A failing assertion must never carry a DOM node (the file hangs), so do not
+  aim `fc.anything()` at a component; test the pure function underneath.
+- Compare against an independent oracle (a naive reference, an exact formulation, the browser's own
+  answer), never a copy of the code under test. The mistakes to avoid when writing one: `0` and `-0`
+  (compare with `===`), a non-finite ratio falls back to `0` rather than clamping, midpoint symmetry needs
+  a floor of one subnormal step, and a tolerance must scale with the operands, not the cancelled result.
 
 ## Pointer-driven state
 

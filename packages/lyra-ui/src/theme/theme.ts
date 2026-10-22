@@ -1154,6 +1154,7 @@ export type LyraSurface = 'solid' | 'glass';
 export type LyraDensity = 'compact' | 'comfortable' | 'touch';
 export type LyraMode = 'light' | 'dark' | 'system' | 'unset';
 export type LyraAccentName = 'emerald' | 'peridot' | 'topaz' | 'ruby' | 'tourmaline' | 'amethyst' | 'aquamarine' | 'sapphire' | 'hematite';
+// oxlint-disable-next-line typescript/no-redundant-type-constituents -- LyraThemeAccent is open (any string), and the named palettes stay in the signature as documentation.
 export type LyraAccent = LyraAccentName | LyraThemeAccent;
 export type LyraAccentBackground = string | { readonly light?: string | null; readonly dark?: string | null } | null;
 export interface LyraLook { readonly id: LyraLookId; readonly tokens: LyraThemeTokens; }

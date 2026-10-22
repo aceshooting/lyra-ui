@@ -1,0 +1,186 @@
+name: Quality tools
+
+# Release qualification, like CI, Test All Browsers and the Full browser-engine suite: release.yml and the
+# publish verification require a successful `workflow_dispatch` run of this workflow from `main` on the exact
+# release commit with all four jobs below green (.github/release-qualification.json lists them; the generator
+# reads the `release-qualification` markers). On the release commit, dispatch it with the browser workflows:
+#
+#   gh workflow run quality-tools.yml --ref main     # inputs at their defaults: every job runs
+#
+# Each job fails on a real problem and reports the rest in its job summary (docs/agents/ci-and-gates.md,
+# "Quality tools"):
+#   flake-hunt          the 40 most expensive test files, three Chromium runs, mocha retries off. A test that fails
+#                       its first attempt in 2 or more runs is broken and fails the job; one failure is a warning.
+#   mutation            Stryker over packages/lyra-map's own logic, every mutant, no cache. Fails on tool errors
+#                       only; the score and the surviving mutants are a worklist in the summary.
+#   bundle-composition  what is inside the built entries' sizes. Fails on tool errors only.
+#   ab-benchmark        tachometer, the built package against the latest published release. Fails when the 95%
+#                       interval of a workload's slowdown lies entirely above 10%; anything less is reported.
+# The schedules (a nightly flake hunt, a Monday mutation and bundle-composition pass) give early warning on
+# main; a scheduled run never qualifies a release because release-integrity accepts dispatched runs only.
+on:
+  workflow_dispatch:
+    inputs:
+      ab_benchmark:
+        description: 'Include the tachometer A/B benchmark against the latest published release (about 10 minutes). A run without it has a skipped job and cannot qualify a release.'
+        type: boolean
+        default: true
+  schedule:
+    # Nightly: flake hunt.
+    - cron: '23 2 * * *'
+    # Mondays: mutation testing and bundle composition.
+    - cron: '41 3 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  # Every first-attempt failure of the heaviest files. The repo's mocha config retries a failed test
+  # once (so a red CI result is reproducible); WTR_RETRIES=0 shows the tests that only pass the second
+  # time. Three runs of the same files separate a broken test from a flaky one.
+  # release-qualification: required
+  flake-hunt:
+    name: flake hunt (Chromium)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '23 2 * * *'
+    runs-on: ubuntu-latest
+    # The same image and font setup as the primary browser jobs, so timing and text metrics match them.
+    # The tag MUST match the `playwright` devDependency -- release-integrity asserts it.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --shm-size=2g -v /usr/share/fonts:/usr/share/host-fonts:ro
+    env:
+      # The image runs as root but GitHub mounts HOME=/github/home; keep one constant root-owned HOME.
+      HOME: /root
+    timeout-minutes: 45
+    steps:
+      - name: Match the runner's default font resolution
+        run: |
+          cat > /etc/fonts/local.conf <<'CONF'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+          <fontconfig><dir>/usr/share/host-fonts</dir></fontconfig>
+          CONF
+          fc-cache -f >/dev/null 2>&1 || true
+          resolved="$(fc-match sans-serif)"
+          echo "sans-serif -> $resolved"
+          case "$resolved" in
+            *DejaVu*) ;;
+            *) echo "::error::sans-serif resolved to '$resolved', not DejaVu -- text-metric tests would measure the wrong typeface"; exit 1 ;;
+          esac
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # package-entrypoints.test.ts imports dist/.
+      - run: pnpm --filter @aceshooting/lyra-ui build
+      # Fails when a test fails its first attempt in 2 or more of the 3 runs (a broken test) or a run loses a
+      # file; a single failure is a warning annotation. Every finding is also in the job summary.
+      - name: Run the heaviest test files three times without retries
+        run: pnpm --filter @aceshooting/lyra-ui exec node scripts/flake-hunt.mjs --count 40 --runs 3 --engine chromium --broken-after 2
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: flake-hunt
+          path: packages/lyra-ui/.quality-tools/flake-hunt
+          if-no-files-found: warn
+          retention-days: 7
+
+  # Mutation testing of the package's own hand-written modules (the generated renderer and the three
+  # modules that emit code are out of scope: their mutants only show in a browser). Every mutant runs
+  # (`--force`): the job reuses no earlier result, so it always covers the commit it ran on. The score
+  # never fails the job -- surviving mutants are a worklist in the summary -- but a missing or empty
+  # report does, because that means the tool did not run.
+  # release-qualification: required
+  mutation:
+    name: mutation testing (lyra-map)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '41 3 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run Stryker
+        working-directory: packages/lyra-map
+        run: pnpm exec stryker run --force
+      - name: Summarize the report
+        if: ${{ !cancelled() }}
+        working-directory: packages/lyra-map
+        run: node scripts/mutation-summary.mjs reports/mutation/mutation.json
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-report
+          path: |
+            packages/lyra-map/reports/mutation
+          if-no-files-found: warn
+          retention-days: 7
+
+  # esbuild metafiles of representative built entries, attributed to the modules that make up the size.
+  # The table is the result (job summary and artifact); the job fails only if the report cannot be built.
+  # release-qualification: required
+  bundle-composition:
+    name: bundle composition
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '41 3 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aceshooting/lyra-ui build
+      - run: pnpm --filter @aceshooting/lyra-ui exec node scripts/bundle-composition-report.mjs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bundle-composition
+          path: packages/lyra-ui/.quality-tools/bundle-composition
+          retention-days: 7
+
+  # Tachometer interleaves the built package and the latest published release in one browser session
+  # and samples until the interval of the difference is bounded within 5% either way, or the timeout
+  # passes. The job fails when a workload's 95% interval lies entirely above the 10% limit (a proven
+  # regression) or when a workload produced no interval; an interval that merely reaches past the limit
+  # is a warning, because a shared runner resolves large changes only. `benchmarks/` stays the
+  # phase-level regression gate.
+  # release-qualification: required
+  ab-benchmark:
+    name: A/B benchmark (tachometer)
+    if: github.event_name == 'workflow_dispatch' && inputs.ab_benchmark
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --shm-size=2g
+    env:
+      HOME: /root
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @aceshooting/lyra-ui build
+      # Stop each workload as soon as the difference is bounded to within 5% either way (or after three minutes).
+      - run: node benchmarks/ab.mjs --timeout 3 --auto-sample-conditions=-5%,+5% --fail-above 10
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ab-benchmark
+          path: |
+            benchmarks/.work/ab/*.result.json
+            benchmarks/.work/ab/summary.md
+          if-no-files-found: warn
+          retention-days: 7

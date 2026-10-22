@@ -92,7 +92,7 @@ const isSource = (file) =>
 const rel = (file) => path.relative(packageDir, file).replaceAll('\\', '/');
 
 /**
- * Blanks out `//` and `/* ... *​/` comments (preserving newlines and byte offsets) while leaving
+ * Blanks out line comments and block comments (preserving newlines and byte offsets) while leaving
  * string and template-literal contents intact, so `'pointercancel'` in code still counts as a
  * reference but a mention in prose does not. Template `${}` holes are tracked so a brace inside
  * one doesn't end the template early.
@@ -281,8 +281,8 @@ function splitTopLevelTernary(expression) {
       if (ternaryDepth > 0) ternaryDepth--;
       else
         return {
-          then: expression.slice(question + 1, i),
-          else: expression.slice(i + 1),
+          whenTrue: expression.slice(question + 1, i),
+          whenFalse: expression.slice(i + 1),
         };
     }
   }
@@ -295,7 +295,7 @@ function isAllowedFallback(expression) {
   if (trimmed === 'undefined') return true;
   if (/\|\|\s*undefined$/.test(trimmed)) return true;
   const ternary = splitTopLevelTernary(trimmed);
-  if (ternary) return isAllowedFallback(ternary.then) || isAllowedFallback(ternary.else);
+  if (ternary) return isAllowedFallback(ternary.whenTrue) || isAllowedFallback(ternary.whenFalse);
   return false;
 }
 
@@ -752,7 +752,7 @@ const PHYSICAL_PATTERNS = [
   [/\bbackground-position[^:;\n]*:[^;{}]*\b(?:left|right)\b/, 'background-position left|right keyword', 'logical offsets'],
 ];
 
-/** Blanks `/* ... *​/` comments (CSS and JS block comments alike) while preserving offsets. */
+/** Blanks block comments (CSS and JS alike) while preserving offsets. */
 function stripCssComments(source) {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '))

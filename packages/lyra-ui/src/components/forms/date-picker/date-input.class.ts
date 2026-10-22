@@ -1979,7 +1979,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private onInputKey = (e: KeyboardEvent): void => {
     if (e.altKey && e.key === 'ArrowDown') {
       e.preventDefault();
-      this.show();
+      void this.show();
       return;
     }
     if (this.liveDisabled || this.readonly) return;
@@ -2140,7 +2140,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // The picker only fires `change` once a selection is finalized (a single
     // pick, or the second click of a range), so this is always the right
     // moment to close, in either mode.
-    this.hide(true);
+    void this.hide(true);
   };
 
   override render(): TemplateResult {

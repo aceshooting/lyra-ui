@@ -380,11 +380,6 @@ function hasExplicitReturnSignature(contract) {
   });
 }
 
-function signatureFingerprint(declarations, isInternal) {
-  const signatures = canonicalSignatures(declarations, isInternal);
-  return createHash('sha256').update(JSON.stringify(signatures)).digest('hex').slice(0, 20);
-}
-
 function applyCanonicalSelector(signature, selector) {
   if (!selector || !signature) return signature;
   const members = signature.type === 'TSInterfaceDeclaration'
@@ -753,20 +748,6 @@ function referencedTypeNodes(node, references, visited = new Set()) {
   }
 }
 
-function referenceRoots(contract, selector = undefined) {
-  return publicFunctionDeclarations(contract.declarations).flatMap((declaration) => {
-    if (declaration.type === 'VariableDeclarator' && declaration.id?.typeAnnotation) {
-      return [declaration.id.typeAnnotation];
-    }
-    const members = declarationMembers(declaration, contract.isInternal, selector);
-    if (!members) return [declaration];
-    // Heritage can supply selected effective fields, so keep it in the dependency walk. Direct
-    // members are already projected here, preventing an omitted/indexed-out field's dependencies
-    // from affecting the public fingerprint.
-    return [...(declaration.extends ?? []), ...members];
-  });
-}
-
 function typeReferenceName(node) {
   if (node?.type === 'Identifier') return node.name;
   if (node?.type === 'TSQualifiedName') return identifierName(node.right);
@@ -777,7 +758,7 @@ function isEventType(node) {
   if (!node) return false;
   if (node.type === 'TSTypeAnnotation') return isEventType(node.typeAnnotation);
   if (node.type === 'TSTypeReference') {
-    return /Event$/u.test(typeReferenceName(node.typeName) ?? '');
+    return (typeReferenceName(node.typeName) ?? '').endsWith('Event');
   }
   if (node.type === 'TSUnionType') {
     return node.types.length > 0 && node.types.every(isEventType);
@@ -790,26 +771,25 @@ function isEventType(node) {
 
 function isEventMapDeclaration(declaration, isInternal) {
   if (declaration.type !== 'TSInterfaceDeclaration') return false;
-  if (/EventMap$/u.test(declarationName(declaration) ?? '')) return true;
+  if ((declarationName(declaration) ?? '').endsWith('EventMap')) return true;
   const heritage = declaration.extends ?? [];
   if (
-    heritage.some((entry) => /EventMap$/u.test(typeReferenceName(entry.expression) ?? ''))
+    heritage.some((entry) => (typeReferenceName(entry.expression) ?? '').endsWith('EventMap'))
   ) {
     return true;
   }
   const members = (declaration.body?.body ?? []).filter((member) => !isInternal(member));
-  return members.length > 0 &&
-    members.some((member) =>
-      member.key?.type === 'Literal' &&
-      typeof member.key.value === 'string' &&
-      member.key.value.startsWith('lr-'),
-    ) &&
+  return members.some((member) =>
+    member.key?.type === 'Literal' &&
+    typeof member.key.value === 'string' &&
+    member.key.value.startsWith('lr-'),
+  ) &&
     members.every((member) => {
     if (member.type !== 'TSPropertySignature' || !isEventType(member.typeAnnotation)) return false;
     // Event maps use event names as keys. A data contract whose sole field stores an originating
     // event (for example `originalEvent: MouseEvent`) is not itself a listener map.
     const key = identifierName(member.key);
-    return member.key?.type === 'Literal' || !/Event$/u.test(key ?? '');
+    return member.key?.type === 'Literal' || !(key ?? '').endsWith('Event');
     });
 }
 

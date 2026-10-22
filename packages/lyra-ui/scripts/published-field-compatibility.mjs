@@ -10,7 +10,6 @@ const hashPattern = /^[a-f0-9]{64}$/u;
 const oidPattern = /^[a-f0-9]{40}$/u;
 const maxInputs = 96;
 const maxMemberBytes = 8 * 1024 * 1024;
-const maxArchiveBytes = 16 * 1024 * 1024;
 
 const declarationSpecs = [
   ['layout/details/details.class.ts', 'LyraDetailsToggleDetail', 'open', 'equal', false, noticeEqual],
@@ -189,7 +188,7 @@ function hasRuntimeContract(text, event, field, relation) {
   return true;
 }
 function hasEventType(text, event, detailType) {
-  return new RegExp(`['\"]${event}['\"]\\s*:\\s*CustomEvent\\s*<\\s*${detailType}\\s*>`, 'u').test(text);
+  return new RegExp(`['"]${event}['"]\\s*:\\s*CustomEvent\\s*<\\s*${detailType}\\s*>`, 'u').test(text);
 }
 function routeForTag(tag, packageJson) {
   const entry = packageJson?.exports?.[`./components/${tag}.js`];

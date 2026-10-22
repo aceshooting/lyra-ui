@@ -13,6 +13,7 @@ import {
   normalizeReleaseChangelog,
   PACKAGE_GENERATORS,
   releaseCommitSubject,
+  releaseNextSteps,
   releasedPackages,
   releasePreparationSteps,
 } from './release-prepare.mjs';
@@ -362,4 +363,17 @@ test('the released set is the publishable version delta, with stable release tag
     () => releasedPackages(before, [{ ...after[0], version: '22.0.0-next.0' }]),
     /Unsupported release tag/u,
   );
+});
+
+test('the closing guidance names every qualification workflow to dispatch on the release commit', () => {
+  const text = releaseNextSteps([{ name: '@aceshooting/lyra-ui', version: '22.0.0' }]);
+  assert.match(text, /pnpm release:budgets/u);
+  assert.match(text, /git commit -m "chore\(release\): @aceshooting\/lyra-ui@22\.0\.0"/u);
+  for (const workflow of ['test-all-browsers.yml', 'full-engine.yml', 'quality-tools.yml']) {
+    assert.match(text, new RegExp(`gh workflow run ${workflow.replace('.', '\\.')} --ref main`, 'u'), `${workflow} is dispatched on the release commit`);
+  }
+  assert.match(text, /Quality tools/u);
+  assert.ok(text.indexOf('quality-tools.yml') < text.indexOf('gh workflow run release.yml --ref main'), 'Release runs after every gate');
+  // The workflow inputs stay at their defaults: a Quality tools run without the benchmark cannot qualify.
+  assert.doesNotMatch(text, /ab_benchmark=false|-f ab_benchmark/u);
 });

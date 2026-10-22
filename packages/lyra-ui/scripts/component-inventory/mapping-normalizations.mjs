@@ -1,6 +1,3 @@
-import path from 'node:path';
-import { readTypeAliases } from '../editor-type-values.mjs';
-import { packageDir } from './paths.mjs';
 import { CHART_REVIEW_EVIDENCE, DATA_GRID_OPTION_TYPE, DATA_GRID_CSV_OPTION_TYPE, DATA_GRID_GET_CSV_OPTION_TYPE, DATA_GRID_SCROLL_OPTION_TYPE } from './upstream-definitions.mjs';
 import { emptyNormalizations } from '../component-inventory.mjs';
 
@@ -91,20 +88,6 @@ const reviewedMethodParameterTypeEquivalence = (
   target,
 });
 
-let structuralTypeAliasRegistry;
-const reviewedStructuralTypeAlias = (name) => {
-  structuralTypeAliasRegistry ??= readTypeAliases(
-    path.join(packageDir, 'src')
-  );
-  if (structuralTypeAliasRegistry.structuralAmbiguous.has(name)) {
-    throw new Error(`${name}: exported structural type alias is ambiguous`);
-  }
-  const target = structuralTypeAliasRegistry.structuralAliases.get(name);
-  if (!target) {
-    throw new Error(`${name}: exported structural type alias is missing`);
-  }
-  return { name, target };
-};
 
 // Widening an event's cancelability is a superset of the contract it replaces: `preventDefault()`
 // on an event that was never cancelable is a silent no-op, and no shipped consumer writes code that

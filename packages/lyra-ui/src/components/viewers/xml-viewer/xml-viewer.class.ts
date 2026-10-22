@@ -48,7 +48,7 @@ import {
 } from '../../../internal/clipboard.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
-import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -168,7 +168,7 @@ function preflightXml(raw: string, maxBytes = 26214400, maxNodes = MAX_NODES): v
     for (; end < raw.length; end++) {
       const character = raw[end]!;
       if (quote) { if (character === quote) quote = ''; }
-      else if (character === '\"' || character === "'") quote = character;
+      else if (character === '"' || character === "'") quote = character;
       else if (character === '<') throw new Error('Invalid XML markup');
       else if (character === '>') break;
     }

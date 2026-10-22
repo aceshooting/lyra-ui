@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { resolve, dirname, sep, relative, join } from 'node:path';
+import { resolve, dirname, sep, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
@@ -1111,7 +1111,7 @@ async function runSaveChecks(page, check, { editor, record }) {
 }
 
 // Read-only, oversize, corpus and fallback inputs.
-async function runInputChecks(page, check, { editor, record }) {
+async function runInputChecks(page, check, { record }) {
   await check('read-only instance refuses editing and preserves revision', async () => {
     const result = await page.evaluate(async () => {
       const element = document.createElement('lr-docx-editor');
@@ -1224,7 +1224,7 @@ async function runInputChecks(page, check, { editor, record }) {
 }
 
 // Mount ownership, superseded reads, abort and disconnect.
-async function runLifecycleChecks(page, check, { editor }) {
+async function runLifecycleChecks(page, check) {
   await check('one mount has one owner through transient removal', async () => {
     const result = await page.evaluate(async () => {
       const create = await window.__docxTest.sessionFactory();

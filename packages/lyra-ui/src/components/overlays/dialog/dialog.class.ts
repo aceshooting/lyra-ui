@@ -308,8 +308,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       this.applyOpenState(normalized);
       return;
     }
-    if (normalized) this.show();
-    else this.close('api');
+    if (normalized) void this.show();
+    else void this.close('api');
   }
 
   /** Visible mapped title. The richer `label` slot wins when both are supplied. */

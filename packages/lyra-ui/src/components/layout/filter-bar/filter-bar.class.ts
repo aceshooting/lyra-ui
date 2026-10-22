@@ -526,11 +526,12 @@ function isPlainFilterRecord(value: object): boolean {
   }
 }
 
+/** The detached value, or the `OMIT_FILTER_VALUE` sentinel when the entry must be dropped. */
 function snapshotFilterEntry(
   value: unknown,
   budget: FilterSnapshotBudget,
   depth: number,
-): unknown | typeof OMIT_FILTER_VALUE {
+): unknown {
   if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
   if (typeof value === 'function') return value;
   if (depth > MAX_FILTER_COLLECTION_DEPTH || budget.remaining <= 0) return OMIT_FILTER_VALUE;

@@ -1,0 +1,2628 @@
+[
+  {
+    "type": "dependency",
+    "from": "src/internal/flow-scene-envelope.ts",
+    "to": "src/components/data/flow-canvas/flow-model.ts",
+    "unresolvedTo": "../components/data/flow-canvas/flow-model.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "internal-not-to-components"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/internal/text-quote.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../components/viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "internal-not-to-components"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.ts",
+    "to": "src/components/charts/chart/lite-chart.ts",
+    "unresolvedTo": "../../charts/chart/lite-chart.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/agent-question/agent-question.class.ts",
+    "to": "src/components/agent-tools/tool-param-form/tool-param-snapshot.ts",
+    "unresolvedTo": "../tool-param-form/tool-param-snapshot.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/agent-trace/agent-trace.class.ts",
+    "to": "src/components/agent-tools/trace-tree/span-projection.ts",
+    "unresolvedTo": "../trace-tree/span-projection.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/agent-trace/agent-trace.class.ts",
+    "to": "src/components/agent-tools/trace-tree/span.ts",
+    "unresolvedTo": "../trace-tree/span.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/eval-dataset/eval-dataset.ts",
+    "to": "src/components/overlays/chip/chip-group.ts",
+    "unresolvedTo": "../../overlays/chip/chip-group.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/evaluation-run/evaluation-run.ts",
+    "to": "src/components/overlays/progress/progress-bar.ts",
+    "unresolvedTo": "../../overlays/progress/progress-bar.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/span-waterfall/span-waterfall.class.ts",
+    "to": "src/components/agent-tools/trace-tree/span-projection.ts",
+    "unresolvedTo": "../trace-tree/span-projection.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/span-waterfall/span-waterfall.class.ts",
+    "to": "src/components/agent-tools/trace-tree/span.ts",
+    "unresolvedTo": "../trace-tree/span.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/terminal/terminal.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/agent-tools/tool-param-form/tool-param-form.ts",
+    "to": "src/components/forms/input/number-input.ts",
+    "unresolvedTo": "../../forms/input/number-input.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/charts/chart/box-plot.class.ts",
+    "to": "src/components/utility/export-button/csv.ts",
+    "unresolvedTo": "../../utility/export-button/csv.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/charts/chart/chart-spatial-data.ts",
+    "to": "src/components/utility/export-button/csv.ts",
+    "unresolvedTo": "../../utility/export-button/csv.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/charts/chart/chart.class.ts",
+    "to": "src/components/utility/export-button/csv.ts",
+    "unresolvedTo": "../../utility/export-button/csv.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/charts/chart/lite-chart.class.ts",
+    "to": "src/components/utility/export-button/csv.ts",
+    "unresolvedTo": "../../utility/export-button/csv.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/agent-workspace/agent-workspace.class.ts",
+    "to": "src/components/conversation/markdown/markdown-shared.ts",
+    "unresolvedTo": "../markdown/markdown-shared.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/branch-picker/branch-picker.class.ts",
+    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
+    "unresolvedTo": "../message-actions/toolbar-actions.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/code-block/code-block-base.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/code-block/code-block-core.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/code-block/code-block-shared.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/code-block/code-block.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown-base.class.ts",
+    "to": "src/components/conversation/code-block/shiki-types.ts",
+    "unresolvedTo": "../code-block/shiki-types.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown-base.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown-core.class.ts",
+    "to": "src/components/conversation/code-block/shiki-types.ts",
+    "unresolvedTo": "../code-block/shiki-types.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown-core.ts",
+    "to": "src/components/conversation/code-block/shiki-types.ts",
+    "unresolvedTo": "../code-block/shiki-types.js",
+    "dependencyTypes": [
+      "local",
+      "export"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown-shared.ts",
+    "to": "src/components/conversation/code-block/shiki-dark-theme.ts",
+    "unresolvedTo": "../code-block/shiki-dark-theme.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown-shared.ts",
+    "to": "src/components/conversation/code-block/shiki-types.ts",
+    "unresolvedTo": "../code-block/shiki-types.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown-shared.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown.class.ts",
+    "to": "src/components/conversation/code-block/code-loader.ts",
+    "unresolvedTo": "../code-block/code-loader.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown.class.ts",
+    "to": "src/components/conversation/code-block/shiki-types.ts",
+    "unresolvedTo": "../code-block/shiki-types.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/markdown/markdown.ts",
+    "to": "src/components/conversation/code-block/shiki-types.ts",
+    "unresolvedTo": "../code-block/shiki-types.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "export"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/message-feedback/message-feedback.class.ts",
+    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
+    "unresolvedTo": "../message-actions/toolbar-actions.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/message-parts/message-parts.class.ts",
+    "to": "src/components/conversation/markdown/markdown-shared.ts",
+    "unresolvedTo": "../markdown/markdown-shared.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/streaming-text/streaming-text-base.class.ts",
+    "to": "src/components/conversation/code-block/shiki-types.ts",
+    "unresolvedTo": "../code-block/shiki-types.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/streaming-text/streaming-text-base.class.ts",
+    "to": "src/components/conversation/markdown/markdown-shared.ts",
+    "unresolvedTo": "../markdown/markdown-shared.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/streaming-text/streaming-text-base.class.ts",
+    "to": "src/components/conversation/markdown/markdown-streaming-tail.ts",
+    "unresolvedTo": "../markdown/markdown-streaming-tail.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversation/streaming-text/streaming-text-core.ts",
+    "to": "src/components/conversation/markdown/markdown-core.ts",
+    "unresolvedTo": "../markdown/markdown-core.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/calendar/calendar.class.ts",
+    "to": "src/components/forms/date-picker/calendar-core.ts",
+    "unresolvedTo": "../../forms/date-picker/calendar-core.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/condition-builder/condition-builder-register.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../../forms/combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/condition-builder/condition-builder.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../../forms/combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/condition-builder/condition-builder.ts",
+    "to": "src/components/forms/date-picker/date-input.ts",
+    "unresolvedTo": "../../forms/date-picker/date-input.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/context-meter/context-meter.class.ts",
+    "to": "src/components/charts/chart/chart-number-format.ts",
+    "unresolvedTo": "../../charts/chart/chart-number-format.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/data-grid/data-grid-processing.ts",
+    "to": "src/components/utility/export-button/csv.ts",
+    "unresolvedTo": "../../utility/export-button/csv.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/data-grid/data-grid.ts",
+    "to": "src/components/layout/menu/dropdown-item.ts",
+    "unresolvedTo": "../../layout/menu/dropdown-item.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/data-grid/data-grid.ts",
+    "to": "src/components/overlays/overlay/dropdown.ts",
+    "unresolvedTo": "../../overlays/overlay/dropdown.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/document-library/document-library.ts",
+    "to": "src/components/overlays/chip/chip-group.ts",
+    "unresolvedTo": "../../overlays/chip/chip-group.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-controls/flow-controls.class.ts",
+    "to": "src/components/data/flow-canvas/flow-companion-controller.ts",
+    "unresolvedTo": "../flow-canvas/flow-companion-controller.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-controls/flow-controls.class.ts",
+    "to": "src/components/data/flow-canvas/flow-types.ts",
+    "unresolvedTo": "../flow-canvas/flow-types.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-minimap/flow-minimap.class.ts",
+    "to": "src/components/data/flow-canvas/flow-companion-controller.ts",
+    "unresolvedTo": "../flow-canvas/flow-companion-controller.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-minimap/flow-minimap.class.ts",
+    "to": "src/components/data/flow-canvas/flow-types.ts",
+    "unresolvedTo": "../flow-canvas/flow-types.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-minimap/flow-minimap.styles.ts",
+    "to": "src/components/data/flow-canvas/flow-status.styles.ts",
+    "unresolvedTo": "../flow-canvas/flow-status.styles.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-node/flow-node.class.ts",
+    "to": "src/components/data/flow-canvas/flow-model.ts",
+    "unresolvedTo": "../flow-canvas/flow-model.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-node/flow-node.class.ts",
+    "to": "src/components/data/flow-canvas/flow-types.ts",
+    "unresolvedTo": "../flow-canvas/flow-types.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-node/flow-node.styles.ts",
+    "to": "src/components/data/flow-canvas/flow-status.styles.ts",
+    "unresolvedTo": "../flow-canvas/flow-status.styles.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-run-status/flow-run-status.class.ts",
+    "to": "src/components/data/flow-canvas/flow-companion-controller.ts",
+    "unresolvedTo": "../flow-canvas/flow-companion-controller.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-run-status/flow-run-status.class.ts",
+    "to": "src/components/data/flow-canvas/flow-model.ts",
+    "unresolvedTo": "../flow-canvas/flow-model.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-run-status/flow-run-status.class.ts",
+    "to": "src/components/data/flow-canvas/flow-types.ts",
+    "unresolvedTo": "../flow-canvas/flow-types.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/flow-run-status/flow-run-status.styles.ts",
+    "to": "src/components/data/flow-canvas/flow-status.styles.ts",
+    "unresolvedTo": "../flow-canvas/flow-status.styles.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/funnel/funnel.class.ts",
+    "to": "src/components/charts/chart/chart-number-format.ts",
+    "unresolvedTo": "../../charts/chart/chart-number-format.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/gauge/gauge.class.ts",
+    "to": "src/components/charts/chart/chart-number-format.ts",
+    "unresolvedTo": "../../charts/chart/chart-number-format.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/graph-query-builder/graph-query-builder.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../../forms/combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/graph-query-builder/graph-query-builder.ts",
+    "to": "src/components/overlays/chip/chip-group.ts",
+    "unresolvedTo": "../../overlays/chip/chip-group.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/heatmap/heatmap.class.ts",
+    "to": "src/components/utility/export-button/csv.ts",
+    "unresolvedTo": "../../utility/export-button/csv.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/sparkline/sparkline.class.ts",
+    "to": "src/components/charts/chart/chart-prepared-data.ts",
+    "unresolvedTo": "../../charts/chart/chart-prepared-data.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/data/timeline/timeline-item.ts",
+    "to": "src/components/utility/format/relative-time.ts",
+    "unresolvedTo": "../../utility/format/relative-time.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/color-picker/color-picker.class.ts",
+    "to": "src/components/forms/swatch-picker/swatch-keys.ts",
+    "unresolvedTo": "../swatch-picker/swatch-keys.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/country-picker/country-picker.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/currency-picker/currency-picker.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/icon-button/icon-button.class.ts",
+    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
+    "unresolvedTo": "../../conversation/message-actions/toolbar-actions.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/locale-picker/locale-picker.class.ts",
+    "to": "src/components/media/flag/language-map.ts",
+    "unresolvedTo": "../../media/flag/language-map.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/rubric-form/rubric-form.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/select/select.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/time-zone-picker/time-zone-picker.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/toggle/toggle.class.ts",
+    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
+    "unresolvedTo": "../../conversation/message-actions/toolbar-actions.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/forms/unit-picker/unit-picker.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
+    "to": "src/components/conversation/widget-renderer/resolve.ts",
+    "unresolvedTo": "../../conversation/widget-renderer/resolve.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/dashboard-grid/layout-internal.ts",
+    "to": "src/components/conversation/widget-renderer/resolve.ts",
+    "unresolvedTo": "../../conversation/widget-renderer/resolve.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/dashboard-grid/layout-types.ts",
+    "to": "src/components/conversation/widget-renderer/resolve.ts",
+    "unresolvedTo": "../../conversation/widget-renderer/resolve.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/drilldown-panel/drilldown-panel.ts",
+    "to": "src/components/layout/breadcrumb/breadcrumb-item.ts",
+    "unresolvedTo": "../breadcrumb/breadcrumb-item.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/drilldown-panel/drilldown-panel.ts",
+    "to": "src/components/layout/tab-group/tab-panel.ts",
+    "unresolvedTo": "../tab-group/tab-panel.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/drilldown-panel/drilldown-panel.ts",
+    "to": "src/components/layout/tab-group/tab.ts",
+    "unresolvedTo": "../tab-group/tab.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/filter-bar/filter-bar.ts",
+    "to": "src/components/forms/combobox/option.ts",
+    "unresolvedTo": "../../forms/combobox/option.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/filter-bar/filter-bar.ts",
+    "to": "src/components/forms/date-picker/date-input.ts",
+    "unresolvedTo": "../../forms/date-picker/date-input.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/filter-bar/filter-bar.ts",
+    "to": "src/components/layout/menu/dropdown-item.ts",
+    "unresolvedTo": "../menu/dropdown-item.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/filter-bar/filter-bar.ts",
+    "to": "src/components/overlays/chip/chip-group.ts",
+    "unresolvedTo": "../../overlays/chip/chip-group.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/filter-bar/filter-bar.ts",
+    "to": "src/components/overlays/overlay/dropdown.ts",
+    "unresolvedTo": "../../overlays/overlay/dropdown.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/menubar/menubar-item.class.ts",
+    "to": "src/components/layout/menu/menu-shared.ts",
+    "unresolvedTo": "../menu/menu-shared.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/menubar/menubar.class.ts",
+    "to": "src/components/layout/menu/menu-shared.ts",
+    "unresolvedTo": "../menu/menu-shared.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/layout/navigation-menu-item/navigation-menu-item.class.ts",
+    "to": "src/components/layout/navigation-menu/navigation-menu-owner.ts",
+    "unresolvedTo": "../navigation-menu/navigation-menu-owner.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
+    "to": "src/components/media/file-input/accept.ts",
+    "unresolvedTo": "../file-input/accept.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/attachment-trigger/attachment-trigger.ts",
+    "to": "src/components/layout/menu/menu-item.ts",
+    "unresolvedTo": "../../layout/menu/menu-item.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/attachment-trigger/attachment-trigger.ts",
+    "to": "src/components/overlays/overlay/dropdown.ts",
+    "unresolvedTo": "../../overlays/overlay/dropdown.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/av-player/av-player.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/av-player/av-player.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../../viewers/document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/drop-zone/drop-zone.class.ts",
+    "to": "src/components/media/file-input/file-intake.ts",
+    "unresolvedTo": "../file-input/file-intake.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/file-icon/file-icon.class.ts",
+    "to": "src/components/media/attachment-chip/file-size.ts",
+    "unresolvedTo": "../attachment-chip/file-size.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/file-input/file-input.class.ts",
+    "to": "src/components/media/attachment-chip/file-size.ts",
+    "unresolvedTo": "../attachment-chip/file-size.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/image-viewer/image-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/media/image-viewer/image-viewer.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../../viewers/document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/overlays/alert/alert.class.ts",
+    "to": "src/components/overlays/toast/toast-region-protocol.ts",
+    "unresolvedTo": "../toast/toast-region-protocol.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/overlays/alert/alert.class.ts",
+    "to": "src/components/overlays/toast/toast-region.ts",
+    "unresolvedTo": "../toast/toast-region.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/overlays/context-menu/context-menu.ts",
+    "to": "src/components/overlays/overlay/dropdown.ts",
+    "unresolvedTo": "../overlay/dropdown.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/overlays/overlay/dropdown.class.ts",
+    "to": "src/components/layout/menu/menu-shared.ts",
+    "unresolvedTo": "../../layout/menu/menu-shared.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/overlays/popup/popup.class.ts",
+    "to": "src/components/overlays/overlay/overlay-arrow.ts",
+    "unresolvedTo": "../overlay/overlay-arrow.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/overlays/popup/popup.class.ts",
+    "to": "src/components/overlays/overlay/overlay-shared.ts",
+    "unresolvedTo": "../overlay/overlay-shared.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/entity-card/entity-card.ts",
+    "to": "src/components/agent-tools/result-card/result-field.ts",
+    "unresolvedTo": "../../agent-tools/result-card/result-field.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/entity-dossier/entity-dossier.ts",
+    "to": "src/components/layout/tab-group/tab-panel.ts",
+    "unresolvedTo": "../../layout/tab-group/tab-panel.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/entity-dossier/entity-dossier.ts",
+    "to": "src/components/layout/tab-group/tab.ts",
+    "unresolvedTo": "../../layout/tab-group/tab.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/ingestion-queue/ingestion-queue.ts",
+    "to": "src/components/overlays/progress/progress-bar.ts",
+    "unresolvedTo": "../../overlays/progress/progress-bar.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/knowledge-base/knowledge-base.ts",
+    "to": "src/components/overlays/overlay/dropdown.ts",
+    "unresolvedTo": "../../overlays/overlay/dropdown.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
+    "to": "src/components/retrieval/graph/graph-model.ts",
+    "unresolvedTo": "../graph/graph-model.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
+    "to": "src/components/retrieval/graph/graph-source-composition.ts",
+    "unresolvedTo": "../graph/graph-source-composition.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.ts",
+    "to": "src/components/overlays/overlay/popover.ts",
+    "unresolvedTo": "../../overlays/overlay/popover.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/neighbor-list/neighbor-list.class.ts",
+    "to": "src/components/retrieval/graph/graph-model.ts",
+    "unresolvedTo": "../graph/graph-model.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.ts",
+    "to": "src/components/charts/chart/lite-chart.ts",
+    "unresolvedTo": "../../charts/chart/lite-chart.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/retrieval-search/retrieval-search.ts",
+    "to": "src/components/overlays/chip/chip-group.ts",
+    "unresolvedTo": "../../overlays/chip/chip-group.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/retrieval/retrieval-trace/retrieval-trace.class.ts",
+    "to": "src/components/agent-tools/trace-tree/span.ts",
+    "unresolvedTo": "../../agent-tools/trace-tree/span.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/utility/copy-button/copy-button.class.ts",
+    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
+    "unresolvedTo": "../../conversation/message-actions/toolbar-actions.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/utility/copy-button/copy-button.ts",
+    "to": "src/components/overlays/overlay/tooltip.ts",
+    "unresolvedTo": "../../overlays/overlay/tooltip.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/utility/diff-view/diff-view.class.ts",
+    "to": "src/components/conversation/code-block/shiki-types.ts",
+    "unresolvedTo": "../../conversation/code-block/shiki-types.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/utility/diff-view/diff-view.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/utility/known-date/known-date.class.ts",
+    "to": "src/components/forms/date-picker/calendar-core.ts",
+    "unresolvedTo": "../../forms/date-picker/calendar-core.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/archive-viewer/archive-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
+    "to": "src/components/media/attachment-chip/file-size.ts",
+    "unresolvedTo": "../../media/attachment-chip/file-size.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/calendar-viewer/calendar-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
+    "to": "src/components/forms/date-picker/calendar-core.ts",
+    "unresolvedTo": "../../forms/date-picker/calendar-core.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/contact-viewer/contact-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/contact-viewer/contact-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/csv-viewer/csv-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/csv-viewer/csv-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/csv-viewer/csv-viewer.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/dataset-viewer/dataset-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/document-compare/document-compare.class.ts",
+    "to": "src/components/conversation/code-block/code-loader.ts",
+    "unresolvedTo": "../../conversation/code-block/code-loader.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/document-compare/document-compare.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/document-preview/document-preview.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/document-viewer/ooxml-part-guard.ts",
+    "to": "src/components/viewers/archive-viewer/zip-resource-guard.ts",
+    "unresolvedTo": "../archive-viewer/zip-resource-guard.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/document-viewer/registry.ts",
+    "to": "src/components/media/av-player/av-metadata.ts",
+    "unresolvedTo": "../../media/av-player/av-metadata.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/docx-viewer/docx-resource-guard.ts",
+    "to": "src/components/viewers/document-viewer/ooxml-part-guard.ts",
+    "unresolvedTo": "../document-viewer/ooxml-part-guard.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/docx-viewer/docx-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/docx-viewer/docx-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/docx-viewer/docx-viewer.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/ebook-viewer/ebook-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/ebook-viewer/ebook-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/ebook-viewer/epub-resource-guard.ts",
+    "to": "src/components/viewers/archive-viewer/zip-resource-guard.ts",
+    "unresolvedTo": "../archive-viewer/zip-resource-guard.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/email-viewer/email-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/email-viewer/email-viewer.class.ts",
+    "to": "src/components/media/attachment-chip/file-size.ts",
+    "unresolvedTo": "../../media/attachment-chip/file-size.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/email-viewer/email-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/geojson-view/geojson-viewer.class.ts",
+    "to": "src/components/media/map/map-loader.ts",
+    "unresolvedTo": "../../media/map/map-loader.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/geojson-view/geojson-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/geojson-view/geojson-viewer.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/html-viewer/html-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/html-viewer/html-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/include/include-resource.ts",
+    "to": "src/components/viewers/html-viewer/dompurify-loader.ts",
+    "unresolvedTo": "../html-viewer/dompurify-loader.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/include/include.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/include/include.class.ts",
+    "to": "src/components/viewers/html-viewer/dompurify-loader.ts",
+    "unresolvedTo": "../html-viewer/dompurify-loader.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/notebook-viewer/notebook-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/notebook-viewer/notebook-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/notebook-viewer/notebook-viewer.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/page-rail/page-rail.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/pdf-viewer/pdf-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
+    "to": "src/components/viewers/page-rail/page-viewer-snapshot.ts",
+    "unresolvedTo": "../page-rail/page-viewer-snapshot.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/pdf-viewer/pdf-viewer.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/pptx-viewer/pptx-resource-guard.ts",
+    "to": "src/components/viewers/document-viewer/ooxml-part-guard.ts",
+    "unresolvedTo": "../document-viewer/ooxml-part-guard.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/pptx-viewer/pptx-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/pptx-viewer/pptx-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/pptx-viewer/pptx-viewer.class.ts",
+    "to": "src/components/viewers/page-rail/page-viewer-snapshot.ts",
+    "unresolvedTo": "../page-rail/page-viewer-snapshot.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/pptx-viewer/pptx-viewer.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+    "to": "src/components/layout/tab-group/tab-panel.ts",
+    "unresolvedTo": "../../layout/tab-group/tab-panel.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+    "to": "src/components/layout/tab-group/tab.ts",
+    "unresolvedTo": "../../layout/tab-group/tab.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/spreadsheet-viewer/xlsx-resource-guard.ts",
+    "to": "src/components/viewers/archive-viewer/zip-resource-guard.ts",
+    "unresolvedTo": "../archive-viewer/zip-resource-guard.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/svg-viewer/svg-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/svg-viewer/svg-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/xml-viewer/xml-viewer-register.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/xml-viewer/xml-viewer.class.ts",
+    "to": "src/components/viewers/document-viewer/anchors.ts",
+    "unresolvedTo": "../document-viewer/anchors.js",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/viewers/xml-viewer/xml-viewer.ts",
+    "to": "src/components/viewers/document-viewer/registry.ts",
+    "unresolvedTo": "../document-viewer/registry.js",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-component-private-imports"
+    }
+  }
+]

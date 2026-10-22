@@ -12030,6 +12030,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/color-picker/color-core.property.test.ts",
           "src/components/forms/color-picker/color-core.test.ts",
           "src/components/forms/color-picker/color-picker-coverage.test.ts",
           "src/components/forms/color-picker/color-picker-remediation.test.ts",
@@ -22837,7 +22838,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1492,
+              "line": 1493,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23265,7 +23266,8 @@
           "src/components/data/flow-canvas/flow-canvas-viewport.test.ts",
           "src/components/data/flow-canvas/flow-canvas.test.ts",
           "src/components/data/flow-canvas/flow-companion-controller.test.ts",
-          "src/components/data/flow-canvas/flow-model.test.ts"
+          "src/components/data/flow-canvas/flow-model.test.ts",
+          "src/components/data/flow-canvas/flow-source.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -41885,7 +41887,7 @@
           "evidence": [
             {
               "file": "src/components/media/qr-code/qr-code.class.ts",
-              "line": 411,
+              "line": 413,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45523,7 +45525,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 932,
+              "line": 933,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47138,7 +47140,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
-              "line": 902,
+              "line": 901,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

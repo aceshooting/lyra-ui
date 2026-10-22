@@ -1122,7 +1122,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       restoreFocusTo: this.segmentElement(this.activeSegment),
     });
     this.popupController.bindPointer();
-    this.updateComplete.then(() => {
+    void this.updateComplete.then(() => {
       // Scroll only the column; scrollIntoView() would also move ancestor scrollers.
       const option = this.renderRoot.querySelector<HTMLElement>('[part~="column-item-selected"]');
       const column = option?.closest<HTMLElement>('[part="column"]');
@@ -1174,7 +1174,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     this.resetDigitBuffer();
     this.setDraftSegment(name, value);
     this.activeSegment = name;
-    this.updateComplete.then(() => this.segmentElement(name)?.focus());
+    void this.updateComplete.then(() => this.segmentElement(name)?.focus());
   }
 
   private onPopupPointerDown = (event: PointerEvent): void => {

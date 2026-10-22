@@ -137,8 +137,8 @@ export function splitSections(text) {
   let fenced = false;
   let current = null;
   for (const line of lines) {
-    if (/^```/.test(line)) fenced = !fenced;
-    if (!fenced && /^## /.test(line)) {
+    if (line.startsWith('```')) fenced = !fenced;
+    if (!fenced && line.startsWith('## ')) {
       current = { title: line.slice(3).trim(), lines: [line], tags: [] };
       sections.push(current);
       continue;
@@ -478,7 +478,7 @@ export function buildPeers(tagFacts) {
   // Peers reached only from a non-component module (e.g. a shared loader) still get a row.
   const walkAll = new Set();
   for (const full of walk(srcRoot)) {
-    if (!/\.ts$/.test(full) || /\.(test|stories)\.ts$/.test(full)) continue;
+    if (!full.endsWith('.ts') || /\.(test|stories)\.ts$/.test(full)) continue;
     const text = readFileSync(full, 'utf8');
     for (const specifier of runtimeModuleSpecifiers(text, full)) {
       for (const peer of componentPeers) {

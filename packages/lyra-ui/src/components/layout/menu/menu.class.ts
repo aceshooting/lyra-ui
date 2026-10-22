@@ -945,7 +945,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   /** Closes every open submenu at this level except `keep`. */
   private closeSubmenus(keep?: LyraMenuItem): void {
     for (const item of this.items) {
-      if (item !== keep && item.submenuOpen) item.closeSubmenu();
+      if (item !== keep && item.submenuOpen) void item.closeSubmenu();
     }
   }
 
@@ -1045,7 +1045,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
           if (current?.hasSubmenu && this.isNavigable(current)) {
             e.preventDefault();
             this.closeSubmenus(current);
-            current.openSubmenu('first');
+            void current.openSubmenu('first');
           }
         } else if (this.submenuAnchor && !this.menubarAnchored) {
           // Only a submenu has anywhere to go back to; in a root menu this key stays untouched.
@@ -1075,7 +1075,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // moves into it, exactly as the into-submenu arrow key does.
         if (current?.hasSubmenu) {
           this.closeSubmenus(current);
-          current.openSubmenu('first');
+          void current.openSubmenu('first');
         } else if (current?.isLinkItem) {
           // A link item's real DOM click target lives inside its shadow root, not on the roving-
           // focused host -- forward through the host's own click() (which the pointer path already
@@ -1128,7 +1128,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       this.submenuOpenTimer = undefined;
       if (!this.interactionOpen || !this.items.includes(hovered)) return;
       this.closeSubmenus(hovered);
-      hovered.openSubmenu('none');
+      void hovered.openSubmenu('none');
     }, SUBMENU_OPEN_DELAY);
   };
 
@@ -1150,7 +1150,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       // A submenu the keyboard is inside was opened deliberately; dismissing it because the
       // pointer wandered off would strand focus on an element about to become invisible.
       if (composedContains(item, safeDeepActiveElement(this.ownerDocument))) return;
-      item.closeSubmenu();
+      void item.closeSubmenu();
     }, SUBMENU_CLOSE_DELAY);
   }
 

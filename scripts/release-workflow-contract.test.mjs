@@ -162,7 +162,7 @@ test('publish and recovery signing share one credential-free verification workfl
   );
   assert.match(
     reusable,
-    /wait-ci[\s\S]*wait-test-all-browsers[\s\S]*wait-full-engine[\s\S]*compare-rebuild/
+    /wait-ci[\s\S]*wait-test-all-browsers[\s\S]*wait-full-engine[\s\S]*wait-quality-tools[\s\S]*compare-rebuild/
   );
   assert.match(reusable, /actions\/upload-artifact@/);
 });
@@ -577,4 +577,50 @@ if (args[1] === 'upload') {
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
+});
+
+test('every exact-commit qualification wait names all four workflows, in the same order, in release and publish verification', () => {
+  const release = read('.github/workflows/release.yml');
+  const verification = read('.github/workflows/release-verification.yml');
+  const manifest = JSON.parse(read('.github/release-qualification.json'));
+  const commands = ['wait-ci', 'wait-test-all-browsers', 'wait-full-engine', 'wait-quality-tools'];
+  const workflows = ['ci.yml', 'test-all-browsers.yml', 'full-engine.yml', 'quality-tools.yml'];
+
+  // The release plan step is renamed to include every gate, and it is the only step that waits.
+  assert.match(release, /- name: Require CI, Test All Browsers, the Full browser-engine suite, and Quality tools on this commit\n/u);
+  assert.doesNotMatch(release, /Require CI, Test All Browsers, and the Full browser-engine suite/u);
+  for (const [source, label] of [[release, 'release.yml'], [verification, 'release-verification.yml']]) {
+    let from = 0;
+    for (const [index, command] of commands.entries()) {
+      const at = source.indexOf(`release-integrity.mjs ${command}`, from);
+      assert.ok(at >= from, `${label} runs ${command} after the previous wait`);
+      const call = source.slice(at, source.indexOf('\n          node ', at + 10) >= 0 ? source.indexOf('\n          node ', at + 10) : at + 400);
+      assert.match(call, new RegExp(`--workflow ${workflows[index].replace('.', '\\.')}`, 'u'), `${label} ${command} waits for ${workflows[index]}`);
+      assert.match(call, /--timeout-seconds \d+/u);
+      from = at + 1;
+    }
+  }
+
+  // The release-qualification manifest names the same four workflows, each as a dispatched main run
+  // except push CI, so the waits above and release-integrity.mjs read one source of truth.
+  assert.deepEqual(Object.keys(manifest.workflows).sort(), ['ci', 'fullEngine', 'qualityTools', 'testAllBrowsers']);
+  for (const [key, workflow] of Object.entries(manifest.workflows)) {
+    assert.equal(workflow.event, key === 'ci' ? 'push' : 'workflow_dispatch', key);
+    assert.equal(workflow.headBranch, 'main', key);
+    assert.ok(workflow.requiredJobs.length > 0, key);
+  }
+});
+
+test('the release plan job outlasts all four qualification waits running to their full windows', () => {
+  const release = read('.github/workflows/release.yml');
+  const plan = release.slice(release.indexOf('\n  plan:\n'), release.indexOf('\n  pack:\n'));
+  const windows = [...plan.matchAll(/--timeout-seconds (\d+)/gu)].map((match) => Number(match[1]));
+  assert.equal(windows.length, 4, 'CI, Test All Browsers, the full-engine suite and Quality tools');
+  const budgetMinutes = Number(plan.match(/timeout-minutes: (\d+)/u)?.[1]);
+  // The waits run one after another, each with its own deadline, so the job must survive their sum
+  // plus the checkout, tag planning and bootstrap checks around them (five minutes is generous).
+  assert.ok(
+    budgetMinutes * 60 >= windows.reduce((sum, seconds) => sum + seconds, 0) + 300,
+    `plan has ${budgetMinutes} minutes for waits of ${windows.join(' + ')} seconds`,
+  );
 });

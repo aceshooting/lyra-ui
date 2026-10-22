@@ -10,6 +10,7 @@ import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { timingReporter } from './wtr-timing-reporter.mjs';
+import { failureReporter } from './wtr-failure-reporter.mjs';
 import { completeJunitReporter } from './wtr-junit-reporter.mjs';
 import { COVERAGE_SHARD_TOTAL } from './coverage-shard-runner.mjs';
 
@@ -26,12 +27,15 @@ function runConfigInspection({
   headed = false,
   coverageConcurrency,
   timingReport,
+  failureReport,
 } = {}) {
   const environment = { ...process.env };
   if (coverageConcurrency === undefined) delete environment.WTR_COVERAGE_CONCURRENCY;
   else environment.WTR_COVERAGE_CONCURRENCY = coverageConcurrency;
   if (timingReport === undefined) delete environment.WTR_TIMING_REPORT;
   else environment.WTR_TIMING_REPORT = timingReport;
+  if (failureReport === undefined) delete environment.WTR_FAILURE_REPORT;
+  else environment.WTR_FAILURE_REPORT = failureReport;
   if (coverage) environment.WTR_COVERAGE = '1';
   else delete environment.WTR_COVERAGE;
   if (coverageReportDir === undefined) delete environment.WTR_COVERAGE_REPORT_DIR;
@@ -67,7 +71,7 @@ function runConfigInspection({
         firefoxUserPrefs: launch.firefoxUserPrefs ?? null,
         webkitSoftwareGl: launch.env?.LIBGL_ALWAYS_SOFTWARE ?? null,
       },
-      ${timingReport === undefined ? '' : `reporterCount: config.reporters?.length ?? null,`}
+      ${timingReport === undefined && failureReport === undefined ? '' : `reporterCount: config.reporters?.length ?? null,`}
       ${coverageReportDir === undefined ? '' : `coverageDetails: {
         threshold: config.coverageConfig.threshold ?? null,
         reportDir: config.coverageConfig.reportDir,
@@ -80,6 +84,22 @@ function runConfigInspection({
     env: environment,
     encoding: 'utf8',
   });
+}
+
+function inspectRetries(retries) {
+  const environment = { ...process.env };
+  if (retries === undefined) delete environment.WTR_RETRIES;
+  else environment.WTR_RETRIES = retries;
+  return spawnSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      `import config from ${JSON.stringify(configUrl)};
+       process.stdout.write(JSON.stringify(config.testFramework.config.retries));`,
+    ],
+    { cwd: packageDirectory, env: environment, encoding: 'utf8' },
+  );
 }
 
 function inspectMouseCommandOrder(product = 'firefox', nativeScrollbar = false) {
@@ -356,6 +376,55 @@ test('the timing reporter records each completed file and its wall time', () => 
   }
 });
 
+test('WTR_FAILURE_REPORT adds the failure reporter beside the existing reporters', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-wtr-failures-'));
+  try {
+    const failureReport = join(directory, 'failures.jsonl');
+    assert.equal(inspectConfig({ failureReport }).reporterCount, 2, 'default + failures');
+    assert.equal(inspectConfig({ failureReport, timingReport: join(directory, 't.jsonl') }).reporterCount, 3);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('the failure reporter records failed tests with their suite path, file-level errors and per-file totals', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-wtr-failure-lines-'));
+  try {
+    const output = join(directory, 'nested', 'failures.jsonl');
+    const reporter = failureReporter(output, { cwd: directory });
+    const test = (name, passed, extra = {}) => ({ name, passed, skipped: false, ...extra });
+    reporter.reportTestFileResults({
+      testFile: join(directory, 'src', 'a.test.ts'),
+      sessionsForTestFile: [{
+        errors: [{ message: 'Uncaught TypeError: x is not a function\n    at stack' }],
+        testResults: {
+          name: '',
+          tests: [test('root passes', true)],
+          suites: [{
+            name: 'outer',
+            tests: [test('fails', false, { error: { message: 'expected 1 to equal 2\n  + expected - actual' } })],
+            suites: [{ name: 'inner', tests: [test('also fails', false), { name: 'skipped', passed: false, skipped: true }], suites: [] }],
+          }],
+        },
+      }],
+    });
+    reporter.reportTestFileResults({
+      testFile: join(directory, 'src', 'b.test.ts'),
+      sessionsForTestFile: [{ errors: [], testResults: { name: '', tests: [test('fine', true)], suites: [] } }],
+    });
+    const lines = readFileSync(output, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    assert.deepEqual(lines, [
+      { type: 'failure', file: 'src/a.test.ts', test: 'outer > fails', message: 'expected 1 to equal 2' },
+      { type: 'failure', file: 'src/a.test.ts', test: 'outer > inner > also fails', message: '' },
+      { type: 'error', file: 'src/a.test.ts', message: 'Uncaught TypeError: x is not a function' },
+      { type: 'file', file: 'src/a.test.ts', tests: 3, failed: 2 },
+      { type: 'file', file: 'src/b.test.ts', tests: 1, failed: 0 },
+    ]);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 function junitSession(directory, file, tests, suites = []) {
   const suitePassed = suite => suite.tests.every(result => result.passed || result.skipped) &&
     suite.suites.every(suitePassed);
@@ -491,6 +560,24 @@ test('uses validated opt-in concurrency without weakening the coverage ceiling',
     const firefoxResult = runConfigInspection({ browser: 'firefox', concurrency });
     assert.notEqual(firefoxResult.status, 0, 'Firefox must validate an override before applying its ceiling');
     assert.match(firefoxResult.stderr, /WTR_CONCURRENCY must be a positive safe integer/u);
+  }
+});
+
+test('retries a failed test once by default and lets WTR_RETRIES switch retries off for flake hunts', () => {
+  const retriesFor = (value) => {
+    const result = inspectRetries(value);
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    return JSON.parse(result.stdout);
+  };
+  assert.equal(retriesFor(undefined), 1, 'CI behaviour is unchanged when the variable is unset');
+  assert.equal(retriesFor('0'), 0, 'zero retries surfaces first-attempt failures');
+  assert.equal(retriesFor('1'), 1);
+  assert.equal(retriesFor('3'), 3);
+
+  for (const invalid of ['', '-1', '1.5', 'many', '01', '9007199254740992']) {
+    const result = inspectRetries(invalid);
+    assert.notEqual(result.status, 0, `WTR_RETRIES=${JSON.stringify(invalid)} must be rejected`);
+    assert.match(result.stderr, /WTR_RETRIES must be a non-negative safe integer/u);
   }
 });
 

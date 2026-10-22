@@ -167,3 +167,220 @@ describe('color-core serialization', () => {
     expect(sameColor(hsva(0, 100, 100, 1), hsva(0, 100, 100, 0.5))).to.equal(false);
   });
 });
+
+describe('color-core hsl() parsing matches the browser', () => {
+  // Each row is an author colour and the channels Chromium's getComputedStyle(...).color reports for
+  // it. Firefox and WebKit resolve some exact-.5 channels differently (and WebKit does not clamp a
+  // saturation above 100%); Chromium is the reference, so these rows pin its decisions. The table is
+  // checked through the pure parse/format functions, so it holds in every engine.
+  type Row = readonly [text: string, channels: readonly [number, number, number]];
+
+  const disagreements = (rows: readonly Row[]): string[] => {
+    const failures: string[] = [];
+    for (const [text, [r, g, b]] of rows) {
+      const wantedRgb = `rgb(${r}, ${g}, ${b})`;
+      const wantedHex = `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
+      const color = parseColor(text);
+      const gotRgb = color === null ? 'null' : formatColor(color, 'rgb');
+      const gotHex = color === null ? 'null' : formatColor(color, 'hex');
+      if (gotRgb !== wantedRgb || gotHex !== wantedHex) {
+        failures.push(`${text}: got ${gotRgb} ${gotHex}, browser ${wantedRgb} ${wantedHex}`);
+      }
+    }
+    return failures;
+  };
+
+  it('rounds a channel that is exactly .5 in real arithmetic the way the browser does (mostly up)', () => {
+    expect(
+      disagreements([
+        ['hsl(0, 100%, 95%)', [255, 230, 230]],
+        ['hsl(5, 5%, 84%)', [216, 213, 212]],
+        ['hsl(0, 25%, 92%)', [240, 230, 230]],
+        ['hsl(55, 88%, 25%)', [120, 111, 8]],
+        ['hsl(247, 75%, 60%)', [94, 77, 230]],
+        ['hsl(335, 75%, 40%)', [179, 26, 89]],
+        ['hsl(187, 60%, 25%)', [26, 93, 102]],
+        ['hsl(281, 100%, 95%)', [247, 230, 255]],
+        ['hsl(90, 78%, 10%)', [26, 45, 6]],
+        ['hsl(116, 25%, 76%)', [181, 209, 179]],
+        ['hsl(161, 60%, 25%)', [26, 102, 78]],
+        ['hsl(210, 54%, 70%)', [137, 179, 220]],
+        ['hsl(305, 25%, 76%)', [209, 179, 207]],
+      ]),
+    ).to.deep.equal([]);
+  });
+
+  it('rounds the exact .5 channels the browser rounds down, where its single precision lands just under', () => {
+    expect(
+      disagreements([
+        ['hsl(170, 80%, 50%)', [26, 230, 195]],
+        ['hsl(155, 50%, 40%)', [51, 153, 110]],
+        ['hsl(235, 70%, 60%)', [82, 93, 224]],
+        ['hsl(335, 100%, 44%)', [224, 0, 93]],
+        ['hsl(125, 80%, 66%)', [99, 238, 110]],
+        ['hsl(205, 80%, 50%)', [26, 144, 230]],
+        ['hsl(14, 50%, 50%)', [191, 93, 64]],
+        ['hsl(346, 50%, 50%)', [191, 64, 93]],
+        ['hsl(10, 60%, 50%)', [204, 76, 51]],
+        ['hsl(10, 100%, 50%)', [255, 42, 0]],
+      ]),
+    ).to.deep.equal([]);
+  });
+
+  it('follows the 1e-7 the browser adds before rounding, so a hair under .5 can still round up', () => {
+    expect(
+      disagreements([
+        ['hsl(327, 91%, 39%)', [190, 9, 109]],
+        ['hsl(33, 91%, 39%)', [190, 109, 9]],
+        ['hsl(273, 91%, 39%)', [109, 9, 190]],
+        ['hsl(153, 91%, 39%)', [9, 190, 109]],
+        ['hsl(398, 5.24%, 65.2%)', [171, 168, 162]],
+        ['hsl(178.72, 1.81%, 74%)', [188, 190, 190]],
+        ['hsl(-664.181, 25.5%, 28.46%)', [91, 89, 54]],
+        ['hsl(49.34, 78.7%, 16%)', [73, 62, 9]],
+      ]),
+    ).to.deep.equal([]);
+  });
+
+  it('matches fractional, negative and over-turn hues, including their exact .5 channels', () => {
+    expect(
+      disagreements([
+        ['hsl(550, 100%, 50%)', [0, 212, 255]],
+        ['hsl(-529.312, 100%, 95%)', [230, 250, 255]],
+        ['hsl(131.9, 100%, 95%)', [230, 255, 235]],
+        ['hsl(6.754, 100%, 95%)', [255, 232, 230]],
+        ['hsl(-1040, 100%, 75%)', [255, 213, 128]],
+        ['hsl(1170, 22.97%, 90%)', [230, 235, 224]],
+        ['hsl(-120, 100%, 50%)', [0, 0, 255]],
+        ['hsl(480, 100%, 50%)', [0, 255, 0]],
+        ['hsl(360, 100%, 50%)', [255, 0, 0]],
+        ['hsl(-360, 100%, 50%)', [255, 0, 0]],
+        ['hsl(1080, 100%, 50%)', [255, 0, 0]],
+        ['hsl(725, 40%, 60%)', [194, 119, 112]],
+        ['hsl(-45.5, 40%, 60%)', [194, 112, 174]],
+      ]),
+    ).to.deep.equal([]);
+  });
+
+  it('matches the primaries, grays and the saturation and lightness edges', () => {
+    expect(
+      disagreements([
+        ['hsl(0, 100%, 50%)', [255, 0, 0]],
+        ['hsl(60, 100%, 50%)', [255, 255, 0]],
+        ['hsl(120, 100%, 50%)', [0, 255, 0]],
+        ['hsl(180, 100%, 50%)', [0, 255, 255]],
+        ['hsl(240, 100%, 50%)', [0, 0, 255]],
+        ['hsl(300, 100%, 50%)', [255, 0, 255]],
+        ['hsl(0, 0%, 0%)', [0, 0, 0]],
+        ['hsl(0, 0%, 10%)', [26, 26, 26]],
+        ['hsl(200, 0%, 30%)', [77, 77, 77]],
+        ['hsl(0, 0%, 50%)', [128, 128, 128]],
+        ['hsl(120, 0%, 70%)', [179, 179, 179]],
+        ['hsl(0, 0%, 90%)', [230, 230, 230]],
+        ['hsl(0, 0%, 100%)', [255, 255, 255]],
+        ['hsl(300, 100%, 0%)', [0, 0, 0]],
+        ['hsl(300, 100%, 100%)', [255, 255, 255]],
+        ['hsl(30, 100%, 1%)', [5, 3, 0]],
+        ['hsl(30, 100%, 99%)', [255, 252, 250]],
+        ['hsl(200, 1%, 50%)', [126, 128, 129]],
+        ['hsl(200, 100%, 25%)', [0, 85, 128]],
+        ['hsl(200, 100%, 75%)', [128, 213, 255]],
+      ]),
+    ).to.deep.equal([]);
+  });
+
+  it('clamps saturation and lightness before converting, as the browser does', () => {
+    expect(
+      disagreements([
+        ['hsl(0, 150%, 50%)', [255, 0, 0]],
+        ['hsl(0, 50%, 150%)', [255, 255, 255]],
+        ['hsl(0, -10%, 50%)', [128, 128, 128]],
+        ['hsl(0, 50%, -20%)', [0, 0, 0]],
+        ['hsl(0, 120.184%, 90%)', [255, 204, 204]],
+      ]),
+    ).to.deep.equal([]);
+  });
+
+  it('gives the same channels for every hsl() and hsla() spelling of one colour', () => {
+    expect(
+      disagreements([
+        ['hsla(0, 100%, 95%, 0.5)', [255, 230, 230]],
+        ['hsl(0 100% 95%)', [255, 230, 230]],
+        ['hsl(0deg 100% 95%)', [255, 230, 230]],
+        ['hsl(0 100% 95% / 50%)', [255, 230, 230]],
+        ['hsl(400grad 100% 95%)', [255, 230, 230]],
+        ['hsl(1turn 100% 95%)', [255, 230, 230]],
+        ['hsl(0.5turn 25% 92%)', [230, 240, 240]],
+        ['hsl(3.141592653589793rad 25% 92%)', [230, 240, 240]],
+      ]),
+    ).to.deep.equal([]);
+    expect(formatColor(parseColor('hsla(0, 100%, 95%, 0.5)')!, 'hexa')).to.equal('#ffe6e680');
+  });
+
+  it('divides the percentages in double precision before narrowing them, as the browser does', () => {
+    // Narrowing 68.1 to single precision first and dividing by 100 afterwards lands one step off here.
+    expect(
+      disagreements([
+        ['hsl(-266, 68.1%, 53.9%)', [127, 217, 57]],
+        ['hsl(336, 32.1%, 31.22%)', [105, 54, 75]],
+      ]),
+    ).to.deep.equal([]);
+  });
+
+  it('keeps the hue, the percentages and a 360 hue in the hsl text when it settles a colour on the browser bytes', () => {
+    // Deriving the colour from the browser's 8-bit channels would move the hue of the first colour from
+    // 5 to 15 and the 360 of the third to 0; the correction only nudges the exact hsv state.
+    expect(formatColor(parseColor('hsl(5, 5%, 84%)')!, 'hsl')).to.equal('hsl(5, 5%, 84%)');
+    expect(formatColor(parseColor('hsl(0, 100%, 95%)')!, 'hsl')).to.equal('hsl(0, 100%, 95%)');
+    const turned = parseColor('hsl(360, 100%, 95%)')!;
+    expect(turned.h).to.equal(360);
+    expect(formatColor(turned, 'rgb')).to.equal('rgb(255, 230, 230)');
+    expect(formatColor(turned, 'hsl')).to.equal('hsl(360, 100%, 95%)');
+  });
+
+  it('agrees with the host browser on a deterministic spread of colours that every engine resolves alike', () => {
+    // Engines disagree on exact-.5 channels (and WebKit on an out-of-range saturation), so this
+    // sweep keeps to in-range colours whose channels are not within 0.001 of a .5 in real
+    // arithmetic; there Chromium, Firefox and WebKit all return the exactly rounded channels.
+    const channelsOf = (hue: number, saturation: number, lightness: number): number[] => {
+      const l = lightness / 100;
+      const a = (saturation / 100) * Math.min(l, 1 - l);
+      const wrapped = ((hue % 360) + 360) % 360;
+      return [0, 8, 4].map((n) => {
+        const k = (n + wrapped / 30) % 12;
+        return (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255;
+      });
+    };
+    const nearHalf = (value: number): boolean => Math.abs(value - Math.floor(value) - 0.5) < 0.001;
+    let state = 0x2545f491;
+    const next = (): number => {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+      return state / 4294967296;
+    };
+    const texts: string[] = [];
+    while (texts.length < 400) {
+      const scale = next() < 0.5 ? 1 : 10;
+      const hue = Math.round((next() * 1440 - 720) * scale) / scale;
+      const saturation = Math.round(next() * 100 * scale) / scale;
+      const lightness = Math.round(next() * 100 * scale) / scale;
+      if (channelsOf(hue, saturation, lightness).some(nearHalf)) continue;
+      texts.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+    }
+    const probe = document.createElement('span');
+    document.body.append(probe);
+    const failures: string[] = [];
+    try {
+      for (const text of texts) {
+        probe.style.color = '';
+        probe.style.color = text;
+        const browser = getComputedStyle(probe).color;
+        const color = parseColor(text);
+        const ours = color === null ? 'null' : formatColor(color, 'rgb');
+        if (ours !== browser) failures.push(`${text}: got ${ours}, browser ${browser}`);
+      }
+    } finally {
+      probe.remove();
+    }
+    expect(failures).to.deep.equal([]);
+  });
+});

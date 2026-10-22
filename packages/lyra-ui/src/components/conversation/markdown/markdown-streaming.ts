@@ -126,7 +126,7 @@ function hasUnresolvedReference(raw: string, definitions: readonly string[]): bo
   const withoutInlineCode = withoutTaskMarkers.replace(/(`+)[^`\n]*\1/g, '');
   const references = [
     /!?\[([^\]]+)\]\[([^\]]*)\]/g,
-    /!?\[([^\]]+)\](?!\s*[\[(])/g,
+    /!?\[([^\]]+)\](?!\s*[[(])/g,
   ];
   for (const reference of references) for (const match of withoutInlineCode.matchAll(reference)) {
     const label = normalizeReferenceLabel(match[2] || match[1] || '');

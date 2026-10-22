@@ -100,7 +100,7 @@ test('every hoisted mode pair resolves to exactly the light and dark values it r
     const value = pairModes(values);
     assert.equal(resolveMode(value, 'light'), resolveMode(values.light, 'light'), `${name} (light)`);
     assert.equal(resolveMode(value, 'dark'), resolveMode(values.dark, 'dark'), `${name} (dark)`);
-    assert.ok(value.length < `var(--_lr-dark-on,${values.light})var(--_lr-light-on,${values.dark})`.length || !/^var\(--lr-theme-/.test(values.light),
+    assert.ok(value.length < `var(--_lr-dark-on,${values.light})var(--_lr-light-on,${values.dark})`.length || !values.light.startsWith('var(--lr-theme-'),
       `${name}: a shared input wrapper is written once`);
   }
   assert.ok(pairs > 50, `the layer has its mode pairs (${pairs})`);

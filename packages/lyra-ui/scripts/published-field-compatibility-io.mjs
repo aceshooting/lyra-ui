@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writ
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { decodeEvidence, encodeEvidence, gitObjectId, jsonBytes, parseGitTree, readPublishedCaptureSync, sha256 } from './published-compatibility-io.mjs';
-import { buildFieldEvidenceIndex, derivePublishedFieldFacts, expectedFieldInputPaths, REQUIRED_FIELD_RELEASES, validateFieldEvidenceIndex, validatePublishedFieldAttachment, verifyPublishedFieldContinuity } from './published-field-compatibility.mjs';
+import { derivePublishedFieldFacts, expectedFieldInputPaths, REQUIRED_FIELD_RELEASES, validateFieldEvidenceIndex, validatePublishedFieldAttachment, verifyPublishedFieldContinuity } from './published-field-compatibility.mjs';
 import { isMainModule } from './is-main-module.mjs';
 import { memoizedHistoryVerification } from './published-history-memo.mjs';
 
@@ -161,30 +161,6 @@ export function readPublishedFieldAttachmentSync(directory, ordinaryCaptureDirec
   const packageJson = packageJsonFromCapture(ordinaryCaptureDirectory, ordinaryCapture);
   const verified = validatePublishedFieldAttachment({ attachment, facts, evidence, evidenceArchiveBytes: archiveBytes, ordinaryCapture: ordinaryCapture.capture, ordinaryCaptureBytes, tarMembers: evidence.tarMembers, packageJson });
   return { attachment, facts: verified.facts, evidence, descriptorSha256: sha256(attachmentBytes), verified: true };
-}
-
-/** Write the index only after every exact required release attachment is present and verified. */
-function writeFieldEvidenceIndex(fieldEvidenceDirectory, ordinaryCaptureDirectories, requiredReleases = REQUIRED_FIELD_RELEASES) {
-  const indexPath = join(fieldEvidenceDirectory, 'index.json');
-  ensure(!existsSync(indexPath), 'Field evidence index already exists; its release descriptor pins are immutable');
-  ensure(ordinaryCaptureDirectories && typeof ordinaryCaptureDirectories === 'object' && !Array.isArray(ordinaryCaptureDirectories) &&
-    Object.keys(ordinaryCaptureDirectories).length === requiredReleases.length && requiredReleases.every(release => typeof ordinaryCaptureDirectories[release] === 'string'), 'Index writing requires the exact ordinary capture directory set');
-  const attachments = requiredReleases.map(sourceRelease => {
-    const version = sourceRelease.slice('lyra-ui@'.length);
-    const directory = join(fieldEvidenceDirectory, version);
-    const validated = readPublishedFieldAttachmentSync(directory, ordinaryCaptureDirectories[sourceRelease]);
-    ensure(validated.attachment.sourceRelease === sourceRelease, `Wrong field attachment release at ${directory}`);
-    return { attachment: validated.attachment, descriptorSha256: validated.descriptorSha256 };
-  });
-  const index = buildFieldEvidenceIndex(attachments, requiredReleases);
-  validateFieldEvidenceIndex(index, attachments);
-  const staging = `${indexPath}.pending-${process.pid}`;
-  try {
-    writeFileSync(staging, jsonBytes(index), { flag: 'wx' });
-    if (existsSync(indexPath)) throw new Error('Field evidence index appeared during capture');
-    renameSync(staging, indexPath);
-  } finally { rmSync(staging, { force: true }); }
-  return index;
 }
 
 function readFieldEvidenceIndex(fieldEvidenceDirectory, attachments) {

@@ -380,4 +380,170 @@ describe('createAnsiParser', () => {
     expect(text('\x1b[1\u00e9clair')).to.equal('\u00e9clair');
     expect(text('a\x1b[1\x18b')).to.equal('ab');
   });
+
+  // A control string (OSC, DCS, SOS, PM, APC) is never interpreted, but it must not outlive its
+  // grammar either: BEL or ST ends it, CAN or SUB aborts it, and any other ESC starts a NEW
+  // escape sequence (the VT500 parser model) rather than disappearing into the payload.
+  describe('control strings', () => {
+    const RED = 'var(--lr-terminal-color-red)';
+    const redText = [{ text: 'red', fg: RED, bg: undefined, bold: false }];
+    const visibleText = (segments: AnsiSegment[]) => segments.map((segment) => segment.text).join('');
+    const characters = (segments: AnsiSegment[]) =>
+      segments.flatMap((segment) =>
+        [...segment.text].map((character) => `${character}|${segment.styles.fg ?? ''}|${segment.styles.bold}`),
+      );
+    const openers = [
+      { kind: 'OSC', opener: '\x1b]0;title' },
+      { kind: 'DCS', opener: '\x1bPq#0;2;0;0;0' },
+      { kind: 'SOS', opener: '\x1bXsos text' },
+      { kind: 'PM', opener: '\x1b^privacy' },
+      { kind: 'APC', opener: '\x1b_Ga=T,f=100;AAAA' },
+    ];
+
+    it('renders the output after an unterminated OSC that the next chunk interrupts', () => {
+      const parser = createAnsiParser();
+      expect(parser.push('\x1b]0;t')).to.deep.equal([]);
+      expect(visibleText(parser.push('\x1b[0mafter'))).to.equal('after');
+    });
+
+    it('consumes ST (ESC \\) as the terminator and renders the text and styling after it', () => {
+      const segments = createAnsiParser().push('before\x1b]0;t\x1b\\\x1b[31mred');
+
+      expect(flat(segments)).to.deep.equal([
+        { text: 'before', fg: undefined, bg: undefined, bold: false },
+        ...redText,
+      ]);
+    });
+
+    it('parses ESC [ after an unterminated OSC as a CSI instead of swallowing it', () => {
+      expect(flat(createAnsiParser().push('\x1b]0;t\x1b[31mred'))).to.deep.equal(redText);
+
+      const parser = createAnsiParser();
+      parser.push('\x1b]0;t');
+      expect(flat(parser.push('\x1b[31mred'))).to.deep.equal(redText);
+    });
+
+    it('ends an OSC at BEL, including a BEL that arrives in a later chunk', () => {
+      expect(visibleText(createAnsiParser().push('\x1b]0;t\x07after'))).to.equal('after');
+
+      const parser = createAnsiParser();
+      expect(parser.push('\x1b]0;t')).to.deep.equal([]);
+      expect(visibleText(parser.push('\x07after'))).to.equal('after');
+    });
+
+    it('aborts an unterminated OSC at CAN without rendering it', () => {
+      expect(visibleText(createAnsiParser().push('\x1b]0;t\x18after'))).to.equal('after');
+
+      const parser = createAnsiParser();
+      parser.push('\x1b]0;t');
+      expect(visibleText(parser.push('\x18after'))).to.equal('after');
+    });
+
+    it('aborts an unterminated OSC at SUB without rendering it', () => {
+      expect(visibleText(createAnsiParser().push('\x1b]0;t\x1aafter'))).to.equal('after');
+
+      const parser = createAnsiParser();
+      parser.push('\x1b]0;t');
+      expect(visibleText(parser.push('\x1aafter'))).to.equal('after');
+    });
+
+    it('treats an ESC ending one chunk and a backslash starting the next as ST', () => {
+      const parser = createAnsiParser();
+      expect(visibleText(parser.push('a\x1b]0;t\x1b'))).to.equal('a');
+      expect(visibleText(parser.push('\\b'))).to.equal('b');
+    });
+
+    it('starts a CSI when the ESC ending one chunk is followed by [ in the next', () => {
+      const parser = createAnsiParser();
+      expect(parser.push('\x1b]0;t\x1b')).to.deep.equal([]);
+      expect(flat(parser.push('[31mred'))).to.deep.equal(redText);
+    });
+
+    it('resolves an ESC that ends a chunk the same way once the string is past the carry ceiling', () => {
+      const overlong = `\x1b]0;${'x'.repeat(5_000)}`;
+      // The ESC ends either the chunk that crosses the ceiling or a later chunk of the discarded string.
+      const ways: string[][] = [[`${overlong}\x1b`], [overlong, 'more payload\x1b']];
+
+      for (const chunks of ways) {
+        const st = createAnsiParser();
+        for (const chunk of chunks) expect(st.push(chunk)).to.deep.equal([]);
+        expect(visibleText(st.push('\\after'))).to.equal('after');
+
+        const csi = createAnsiParser();
+        for (const chunk of chunks) expect(csi.push(chunk)).to.deep.equal([]);
+        expect(flat(csi.push('[31mred'))).to.deep.equal(redText);
+      }
+    });
+
+    it('starts a new string when the ESC ending one chunk is followed by ] in the next', () => {
+      const parser = createAnsiParser();
+      expect(parser.push('\x1b]0;a\x1b')).to.deep.equal([]);
+      expect(parser.push(']0;b')).to.deep.equal([]);
+      expect(visibleText(parser.push('\x07after'))).to.equal('after');
+    });
+
+    for (const { kind, opener } of openers) {
+      it(`does not let an unterminated ${kind} swallow a following escape sequence`, () => {
+        expect(flat(createAnsiParser().push(`${opener}\x1b[31mred`))).to.deep.equal(redText);
+
+        const parser = createAnsiParser();
+        expect(parser.push(opener)).to.deep.equal([]);
+        expect(flat(parser.push('\x1b[31mred'))).to.deep.equal(redText);
+      });
+
+      it(`aborts an unterminated ${kind} at CAN or SUB`, () => {
+        expect(visibleText(createAnsiParser().push(`${opener}\x18after`))).to.equal('after');
+        expect(visibleText(createAnsiParser().push(`${opener}\x1aafter`))).to.equal('after');
+
+        const parser = createAnsiParser();
+        parser.push(opener);
+        expect(visibleText(parser.push('\x18after'))).to.equal('after');
+      });
+    }
+
+    it('ends a discarded overlong string at CAN or SUB', () => {
+      for (const cancel of ['\x18', '\x1a']) {
+        const parser = createAnsiParser();
+        expect(parser.push(`\x1b]0;${'x'.repeat(5_000)}`)).to.deep.equal([]);
+        expect(visibleText(parser.push(`more payload${cancel}visible`))).to.equal('visible');
+      }
+    });
+
+    it('never leaks the ESC that interrupts a string into the rendered text', () => {
+      const text = (input: string) => visibleText(createAnsiParser().push(input));
+
+      expect(text('\x1b]0;t\x1b\u00e9after')).to.equal('\u00e9after');
+      expect(text('\x1b]0;t\x1b\nafter')).to.equal('\nafter');
+      expect(text('\x1bPq\x1b\x1b[31mred')).to.equal('red');
+      expect(text('\x1b]0;a\x1b]0;b\x07after')).to.equal('after');
+    });
+
+    it('streams a document of interrupted strings identically for every chunk split', () => {
+      // OSC cancelled by a CSI, OSC + ST, DCS + CAN, APC + SUB, PM + BEL, SOS cancelled by a whole OSC.
+      const input = 'a\x1b]0;t\x1b[31mb\x1b]0;u\x1b\\c\x1bPq\x18d\x1b_G\x1ae\x1b^p\x07f\x1bXs\x1b]0;v\x07g\x1b[1mh';
+      const whole = characters(createAnsiParser().push(input));
+      expect(whole.map((entry) => entry[0]).join('')).to.equal('abcdefgh');
+
+      for (let split = 0; split <= input.length; split++) {
+        const parser = createAnsiParser();
+        const streamed = [...parser.push(input.slice(0, split)), ...parser.push(input.slice(split))];
+        expect(characters(streamed), `split at ${split}`).to.deep.equal(whole);
+      }
+
+      const parser = createAnsiParser();
+      const bytewise = [...input].flatMap((character) => characters(parser.push(character)));
+      expect(bytewise).to.deep.equal(whole);
+    });
+
+    it('reset() clears a held ESC and a discarded string', () => {
+      const parser = createAnsiParser();
+      parser.push('\x1b]0;t\x1b');
+      parser.reset();
+      expect(visibleText(parser.push('[31mplain'))).to.equal('[31mplain');
+
+      parser.push(`\x1b]0;${'x'.repeat(5_000)}`);
+      parser.reset();
+      expect(visibleText(parser.push('plain'))).to.equal('plain');
+    });
+  });
 });

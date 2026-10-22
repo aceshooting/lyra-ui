@@ -1,12 +1,13 @@
 # Cuts a release from the current main commit after it has fully qualified.
 #
-# Run it only once the version-bump commit is on main and push CI,
-# Test All Browsers, and the Full browser-engine suite have all passed on that exact commit:
+# Run it only once the version-bump commit is on main and push CI, Test All Browsers, the Full
+# browser-engine suite, and Quality tools have all passed on that exact commit (dispatch the last three
+# together on the release commit: test-all-browsers.yml, full-engine.yml and quality-tools.yml):
 #
 #   gh workflow run release.yml --ref main
 #
 # It plans the unreleased `<package>@<version>` tags from the committed package.json versions,
-# re-verifies the three qualification gates for the exact commit, packs each tarball with the
+# re-verifies the four qualification gates for the exact commit, packs each tarball with the
 # pinned Node and pnpm, pushes the annotated tags atomically, creates each GitHub Release with its
 # assets, and then dispatches publish.yml on each tag. A release created with GITHUB_TOKEN does not
 # emit `release: published` to other workflows, so that explicit dispatch is the only publish
@@ -47,7 +48,7 @@ jobs:
   plan:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     permissions:
       actions: read
       contents: read
@@ -105,7 +106,7 @@ jobs:
 
       # The same exact-commit checks publish.yml repeats before npm publish. They are expected to
       # be green already, so a short window only absorbs a run that is just finishing.
-      - name: Require CI, Test All Browsers, and the Full browser-engine suite on this commit
+      - name: Require CI, Test All Browsers, the Full browser-engine suite, and Quality tools on this commit
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ steps.source.outputs.sha }}
@@ -119,6 +120,9 @@ jobs:
             --timeout-seconds 300 --poll-seconds 20
           node scripts/release-integrity.mjs wait-full-engine \
             --repository "$GITHUB_REPOSITORY" --sha "$SHA" --workflow full-engine.yml \
+            --timeout-seconds 300 --poll-seconds 20
+          node scripts/release-integrity.mjs wait-quality-tools \
+            --repository "$GITHUB_REPOSITORY" --sha "$SHA" --workflow quality-tools.yml \
             --timeout-seconds 300 --poll-seconds 20
 
   pack:

@@ -601,6 +601,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       } else {
         this.activateOverlayInternal();
       }
+      // oxlint-disable-next-line typescript/no-misused-promises -- fire and forget: a throw becomes an unhandled rejection however it is wrapped, and `lr-tour.js` sits within bytes of its reviewed size budget
       queueMicrotask(async () => {
         if (!this.isConnected || !this.open) return;
         // willUpdate() never reruns on a reconnect (see the comment above), so re-derive

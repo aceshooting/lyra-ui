@@ -2,5 +2,3 @@
 // separate from registrations and diagnostics so an application can install Lit hydration once,
 // then import only the component registrations it actually uses.
 import '@lit-labs/ssr-client/lit-element-hydrate-support.js';
-
-export {};

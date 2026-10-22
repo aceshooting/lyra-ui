@@ -277,6 +277,7 @@ function* ownEnumerableStringKeys(value: object): IterableIterator<string> {
   for (const key in value) yield key;
 }
 
+/** The frozen record copy, or a `CollectionSnapshotFailure` marker when an entry cannot be kept. */
 function snapshotDataRecord(
   value: object,
   keys: Iterable<string>,
@@ -285,7 +286,7 @@ function snapshotDataRecord(
   depth: number,
   preserveRecordKeys?: ReadonlySet<PropertyKey>,
   preserveCollectionItemKeys?: ReadonlySet<PropertyKey>
-): unknown | CollectionSnapshotFailure {
+): unknown {
   // Fill without inherited setters (including __proto__), then restore the destination realm.
   const output = budget.realm.Object.create(null) as Record<
     PropertyKey,
@@ -345,7 +346,7 @@ function snapshotCollectionValue(
   preserveRecordKeys?: ReadonlySet<PropertyKey>,
   preserveCollectionItemKeys?: ReadonlySet<PropertyKey>,
   allowPrefixTruncation = false
-): unknown | CollectionSnapshotFailure {
+): unknown {
   if (
     value === null ||
     (typeof value !== 'object' && typeof value !== 'function')
@@ -856,13 +857,14 @@ function snapshotDetachedSet(
 /**
  * @param root - Only for a root assignment (never with `budget`): which end of an over-limit array
  *   to keep, and where to report entries the 10,000-entry limit cut off.
+ * @returns The detached collection, or a `CollectionSnapshotFailure` marker.
  */
 function snapshotIdentityCollection(
   value: unknown,
   view?: Window | SnapshotRealm | null,
   budget?: CollectionSnapshotBudget,
   root?: PublicCollectionSnapshotOptions
-): unknown | CollectionSnapshotFailure {
+): unknown {
   const realm = snapshotRealm(view);
   if (
     budget &&

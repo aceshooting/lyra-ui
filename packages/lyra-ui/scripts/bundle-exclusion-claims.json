@@ -119,6 +119,13 @@
       "internal/scroll-lock.js"
     ]
   },
+  "dist/lyra.js": {
+    "includedOptionalPeers": [],
+    "forbiddenInputs": [
+      "components/media/map/map.class.js",
+      "components/media/map/map.styles.js"
+    ]
+  },
   "dist/theme/theme.js": {
     "includedOptionalPeers": [],
     "forbiddenInputs": [

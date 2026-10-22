@@ -906,6 +906,35 @@ for (const shape of ['direct', 'nested'] as const) {
   }
 }
 
+const WHEEL_ATTEMPTS = 3;
+
+/**
+ * Scrolls `list` with a native wheel and waits for it to move. `waitUntil` measures a wall-clock budget,
+ * so a stall of the page longer than the budget rejects the wait even though the list has scrolled by
+ * the time the rejection is handled (measured: a 1.1 s main-thread stall against a 1 s wait). A healthy
+ * wheel scrolls within about 20 ms, so after a timeout give the page one frame and read the list again
+ * before calling the wheel unanswered, then land the pointer and send the wheel again. Three one-second
+ * attempts stay inside mocha's six-second limit.
+ */
+async function wheelUntilScrolled(list: HTMLElement): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
+    await hoverUntilMatched(list, 'the scrolling list receives the pointer');
+    await sendWheel({ deltaX: 0, deltaY: 300 });
+    try {
+      await waitUntil(
+        () => list.scrollTop > 0,
+        `the menu list responds to native wheel input (wheel ${attempt} of ${WHEEL_ATTEMPTS})`,
+        { timeout: 1000 },
+      );
+      return;
+    } catch (error) {
+      await nextFrame();
+      if (list.scrollTop > 0) return;
+      if (attempt === WHEEL_ATTEMPTS) throw error;
+    }
+  }
+}
+
 for (const consumerMenu of [false, true]) {
   for (const arrow of [false, true]) {
     it(`keeps long menu lists scrollable within the popup, consumerMenu=${consumerMenu}, arrow=${arrow}`, async () => {
@@ -949,9 +978,7 @@ for (const consumerMenu of [false, true]) {
           }
         }
 
-        await hoverUntilMatched(list, 'the scrolling list receives the pointer');
-        await sendWheel({ deltaX: 0, deltaY: 300 });
-        await waitUntil(() => list.scrollTop > 0, 'the menu list responds to native wheel input');
+        await wheelUntilScrolled(list);
         (el.querySelector('[value="0"]') as LyraDropdownItem).focus();
         await sendKeys({ press: 'End' });
         const last = el.querySelector('[value="29"]') as LyraDropdownItem;

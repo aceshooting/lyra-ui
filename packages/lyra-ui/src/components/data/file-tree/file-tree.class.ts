@@ -730,7 +730,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
 
   collapseAll(): void {
     if (this.treeSource !== undefined) return;
-    (this.renderRoot.querySelector(tag('tree')) as LyraTree | null)?.collapseAll();
+    void (this.renderRoot.querySelector(tag('tree')) as LyraTree | null)?.collapseAll();
   }
 
   override render(): TemplateResult {

@@ -12,7 +12,6 @@ import {
   writeTranslationReviews,
 } from './translation-review-source.mjs';
 import { readTranslationCatalogInventory } from './check-translations.mjs';
-import { validateTranslationReviews } from './translation-review.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const legacyPath = path.join(packageDir, 'scripts/fixtures/translation-reviews.json');
@@ -155,7 +154,7 @@ test('source reader rejects missing, unknown, duplicate, and mismatched locale s
   });
 });
 
-test('assembler and aggregate reader reject malformed source data and stale aggregate bytes', async (t) => {
+test('assembler and aggregate reader reject malformed source data and stale aggregate bytes', async () => {
   const original = await readTranslationReviewSources({ packageDir });
   const fa = original.records.find(({ locale }) => locale === 'fa');
 

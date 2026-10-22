@@ -19,10 +19,10 @@ const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const source = readCanonicalTokens(packageDir);
 const errors = [...validateCanonicalTokens(source), ...verifyRuntimeTokenParity(source, packageDir)];
 const runtimeNames = [...readRuntimeTokenValues(packageDir).keys()]
-  .filter((name) => /^--lr-size-/.test(name))
+  .filter((name) => name.startsWith('--lr-size-'))
   .sort();
 const classifiedNames = Object.keys(source.tokens)
-  .filter((name) => /^--lr-size-/.test(name))
+  .filter((name) => name.startsWith('--lr-size-'))
   .sort();
 
 if (JSON.stringify(runtimeNames) !== JSON.stringify(classifiedNames)) {

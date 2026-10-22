@@ -69,7 +69,7 @@ export interface DataGridColumn<Row = Record<string, unknown>> {
   readonly minWidth?: number;
   readonly maxWidth?: number;
   readonly flex?: number;
-  readonly formatter?: (value: unknown, row: Row) => string | TemplateResult | Node | unknown;
+  readonly formatter?: (value: unknown, row: Row) => string | TemplateResult | Node | unknown; // oxlint-disable-line typescript/no-redundant-type-constituents -- the union documents the supported return kinds
   /** Applied as the generated cell's native `title`, symmetrical with `<lr-table>`'s
    *  `columns[].cellTitle` -- e.g. the untruncated text behind an ellipsized cell, or a formatted
    *  timestamp behind a relative one. Returning `undefined` (or an empty string) omits the
@@ -94,7 +94,7 @@ export interface DataGridColumn<Row = Record<string, unknown>> {
   readonly pinned?: DataGridPinSide;
   readonly footer?: string | ((rows: readonly Row[]) => unknown);
   readonly aggregation?: DataGridAggregation<Row>;
-  readonly aggregatedFormatter?: (value: unknown, rows: readonly Row[]) => string | TemplateResult | Node | unknown;
+  readonly aggregatedFormatter?: (value: unknown, rows: readonly Row[]) => string | TemplateResult | Node | unknown; // oxlint-disable-line typescript/no-redundant-type-constituents -- the union documents the supported return kinds
 }
 
 export interface DataGridSort {

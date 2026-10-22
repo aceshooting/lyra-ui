@@ -3,7 +3,9 @@
  * styled text segments — shared by any component that needs to turn raw ANSI-colored text into
  * styled segments, rather than re-implementing this per consumer. Handles SGR color/style codes
  * and erase-in-line (`CSI K`); other CSI finals, OSC/DCS/SOS/PM/APC strings, and two- or three-byte
- * escapes such as `ESC ( B` or `ESC 7` are stripped and never interpreted.
+ * escapes such as `ESC ( B` or `ESC 7` are stripped and never interpreted. A string ends at BEL or ST
+ * (`ESC \`), is aborted by CAN or SUB, and is cut short by any other ESC, which starts a new
+ * sequence, so a string that never terminates cannot swallow the output after it.
  * Cursor/line-buffer control characters (`\r`/`\b`/`\t`/`\n`) are deliberately out of scope here —
  * they are a terminal-emulation concern owned by the consuming component, not this parser.
  */
@@ -129,10 +131,18 @@ function isCsiFinal(code: number): boolean {
   return code >= 0x40 && code <= 0x7e;
 }
 
-/** ESC P (DCS), ESC X (SOS), ESC ] (OSC), ESC ^ (PM) and ESC _ (APC) open a string ended by ST or BEL. */
+/** ESC P (DCS), ESC X (SOS), ESC ] (OSC), ESC ^ (PM) and ESC _ (APC) open a string. */
 function opensStringSequence(code: number): boolean {
   return code === 0x50 || code === 0x58 || code === 0x5d || code === 0x5e || code === 0x5f;
 }
+
+/** BEL ends a string and CAN or SUB aborts it, each consumed with the string. An ESC ends it as well
+ *  but is never consumed with it: `ESC \` (ST) is stripped as a lone escape and any other ESC starts
+ *  a new sequence. */
+function endsStringSequence(code: number): boolean {
+  return code === 0x07 || code === CAN || code === SUB;
+}
+
 /** ANSI control sequences are small; this generous ceiling prevents a truncated OSC/CSI from
  * retaining and repeatedly rescanning an unbounded streamed suffix, and prevents a terminated
  * sequence from allocating or interpreting an unbounded payload. */
@@ -248,19 +258,16 @@ export function createAnsiParser(): AnsiParser {
           if (isCsiFinal(code) || code === CAN || code === SUB) i++;
           break;
         }
-        if (discarding === 'string' && code === 0x07) {
+        if (discarding === 'string' && endsStringSequence(code)) {
           discarding = null;
           i++;
           break;
         }
         if (code === 0x1b) {
-          if (discarding === 'string' && input[i + 1] === '\\') {
-            discarding = null;
-            i += 2;
-            break;
-          }
-          // A fresh escape starts a new independently parseable boundary. This also lets a bare
-          // trailing ESC become the normal one-byte carry rather than retaining hostile content.
+          // An ESC ends a discarded string without belonging to it: it is parsed afresh, which
+          // strips `ESC \` (ST) whole and starts a new sequence otherwise. This also lets a bare
+          // trailing ESC become the normal one-byte carry, so an ST split across chunks still
+          // resolves, rather than retaining hostile content.
           discarding = null;
           break;
         }
@@ -328,26 +335,25 @@ export function createAnsiParser(): AnsiParser {
 
       if (opensStringSequence(next)) {
         // OSC, DCS, SOS, PM and APC payloads (titles, sixel or kitty graphics, multiplexer
-        // passthrough) run to BEL or ST (ESC \) and are never interpreted.
+        // passthrough) are never interpreted. BEL ends one and CAN or SUB aborts it. An ESC ends
+        // it too but stays unconsumed, so it is parsed afresh below: `ESC \` (ST) is stripped whole
+        // and any other ESC starts a new sequence instead of vanishing into the payload.
         let j = i + 2;
         let terminated = false;
-        let overlong = false;
         while (j < input.length) {
-          if (input.charCodeAt(j) === 0x07) {
-            j++;
-            terminated = true;
-            break;
-          }
-          if (input.charCodeAt(j) === 0x1b && input[j + 1] === '\\') {
-            j += 2;
+          const code = input.charCodeAt(j);
+          if (code === 0x1b) {
             terminated = true;
             break;
           }
           j++;
-          if (j - i > MAX_ANSI_SEQUENCE_LENGTH) overlong = true;
+          if (endsStringSequence(code)) {
+            terminated = true;
+            break;
+          }
         }
         if (!terminated) {
-          if (overlong || input.length - i > MAX_ANSI_SEQUENCE_LENGTH) discarding = 'string';
+          if (input.length - i > MAX_ANSI_SEQUENCE_LENGTH) discarding = 'string';
           else carry = input.slice(i);
           return segments;
         }

@@ -742,6 +742,25 @@ it("parses every format it can emit, so a value survives a round trip", async ()
   }
 });
 
+it("resolves an hsl() value to the channels the browser computes, in every output format", async () => {
+  // In exact arithmetic the green and blue channels of hsl(0, 100%, 95%) are 229.5. The browser
+  // rounds that up to 230 (#ffe6e6); the picker follows it instead of landing on 229.
+  const el = (await fixture(
+    html`<lr-color-picker value="hsl(0, 100%, 95%)"></lr-color-picker>`
+  )) as LyraColorPicker;
+  await el.updateComplete;
+  expect(el.value).to.equal("#ffe6e6");
+
+  el.format = "rgb";
+  await el.updateComplete;
+  expect(el.value).to.equal("rgb(255, 230, 230)");
+
+  // Exact .5 channels the browser rounds down are followed the same way.
+  el.value = "hsl(170, 80%, 50%)";
+  await el.updateComplete;
+  expect(el.value).to.equal("rgb(26, 230, 195)");
+});
+
 it("uppercases the serialized value when uppercase is set", async () => {
   const el = (await fixture(
     html`<lr-color-picker value="#ff00aa" uppercase></lr-color-picker>`

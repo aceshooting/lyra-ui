@@ -14,7 +14,8 @@ export function flowSourceRows(raw: unknown, limit: number, reader: SceneReader)
     const order = sourceCount(reader.field(rawRow, 'order')), rawValue = reader.field(rawRow, 'value');
     const kind = reader.field(rawValue, 'kind'), value = reader.field(rawValue, 'value');
     const id = reader.text(reader.field(value, 'id'), true);
-    if (!id.trim() || key !== `${kind}:${id}`) throw new TypeError('Invalid flow record identity');
+    // `kind` is untrusted data: only a string may be interpolated into the identity key.
+    if (!id.trim() || typeof kind !== 'string' || key !== `${kind}:${id}`) throw new TypeError('Invalid flow record identity');
     if (kind === 'node') {
       const data = reader.field(value, 'data');
       const label = data === undefined ? undefined : reader.field(data, 'label');

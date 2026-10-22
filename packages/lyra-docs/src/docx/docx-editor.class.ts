@@ -1067,20 +1067,20 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private onParagraphStyleChange(event: CustomEvent<{ value: string | string[] }>): void {
     if (typeof event.detail.value === 'string' && event.detail.value) {
       this.pickerFocusReturn = true;
-      this.runEdit({ type: 'paragraph-style', styleId: event.detail.value }, false);
+      void this.runEdit({ type: 'paragraph-style', styleId: event.detail.value }, false);
     }
   }
 
   private onFontFamilyChange(event: CustomEvent<{ value: string | string[] }>): void {
     if (typeof event.detail.value === 'string' && event.detail.value) {
       this.pickerFocusReturn = true;
-      this.runEdit({ type: 'font-family', family: event.detail.value }, false);
+      void this.runEdit({ type: 'font-family', family: event.detail.value }, false);
     }
   }
 
   private onFontSizeChange(event: CustomEvent<{ value: string }>): void {
     const points = Number(event.detail.value);
-    this.runEdit({ type: 'font-size', points });
+    void this.runEdit({ type: 'font-size', points });
   }
 
   private findEditorPopover(part: string): EditorPopover | null {
@@ -1094,7 +1094,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   /** Apply a color tool's edit; palette picks close their popover and return to the document. */
   private applyPopoverEdit(edit: DocxEdit, close: string | null): void {
     this.pickerFocusReturn = close !== null;
-    this.runEdit(edit, false);
+    void this.runEdit(edit, false);
     if (this.editError) return;
     if (edit.type === 'text-color' && edit.color !== 'auto') this.lastTextColor = edit.color;
     if (edit.type === 'highlight' && edit.color !== 'none') this.lastHighlight = edit.color;
@@ -1137,7 +1137,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   private applyLink(): void {
-    this.runEdit(this.linkEdit(), false);
+    void this.runEdit(this.linkEdit(), false);
     if (this.editError === null) this.closeLinkEditor();
   }
 
@@ -1268,7 +1268,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private insertTable(): void {
     const action = tableInsertDraft(this.tableRows, this.tableColumns);
     if (!action) return;
-    this.runTableEdit(action, true);
+    void this.runTableEdit(action, true);
   }
 
   private insertionPopover() {
@@ -1608,12 +1608,12 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     let action = imageResizeDraft(this.imageWidth, this.imageHeight);
     if (!action || !this.imageIntent) return;
     if (imageResizeUnchanged(action, this.imageIntent.image)) action = { type: 'resize-image', ...this.imageIntent.image };
-    this.runImageEdit(action, true);
+    void this.runImageEdit(action, true);
   }
 
   private applyImageDescription(): void {
     const action = imageDescriptionDraft(this.imageTitle, this.imageDescriptionText);
-    if (action) this.runImageEdit(action, true);
+    if (action) void this.runImageEdit(action, true);
   }
 
   private imageHandlesAvailable(): boolean {
@@ -2465,7 +2465,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
             @click=${() => this.applyLink()}>${this.localize('docxEditorApplyLink')}</${buttonTag}>
           <${buttonTag} part="link-remove" data-edit="remove-link" size="s" appearance="quiet"
             ?disabled=${!this.available({ type: 'remove-link' })}
-            @click=${() => { this.runEdit({ type: 'remove-link' }, false); if (!this.editError) this.closeLinkEditor(); }}>
+            @click=${() => { void this.runEdit({ type: 'remove-link' }, false); if (!this.editError) this.closeLinkEditor(); }}>
             ${this.localize('docxEditorRemoveLink')}
           </${buttonTag}>
           <${buttonTag} part="link-cancel" size="s" appearance="quiet"
@@ -3095,7 +3095,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         ${!this.reviewReplyId && this.intentValid(this.reviewIntent) && !this.reviewHadTextSelection ?
           html`<p>${this.localize('docxEditorReviewSelectText')}</p>` : nothing}
         <${buttonTag} part="review-submit" size="s" appearance="quiet" ?disabled=${!draft || !this.reviewActionAvailable(draft)}
-          @click=${() => { if (draft) this.runReviewAction(draft); }}>${this.localize(this.reviewReplyId ? 'docxEditorReviewSend' : 'docxEditorReviewAdd')}</${buttonTag}>
+          @click=${() => { if (draft) void this.runReviewAction(draft); }}>${this.localize(this.reviewReplyId ? 'docxEditorReviewSend' : 'docxEditorReviewAdd')}</${buttonTag}>
         ${this.reviewReplyId ? html`<${buttonTag} part="review-reply-cancel" size="s" appearance="quiet"
           @click=${() => { this.reviewReplyId = null; }}>${this.localize('docxEditorCancel')}</${buttonTag}>` : nothing}
       </div>

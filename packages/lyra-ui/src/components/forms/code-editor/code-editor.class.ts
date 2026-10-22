@@ -245,6 +245,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   get wrap(): LyraCodeEditorWrap {
     return this.wrapValue;
   }
+  // oxlint-disable-next-line typescript/no-redundant-type-constituents -- any string is accepted and normalized to 'off'; the literal union documents the supported values in the signature.
   set wrap(next: LyraCodeEditorWrap | string | null) {
     const old = this.wrapValue;
     this.wrapValue = next === 'soft' || next === 'hard' ? next : 'off';

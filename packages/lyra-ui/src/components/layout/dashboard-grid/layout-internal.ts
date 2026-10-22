@@ -38,10 +38,11 @@ export interface DashboardPlacementMetrics {
   collisionCandidates: number;
 }
 
+/** The own property value, or the `MISSING` / `INVALID` sentinel. */
 function safeRead(
   record: object,
   key: PropertyKey
-): unknown | typeof INVALID | typeof MISSING {
+): unknown {
   try {
     return Object.hasOwn(record, key) ? Reflect.get(record, key) : MISSING;
   } catch {

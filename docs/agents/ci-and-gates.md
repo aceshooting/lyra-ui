@@ -20,7 +20,37 @@ explicitly unstable `typescript/unstable/sync`, `/fs` and `/ast` interfaces for 
 check; this does not establish compatibility for `type-coverage`, type-aware `typescript-eslint`,
 `ts-morph`, Stryker's TypeScript checker or other compiler-API tools. Verify a proposed tool against
 the pinned package first, or use options needing no compiler API: `tsc`'s strict flags, bespoke
-`check-*.mjs` scanners, `secretlint`, `knip`, `cspell`.
+`check-*.mjs` scanners, `secretlint`, `knip`, `cspell`, oxlint (its type-aware backend is
+typescript-go, which reads the TS 7 `tsconfig.json` natively), Stryker without a checker (the mutated
+modules are plain JavaScript). dependency-cruiser does need the legacy API, so `pnpm-workspace.yaml`
+(`packageExtensions`) gives it a private `typescript@6`; every other package keeps `typescript@7`.
+
+**Static-analysis gates.** Two `contract-policy` members run third-party analyzers over the sources;
+both are also root scripts, and a finding fails `lint`:
+
+- `check:oxlint` (`pnpm lint:oxlint`, about 6 s) runs oxlint with the root `.oxlintrc.json`:
+  type-aware over `packages/{lyra-ui,lyra-3d,lyra-map}/src`, syntax-only over the `.mjs` tooling
+  (`scripts/`, `packages/*/scripts`, `benchmarks/`, `.storybook/`); `lyra-docs` runs the type-aware pass
+  in its own `lint` script because it needs lyra-ui's built declarations. The config is oxlint's
+  `correctness` category plus `no-floating-promises`, `no-misused-promises` and
+  `switch-exhaustiveness-check`, minus the rules that fire on idioms this code base uses on purpose
+  (each switched-off rule carries its reason in the file). A deliberately unawaited promise is
+  `void p`; a callback slot that expects `void` gets `() => void p()`. Shipped component code fixes a
+  finding; `// oxlint-disable-line <rule> -- <reason>` is for the tooling and for public type text that
+  generated docs quote verbatim (for example a documented return-kind union). The six component
+  directories under `ignorePatterns` ("covered separately") are excluded until their rework lands:
+  remove the entries then and fix what surfaces.
+- `check:architecture` (`pnpm check:architecture`, about 16 s) runs dependency-cruiser with
+  `packages/lyra-ui/.dependency-cruiser.cjs` over `src`. Errors: a static or type-only import cycle (the
+  contract of `check:cycles`, which stays), a shipped module importing a test, story, fixture or
+  `src/testing`, and a shipped module reaching an optional peer through a static edge. Warnings: a
+  component directory importing another component's private module, `src/internal` importing a
+  component, and an orphaned module. The warnings that exist today are frozen in
+  `.dependency-cruiser-known-violations.json`, so a run prints only new ones: fix the import (move the
+  shared code to `src/internal`) instead of adding an entry, delete an entry when you remove its
+  violation, and refresh the file with `pnpm --filter @aceshooting/lyra-ui run architecture:baseline`.
+  The legacy parser misses a few literal `import()` calls in default-parameter initialisers, so peer
+  laziness is proven by the esbuild bundle budgets (`bundle-exclusion-claims.json`), not here.
 
 Two silent-failure checks worth knowing:
 
@@ -262,6 +292,63 @@ are for diagnosis only: the generated qualification manifest requires the Chromi
 aggregates from one successful `workflow_dispatch` run whose `head_branch` is `main` and whose
 `head_sha` is the release commit, so a subset run cannot qualify a release.
 
+## Quality tools (`quality-tools.yml`)
+
+`.github/workflows/quality-tools.yml` is release qualification, exactly like `test-all-browsers.yml`
+and `full-engine.yml`: its four jobs carry `# release-qualification: required` markers, the generated
+`.github/release-qualification.json` lists them under `qualityTools`, and `release-integrity.mjs
+wait-quality-tools` requires one successful `workflow_dispatch` run from `main` on the exact release
+commit with every job successful (a skipped job fails the check, so a run with the benchmark switched off
+cannot qualify). Each job fails on a real problem and writes everything else to its job summary and to an
+artifact kept for seven days. Every job can be started by hand; the schedules are a nightly flake hunt and
+a Monday pass (full mutation run, bundle composition) that give early warning on `main` but never
+qualify a release, because the waits accept dispatched runs only.
+
+| Job | Fails when | Reports | Locally |
+| --- | --- | --- | --- |
+| flake hunt | a test fails its first attempt in 2 or more of the 3 runs (broken), a run loses a file (the harness crashed), or the tool breaks | Every test of the 40 most expensive files (from `scripts/fixtures/test-file-costs.json`) that fails a first attempt over three Chromium runs with `WTR_RETRIES=0`; a test failing once is flaky and is a `::warning` annotation, not a failure. | `pnpm --filter @aceshooting/lyra-ui exec node scripts/flake-hunt.mjs --runs 3` (`--engine firefox\|webkit`, `--broken-after n`, `--fail-on-failure` to fail on a flake too) |
+| mutation testing | Stryker or its sandbox breaks, or the report is missing, empty or holds no testable mutant | Stryker's score and surviving mutants for `packages/lyra-map`'s own logic modules (`stryker.config.mjs` lists them; the generated renderer and the three code-emitting transforms are out of scope because their mutants only show in a browser). Every mutant runs (`--force`) and no earlier result is reused, so the run always covers the commit it ran on; the score is a worklist, never a failure. | `pnpm --filter @aceshooting/lyra-map test:mutation` (incremental locally), then `node scripts/mutation-summary.mjs` |
+| bundle composition | the report cannot be built (a missing or unbuildable entry) | Minified and gzip size of representative built entries attributed to the modules that make them up, the modules nearly every component entry shares, and the esbuild metafiles for [esbuild's analyzer](https://esbuild.github.io/analyze/). Complements `check:bundle-size`, which only compares totals with budgets. | `node scripts/bundle-composition-report.mjs` after a build |
+| A/B benchmark | the 95% interval of a workload's slowdown lies entirely above 10%, or a workload produced no interval | tachometer (pinned in `benchmarks/ab.mjs`, run through `npx`, never a dependency) interleaves the built package and the latest published release in one browser session and samples until the interval is bounded within 5% either way or the timeout passes: 1,000 `lr-button`, a 10,000-row `lr-data-grid`, a 10,000-item `lr-virtual-list`. An interval that reaches past 10% but includes smaller values is inconclusive and warns. `benchmarks/` stays the phase-level regression gate; this is the second opinion against the last release. | `pnpm benchmark:ab` on a quiet machine (`--fail-above 10`) |
+
+The A/B limit is `DEFAULT_FAIL_ABOVE_PERCENT` in `benchmarks/ab.mjs` (10, passed explicitly by the
+workflow). Tachometer's `percentChange` interval is (local - published) / published, so positive means the
+built package is slower; the gate compares its lower bound with the limit, which is the statistically
+significant regression beyond the threshold. Raising the limit is a reviewed policy change, like a bundle
+budget.
+
+`WTR_RETRIES=0` is the only way a lane sees a test that passes on its retry, so only this workflow sets
+it; `ci.yml`, `full-engine.yml` and `test-all-browsers.yml` keep mocha's default of one retry (a policy
+test enforces it). `WTR_FAILURE_REPORT=<file>` makes the runner append one JSON line per failed test,
+per file-level error and per completed file; the flake hunt reads it, and an incomplete run (files that
+never reported) fails the job rather than counting as clean.
+
+**Release rule.** On the release commit, dispatch the three on-demand qualification workflows together
+(default inputs; the Quality tools run must include the A/B benchmark):
+
+```bash
+gh workflow run test-all-browsers.yml --ref main
+gh workflow run full-engine.yml --ref main
+gh workflow run quality-tools.yml --ref main
+```
+
+`release.yml` then requires push CI plus all three, and the publish verification repeats the check. Run
+the workflow once on the release candidate before `pnpm release:prepare` too, so a finding is still a
+plain commit rather than a requalification of the version bump. Resolve findings like this:
+
+- a broken test is a bug; a flaky one is fixed, or quarantined with a tracked reason;
+- a surviving mutant in `lyra-map` gets a test, or a recorded reason it is equivalent (the score itself
+  does not fail the job, but the worklist is not for ignoring);
+- a bundle entry that grew is explained by the composition table (or fixed) before `release:budgets`;
+- an A/B regression above the limit is fixed, or the limit is raised in a reviewed change that explains
+  it in the changeset like any material benchmark regression (see Runtime comparison below). A slowdown
+  below the limit is reported in the table and handled the same way when it is material.
+
+Commits that resolve a finding land first, and the dependency freeze applies as usual: the qualifying
+run is the one on the commit that will be released. Re-run a red job (`gh run rerun <id> --failed`) only
+when the failure is infrastructure (a lost runner, a registry timeout, tachometer or Stryker crashing
+before they measure); re-rolling to get past a broken test or a benchmark interval defeats the gate.
+
 ## Local aggregate: `scripts/ci.sh`
 
 `./scripts/ci.sh` consolidates the six primary jobs into one Node 22/Chromium run. It requires the exact Node patch recorded in `.nvmrc` and pnpm to match `package.json#packageManager`, so a green run under another patch is not mistaken for CI; run `nvm use` first. It reuses one install, one library build and one Storybook build, and omits the external Codecov and artifact-upload actions (the blocking local equivalents of bundle-size, coverage and visual regression still run; `codecov:bundle` is reporting only). It includes the networked, content-addressed pinned-upstream-manifest check (an unavailable registry or changed artifact fails the run rather than falling back to a clone-generated manifest) and the checksum-pinned actionlint workflow gate.
@@ -385,12 +472,13 @@ remain advisory evidence; the deterministic scale counters are the automated reg
    publishable dependent: the package-version delta, not the changeset list, is the release set. Only
    stable `major.minor.patch` versions are accepted.
 2. **Commit and qualify.** Review, commit as `chore(release): <pkg>@<version>`, push to main. Push CI
-   runs on that commit; dispatch `test-all-browsers.yml` (default browsers) and `full-engine.yml` on
-   main for the same commit. Fix any failure with a new commit and requalify the new HEAD.
+   runs on that commit; dispatch `test-all-browsers.yml` (default browsers), `full-engine.yml` and
+   `quality-tools.yml` (default inputs, so the A/B benchmark runs) on main for the same commit, all three
+   together. Fix any failure with a new commit and requalify the new HEAD.
 3. **Release on GitHub.** `gh workflow run release.yml --ref main` plans one `<directory>@<version>`
    tag per publishable package whose committed version is untagged (a named `package` input must be
    unreleased) and requires, through `release-integrity.mjs`, the exact-SHA `push`/`main` CI run and
-   `workflow_dispatch`/`main` runs of both browser workflows. A credential-free job packs each
+   `workflow_dispatch`/`main` runs of the two browser workflows and of Quality tools. A credential-free job packs each
    tarball with the pinned Node and pnpm (the same command publish verification rebuilds with) and
    fails if packing changes tracked files. A job with no checkout then pushes the annotated tags
    atomically, creates each GitHub Release with the tarball, canonical source archive and `CHANGELOG.md` (plus
@@ -403,15 +491,16 @@ remain advisory evidence; the deterministic scale counters are the automated reg
 
 The read-only publish verification job rejects a lightweight tag, verifies the annotated tag's peeled
 commit is both the checkout and the invocation ref/SHA, then waits for one successful `push`/`main`
-`ci.yml` run and successful `workflow_dispatch`/`main` runs of `test-all-browsers.yml` and
-`full-engine.yml`, all with that `head_sha`. A manual invocation must therefore be dispatched on the
+`ci.yml` run and successful `workflow_dispatch`/`main` runs of `test-all-browsers.yml`,
+`full-engine.yml` and `quality-tools.yml`, all with that `head_sha`. A manual invocation must therefore be dispatched on the
 tag itself (`gh workflow run publish.yml --ref <tag> -f tag=<tag>`). Each run must contain successful
 results for every job marked `release-qualification: required` or `release-qualification: matrix`,
 and every job present must succeed, so a new gate cannot become non-blocking by accident. The exact
 expanded job names live in `.github/release-qualification.json`; `generate-release-qualification.mjs
---check` derives them from all three workflow files, making matrix or display-name drift a freshness
-failure. The browser run must contain Chromium, Chrome and Edge, and the full-engine run every
-Firefox and WebKit shard. The helper reads the named runs and their jobs, not every check on the
+--check` derives them from all four workflow files, making matrix or display-name drift a freshness
+failure. The browser run must contain Chromium, Chrome and Edge, the full-engine run every
+Firefox and WebKit shard, and the Quality tools run its flake hunt, mutation, bundle composition and
+A/B benchmark jobs (a dispatch with `ab_benchmark` off has a skipped job and fails the check). The helper reads the named runs and their jobs, not every check on the
 commit (that would include the running publish job and deadlock). Its state-machine, tag and tarball
 checks are tested in `scripts/release-integrity.test.mjs`.
 
@@ -636,8 +725,11 @@ path, and `package.sh` ships the focused shared routes in the standalone referen
 Six check families (`lint`, `static-checks`, `build-and-coverage`, `packed-consumer`,
 `docs-and-storybook`, `visual-regression`) plus the `platform-contracts` matrix run on every push;
 `full-engine.yml` (weekly and manual) and `test-all-browsers.yml` (manual) are the complete-suite
-sweeps. Releases require the push CI, the Chromium/Chrome/Edge Test All Browsers aggregates and every
-full-engine shard (Firefox and WebKit) to succeed on the exact main commit before any tag is created.
+sweeps; `quality-tools.yml` (manual for qualification, nightly and weekly for early warning) runs the flake
+hunt, mutation testing, bundle composition and the published-release benchmark
+([Quality tools](#quality-tools-quality-toolsyml)). Releases require the push CI, the Chromium/Chrome/Edge
+Test All Browsers aggregates, every full-engine shard (Firefox and WebKit) and all four Quality tools jobs
+to succeed on the exact main commit before any tag is created.
 
 ### Deterministic scale budgets
 

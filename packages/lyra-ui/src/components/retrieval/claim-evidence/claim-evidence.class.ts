@@ -95,7 +95,7 @@ const EMPTY_CANONICAL_CITATIONS: readonly CanonicalCitation[] = Object.freeze(
 
 function valueOfDescriptor(
   descriptor: ReturnType<typeof getOwnDataDescriptor>
-): unknown | undefined {
+): unknown {
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
     descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
     ? undefined

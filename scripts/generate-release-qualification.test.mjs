@@ -62,9 +62,29 @@ jobs:
         browser: \${{ fromJSON(needs.plan.outputs.browsers) }}
   `;
 
+  const qualityToolsSource = `
+name: Quality tools
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 2 * * *'
+jobs:
+  # release-qualification: required
+  flake-hunt:
+    name: flake hunt (Chromium)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '23 2 * * *'
+  # release-qualification: required
+  mutation:
+    name: mutation testing (lyra-map)
+  # release-qualification: required
+  silent-name:
+    runs-on: ubuntu-latest
+  `;
+
   const qualification = deriveReleaseQualification({
     ciSource,
     fullEngineSource,
+    qualityToolsSource,
     testAllBrowsersSource,
   });
   assert.deepEqual(qualification, {
@@ -95,6 +115,14 @@ jobs:
           'webkit / shard 2/2',
         ],
       },
+      qualityTools: {
+        name: 'Quality tools',
+        path: '.github/workflows/quality-tools.yml',
+        event: 'workflow_dispatch',
+        headBranch: 'main',
+        // A job without a `name:` is reported under its id, like the other workflows.
+        requiredJobs: ['flake hunt (Chromium)', 'mutation testing (lyra-map)', 'silent-name'],
+      },
       testAllBrowsers: {
         name: 'Test All Browsers',
         path: '.github/workflows/test-all-browsers.yml',
@@ -104,7 +132,11 @@ jobs:
       },
     },
   });
+  // The manifest is read by humans and diffed in review: keep its workflows alphabetical.
+  assert.deepEqual(Object.keys(qualification.workflows), ['ci', 'fullEngine', 'qualityTools', 'testAllBrowsers']);
 });
+
+const markedQualityTools = `name: Quality tools\njobs:\n  # release-qualification: required\n  flake-hunt:\n    runs-on: ubuntu-latest`;
 
 test('fails closed on an unmarked workflow or unresolved matrix interpolation', () => {
   assert.throws(
@@ -112,6 +144,7 @@ test('fails closed on an unmarked workflow or unresolved matrix interpolation', 
       deriveReleaseQualification({
         ciSource: 'name: CI\njobs:\n  lint:\n    runs-on: ubuntu-latest',
         fullEngineSource: 'name: Full\njobs: {}',
+        qualityToolsSource: markedQualityTools,
         testAllBrowsersSource: `name: Browsers\non:\n  workflow_dispatch:\n    inputs:\n      browsers:\n        default: chromium\njobs:\n  # release-qualification: required\n  test:\n    runs-on: ubuntu-latest`,
       }),
     /no release-qualification jobs/
@@ -121,6 +154,7 @@ test('fails closed on an unmarked workflow or unresolved matrix interpolation', 
       deriveReleaseQualification({
         ciSource: `name: CI\njobs:\n  # release-qualification: matrix\n  platform:\n    name: \${{ matrix.missing }}\n    strategy:\n      matrix:\n        browser: [firefox]`,
         fullEngineSource: `name: Full\njobs:\n  # release-qualification: required\n  full:\n    runs-on: ubuntu-latest`,
+        qualityToolsSource: markedQualityTools,
         testAllBrowsersSource: `name: Browsers\non:\n  workflow_dispatch:\n    inputs:\n      browsers:\n        default: chromium\njobs:\n  # release-qualification: required\n  test:\n    runs-on: ubuntu-latest`,
       }),
     /unresolved matrix expression/
@@ -151,8 +185,35 @@ jobs:
       deriveReleaseQualification({
         ciSource,
         fullEngineSource,
+        qualityToolsSource: markedQualityTools,
         testAllBrowsersSource,
       }),
     /browsers.*default/iu
+  );
+});
+
+test('fails closed when the quality-tools workflow marks no job, so it cannot qualify nothing', () => {
+  const marked = `name: Marked\njobs:\n  # release-qualification: required\n  job:\n    runs-on: ubuntu-latest`;
+  const browsers = `name: Browsers\non:\n  workflow_dispatch:\n    inputs:\n      browsers:\n        default: chromium\njobs:\n  # release-qualification: required\n  test:\n    runs-on: ubuntu-latest`;
+  assert.throws(
+    () =>
+      deriveReleaseQualification({
+        ciSource: marked,
+        fullEngineSource: marked,
+        qualityToolsSource: 'name: Quality tools\njobs:\n  flake-hunt:\n    runs-on: ubuntu-latest',
+        testAllBrowsersSource: browsers,
+      }),
+    /no release-qualification jobs/
+  );
+  // A marker that is not directly above a job header is a mistake, not a pass.
+  assert.throws(
+    () =>
+      deriveReleaseQualification({
+        ciSource: marked,
+        fullEngineSource: marked,
+        qualityToolsSource: 'name: Quality tools\njobs:\n  # release-qualification: required\n  # a stray comment\n  flake-hunt:\n    runs-on: ubuntu-latest',
+        testAllBrowsersSource: browsers,
+      }),
+    /not directly above a job/
   );
 });

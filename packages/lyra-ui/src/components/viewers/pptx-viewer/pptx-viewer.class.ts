@@ -24,7 +24,7 @@ import { assertPptxArchiveWithinLimits } from './pptx-resource-guard.js';
 import { styles } from './pptx-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
-import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind, TextSelectDetail } from '../document-viewer/anchors.js';
 import { textQuoteContextScore } from '../document-viewer/anchors.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
@@ -791,12 +791,12 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     if (this.phase !== 'mounted') return nothing;
     return html`
       <div part="nav" ?hidden=${this.slideCount <= 1}>
-        ${renderViewerPagerButton('previous', this.localize('pptxViewerPreviousSlide'), this.currentSlideIndex <= 0, () => this.goToSlide(this.currentSlideIndex - 1))}
+        ${renderViewerPagerButton('previous', this.localize('pptxViewerPreviousSlide'), this.currentSlideIndex <= 0, () => void this.goToSlide(this.currentSlideIndex - 1))}
         <span part="slide-count">${this.localize('pptxViewerSlideOf', undefined, {
           current: getNumberFormat(this.effectiveLocale).format(this.currentSlideIndex + 1),
           total: getNumberFormat(this.effectiveLocale).format(this.slideCount),
         })}</span>
-        ${renderViewerPagerButton('next', this.localize('pptxViewerNextSlide'), this.currentSlideIndex >= this.slideCount - 1, () => this.goToSlide(this.currentSlideIndex + 1))}
+        ${renderViewerPagerButton('next', this.localize('pptxViewerNextSlide'), this.currentSlideIndex >= this.slideCount - 1, () => void this.goToSlide(this.currentSlideIndex + 1))}
       </div>
       <div part="container"></div>
     `;

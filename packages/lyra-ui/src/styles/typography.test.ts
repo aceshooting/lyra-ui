@@ -238,7 +238,7 @@ describe('typography role classes', () => {
     const rules = await utilitiesLayerRules();
     const roleRules = rules.filter((rule) =>
       selectorArms(rule.selectorText).some(
-        (arm) => /^:where\(\.lr-(heading-[1-4]|inline-code)/.test(arm) || /^:where\(a\) :where\(\.lr-inline-code/.test(arm),
+        (arm) => /^:where\(\.lr-(heading-[1-4]|inline-code)/.test(arm) || arm.startsWith(':where(a) :where(.lr-inline-code'),
       ),
     );
     expect(roleRules.length, 'role rules found').to.be.greaterThan(5);

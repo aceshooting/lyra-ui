@@ -780,7 +780,7 @@ export function projectChartSeries(value: unknown): LyraChartSeries | undefined 
   }
   const valueAt = (
     property: (typeof CHART_SERIES_PROPERTIES)[number]
-  ): unknown | undefined => {
+  ): unknown => {
     const descriptor = descriptors.get(property);
     return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
       descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ||
@@ -931,10 +931,11 @@ function projectLegendPosition(value: unknown): { [scaleId: string]: number } | 
   return Object.freeze(output);
 }
 
+/** The detached value, or the `OMIT_CHART_CONFIGURATION_VALUE` sentinel when it must be dropped. */
 function copyChartConfigurationValue(
   value: unknown,
   profile: 'chart' | 'chartData' = 'chart',
-): unknown | typeof OMIT_CHART_CONFIGURATION_VALUE {
+): unknown {
   const snapshot = snapshotStructuredData(value, {
     profile,
     omitKeys: UNSAFE_KEYS,
@@ -1340,7 +1341,7 @@ function labelText(value: unknown, depth = 0): string {
 }
 
 /** Reads a Chart.js dataset field without invoking a caller or plugin accessor. */
-function chartDatasetValue(dataset: unknown, property: PropertyKey): unknown | undefined {
+function chartDatasetValue(dataset: unknown, property: PropertyKey): unknown {
   if (!isChartRecord(dataset)) return undefined;
   const descriptor = chartRecordValue(dataset, property);
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
@@ -4072,7 +4073,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   private computeStackTotals(
     axisId: 'y' | 'y2' = 'y',
-    stackGroup: string | undefined = undefined,
+    stackGroup?: string,
   ): (number | null)[] {
     const effective = this.effectiveData();
     const members = effective.datasets.filter(
@@ -4782,7 +4783,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     value: unknown,
     context: LyraChartValueFormatterContext,
     metadata: LyraChartFormatterMetadata = {},
-  ): string | unknown {
+  ): unknown {
     const numeric = chartDatumNumericValue(value);
     if (numeric === undefined) return value;
     return (

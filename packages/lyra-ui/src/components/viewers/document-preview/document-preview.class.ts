@@ -34,7 +34,7 @@ import {
   type SafePercentRect,
 } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
-import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import {
   snapshotLyraHighlightAnchorKind,
   snapshotLyraHighlights,

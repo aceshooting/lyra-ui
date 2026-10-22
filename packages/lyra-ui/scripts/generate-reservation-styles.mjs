@@ -16,7 +16,6 @@ import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const cssPath = path.join(packageDir, 'src', 'styles', 'reservations.css');
 const outputPath = path.join(packageDir, 'src', 'styles', 'reservations.styles.ts');
 
 /**

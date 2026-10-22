@@ -651,6 +651,40 @@ describe('status-change announcements', () => {
     expect(await getLiveRegionText(el)).to.equal('Example 2 needs approval');
   });
 
+  it('announces an example being queued (running -> queued) by its localized status name, politely', async () => {
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
+    el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'queued' as const } } : ex));
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('lr-live-region')!;
+    expect((region as unknown as { mode: string }).mode).to.equal('polite');
+    expect(await getLiveRegionText(el)).to.equal('Example 2: Queued');
+  });
+
+  it('announces an example collecting context (running -> collecting), politely', async () => {
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
+    el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'collecting' as const } } : ex));
+    await el.updateComplete;
+    expect(await getLiveRegionText(el)).to.equal('Example 2: Collecting context');
+  });
+
+  it('announces an application-defined status with its own label', async () => {
+    const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
+    el.examples = examples.map((ex) =>
+      ex.id === 'ex-2' ? { ...ex, status: { kind: 'retrying', label: 'Retrying after rate limit' } } : ex,
+    );
+    await el.updateComplete;
+    expect(await getLiveRegionText(el)).to.equal('Example 2: Retrying after rate limit');
+  });
+
+  it('localizes the queued announcement through the shared status strings', async () => {
+    const el = (await fixture(
+      html`<lr-eval-run .examples=${examples} .strings=${{ agentRunStatusQueued: 'En file', taskListStepIncompleteAnnounce: '{label} : {status}' }}></lr-eval-run>`,
+    )) as LyraEvalRun;
+    el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'queued' as const } } : ex));
+    await el.updateComplete;
+    expect(await getLiveRegionText(el)).to.equal('Example 2 : En file');
+  });
+
   it('does not announce a transition to idle (a no-op status, unlike the other terminal/waiting kinds)', async () => {
     const el = (await fixture(html`<lr-eval-run .examples=${examples}></lr-eval-run>`)) as LyraEvalRun;
     el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'idle' as const } } : ex));

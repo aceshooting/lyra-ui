@@ -3484,6 +3484,12 @@ active? }`. `label` and `variant` customize application-defined lifecycle displa
 - `headingLevel: LyraHeadingLevel = '4'` (attribute `heading-level`) — level of each example's
   section headings (input, output, grounding, tool trace); `'none'` drops heading semantics
 
+**Announcements:** nothing is announced for the first render. After it, a change of an example's status
+is announced politely, and `error` assertively. `running`, `done`, `error`, `cancelled`, `waiting-input`
+and `waiting-approval` have their own localized sentence ("{label} started", "{label} needs input", ...);
+`queued`, `collecting` and application-defined statuses announce "{label}: {status}" using the status's
+localized name or its `label`; `idle` is silent.
+
 **Events:** `lr-example-toggle` (`detail: EvalExampleToggleDetail` = `{ exampleId: string; expanded:
 boolean }`), `lr-example-citation-select` (`detail: EvalCitationSelectDetail` = `{ exampleId:
 string; citation: Citation }` — the nested `lr-grounding-summary`'s own `{ citation }` correlated

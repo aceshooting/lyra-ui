@@ -3,7 +3,7 @@ import { isMainModule } from './is-main-module.mjs';
 // Manual, occasional regeneration tool. Run it from packages/lyra-ui whenever the tiny fixture
 // needs a new field or style. The fixed archive timestamp keeps repeated runs byte-identical.
 import { writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import JSZip from 'jszip';
 

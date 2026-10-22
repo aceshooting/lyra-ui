@@ -45,6 +45,36 @@ Vite builds a production fixture bundle under ignored `benchmarks/.work/`, then 
 
 Avoid concurrent browser workloads on the same machine. Keep power mode, rendering mode, browser versions, display conditions, fonts and machine load stable. The schema records relevant software and machine characteristics, but cannot prove that background load or thermal conditions matched.
 
+## A/B comparison with tachometer
+
+The harness above compares two saved runs taken at different times. For a release, the sharper question is
+"is this build different from the latest published one, and by how much?". `pnpm benchmark:ab` answers it
+with [tachometer](https://github.com/google/tachometer), which interleaves both builds in one browser session
+and keeps sampling until the confidence interval of the difference excludes zero (or the timeout passes):
+
+```sh
+pnpm --filter @aceshooting/lyra-ui build
+pnpm benchmark:ab                                   # latest published release, all three workloads
+pnpm benchmark:ab --published 29.2.2 --workloads data-grid --auto-sample-conditions=-5%,+5%
+```
+
+The workloads are 1,000 `lr-button`, a 10,000-row `lr-data-grid` and a 10,000-item `lr-virtual-list`; each
+asserts after the timed region that the real work happened. Tachometer ignores `package.json` `exports`
+maps, so the script installs the published package with `npm`, copies the local `dist/`, bundles each
+variant with the repository's esbuild from inside its own `node_modules` (the same Lit is pinned in both)
+and lets tachometer compare two plain pages. Tachometer runs through `npx` at the version pinned in
+`benchmarks/ab.mjs`; it is not a dependency. Use Playwright's Chromium (default) or `--browser-binary`.
+On a quiet machine the interval narrows to about 1 to 2% in four to five minutes per workload; a shared
+runner (the "A/B benchmark" job of the Quality tools workflow) resolves large changes only.
+
+The command is also a gate. It exits 1 when the 95% confidence interval of a workload's slowdown (local
+relative to published, as tachometer reports it) lies entirely above `--fail-above` percent (default 10), or
+when a workload produced no interval; an interval that reaches past the limit but also includes smaller values
+is inconclusive and only warns (`::warning`), because a shared runner cannot always tell. Every verdict is in
+the summary table. A real slow-down below the limit is reported as "slower, within the limit" and still goes
+through the regression rule in the release procedure. Raising `--fail-above` in `quality-tools.yml` is a
+reviewed policy change, like raising a bundle budget.
+
 ## What is measured
 
 See [fixture details](fixtures/README.md) for exact workloads and assertions. `quick` covers scheduling controls, table assignment/sorting/filtering, chart assignment and relabeling, and closed select/combobox option metadata. `stress` adds larger chart/option sets and million-record table boundary and server-pagination cases. A million-record source is **not** a claim that one million rows are rendered: each result records its input parameters, retained entries, rendered rows and semantic checks. The boundary case exercises collection limits; the paged case models a million logical records with a bounded supplied page.

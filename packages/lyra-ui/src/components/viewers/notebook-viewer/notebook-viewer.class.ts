@@ -18,7 +18,7 @@ import { loadNotebookSanitizer } from './dompurify-loader.js';
 import { styles } from './notebook-viewer.styles.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
-import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { sanitizePassiveMarkup } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js';

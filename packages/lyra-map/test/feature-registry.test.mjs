@@ -145,6 +145,73 @@ test('drawing functions arrive with their layer type, after the always-needed de
   assert.equal(registry.loads.filter((path) => path === './draw_circle.ts').length, 1);
 });
 
+// Every type name the renderer accepts, with the upstream module and class that implement it. A
+// wrong type name builds fine and only fails when that family is first used in a browser.
+const layerFamilies = {
+  circle: ['circle_style_layer.ts', 'CircleStyleLayer'],
+  heatmap: ['heatmap_style_layer.ts', 'HeatmapStyleLayer'],
+  hillshade: ['hillshade_style_layer.ts', 'HillshadeStyleLayer'],
+  'color-relief': ['color_relief_style_layer.ts', 'ColorReliefStyleLayer'],
+  fill: ['fill_style_layer.ts', 'FillStyleLayer'],
+  'fill-extrusion': ['fill_extrusion_style_layer.ts', 'FillExtrusionStyleLayer'],
+  line: ['line_style_layer.ts', 'LineStyleLayer'],
+  symbol: ['symbol_style_layer.ts', 'SymbolStyleLayer'],
+  background: ['background_style_layer.ts', 'BackgroundStyleLayer'],
+  raster: ['raster_style_layer.ts', 'RasterStyleLayer'],
+  custom: ['custom_style_layer.ts', 'CustomStyleLayer'],
+};
+const sourceFamilies = {
+  vector: ['vector_tile_source.ts', 'VectorTileSource'],
+  raster: ['raster_tile_source.ts', 'RasterTileSource'],
+  'raster-dem': ['raster_dem_tile_source.ts', 'RasterDEMTileSource'],
+  geojson: ['geojson_source.ts', 'GeoJSONSource'],
+  video: ['video_source.ts', 'VideoSource'],
+  image: ['image_source.ts', 'ImageSource'],
+  canvas: ['canvas_source.ts', 'CanvasSource'],
+};
+const modulesOf = (families) => Object.fromEntries(Object.values(families).map(([file, name]) => [file, classes(name)]));
+
+test('each layer type name loads exactly its own upstream module and builds its own class', async () => {
+  for (const [type, [file, className]] of Object.entries(layerFamilies)) {
+    const registry = await instantiate('style/create_style_layer.ts', ['prepareStyleLayers', 'createStyleLayer'], modulesOf(layerFamilies));
+    await registry.prepareStyleLayers([type]);
+    assert.deepEqual(registry.loads, [`./style_layer/${file}`], type);
+    assert.equal(registry.createStyleLayer({ type, id: 'one' }, {}).constructor.name, className, type);
+  }
+});
+
+test('each source type name loads exactly its own upstream module', async () => {
+  for (const [type, [file]] of Object.entries(sourceFamilies)) {
+    const registry = await instantiate('source/source.ts', ['prepareSources'], modulesOf(sourceFamilies));
+    await registry.prepareSources([type]);
+    assert.deepEqual(registry.loads.map((path) => path.split('/').at(-1)), [file], type);
+  }
+});
+
+test('each drawing function is published under its renderer key once its layer type is prepared', async () => {
+  const drawing = new Proxy({}, { get: (_target, name) => (typeof name === 'string' && name !== 'then' ? Object.assign(() => name, { named: name }) : undefined) });
+  const draws = {
+    symbol: ['draw_symbol.ts', 'drawSymbols', 'symbol'],
+    circle: ['draw_circle.ts', 'drawCircles', 'circle'],
+    heatmap: ['draw_heatmap.ts', 'drawHeatmap', 'heatmap'],
+    line: ['draw_line.ts', 'drawLine', 'line'],
+    fill: ['draw_fill.ts', 'drawFill', 'fill'],
+    'fill-extrusion': ['draw_fill_extrusion.ts', 'drawFillExtrusion', 'fillExtrusion'],
+    hillshade: ['draw_hillshade.ts', 'drawHillshade', 'hillshade'],
+    'color-relief': ['draw_color_relief.ts', 'drawColorRelief', 'colorRelief'],
+    raster: ['draw_raster.ts', 'drawRaster', 'raster'],
+    background: ['draw_background.ts', 'drawBackground', 'background'],
+    custom: ['draw_custom.ts', 'drawCustom', 'custom'],
+  };
+  const modules = Object.fromEntries(['draw_debug.ts', 'draw_terrain.ts', 'draw_sky.ts', ...Object.values(draws).map(([file]) => file)].map((file) => [file, drawing]));
+  for (const [type, [file, fn, key]] of Object.entries(draws)) {
+    const registry = await instantiate('webgl/draw/index.ts', ['prepareDraws', 'webglDrawFunctions'], modules);
+    await registry.prepareDraws([type]);
+    assert.ok(registry.loads.includes(`./${file}`), `${type} loads ${file}`);
+    assert.equal(registry.webglDrawFunctions[key]?.named, fn, `${type} publishes ${fn} as ${key}`);
+  }
+});
+
 test('shader programs of a family join the shared table once, and unknown groups are ignored', async () => {
   const program = (name) => ({ default: { [name]: { fragmentSource: `${name} fragment` } } });
   const registry = await instantiate('shaders/shaders.ts', ['prepareShaders', 'shaders'], {

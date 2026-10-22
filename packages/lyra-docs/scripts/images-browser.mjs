@@ -61,7 +61,7 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
     ['image-simple', { type: 'resize-image', widthPoints: 144, heightPoints: 72 }],
     ['image-jpeg', { type: 'resize-image', widthPoints: 100, heightPoints: 50 }],
     ['image-gif', { type: 'resize-image', widthPoints: 100, heightPoints: 50 }],
-    ['image-simple', { type: 'image-description', title: 'Picture & \"quoted\" 😀', description: 'First line\nSecond line: Café 東京' }],
+    ['image-simple', { type: 'image-description', title: 'Picture & "quoted" 😀', description: 'First line\nSecond line: Café 東京' }],
     ['image-simple', { type: 'image-description', title: 'Title\rwith\r\nlines', description: 'First\rMiddle\r\nLast' }],
     ['image-simple', { type: 'image-description', title: '', description: '' }],
     ['image-simple', { type: 'delete-image' }],

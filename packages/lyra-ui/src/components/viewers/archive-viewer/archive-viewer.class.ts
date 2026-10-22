@@ -22,7 +22,7 @@ import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.cla
 import { assertZipArchiveMetadataWithinLimits } from './zip-resource-guard.js';
 import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
-import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';

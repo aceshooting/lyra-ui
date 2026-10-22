@@ -118,7 +118,7 @@ export function readTypeAliases(root) {
       }
     }
 
-    const interfaceStart = /export\s+interface\s+([A-Za-z_$][A-Za-z0-9_$]*)[^\{]*\{/g;
+    const interfaceStart = /export\s+interface\s+([A-Za-z_$][A-Za-z0-9_$]*)[^{]*\{/g;
     for (const match of source.matchAll(interfaceStart)) {
       const name = match[1];
       const bodyStart = match.index + match[0].length;

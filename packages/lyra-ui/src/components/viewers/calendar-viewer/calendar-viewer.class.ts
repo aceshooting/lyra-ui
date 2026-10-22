@@ -22,7 +22,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
-import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';

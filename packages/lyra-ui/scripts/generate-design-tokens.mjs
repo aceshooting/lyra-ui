@@ -89,7 +89,7 @@ export function validateCanonicalTokens(source) {
       errors.push(`${name}: invalid themeInput`);
     }
 
-    if (/^--lr-size-/.test(name)) {
+    if (name.startsWith('--lr-size-')) {
       if (!VALUE_CLASSIFICATIONS.has(token?.valueNameClassification)) {
         errors.push(`${name}: missing value-name classification`);
       }
@@ -110,7 +110,7 @@ export function validateCanonicalTokens(source) {
     }
   }
 
-  const valueNamedCount = entries.filter(([name]) => /^--lr-size-/.test(name)).length;
+  const valueNamedCount = entries.filter(([name]) => name.startsWith('--lr-size-')).length;
   for (const name of TOOLING_RAMP_TOKENS) {
     if (!source?.tokens?.[name]) errors.push(`${name}: canonical palette input is missing`);
   }
@@ -227,7 +227,7 @@ export function readRuntimeTokenValues(packageDir = defaultPackageDir) {
     throw new Error('sizes.styles.ts base-tier marker changed; update the parity reader explicitly');
   }
   for (const [name, value] of declarations(sizes, 0, sizesTierMarker)) {
-    if (/^var\(--lr-theme-/.test(value)) add(name, 'light', value, 'shared');
+    if (value.startsWith('var(--lr-theme-')) add(name, 'light', value, 'shared');
   }
 
   return records;

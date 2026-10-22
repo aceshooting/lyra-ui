@@ -32,7 +32,7 @@ export interface LyraWidgetTypeRegistry
   readonly [WIDGET_TYPE_REGISTRY_BRAND]: true;
 }
 
-const CUSTOM_ELEMENT_NAME = /^[a-z][.0-9_a-z]*-[\-.0-9_a-z]*$/;
+const CUSTOM_ELEMENT_NAME = /^[a-z][.0-9_a-z]*-[-.0-9_a-z]*$/;
 const RESERVED_CUSTOM_ELEMENT_NAMES = new Set([
   'annotation-xml',
   'color-profile',

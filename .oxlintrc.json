@@ -1,0 +1,88 @@
+{
+  // Low-noise, correctness-focused oxlint configuration. Run through `pnpm run lint:oxlint`
+  // (type-aware for every package's src, syntax-only for the .mjs tooling); see
+  // docs/agents/ci-and-gates.md. Rules switched off below fire on idioms this code base uses on
+  // purpose; do not re-enable one without auditing its findings first.
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc"],
+  "categories": { "correctness": "error" },
+  "env": { "browser": true, "es2022": true },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/coverage/**",
+    "**/storybook-static/**",
+    "**/node_modules/**",
+    "**/*.generated.ts",
+    "**/src/translations/**",
+    "**/fixtures/**",
+    "**/visual-baselines/**",
+
+    // Covered separately: these component directories are being reworked and their findings are
+    // fixed with that work. Remove these entries once they are clean.
+    "packages/lyra-ui/src/components/media/map/**",
+    "packages/lyra-ui/src/components/media/image-viewer/**",
+    "packages/lyra-ui/src/components/media/video/**",
+    "packages/lyra-ui/src/components/retrieval/graph/**",
+    "packages/lyra-ui/src/components/retrieval/knowledge-graph-explorer/**",
+    "packages/lyra-ui/src/components/retrieval/embedding-explorer/**"
+  ],
+  "rules": {
+    // Not in `correctness`, but the code base already writes `void promise` for every deliberate
+    // fire-and-forget call; these enforce that convention.
+    "typescript/no-misused-promises": "error",
+    "typescript/switch-exhaustiveness-check": ["error", { "considerDefaultExhaustiveForUnions": true }],
+    "eslint/no-unused-expressions": ["error", { "allowTernary": true, "allowShortCircuit": true }],
+
+    // `correctness` rules that fire on intentional idioms here:
+    "typescript/unbound-method": "off", // Lit `@event=${this.handler}` bindings; captured prototype getters
+    "typescript/no-duplicate-type-constituents": "off", // generated union types in src/events.ts
+    "typescript/no-base-to-string": "off", // `String(unknown)` in defensive snapshotting
+    "typescript/no-this-alias": "off", // `const host = this` inside object-literal adapters
+    "typescript/no-misused-spread": "off", // `[...code]` over ASCII-only ISO codes
+    "eslint/no-self-assign": "off", // `tree.data = tree.data` re-runs the setter on purpose
+    "eslint/no-control-regex": "off", // sanitizers match C0 control characters on purpose
+    // `const { omitted, ...rest } = value` is the omit idiom; the patterns restate oxlint's defaults,
+    // which passing any option object would otherwise reset.
+    "eslint/no-unused-vars": ["error", {
+      "ignoreRestSiblings": true,
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_",
+      "caughtErrorsIgnorePattern": "^_",
+      "destructuredArrayIgnorePattern": "^_"
+    }],
+    "unicorn/no-new-array": "off",
+    "unicorn/no-useless-spread": "off", // snapshot-before-iterate copies
+    "unicorn/no-useless-fallback-in-spread": "off"
+  },
+  "overrides": [
+    {
+      // The benchmark harness is content-hashed into every recorded result (benchmarks/compare.mjs
+      // refuses to compare runs from different harness hashes), so editing it forces the previous
+      // release to be re-measured. Its cleanup path rethrows `cleanup-failed` from a finally block;
+      // fix that together with the next deliberate harness revision, then drop this override.
+      "files": ["benchmarks/run.mjs"],
+      "rules": { "eslint/no-unsafe-finally": "off" }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.mjs", "**/*.stories.ts", "**/test/**", "**/src/testing/**"],
+      "rules": {
+        "eslint/no-unsafe-finally": "off", // cleanup in a finally block may rethrow an unexpected kill/close error
+        "eslint/no-unused-expressions": "off", // chai: `expect(x).to.be.true`
+        "eslint/no-sparse-arrays": "off",
+        "eslint/no-unsafe-optional-chaining": "off",
+        "eslint/no-useless-escape": "off",
+        "typescript/no-floating-promises": "off", // un-awaited `el.show()` is common in specs
+        "typescript/no-misused-promises": "off",
+        "typescript/no-array-delete": "off",
+        "typescript/no-implied-eval": "off", // specs run the theme bootstrap through `new Function`
+        "typescript/require-array-sort-compare": "off",
+        "typescript/no-redundant-type-constituents": "off",
+        "typescript/no-unsafe-declaration-merging": "off",
+        "typescript/restrict-template-expressions": "off",
+        "typescript/no-useless-default-assignment": "off",
+        "typescript/await-thenable": "off",
+        "unicorn/no-thenable": "off" // intentional thenable fixtures
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 import { isMainModule } from './is-main-module.mjs';
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));

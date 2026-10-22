@@ -22,9 +22,11 @@ import {
   collectGitHubPages,
   REQUIRED_CI_JOBS,
   REQUIRED_FULL_ENGINE_JOBS,
+  REQUIRED_QUALITY_TOOLS_JOBS,
   REQUIRED_TEST_ALL_BROWSER_JOBS,
   evaluateCiRun,
   evaluateFullEngineRun,
+  evaluateQualityToolsRun,
   evaluateTestAllBrowsersRun,
   parseReleaseTag,
   planReleaseTags,
@@ -35,6 +37,7 @@ import {
   validateWorkflowSource,
   waitForSuccessfulCi,
   waitForSuccessfulFullEngine,
+  waitForSuccessfulQualityTools,
   waitForSuccessfulTestAllBrowsers,
   evaluateSiteFreshness,
 } from './release-integrity.mjs';
@@ -725,6 +728,13 @@ const successfulFullEngineJobs = () =>
   }));
 const successfulTestAllBrowserJobs = () =>
   REQUIRED_TEST_ALL_BROWSER_JOBS.map((name, index) => ({
+    id: index + 1,
+    name,
+    status: 'completed',
+    conclusion: 'success',
+  }));
+const successfulQualityToolsJobs = () =>
+  REQUIRED_QUALITY_TOOLS_JOBS.map((name, index) => ({
     id: index + 1,
     name,
     status: 'completed',
@@ -1746,6 +1756,96 @@ test('requires the exact main-branch Test All Browsers run and every Chromium-fa
   }
 });
 
+test('requires one successful dispatched Quality tools run on main for the release commit with all four jobs', () => {
+  assert.deepEqual(REQUIRED_QUALITY_TOOLS_JOBS, [
+    'A/B benchmark (tachometer)',
+    'bundle composition',
+    'flake hunt (Chromium)',
+    'mutation testing (lyra-map)',
+  ]);
+  const run = {
+    id: 168,
+    name: 'Quality tools',
+    path: '.github/workflows/quality-tools.yml',
+    event: 'workflow_dispatch',
+    head_branch: 'main',
+    head_sha: sha,
+    status: 'completed',
+    conclusion: 'success',
+  };
+
+  assert.deepEqual(evaluateQualityToolsRun({ run, jobs: successfulQualityToolsJobs(), sha }), {
+    state: 'success',
+    message: `Quality tools run 168 passed all ${REQUIRED_QUALITY_TOOLS_JOBS.length} required jobs for ${sha}.`,
+  });
+
+  const withoutBenchmark = successfulQualityToolsJobs().filter((job) => job.name !== 'A/B benchmark (tachometer)');
+  assert.deepEqual(evaluateQualityToolsRun({ run, jobs: withoutBenchmark, sha }), {
+    state: 'failed',
+    message: "Quality tools run 168 is missing required job 'A/B benchmark (tachometer)'.",
+  });
+  // `ab_benchmark: false` skips the benchmark job: the run is green overall but incomplete, so it cannot qualify.
+  const skippedBenchmark = successfulQualityToolsJobs();
+  skippedBenchmark[0] = { ...skippedBenchmark[0], conclusion: 'skipped' };
+  assert.equal(evaluateQualityToolsRun({ run, jobs: skippedBenchmark, sha }).state, 'failed');
+  const failedFlakeHunt = successfulQualityToolsJobs();
+  failedFlakeHunt[2] = { ...failedFlakeHunt[2], conclusion: 'failure' };
+  assert.equal(evaluateQualityToolsRun({ run: { ...run, conclusion: 'failure' }, jobs: failedFlakeHunt, sha }).state, 'failed');
+  assert.equal(
+    evaluateQualityToolsRun({ run: { ...run, status: 'in_progress', conclusion: null }, jobs: successfulQualityToolsJobs(), sha }).state,
+    'pending',
+  );
+  for (const mismatchedRun of [
+    { ...run, head_sha: 'f'.repeat(40) },
+    { ...run, head_branch: 'feature' },
+    { ...run, event: 'schedule' },
+    { ...run, name: 'Another workflow' },
+    { ...run, path: '.github/workflows/another.yml' },
+  ]) {
+    assert.equal(
+      evaluateQualityToolsRun({ run: mismatchedRun, jobs: successfulQualityToolsJobs(), sha }).state,
+      'failed',
+    );
+  }
+});
+
+test('waits for a successful exact-SHA Quality tools run and skips a scheduled run of the same commit', async () => {
+  const dispatched = {
+    id: 168,
+    name: 'Quality tools',
+    path: '.github/workflows/quality-tools.yml',
+    event: 'workflow_dispatch',
+    head_branch: 'main',
+    head_sha: sha,
+    status: 'completed',
+    conclusion: 'success',
+  };
+  // A nightly run on the same commit has a higher id and is red; it must not hide the dispatched run.
+  const scheduled = { ...dispatched, id: 170, event: 'schedule', conclusion: 'failure' };
+  const result = await waitForSuccessfulQualityTools({
+    sha,
+    listRuns: async () => [dispatched, scheduled],
+    listJobs: async () => successfulQualityToolsJobs(),
+    delay: async () => {},
+  });
+  assert.equal(result.run.id, 168);
+  await assert.rejects(
+    waitForSuccessfulQualityTools({
+      sha,
+      timeoutMs: 2,
+      pollMs: 1,
+      listRuns: async () => [scheduled],
+      listJobs: async () => successfulQualityToolsJobs(),
+      delay: async () => {},
+      now: (() => {
+        let value = 0;
+        return () => value++;
+      })(),
+    }),
+    /Timed out waiting for a successful Quality tools run/,
+  );
+});
+
 test('waits for a pending exact-SHA CI run without treating the publish check as a dependency', async () => {
   let calls = 0;
   const pendingRun = {
@@ -2262,6 +2362,7 @@ test('release workflows verify tagged-source bytes without exposing protected cr
     assert.match(workflow, /wait-ci/);
     assert.match(workflow, /wait-test-all-browsers/);
     assert.match(workflow, /wait-full-engine/);
+    assert.match(workflow, /wait-quality-tools/);
     assert.match(workflow, /validate-tarball/);
     assert.match(workflow, /compare-rebuild/);
     assert.match(workflow, /Upload byte-verified tarball/);
@@ -2394,12 +2495,12 @@ test('release workflow qualifies the exact main commit before tagging, releasing
     assert.match(uses, /@[0-9a-f]{40}$/u, `${uses} must be pinned to a commit SHA`);
   }
 
-  // Plan: main only, unreleased tags from committed versions, all three gates on the exact SHA.
+  // Plan: main only, unreleased tags from committed versions, all four gates on the exact SHA.
   assert.match(plan, /"\$GITHUB_REF" != "refs\/heads\/main"/);
   assert.match(plan, /release-integrity\.mjs plan-release/);
   assert.match(
     plan,
-    /wait-ci[\s\S]*--sha "\$SHA" --workflow ci\.yml[\s\S]*wait-test-all-browsers[\s\S]*--sha "\$SHA" --workflow test-all-browsers\.yml[\s\S]*wait-full-engine[\s\S]*--sha "\$SHA" --workflow full-engine\.yml/
+    /wait-ci[\s\S]*--sha "\$SHA" --workflow ci\.yml[\s\S]*wait-test-all-browsers[\s\S]*--sha "\$SHA" --workflow test-all-browsers\.yml[\s\S]*wait-full-engine[\s\S]*--sha "\$SHA" --workflow full-engine\.yml[\s\S]*wait-quality-tools[\s\S]*--sha "\$SHA" --workflow quality-tools\.yml/
   );
   assert.doesNotMatch(plan, /contents: write|actions: write/);
 

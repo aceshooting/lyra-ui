@@ -29,7 +29,6 @@ import {
 import {
   publicSourceContractModules,
   sourceContractCensus,
-  sourceContractKey,
   validateSourceContractBaseline,
 } from './llms-source-contracts.mjs';
 

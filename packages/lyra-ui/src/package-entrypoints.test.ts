@@ -65,8 +65,8 @@ type CuratedHelperTypeContracts = readonly [
   LyraSpanProjection,
 ];
 
-const curatedHelperTypeContracts: CuratedHelperTypeContracts | undefined = undefined;
-void curatedHelperTypeContracts;
+// Compile-time proof that every curated helper type resolves; the alias has no runtime value.
+export type { CuratedHelperTypeContracts };
 
 const definedAmong = (registry: CustomElementRegistry, tags: readonly string[]): string[] =>
   tags.filter((tag) => registry.get(tag) !== undefined);

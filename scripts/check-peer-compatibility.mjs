@@ -1340,16 +1340,6 @@ function sameAuthorityCommittedFileIdentity(left, right) {
   return Object.keys(left).every((key) => left[key] === right[key]);
 }
 
-async function bindAuthorityTarget(targetPath) {
-  const metadata = await lstat(targetPath, { bigint: true });
-  if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.nlink !== 1n) {
-    throw new Error(
-      'Peer-compatibility authority must be one regular, singly-linked file, not a symbolic link or special file.',
-    );
-  }
-  return authorityTargetIdentity(metadata);
-}
-
 async function assertAuthorityTargetIdentity(targetPath, expected) {
   const metadata = await lstat(targetPath, { bigint: true });
   if (
@@ -1418,7 +1408,7 @@ async function readBoundAuthorityText(
       await handle.close();
     } catch (closeError) {
       if (primaryError) preserveCleanupFailure(primaryError, closeError);
-      else throw closeError;
+      else throw closeError; // oxlint-disable-line eslint/no-unsafe-finally -- no primary error is in flight on this branch
     }
   }
 }
@@ -3280,7 +3270,7 @@ async function readBoundRegularFile(
     try {
       await handle.close();
     } catch (cleanupError) {
-      if (!primaryError) throw cleanupError;
+      if (!primaryError) throw cleanupError; // oxlint-disable-line eslint/no-unsafe-finally -- no primary error is in flight on this branch
       preserveCleanupFailure(primaryError, cleanupError);
     }
   }

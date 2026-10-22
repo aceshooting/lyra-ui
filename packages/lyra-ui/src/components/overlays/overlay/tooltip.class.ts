@@ -266,8 +266,8 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       this.applyOpenState(normalized);
       return;
     }
-    if (normalized) this.show();
-    else this.hide();
+    if (normalized) void this.show();
+    else void this.hide();
   }
   /**
    * Space-separated interaction list: any of `hover`, `focus`, `click`, `manual`. `manual` (or an
@@ -741,7 +741,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     this.overlayHandle = activateNonmodalOverlay({
       host: this,
       panel: () => this.renderRoot.querySelector('[part~="popup"]') as HTMLElement | null,
-      onEscape: () => this.hide({ restoreFocus: this.shouldRestoreFocusAfterEscape() }),
+      onEscape: () => void this.hide({ restoreFocus: this.shouldRestoreFocusAfterEscape() }),
       restoreFocusTo: restoreFocusTarget,
     });
     // A hover tooltip must never steal focus, so initial focus is moved only when the content
@@ -1020,15 +1020,15 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.disabled) return;
     const delay = this.interactionDelay(next);
     if (delay <= 0) {
-      if (next) this.show();
-      else this.hide();
+      if (next) void this.show();
+      else void this.hide();
       return;
     }
     const view = this.ownerDocument.defaultView;
     if (!view) return;
     this.delayTimer.schedule(view, delay, next ? 'show' : 'hide', () => {
-      if (next) this.show();
-      else this.hide();
+      if (next) void this.show();
+      else void this.hide();
     });
   }
   private interactionDelay(showing: boolean): number {
@@ -1162,13 +1162,13 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     if (this.disabled) return;
     if (!this.opensOn('click')) return;
     this.syncTriggerA11y();
-    if (this._open) this.hide();
-    else this.show();
+    if (this._open) void this.hide();
+    else void this.show();
   };
   private onPopupEnter = (): void => {
     if (!this.interactiveContent || this.isManual) return;
     this.cancelPendingTransition();
-    this.show();
+    void this.show();
   };
   private onPopupLeave = (event: Event): void => {
     if (!this.interactiveContent || this.isManual) return;

@@ -566,7 +566,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   /** When set and it matches a row's typed `keyFunction` result, that row is
    * smoothly scrolled into view whenever this changes. Attribute values are
    * strings; assign the property for a numeric key. */
-  @property({ attribute: 'active-item-id' }) activeItemId: VirtualListKey | '' = '';
+  @property({ attribute: 'active-item-id' }) activeItemId: VirtualListKey | '' = ''; // oxlint-disable-line typescript/no-redundant-type-constituents -- `''` is the documented "no active item" value
 
   @property({ type: Boolean, reflect: true }) loading = false;
 
@@ -1172,7 +1172,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * caller's indexOfKey capability without scanning their declared count. */
   private activeIndexFor?: LyraVirtualListSource;
   private activeIndexForLength = -1;
-  private activeIndexForId: VirtualListKey | '' = '';
+  private activeIndexForId: VirtualListKey = '';
   private activeIndexForKeyFn?: (item: unknown, index: number) => string | number;
   private activeIndexCache = -1;
 
@@ -2415,7 +2415,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     index: number,
     align: 'start' | 'end' | 'auto',
     behavior: 'auto' | 'smooth',
-    activeItemId?: VirtualListKey | ''
+    activeItemId?: VirtualListKey
   ): void {
     if (this.fixedRowHeight != null && !this.hasUnmeasuredGroupThrough(index)) {
       this.pendingScrollCorrection = undefined;

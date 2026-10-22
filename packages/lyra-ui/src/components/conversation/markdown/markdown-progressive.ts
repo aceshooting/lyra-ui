@@ -188,7 +188,7 @@ export function markdownHtmlBalanced(html: string): boolean {
 }
 
 function definitionHeld(source: string, tokenize?: (source: string) => MarkdownLexToken | undefined): boolean {
-  const opener = /^ {0,3}\[(?!\s*\])(?:\\[\s\S]|[^\[\]\\])+\]: *(?:\n[ \t]*)?(?:[^<\s][^\s]*|<.*?>)(?: +(?:\n[ \t]*)?| *\n[ \t]*)(["'(])/.exec(source);
+  const opener = /^ {0,3}\[(?!\s*\])(?:\\[\s\S]|[^[\]\\])+\]: *(?:\n[ \t]*)?(?:[^<\s][^\s]*|<.*?>)(?: +(?:\n[ \t]*)?| *\n[ \t]*)(["'(])/.exec(source);
   if (!opener) return false;
   const token = tokenize?.(source);
   if (token && token.title != null) return false;

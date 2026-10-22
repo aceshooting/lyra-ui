@@ -46,6 +46,18 @@
         "webkit / shard 8/8"
       ]
     },
+    "qualityTools": {
+      "name": "Quality tools",
+      "path": ".github/workflows/quality-tools.yml",
+      "event": "workflow_dispatch",
+      "headBranch": "main",
+      "requiredJobs": [
+        "A/B benchmark (tachometer)",
+        "bundle composition",
+        "flake hunt (Chromium)",
+        "mutation testing (lyra-map)"
+      ]
+    },
     "testAllBrowsers": {
       "name": "Test All Browsers",
       "path": ".github/workflows/test-all-browsers.yml",

@@ -118,7 +118,7 @@ for (const [relative, anchor] of anchors) {
     const original = await read(relative);
     assert.ok(original.includes(anchor), 'the anchor exists in the pinned source');
     const result = completePlugin.transform(original.replace(anchor, '/* anchor removed */'), join(src, relative));
-    await assert.rejects(result, (error) => /^Patch mismatch/u.test(error.message) && error.message.includes(anchor.slice(0, 40)));
+    await assert.rejects(result, (error) => error.message.startsWith('Patch mismatch') && error.message.includes(anchor.slice(0, 40)));
   });
 }
 

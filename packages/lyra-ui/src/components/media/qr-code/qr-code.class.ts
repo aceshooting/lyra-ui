@@ -295,7 +295,9 @@ export class LyraQrCode extends LyraElement {
    * ready, error, reconnect, and redraw transitions. Readonly: an explicit `get` (rather than
    * `@query`) so the generated manifest marks it non-assignable. */
   get canvas(): HTMLCanvasElement {
-    return this.renderRoot?.querySelector('canvas')!;
+    // Like a Lit `@query`, nothing exists before the first render; typed non-null for the usual
+    // read after `updateComplete`, and `draw()` still guards the missing case.
+    return this.renderRoot?.querySelector('canvas') as HTMLCanvasElement;
   }
 
   @state() private loadState: QrCodeState = { kind: 'empty' };

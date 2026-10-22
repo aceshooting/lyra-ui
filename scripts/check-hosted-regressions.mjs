@@ -325,7 +325,7 @@ async function main() {
     runs.push(current);
     validateRun(current, readReport(current), expectedFiles, expectedCount, 'passed');
 
-    for (const [source, bytes] of [...savedSources, ...savedTests]) {
+    for (const [source] of [...savedSources, ...savedTests]) {
       requireValue(sha256(readFileSync(path.join(root, source))) === hashes.get(source),
         `Current WTR run changed a selected source or test file: ${source}`);
     }
@@ -365,7 +365,7 @@ async function main() {
     requireValue(restoreErrors.length === 0, `Source/test restoration failed: ${restoreErrors.join('; ')}`);
   }
 
-  for (const [relative, bytes] of [...savedSources, ...savedTests]) {
+  for (const [relative] of [...savedSources, ...savedTests]) {
     requireValue(sha256(readFileSync(path.join(root, relative))) === hashes.get(relative), `File bytes changed unexpectedly: ${relative}`);
   }
   requireValue(runs.length === 2, 'Both WTR passes must complete.');

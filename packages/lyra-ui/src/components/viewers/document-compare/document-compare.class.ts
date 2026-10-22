@@ -108,7 +108,7 @@ function projectDocumentCompareVersion(value: unknown): DocumentCompareVersion |
     }
     const fieldValue = (
       field: (typeof DOCUMENT_COMPARE_VERSION_FIELDS)[number],
-    ): unknown | undefined => {
+    ): unknown => {
       const descriptor = descriptors.get(field);
       if (
         descriptor === undefined ||

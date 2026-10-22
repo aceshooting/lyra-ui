@@ -97,7 +97,7 @@ assert(docxStringKeys.size > 10, 'DOCX_EDITOR_STRINGS keys could not be read for
 const sourcePolicyCounts = new Map();
 const sourcePolicyFindings = [];
 for (const file of files(path.join(packageRoot, 'src'))) {
-  if (!/\.ts$/u.test(file) || /\.test\.ts$/u.test(file)) continue;
+  if (!file.endsWith('.ts') || file.endsWith('.test.ts')) continue;
   for (const finding of collectSourcePolicyFindings({
     file,
     source: readFileSync(file, 'utf8'),

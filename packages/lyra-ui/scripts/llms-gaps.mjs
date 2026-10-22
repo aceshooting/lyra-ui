@@ -5,7 +5,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
-import { splitSections, readTagFacts, FAMILIES } from './build-llms.mjs';
+import { splitSections, FAMILIES } from './build-llms.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import {
   readSourceContractBaseline,
@@ -180,12 +180,6 @@ function utilityContractBlocks(text, moduleName) {
   });
 }
 
-/** Returns one uniquely owned utility bullet, or empty when it is missing/duplicated. */
-function utilityContractBlock(text, moduleName) {
-  const blocks = utilityContractBlocks(text, moduleName);
-  return blocks.length === 1 ? blocks[0] : '';
-}
-
 /**
  * True when `name` appears in `text` as a genuine standalone token, not merely as a substring of an
  * unrelated word or a different (usually longer, hyphenated) identifier. A plain `text.includes(n)`
@@ -260,7 +254,7 @@ function stylesheetTokens(modulePath) {
   if (!existsSync(dir)) return [];
   const found = new Set();
   for (const file of readdirSync(dir)) {
-    if (!/\.styles\.ts$/.test(file)) continue;
+    if (!file.endsWith('.styles.ts')) continue;
     for (const m of readFileSync(path.join(dir, file), 'utf8').matchAll(/var\((--lr-[a-z0-9-]+)/g)) {
       found.add(m[1]);
     }
@@ -298,7 +292,6 @@ export function collectGaps(
       readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'),
     ),
   );
-  const tagFacts = readTagFacts(manifest);
   const declFor = new Map();
   for (const mod of manifest.modules ?? []) {
     for (const decl of mod.declarations ?? []) {
@@ -562,9 +555,4 @@ export function groupGapsForReport(gaps, families = FAMILIES.map(([family]) => f
   return order
     .map((family) => [family, gaps.filter((gap) => gap.family === family)])
     .filter(([, familyGaps]) => familyGaps.length > 0);
-}
-
-function tagFactsFor() {
-  const manifest = JSON.parse(readFileSync(path.join(packageDir, 'custom-elements.json'), 'utf8'));
-  return readTagFacts(manifest);
 }

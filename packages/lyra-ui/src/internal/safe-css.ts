@@ -143,7 +143,7 @@ export interface SafePercentRect {
 export function sanitizePercentRect(value: unknown): SafePercentRect | undefined {
   try {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
-    const read = (key: keyof SafePercentRect): unknown | undefined => {
+    const read = (key: keyof SafePercentRect): unknown => {
       const descriptor = getOwnDataDescriptor(value, key);
       if (
         descriptor === MISSING_OWN_DATA_DESCRIPTOR ||

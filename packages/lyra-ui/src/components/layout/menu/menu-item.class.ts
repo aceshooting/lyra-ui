@@ -603,7 +603,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   select(): void {
     if (this.interactionDisabled) return;
     if (this.submenuPanel) {
-      this.openSubmenu('none');
+      void this.openSubmenu('none');
       return;
     }
     if (this.type === 'checkbox') {

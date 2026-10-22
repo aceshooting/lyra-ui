@@ -37,7 +37,7 @@ const inventedRamp = structuredClone(source);
 inventedRamp.tokens['--lr-ramp-brand-15'] = structuredClone(source.tokens['--lr-ramp-brand-10']);
 assert.match(validateCanonicalTokens(inventedRamp).join('; '), /--lr-ramp-brand-15: unknown palette input/u);
 
-const valueNamed = Object.entries(source.tokens).filter(([name]) => /^--lr-size-/.test(name));
+const valueNamed = Object.entries(source.tokens).filter(([name]) => name.startsWith('--lr-size-'));
 assert.equal(valueNamed.length, 88);
 for (const [name, token] of valueNamed) {
   assert.ok(

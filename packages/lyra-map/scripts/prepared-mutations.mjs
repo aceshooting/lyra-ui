@@ -187,7 +187,7 @@ export async function addPreparedFeatures(map, input, options = {}) {
         }
         before = key;
       }
-    } catch (error) {
+    } catch {
       if (!current()) abort();
       let rollbackFailed = false;
       const remove = (key, get, drop) => {

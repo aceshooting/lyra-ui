@@ -398,7 +398,7 @@ test('a different constructor requires exact historical component identities and
 
 function untaggedClassFixture() {
   const state = rootClassFixture();
-  const { metadata, options, sources } = state;
+  const { options, sources } = state;
   const alias = historicalWidgetAlias();
   options.manifest.modules[0].declarations[0] = { kind: 'class', name: 'Widget' };
   sources[alias.source.module] = sources[alias.source.module].replace('class Widget {}', 'class Widget extends Base {}');

@@ -17,3 +17,6 @@ storybook-static
 # points, produced only so Codecov bundle analysis has a real bundle to report on
 # (scripts/codecov-bundle.mjs). Regenerated from dist/ on every run.
 .codecov-bundle/
+
+# Output of the "Quality tools" scripts (flake hunt, bundle composition).
+.quality-tools/

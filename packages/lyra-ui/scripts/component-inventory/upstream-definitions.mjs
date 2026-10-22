@@ -75,7 +75,7 @@ function reviewedNativeEvent(
   constructor = 'Event',
   { bubbles = true, composed = true, cancelable = 'never' } = {}
 ) {
-  const runtimeConstructor = /^CustomEvent</u.test(constructor)
+  const runtimeConstructor = constructor.startsWith('CustomEvent<')
     ? 'CustomEvent'
     : constructor;
   return {

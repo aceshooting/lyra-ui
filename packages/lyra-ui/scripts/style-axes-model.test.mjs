@@ -305,7 +305,7 @@ test('a default-look role that follows brand compiles to the follow switch, neve
     if (/var\(--lr-theme-/.test(match[2])) assert.match(match[2], /var\(--lr-theme-shadow-color/, match[1]);
   }
   const look = model.looks.find((entry) => entry.id === model.defaults.look);
-  const followers = Object.entries(look.tokens).filter(([, value]) => typeof value === 'string' && /^var\(--lr-theme-color-brand-/.test(value));
+  const followers = Object.entries(look.tokens).filter(([, value]) => typeof value === 'string' && value.startsWith('var(--lr-theme-color-brand-'));
   assert.ok(followers.length > 0, 'the default look has roles that follow brand');
   for (const [name] of followers) {
     const role = name.slice('--lr-theme-'.length);

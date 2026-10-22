@@ -149,13 +149,6 @@ const ACCESSIBILITY_BEHAVIOR_VOCABULARY = Object.freeze({
   ]),
 });
 
-const ACCESSIBILITY_COMPARISON_STATUSES = [
-  'equivalent',
-  'target-additive',
-  'not-applicable',
-  'warning-required',
-];
-
 const ACCESSIBILITY_EVIDENCE = Object.freeze({
   upstream: 'pinned-public-contract',
   target: 'lyra-authored-contract-and-automated-tests',
@@ -543,7 +536,7 @@ function isInternalMethod(member, ecosystem) {
   if (ecosystem === 'lyra' && !member.inheritedFrom) return false;
   if (INTERNAL_METHOD_NAMES.has(member.name)) return true;
   if (/^(?:handle|on|_)[A-Z_]/.test(member.name) && !PUBLIC_METHOD_NAMES.has(member.name)) return true;
-  if (/Callback$/.test(member.name) && !PUBLIC_METHOD_NAMES.has(member.name)) return true;
+  if (member.name.endsWith('Callback') && !PUBLIC_METHOD_NAMES.has(member.name)) return true;
   if (member.inheritedFrom && !PUBLIC_METHOD_NAMES.has(member.name) && !FORM_METHODS.has(member.name)) return true;
   if (ecosystem !== 'lyra' && !member.description && !PUBLIC_METHOD_NAMES.has(member.name) && !FORM_METHODS.has(member.name)) {
     return true;
@@ -557,7 +550,7 @@ function isPublicField(member, attributeNames, ecosystem) {
   // directly-authored API boundary. Underscore/framework-controller fields must be declared
   // private/protected in source if they are implementation detail.
   if (ecosystem === 'lyra' && !member.inheritedFrom) return true;
-  if (/^_/.test(member.name)) return false;
+  if (member.name.startsWith('_')) return false;
   if (
     FRAMEWORK_CONTROLLER_FIELDS.has(member.name) &&
     !member.attribute &&
@@ -617,7 +610,7 @@ function isPublicStaticMethod(member, ecosystem) {
   if (ecosystem === 'lyra' && !member.inheritedFrom) {
     if (INTERNAL_METHOD_NAMES.has(member.name)) return false;
     if (/^(?:handle|on|_)[A-Z_]/u.test(member.name) && !PUBLIC_METHOD_NAMES.has(member.name)) return false;
-    if (/Callback$/u.test(member.name) && !PUBLIC_METHOD_NAMES.has(member.name)) return false;
+    if (member.name.endsWith('Callback') && !PUBLIC_METHOD_NAMES.has(member.name)) return false;
     return true;
   }
   return member.privacy === 'public' || Boolean(member.description);

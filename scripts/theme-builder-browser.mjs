@@ -385,7 +385,7 @@ try {
       for (const [script, tokens] of Object.entries(c.catalog.typography)) {
         c.change({ type: 'group', group: 'typography', tokens }); await c.whenSettled();
         const root = document.querySelector('[data-preview]'); const actual = getComputedStyle(root);
-        const expectedFirst = tokens['--lr-theme-font-family-body'].split(',')[0].replace(/['\"]/g, '');
+        const expectedFirst = tokens['--lr-theme-font-family-body'].split(',')[0].replace(/['"]/g, '');
         if (!actual.fontFamily.includes(expectedFirst)) failures.push({ script, font: actual.fontFamily, expectedFirst });
         if (!(parseFloat(actual.lineHeight) >= parseFloat(actual.fontSize))) failures.push({ script, lineHeight: actual.lineHeight });
       }
@@ -780,13 +780,13 @@ try {
       url: page.url(), lifecycle, pendingRequests: [...pendingRequests.values()], pendingRequestsTruncated,
       failedResponses, errors: errors.slice(-32), external: external.slice(-32),
       unexpectedNetworkFailures: unexpectedNetworkFailures.slice(-32) }));
-  } finally { throw error; }
+  } finally { throw error; } // oxlint-disable-line eslint/no-unsafe-finally -- always rethrow the original failure, even if logging the diagnostics throws
 } finally {
   const cleanup = await Promise.allSettled([
     browser.close(), new Promise((accept, reject) => server.close(error => error ? reject(error) : accept())),
   ]);
   for (const result of cleanup) if (result.status === 'rejected') {
-    if (!failed) throw result.reason;
+    if (!failed) throw result.reason; // oxlint-disable-line eslint/no-unsafe-finally -- a cleanup failure is the only error when the run itself passed
     console.error('Theme browser cleanup failed:', result.reason);
   }
 }

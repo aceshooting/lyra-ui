@@ -17,10 +17,11 @@ function isSafeArrayLength(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
+/** The own data value, or the `MISSING_OWN_DATA_DESCRIPTOR` / `UNSAFE_OWN_DATA_DESCRIPTOR` sentinel. */
 function dataValue(
   source: object,
   key: PropertyKey,
-): unknown | typeof MISSING_OWN_DATA_DESCRIPTOR | typeof UNSAFE_OWN_DATA_DESCRIPTOR {
+): unknown {
   const descriptor = getOwnDataDescriptor(source, key);
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
     ? descriptor
@@ -30,11 +31,12 @@ function dataValue(
 /**
  * The public highlight collection has long accepted a computed `id`; preserve that narrow
  * compatibility path without restoring broad record spreading. The getter is resolved exactly
- * once, under containment, and every other field remains an own-data-only projection.
+ * once, under containment, and every other field remains an own-data-only projection. Resolves to
+ * the id, or to the missing/unsafe descriptor sentinel.
  */
 function highlightIdValue(
   source: object,
-): unknown | typeof MISSING_OWN_DATA_DESCRIPTOR | typeof UNSAFE_OWN_DATA_DESCRIPTOR {
+): unknown {
   try {
     const descriptor = Object.getOwnPropertyDescriptor(source, 'id');
     if (!descriptor) return MISSING_OWN_DATA_DESCRIPTOR;

@@ -71,8 +71,7 @@ export function stripNonRenderedText(source) {
 export function dynamicAttributeExpressions(text, attrName) {
   const results = [];
   const open = new RegExp(`${attrName}\\s*=\\s*\\$\\{`, 'g');
-  let match;
-  while ((match = open.exec(text))) {
+  while (open.exec(text)) {
     let index = open.lastIndex;
     let depth = 1;
     const start = index;

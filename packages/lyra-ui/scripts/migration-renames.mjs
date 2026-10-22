@@ -402,7 +402,7 @@ function openingTagBraceGroups(text, token) {
 /** An event listener binding in any supported template syntax, or null. */
 function markupEventName(rawName) {
   if (/^\(lr-[a-z0-9-]+\)$/.test(rawName)) return { name: rawName.slice(1, -1), offset: 1 };
-  if (/^onlr-/.test(rawName)) return { name: rawName.slice(2).replace(/Capture$/, ''), offset: 2 };
+  if (rawName.startsWith('onlr-')) return { name: rawName.slice(2).replace(/Capture$/, ''), offset: 2 };
   for (const [prefix, separator] of [['@', '.'], ['v-on:', '.'], ['on:', '|']]) {
     if (rawName.startsWith(prefix)) return { name: rawName.slice(prefix.length).split(separator)[0], offset: prefix.length };
   }
@@ -424,7 +424,7 @@ function markupMemberBinding(attribute) {
   for (const prefix of ['v-bind:', ':']) {
     if (raw.startsWith(prefix)) return { form: 'member', offset: prefix.length, name: raw.slice(prefix.length).split('.')[0], dynamic: true };
   }
-  if (!/^[A-Za-z][\w-]*$/.test(raw) || /^onlr-/.test(raw)) return null;
+  if (!/^[A-Za-z][\w-]*$/.test(raw) || raw.startsWith('onlr-')) return null;
   const dynamic = attribute.valueKind === 'expression' || /\$\{|\{\{/.test(attribute.value ?? '');
   return { form: /[A-Z]/.test(raw) ? 'property' : 'attribute', offset: 0, name: raw, dynamic };
 }
@@ -1066,7 +1066,7 @@ export function migrateRenameText(original, contract, options) {
     const owner = token.tag.toLowerCase();
     for (const attribute of parseTagAttributes(original, token)) {
       const event = markupEventName(attribute.rawName);
-      if (event && /^lr-/u.test(event.name)) inspectMarkupDetailFields(owner, event.name, attribute);
+      if (event && event.name.startsWith('lr-')) inspectMarkupDetailFields(owner, event.name, attribute);
     }
   }
 
@@ -1115,7 +1115,7 @@ export function migrateRenameText(original, contract, options) {
     const planned = attributes.map((attribute) => {
       const event = markupEventName(attribute.rawName);
       let finalRaw = attribute.rawName;
-      if (event && /^lr-/.test(event.name)) {
+      if (event && event.name.startsWith('lr-')) {
         const to = eventMove(event.name, owner);
         if (to) finalRaw = attribute.rawName.slice(0, event.offset) + to + attribute.rawName.slice(event.offset + event.name.length);
       } else if (lyraOwner) {
@@ -1161,7 +1161,7 @@ export function migrateRenameText(original, contract, options) {
 
     for (const { attribute, event, key, renamed } of planned) {
       if (event) {
-        if (/^lr-/.test(event.name)) {
+        if (event.name.startsWith('lr-')) {
           inspectMarkupDetailFields(owner, event.name, attribute);
           eventSite({
             name: event.name,

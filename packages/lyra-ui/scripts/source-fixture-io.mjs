@@ -8,7 +8,7 @@ function invariant(condition, message) {
 /** JSON.parse validates syntax; the token walk additionally rejects overwritten object keys. */
 export function parseSourceJson(source, label) {
   const result = JSON.parse(source);
-  const tokens = source.match(/"(?:\\.|[^"\\])*"|[{}\[\]:,]|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null/g);
+  const tokens = source.match(/"(?:\\.|[^"\\])*"|[{}[\]:,]|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null/g);
   let index = 0;
   function value() {
     const token = tokens[index++];

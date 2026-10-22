@@ -1233,9 +1233,9 @@ function resolveDeclarationFile(files, fromFile, specifier) {
   if (typeof specifier !== 'string' || !specifier.startsWith('.')) return undefined;
   const base = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), specifier));
   const candidates = [base];
-  if (/\.mjs$/.test(base)) candidates.push(base.replace(/\.mjs$/, '.d.mts'));
-  if (/\.cjs$/.test(base)) candidates.push(base.replace(/\.cjs$/, '.d.cts'));
-  if (/\.js$/.test(base)) candidates.push(base.replace(/\.js$/, '.d.ts'));
+  if (base.endsWith('.mjs')) candidates.push(base.replace(/\.mjs$/, '.d.mts'));
+  if (base.endsWith('.cjs')) candidates.push(base.replace(/\.cjs$/, '.d.cts'));
+  if (base.endsWith('.js')) candidates.push(base.replace(/\.js$/, '.d.ts'));
   if (!/\.(?:d\.)?[cm]?[jt]s$/.test(base)) {
     candidates.push(`${base}.d.ts`, path.posix.join(base, 'index.d.ts'));
   }
@@ -2613,11 +2613,11 @@ function declarationFileForTarget(graph, target) {
   if (typeof target !== 'string') return undefined;
   const normalized = normalizedFileKey(target);
   const candidates = [normalized];
-  if (/\.mjs$/.test(normalized)) {
+  if (normalized.endsWith('.mjs')) {
     candidates.push(normalized.replace(/\.mjs$/, '.d.mts'), normalized.replace(/\.mjs$/, '.d.ts'));
-  } else if (/\.cjs$/.test(normalized)) {
+  } else if (normalized.endsWith('.cjs')) {
     candidates.push(normalized.replace(/\.cjs$/, '.d.cts'), normalized.replace(/\.cjs$/, '.d.ts'));
-  } else if (/\.js$/.test(normalized)) {
+  } else if (normalized.endsWith('.js')) {
     candidates.push(normalized.replace(/\.js$/, '.d.ts'));
   }
   return candidates.find((candidate) => graph.files.has(candidate));

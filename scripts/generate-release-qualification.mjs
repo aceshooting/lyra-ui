@@ -224,6 +224,7 @@ function workflowDispatchCsvDefault(source, inputName, label) {
 export function deriveReleaseQualification({
   ciSource,
   fullEngineSource,
+  qualityToolsSource,
   testAllBrowsersSource,
 }) {
   const testBrowsers = workflowDispatchCsvDefault(
@@ -247,6 +248,13 @@ export function deriveReleaseQualification({
         event: 'workflow_dispatch',
         headBranch: 'main',
         requiredJobs: requiredJobNames(fullEngineSource, 'full-engine'),
+      },
+      qualityTools: {
+        name: workflowName(qualityToolsSource, 'quality-tools'),
+        path: '.github/workflows/quality-tools.yml',
+        event: 'workflow_dispatch',
+        headBranch: 'main',
+        requiredJobs: requiredJobNames(qualityToolsSource, 'quality-tools'),
       },
       testAllBrowsers: {
         name: workflowName(testAllBrowsersSource, 'test-all-browsers'),
@@ -276,6 +284,10 @@ export function generateReleaseQualification() {
     ),
     fullEngineSource: readFileSync(
       path.join(repoRoot, '.github', 'workflows', 'full-engine.yml'),
+      'utf8'
+    ),
+    qualityToolsSource: readFileSync(
+      path.join(repoRoot, '.github', 'workflows', 'quality-tools.yml'),
       'utf8'
     ),
     testAllBrowsersSource: readFileSync(

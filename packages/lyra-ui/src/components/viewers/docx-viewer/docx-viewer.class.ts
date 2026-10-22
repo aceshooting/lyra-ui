@@ -57,7 +57,7 @@ export type {
   LyraViewerDiagnosticSeverity,
 } from '../viewer-diagnostics.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
-import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { sanitizePassiveMarkupFragment } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';

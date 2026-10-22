@@ -65,8 +65,7 @@ export function styleFiles(directory) {
 export function cssTemplateContents(fileText) {
   const contents = [];
   const templateStart = /\bcss`/g;
-  let match;
-  while ((match = templateStart.exec(fileText))) {
+  while (templateStart.exec(fileText)) {
     let index = templateStart.lastIndex;
     while (index < fileText.length) {
       if (fileText[index] === '\\') {

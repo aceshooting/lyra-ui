@@ -144,13 +144,13 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
     const cancelButton = createButton(
       resolveLyraString(dialog, 'cancel', undefined, cancelLabel, undefined, CONFIRM_DEFAULT_STRINGS),
       CANCEL_STYLE,
-      () => dialog.close('cancel'),
+      () => void dialog.close('cancel'),
     );
     cancelButton.slot = 'footer';
     const confirmButton = createButton(
       resolveLyraString(dialog, 'confirm', undefined, confirmLabel, undefined, CONFIRM_DEFAULT_STRINGS),
       CONFIRM_VARIANT_STYLE[resolvedVariant],
-      () => dialog.close('confirm'),
+      () => void dialog.close('confirm'),
     );
     confirmButton.slot = 'footer';
     dialog.appendChild(cancelButton);

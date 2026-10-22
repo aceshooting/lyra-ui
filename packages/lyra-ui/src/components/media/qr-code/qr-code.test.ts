@@ -1413,6 +1413,19 @@ describe('lr-qr-code', () => {
     expect(el.canvas.hidden).to.equal(true);
   });
 
+  it('reads the public canvas without throwing before the first render, then resolves to the shadow canvas', async () => {
+    const el = document.createElement('lr-qr-code') as LyraQrCode;
+    expect(() => el.canvas).to.not.throw();
+    expect(el.canvas == null, 'no canvas exists before the element renders').to.equal(true);
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(el.canvas === el.shadowRoot!.querySelector('canvas')).to.equal(true);
+    } finally {
+      el.remove();
+    }
+  });
+
   it('keeps the public canvas identity stable across loading, ready, empty, and reconnect', async () => {
     const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
     await el.updateComplete;

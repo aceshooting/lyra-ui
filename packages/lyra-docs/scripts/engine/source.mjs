@@ -86,7 +86,7 @@ export function applySourcePatch(files, patch) {
       let added = 0;
       while (removed < Number(hunk[2] ?? 1) || added < Number(hunk[4] ?? 1)) {
         const line = lines[index++];
-        assert(line && /^[ +\-]/u.test(line), 'Truncated patch hunk');
+        assert(line && /^[ +-]/u.test(line), 'Truncated patch hunk');
         if (line[0] !== '+') {
           assert.equal(source[cursor++], line.slice(1), `Patch context differs: ${file}`);
           removed++;

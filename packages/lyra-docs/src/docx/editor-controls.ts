@@ -9,7 +9,7 @@ export function loadDocumentControls(...names: string[]): Promise<unknown> {
   return Promise.all(names.map(name => {
     const load = loaders.get(name);
     loaders.delete(name);
-    return load?.().catch(() => undefined);
+    return Promise.resolve(load?.().catch(() => undefined));
   }));
 }
 

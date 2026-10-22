@@ -1318,7 +1318,7 @@ export class LyraCombobox<
   override click(): void {
     if (this.liveDisabled) return;
     this.inputEl?.focus();
-    this.show();
+    void this.show();
   }
 
   select(): void {
@@ -1535,7 +1535,7 @@ export class LyraCombobox<
     this.toggleAttribute('disabled', this._disabled);
     this._fieldsetDisabled =
       this.validityController?.fieldsetDisabled(this._fieldsetDisabled) ?? this._fieldsetDisabled;
-    if (this._disabled) this.hide();
+    if (this._disabled) void this.hide();
     // Disabling bars constraint validation, so the violation itself is recomputed here -- not just
     // the states republished.
     this.updateValidity();
@@ -1568,7 +1568,7 @@ export class LyraCombobox<
     const old = this._readonly;
     this._readonly = Boolean(next);
     this.toggleAttribute('readonly', this._readonly);
-    if (this._readonly) this.hide();
+    if (this._readonly) void this.hide();
     this.updateValidity();
     this.requestUpdate('readonly', old);
   }
@@ -2045,7 +2045,7 @@ export class LyraCombobox<
     const wasDisabled = this.effectiveDisabled;
     this._fieldsetDisabled = disabled;
     if (wasDisabled === this.effectiveDisabled) return;
-    if (disabled) this.hide();
+    if (disabled) void this.hide();
     // Cascaded disablement bars constraint validation exactly like the control's own `disabled`.
     this.updateValidity();
     this.requestUpdate();
@@ -3075,7 +3075,7 @@ export class LyraCombobox<
       this.setValue(row.value, true, sourceOption);
       this.query = '';
       this.explicitInputValue = false;
-      this.hide();
+      void this.hide();
     }
     // The query resets to '' above but `asyncRows` doesn't refresh on its
     // own -- re-run `source` so the listbox (still open in multiple mode,
@@ -3135,7 +3135,7 @@ export class LyraCombobox<
     this.explicitInputValue = false;
     this.query = (e.target as HTMLInputElement).value;
     this.activeIndex = -1;
-    this.show();
+    void this.show();
     if (this.source) this.runSource(this.query);
     // One of the two user-driven `query` writers that announce the new filter text (the other is
     // the clear button, via `clear()`) -- see the `query` declaration above.
@@ -3317,7 +3317,7 @@ export class LyraCombobox<
       event.stopPropagation();
       return;
     }
-    if (!this.restoringOverlayFocus) this.show();
+    if (!this.restoringOverlayFocus) void this.show();
     relayNativeEvent(this, event);
   };
 
@@ -3376,7 +3376,7 @@ export class LyraCombobox<
           (!this.overlayHandle?.isActive() || this.overlayHandle.isTopmost())
         ) {
           e.preventDefault();
-          this.hide();
+          void this.hide();
         }
         break;
       case 'Home':
@@ -3411,7 +3411,7 @@ export class LyraCombobox<
     if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
     this.inputEl?.focus();
-    this.show();
+    void this.show();
   };
 
   // Delegated onto [part="listbox"] (see render()) rather than one closure

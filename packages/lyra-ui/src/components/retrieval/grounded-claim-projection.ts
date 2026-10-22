@@ -19,7 +19,7 @@ export interface ProjectedGroundedClaim {
 
 const MAX_PROJECTED_ROWS = 10_000;
 
-function valueOf(descriptor: OwnDataDescriptorResult): unknown | undefined {
+function valueOf(descriptor: OwnDataDescriptorResult): unknown {
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
     ? undefined : descriptor.value;
 }

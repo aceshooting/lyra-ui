@@ -75,7 +75,7 @@ function descriptorValue(value: object, property: PropertyKey): ReturnType<typeo
   return getOwnDataDescriptor(value, property);
 }
 
-function valueOfDescriptor(descriptor: ReturnType<typeof getOwnDataDescriptor>): unknown | undefined {
+function valueOfDescriptor(descriptor: ReturnType<typeof getOwnDataDescriptor>): unknown {
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
     ? undefined
     : descriptor.value;

@@ -245,7 +245,7 @@ test('field continuity requires all three published witnesses and rejects change
     };
     return { capture };
   });
-  const attachments = captures.map(({ capture }, index) => {
+  const attachments = captures.map(({ capture }) => {
     const facts = structuredClone(baseline);
     facts.sourceRelease = capture.sourceRelease;
     facts.sourceVersion = capture.sourceVersion;

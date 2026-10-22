@@ -109,7 +109,7 @@ export function collectDocumentedSpecifiers(packageDir = defaultPackageDir) {
     // importing (it deliberately no longer resolves), so those rows are not instructions to import.
     const contents = readFileSync(file, 'utf8')
       .split('\n')
-      .filter((line) => !/^\| module \|/.test(line))
+      .filter((line) => !line.startsWith('| module |'))
       .join('\n');
     for (const pattern of IMPORT_PATTERNS) {
       pattern.lastIndex = 0;

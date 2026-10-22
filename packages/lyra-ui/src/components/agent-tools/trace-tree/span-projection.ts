@@ -49,7 +49,7 @@ function projectLyraSpan(value: unknown): CanonicalLyraSpan | undefined {
       if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
       descriptors.set(property, descriptor);
     }
-    const descriptor = (property: (typeof SPAN_PROPERTIES)[number]): unknown | undefined => {
+    const descriptor = (property: (typeof SPAN_PROPERTIES)[number]): unknown => {
       const valueDescriptor = descriptors.get(property);
       if (
         valueDescriptor === undefined ||

@@ -18,17 +18,20 @@ if (
   qualificationManifest?.schemaVersion !== 1 ||
   !qualificationManifest.workflows?.ci ||
   !qualificationManifest.workflows?.fullEngine ||
+  !qualificationManifest.workflows?.qualityTools ||
   !qualificationManifest.workflows?.testAllBrowsers
 ) {
   throw new Error('.github/release-qualification.json has an unsupported schema');
 }
 const ciQualification = qualificationManifest.workflows.ci;
 const fullEngineQualification = qualificationManifest.workflows.fullEngine;
+const qualityToolsQualification = qualificationManifest.workflows.qualityTools;
 const testAllBrowsersQualification =
   qualificationManifest.workflows.testAllBrowsers;
 for (const [label, workflow] of [
   ['CI', ciQualification],
   ['full-engine', fullEngineQualification],
+  ['Quality tools', qualityToolsQualification],
   ['Test All Browsers', testAllBrowsersQualification],
 ]) {
   if (
@@ -48,6 +51,9 @@ for (const [label, workflow] of [
 export const REQUIRED_CI_JOBS = Object.freeze([...ciQualification.requiredJobs]);
 export const REQUIRED_FULL_ENGINE_JOBS = Object.freeze([
   ...fullEngineQualification.requiredJobs,
+]);
+export const REQUIRED_QUALITY_TOOLS_JOBS = Object.freeze([
+  ...qualityToolsQualification.requiredJobs,
 ]);
 export const REQUIRED_TEST_ALL_BROWSER_JOBS = Object.freeze([
   ...testAllBrowsersQualification.requiredJobs,
@@ -193,6 +199,22 @@ export function evaluateFullEngineRun({ run, jobs, sha }) {
   });
 }
 
+export function evaluateQualityToolsRun({ run, jobs, sha }) {
+  return evaluateRequiredWorkflowRun({
+    run,
+    jobs,
+    sha,
+    workflowName: qualityToolsQualification.name,
+    workflowPath: qualityToolsQualification.path,
+    requiredJobs: REQUIRED_QUALITY_TOOLS_JOBS,
+    runLabel: 'Quality tools',
+    requiredJobLabel: 'Quality tools',
+    workflowDescription: 'Quality tools workflow',
+    requiredEvent: qualityToolsQualification.event,
+    requiredHeadBranch: qualityToolsQualification.headBranch,
+  });
+}
+
 export function evaluateTestAllBrowsersRun({ run, jobs, sha }) {
   return evaluateRequiredWorkflowRun({
     run,
@@ -265,6 +287,14 @@ export function waitForSuccessfulFullEngine(options) {
     ...options,
     evaluateRun: evaluateFullEngineRun,
     workflowLabel: 'full-engine',
+  });
+}
+
+export function waitForSuccessfulQualityTools(options) {
+  return waitForSuccessfulWorkflow({
+    ...options,
+    evaluateRun: evaluateQualityToolsRun,
+    workflowLabel: 'Quality tools',
   });
 }
 
@@ -560,6 +590,14 @@ function waitFullEngineCli(options) {
   });
 }
 
+function waitQualityToolsCli(options) {
+  return waitWorkflowCli(options, {
+    defaultWorkflow: 'quality-tools.yml',
+    waiter: waitForSuccessfulQualityTools,
+    workflowLabel: 'Quality tools',
+  });
+}
+
 function waitTestAllBrowsersCli(options) {
   return waitWorkflowCli(options, {
     defaultWorkflow: 'test-all-browsers.yml',
@@ -823,6 +861,7 @@ export async function runCli(argv = process.argv.slice(2)) {
   if (options.command === 'wait-test-all-browsers') {
     return waitTestAllBrowsersCli(options);
   }
+  if (options.command === 'wait-quality-tools') return waitQualityToolsCli(options);
   if (options.command === 'plan-release') return planReleaseCli(options);
   if (options.command === 'resolve-tag') return resolveTagCli(options);
   if (options.command === 'validate-git-tag') return validateGitTagCli(options);
@@ -845,7 +884,7 @@ export async function runCli(argv = process.argv.slice(2)) {
   }
   if (options.command === 'verify-site-freshness') return verifySiteFreshnessCli(options);
   throw new Error(
-    'Usage: release-integrity.mjs wait-ci|wait-full-engine|wait-test-all-browsers|plan-release|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild|collect-release-assets|verify-release-assets|verify-site-freshness [options]',
+    'Usage: release-integrity.mjs wait-ci|wait-full-engine|wait-test-all-browsers|wait-quality-tools|plan-release|resolve-tag|validate-git-tag|validate-workflow-source|validate-tarball|compare-rebuild|collect-release-assets|verify-release-assets|verify-site-freshness [options]',
   );
 }
 

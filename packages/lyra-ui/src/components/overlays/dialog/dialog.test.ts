@@ -1311,7 +1311,8 @@ describe('unified show/hide lifecycle', () => {
     await el.updateComplete;
     let closeCount = 0;
     el.addEventListener('lr-close', () => closeCount++);
-    el.addEventListener('lr-hide', (event) => (event as Event).preventDefault());
+    const veto = (event: Event): void => event.preventDefault();
+    el.addEventListener('lr-hide', veto);
 
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await el.updateComplete;
@@ -1331,7 +1332,11 @@ describe('unified show/hide lifecycle', () => {
     expect(el.hasAttribute('open'), 'the reflected attribute must not drift from the vetoed state').to.be.true;
     expect(closeCount, 'a vetoed lr-hide never reaches lr-close').to.equal(0);
 
-    el.removeEventListener('lr-hide', () => undefined);
+    // Positive control: with the veto listener removed, the same request closes the dialog.
+    el.removeEventListener('lr-hide', veto);
+    await el.hide();
+    expect(el.open, 'hide() once the veto listener is removed').to.be.false;
+    expect(closeCount, 'the unvetoed hide reaches lr-close').to.equal(1);
   });
 
   it('assigning open drives the same lifecycle as show()/hide()', async () => {

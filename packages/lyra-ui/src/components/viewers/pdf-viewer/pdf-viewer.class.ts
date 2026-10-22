@@ -45,7 +45,7 @@ import type {
 } from '../page-rail/page-rail.class.js';
 import type { LyraVirtualListIndexedSource } from '../../layout/virtual-list/virtual-list.class.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
-import { DeferredTeardown } from '../document-viewer/deferred-teardown.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import {

@@ -57,7 +57,7 @@ for (const mod of manifest.modules ?? []) {
     const ownStylesheet = path.basename(mod.path).replace(/\.class\.ts$|\.ts$/, '.styles.ts');
     const stylesheets = existsSync(path.join(dir, ownStylesheet))
       ? [ownStylesheet]
-      : readdirSync(dir).filter((file) => /\.styles\.ts$/.test(file));
+      : readdirSync(dir).filter((file) => file.endsWith('.styles.ts'));
     const usedProps = new Set();
     const entrySheets = stylesheets.map((file) => path.join(dir, file));
     for (const file of entrySheets) {

@@ -6,7 +6,7 @@ import test from 'node:test';
 
 import { pinnedPlaywright, syncPlaywrightImages } from './sync-playwright-images.mjs';
 
-const WORKFLOWS = ['ci.yml', 'full-engine.yml', 'test-all-browsers.yml'];
+const WORKFLOWS = ['ci.yml', 'full-engine.yml', 'quality-tools.yml', 'test-all-browsers.yml'];
 const image = (version) => `container:\n  image: mcr.microsoft.com/playwright:v${version}-noble\n`;
 
 function fixtureRoot({ pinned = '1.64.0', images = '1.63.0', versionFile = '1.63.0' } = {}) {

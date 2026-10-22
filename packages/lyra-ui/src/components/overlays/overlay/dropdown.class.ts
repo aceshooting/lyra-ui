@@ -321,7 +321,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     const menu = this.menuEngine;
     this.configureMenu(menu);
     if (menu) menu.focusContained(focus);
-    else this.show();
+    else void this.show();
   }
 
   /** Re-run positioning after an imperative anchor/layout change. */

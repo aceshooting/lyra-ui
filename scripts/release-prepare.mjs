@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Local release preparation: consumes every pending changeset and regenerates the version-derived
 // artifacts, then stops. It never lints, tests, packs, commits, tags, or pushes -- the bumped tree
-// is left for review and a normal commit to main. Qualification (CI, Test All Browsers, and the
-// full browser-engine suite on the exact pushed commit), tagging, the GitHub Release, and the npm
-// publish all run on GitHub through .github/workflows/release.yml.
+// is left for review and a normal commit to main. Qualification (CI, Test All Browsers, the full
+// browser-engine suite, and Quality tools on the exact pushed commit), tagging, the GitHub Release,
+// and the npm publish all run on GitHub through .github/workflows/release.yml.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -125,6 +125,23 @@ export function releaseCommitSubject(packages) {
   return `chore(release): ${packages.map(({ name, version }) => `${name}@${version}`).join(', ')}`;
 }
 
+/** What to do after the bump: budgets, the release commit, the qualification dispatches, then Release. */
+export function releaseNextSteps(released) {
+  return (
+    '\nConfirm the version-stamped build still fits every size budget before committing:\n' +
+    '  pnpm release:budgets\n' +
+    'Review the diff, then commit and push to main:\n' +
+    `  git add -A && git commit -m "${releaseCommitSubject(released)}"\n` +
+    'Push CI runs on that commit. Dispatch the other three qualification workflows for the same commit\n' +
+    '(default inputs; Quality tools must include the A/B benchmark), while origin/main is still that commit:\n' +
+    '  gh workflow run test-all-browsers.yml --ref main\n' +
+    '  gh workflow run full-engine.yml --ref main\n' +
+    '  gh workflow run quality-tools.yml --ref main\n' +
+    'After CI, Test All Browsers, the Full browser-engine suite, and Quality tools pass on that commit, run:\n' +
+    '  gh workflow run release.yml --ref main'
+  );
+}
+
 /** Remove Changesets' indentation on blank lines only within the newly generated release. */
 export function normalizeReleaseChangelog(text, version) {
   const headings = [...text.matchAll(/^## ([^\r\n]+)\r?$/gmu)];
@@ -226,14 +243,7 @@ async function main(argv) {
     console.log(`  ${pkg.name}: ${pkg.previousVersion} -> ${pkg.version} (tag ${pkg.tag})`);
   }
   console.log(`\n${git(['status', '--short']).trimEnd()}`);
-  console.log(
-    '\nConfirm the version-stamped build still fits every size budget before committing:\n' +
-      '  pnpm release:budgets\n' +
-      'Review the diff, then commit and push to main:\n' +
-      `  git add -A && git commit -m "${releaseCommitSubject(released)}"\n` +
-      'After CI, Test All Browsers, and the Full browser-engine suite pass on that commit, run:\n' +
-      '  gh workflow run release.yml --ref main',
-  );
+  console.log(releaseNextSteps(released));
 }
 
 if (isMainModule(import.meta.url)) {

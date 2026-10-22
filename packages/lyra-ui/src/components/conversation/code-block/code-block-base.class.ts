@@ -323,7 +323,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       localize: this.localize.bind(this),
       renderPlainCode: () => this.cachedPlainCode(),
       onToggle: this.interactions.toggleCollapsed,
-      onCopy: this.interactions.copy,
+      onCopy: () => void this.interactions.copy(),
       onBodyMouseUp: this.interactions.onBodyMouseUp,
       onBodyClick: this.interactions.onBodyClick,
       onBodyKeyDown: this.interactions.onBodyKeyDown,

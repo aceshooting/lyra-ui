@@ -256,7 +256,7 @@ export class LyraAccordion extends LyraElement<LyraAccordionEventMap> {
     if (this.mode !== 'multiple') return;
     for (const panel of this.panels) {
       if (panel.disabled || panel.expanded) continue;
-      panel.expand();
+      void panel.expand();
     }
   }
 

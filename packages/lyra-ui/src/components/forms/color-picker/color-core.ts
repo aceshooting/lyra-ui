@@ -188,6 +188,67 @@ function parseHex(text: string): LyraColorHsva | null {
   return hsva(h, s, v, hasAlpha ? channel(3) / 255 : 1);
 }
 
+const float32 = Math.fround;
+/** The binary32 `1e-7` the browser adds to each channel before it rounds to 8 bits. */
+const BROWSER_ROUNDING_EPSILON = float32(1e-7);
+/** How far inside a byte's rounding interval, in 8-bit steps, a channel is settled. */
+const BYTE_MARGIN = 1e-9;
+
+/**
+ * The 8-bit channels Chromium resolves an author-written `hsl()` colour to (its computed `color`).
+ *
+ * The browser converts in single precision and adds a binary32 `1e-7` before rounding, so a channel
+ * that is exactly `.5` in real arithmetic lands on either side of it, while a double-precision
+ * `hslToHsv` -> `hsvToRgb` round trip disagrees by one on roughly 1 in 1000 integer colours (always
+ * an exact `.5` or a hair under it). This follows `gfx::HSLToSRGB` and the legacy `rgb()` serializer
+ * operation by operation, rounding to binary32 after each one; the hue is wrapped, and `percent / 100`
+ * taken, in double precision first. Firefox and WebKit resolve some exact-`.5` channels differently
+ * (and WebKit does not clamp a saturation above 100%); Chromium is the reference here. Chromium's own
+ * painting omits the `1e-7`, so on a fraction of a percent of integer colours a painted channel is one
+ * below its computed `color`; the computed value is what scripts and `parseViaCssom` read, so it is
+ * the one matched.
+ */
+function browserHslBytes(
+  hue: number,
+  saturation: number,
+  lightness: number,
+): [number, number, number] {
+  const h = float32(normalizeHue(hue));
+  const s = float32(clamp(saturation, 0, 100) / 100);
+  const l = float32(clamp(lightness, 0, 100) / 100);
+  const channel = (offset: number): number => {
+    let value = l;
+    if (s !== 0) {
+      const k = float32(offset + float32(h / 30)) % 12;
+      const a = float32(s * Math.min(l, float32(1 - l)));
+      const t = Math.max(-1, Math.min(float32(k - 3), float32(9 - k), 1));
+      value = float32(l - float32(a * t));
+    }
+    return Math.round(clamp(float32(float32(value + BROWSER_ROUNDING_EPSILON) * 255), 0, 255));
+  };
+  return [channel(0), channel(8), channel(4)];
+}
+
+/**
+ * Moves `color` by far less than one 8-bit step so each channel rounds to `bytes`. A colour already
+ * on those bytes comes back untouched; otherwise each channel that misses moves to just inside the
+ * rounding interval of its byte. Only exact and near-exact `.5` channels ever miss, so the state the
+ * picker drags from stays the plain hsl() -> hsv conversion to within a billionth of a percent.
+ */
+function settleOnBytes(color: LyraColorHsva, bytes: readonly [number, number, number]): LyraColorHsva {
+  const { r, g, b } = hsvToRgb(color.h, color.s, color.v);
+  const channels = [r, g, b];
+  if (channels.every((channel, index) => Math.round(channel) === bytes[index])) return color;
+  const [red = 0, green = 0, blue = 0] = channels.map((channel, index) => {
+    const byte = bytes[index] ?? 0;
+    return clamp(channel, byte - 0.5 + BYTE_MARGIN, byte + 0.5 - BYTE_MARGIN);
+  });
+  const settled = rgbToHsv(red, green, blue);
+  // A gray has no hue to recover, and an author's 360 is the same colour as the 0 recovered here.
+  const keepHue = settled.s === 0 || (settled.h === 0 && color.h === 360);
+  return hsva(keepHue ? color.h : settled.h, settled.s, settled.v, color.a);
+}
+
 function parseFunctional(text: string): LyraColorHsva | null {
   const match = FUNCTION_PATTERN.exec(text);
   if (!match) return null;
@@ -212,7 +273,11 @@ function parseFunctional(text: string): LyraColorHsva | null {
     if (h === null || second === null || third === null) return null;
     if (name.startsWith('hsv')) return hsva(h, second, third, alphaValue);
     const converted = hslToHsv(h, second, third);
-    return hsva(converted.h, converted.s, converted.v, alphaValue);
+    // The exact state is kept for dragging; it is only settled onto the channels the browser shows.
+    return settleOnBytes(
+      hsva(converted.h, converted.s, converted.v, alphaValue),
+      browserHslBytes(h, second, third),
+    );
   }
   return null;
 }

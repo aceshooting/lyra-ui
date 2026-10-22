@@ -12,6 +12,7 @@ import { playwrightLauncher } from '@web/test-runner-playwright';
 import { esbuildPlugin } from '@web/dev-server-esbuild';
 import { scaleReporter } from './scripts/wtr-scale-reporter.mjs';
 import { timingReporter } from './scripts/wtr-timing-reporter.mjs';
+import { failureReporter } from './scripts/wtr-failure-reporter.mjs';
 import { completeJunitReporter } from './scripts/wtr-junit-reporter.mjs';
 import { waitUntilPollIntervalPlugin } from './scripts/wait-until-poll-interval.mjs';
 
@@ -288,8 +289,23 @@ function parseTestConcurrency(value, name = 'WTR_CONCURRENCY') {
   return concurrency;
 }
 
+// Mocha retries per failed test (default 1). `WTR_RETRIES=0` exposes first-attempt failures that the
+// retry hides, which is how the scheduled flake hunt (quality-tools.yml) finds tests that only pass
+// on their second try; every ordinary lane leaves it unset.
+function parseTestRetries(value) {
+  if (value === undefined) return 1;
+  const retries = Number(value);
+  if (!/^(0|[1-9]\d*)$/.test(value) || !Number.isSafeInteger(retries)) {
+    throw new Error(
+      `WTR_RETRIES must be a non-negative safe integer; received ${JSON.stringify(value)}.`,
+    );
+  }
+  return retries;
+}
+
 const testServerPort = parseTestServerPort(process.env.WTR_PORT);
 const testConcurrency = parseTestConcurrency(process.env.WTR_CONCURRENCY);
+const testRetries = parseTestRetries(process.env.WTR_RETRIES);
 // Pages per runner process under coverage (default 1).
 const coverageConcurrency =
   process.env.WTR_COVERAGE_CONCURRENCY === undefined
@@ -297,6 +313,8 @@ const coverageConcurrency =
     : parseTestConcurrency(process.env.WTR_COVERAGE_CONCURRENCY, 'WTR_COVERAGE_CONCURRENCY');
 // Per-file timing lines for scripts/fixtures/test-file-costs.json.
 const timingReportPath = process.env.WTR_TIMING_REPORT || undefined;
+// Per-failure lines for the scheduled flake hunt (scripts/flake-hunt.mjs).
+const failureReportPath = process.env.WTR_FAILURE_REPORT || undefined;
 const browserProduct = (process.env.WTR_BROWSER ?? 'chromium').toLowerCase();
 const isPointerTimingSensitiveBrowser =
   browserProduct === 'firefox' || browserProduct === 'webkit' || browserProduct === 'safari';
@@ -552,7 +570,8 @@ export default {
       // Retry a failed test once before reporting it red: a red result is
       // therefore reproducible, not scheduler noise. Tests that stay flaky
       // under a retry get fixed or explicitly quarantined, never ignored.
-      retries: 1,
+      // WTR_RETRIES=0 (the scheduled flake hunt only) reports first-attempt failures instead.
+      retries: testRetries,
     },
   },
   testRunnerHtml,
@@ -564,7 +583,7 @@ export default {
   // built-in default reporter behavior exactly as today. outputPath follows
   // the same per-shard reportDir as coverageConfig below, so parallel/sequential
   // shard sub-runs never clobber each other's JUnit output.
-  reporters: collectCoverage || timingReportPath || scaleRun
+  reporters: collectCoverage || timingReportPath || failureReportPath || scaleRun
     ? [
         defaultReporter(),
         ...(scaleRun ? [scaleReporter()] : []),
@@ -572,6 +591,7 @@ export default {
           ? [completeJunitReporter({ outputPath: `${coverageReportDir ?? 'coverage'}/junit.xml` })]
           : []),
         ...(timingReportPath ? [timingReporter(timingReportPath)] : []),
+        ...(failureReportPath ? [failureReporter(failureReportPath)] : []),
       ]
     : undefined,
   // Chromium reports ResizeObserver loop notifications as ErrorEvents whose

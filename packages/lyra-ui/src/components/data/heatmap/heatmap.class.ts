@@ -2731,7 +2731,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       }
       if (this.accessibleCells && this.sourceController.viewport && !this.sourceController.error) {
         const cursor = this.sourceController.cursor;
-        this.sourceController.ensureWindow(cursor?.row ?? this.sourceController.viewport.rowStart, cursor?.col ?? this.sourceController.viewport.columnStart);
+        void this.sourceController.ensureWindow(cursor?.row ?? this.sourceController.viewport.rowStart, cursor?.col ?? this.sourceController.viewport.columnStart);
       }
       return;
     }

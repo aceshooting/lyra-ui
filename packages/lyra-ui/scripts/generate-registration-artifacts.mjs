@@ -145,7 +145,7 @@ function assertCuratedOutsideImports(source, range, label) {
   const outside = source.slice(0, range.start) + source.slice(range.end);
   const unknown = [...outside.matchAll(/^import '([^']+)';$/gm)]
     .map((match) => match[1])
-    .filter((specifier) => !/-register\.js$/.test(specifier));
+    .filter((specifier) => !specifier.endsWith('-register.js'));
   invariant(
     unknown.length === 0,
     `${label} has non-inventory side-effect import(s) outside the generated block: ${unknown.join(', ')}`,

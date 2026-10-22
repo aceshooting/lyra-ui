@@ -180,6 +180,21 @@ function stubFetch(body: string, ok = true): () => void {
   };
 }
 
+// Budget for every wait on a message load. The first real load in a page cold-imports postal-mime and
+// dompurify through the dev server (about 80 ms idle, 0.7 to 1.1 s on one core shared with eight busy
+// loops), so the 1,000 ms default has no margin; 5 s stays under mocha's 6 s test timeout, so a miss
+// reports its own message.
+const LOAD_WAIT = { timeout: 5000 };
+
+/** Waits for `selector` to render in `el`'s shadow root, i.e. for the message load to settle. */
+function untilRendered(el: LyraEmailViewer, selector: string): Promise<void> {
+  return waitUntil(
+    () => el.shadowRoot!.querySelector(selector) !== null,
+    `${selector} never rendered after the message load`,
+    LOAD_WAIT,
+  );
+}
+
 async function loaded(
   body: string
 ): Promise<{ el: LyraEmailViewer; restore: () => void }> {
@@ -189,7 +204,7 @@ async function loaded(
       src="https://example.test/message.eml"
     ></lr-email-viewer>`
   );
-  await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
+  await untilRendered(el, '[part="body"]');
   return { el, restore };
 }
 
@@ -321,9 +336,7 @@ describe("lr-email-viewer", () => {
           src="https://example.test/message.eml"
         ></lr-email-viewer>
       `);
-      await waitUntil(
-        () => el.shadowRoot!.querySelector("[data-fixed]") !== null
-      );
+      await untilRendered(el, '[data-fixed]');
       const surface = el.shadowRoot!.querySelector(
         '[part="body-html"]'
       ) as HTMLElement;
@@ -380,9 +393,7 @@ describe("lr-email-viewer", () => {
           .strings=${{ emailViewerGroupAddress: "{members} — {name}" }}
         ></lr-email-viewer>
       `);
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="from"]') !== null
-      );
+      await untilRendered(el, '[part="from"]');
       expect(
         el.shadowRoot!.querySelector('[part="from"]')!.textContent
       ).to.equal(
@@ -461,9 +472,7 @@ describe("lr-email-viewer", () => {
           src="https://example.test/message.eml"
         ></lr-email-viewer>`
       );
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="error"]') !== null
-      );
+      await untilRendered(el, '[part="error"]');
       expect(
         el.shadowRoot!.querySelector('[part="error"]')!.textContent
       ).to.equal(
@@ -497,9 +506,7 @@ describe("lr-email-viewer", () => {
           src="https://example.test/message.eml"
         ></lr-email-viewer>`
       );
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="body-text"]') !== null
-      );
+      await untilRendered(el, '[part="body-text"]');
       expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be
         .true;
       expect(
@@ -529,9 +536,7 @@ describe("lr-email-viewer", () => {
           src="https://example.test/message.eml"
         ></lr-email-viewer>`
       );
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="body"]') !== null
-      );
+      await untilRendered(el, '[part="body"]');
       expect(
         el.shadowRoot!.querySelector('[part="body-text"]')!.textContent
       ).to.contain("See you at noon.");
@@ -622,7 +627,7 @@ describe("lr-email-viewer", () => {
       );
       let renderErrors = 0;
       el.addEventListener('lr-render-error', () => { renderErrors += 1; });
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="body-text"]') !== null);
+      await untilRendered(el, '[part="body-text"]');
 
       expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent)
         .to.contain('Safe plain-text body.');
@@ -677,9 +682,7 @@ describe("lr-email-viewer", () => {
           src="https://example.test/missing.eml"
         ></lr-email-viewer>`
       );
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="error"]') !== null
-      );
+      await untilRendered(el, '[part="error"]');
       expect(
         el.shadowRoot!.querySelector('[part="error"]')!.textContent
       ).to.equal("Failed to load document.");
@@ -709,9 +712,7 @@ describe("lr-email-viewer", () => {
           src="https://example.test/huge.eml"
         ></lr-email-viewer>`
       );
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="error"]') !== null
-      );
+      await untilRendered(el, '[part="error"]');
       expect(
         el.shadowRoot!.querySelector('[part="error"]')!.textContent
       ).to.equal("This document is too large to preview.");
@@ -742,11 +743,9 @@ describe("lr-email-viewer", () => {
     });
     try {
       el.src = "https://example.test/stale.eml";
-      await waitUntil(() => signals.length > 0);
+      await waitUntil(() => signals.length > 0, 'the stale request was never issued', LOAD_WAIT);
       el.src = "https://example.test/fresh.eml";
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="body"]') !== null
-      );
+      await untilRendered(el, '[part="body"]');
       expect(signals[0]?.aborted, "the stale request should have been aborted")
         .to.be.true;
       expect(el.shadowRoot!.querySelector('[part="error"]') == null).to.be.true;
@@ -767,9 +766,7 @@ describe("lr-email-viewer", () => {
           src="https://example.test/message.eml"
         ></lr-email-viewer>`
       );
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="body"]') !== null
-      );
+      await untilRendered(el, '[part="body"]');
       expect(
         el.shadowRoot!.querySelector('[part="subject"]')!.textContent
       ).to.contain("Quarterly report");
@@ -785,7 +782,7 @@ describe("lr-email-viewer", () => {
     window.fetch = (() => { calls++; return Promise.resolve(response(SAMPLE_EML)); }) as typeof window.fetch;
     try {
       const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
+      await untilRendered(el, '[part="body"]');
       el.parentElement!.append(document.createElement('span'), el);
       await twoFrames();
       expect(calls).to.equal(1);
@@ -809,13 +806,15 @@ describe("lr-email-viewer", () => {
       );
       await waitUntil(
         () =>
-          calls === 1 && el.shadowRoot!.querySelector('[part="body"]') !== null
+          calls === 1 && el.shadowRoot!.querySelector('[part="body"]') !== null,
+        'the first load never rendered its body',
+        LOAD_WAIT,
       );
       const parent = el.parentElement!;
       el.remove();
       await aTimeout(0);
       parent.append(el);
-      await waitUntil(() => calls === 2);
+      await waitUntil(() => calls === 2, 'reconnecting never reloaded the source', LOAD_WAIT);
     } finally {
       window.fetch = original;
     }
@@ -885,9 +884,7 @@ describe("lr-email-viewer", () => {
           src="https://example.test/message.eml"
         ></lr-email-viewer>`
       );
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
-      );
+      await untilRendered(el, '[part="quote-toggle"]');
       (
         el.shadowRoot!.querySelector(
           '[part="quote-toggle"]'
@@ -989,9 +986,7 @@ describe("lr-email-viewer", () => {
         const el = await fixture<LyraEmailViewer>(html`
           <lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>
         `);
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="attachment-button"]') !== null
-        );
+        await untilRendered(el, '[part="attachment-button"]');
         expect(
           el.shadowRoot!.querySelector('[part="attachment-name"]')!.textContent
         ).to.equal('Unnamed attachment');
@@ -1076,9 +1071,7 @@ describe("lr-email-viewer", () => {
             .strings=${{ fileSizeUnitB: "o" }}
           ></lr-email-viewer>`
         );
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="body"]') !== null
-        );
+        await untilRendered(el, '[part="body"]');
         const button = el.shadowRoot!.querySelector(
           '[part="attachment-button"]'
         ) as HTMLButtonElement;
@@ -1147,9 +1140,7 @@ describe("lr-email-viewer", () => {
             src="https://example.test/message.eml"
           ></lr-email-viewer>`
         );
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="body"]') !== null
-        );
+        await untilRendered(el, '[part="body"]');
         // The empty `{}` group member formats to '' and is dropped by formatAddress's own
         // `.filter(Boolean)`, so it contributes coverage of the fallback without appearing here.
         const person = new Intl.ListFormat("en", {
@@ -1249,10 +1240,7 @@ describe("lr-email-viewer", () => {
             src="https://example.test/message.eml"
           ></lr-email-viewer>`
         );
-        await waitUntil(
-          () =>
-            el.shadowRoot!.querySelector('[part="attachment-size"]') !== null
-        );
+        await untilRendered(el, '[part="attachment-size"]');
         expect(
           el.shadowRoot!.querySelector('[part="attachment-size"]')!.textContent
         ).to.equal(
@@ -1274,9 +1262,7 @@ describe("lr-email-viewer", () => {
             src="https://example.test/message.eml"
           ></lr-email-viewer>`
         );
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="body"]') !== null
-        );
+        await untilRendered(el, '[part="body"]');
         const base = el.shadowRoot!.querySelector(
           '[part="base"]'
         ) as HTMLElement;
@@ -1304,7 +1290,7 @@ describe("lr-email-viewer", () => {
       const restore = stubFetch(QUOTED_TEXT_EML);
       try {
         const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+        await untilRendered(el, '[part="quote-toggle"]');
         expect(await el.search('Show quoted text')).to.equal(0);
         expect(await el.search('Sounds good')).to.equal(1);
         const bodyText = el.shadowRoot!.querySelector('[part="body-text"]')!;
@@ -1328,9 +1314,7 @@ describe("lr-email-viewer", () => {
         ></lr-email-viewer>`
       );
       try {
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
-        );
+        await untilRendered(el, '[part="quote-toggle"]');
         const quoted = el.shadowRoot!.querySelector(
           '[part="quoted"]'
         ) as HTMLElement;
@@ -1357,9 +1341,7 @@ describe("lr-email-viewer", () => {
             src="https://example.test/message.eml"
           ></lr-email-viewer>`
         );
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quoted"]') !== null
-        );
+        await untilRendered(el, '[part="quoted"]');
         expect(
           el
             .shadowRoot!.querySelector('[part="quoted"]')!
@@ -1385,9 +1367,7 @@ describe("lr-email-viewer", () => {
         ></lr-email-viewer>`
       );
       try {
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="body-text"]') !== null
-        );
+        await untilRendered(el, '[part="body-text"]');
         expect(el.shadowRoot!.querySelector('[part="quote-toggle"]') == null).to
           .be.true;
       } finally {
@@ -1401,7 +1381,7 @@ describe("lr-email-viewer", () => {
       const restore = stubFetch(GMAIL_QUOTE_EML);
       try {
         const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
-        await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+        await untilRendered(el, '[part="quote-toggle"]');
         expect(await el.search('Show quoted text')).to.equal(0);
         expect(await el.search('Sounds good')).to.equal(1);
         const paragraph = el.shadowRoot!.querySelector('[part="body-html"] p')!;
@@ -1494,9 +1474,7 @@ describe("lr-email-viewer", () => {
         ></lr-email-viewer>`
       );
       try {
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
-        );
+        await untilRendered(el, '[part="quote-toggle"]');
         const quoted = el.shadowRoot!.querySelector(
           '[part="quoted"]'
         ) as HTMLElement;
@@ -1516,9 +1494,7 @@ describe("lr-email-viewer", () => {
             src="https://example.test/message.eml"
           ></lr-email-viewer>`
         );
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quoted"]') !== null
-        );
+        await untilRendered(el, '[part="quoted"]');
         expect(
           el
             .shadowRoot!.querySelector('[part="quoted"]')!
@@ -1544,9 +1520,7 @@ describe("lr-email-viewer", () => {
         ></lr-email-viewer>`
       );
       try {
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
-        );
+        await untilRendered(el, '[part="quote-toggle"]');
         const bodyHtml = el.shadowRoot!.querySelector(
           '[part="body-html"]'
         ) as HTMLElement;
@@ -1605,9 +1579,7 @@ describe("lr-email-viewer", () => {
       const internals = el as unknown as { load(): Promise<void> };
       const originalLoad = internals.load;
       try {
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
-        );
+        await untilRendered(el, '[part="quote-toggle"]');
         // Keep the already-rendered body stable across the reconnect. This regression is about
         // delegated event-target identity; the ordinary reconnect reload contract has separate
         // coverage above.
@@ -1618,7 +1590,9 @@ describe("lr-email-viewer", () => {
         await waitUntil(
           () =>
             el.shadowRoot!.querySelector('[part="body-html"]') !== null &&
-            el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
+            el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null,
+          'the adopted viewer never re-rendered its body and quote toggle',
+          LOAD_WAIT,
         );
 
         const body = el.shadowRoot!.querySelector('[part="body-html"]')!;
@@ -1653,9 +1627,7 @@ describe("lr-email-viewer", () => {
             src="https://example.test/message.eml"
           ></lr-email-viewer>`
         );
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
-        );
+        await untilRendered(el, '[part="quote-toggle"]');
         const toggle = el.shadowRoot!.querySelector(
           '[part="quote-toggle"]'
         ) as HTMLButtonElement;
@@ -1680,9 +1652,7 @@ describe("lr-email-viewer", () => {
             src="https://example.test/message.eml"
           ></lr-email-viewer>`
         );
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
-        );
+        await untilRendered(el, '[part="quote-toggle"]');
         (
           el.shadowRoot!.querySelector(
             '[part="quote-toggle"]'
@@ -1713,7 +1683,9 @@ describe("lr-email-viewer", () => {
         await waitUntil(
           () =>
             el.shadowRoot!.querySelectorAll('[part="quote-toggle"]').length ===
-            2
+            2,
+          'the two quote toggles never rendered after the message load',
+          LOAD_WAIT,
         );
         const blocks = () =>
           el.shadowRoot!.querySelectorAll<HTMLElement>('[part="quoted"]');
@@ -1780,7 +1752,9 @@ describe("lr-email-viewer", () => {
         await waitUntil(
           () =>
             el.shadowRoot!.querySelectorAll('[part="quote-toggle"]').length ===
-            2
+            2,
+          'the two quote toggles never rendered after the message load',
+          LOAD_WAIT,
         );
         const afterLoad = parseCount;
         expect(
@@ -1833,9 +1807,7 @@ describe("lr-email-viewer", () => {
         ></lr-email-viewer>`
       );
       try {
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
-        );
+        await untilRendered(el, '[part="quote-toggle"]');
         expect(
           el.shadowRoot!.querySelector('[part="quote-toggle"]')!.textContent
         ).to.equal("Show quoted text");
@@ -1859,9 +1831,7 @@ describe("lr-email-viewer", () => {
         ></lr-email-viewer>`
       );
       try {
-        await waitUntil(
-          () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null
-        );
+        await untilRendered(el, '[part="quote-toggle"]');
         const toggle = el.shadowRoot!.querySelector(
           '[part="quote-toggle"]'
         ) as HTMLButtonElement;
@@ -1922,9 +1892,7 @@ describe("styling", () => {
       ></lr-email-viewer>
     `);
     try {
-      await waitUntil(
-        () => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null,
-      );
+      await untilRendered(el, '[part="quote-toggle"]');
       const toggle = el.shadowRoot!.querySelector(
         '[part="quote-toggle"]',
       ) as HTMLElement;
@@ -1948,7 +1916,7 @@ describe('message content and Lyra chrome', () => {
       '<span data-quote-toggle="0" data-quote-index="0">Fake toggle</span><div class="gmail_quote">Quoted</div>', ''].join('\r\n'));
     try {
       const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+      await untilRendered(el, '[part="quote-toggle"]');
       const body = el.shadowRoot!.querySelector('[part="body-html"]')!;
       expect(body.querySelectorAll('[data-quote-index], [data-quote-toggle]').length).to.equal(2);
       (body.querySelector('span') as HTMLElement).click();
@@ -1979,7 +1947,7 @@ describe('message content and Lyra chrome', () => {
   it('keeps the attachments heading start-aligned', async () => {
     const { el, restore } = await loaded(ATTACHMENT_EML);
     try {
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="attachments-label"]') !== null);
+      await untilRendered(el, '[part="attachments-label"]');
       expect(getComputedStyle(el.shadowRoot!.querySelector('[part="attachments-label"]')!).textAlign).to.equal('start');
       expect(getComputedStyle(el.shadowRoot!.querySelector('[part="from-label"]')!).textAlign).to.equal('end');
     } finally {
@@ -2006,7 +1974,7 @@ describe('message content and Lyra chrome', () => {
       const el = await fixture<LyraEmailViewer>(html`
         <lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>
       `);
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="body-text"]') !== null);
+      await untilRendered(el, '[part="body-text"]');
 
       expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent).to.contain(
         'The safe message body remains available.',

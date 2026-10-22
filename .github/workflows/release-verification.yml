@@ -114,6 +114,12 @@ jobs:
             --workflow full-engine.yml \
             --timeout-seconds 7200 \
             --poll-seconds 20
+          node scripts/release-integrity.mjs wait-quality-tools \
+            --repository "$GITHUB_REPOSITORY" \
+            --sha "$SHA" \
+            --workflow quality-tools.yml \
+            --timeout-seconds 7200 \
+            --poll-seconds 20
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Resolve source package identity from tag

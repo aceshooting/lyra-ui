@@ -105,7 +105,7 @@ const EMPTY_WARNINGS: readonly string[] = Object.freeze([]);
 
 function valueOfDescriptor(
   descriptor: ReturnType<typeof getOwnDataDescriptor>
-): unknown | undefined {
+): unknown {
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR ||
     descriptor === UNSAFE_OWN_DATA_DESCRIPTOR
     ? undefined
@@ -123,7 +123,7 @@ function hasUnsafeDescriptor(
 function nestedEventDetailValue(
   event: CustomEvent<unknown>,
   property: PropertyKey
-): unknown | undefined {
+): unknown {
   const detail = event.detail;
   if (detail === null || typeof detail !== 'object') return undefined;
   return readOwnDataValue(detail, property);

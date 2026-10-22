@@ -74,10 +74,11 @@ interface DocumentSnapshotContext {
   remaining: number;
 }
 
+/** The own field value, or the `DOCUMENT_MISSING` / `DOCUMENT_INVALID` sentinel. */
 function readDocumentField(
   input: object,
   key: PropertyKey
-): unknown | typeof DOCUMENT_INVALID | typeof DOCUMENT_MISSING {
+): unknown {
   try {
     return Object.hasOwn(input, key)
       ? Reflect.get(input, key)
@@ -175,7 +176,7 @@ function snapshotDocumentNode(
       ? undefined
       : snapshotDocumentProps(propsInput as object);
   if (props === DOCUMENT_INVALID) return DOCUMENT_INVALID;
-  let payload: unknown | typeof DOCUMENT_MISSING = DOCUMENT_MISSING;
+  let payload: unknown = DOCUMENT_MISSING;
   if (actionId !== DOCUMENT_MISSING) {
     payload = readDocumentField(input, 'payload');
     if (payload === DOCUMENT_INVALID) return DOCUMENT_INVALID;
