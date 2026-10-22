@@ -13,6 +13,7 @@ import {
   isPlainDataRecord,
   type OwnDataDescriptorResult,
   MISSING_OWN_DATA_DESCRIPTOR,
+  readOwnArrayLength,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -28,14 +29,9 @@ import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
-import { deferredPlaceReady as place } from '../../../internal/anchored-overlay-runtime.js';
-import { collectFocusableElements, composedContains, deepActiveElement } from '../../../internal/overlay-stack.js';
-import { captureComposedFocusRepair, applyComposedFocusRepair, focusFirstAvailable } from '../../../internal/focus-navigation.js';
-import { admitMapAnchorOptions, type LyraMapAnchorBoundary, type LyraMapAnchorSafeArea } from './map-anchor-options.js';
-export type { LyraMapAnchorBoundary, LyraMapAnchorSafeArea } from './map-anchor-options.js';
-export type LyraMapAnchorCloseReason = 'api' | 'close-button' | 'escape';
-export interface LyraMapAnchorCloseDetail { readonly reason: LyraMapAnchorCloseReason; }
-import { virtualAnchorFromRect } from '../../../internal/positioner-geometry.js';
+import type { LyraMapAnchorBoundary, LyraMapAnchorCloseDetail, LyraMapAnchorSafeArea } from './map-anchor-options.js';
+import type { MapAnchorController, MapAnchorHost } from './map-anchor-controller.js';
+export type { LyraMapAnchorBoundary, LyraMapAnchorSafeArea, LyraMapAnchorCloseReason, LyraMapAnchorCloseDetail } from './map-anchor-options.js';
 import {
   loadMapControl,
   loadMaplibre,
@@ -52,18 +48,16 @@ import { styles } from './map.styles.js';
 import { queryMapHit, type MapHitRule, type LyraMapFeatureValue } from './map-hit-test.js';
 export type { LyraMapFeatureValue } from './map-hit-test.js';
 import { flattenedParentElement } from '../../../internal/composed-tree.js';
-import { MapFeatureStateRoutes, type MapFeatureStateRoute, type LyraMapFeatureOrigin, type LyraMapFeatureStateTarget, type LyraMapResolvedFeatureStateTarget } from './map-feature-state-routes.js';
+import { MapFeatureStateRouter, type MapFeatureStateRoute, type LyraMapFeatureOrigin, type LyraMapFeatureStateTarget,
+  type LyraMapResolvedFeatureStateTarget } from './map-feature-state-router.js';
+import type { MapFeatureStateRoutes } from './map-feature-state-routes.js';
 import type { LyraMapFeatureState, MapFeatureStatePeer } from './map-feature-state.js';
 export type { LyraMapFeatureState, LyraMapFeatureStateValue, LyraMapFeatureIdentifier } from './map-feature-state.js';
-export type { LyraMapFeatureOrigin, LyraMapFeatureStateTarget, LyraMapResolvedFeatureStateTarget } from './map-feature-state-routes.js';
-import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { MapDrawing, type MapDrawingError, type LyraMapDrawingSnapshot, type LyraMapDrawingMode } from './map-drawing.js';
-import { acquireMapDrawingGesture } from './map-drawing-gesture.js';
-import { acquireMapDrawingPan } from './map-drawing-pan.js';
-import { MapDrawingPointer } from './map-drawing-pointer.js';
-export type { LyraMapDrawingSnapshot, LyraMapDrawingMetrics, LyraMapDrawingMode, LyraMapDrawingPoint } from './map-drawing.js';
-export type LyraMapDrawingCancelReason = 'cancel' | 'escape' | 'mode-change' | 'pick-mode' | 'style-change' | 'disconnect' | 'disabled' | 'pointercancel';
-export interface LyraMapDrawingCancelDetail extends LyraMapDrawingSnapshot { readonly reason: LyraMapDrawingCancelReason; }
+export type { LyraMapFeatureOrigin, LyraMapFeatureStateTarget, LyraMapResolvedFeatureStateTarget } from './map-feature-state-router.js';
+import type { MapDrawingError, LyraMapDrawingSnapshot, LyraMapDrawingMode, LyraMapDrawingCancelReason, LyraMapDrawingCancelDetail } from './map-drawing.js';
+import type { MapDrawingController, MapDrawingHost } from './map-drawing-controller.js';
+export type { LyraMapDrawingSnapshot, LyraMapDrawingMetrics, LyraMapDrawingMode, LyraMapDrawingPoint, LyraMapDrawingCancelReason,
+  LyraMapDrawingCancelDetail } from './map-drawing.js';
 const DRAW_MODE = literalSetConverter<LyraMapDrawingMode>(['none', 'line', 'polygon'], 'none');
 // Closed message-key sets: each table lists exactly the keys its feedback can show.
 const MAP_CONFIGURATION_MESSAGE = {
@@ -80,28 +74,47 @@ const MAP_DRAWING_MESSAGE = {
   mapDrawingDuplicateVertex: 'mapDrawingDuplicateVertex', mapDrawingVertexLimit: 'mapDrawingVertexLimit',
   mapDrawingTooFewVertices: 'mapDrawingTooFewVertices', mapDrawingInvalidGeometry: 'mapDrawingInvalidGeometry',
 } as const;
+/** The settled temporary-resource work of an element whose drawing runtime is not loaded. */
+const NO_DRAWING_WORK: Promise<void> = Promise.resolve();
+/** The admitted form of the default, empty `overlays`, `images` and `styleOverrides`. */
+const NO_OWNED_FEATURES: MapOwnedFeatureInput = Object.freeze({
+  overlays: Object.freeze({ sources: Object.freeze([]), layers: Object.freeze([]) }),
+  images: Object.freeze([]), styleOverrides: Object.freeze([]),
+});
+/** Conservatively true unless every input is an empty plain default, which needs no admission. */
+function ownedFeaturesRequested(overlays: unknown, images: unknown, styleOverrides: unknown): boolean {
+  try {
+    const empty = (value: unknown): boolean => Array.isArray(value) && Object.getPrototypeOf(value) === Array.prototype && readOwnArrayLength(value) === 0;
+    return !(isPlainDataRecord(overlays) && Object.getPrototypeOf(overlays) === Object.prototype && Reflect.ownKeys(overlays).length === 0 &&
+      empty(images) && empty(styleOverrides));
+  } catch { return true; }
+}
 import { MapCursorOwner } from './map-cursor.js';
+import { mapCoordinates, mapOwnValue, renderedSizeKey } from './map-readers.js';
 import { projectMapInteractionOptions, projectMapBasemapInteractions, type LyraMapInteractionOptions, type LyraMapBasemapInteraction, type CanonicalMapInteraction } from './map-interaction-options.js';
 export type { LyraMapInteractionOptions, LyraMapBasemapInteraction } from './map-interaction-options.js';
-import { MapHashOwner } from './map-hash-owner.js';
+import type { MapHashOwner } from './map-hash-owner.js';
 import type { MapHashCamera } from './map-hash.js';
 import { normalizeMapControlOptions, type LyraMapGeolocateControlOptions, type LyraMapAttributionControlOptions, type LyraMapGeolocationErrorCode,
   type LyraMapNavigationControlOptions, type LyraMapScaleControlOptions } from './map-control-options.js';
 export type { LyraMapControlPosition, LyraMapScaleUnit, LyraMapNavigationControlOptions, LyraMapScaleControlOptions,
   LyraMapGeolocateControlOptions, LyraMapAttributionControlOptions, LyraMapGeolocationErrorCode } from './map-control-options.js';
-import { MapControlsLifecycle, type MapControlLifecyclePeer } from './map-controls-lifecycle.js';
+import type { MapControlLifecyclePeer, MapControlsLifecycle } from './map-controls-lifecycle.js';
 import { MapEngineEvents } from './map-engine-events.js';
 import { MapReadiness } from './map-readiness.js';
-import { exportMapImage, LyraMapImageExportError, type MapImageExportServices, type LyraMapImageExportOptions, type LyraMapImageExportErrorCode } from './map-image-export.js';
-import { collectMapExportAttribution } from './map-export-attribution.js';
-export { LyraMapImageExportError } from './map-image-export.js';
-export type { LyraMapImageExportOptions, LyraMapImageExportType, LyraMapImageExportErrorCode } from './map-image-export.js';
+import { LyraMapImageExportError, type LyraMapImageExportOptions, type LyraMapImageExportErrorCode } from './map-image-export-error.js';
+import type { MapImageExportController, MapImageExportHost, MapImageExportRequest } from './map-image-export-controller.js';
+import { loadMapAnchorRuntime, loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime,
+  loadMapImageExportRuntime, loadMapOwnedFeatureRuntime } from './map-feature-loader.js';
+export { LyraMapImageExportError } from './map-image-export-error.js';
+export type { LyraMapImageExportOptions, LyraMapImageExportType, LyraMapImageExportErrorCode } from './map-image-export-error.js';
 export interface LyraMapImageExportErrorDetail { readonly code: LyraMapImageExportErrorCode; }
 import { createMapConstructionScheduler, type MapConstructionScheduler, type LyraMapInitialization } from './map-construction-scheduler.js';
 export type { LyraMapInitialization } from './map-construction-scheduler.js';
-import { MapOwnedFeatures, snapshotMapOwnedFeatureInput, type MapOwnedFeatureInput } from './map-owned-features.js';
-import type { MapOwnedOverlaySnapshot, LyraMapOverlaySource, LyraMapOverlayLayer } from './map-owned-resources.js';
-import type { LyraMapImage } from './map-images.js';
+import type { MapOwnedFeatures } from './map-owned-features.js';
+import type { MapOwnedFeatureInput } from './map-owned-feature-input.js';
+import type { MapOwnedOverlaySnapshot, LyraMapOverlaySource, LyraMapOverlayLayer } from './map-overlay-admission.js';
+import type { LyraMapImage } from './map-image-admission.js';
 import { projectMapDataLayerModel, projectMapLabelOptions, buildMapLabelLayer, buildMapExternalLayers,
   type CanonicalMapExternalLayer, type CanonicalMapLabel, type LyraMapExternalDataLayer, type LyraMapLabelOptions } from './map-data-layer-model.js';
 export type { LyraMapSourceCoordinates, LyraMapLabelValue, LyraMapLabelOptions, LyraMapTileSource,
@@ -110,16 +123,16 @@ export type { LyraMapSourceCoordinates, LyraMapLabelValue, LyraMapLabelOptions, 
 /** Existing GeoJSON overlays and explicitly discriminated native external-source families. */
 export type LyraMapDataLayer = LyraMapGeoJsonDataLayer | LyraMapExternalDataLayer;
 
-import { projectMapStyleOverrides, type LyraMapStyleOverride, type LyraMapStyleValue } from './map-style-overrides.js';
+import type { LyraMapStyleOverride, LyraMapStyleValue } from './map-style-override-admission.js';
 
-export type { LyraMapOverlaySource, LyraMapOverlayLayer } from './map-owned-resources.js';
+export type { LyraMapOverlaySource, LyraMapOverlayLayer } from './map-overlay-admission.js';
 /** Declarative native resources restored after every style replacement. */
 export interface LyraMapOverlays {
   readonly sources?: readonly LyraMapOverlaySource[];
   readonly layers?: readonly LyraMapOverlayLayer[];
 }
-export type { LyraMapImage } from './map-images.js';
-export type { LyraMapStyleOverride, LyraMapStyleValue } from './map-style-overrides.js';
+export type { LyraMapImage } from './map-image-admission.js';
+export type { LyraMapStyleOverride, LyraMapStyleValue } from './map-style-override-admission.js';
 import {
   emptyExtent,
   extendExtent,
@@ -154,8 +167,8 @@ import {
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable, LYRA_DEFAULT_pause, LYRA_DEFAULT_play } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_download, LYRA_DEFAULT_duration, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_popover, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** A caller-authored GeoJSON source diff; feature IDs must be unique and stable. */
@@ -163,12 +176,6 @@ export type LyraMapSourceDataDiff = MapLibreSourceDataDiff;
 
 /** Probes for a real WebGL2 context without ever touching maplibre-gl's own (unreliable) failure
  *  path -- see the call site in `tryConstructMap()`. */
-/** A rendered box size key; observers compare it so their initial notification is not a resize. */
-function renderedSizeKey(element: Element): string {
-  const box = element.getBoundingClientRect();
-  return `${box.width}x${box.height}`;
-}
-
 function supportsWebGL2(host: Element): boolean {
   try {
     const context = host.ownerDocument.createElement('canvas').getContext('webgl2');
@@ -2463,16 +2470,6 @@ interface AppliedMapInteraction extends MapHitRule {
   readonly sourceLayer?: string;
   readonly cluster?: boolean;
 }
-function mapOwnValue(value: unknown, key: string): unknown {
-  if (value === null || typeof value !== 'object') return undefined;
-  const descriptor = getOwnDataDescriptor(value, key);
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
-}
-function mapCoordinates(value: unknown): readonly [number, number] | undefined {
-  const lng = mapOwnValue(value, 'lng'), lat = mapOwnValue(value, 'lat');
-  return typeof lng === 'number' && Number.isFinite(lng) && typeof lat === 'number' && Number.isFinite(lat) && Math.abs(lat) <= 90
-    ? Object.freeze([lng, lat] as const) : undefined;
-}
 function featureStatePeer(map: MapLibreMapCapability): map is MapLibreMapCapability & MapFeatureStatePeer {
   try {
     return ['setFeatureState', 'removeFeatureState'].every(key => {
@@ -2759,7 +2756,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     copy: LYRA_DEFAULT_copy,
     date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
-    download: LYRA_DEFAULT_download,
     duration: LYRA_DEFAULT_duration,
     items: LYRA_DEFAULT_items,
     legendTypeHidden: LYRA_DEFAULT_legendTypeHidden,
@@ -2812,9 +2808,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
     paginationSummary: LYRA_DEFAULT_paginationSummary,
-    pause: LYRA_DEFAULT_pause,
-    play: LYRA_DEFAULT_play,
-    popover: LYRA_DEFAULT_popover,
     remove: LYRA_DEFAULT_remove,
     search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
@@ -2890,7 +2883,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     new ThemeWatcher(this, () => {
       if (!this.syncPaintTheme()) return;
       this.refreshThemePaint();
-      if (projectMapStyleOverrides(this.styleOverrides)?.length && this._styleLoaded) void this.reconcileGeneratedLayers();
+      // Overrides are applied only after their runtime loaded; a pending reconcile reads the new theme.
+      if (loadMapOwnedFeatureRuntime.loaded?.projectMapStyleOverrides(this.styleOverrides)?.length && this._styleLoaded) void this.reconcileGeneratedLayers();
       this.legendIsLine = this.legendDescribesLine();
     });
     new GlassScrollLayer(this, '[part="legend"]');
@@ -3012,14 +3006,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   /** Named URL field ownership. `true` owns `map`; unset does not read or write the URL.
    * A valid initial hash takes precedence over a queued initial fit. Disabling leaves the URL
-   * intact. Two connected maps cannot own the same window/key; the first owner keeps it. */
+   * intact. Two connected maps cannot own the same window/key; the first owner keeps it.
+   * Any value other than false, null or undefined loads the URL ownership runtime on demand. The
+   * map is constructed once it has loaded, and URL feedback appears then; whenIdle() covers it.
+   * If that runtime cannot be loaded, the URL is left untouched with localized control feedback. */
   @property({ attribute: false }) hash: boolean | string = false;
-  private readonly hashOwner = new MapHashOwner();
+  private hashOwner?: MapHashOwner;
+  private hashRuntimePending = false;
+  private hashRuntimeFailed = false;
   private applyingHash = false;
-  @state() private hashIssue?: 'mapHashConflict' | 'mapHashInvalid';
+  @state() private hashIssue?: 'mapHashConflict' | 'mapHashInvalid' | 'mapControlUnavailable';
   @state() private controlIssue?: Exclude<keyof typeof MAP_CONFIGURATION_MESSAGE, 'mapHashConflict' | 'mapHashInvalid'>;
 
-  private pendingHashIssue?: 'mapHashConflict' | 'mapHashInvalid';
+  private pendingHashIssue?: LyraMap['hashIssue'];
   private pendingControlIssue: LyraMap['controlIssue'];
 
   private setControlIssue(issue: LyraMap['controlIssue']): void {
@@ -3028,10 +3027,43 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     else this.controlIssue = issue;
   }
 
+  /** Whether `hash` asks for URL ownership; only these values need the ownership runtime. */
+  private hashRequested(): boolean {
+    return this.hash !== false && this.hash !== undefined && this.hash !== null;
+  }
+
+  /** The URL owner once its runtime has loaded; a requested hash starts loading it once. */
+  private hashRuntime(): MapHashOwner | undefined {
+    if (this.hashOwner || !this.hashRequested() || this.hashRuntimeFailed) return this.hashOwner;
+    const runtime = loadMapHashRuntime.loaded;
+    if (runtime) return this.hashOwner = new runtime.MapHashOwner();
+    if (!this.hashRuntimePending) {
+      this.hashRuntimePending = true;
+      this.trackFeatureLoad(loadMapHashRuntime().then(() => undefined, () => { this.hashRuntimeFailed = true; }).then(() => {
+        this.hashRuntimePending = false;
+        if (!this.isConnected) return;
+        this.syncHash(); this.applyHash(); this.tryConstructMap();
+      }));
+    }
+    return undefined;
+  }
+
+  /** Optional runtimes still loading, together with the work their arrival resumes. */
+  private featureLoads = 0;
+
+  /** Readiness waits for an on-demand runtime and the continuation it resumes. */
+  private trackFeatureLoad(work: Promise<void>): void {
+    this.featureLoads += 1;
+    this.readiness.invalidate();
+    void work.finally(() => { this.featureLoads -= 1; this.readiness.check(); });
+  }
+
   private syncHash(): void {
     if (!this.isConnected) return;
-    const status = this.hashOwner.configure(this.ownerDocument.defaultView, this.hash, () => this.applyHash());
-    const issue = status === 'conflict' ? 'mapHashConflict' : status === 'invalid' ? 'mapHashInvalid' : undefined;
+    const owner = this.hashRuntime();
+    const status = owner ? owner.configure(this.ownerDocument.defaultView, this.hash, () => this.applyHash()) : undefined;
+    const issue = status === 'conflict' ? 'mapHashConflict' : status === 'invalid' ? 'mapHashInvalid'
+      : !owner && this.hashRuntimeFailed && this.hashRequested() ? 'mapControlUnavailable' : undefined;
     this.pendingHashIssue = issue;
     this.scheduleAfterUpdate(() => {
       const latest = this.pendingHashIssue;
@@ -3049,7 +3081,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     const map = this._map, connection = this._connectGeneration, option = this.hash;
     const current = () => this.isConnected && this._map === map && this._connectGeneration === connection && this.hash === option;
-    const result = this.hashOwner.read();
+    const owner = this.hashOwner;
+    if (!owner) return;
+    const result = owner.read();
     if (!map || !current() || this.applyingHash) return;
     if (result.status === 'none') { this.writeHash(map); return; }
     if (result.status !== 'camera') return;
@@ -3074,7 +3108,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const camera = readPeerCamera(map); if (!camera || !current()) return;
       const bearing = map.getBearing?.() ?? 0; if (!current()) return;
       const pitch = map.getPitch?.() ?? 0; if (!current()) return;
-      this.hashOwner.write({ ...camera, bearing, pitch });
+      this.hashOwner?.write({ ...camera, bearing, pitch });
     } catch { /* Unavailable camera state cannot replace an existing URL field. */ }
   }
 
@@ -3083,7 +3117,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * for none. The slotted content (a feature's details, say) is placed above the point, flipped
    * below it near the top edge and kept inside the map, follows the point as the camera moves and
    * is hidden while the point is off screen or the map is not ready. Use the `lngLat` of an
-   * `lr-map-click` to anchor content to a clicked feature. See the `anchor` slot.
+   * `lr-map-click` to anchor content to a clicked feature. See the `anchor` slot. The first
+   * coordinate loads the anchor placement runtime on demand; placement, already asynchronous,
+   * follows once it has loaded, and the anchor stays hidden if it cannot be loaded.
    */
   @property({ attribute: false }) anchorLngLat?: readonly [number, number] | null;
   /** Additional clipping boundaries intersected with map allocation. Accepts a connected Element
@@ -3641,8 +3677,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private _connectGeneration = 0;
   private _styleGeneration = 0;
   private readonly readiness = new MapReadiness();
-  private readonly ownedFeatures = new MapOwnedFeatures();
-  private readonly externalFeatures = new MapOwnedFeatures();
+  /** Native resource owners, created once their runtime has loaded for requested resources. */
+  private ownedFeatures?: MapOwnedFeatures;
+  private externalFeatures?: MapOwnedFeatures;
   private externalFeatureWorkStarted = false;
   private externalIdStyle = -1;
   private externalIdCounter = 0;
@@ -3657,36 +3694,31 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Arms bounded line or polygon drawing. The first accepted vertex starts the session.
    * Pick mode cancels drawing without automatic resumption. Completion/cancellation reset to none.
    * Drawing preserves pan/zoom and temporarily owns double-click zoom. Maximum 512 vertices.
-   * Accepted edits update desired state synchronously; whenIdle() covers temporary resource preparation. */
+   * Accepted edits update desired state synchronously; whenIdle() covers temporary resource preparation.
+   * Arming loads the drawing runtime on demand: the controls render at once, and the session starts
+   * once that runtime has loaded and the style is ready. whenIdle() also covers that load. */
   @property({ attribute: 'draw-mode', converter: DRAW_MODE }) drawMode: LyraMapDrawingMode = 'none';
-  @state() private drawingSnapshot?: LyraMapDrawingSnapshot;
   @state() private drawingIssue?: keyof typeof MAP_DRAWING_MESSAGE;
-  private drawing?: MapDrawing;
-  private drawingStarted = false;
-  @state() private drawingEditing = false;
-  @state() private drawingHandles: readonly { index: number; x: number; y: number }[] = [];
-  @state() private drawingSelected = 0;
-  private drawingPointer?: MapDrawingPointer;
+  /** Bumped whenever a rendered value owned by the drawing controller changes. */
+  @state() private drawingRevision = 0;
+  /** Sessions, editing and temporary resources, once the drawing runtime has loaded. */
+  private drawingController?: MapDrawingController;
+  /** `loading` while the drawing runtime imports; `failed` until drawing is requested again. */
+  private drawingLoad?: 'loading' | 'failed';
   private suppressDrawingClick = false;
-  private drawingCompleting?: MapDrawing;
-  private drawingEditAdmission = false;
-  private drawingEditCancelled = false;
   private drawingResetting = false;
-  private drawingDispatch = false;
+  /** Advances when a drawing or armed mode ends; an image export in progress is tied to it. */
   private drawingEpoch = 0;
-  private drawingRelease?: () => void;
-  private drawingOverlay?: OverlayHandle;
-  private readonly drawingFeatures = new MapOwnedFeatures();
-  private drawingAbort?: AbortController;
-  private drawingResourceEpoch = 0;
-  private drawingIdCounter = 0;
-  private drawingSourceId?: string;
-  private drawingPending = false;
-  private drawingWork: Promise<void> = Promise.resolve();
-  private finishDrawingWork?: () => void;
+  private get drawingPending(): boolean { return this.drawingController?.pending === true; }
+  private get drawingWork(): Promise<void> { return this.drawingController?.work ?? NO_DRAWING_WORK; }
   @state() private featureStateIssue = false;
   @state() private interactionBlocked = false;
-  private featureStates = new MapFeatureStateRoutes();
+  /** Hit-target routing over the accepted routes, so every hit can name its target. */
+  private readonly stateRouter = new MapFeatureStateRouter();
+  /** Desired feature state, created by the first write once its runtime has loaded. */
+  private featureStates?: MapFeatureStateRoutes;
+  /** `loading` while the state runtime imports; `failed` until a new style or connection. */
+  private featureStateLoad?: 'loading' | 'failed';
   private stateRequested = false;
   private stateRoutingAvailable = true;
   private stateRoutes: readonly MapFeatureStateRoute[] = [];
@@ -4169,7 +4201,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
-  private readonly controlLifecycle = new MapControlsLifecycle(kind => loadMapControl(kind, this.engine, this._maplibreModule));
+  /** Native control ownership, loaded once the engine first needs a control (attribution by default). */
+  private controlLifecycle?: MapControlsLifecycle;
   private controlPeer?: { readonly map: MapLibreMapCapability; readonly adapter: MapControlLifecyclePeer };
 
   private readonly scaleLabels = new Map<string, keyof typeof MAP_SCALE_UNIT_MESSAGE>();
@@ -4208,7 +4241,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       addControl: (control, position) => map.addControl!(control, position),
       removeControl: control => map.removeControl!(control),
     } };
-    void this.controlLifecycle.sync(this.controlPeer.adapter, wanted, {
+    const peer = this.controlPeer.adapter;
+    const run = ({ MapControlsLifecycle }: NonNullable<typeof loadMapControlRuntime.loaded>): Promise<void> => (this.controlLifecycle ??=
+      new MapControlsLifecycle(kind => loadMapControl(kind, this.engine, this._maplibreModule))).sync(peer, wanted, {
       isCurrent: current,
       onEvent: event => {
         if (!current()) return;
@@ -4230,38 +4265,25 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this.setControlIssue('mapControlUnavailable');
         this.announcements.announceAssertive(this.localize('mapControlUnavailable'));
       },
-    }).then(() => { if (current()) this.syncPeerChromeParts(); });
+    });
+    const runtime = loadMapControlRuntime.loaded;
+    // Without a previously owned control, an empty request needs no control runtime at all.
+    const sync = !this.controlLifecycle && wanted.size === 0 ? Promise.resolve() : runtime ? run(runtime) : loadMapControlRuntime().then(run, () => {
+      // Fail closed exactly like a control whose own code cannot load; default attribution stays silent.
+      if (!current() || ![...wanted.keys()].some(kind => !defaultAttribution || kind !== 'attribution')) return;
+      this.setControlIssue('mapControlUnavailable');
+      this.announcements.announceAssertive(this.localize('mapControlUnavailable'));
+    });
+    void sync.then(() => { if (current()) this.syncPeerChromeParts(); });
   }
 
-  private stopAnchorPlacement(): void {
-    this.anchorPlacementEpoch = (this.anchorPlacementEpoch ?? 0) + 1;
-    this.anchorPlaced = false; this.anchorPlacedCoordinates = undefined;
-    const cleanup = this.anchorCleanup; this.anchorCleanup = undefined;
-    cleanup?.();
-    this.anchorOverlay?.suspend();
-  }
-  private anchorPlacementEpoch = 0;
+  /** Placement and close ownership, once a requested coordinate has loaded the anchor runtime. */
+  private anchorController?: MapAnchorController;
+  /** `loading` while the anchor runtime imports; `failed` until a coordinate is requested again. */
+  private anchorLoad?: 'loading' | 'failed';
   private anchorSyncRequested = false;
-  private anchorPlaced = false;
-  private anchorPlacedCoordinates?: readonly [number, number] | null;
-  private anchorClosing = false;
-  private anchorOverlay?: OverlayHandle;
-  private anchorReturnTarget?: HTMLElement;
-  private anchorBoundaryObserver?: ResizeObserver;
-  private observedAnchorBoundaries: readonly Element[] = [];
-  private anchorCleanup?: () => void;
-  private anchorFrame?: number;
 
-  private exportOwner?: {
-    readonly map: MapLibreMapCapability;
-    readonly style: number;
-    readonly connection: number;
-    readonly controller: AbortController;
-    readonly services: MapImageExportServices;
-    readonly request: { attribution: boolean; attributionFailed: boolean; features: number; drawing: number; controls: LyraMap['controls'] };
-    busy: boolean;
-  };
-  private exportIdleWait?: Promise<void>;
+  private exportController?: MapImageExportController;
   @state() private exportIssue = false;
   private pendingExportIssue = false;
 
@@ -4270,333 +4292,118 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.scheduleAfterUpdate(() => { this.exportIssue = this.pendingExportIssue; }, 'map-export-feedback');
   }
 
+  /** Localized feedback for a failed export, plus its frozen sanitized public event. */
+  private reportExportFailure(code: LyraMapImageExportErrorCode): void {
+    if (code !== 'cancelled') {
+      this.publishExportIssue(true);
+      this.announcements.announceAssertive(this.localize('mapExportUnavailable'));
+    }
+    this.emit('lr-map-export-error', Object.freeze({ code } satisfies LyraMapImageExportErrorDetail));
+  }
+
   private cancelImageExport(): void {
-    const owner = this.exportOwner;
-    this.exportOwner = undefined;
-    this.exportIdleWait = undefined;
-    owner?.controller.abort();
+    this.exportController?.cancel();
   }
 
   /** Exports a fresh current-style WebGL frame as PNG (default), JPEG or WebP. Attribution
    * defaults to true and includes all admitted source/provider and custom credits in a footer.
    * DOM controls, markers and anchored content are excluded. Rejects with a sanitized
-   * LyraMapImageExportError code; disconnect or style replacement cancels the operation. */
+   * LyraMapImageExportError code; disconnect or style replacement cancels the operation.
+   * The first call loads the export runtime on demand; options are admitted synchronously
+   * either way. If that runtime cannot be loaded, the call rejects with `capture-failed`. */
   exportImage(options?: LyraMapImageExportOptions): Promise<Blob> {
     const map = this._map, style = this._styleGeneration, connection = this._connectGeneration;
     if (!map || !this.isConnected) {
-      if (this.isConnected) {
-        this.publishExportIssue(true);
-        this.announcements.announceAssertive(this.localize('mapExportUnavailable'));
-        this.emit('lr-map-export-error', Object.freeze({ code: 'not-ready' } satisfies LyraMapImageExportErrorDetail));
-      }
+      if (this.isConnected) this.reportExportFailure('not-ready');
       return Promise.reject(new LyraMapImageExportError('not-ready'));
     }
-    let owner = this.exportOwner;
-    if (!owner || owner.controller.signal.aborted || owner.map !== map || owner.style !== style || owner.connection !== connection) {
-      this.cancelImageExport();
-      const controller = new AbortController();
-      const request = { attribution: true, attributionFailed: false, features: this.featureGeneration, drawing: this.drawingEpoch, controls: this.controls };
-      const current = (): boolean => !controller.signal.aborted && this.isConnected && this._map === map &&
-        this._styleGeneration === style && this._connectGeneration === connection && this.featureGeneration === request.features &&
-        this.drawingEpoch === request.drawing && this.controls === request.controls;
-      let attribution = '';
-      const services: MapImageExportServices = {
-        current,
-        ready: async signal => {
-          if (!current() || signal.aborted) throw new LyraMapImageExportError('cancelled');
-          if (!this.exportIdleWait) {
-            const pending = this.whenIdle();
-            this.exportIdleWait = pending;
-            void pending.finally(() => { if (this.exportIdleWait === pending) this.exportIdleWait = undefined; }).catch(() => undefined);
-          }
-          await this.exportIdleWait;
-          if (!current() || signal.aborted) throw new LyraMapImageExportError('cancelled');
-          if (typeof map.triggerRepaint !== 'function' || typeof map.off !== 'function' || typeof map.loaded !== 'function') throw new LyraMapImageExportError('not-ready');
-          request.attributionFailed = false;
-          attribution = '';
-          if (request.attribution) {
-            try {
-              if (typeof map.getStyle !== 'function') throw new LyraMapImageExportError('attribution-failed');
-              const normalized = normalizeMapControlOptions(this.controls);
-              const customAttribution = normalized.controls.get('attribution')?.options['customAttribution'];
-              attribution = await collectMapExportAttribution({ getStyle: () => map.getStyle!(), getSource: id => map.getSource(id) },
-                { document: this.ownerDocument, customAttribution, signal, current });
-            } catch (error) {
-              request.attributionFailed = error instanceof LyraMapImageExportError && error.code === 'attribution-failed';
-              throw error;
-            }
-          }
-          if (!current() || signal.aborted) throw new LyraMapImageExportError('cancelled');
-        },
-        onRender: callback => this.peerEvents.subscribe(map, 'render', () => {
-          if (!current()) { callback(); return; }
-          if (this.isUpdatePending || this.preparingFeatures || this.drawingPending) return;
-          try {
-            const moving = map.isMoving?.() === true;
-            if (!current()) { callback(); return; }
-            if (moving || this.isUpdatePending || this.preparingFeatures || this.drawingPending) return;
-            const loaded = map.loaded!() === true;
-            if (!current()) { callback(); return; }
-            if (!loaded || this.isUpdatePending || this.preparingFeatures || this.drawingPending) return;
-            callback();
-          } catch { controller.abort(); }
-        }),
-        requestRender: () => { if (!current()) throw new LyraMapImageExportError('cancelled'); map.triggerRepaint!(); },
-        canvas: () => { if (!current()) throw new LyraMapImageExportError('cancelled'); return map.getCanvas(); },
-        attributionText: () => attribution,
-        createCanvas: () => this.ownerDocument.createElement('canvas'),
-      };
-      owner = { map, style, connection, controller, services, request, busy: false };
-      this.exportOwner = owner;
-    }
-    const active = owner, admitted = !owner.busy;
-    let admittedOptions: unknown, admissionFailure: LyraMapImageExportError | undefined;
-    if (admitted) {
-      active.busy = true;
-      active.request.features = this.featureGeneration;
-      active.request.drawing = this.drawingEpoch;
-      active.request.controls = this.controls;
-      active.request.attribution = true;
+    let admitted: unknown, invalid = false;
+    if (options !== undefined) {
       try {
-        if (options !== undefined) {
-          if (!isPlainDataRecord(options)) throw new LyraMapImageExportError('invalid-options');
-          const keys = Reflect.ownKeys(options);
-          if (keys.length > 2 || keys.some(key => key !== 'type' && key !== 'attribution')) throw new LyraMapImageExportError('invalid-options');
-          const snapshot: Record<string, unknown> = {};
-          for (const key of keys) {
-            const descriptor = getOwnDataDescriptor(options, key);
-            if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) throw new LyraMapImageExportError('invalid-options');
-            snapshot[String(key)] = descriptor.value;
-          }
-          admittedOptions = Object.freeze(snapshot);
-          active.request.attribution = snapshot['attribution'] !== false;
+        if (!isPlainDataRecord(options)) throw new TypeError('Invalid export options.');
+        const keys = Reflect.ownKeys(options);
+        if (keys.length > 2 || keys.some(key => key !== 'type' && key !== 'attribution')) throw new TypeError('Invalid export options.');
+        const snapshot: Record<string, unknown> = {};
+        for (const key of keys) {
+          const descriptor = getOwnDataDescriptor(options, key);
+          if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) throw new TypeError('Invalid export options.');
+          snapshot[String(key)] = descriptor.value;
         }
-      } catch { admissionFailure = new LyraMapImageExportError('invalid-options'); }
-      this.publishExportIssue(false);
+        admitted = Object.freeze(snapshot);
+      } catch { invalid = true; }
     }
-    const work = !admitted ? Promise.reject(new LyraMapImageExportError('busy')) : admissionFailure
-      ? Promise.reject(admissionFailure) : exportMapImage(admittedOptions, active.services, active.controller.signal);
-    return work.catch(error => {
-      const code = error instanceof LyraMapImageExportError
-        ? error.code === 'not-ready' && active.request.attributionFailed ? 'attribution-failed' : error.code : 'capture-failed';
-      if (this.exportOwner === active && this.isConnected) {
-        if (code !== 'cancelled') {
-          this.publishExportIssue(true);
-          this.announcements.announceAssertive(this.localize('mapExportUnavailable'));
-        }
-        this.emit('lr-map-export-error', Object.freeze({ code } satisfies LyraMapImageExportErrorDetail));
-      }
-      throw error instanceof LyraMapImageExportError && error.code === code ? error : new LyraMapImageExportError(code);
-    }).finally(() => { if (admitted) active.busy = false; });
-  }
-
-  /** Runs `syncAnchor()` on the next animation frame, once however many callers ask. */
-  private scheduleAnchorSync(): void {
-    this.stopAnchorPlacement();
-    if (this.anchorFrame !== undefined) return;
-    const view = ownerWindow(this);
-    if (!view || typeof view.requestAnimationFrame !== 'function') {
-      this.syncAnchor();
-      return;
-    }
-    this.anchorFrame = view.requestAnimationFrame(() => {
-      this.anchorFrame = undefined;
-      this.syncAnchor();
+    const request: MapImageExportRequest = { map, style, connection, options: admitted, invalid };
+    const run = (runtime: NonNullable<typeof loadMapImageExportRuntime.loaded>): Promise<Blob> =>
+      (this.exportController ??= new runtime.MapImageExportController(this.imageExportHost())).export(request);
+    const runtime = loadMapImageExportRuntime.loaded;
+    if (runtime) return run(runtime);
+    return loadMapImageExportRuntime().then(run, () => {
+      const current = this.isConnected && this._map === map && this._styleGeneration === style && this._connectGeneration === connection;
+      if (current) this.reportExportFailure('capture-failed');
+      throw new LyraMapImageExportError(current ? 'capture-failed' : 'cancelled');
     });
   }
 
-  private cancelAnchorSync(): void {
-    if (this.anchorFrame === undefined) return;
-    ownerWindow(this)?.cancelAnimationFrame?.(this.anchorFrame);
-    this.anchorFrame = undefined;
+  private imageExportHost(): MapImageExportHost {
+    return {
+      element: this,
+      current: (map, style, connection) => this.isConnected && this._map === map && this._styleGeneration === style && this._connectGeneration === connection,
+      generations: () => [this.featureGeneration, this.drawingEpoch],
+      pending: () => this.isUpdatePending || this.preparingFeatures || this.drawingPending,
+      onRender: (map, listener) => this.peerEvents.subscribe(map, 'render', listener),
+      clearFeedback: () => { this.publishExportIssue(false); },
+      fail: code => { this.reportExportFailure(code); },
+    };
   }
 
   /** Closes an actually placed anchor, restoring its prior focus only while it still owns focus.
    * Returns false without dispatch when already hidden, unplaced, inert or closed. */
-  closeAnchor(): boolean { return this.closeMapAnchor('api'); }
+  closeAnchor(): boolean { return this.anchorController?.close('api') ?? false; }
 
   /** Explicitly focuses the first eligible rendered anchor action. Returns false for a hidden,
    * stale, inert or not-yet-placed anchor, or when no eligible target exists. Never queues focus. */
-  focusAnchor(): boolean {
-    const wrapper = this.anchorEl;
-    if (!wrapper || !this.anchorIsOpen()) return false;
-    const epoch = this.anchorPlacementEpoch;
-    const targets = collectFocusableElements(wrapper);
-    if (epoch !== this.anchorPlacementEpoch || !this.anchorIsOpen() || targets.length === 0) return false;
-    this.captureAnchorReturnTarget(wrapper);
-    if (epoch !== this.anchorPlacementEpoch || !this.anchorIsOpen()) return false;
-    const focused = focusFirstAvailable(targets);
-    return focused && epoch === this.anchorPlacementEpoch && this.anchorIsOpen();
-  }
+  focusAnchor(): boolean { return this.anchorController?.focus() ?? false; }
 
-  private anchorIsOpen(): boolean {
-    return this.isConnected && !!this._map && this._styleLoaded && this.anchorPlaced &&
-      !this.isUpdatePending && this.anchorPlacedCoordinates === this.anchorLngLat &&
-      !!this.anchorEl && !this.anchorEl.hidden && !this.mapInteractionBlocked() && this.anchorHasContent();
-  }
-
-  private captureAnchorReturnTarget(wrapper: HTMLElement): void {
-    const active = deepActiveElement(this.ownerDocument);
-    if (!active || composedContains(wrapper, active)) return;
-    try {
-      const descriptor = getInheritedPropertyDescriptor(active, 'focus');
-      if (descriptor && Object.hasOwn(descriptor, 'value') && typeof descriptor.value === 'function') {
-        this.anchorReturnTarget = active as HTMLElement;
-        this.anchorOverlay?.updateRestoreFocusTo(this.anchorReturnTarget);
-      }
-    } catch { /* A missing focus capability does not create a return target. */ }
-  }
-
-  private closeMapAnchor(reason: LyraMapAnchorCloseReason): boolean {
-    const wrapper = this.anchorEl;
-    if (!wrapper || !this.anchorIsOpen()) return false;
-    const requestEpoch = this.anchorPlacementEpoch, map = this._map, coordinates = this.anchorLngLat;
-    const repair = captureComposedFocusRepair(wrapper, this.anchorReturnTarget ?? null);
-    if (requestEpoch !== this.anchorPlacementEpoch || map !== this._map || coordinates !== this.anchorLngLat || !this.anchorIsOpen()) return false;
-    this.anchorClosing = true;
-    try { this.anchorLngLat = null; } finally { this.anchorClosing = false; }
-    this.hideAnchor(false, true);
-    const epoch = this.anchorPlacementEpoch;
-    this.emit('lr-map-anchor-close', Object.freeze({ reason } satisfies LyraMapAnchorCloseDetail));
-    if (repair && epoch === this.anchorPlacementEpoch && this.anchorLngLat === null) applyComposedFocusRepair(repair);
-    return true;
-  }
-
-  private hideAnchor(restore = true, retire = false): void {
-    const wrapper = this.anchorEl;
-    const requestEpoch = this.anchorPlacementEpoch, map = this._map, coordinates = this.anchorLngLat;
-    const repair = restore && wrapper ? captureComposedFocusRepair(wrapper, this.anchorReturnTarget ?? null) : null;
-    if (requestEpoch !== this.anchorPlacementEpoch || map !== this._map || coordinates !== this.anchorLngLat) return;
-    this.stopAnchorPlacement();
-    if (wrapper) wrapper.hidden = true;
-    const epoch = this.anchorPlacementEpoch;
-    if (retire) {
-      const overlay = this.anchorOverlay; this.anchorOverlay = undefined; this.anchorReturnTarget = undefined;
-      overlay?.deactivate({ restoreFocus: false });
-    } else this.anchorOverlay?.suspend();
-    if (repair && epoch === this.anchorPlacementEpoch && !this.anchorPlaced) applyComposedFocusRepair(repair);
-  }
-
-  private syncAnchorOverlay(wrapper: HTMLElement): void {
-    if (!this.anchorClosable) {
-      const overlay = this.anchorOverlay; this.anchorOverlay = undefined;
-      overlay?.deactivate({ restoreFocus: false }); return;
-    }
-    if (!this.anchorOverlay) {
-      const epoch = this.anchorPlacementEpoch;
-      this.captureAnchorReturnTarget(wrapper);
-      if (epoch !== this.anchorPlacementEpoch || !this.anchorPlaced || !this.isConnected) return;
-      const overlay = activateOverlay({ host: this, panel: () => this.anchorEl ?? null,
-        onEscape: () => { this.closeMapAnchor('escape'); }, beforeInitialFocus: () => false,
-        restoreFocusTo: () => this.anchorReturnTarget ?? null, modal: false, trapFocus: false, lockScroll: false });
-      if (epoch === this.anchorPlacementEpoch && this.anchorPlaced && this.isConnected && this.anchorClosable && !this.anchorOverlay) this.anchorOverlay = overlay;
-      else overlay.deactivate({ restoreFocus: false });
-    } else this.anchorOverlay.resume();
-  }
-
-  private anchorHasContent(): boolean {
-    const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="anchor"]');
-    return slot?.assignedNodes({ flatten: true }).some(node => node.nodeType === 1 || node.nodeType === 3 && !!node.textContent?.trim()) ?? false;
-  }
-
-  private observeAnchorBoundaries(boundaries: readonly Element[]): void {
-    if (boundaries.length === this.observedAnchorBoundaries.length && boundaries.every((value, index) => value === this.observedAnchorBoundaries[index])) return;
-    this.anchorBoundaryObserver?.disconnect(); this.anchorBoundaryObserver = undefined;
-    this.observedAnchorBoundaries = [...boundaries];
-    const ResizeObserverClass = ownerWindow(this)?.ResizeObserver;
-    if (!ResizeObserverClass || boundaries.length === 0) return;
-    let sizes = boundaries.map(renderedSizeKey);
-    this.anchorBoundaryObserver = new ResizeObserverClass(() => {
-      const next = boundaries.map(renderedSizeKey);
-      if (next.every((value, index) => value === sizes[index])) return;
-      sizes = next;
+  /** The anchor controller. A requested coordinate loads its runtime once; nothing can be placed
+   * before it exists, so without one the anchor simply stays hidden. */
+  private anchorRuntime(): MapAnchorController | undefined {
+    if (this.anchorController) return this.anchorController;
+    if (this.anchorLngLat === null || this.anchorLngLat === undefined) return undefined;
+    const runtime = loadMapAnchorRuntime.loaded;
+    if (runtime) return this.anchorController = new runtime.MapAnchorController(this.anchorHost());
+    if (this.anchorLoad) return undefined;
+    this.anchorLoad = 'loading';
+    void loadMapAnchorRuntime().then(() => {
+      this.anchorLoad = undefined;
       if (this.isConnected) this.scheduleAnchorSync();
-    });
-    for (const boundary of boundaries) this.anchorBoundaryObserver.observe(boundary);
+    }, () => { this.anchorLoad = 'failed'; });
+    return undefined;
   }
 
-  private onAnchorFocus = (event: FocusEvent): void => {
-    const wrapper = this.anchorEl, previous = event.relatedTarget, view = ownerWindow(this);
-    if (!wrapper || !view || !(previous instanceof view.Element) || previous.ownerDocument !== this.ownerDocument || composedContains(wrapper, previous)) return;
-    try {
-      const descriptor = getInheritedPropertyDescriptor(previous, 'focus');
-      if (descriptor && Object.hasOwn(descriptor, 'value') && typeof descriptor.value === 'function') {
-        this.anchorReturnTarget = previous as HTMLElement; this.anchorOverlay?.updateRestoreFocusTo(this.anchorReturnTarget);
-      }
-    } catch { /* An unavailable previous focus target is not retained. */ }
-  };
+  private syncAnchor(): void { this.anchorRuntime()?.sync(); }
+
+  /** Places the anchor on the next animation frame, once however many callers ask. */
+  private scheduleAnchorSync(): void { this.anchorRuntime()?.schedule(); }
+
+  private onAnchorFocus = (event: FocusEvent): void => { this.anchorController?.focusIn(event); };
 
   private onAnchorSlotChange = (): void => { this.scheduleAnchorSync(); };
 
-  /** The anchor's container-relative pixel position while its safe own coordinates are on screen. */
-  private anchorPoint(): LyraMapPoint | undefined {
-    const position = this.anchorLngLat, container = this.containerEl;
-    if (!container || !Array.isArray(position)) return undefined;
-    const lng = mapOwnValue(position, '0'), lat = mapOwnValue(position, '1');
-    if (typeof lng !== 'number' || !Number.isFinite(lng) || typeof lat !== 'number' || !Number.isFinite(lat) || Math.abs(lat) > 90) return undefined;
-    const point = this.project([lng, lat]);
-    if (!point) return undefined;
-    const [x, y] = point;
-    return x >= 0 && y >= 0 && x <= container.clientWidth && y <= container.clientHeight ? point : undefined;
-  }
-
-  /** Owns placement only after the current deferred positioner callback has measured the anchor. */
-  private syncAnchor(): void {
-    if (this.mapUpdateActive) {
-      const connection = this._connectGeneration, generation = this._styleGeneration, map = this._map;
-      this.scheduleAfterUpdate(() => {
-        if (this.isConnected && this._connectGeneration === connection && this._styleGeneration === generation && this._map === map) this.syncAnchor();
-      }, `map-anchor-${connection}-${generation}`);
-      return;
-    }
-    const wrapper = this.anchorEl, container = this.containerEl, fence = this.anchorBoundaryEl;
-    if (!wrapper || !container || !fence || !this.isConnected || !this._map || !this._styleLoaded ||
-      this.mapInteractionBlocked() || !this.anchorHasContent()) { this.hideAnchor(); return; }
-    this.stopAnchorPlacement();
-    const epoch = this.anchorPlacementEpoch, map = this._map, coordinates = this.anchorLngLat;
-    const boundary = this.anchorBoundary, safeArea = this.anchorSafeArea, direction = this.effectiveDirection;
-    const current = (): boolean => this.isConnected && this._map === map && this._styleLoaded &&
-      epoch === this.anchorPlacementEpoch && this.anchorLngLat === coordinates && this.anchorBoundary === boundary &&
-      this.anchorSafeArea === safeArea && this.effectiveDirection === direction && !this.mapInteractionBlocked();
-    try {
-    const admitted = admitMapAnchorOptions({ boundary, safeArea }, this.ownerDocument, { current });
-    if (!admitted.ok || !current()) { if (epoch === this.anchorPlacementEpoch) this.hideAnchor(); return; }
-    this.observeAnchorBoundaries(admitted.boundaries);
-    const point = this.anchorPoint();
-    if (!current()) return;
-    const width = finiteRange(container.clientWidth, 0, 0), height = finiteRange(container.clientHeight, 0, 0);
-    const edges = admitted.safeArea;
-    const start = Math.min(width, edges.inlineStart), end = Math.min(width, edges.inlineEnd);
-    const top = Math.min(height, edges.blockStart), bottom = Math.min(height, edges.blockEnd);
-    if (!point || start + end >= width || top + bottom >= height) { this.hideAnchor(); return; }
-    fence.style.insetInlineStart = `${start}px`; fence.style.insetInlineEnd = `${end}px`;
-    fence.style.insetBlockStart = `${top}px`; fence.style.insetBlockEnd = `${bottom}px`;
-    const clip = fence.getBoundingClientRect();
-    let left = clip.left, right = clip.right, upper = clip.top, lower = clip.bottom;
-    for (const clipping of admitted.boundaries) {
-      const bounds = clipping.getBoundingClientRect();
-      if (!current()) return;
-      left = Math.max(left, bounds.left); right = Math.min(right, bounds.right);
-      upper = Math.max(upper, bounds.top); lower = Math.min(lower, bounds.bottom);
-    }
-    if (!(right - left > 16 && lower - upper > 16)) { this.hideAnchor(); return; }
-    wrapper.hidden = false;
-    const rect = container.getBoundingClientRect();
-    if (!current()) return;
-    const placement = place(virtualAnchorFromRect({ x: rect.left + point[0], y: rect.top + point[1], contextElement: container }), wrapper, {
-        placement: 'top', strategy: 'absolute', offset: 12, boundary: [fence, ...admitted.boundaries], padding: 8,
-        onPlaced: () => {
-          if (!current() || !this.anchorHasContent()) return;
-          if (!this.anchorPlaced) this.captureAnchorReturnTarget(wrapper);
-          if (!current()) return;
-          this.anchorPlaced = true; this.anchorPlacedCoordinates = coordinates;
-          this.syncAnchorOverlay(wrapper);
-        },
-      });
-      if (!current()) { placement(); return; }
-      this.anchorCleanup = placement;
-      void placement.ready.then(ready => { if (!ready && current()) this.hideAnchor(); });
-    } catch { if (current()) this.hideAnchor(); }
+  private anchorHost(): MapAnchorHost {
+    return {
+      element: this,
+      wrapper: () => this.anchorEl,
+      container: () => this.containerEl,
+      fence: () => this.anchorBoundaryEl,
+      map: () => this._map,
+      styleLoaded: () => this._styleLoaded,
+      generations: () => [this._styleGeneration, this._connectGeneration],
+      updateActive: () => this.mapUpdateActive,
+      afterUpdate: (callback, key) => { this.scheduleAfterUpdate(callback, key); },
+      interactionBlocked: () => this.mapInteractionBlocked(),
+      direction: () => this.effectiveDirection,
+      emitClose: detail => { this.emit('lr-map-anchor-close', detail); },
+    };
   }
 
   /**
@@ -4860,6 +4667,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     super.connectedCallback();
     const generation = ++this._connectGeneration;
     this.readiness.reset();
+    this.hashRuntimeFailed = false;
     this.syncHash();
     this.visible = false;
     this.constructionScheduler?.disconnect();
@@ -4935,7 +4743,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.hashOwner.dispose();
+    this.hashOwner?.dispose();
     this.disposeMap();
     this.constructionScheduler?.disconnect();
     this.constructionScheduler = undefined;
@@ -4997,14 +4805,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!this.isConnected) this.exportIssue = false;
     else this.publishExportIssue(false);
     this.cancelMapDrawing('disconnect');
-    this.drawingFeatures.cancel(); this.drawingAbort?.abort(); this.finishDrawingWork?.();
-    this.drawingAbort = undefined; this.finishDrawingWork = undefined; this.drawingPending = false;
+    this.drawingController?.cancelResources();
     if (cancelReadiness) this.readiness.cancel();
     this.cancelFeaturePreparation();
     this.pointerCleanup?.(); this.pointerCleanup = undefined;
     this.interactionObserver?.disconnect(); this.interactionObserver = undefined;
     this.mapCursor.clear(); this.hovered = undefined;
-    this.featureStates.dispose(); this.featureStates = new MapFeatureStateRoutes();
+    this.featureStates?.dispose(); this.featureStates = undefined; this.stateRouter.configure([]);
+    if (this.featureStateLoad === 'failed') this.featureStateLoad = undefined;
     this.stateRequested = false; this.stateRoutes = []; this.interactions = []; this.sourceIdentities.clear(); this.featureStateIssue = false;
     this.preparedFeatureSignature = undefined;
     this.pendingMapLoad = false;
@@ -5013,7 +4821,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.stopObservingMapAllocation();
     this.stopObservingPeerChrome();
     this.optionalFeatureWorkStarted = false;
-    this.controlLifecycle.dispose();
+    this.controlLifecycle?.dispose();
     this.controlPeer = undefined;
     if (this._map) this.peerEvents.clear(this._map);
     try {
@@ -5022,15 +4830,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // Teardown is best-effort for a peer instance that failed partway through initialization.
     }
     this._map = undefined;
-    this.drawingFeatures.dispose(); this.drawingSourceId = undefined;
-    this.ownedFeatures.dispose();
-    this.externalFeatures.dispose();
+    this.drawingController?.disposeResources();
+    this.ownedFeatures?.dispose();
+    this.externalFeatures?.dispose();
     this.externalFeatureWorkStarted = false;
     this.externalSourceIds.clear();
     this.setControlIssue(undefined);
-    this.cancelAnchorSync();
-    this.hideAnchor(true, true);
-    this.anchorBoundaryObserver?.disconnect(); this.anchorBoundaryObserver = undefined; this.observedAnchorBoundaries = [];
+    this.anchorController?.dispose();
     this.cancelMoveReport();
     this.appliedPadding = ZERO_CAMERA_PADDING;
     this._styleLoaded = false;
@@ -5097,7 +4903,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const mod = this._maplibreModule;
     const authoredCenter = this.center, authoredZoom = this.zoom, option = this.hash;
     this.syncHash();
-    const initialHash = this.hashOwner.read();
+    // A requested URL field is read before construction, so wait for its ownership runtime.
+    if (!this.hashOwner && this.hashRequested() && !this.hashRuntimeFailed) return;
+    const initialHash = this.hashOwner?.read() ?? { status: 'disabled' as const };
     const hashCamera: MapHashCamera | undefined = initialHash.status === 'camera' ? initialHash.camera : undefined;
     let candidate: MapLibreMapCapability | undefined;
     try {
@@ -5152,7 +4960,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (this._map === candidate) this.boxZoomSettling = true;
       });
       this.peerEvents.subscribe(candidate, 'move', () => {
-        if (this._map === candidate) { this.stopAnchorPlacement(); this.scheduleMoveReport(candidate!); this.scheduleDrawingHandles(); }
+        if (this._map === candidate) { this.anchorController?.stop(); this.scheduleMoveReport(candidate!); this.drawingController?.scheduleHandles(); }
       });
       this.peerEvents.subscribe(candidate, 'moveend', (event) => {
         if (this._map !== candidate) return;
@@ -5299,7 +5107,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (typeof map.isMoving === 'function' && map.isMoving()) return false;
         return typeof map.loaded === 'function' ? map.loaded() === true : undefined;
       },
-      ownerPending: () => this.isUpdatePending || this.preparingFeatures || this.drawingPending || !current(),
+      ownerPending: () => this.isUpdatePending || this.preparingFeatures || this.drawingPending || this.featureLoads > 0 || !current(),
       restore: async signal => {
         if (!current() || signal.aborted) return;
         startRestoration();
@@ -5337,14 +5145,20 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (valueChanged && (args[0] === undefined || ['mapStyle', 'dataLayers', 'choropleth', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0])))) {
       this.drawingConfigRevision = (this.drawingConfigRevision ?? 0) + 1;
     }
-    if (valueChanged && this.anchorPlacementEpoch !== undefined && (args[0] === undefined || ['anchorLngLat', 'anchorBoundary', 'anchorSafeArea', 'anchorClosable', 'mapStyle', 'dir'].includes(String(args[0])))) {
+    if (valueChanged && (args[0] === undefined || ['anchorLngLat', 'anchorBoundary', 'anchorSafeArea', 'anchorClosable', 'mapStyle', 'dir'].includes(String(args[0])))) {
       this.anchorSyncRequested = true;
-      if (!this.anchorClosing && (args[0] === 'mapStyle' || args[0] === 'anchorLngLat' && !this.anchorLngLat)) this.hideAnchor(true, true);
-      else this.stopAnchorPlacement();
+      // A new coordinate retries an anchor runtime whose import failed.
+      if (args[0] === 'anchorLngLat' && this.anchorLoad === 'failed') this.anchorLoad = undefined;
+      const anchor = this.anchorController;
+      if (anchor && !anchor.closing && (args[0] === 'mapStyle' || args[0] === 'anchorLngLat' && !this.anchorLngLat)) anchor.hide(true, true);
+      else anchor?.stop();
     }
-    if (valueChanged && !this.drawingResetting && args[0] === 'drawMode' && (this.drawing || args[1] === 'line' || args[1] === 'polygon')) this.cancelMapDrawing('mode-change', true, args[1] === 'polygon' ? 'polygon' : 'line');
-    if (valueChanged && args[0] === 'pickMode' && this.pickMode && (this.drawing || this.drawMode === 'line' || this.drawMode === 'polygon')) this.cancelMapDrawing('pick-mode');
-    if (valueChanged && args[0] === 'mapStyle' && (this.drawing || this.drawMode === 'line' || this.drawMode === 'polygon')) this.cancelMapDrawing('style-change');
+    const drawing = this.drawingController?.active === true;
+    if (valueChanged && !this.drawingResetting && args[0] === 'drawMode' && (drawing || args[1] === 'line' || args[1] === 'polygon')) this.cancelMapDrawing('mode-change', true, args[1] === 'polygon' ? 'polygon' : 'line');
+    // Arming again retries a drawing runtime whose import failed.
+    if (valueChanged && args[0] === 'drawMode' && this.drawingLoad === 'failed') this.drawingLoad = undefined;
+    if (valueChanged && args[0] === 'pickMode' && this.pickMode && (drawing || this.drawMode === 'line' || this.drawMode === 'polygon')) this.cancelMapDrawing('pick-mode');
+    if (valueChanged && args[0] === 'mapStyle' && (drawing || this.drawMode === 'line' || this.drawMode === 'polygon')) this.cancelMapDrawing('style-change');
     if (valueChanged && this.isUpdatePending && (args[0] === undefined || ['mapStyle', 'dataLayers', 'choropleth', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0])))) {
       this.interactionGeneration = (this.interactionGeneration ?? 0) + 1;
       this.featureStates?.cancel();
@@ -5391,11 +5205,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `loadMaplibre().then()` chain in connectedCallback() above).
     if (changed.has('mapStyle')) {
       this.cancelImageExport();
-      this.drawingFeatures.cancel(); this.drawingAbort?.abort(); this.finishDrawingWork?.();
-      this.drawingAbort = undefined; this.finishDrawingWork = undefined; this.drawingPending = false; this.drawingSourceId = undefined;
+      this.drawingController?.cancelResources(true);
       this._styleGeneration += 1;
       this.cancelFeaturePreparation();
       this.preparedFeatureSignature = undefined;
+      // A new style retries a feature-state runtime whose import failed.
+      if (this.featureStateLoad === 'failed') this.featureStateLoad = undefined;
     }
 
     if (changed.has('mapStyle') && !hasMapStyle(this.mapStyle) && this._maplibreModule) {
@@ -5411,7 +5226,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       });
     } else if (this._styleLoaded && (this.refreshingGeoJson || changed.has('dataLayers') || changed.has('choropleth') ||
       changed.has('overlays') || changed.has('images') || changed.has('styleOverrides') || changed.has('interactiveBasemapLayers'))) {
-      this.reconcileGeneratedLayers();
+      void this.reconcileGeneratedLayers();
     }
     const constructionMode = this.initialization === 'idle' || this.initialization === 'eager' ? this.initialization : 'visible';
     if (changed.has('initialization') && constructionMode !== this.constructionMode) {
@@ -5483,14 +5298,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private paintThemeSources?: readonly unknown[];
   private paintThemeTokens: string[] = [];
   private syncPaintTheme(): boolean {
-    const sources = [this.dataLayers, this.choropleth, this.styleOverrides];
+    // The ownership runtime is part of the key: override tokens are discovered once it can admit them.
+    const sources = [this.dataLayers, this.choropleth, this.styleOverrides, loadMapOwnedFeatureRuntime.loaded];
     if (!this.paintThemeSources || sources.some((source, index) => source !== this.paintThemeSources![index])) {
       this.paintThemeSources = sources;
       const tokens = new Set([...Object.values(TONE_TOKEN), ...Object.values(ON_TONE_TOKEN),
         '--lr-map-choropleth-fill-opacity', '--lr-map-hidden-category-opacity']);
       const inputs = JSON.stringify([this.canonicalDataLayers.map(({geojson: _geojson, geojsonProjection: _projection, ...paint}) => paint),
         [this.canonicalChoropleth?.stops, this.canonicalChoropleth?.stepBaseColor, this.canonicalChoropleth?.noData],
-        projectMapStyleOverrides(this.styleOverrides),
+        loadMapOwnedFeatureRuntime.loaded?.projectMapStyleOverrides(this.styleOverrides),
         this._canonicalExternalLayers.map(({ source: _source, ...paint }) => paint)]);
       for (const match of inputs.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
       this.paintThemeTokens = [...tokens];
@@ -5557,25 +5373,52 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * sources require interactiveBasemapLayers opt-in. Invalid or colliding targets return false.
    * Retained routing admits at most 256 logical sources and 1,048,576 copied source-descriptor characters;
    * exceeding either bound disables retained routing atomically while map interaction remains available.
+   * The first write loads the feature-state runtime on demand. Until it has loaded this returns false
+   * without retaining anything, and whenIdle() resolves only after the load, so await it and write
+   * again; once loaded, admission is synchronous for every element. If the runtime cannot load,
+   * localized feedback is shown and writes keep returning false until a new style or connection.
    */
   setFeatureState(target: LyraMapFeatureStateTarget, patch: LyraMapFeatureState): boolean {
     if (!this.canWriteFeatureState()) return false;
-    const accepted = this.featureStates.set(target, patch).accepted;
+    const states = this.featureStateRuntime();
+    if (!states) return false;
+    const accepted = states.set(target, patch).accepted;
     if (accepted) { this.stateRequested = true; this.flushFeatureState(); }
     return accepted;
   }
 
   /** Returns frozen own-data desired state, never caller-owned or native state references. */
   getFeatureState(target: LyraMapFeatureStateTarget): LyraMapFeatureState | undefined {
-    return this.featureStates.get(target);
+    return this.featureStates?.get(target);
   }
 
   /** Records removal of owned keys only; admission and idle semantics match setFeatureState(). */
   removeFeatureState(target: LyraMapFeatureStateTarget, key?: string): boolean {
     if (!this.canWriteFeatureState()) return false;
-    const accepted = this.featureStates.remove(target, key).accepted;
+    const states = this.featureStateRuntime();
+    if (!states) return false;
+    const accepted = states.remove(target, key).accepted;
     if (accepted) { this.stateRequested = true; this.flushFeatureState(); }
     return accepted;
+  }
+
+  /** The desired-state owner, configured with the accepted routes. Without its runtime, the first
+   * call starts that load once and returns undefined. */
+  private featureStateRuntime(): MapFeatureStateRoutes | undefined {
+    if (this.featureStates) return this.featureStates;
+    const runtime = loadMapFeatureStateRuntime.loaded;
+    if (runtime) {
+      const states = new runtime.MapFeatureStateRoutes();
+      states.configure(this.stateRoutes);
+      return this.featureStates = states;
+    }
+    if (this.featureStateLoad) return undefined;
+    this.featureStateLoad = 'loading';
+    this.trackFeatureLoad(loadMapFeatureStateRuntime().then(() => { this.featureStateLoad = undefined; }, () => {
+      this.featureStateLoad = 'failed';
+      if (this.isConnected) this.featureStateIssue = true;
+    }));
+    return undefined;
   }
 
   private canWriteFeatureState(): boolean {
@@ -5595,7 +5438,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private replayFeatureStates(map: MapLibreMapCapability, current: () => boolean, signal?: AbortSignal): void {
     if (!this.stateRequested || !current()) return;
     if (!this.stateRoutingAvailable) { this.featureStateIssue = true; this.readiness.fail(); return; }
-    const result = featureStatePeer(map) ? this.featureStates.replay(map, this._styleGeneration, signal, current) : undefined;
+    const states = this.featureStates;
+    const result = states && featureStatePeer(map) ? states.replay(map, this._styleGeneration, signal, current) : undefined;
     if (!current()) return;
     if (!result?.accepted || result.diagnostics.length) {
       this.featureStateIssue = true; this.readiness.fail(); return;
@@ -5639,7 +5483,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     const opted = projectMapBasemapInteractions(this.interactiveBasemapLayers);
     if (opted?.length && this.stateRoutingAvailable) {
-      const nativeOwned = new Set([...routes.map(route => route.nativeSource), ...owned.sources.map(source => source.id), ...this.externalSourceIds.values(), ...[...this.externalSourceIds.values()].map(id => `${id}-hit-source`), ...(this.drawingSourceId ? [this.drawingSourceId] : [])]);
+      const nativeOwned = new Set([...routes.map(route => route.nativeSource), ...owned.sources.map(source => source.id), ...this.externalSourceIds.values(), ...[...this.externalSourceIds.values()].map(id => `${id}-hit-source`), ...(this.drawingController?.sourceId ? [this.drawingController.sourceId] : [])]);
       const style = map.getStyle?.() ?? this.mapStyle;
       if (!current()) return [];
       const sources = mapOwnValue(style, 'sources');
@@ -5657,7 +5501,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         const raw = mapOwnValue(sources, id);
         // Reuse the source admission boundary before retaining any peer-owned style data.
         let snapshot: MapOwnedFeatureInput;
-        try { snapshot = snapshotMapOwnedFeatureInput({ overlays: { sources: [{ id, source: raw }], layers: [] }, images: [], styleOverrides: [] }); }
+        // A basemap opt-in loads the ownership runtime before routes are defined; without it, skip.
+        const admit = loadMapOwnedFeatureRuntime.loaded?.snapshotMapOwnedFeatureInput;
+        if (!admit) continue;
+        try { snapshot = admit({ overlays: { sources: [{ id, source: raw }], layers: [] }, images: [], styleOverrides: [] }); }
         catch { if (!current()) return []; else continue; }
         if (!current()) return [];
         const source = (snapshot.overlays as MapOwnedOverlaySnapshot).sources[0]?.source;
@@ -5674,7 +5521,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (generation !== this.interactionGeneration || map !== this._map) return;
     for (const old of this.stateRoutes) {
       const next = desired.find(route => route.origin === old.origin && route.source === old.source);
-      if (!next || next.identity !== old.identity) this.featureStates.invalidateNative(old.origin, old.nativeSource);
+      if (!next || next.identity !== old.identity) this.featureStates?.invalidateNative(old.origin, old.nativeSource);
     }
     const keys = new Set(desired.map(route => JSON.stringify([route.origin, route.source])));
     for (const key of this.sourceIdentities.keys()) if (!keys.has(key)) this.sourceIdentities.delete(key);
@@ -5685,9 +5532,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const current = (): boolean => generation === this.interactionGeneration && map === this._map && this.isConnected;
     const routes = this.mapStateDefinitions(owned);
     if (!current()) return;
-    if (this.featureStates.configure(routes).accepted) this.stateRoutes = routes;
+    const states = this.featureStates;
+    if (states ? states.configure(routes).accepted && this.stateRouter.configure(routes) : this.stateRouter.configure(routes)) this.stateRoutes = routes;
     else {
-      this.featureStates.configure([]); this.stateRoutes = [];
+      states?.configure([]); this.stateRouter.configure([]); this.stateRoutes = [];
       if (this.stateRequested) { this.featureStateIssue = true; this.readiness.fail(); }
     }
     const rules: AppliedMapInteraction[] = [];
@@ -5711,7 +5559,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     const opted = projectMapBasemapInteractions(this.interactiveBasemapLayers);
     if (opted) for (const row of opted) {
-      if (this.drawingFeatures.ownsLayer(row.layerId) || rules.some(rule => rule.layerId === row.layerId)) continue;
+      if (this.drawingController?.ownsLayer(row.layerId) === true || rules.some(rule => rule.layerId === row.layerId)) continue;
       const layer = map?.getLayer(row.layerId);
       if (!current()) return;
       const source = mapOwnValue(layer, 'source'), sourceLayer = mapOwnValue(layer, 'source-layer');
@@ -5745,14 +5593,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     try {
       const canvas = map.getCanvas();
       if (this._map !== map || generation !== this.interactionGeneration || !this.mapInteractionAllowed()) return;
-      this.mapCursor.set(canvas, this.pickMode ? 'pick' : this.drawing ? 'drawing' : this.hovered ? 'hover' : undefined);
+      this.mapCursor.set(canvas, this.pickMode ? 'pick' : this.drawingController?.active ? 'drawing' : this.hovered ? 'hover' : undefined);
     } catch { if (this._map === map && generation === this.interactionGeneration) this.mapCursor.clear(); }
   }
 
   private observeMapInteractions(canvas: HTMLCanvasElement): void {
     const map = this._map;
     const current = (): boolean => this._map === map && this.isConnected;
-    const cancel = (): void => { if (current()) { this.cancelMapDrawing('pointercancel'); if (!this.drawing) { this.clearMapHover(); this.mapCursor.clear(); } } };
+    const cancel = (): void => { if (current()) { this.cancelMapDrawing('pointercancel'); if (!this.drawingController?.active) { this.clearMapHover(); this.mapCursor.clear(); } } };
     const down = (): void => { this.suppressDrawingClick = false; };
     const click = (event: MouseEvent): void => { if (this.suppressDrawingClick) { this.suppressDrawingClick = false; event.preventDefault(); event.stopImmediatePropagation(); } };
     canvas.addEventListener('pointercancel', cancel, true);
@@ -5762,7 +5610,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.interactionObserver = new MutationObserver(() => {
       if (!current()) return;
       this.interactionBlocked = this.mapInteractionBlocked();
-      if (this.interactionBlocked) { this.cancelMapDrawing('disabled'); this.clearMapHover(); this.hideAnchor(); } else { this.syncMapCursor(); this.scheduleAnchorSync(); }
+      if (this.interactionBlocked) { this.cancelMapDrawing('disabled'); this.clearMapHover(); this.anchorController?.hide(); } else { this.syncMapCursor(); this.scheduleAnchorSync(); }
     });
     for (let node: Element | null = this; node; node = flattenedParentElement(node)) this.interactionObserver.observe(node, { attributes: true, attributeFilter: ['inert', 'disabled'] });
   }
@@ -5778,102 +5626,46 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * when another session is active. A completion listener may synchronously reopen its result.
    * Accepted vertex edits emit frozen lr-map-draw-change snapshots with completed geometry and
    * metrics. Finish/completeDrawing commits and clears; cancel, style replacement and disconnect
-   * retire the edit session. True admits desired state; whenIdle covers owned rendering work. */
+   * retire the edit session. True admits desired state; whenIdle covers owned rendering work.
+   * The first call loads the drawing runtime on demand. Until it has loaded, this returns false
+   * without reading the snapshot or changing state, and whenIdle() resolves only after the load,
+   * so await it and call again. Once loaded, admission is synchronous for every element. */
   editDrawing(snapshot: LyraMapDrawingSnapshot): boolean {
-    if (this.drawingEditAdmission) return false;
-    this.drawingEditCancelled = false; this.drawingEditAdmission = true;
-    try { return this.admitDrawingEdit(snapshot); } finally { this.drawingEditAdmission = false; }
-  }
-
-  private admitDrawingEdit(snapshot: LyraMapDrawingSnapshot): boolean {
-    const authoredStyle = this.mapStyle, authoredMode = this.drawMode;
-    const previous = this.drawing, map = this._map, style = this._styleGeneration, connection = this._connectGeneration, epoch = this.drawingEpoch;
-    if (!map || !this._styleLoaded || this.loading || this.failure || this.pickMode || !this.drawingActionAllowed() ||
-      (previous && this.drawingCompleting !== previous) || (this.drawingDispatch && (!previous || this.drawingCompleting !== previous))) return false;
-    const current = (): boolean => this._map === map && this._styleGeneration === style && this._connectGeneration === connection &&
-      this.drawingEpoch === epoch && !this.drawingEditCancelled && this.drawing === previous && this.mapStyle === authoredStyle && this.drawMode === authoredMode && !this.pickMode && this.drawingActionAllowed();
-    let candidate: MapDrawing;
-    try {
-      const phase = mapOwnValue(snapshot, 'phase'); if (!current() || phase !== 'completed') return false;
-      const mode = mapOwnValue(snapshot, 'mode'); if (!current() || (mode !== 'line' && mode !== 'polygon')) return false;
-      const vertices = mapOwnValue(snapshot, 'vertices'); if (!current() || !Array.isArray(vertices)) return false;
-      const length = mapOwnValue(vertices, 'length');
-      if (!current() || typeof length !== 'number' || !Number.isSafeInteger(length) || length < 2 || length > 512) return false;
-      candidate = new MapDrawing(mode);
-      for (let index = 0; index < length; index++) {
-        const point = mapOwnValue(vertices, String(index)); if (!current()) return false;
-        const result = candidate.add(point); if (!current() || !result.accepted) return false;
-      }
-      if (!candidate.complete().accepted || !current()) return false;
-    } catch { return false; }
-    if (previous) this.clearDrawing();
-    const admittedEpoch = this.drawingEpoch;
-    const owns = (): boolean => this._map === map && this._styleGeneration === style && this._connectGeneration === connection &&
-      this.drawingEpoch === admittedEpoch && !this.drawingEditCancelled && this.mapStyle === authoredStyle && (!this.drawing || this.drawing === candidate) && !this.pickMode && this.drawMode === 'none';
-    if (!owns() || !this.drawingActionAllowed()) return false;
-    const lease = acquireMapDrawingGesture(map, { current: () => this._map === map && this._styleGeneration === style && this._connectGeneration === connection &&
-      this.drawingEpoch === admittedEpoch && (!this.drawing || this.drawing === candidate) });
-    if (!lease.accepted || !owns() || !this.drawingActionAllowed()) { lease.release(); return false; }
-    this.drawingRelease = lease.release; this.drawing = candidate; this.drawingEditing = true;
-    this.drawingStarted = true; this.drawingSelected = 0; this.drawingSnapshot = candidate.snapshot(); this.drawingIssue = undefined;
-    this.syncDrawing(); this.renderDrawingResources();
-    return this.drawing === candidate;
+    if (this.drawingLoad === 'failed') this.drawingLoad = undefined;
+    return this.drawingRuntime()?.edit(snapshot) ?? false;
   }
 
   /** Removes the last accepted vertex. Returns false when drawing is unavailable or empty. */
   undoDrawing(): boolean {
-    const session = this.drawing;
-    if (!session || this.drawingDispatch || !this.mapInteractionAllowed()) return false;
-    const result = session.undo();
-    if (!result.accepted) return false;
-    this.drawingSnapshot = result.state; this.drawingIssue = undefined;
-    this.emitDrawingChange(session);
-    if (this.drawing === session && this.drawingSnapshot === result.state) this.renderDrawingResources();
-    return true;
+    return this.drawingController?.undo() ?? false;
   }
 
   /** Emits a frozen valid geometry with spherical metrics, then exits drawing mode.
    * Returns false for an incomplete/invalid shape. Completed geometry is not retained on the map;
    * assign it to dataLayers to keep it. Reentrant replacement belongs to the new drawing. */
   completeDrawing(): boolean {
-    const session = this.drawing;
-    if (!session || this.drawingDispatch || !this.drawingActionAllowed()) return false;
-    const result = this.drawingEditing ? { accepted: true, state: session.snapshot(), error: undefined } : session.complete();
-    if (!result.accepted) { this.showDrawingError(result.error); return false; }
-    this.drawingSnapshot = result.state;
-    this.drawingDispatch = true; this.drawingCompleting = session;
-    try { this.emit('lr-map-draw-complete', result.state); }
-    finally { this.drawingDispatch = false; this.drawingCompleting = undefined; }
-    if (this.drawing === session) this.clearDrawing();
-    return true;
+    return this.drawingController?.complete() ?? false;
   }
 
-  /** Cancels an armed or started drawing and clears its temporary resources and mode. */
+  /** Cancels an armed or started drawing and clears its temporary resources and mode. An armed
+   * mode whose drawing runtime is still loading is cancelled synchronously as well. */
   cancelDrawing(): boolean { return this.cancelMapDrawing('cancel'); }
 
   private cancelMapDrawing(reason: LyraMapDrawingCancelReason, keepMode = false, armedMode = this.drawMode): boolean {
-    const session = this.drawing;
-    if (!session && armedMode !== 'line' && armedMode !== 'polygon') { if (this.drawingEditAdmission) this.drawingEditCancelled = true; return false; }
-    const state = session ? session.snapshot().phase !== 'cancelled' ? session.cancel().state : undefined
-      : armedMode === 'line' || armedMode === 'polygon' ? new MapDrawing(armedMode).cancel().state : undefined;
-    this.clearDrawing(keepMode);
-    if (state) this.emit('lr-map-draw-cancel', Object.freeze({ ...state, reason } satisfies LyraMapDrawingCancelDetail));
+    const drawing = this.drawingController;
+    if (drawing) return drawing.cancel(reason, keepMode, armedMode);
+    // Before the runtime loads, an armed mode has no session, gesture lease or resources to retire.
+    if (armedMode !== 'line' && armedMode !== 'polygon') return false;
+    this.drawingIssue = undefined;
+    if (!keepMode) this.resetDrawingMode();
+    this.drawingEpoch++; this.syncMapCursor();
+    this.emit('lr-map-draw-cancel', Object.freeze({ mode: armedMode, phase: 'cancelled', vertices: Object.freeze([]), reason } satisfies LyraMapDrawingCancelDetail));
     return true;
   }
 
-  private clearDrawing(keepMode = false): void {
-    const pointer = this.drawingPointer, release = this.drawingRelease, overlay = this.drawingOverlay, mode = this.drawMode;
-    this.drawingPointer = undefined; this.drawingRelease = undefined; this.drawingOverlay = undefined;
-    this.drawing = undefined; this.drawingStarted = false; this.drawingEditing = false; this.drawingHandles = []; this.drawingSnapshot = undefined; this.drawingIssue = undefined;
-    if (!keepMode && this.drawMode === mode) {
-      this.drawingResetting = true;
-      try { this.drawMode = 'none'; } finally { this.drawingResetting = false; }
-    }
-    if (pointer?.consumeClick()) this.suppressDrawingClick = true;
-    pointer?.dispose(); release?.(); overlay?.deactivate();
-    if (this.drawing) return;
-    this.drawingEpoch++;
-    this.renderDrawingResources(); this.syncMapCursor();
+  private resetDrawingMode(): void {
+    this.drawingResetting = true;
+    try { this.drawMode = 'none'; } finally { this.drawingResetting = false; }
   }
 
   private syncDrawing(): void {
@@ -5881,123 +5673,60 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.scheduleAfterUpdate(() => this.syncDrawing(), 'map-sync-drawing');
       return;
     }
+    const drawing = this.drawingController;
+    if (drawing) { drawing.sync(); return; }
     if (this.pickMode) { this.cancelMapDrawing('pick-mode'); return; }
     if (this.mapInteractionBlocked()) { this.cancelMapDrawing('disabled'); return; }
-    if (this.drawMode !== 'line' && this.drawMode !== 'polygon' && !this.drawingEditing) return;
-    if (!this.isConnected || !this._map || !this._styleLoaded || this.failure || this.loading) return;
-    if (!this.drawing) {
-      if (this.drawMode !== 'line' && this.drawMode !== 'polygon') return;
-      const map = this._map, style = this._styleGeneration, epoch = this.drawingEpoch, connection = this._connectGeneration, mode = this.drawMode;
-      const current = (): boolean => this._map === map && this._styleGeneration === style && this.drawingEpoch === epoch && this._connectGeneration === connection;
-      this.drawingDispatch = true;
-      let lease: ReturnType<typeof acquireMapDrawingGesture>;
-      try { lease = acquireMapDrawingGesture(map, { current }); }
-      finally { this.drawingDispatch = false; }
-      if (!lease.accepted || !current() || !this.isConnected || this.drawMode !== mode || this.pickMode || this.mapInteractionBlocked()) { lease.release(); if (!lease.accepted && current()) this.showDrawingError(); return; }
-      this.drawingRelease = lease.release; this.drawingIssue = undefined;
-      this.drawing = new MapDrawing(mode);
-      this.drawingSnapshot = this.drawing.snapshot();
-    }
-    this.installDrawingPointer(); this.scheduleDrawingHandles();
-    if (!this.drawingOverlay) this.drawingOverlay = activateOverlay({
-      host: this, panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="drawing-controls"]') ?? null,
-      onEscape: () => { this.cancelMapDrawing('escape'); }, beforeInitialFocus: () => false,
-      modal: false, trapFocus: false, lockScroll: false,
-    });
-    this.syncMapCursor();
+    if (this.drawMode === 'line' || this.drawMode === 'polygon') this.drawingRuntime()?.sync();
   }
 
-  private installDrawingPointer(): void {
-    const map = this._map, session = this.drawing, epoch = this.drawingEpoch, style = this._styleGeneration, connection = this._connectGeneration;
-    if (!map || !session || this.drawingPointer) return;
-    const owns = (): boolean => this._map === map && this.drawing === session && this.drawingEpoch === epoch &&
-      this._styleGeneration === style && this._connectGeneration === connection;
-    try {
-      const canvas = map.getCanvas();
-      if (!owns() || !this.mapInteractionAllowed()) return;
-      this.drawingPointer = new MapDrawingPointer({
-        canvas, current: () => owns() && this.mapInteractionAllowed(),
-        vertices: () => session.snapshot().vertices,
-        project: point => this.project(point), unproject: point => this.unproject(point),
-        replace: (index, point) => this.replaceDrawingVertex(session, index, point),
-        acquirePan: () => acquireMapDrawingPan(map, { current: () => this._map === map && this.drawingEpoch === epoch &&
-          this._styleGeneration === style && this._connectGeneration === connection }),
-        cancel: () => { if (owns()) this.cancelMapDrawing('pointercancel'); },
-      });
-    } catch { if (owns()) this.showDrawingError(); }
+  /** The drawing controller. Without its runtime, starts loading it once and returns undefined;
+   * a failed load is retried only when drawing is requested again. */
+  private drawingRuntime(): MapDrawingController | undefined {
+    if (this.drawingController) return this.drawingController;
+    const runtime = loadMapDrawingRuntime.loaded;
+    if (runtime) return this.drawingController = new runtime.MapDrawingController(this.drawingHost());
+    if (this.drawingLoad) return undefined;
+    this.drawingLoad = 'loading';
+    this.trackFeatureLoad(loadMapDrawingRuntime().then(() => {
+      this.drawingLoad = undefined;
+      if (this.isConnected) this.syncDrawing();
+    }, () => {
+      this.drawingLoad = 'failed';
+      if (this.isConnected) this.showDrawingError();
+    }));
+    return undefined;
   }
 
-  private replaceDrawingVertex(session: MapDrawing, index: number, point: unknown): boolean {
-    if (this.drawing !== session || this.drawingDispatch || !this.mapInteractionAllowed()) return false;
-    const result = session.replace(index, point);
-    if (this.drawing !== session) return false;
-    if (!result.accepted) { this.showDrawingError(result.error); return false; }
-    this.drawingSnapshot = result.state; this.drawingIssue = undefined; this.drawingSelected = index;
-    this.emitDrawingChange(session);
-    if (this.drawing === session && this.drawingSnapshot === result.state) this.renderDrawingResources();
-    return true;
-  }
-
-  private scheduleDrawingHandles(): void {
-    this.scheduleAfterUpdate(() => this.syncDrawingHandles(), 'map-drawing-handles');
-  }
-
-  private syncDrawingHandles(): void {
-    const map = this._map, session = this.drawing, state = this.drawingSnapshot, epoch = this.drawingEpoch;
-    const current = (): boolean => this._map === map && this.drawing === session && this.drawingSnapshot === state && this.drawingEpoch === epoch && this.mapInteractionAllowed();
-    const next: { index: number; x: number; y: number }[] = [];
-    if (map && session && state && current()) {
-      try {
-        const canvas = map.getCanvas(); if (!current()) return;
-        const base = this.shadowRoot?.querySelector<HTMLElement>('[part="base"]');
-        if (base) {
-          const viewport = canvas.getBoundingClientRect(); if (!current()) return;
-          const rect = base.getBoundingClientRect(); if (!current()) return;
-          const width = canvas.clientWidth, height = canvas.clientHeight, baseWidth = base.clientWidth, baseHeight = base.clientHeight;
-          if ([viewport.left, viewport.top, viewport.width, viewport.height, rect.left, rect.top, rect.width, rect.height, width, height, baseWidth, baseHeight].every(Number.isFinite) &&
-            Math.min(width, height, baseWidth, baseHeight, viewport.width, viewport.height, rect.width, rect.height) > 0) {
-            for (let index = 0; index < state.vertices.length; index++) {
-              const point = this.project(state.vertices[index]!); if (!current()) return;
-              if (!point || point[0] < 0 || point[1] < 0 || point[0] > width || point[1] > height) continue;
-              const x = (viewport.left - rect.left + point[0] * viewport.width / width) * baseWidth / rect.width;
-              const y = (viewport.top - rect.top + point[1] * viewport.height / height) * baseHeight / rect.height;
-              if (Number.isFinite(x) && Number.isFinite(y)) next.push({ index, x, y });
-            }
-          }
-        }
-      } catch { if (!current()) return; }
-    }
-    if (next.length && !next.some(handle => handle.index === this.drawingSelected)) this.drawingSelected = next[0]!.index;
-    if (next.length !== this.drawingHandles.length || next.some((handle, index) => {
-      const previous = this.drawingHandles[index]; return !previous || previous.index !== handle.index || previous.x !== handle.x || previous.y !== handle.y;
-    })) this.drawingHandles = next;
-  }
-
-  private onDrawingVertexKey(event: KeyboardEvent, index: number): void {
-    const session = this.drawing, state = this.drawingSnapshot, map = this._map, epoch = this.drawingEpoch;
-    if (!session || !state || !map || this.drawingDispatch || !this.mapInteractionAllowed()) return;
-    const current = (): boolean => this.drawing === session && this.drawingSnapshot === state && this._map === map && this.drawingEpoch === epoch && this.mapInteractionAllowed();
-    const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
-    if (!keys.includes(event.key)) return;
-    event.preventDefault(); event.stopPropagation();
-    if (event.key === 'Home' || event.key === 'End' || event.key === 'PageUp' || event.key === 'PageDown') {
-      const handles = this.drawingHandles, position = handles.findIndex(handle => handle.index === index);
-      const selected = event.key === 'Home' ? 0 : event.key === 'End' ? handles.length - 1
-        : Math.max(0, Math.min(handles.length - 1, position + (event.key === 'PageUp' ? -1 : 1)));
-      const handle = handles[selected];
-      if (handle && current()) {
-        this.drawingSelected = handle.index;
-        this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[part="drawing-vertex"]')[selected]?.focus();
-      }
-      return;
-    }
-    const vertex = state.vertices[index]; if (!vertex) return;
-    const point = this.project(vertex); if (!point || !current()) return;
-    const step = event.shiftKey ? 32 : 8, rtl = this.effectiveDirection === 'rtl' ? -1 : 1;
-    const dx = event.key === 'ArrowLeft' ? -step * rtl : event.key === 'ArrowRight' ? step * rtl : 0;
-    const dy = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0;
-    const coordinate = this.unproject([point[0] + dx, point[1] + dy]);
-    if (coordinate && current()) this.replaceDrawingVertex(session, index, coordinate);
+  private drawingHost(): MapDrawingHost {
+    return {
+      element: this,
+      map: () => this._map,
+      styleLoaded: () => this._styleLoaded,
+      generations: () => [this._styleGeneration, this._connectGeneration],
+      usable: () => !this.loading && !this.failure,
+      epoch: () => this.drawingEpoch,
+      advanceEpoch: () => { this.drawingEpoch++; },
+      actionAllowed: () => this.drawingActionAllowed(),
+      interactionAllowed: () => this.mapInteractionAllowed(),
+      interactionBlocked: () => this.mapInteractionBlocked(),
+      updateActive: () => this.mapUpdateActive,
+      afterUpdate: (callback, key) => { this.scheduleAfterUpdate(callback, key); },
+      emit: (type: 'lr-map-draw-start' | 'lr-map-draw-change' | 'lr-map-draw-complete', state) => { this.emit(type, state); },
+      emitCancel: detail => { this.emit('lr-map-draw-cancel', detail); },
+      showError: error => { this.showDrawingError(error); },
+      clearError: () => { this.drawingIssue = undefined; },
+      resetMode: () => { this.resetDrawingMode(); },
+      suppressClick: () => { this.suppressDrawingClick = true; },
+      syncCursor: () => { this.syncMapCursor(); },
+      changed: () => { this.drawingRevision += 1; },
+      invalidate: () => { this.readiness.invalidate(); },
+      check: () => { this.readiness.check(); },
+      fail: () => { this.readiness.fail(); },
+      direction: () => this.effectiveDirection,
+      accentColor: () => resolvedLayerColor(this, undefined, 'accent'),
+      resolve: (value, property) => this.resolveStyleOverride(value, property),
+    };
   }
 
   private showDrawingError(error?: MapDrawingError): void {
@@ -6012,97 +5741,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this.localize(MAP_DRAWING_MESSAGE[this.drawingIssue!], undefined, { count: this.drawingIssue === 'mapDrawingVertexLimit' ? 512 : this.drawMode === 'polygon' ? 3 : 2 });
   }
 
-  private emitDrawingChange(session: MapDrawing): void {
-    if (this.drawing !== session) return;
-    this.drawingDispatch = true;
-    try { this.emit('lr-map-draw-change', session.snapshot()); }
-    finally { this.drawingDispatch = false; }
-  }
-
-  private addDrawingVertex(point: unknown): boolean {
-    const session = this.drawing;
-    if (!session || this.drawingDispatch || !this.mapInteractionAllowed()) return false;
-    const first = !this.drawingStarted;
-    const result = session.add(point);
-    if (!result.accepted) { this.showDrawingError(result.error); return false; }
-    this.drawingSnapshot = result.state; this.drawingIssue = undefined;
-    if (first) {
-      this.drawingStarted = true;
-      this.drawingDispatch = true;
-      try { this.emit('lr-map-draw-start', result.state); }
-      finally { this.drawingDispatch = false; }
-    }
-    this.emitDrawingChange(session);
-    if (this.drawing === session && this.drawingSnapshot === result.state) this.renderDrawingResources();
-    return true;
-  }
-
-  private drawMapCenter = (): void => {
-    const map = this._map, session = this.drawing, epoch = this.drawingEpoch;
-    if (!map || !session || this.drawingDispatch || !this.mapInteractionAllowed()) return;
-    try {
-      const point = mapCoordinates(map.getCenter());
-      if (this._map === map && this.drawing === session && this.drawingEpoch === epoch && point) this.addDrawingVertex(point);
-    } catch { if (this.drawing === session) this.showDrawingError(); }
-  };
-
-  private renderDrawingResources(): void {
-    const map = this._map;
-    this.drawingFeatures.cancel(); this.drawingAbort?.abort(); this.finishDrawingWork?.();
-    this.drawingAbort = undefined; this.finishDrawingWork = undefined; this.drawingPending = false;
-    if (!map || !this._styleLoaded || !this.isConnected) return;
-    const state = this.drawingSnapshot, style = this._styleGeneration, epoch = ++this.drawingResourceEpoch;
-    const controller = new AbortController(); this.drawingAbort = controller;
-    const current = (): boolean => this._map === map && this._styleGeneration === style && epoch === this.drawingResourceEpoch && this.isConnected && !controller.signal.aborted;
-    const vertices = state && (state.phase === 'drawing' || this.drawingEditing && state.phase === 'completed') ? state.vertices : [];
-    this.scheduleDrawingHandles();
-    if (!vertices.length && !this.drawingSourceId) return;
-    this.drawingPending = true; this.readiness.invalidate();
-    let finish!: () => void;
-    this.drawingWork = new Promise<void>(resolve => { finish = resolve; }); this.finishDrawingWork = finish;
-    const run = async (): Promise<void> => {
-      try {
-        let id = this.drawingSourceId;
-        if (vertices.length && !id) {
-          const reserved = snapshotMapOwnedFeatureInput({ overlays: this.overlays, images: [], styleOverrides: [] }).overlays as MapOwnedOverlaySnapshot;
-          const used = new Set([...reserved.sources.map(row => row.id), ...reserved.layers.map(row => row.layer.id)]);
-          for (let attempt = 0; attempt < 512 && current(); attempt++) {
-            const candidate = `lr-drawing-${this.drawingIdCounter++}`;
-            const ids = [candidate, `${candidate}-points`, `${candidate}-line`, `${candidate}-fill`];
-            if (ids.some(value => used.has(value) || map.getSource(value) || map.getLayer(value))) continue;
-            if (current()) id = candidate;
-            break;
-          }
-          if (!id) throw new Error('Drawing resources are unavailable.');
-          this.drawingSourceId = id;
-        }
-        if (!current()) return;
-        const features: unknown[] = vertices.map(point => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [...point] } }));
-        if (vertices.length > 1) features.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: vertices.map(point => [...point]) } });
-        if (state?.mode === 'polygon' && vertices.length > 2) features.push({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[...vertices.map(point => [...point]), [...vertices[0]!]]] } });
-        const color = resolvedLayerColor(this, undefined, 'accent');
-        const layers = vertices.length ? [
-          { layer: { id: `${id}-fill`, type: 'fill', source: id, filter: ['==', '$type', 'Polygon'], paint: { 'fill-color': color, 'fill-opacity': 0.2 } } },
-          { layer: { id: `${id}-line`, type: 'line', source: id, filter: ['==', '$type', 'LineString'], paint: { 'line-color': color, 'line-width': 2 } } },
-          { layer: { id: `${id}-points`, type: 'circle', source: id, filter: ['==', '$type', 'Point'], paint: { 'circle-color': color, 'circle-radius': 5 } } },
-        ] : [];
-        await this.drawingFeatures.reconcile(map, style, { overlays: { sources: vertices.length ? [{ id, source: { type: 'geojson', data: { type: 'FeatureCollection', features } } }] : [], layers }, images: [], styleOverrides: [] }, {
-          owner: this, signal: controller.signal, isCurrent: current, isGeneratedLayer: () => false,
-          resolve: (value, property) => this.resolveStyleOverride(value, property),
-        });
-        if (current() && !vertices.length) this.drawingSourceId = undefined;
-      } catch {
-        if (current()) { this.showDrawingError(); this.readiness.fail(); }
-      } finally {
-        finish();
-        if (current()) { this.drawingPending = false; this.drawingAbort = undefined; this.finishDrawingWork = undefined; this.readiness.check(); }
-      }
-    };
-    // Native resource callbacks may synchronously cancel or replace a drawing. Reconcile after
-    // their mutation stack unwinds, so cleanup never reenters the owned-resource transaction.
-    queueMicrotask(() => { if (current()) void run(); else finish(); });
-  }
-
+  private drawMapCenter = (): void => { this.drawingController?.addCenter(); };
   private cancelMapPick = (): void => { this.pickMode = false; this.clearMapHover(); };
   private pickMapCenter = (): void => {
     const map = this._map, generation = this.interactionGeneration;
@@ -6114,8 +5753,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   };
 
   private handleMapInteraction(kind: 'click' | 'contextmenu' | 'mousemove', event: { readonly point: unknown; readonly lngLat: unknown }): void {
-    if (kind === 'click' && (this.suppressDrawingClick || this.drawingPointer?.consumeClick())) { this.suppressDrawingClick = false; return; }
-    if (this.drawingDispatch) return;
+    const drawing = this.drawingController;
+    if (kind === 'click' && (this.suppressDrawingClick || drawing?.consumeClick())) { this.suppressDrawingClick = false; return; }
+    if (drawing?.dispatching) return;
     if (this.queryingMap) { this.interactionQuery++; return; }
     if (!this.mapInteractionAllowed()) { this.clearMapHover(); return; }
     const map = this._map!;
@@ -6127,7 +5767,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     try {
       lngLat = mapCoordinates(mapOwnValue(event, 'lngLat'));
       if (!lngLat || !current()) return;
-      if (kind === 'click' && this.drawing && !this.pickMode) { if (!this.drawingEditing) this.addDrawingVertex(lngLat); return; }
+      if (kind === 'click' && drawing?.active && !this.pickMode) { if (!drawing.editing) drawing.add(lngLat); return; }
       let features: unknown;
       const rules = this.interactions;
       const result = queryMapHit({ getLayer: id => map.getLayer(id), queryRenderedFeatures: (point, options) => {
@@ -6137,7 +5777,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (result.status === 'hit') {
         rule = rules.find(row => row.layerId === result.hit.layerId); if (!rule) return;
         const native = result.hit;
-        const target = native.id === undefined ? undefined : this.featureStates.resolve({ origin: rule.origin, source: rule.source, id: native.id, ...(rule.sourceLayer ? { sourceLayer: rule.sourceLayer } : {}) });
+        const target = native.id === undefined ? undefined : this.stateRouter.resolve({ origin: rule.origin, source: rule.source, id: native.id, ...(rule.sourceLayer ? { sourceLayer: rule.sourceLayer } : {}) });
         hit = Object.freeze({ layerId: native.layerId, origin: rule.origin, source: rule.source, properties: native.properties,
           ...(native.id === undefined ? {} : { id: native.id }), ...(rule.sourceLayer ? { sourceLayer: rule.sourceLayer } : {}), ...(target ? { target } : {}) });
         raw = mapOwnValue(features, String(result.featureIndex)) as Feature | undefined;
@@ -6166,9 +5806,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private cancelFeaturePreparation(): void {
-    this.interactionGeneration++; this.featureStates.cancel(); this.clearMapHover();
-    this.ownedFeatures.cancel();
-    this.externalFeatures.cancel();
+    this.interactionGeneration++; this.featureStates?.cancel(); this.clearMapHover();
+    this.ownedFeatures?.cancel();
+    this.externalFeatures?.cancel();
     this.finishFeatureWork?.();
     this.finishFeatureWork = undefined;
     this.featureGeneration += 1;
@@ -6214,12 +5854,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const reserved = new Set([...owned.sources.map(source => source.id), ...owned.layers.map(layer => layer.layer.id)]);
     const available = (id: string, retained: boolean): boolean => !reserved.has(id) &&
       !reserved.has(`${id}-render`) && !reserved.has(`${id}-label`) && !reserved.has(`${id}-hit`) && !reserved.has(`${id}-hit-source`) &&
-      ((!this._map?.getSource(`${id}-hit-source`) && !this._map?.getLayer(`${id}-hit`)) || this.externalFeatures.ownsLayer(`${id}-hit`)) &&
+      ((!this._map?.getSource(`${id}-hit-source`) && !this._map?.getLayer(`${id}-hit`)) || this.externalFeatures?.ownsLayer(`${id}-hit`) === true) &&
       (retained || (!this._map?.getSource(id) && !this._map?.getLayer(`${id}-render`) && !this._map?.getLayer(`${id}-label`)));
     return buildMapExternalLayers(this._canonicalExternalLayers, {
       nativeId: row => {
         const previous = this.externalSourceIds.get(row.sourceId);
-        if (previous && available(previous, this.externalFeatures.ownsLayer(`${previous}-render`))) return previous;
+        if (previous && available(previous, this.externalFeatures?.ownsLayer(`${previous}-render`) === true)) return previous;
         for (let index = 0; index < 512; index++) {
           const id = `lr-external-layer-${this.externalIdCounter++}`;
           if (!available(id, false)) continue;
@@ -6301,25 +5941,34 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         complete(); return;
       }
       this.optionalFeatureWorkStarted = true;
-      const applyOwned = (): Promise<void> => this.ownedFeatures.reconcile(map, styleGeneration, ownedInput, {
-        owner: this, signal: controller.signal, isCurrent: current,
-        beforeSourceChange: change => { this.featureStates.refreshNative('overlay', change.id); },
-        isGeneratedLayer: id => this.externalFeatures.ownsLayer(id) || id === this._appliedFillLayerId || [...this._appliedDataLayerIds.values()]
-          .some(sourceId => DATA_LAYER_SUFFIXES.some(suffix => id === `${sourceId}${suffix}`)),
-        resolve: (value, property) => this.resolveStyleOverride(value, property),
-      });
       const failure = (): void => { if (current() && !controller.signal.aborted) fail(); };
-      if (this.externalFeatureWorkStarted || externalInput.sources.length > 0) {
-        this.externalFeatureWorkStarted = true;
-        void this.externalFeatures.reconcile(map, styleGeneration, { overlays: { sources: externalInput.sources, layers: externalInput.layers }, images: [], styleOverrides: [] }, {
-          owner: this, signal: controller.signal, isCurrent: current, isGeneratedLayer: () => false,
-          beforeSourceChange: change => { this.featureStates.refreshNative('data-layer', change.id); },
+      const external = this.externalFeatureWorkStarted || externalInput.sources.length > 0;
+      if (external) this.externalFeatureWorkStarted = true;
+      // Native resource ownership loads on demand, inside this same feature transaction.
+      const reconcileOwned = ({ MapOwnedFeatures }: NonNullable<typeof loadMapOwnedFeatureRuntime.loaded>): void => {
+        if (!current() || controller.signal.aborted) return;
+        const owned = this.ownedFeatures ??= new MapOwnedFeatures();
+        const applyOwned = (): Promise<void> => owned.reconcile(map, styleGeneration, ownedInput, {
+          owner: this, signal: controller.signal, isCurrent: current,
+          beforeSourceChange: change => { this.featureStates?.refreshNative('overlay', change.id); },
+          isGeneratedLayer: id => this.externalFeatures?.ownsLayer(id) === true || id === this._appliedFillLayerId || [...this._appliedDataLayerIds.values()]
+            .some(sourceId => DATA_LAYER_SUFFIXES.some(suffix => id === `${sourceId}${suffix}`)),
           resolve: (value, property) => this.resolveStyleOverride(value, property),
-        }).then(() => {
-          if (!current() || controller.signal.aborted) return;
-          return applyOwned().then(complete);
-        }).catch(failure);
-      } else void applyOwned().then(complete, failure);
+        });
+        if (external) {
+          void (this.externalFeatures ??= new MapOwnedFeatures()).reconcile(map, styleGeneration, { overlays: { sources: externalInput.sources, layers: externalInput.layers }, images: [], styleOverrides: [] }, {
+            owner: this, signal: controller.signal, isCurrent: current, isGeneratedLayer: () => false,
+            beforeSourceChange: change => { this.featureStates?.refreshNative('data-layer', change.id); },
+            resolve: (value, property) => this.resolveStyleOverride(value, property),
+          }).then(() => {
+            if (!current() || controller.signal.aborted) return;
+            return applyOwned().then(complete);
+          }).catch(failure);
+        } else void applyOwned().then(complete, failure);
+      };
+      const runtime = loadMapOwnedFeatureRuntime.loaded;
+      if (runtime) reconcileOwned(runtime);
+      else void loadMapOwnedFeatureRuntime().then(reconcileOwned).catch(failure);
     };
     const fail = (): void => {
       if (!current()) return;
@@ -6331,22 +5980,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (current()) this.failInitialization('initialization-failed');
       }, `map-feature-failure-${generation}`);
     };
-    try {
-      ownedInput = snapshotMapOwnedFeatureInput({ overlays, images, styleOverrides });
-      const geojson = this.canonicalDataLayers;
-      if (this.invalidDataLayerModel || geojson.some(layer => layer.invalidLabel) ||
-        (geojson.some(layer => layer.label !== undefined) && !this.styleProvidesGlyphs())) throw new Error('Map labels or sources are unavailable.');
+    const begin = (input: MapOwnedFeatureInput): void => {
+      ownedInput = input;
       externalInput = this.externalLayerInput(ownedInput.overlays as MapOwnedOverlaySnapshot);
-      if (!current() || controller.signal.aborted) { finish(); return work; }
+      if (!current() || controller.signal.aborted) { finish(); return; }
       // Canonical peers keep their synchronous mutation contract. The modular loader validates
       // prepareFeatures before a real module can reach this point.
-      if (typeof map.prepareFeatures !== 'function') { apply(); return work; }
+      if (typeof map.prepareFeatures !== 'function') { apply(); return; }
       const requirements = this.generatedFeatureRequirements();
       const signature = JSON.stringify([
         Object.values(requirements.sources ?? {}).map(source => (source as { type: string; cluster?: boolean }).type),
         (requirements.layers ?? []).map(layer => (layer as { type: string }).type),
       ]);
-      if (signature === this.preparedFeatureSignature) { apply(); return work; }
+      if (signature === this.preparedFeatureSignature) { apply(); return; }
       void (async () => {
         try {
           await map.prepareFeatures!(requirements, { signal: controller.signal });
@@ -6359,6 +6005,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           fail();
         }
       })();
+    };
+    try {
+      const geojson = this.canonicalDataLayers;
+      if (this.invalidDataLayerModel || geojson.some(layer => layer.invalidLabel) ||
+        (geojson.some(layer => layer.label !== undefined) && !this.styleProvidesGlyphs())) throw new Error('Map labels or sources are unavailable.');
+      // Empty defaults stay synchronous; other resources and basemap opt-ins are admitted by the
+      // ownership runtime, loaded once on demand inside this same feature transaction.
+      const runtime = loadMapOwnedFeatureRuntime.loaded;
+      if (runtime) begin(runtime.snapshotMapOwnedFeatureInput({ overlays, images, styleOverrides }));
+      else if (!ownedFeaturesRequested(overlays, images, styleOverrides) && !projectMapBasemapInteractions(interactiveBasemapLayers)?.length) begin(NO_OWNED_FEATURES);
+      else void loadMapOwnedFeatureRuntime().then(loaded => {
+        if (current() && !controller.signal.aborted) begin(loaded.snapshotMapOwnedFeatureInput({ overlays, images, styleOverrides }));
+      }).catch(fail);
     } catch { fail(); }
     return work;
   }
@@ -6527,7 +6186,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Removes whatever choropleth layer/source is currently applied, if any. */
   private removeChoropleth(): void {
     if (!this._map || !this._appliedChoroplethSourceId) return;
-    this.featureStates.refreshNative('choropleth', this._appliedChoroplethSourceId);
+    this.featureStates?.refreshNative('choropleth', this._appliedChoroplethSourceId);
     if (this._appliedFillLayerId && this._map.getLayer(this._appliedFillLayerId)) {
       this._map.removeLayer(this._appliedFillLayerId);
     }
@@ -7167,7 +6826,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!this._map) return;
     const sourceId = this._appliedDataLayerIds.get(publicSourceId);
     if (!sourceId) return;
-    this.featureStates.refreshNative('data-layer', sourceId);
+    this.featureStates?.refreshNative('data-layer', sourceId);
     this.removePointIcons(sourceId);
     this.appliedPointPaint.delete(sourceId);
     this.appliedGeoLabels.delete(sourceId);
@@ -7404,7 +7063,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       ) return;
       try {
         map.resize();
-        this.scheduleDrawingHandles();
+        this.drawingController?.scheduleHandles();
       } catch {
         // A peer can be disposing in the same delivery turn; the next live allocation retries.
       }
@@ -7875,6 +7534,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   override render(): TemplateResult {
+    const drawing = this.drawingController;
     // Lit's own whitespace/comment marker nodes around the `${...}` binding mean
     // `[part="legend"]` is never truly `:empty` in CSS even with zero entries, so
     // the panel is omitted only when both the bounded legend and its projection result are empty
@@ -7910,25 +7570,25 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           <button type="button" part="pick-center" ?disabled=${this.interactionBlocked} @click=${this.pickMapCenter}>${this.localize('mapPickAtCenter')}</button>
           <button type="button" part="pick-cancel" ?disabled=${this.interactionBlocked} @click=${this.cancelMapPick}>${this.localize('mapCancelPick')}</button>
         </div>` : nothing}
-        ${(this.drawMode === 'line' || this.drawMode === 'polygon' || this.drawingEditing) && !this.pickMode && !this.failure && !this.loading ? html`<div part="drawing-controls" role="group" aria-label=${this.localize('mapDrawingControls')}>
-          <button type="button" part="drawing-add" ?disabled=${this.interactionBlocked || !this.drawing || this.drawingEditing} @click=${this.drawMapCenter}>${this.localize('mapDrawAtCenter')}</button>
-          <button type="button" part="drawing-undo" ?disabled=${this.interactionBlocked || !this.drawingSnapshot?.vertices.length || this.drawingEditing} @click=${() => this.undoDrawing()}>${this.localize('mapUndoDrawing')}</button>
-          <button type="button" part="drawing-complete" ?disabled=${this.interactionBlocked || !this.drawing} @click=${() => this.completeDrawing()}>${this.localize('mapCompleteDrawing')}</button>
+        ${(this.drawMode === 'line' || this.drawMode === 'polygon' || drawing?.editing) && !this.pickMode && !this.failure && !this.loading ? html`<div part="drawing-controls" role="group" aria-label=${this.localize('mapDrawingControls')}>
+          <button type="button" part="drawing-add" ?disabled=${this.interactionBlocked || !drawing?.active || drawing.editing} @click=${this.drawMapCenter}>${this.localize('mapDrawAtCenter')}</button>
+          <button type="button" part="drawing-undo" ?disabled=${this.interactionBlocked || !drawing?.snapshot?.vertices.length || drawing.editing} @click=${() => this.undoDrawing()}>${this.localize('mapUndoDrawing')}</button>
+          <button type="button" part="drawing-complete" ?disabled=${this.interactionBlocked || !drawing?.active} @click=${() => this.completeDrawing()}>${this.localize('mapCompleteDrawing')}</button>
           <button type="button" part="drawing-cancel" ?disabled=${this.interactionBlocked} @click=${() => this.cancelDrawing()}>${this.localize('mapCancelDrawing')}</button>
-          <span part="drawing-status">${this.localize('mapDrawingVertices', undefined, { count: this.drawingSnapshot?.vertices.length ?? 0 })}</span>
+          <span part="drawing-status">${this.localize('mapDrawingVertices', undefined, { count: drawing?.snapshot?.vertices.length ?? 0 })}</span>
         </div>` : nothing}
-        ${this.drawingHandles.length ? html`<span id="drawing-edit-instructions" class="sr-only">${this.localize('mapDrawingEditInstructions')}</span>
-          <div part="drawing-handles">${this.drawingHandles.map(handle => html`<button type="button" part="drawing-vertex"
-            style=${styleMap({ left: `${handle.x}px`, top: `${handle.y}px` })} tabindex=${handle.index === this.drawingSelected ? '0' : '-1'}
+        ${drawing?.handles.length ? html`<span id="drawing-edit-instructions" class="sr-only">${this.localize('mapDrawingEditInstructions')}</span>
+          <div part="drawing-handles">${drawing.handles.map(handle => html`<button type="button" part="drawing-vertex"
+            style=${styleMap({ left: `${handle.x}px`, top: `${handle.y}px` })} tabindex=${handle.index === drawing.selected ? '0' : '-1'}
             aria-label=${this.localize('mapDrawingVertex', undefined, { index: handle.index + 1 })} aria-describedby="drawing-edit-instructions"
-            ?disabled=${this.interactionBlocked} @focus=${() => { this.drawingSelected = handle.index; }}
-            @pointerdown=${(event: PointerEvent) => { this.suppressDrawingClick = false; this.drawingPointer?.begin(event, handle.index); }}
-            @keydown=${(event: KeyboardEvent) => this.onDrawingVertexKey(event, handle.index)}
+            ?disabled=${this.interactionBlocked} @focus=${() => { drawing.select(handle.index); }}
+            @pointerdown=${(event: PointerEvent) => { this.suppressDrawingClick = false; drawing.begin(event, handle.index); }}
+            @keydown=${(event: KeyboardEvent) => drawing.vertexKey(event, handle.index)}
             @click=${(event: MouseEvent) => { event.preventDefault(); event.stopPropagation(); }}><span aria-hidden="true"></span></button>`)}</div>` : nothing}
         ${this.drawingIssue ? html`<div part="configuration-error">${this.drawingErrorMessage()}</div>` : nothing}
         <div class="anchor-boundary" aria-hidden="true"></div>
         <div part="anchor" hidden @focusin=${this.onAnchorFocus}><slot name="anchor" @slotchange=${this.onAnchorSlotChange}></slot>${this.anchorClosable
-          ? html`<button type="button" part="anchor-close" @click=${() => this.closeMapAnchor('close-button')}>${this.localize('close')}</button>` : nothing}</div>
+          ? html`<button type="button" part="anchor-close" @click=${() => { this.anchorController?.close('close-button'); }}>${this.localize('close')}</button>` : nothing}</div>
         ${this.legend.length ||
         this.legendProjection.truncated ||
         this.legendGradient.length ||

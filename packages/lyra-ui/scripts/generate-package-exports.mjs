@@ -124,6 +124,12 @@ export const ACKNOWLEDGED_INTERNAL_HELPER_MODULES = Object.freeze([
   'src/components/viewers/notebook-viewer/dompurify-loader.ts',
   'src/components/viewers/svg-viewer/dompurify-loader.ts',
 
+  // On-demand runtime chunks of one component: lr-map imports its optional feature runtimes
+  // (drawing, export, URL hash, owned resources, anchor, controls, feature state) through this
+  // module on first use. Nothing re-exports it, its runtimes are private implementation, and its
+  // only other export is a test hook, so there is no public contract to route.
+  'src/components/media/map/map-feature-loader.ts',
+
   // Structurally these two look like the pptx-loader.ts case above: a real adapter-shaped "Api"
   // type surface (PdfJsApi/PdfDocumentApi/PdfPageApi/... and EpubBook/EpubRendition/...) imported
   // type-only by their viewer class and never re-exported by anything that already has a package

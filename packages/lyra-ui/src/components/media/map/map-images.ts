@@ -1,28 +1,15 @@
-import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import { isSvgElement } from '../../../internal/dom-guards.js';
 import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
 import { isResourceLimitError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
 import { sanitizePassiveMarkupFragment } from '../../viewers/passive-markup.js';
-import { inspectMapImageMetadata, MAP_IMAGE_MAX_DIMENSION, MAP_IMAGE_MAX_ENCODED_BYTES, MAP_IMAGE_MAX_PIXELS } from './map-image-metadata.js';
+import { inspectMapImageMetadata } from './map-image-metadata.js';
+import { admitMapImages, failMapImage as fail, MAP_IMAGE_LIMITS, mapImageBytes as bytesOf, mapImageIssue, MapImageFailure as ImageFailure,
+  type MapImageIssue } from './map-image-admission.js';
 
-/** Limits apply to backing pixels; pixelRatio changes logical size without multiplying allocation. */
-export const MAP_IMAGE_LIMITS = Object.freeze({ count: 64, idLength: 128, svgBytes: 262_144,
-  encodedBytes: MAP_IMAGE_MAX_ENCODED_BYTES, totalBytes: 8_388_608, dimension: MAP_IMAGE_MAX_DIMENSION, pixels: MAP_IMAGE_MAX_PIXELS,
-  totalPixels: 16_777_216, elements: 2048, decodeTimeoutMs: 15_000 });
-export interface LyraMapImage {
-  readonly id: string;
-  readonly source: { readonly kind: 'svg'; readonly markup: string } | { readonly kind: 'url'; readonly url: string };
-  readonly width: number;
-  readonly height: number;
-  readonly pixelRatio: number;
-}
-type MapImageErrorCode = 'invalid-descriptor' | 'duplicate-id' | 'limit' | 'unsafe-url' |
-  'fetch' | 'unsupported-format' | 'missing-sanitizer' | 'invalid-svg' | 'decode' | 'tainted' | 'aborted';
-interface MapImageIssue { readonly code: MapImageErrorCode; readonly id?: string }
-export type MapImageAdmission = { readonly ok: true; readonly images: readonly LyraMapImage[] } |
-  { readonly ok: false; readonly issue: MapImageIssue };
+export { admitMapImages, MAP_IMAGE_LIMITS };
+export type { LyraMapImage } from './map-image-admission.js';
 export interface MapImagePreparationContext {
   readonly owner: Element;
   readonly signal: AbortSignal;
@@ -56,66 +43,8 @@ export interface PreparedMapImage {
 }
 export type MapImagePreparationResult = { readonly ok: true; readonly images: readonly PreparedMapImage[]; dispose(): void } |
   { readonly ok: false; readonly issue: MapImageIssue };
-class ImageFailure extends Error {
-  constructor(readonly code: MapImageErrorCode) { super(code); }
-}
-const fail = (code: MapImageErrorCode): never => { throw new ImageFailure(code); };
-function own(value: object, key: string): unknown {
-  const descriptor = getOwnDataDescriptor(value, key);
-  if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return fail('invalid-descriptor');
-  return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
-}
-function bytesOf(text: string, ceiling: number): Uint8Array {
-  if (text.length > ceiling) return fail('limit');
-  const bytes = new TextEncoder().encode(text);
-  if (bytes.length > ceiling) return fail('limit');
-  return bytes;
-}
 function issue(error: unknown, id?: string): { readonly ok: false; readonly issue: MapImageIssue } {
-  const code = error instanceof ImageFailure ? error.code : isResourceLimitError(error) ? 'limit' : 'decode';
-  return Object.freeze({ ok: false, issue: Object.freeze({ code, ...(id === undefined ? {} : { id }) }) });
-}
-/** Projects strict own data without calling accessors, rejecting an invalid assignment atomically. */
-export function admitMapImages(value: unknown): MapImageAdmission {
-  try {
-    if (!Array.isArray(value)) return fail('invalid-descriptor');
-    const count = readOwnArrayLength(value);
-    if (count === undefined) return fail('invalid-descriptor');
-    if (count > MAP_IMAGE_LIMITS.count) return fail('limit');
-    const ids = new Set<string>();
-    const images: LyraMapImage[] = [];
-    let totalPixels = 0;
-    let inlineBytes = 0;
-    for (let index = 0; index < count; index += 1) {
-      const row: unknown = own(value, String(index));
-      if (!isPlainDataRecord(row)) return fail('invalid-descriptor');
-      const rawId = own(row, 'id');
-      const source = own(row, 'source');
-      const width = own(row, 'width'); const height = own(row, 'height'); const ratio = own(row, 'pixelRatio');
-      if (typeof rawId !== 'string' || !isPlainDataRecord(source) || typeof width !== 'number' ||
-        typeof height !== 'number' || !Number.isInteger(width) || !Number.isInteger(height) ||
-        width < 1 || height < 1 || typeof ratio !== 'number' || !Number.isFinite(ratio) || ratio <= 0 || ratio > 4) return fail('invalid-descriptor');
-      const id = rawId.trim();
-      if (!id || id.length > MAP_IMAGE_LIMITS.idLength) return fail('invalid-descriptor');
-      if (ids.has(id)) return fail('duplicate-id');
-      if (width > MAP_IMAGE_LIMITS.dimension || height > MAP_IMAGE_LIMITS.dimension || width * height > MAP_IMAGE_LIMITS.pixels) return fail('limit');
-      totalPixels += width * height;
-      if (totalPixels > MAP_IMAGE_LIMITS.totalPixels) return fail('limit');
-      const kind = own(source, 'kind');
-      const markup = own(source, 'markup'); const url = own(source, 'url');
-      let projected: LyraMapImage['source'];
-      if (kind === 'svg' && typeof markup === 'string' && url === undefined) {
-        inlineBytes += bytesOf(markup, MAP_IMAGE_LIMITS.svgBytes).length;
-        if (inlineBytes > MAP_IMAGE_LIMITS.totalBytes) return fail('limit');
-        projected = Object.freeze({ kind, markup });
-      } else if (kind === 'url' && typeof url === 'string' && url.trim() && url.length <= 8192 && markup === undefined) {
-        projected = Object.freeze({ kind, url: url.trim() });
-      } else return fail('invalid-descriptor');
-      ids.add(id);
-      images.push(Object.freeze({ id, source: projected, width, height, pixelRatio: ratio }));
-    }
-    return Object.freeze({ ok: true, images: Object.freeze(images) });
-  } catch (error) { return issue(error); }
+  return mapImageIssue(error instanceof ImageFailure ? error.code : isResourceLimitError(error) ? 'limit' : 'decode', id);
 }
 function guard(context: MapImagePreparationContext): void {
   if (context.signal.aborted || !context.owner.isConnected || !context.isCurrent()) fail('aborted');

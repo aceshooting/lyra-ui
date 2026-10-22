@@ -1,6 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { loadMapHashRuntime } from './map-feature-loader.js';
 
 class Control {
   readonly listeners = new Map<string, Set<(event: unknown) => void>>();
@@ -107,6 +108,8 @@ async function mount(configure: (element: LyraMap) => void = () => undefined) {
   return { element, peer, wrapper };
 }
 describe('lr-map controls and named URL ownership', () => {
+  // Exercises the steady state after the on-demand runtime has loaded; map-lazy-runtimes.test.ts covers the loading itself.
+  before(() => loadMapHashRuntime());
   beforeEach(() => {
     originalUrl = location.href; originalState = history.state;
     ControlMap.initialReady = true;

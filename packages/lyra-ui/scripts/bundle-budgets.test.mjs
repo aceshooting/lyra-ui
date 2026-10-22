@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -16,6 +16,7 @@ import {
 import { positiveInitialMarginalGzipBytes } from './bundle-metrics.mjs';
 import { bundleCssMeasurement } from './bundle-css-entry.mjs';
 import { cssBudgetFinding, validateCssBundleConfig } from './bundle-css-policy.mjs';
+import { parseProgram } from './lib/ast.mjs';
 import './bundle-initial-entry.test.mjs';
 
 const scriptsDir = path.dirname(fileURLToPath(import.meta.url));
@@ -776,5 +777,53 @@ test('granular tool-param-form executes only its declared control registration g
       (input) => !input.includes('src/components/forms/checkbox/')
     ),
     'the actual registration metafile must exclude the checkbox family',
+  );
+});
+
+/** Relative modules a source file's static value imports and re-exports reach, transitively. */
+function staticValueImportClosure(entry) {
+  const reachable = new Set();
+  const pending = [entry];
+  while (pending.length > 0) {
+    const file = pending.pop();
+    if (reachable.has(file)) continue;
+    reachable.add(file);
+    for (const node of parseProgram(file, readFileSync(file, 'utf8')).body) {
+      const source = node.source?.value;
+      if (typeof source !== 'string' || !source.startsWith('.')) continue;
+      const typeOnly = node.importKind === 'type' || node.exportKind === 'type' ||
+        (node.specifiers?.length > 0 && node.specifiers.every((specifier) => specifier.importKind === 'type' || specifier.exportKind === 'type'));
+      const target = path.resolve(path.dirname(file), source.replace(/\.js$/u, '.ts'));
+      if (!typeOnly && existsSync(target)) pending.push(target);
+    }
+  }
+  return reachable;
+}
+
+test('lr-map keeps every on-demand feature runtime out of its static module graph', () => {
+  const mapDir = path.join(packageDir, 'src', 'components', 'media', 'map');
+  const internalDir = path.join(packageDir, 'src', 'internal');
+  const loaderSource = readFileSync(path.join(mapDir, 'map-feature-loader.ts'), 'utf8');
+  const runtimes = [...loaderSource.matchAll(/import\(['"]\.\/([^'"]+)\.js['"]\)/gu)].map(([, name]) => `${name}.ts`);
+  assert.deepEqual(runtimes.sort(), [
+    'map-anchor-controller.ts', 'map-controls-lifecycle.ts', 'map-drawing-controller.ts', 'map-feature-state-routes.ts', 'map-hash-owner.ts',
+    'map-image-export-controller.ts', 'map-images.ts', 'map-owned-features.ts', 'map-style-overrides.ts',
+  ], 'the shared loader must import each optional runtime through a literal specifier bundlers can split');
+  // Implementation modules only those runtimes need; the class may still import their types.
+  const onDemand = [
+    ...runtimes, 'map-anchor-options.ts', 'map-drawing.ts', 'map-drawing-gesture.ts', 'map-drawing-pan.ts', 'map-drawing-pointer.ts',
+    'map-export-attribution.ts', 'map-feature-state.ts', 'map-hash.ts', 'map-image-admission.ts', 'map-image-export.ts',
+    'map-image-metadata.ts', 'map-layer-order.ts', 'map-overlay-admission.ts', 'map-owned-feature-input.ts', 'map-owned-resources.ts',
+    'map-source-updates.ts', 'map-style-override-admission.ts',
+  ].map((name) => path.join(mapDir, name));
+  const sharedOverlayInternals = ['anchored-overlay-runtime.ts', 'overlay-manager.ts', 'overlay-stack.ts', 'positioner-geometry.ts']
+    .map((name) => path.join(internalDir, name));
+  for (const file of [...onDemand, ...sharedOverlayInternals]) assert.ok(existsSync(file), `${path.relative(packageDir, file)} must exist`);
+  const reachable = staticValueImportClosure(path.join(mapDir, 'map.class.ts'));
+  assert.ok(reachable.has(path.join(mapDir, 'map-feature-loader.ts')), 'the class must reach its runtimes through the shared loader');
+  assert.deepEqual(
+    [...onDemand, ...sharedOverlayInternals].filter((file) => reachable.has(file)).map((file) => path.relative(packageDir, file)),
+    [],
+    'lr-map must load drawing, export, URL, resource, image, override, anchor, control and feature-state runtimes on first use',
   );
 });

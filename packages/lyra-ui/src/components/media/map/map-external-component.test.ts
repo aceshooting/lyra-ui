@@ -1,6 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { loadMapFeatureStateRuntime } from './map-feature-loader.js';
 
 class OwnedMap {
   sourceWrites = 0;
@@ -118,6 +119,8 @@ async function load(element: LyraMap, peer: OwnedMap) {
 }
 
 describe('lr-map external data layers and labels', () => {
+  // Exercises the steady state after the on-demand runtime has loaded; map-lazy-runtimes.test.ts covers the loading itself.
+  before(() => loadMapFeatureStateRuntime());
   beforeEach(() => {
     OwnedMap.initialReady = false; OwnedMap.prepare = undefined;
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });

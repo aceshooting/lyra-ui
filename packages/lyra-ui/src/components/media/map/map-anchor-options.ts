@@ -10,6 +10,9 @@ export interface LyraMapAnchorSafeArea {
   readonly inlineStart?: number;
 }
 export type LyraMapAnchorBoundary = Element | readonly Element[];
+/** How an open anchor was closed: by `closeAnchor()`, its close button or Escape. */
+export type LyraMapAnchorCloseReason = 'api' | 'close-button' | 'escape';
+export interface LyraMapAnchorCloseDetail { readonly reason: LyraMapAnchorCloseReason; }
 type MapAnchorSafeArea = Readonly<Required<LyraMapAnchorSafeArea>>;
 export interface MapAnchorOptionsContext { readonly current?: () => boolean; }
 export type MapAnchorOptionsResult = {

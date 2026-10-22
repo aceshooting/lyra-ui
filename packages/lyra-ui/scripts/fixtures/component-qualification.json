@@ -31266,6 +31266,7 @@
           "src/components/media/map/map-interaction-options.test.ts",
           "src/components/media/map/map-large-source-replacement-scale.test.ts",
           "src/components/media/map/map-layer-order.test.ts",
+          "src/components/media/map/map-lazy-runtimes.test.ts",
           "src/components/media/map/map-legend-icon-border.test.ts",
           "src/components/media/map/map-legend-icon.test.ts",
           "src/components/media/map/map-legend-scroll.test.ts",

@@ -4,6 +4,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime } from './map-feature-loader.js';
 import type { LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot } from './map.class.js';
 void LyraMap;
 
@@ -83,6 +84,8 @@ describe('lr-map actual modular companion integration', function () {
   let previousWorkerUrl: string;
   // These cases need a real WebGL2 context; a browser without one shows the map's fallback instead.
   before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
+  // Exercises the steady state after the on-demand runtime has loaded; map-lazy-runtimes.test.ts covers the loading itself.
+  before(() => Promise.all([loadMapDrawingRuntime(), loadMapFeatureStateRuntime(), loadMapHashRuntime()]));
   beforeEach(() => {
     previousWorkerUrl = getWorkerUrl();
     setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href);

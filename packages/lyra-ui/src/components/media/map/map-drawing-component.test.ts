@@ -5,6 +5,7 @@ import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { MapDrawing, type LyraMapDrawingSnapshot } from './map-drawing.js';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { loadMapDrawingRuntime } from './map-feature-loader.js';
 
 import { ControlMapEngine, FakeGeolocateControl as Geolocate, FakeAttributionControl as Attribution } from '../../../../test/map-control-engine.js';
 class ControlMap extends ControlMapEngine {
@@ -66,6 +67,8 @@ function pointer(peer: ControlMap, type: string, x: number, y: number) {
 }
 
 describe('lr-map drawing integration', () => {
+  // Exercises the steady state after the on-demand runtime has loaded; map-lazy-runtimes.test.ts covers the loading itself.
+  before(() => loadMapDrawingRuntime());
   beforeEach(() => {
     originalUrl = location.href; originalState = history.state; ControlMap.initialReady = true; ControlMap.prepare = undefined; ControlMap.initialZoomGesture = true;
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });

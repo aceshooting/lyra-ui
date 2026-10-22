@@ -2,6 +2,7 @@ import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testi
 import { MapReadiness, type MapReadinessOptions } from './map-readiness.js';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { loadMapOwnedFeatureRuntime } from './map-feature-loader.js';
 
 function deferred() {
   let resolve!: () => void;
@@ -290,6 +291,8 @@ async function load(element: LyraMap, peer: ReadinessMap) {
 }
 
 describe('lr-map public readiness', () => {
+  // Exercises the steady state after the on-demand runtime has loaded; map-lazy-runtimes.test.ts covers the loading itself.
+  before(() => loadMapOwnedFeatureRuntime());
   beforeEach(() => {
     ReadinessMap.initialReady = false; ReadinessMap.prepare = undefined;
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });

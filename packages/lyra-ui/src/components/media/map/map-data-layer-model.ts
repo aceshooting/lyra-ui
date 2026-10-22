@@ -1,7 +1,7 @@
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR, type OwnDataDescriptorResult } from '../../../internal/data-descriptors.js';
 import { projectMapInteractionOptions, type LyraMapInteractionOptions, type CanonicalMapInteraction } from './map-interaction-options.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
-import type { LyraMapOverlayLayer, LyraMapOverlaySource } from './map-owned-resources.js';
+import type { LyraMapOverlayLayer, LyraMapOverlaySource } from './map-overlay-admission.js';
 
 /** Four native corners, ordered top-left, top-right, bottom-right, bottom-left. */
 export type LyraMapSourceCoordinates = readonly [readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number]];

@@ -82,6 +82,19 @@ describe('map hit selection', () => {
     for (const identity of ['0', '', -1.5]) { const text = selectMapHit([feature('point', identity)], rules, ['point']); expect(text.status).to.equal('hit'); if (text.status === 'hit') expect(text.hit.id).to.equal(identity); }
   });
 
+  it('returns the same frozen null-prototype properties record when a feature has no usable properties', () => {
+    const populated = selectMapHit([feature('point')], rules, ['point']); expect(populated.status).to.equal('hit');
+    if (populated.status === 'hit') expect(Object.getPrototypeOf(populated.hit.properties) === null).to.equal(true);
+    for (const properties of [undefined, null, 'text', 7, [1, 2]]) {
+      const candidate: Record<string, unknown> = { layer: { id: 'point' }, source: 'tiles' };
+      if (properties !== undefined) candidate['properties'] = properties;
+      const result = selectMapHit([candidate], rules, ['point']); expect(result.status).to.equal('hit');
+      if (result.status !== 'hit') continue;
+      expect(Object.getPrototypeOf(result.hit.properties) === null, `prototype for ${JSON.stringify(properties)}`).to.equal(true);
+      expect(Object.keys(result.hit.properties).length).to.equal(0); expect(Object.isFrozen(result.hit.properties)).to.equal(true);
+    }
+  });
+
   it('reads own feature descriptors only, tolerating wrapper prototypes without invoking accessors', () => {
     let reads = 0; const candidate = Object.assign(Object.create({ id: 77, source: 'inherited' }), { layer: { id: 'point' }, properties: { good: 1, get bad() { reads++; return 2; } } });
     Object.defineProperty(candidate, 'sourceLayer', { get() { reads++; return 'private'; } });

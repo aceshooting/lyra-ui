@@ -63,6 +63,32 @@ style, await `whenIdle()` for the current resource and rendering work. Observe
 rejection when replacing styles or disconnecting; a returned `true` from a synchronous command
 means admission, not asynchronous completion.
 
+**On-demand runtimes:** optional `lr-map` features load their code on first use, so a bundler that
+splits chunks keeps them out of the initial bundle. Drawing and vertex editing load when `drawMode`
+becomes `line` or `polygon` or `editDrawing()` is first called; `exportImage()` loads export
+capture; `hash` loads URL ownership when it is anything but `false`, `null` or `undefined`;
+`overlays`, `images`, `styleOverrides`, external data layers and `interactiveBasemapLayers` load
+resource ownership when they are not the empty defaults, with image preparation and basemap
+override ownership loading only for non-empty `images` and `styleOverrides`; `anchorLngLat` loads
+anchor placement; the first native control (default attribution included) loads control
+ownership; and the first `setFeatureState()`/`removeFeatureState()` loads feature state. Each
+runtime is imported once per page and every element shares it. `whenStyleReady()` and
+`whenIdle()` wait for a resource-ownership load and for any drawing, URL or feature-state load in
+progress, so awaiting them is the deterministic way to wait; anchor placement, export and controls
+stay asynchronous as before. Once a runtime has loaded, its APIs are synchronous again.
+While one is loading, `editDrawing()`, `setFeatureState()` and `removeFeatureState()` return
+`false` without retaining anything: await `whenIdle()` and call again. `undoDrawing()`,
+`completeDrawing()`, `closeAnchor()` and `focusAnchor()` return `false` because no session or
+placed anchor exists yet; `cancelDrawing()` still cancels an armed mode synchronously with the
+usual `lr-map-draw-cancel` detail. A runtime that cannot load fails closed with the feature's
+existing localized feedback: drawing shows its unavailable message, export rejects with
+`capture-failed`, resources show the initialization fallback, URL ownership and requested controls
+show the control-unavailable message (default attribution alone stays silent, as when its own code
+cannot load), feature state shows its unavailable message, and an anchor stays hidden. Drawing
+retries when drawing is requested again, feature state after a new style or connection, URL
+ownership after reconnection, controls when they next change, export on its next call, and an
+anchor for a new coordinate.
+
 `overlays: LyraMapOverlays = {}` owns native `sources` (`{ id, source }`) and `layers`
 (`{ layer, before?, interactive?, priority? }`). `images: readonly LyraMapImage[] = []` registers
 bounded image descriptors (`id`, `source`, `width`, `height`, `pixelRatio`), with SVG markup or a
@@ -87,12 +113,17 @@ legacy `lr-map-click` and cluster payloads remain available. `pickMode = false` 
 coordinate-picking session when set to true; `lr-map-pick` also supports keyboard center selection.
 `setFeatureState(target, patch)`, `getFeatureState(target)`, and `removeFeatureState(target, key?)`
 use stable source/feature IDs and an optional `origin` (`choropleth`, `data-layer`, `overlay`, or
-`basemap`). Check boolean admission and retain application state across source identity changes.
+`basemap`). Check boolean admission and retain application state across source identity changes;
+the first write returns `false` while the feature-state runtime loads (see **On-demand runtimes**).
 `hash = false` opts out of URL camera synchronization; use true or a distinct string key to opt in.
+An enabled `hash` delays map construction until URL ownership has loaded, so a valid initial hash
+still sets the first camera.
 `controls` also supports `geolocate` and `attribution` options; geolocation errors are sanitized in
 `lr-map-geolocate-error`, and out-of-bounds reports use `lr-map-geolocate-out-of-bounds`.
 
-**Drawing:** `drawMode: LyraMapDrawingMode = 'none'` arms `line` or `polygon` drawing. Pointer
+**Drawing:** `drawMode: LyraMapDrawingMode = 'none'` arms `line` or `polygon` drawing. The
+controls render as soon as a mode is armed; the session starts once the drawing runtime has loaded
+and the style is ready, and `whenIdle()` covers that load. Pointer
 vertices and the keyboard center/undo/finish/cancel controls share one temporary session.
 `undoDrawing()`, `completeDrawing()`, and `cancelDrawing()` return boolean admission.
 `lr-map-draw-start`, `lr-map-draw-change`, `lr-map-draw-complete`, and `lr-map-draw-cancel` carry
@@ -101,10 +132,13 @@ metrics: length in metres, area in square metres, and a geographic centroid. The
 and simple-geometry, polar and antimeridian validation reject unsupported shapes. Persist the
 completed snapshot in application state: temporary drawing resources are not a durable layer.
 `editDrawing(snapshot)` explicitly starts editing a completed snapshot; completion does not
-implicitly reopen it. Keyboard vertex handles and pointer edits update the same session.
+implicitly reopen it. Before the drawing runtime has loaded it returns `false` without reading the
+snapshot and starts the load; await `whenIdle()` and call it again. Keyboard vertex handles and
+pointer edits update the same session.
 Use `whenIdle()` to await temporary rendering work.
 
 **Anchored content:** `anchorLngLat` is the sole declarative open request for the `anchor` slot.
+Its first coordinate loads anchor placement; placement, already asynchronous, follows that load.
 `anchorBoundary?: LyraMapAnchorBoundary` accepts connected same-document elements (one element or
 a dense array of at most 32). `anchorSafeArea?: LyraMapAnchorSafeArea` adds nonnegative finite
 logical CSS-pixel edges (`blockStart`, `inlineEnd`, `blockEnd`, `inlineStart`); omitted edges are
@@ -124,7 +158,9 @@ frame with `type` of `image/png` (default), `image/jpeg`, or `image/webp`. Attri
 by default, including admitted source credits and custom attribution; preserve required credits
 when sharing an export. DOM markers, popups and slotted overlays are excluded. Export waits for
 current-frame readiness; handle rejection as `LyraMapImageExportError` with a sanitized `code`.
-`lr-map-export-error` carries `LyraMapImageExportErrorDetail`, never raw renderer errors.
+`lr-map-export-error` carries `LyraMapImageExportErrorDetail`, never raw renderer errors. The first
+call loads the export runtime; options are still admitted when the call is made, and a runtime that
+cannot load rejects with `capture-failed`.
 
 **Properties:**
 
@@ -618,7 +654,8 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   again to the next one. Parts `navigation`, `zoom-in`, `zoom-out`, `compass`, `scale`.
 - `anchorLngLat?: readonly [number, number] | null` (attribute: false) — where content in the
   `anchor` slot sits. Pair it with the `lngLat` of an `lr-map-click` to show a clicked feature's
-  details, replacing a hand-positioned popup. See **Slots**.
+  details, replacing a hand-positioned popup. The first coordinate loads anchor placement on
+  demand; the anchor stays hidden until it has been placed. See **Slots**.
 
 **Choropleth and `dataLayers` updates are diffed before they reach the peer.** `setData()`
 unconditionally re-tiles and repaints an entire source, which is invisible on a static map and

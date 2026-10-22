@@ -93,6 +93,8 @@ function sanitize(value: unknown, depth: number, budget: Budget): LyraMapFeature
     return Object.freeze(result);
   } finally { budget.stack.delete(value); }
 }
+/** Every hit's properties record has a null prototype, including the empty one. */
+const NO_PROPERTIES = Object.freeze(Object.create(null) as MapHit['properties']);
 function snapshot(feature: unknown, rule: MapHitRule): MapHit {
   const source = own(feature, 'source'), sourceLayer = own(feature, 'sourceLayer'), featureId = own(feature, 'id');
   const properties = own(feature, 'properties');
@@ -100,7 +102,7 @@ function snapshot(feature: unknown, rule: MapHitRule): MapHit {
   return Object.freeze({ layerId: rule.layerId, owner: rule.owner,
     ...(id(source) ? { source } : {}), ...(id(sourceLayer) ? { sourceLayer } : {}),
     ...(typeof featureId === 'number' && Number.isFinite(featureId) || typeof featureId === 'string' && featureId.length <= MAX_ID ? { id: featureId as string | number } : {}),
-    properties: clean !== OMIT && object(clean) && !Array.isArray(clean) ? clean as MapHit['properties'] : Object.freeze({}),
+    properties: clean !== OMIT && object(clean) && !Array.isArray(clean) ? clean as MapHit['properties'] : NO_PROPERTIES,
   });
 }
 function admittedLayers(input: unknown): readonly string[] | undefined {

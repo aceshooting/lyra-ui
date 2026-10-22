@@ -1,59 +1,11 @@
-import { getInheritedPropertyDescriptor, getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR,
-  readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
+import { getInheritedPropertyDescriptor } from '../../../internal/data-descriptors.js';
+import { admitMapFeatureStateRoutes, resolveMapFeatureStateTarget, type LyraMapFeatureOrigin,
+  type LyraMapResolvedFeatureStateTarget, type MapFeatureStateRoute } from './map-feature-state-router.js';
 import { MapFeatureStateStore, type LyraMapFeatureState, type MapFeatureStatePeer, type LyraMapFeatureIdentifier,
   type MapFeatureStateResult, type MapFeatureStateReplayResult, type MapFeatureStateIssue, type MapFeatureStateRetirement } from './map-feature-state.js';
 
-export type LyraMapFeatureOrigin = 'choropleth' | 'data-layer' | 'overlay' | 'basemap';
-export interface MapFeatureStateRoute {
-  readonly origin: LyraMapFeatureOrigin;
-  readonly source: string;
-  readonly nativeSource: string;
-  /** Stable logical dataset token, independent of the native ID or style generation. */
-  readonly identity: unknown;
-  /** Omitted for GeoJSON; vector targets must name one of these exact source layers. */
-  readonly sourceLayers?: readonly string[];
-}
-export interface LyraMapFeatureStateTarget extends LyraMapFeatureIdentifier { readonly origin?: LyraMapFeatureOrigin; }
-export interface LyraMapResolvedFeatureStateTarget extends LyraMapFeatureIdentifier { readonly origin: LyraMapFeatureOrigin; }
-const origins = new Set(['choropleth', 'data-layer', 'overlay', 'basemap']);
-const keyOf = (origin: LyraMapFeatureOrigin, source: string): string => JSON.stringify([origin, source]);
-const validName = (value: unknown, limit = 1024): value is string => typeof value === 'string' && value.trim().length > 0 && value.length <= limit;
+export type { MapFeatureStateRoute } from './map-feature-state-router.js';
 const failure = (code: MapFeatureStateIssue): MapFeatureStateResult => Object.freeze({ accepted: false, code });
-function own(value: object, key: string): unknown {
-  const descriptor = getOwnDataDescriptor(value, key);
-  if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) throw new Error('Invalid feature-state data.');
-  return descriptor.value;
-}
-function fields(value: unknown, allowed: readonly string[]): readonly string[] {
-  if (!isPlainDataRecord(value)) throw new Error('Invalid feature-state record.');
-  const keys = Reflect.ownKeys(value);
-  if (keys.length > allowed.length || keys.some(key => typeof key !== 'string' || !allowed.includes(key))) throw new Error('Invalid feature-state fields.');
-  for (const key of keys) own(value, key as string);
-  return keys as string[];
-}
-function array(value: unknown, maximum: number): readonly unknown[] {
-  if (!Array.isArray(value)) throw new Error('Invalid feature-state array.');
-  const length = readOwnArrayLength(value);
-  if (length === undefined || length > maximum || Reflect.ownKeys(value).length !== length + 1) throw new Error('Invalid feature-state array.');
-  return Array.from({ length }, (_value, index) => own(value, String(index)));
-}
-function snapshot(input: unknown): Map<string, MapFeatureStateRoute> {
-  const routes = new Map<string, MapFeatureStateRoute>();
-  for (const entry of array(input, 256)) {
-    const keys = fields(entry, ['origin', 'source', 'nativeSource', 'identity', 'sourceLayers']);
-    const origin = own(entry as object, 'origin'), source = own(entry as object, 'source'), nativeSource = own(entry as object, 'nativeSource'), identity = own(entry as object, 'identity');
-    if (typeof origin !== 'string' || !origins.has(origin) || !validName(source, 128) || !validName(nativeSource) || identity === undefined) throw new Error('Invalid feature-state route.');
-    const sourceLayers = keys.includes('sourceLayers') ? Object.freeze(array(own(entry as object, 'sourceLayers'), 128).map(value => {
-      if (!validName(value)) throw new Error('Invalid source layer.'); return value;
-    })) : undefined;
-    if (sourceLayers && (!sourceLayers.length || new Set(sourceLayers).size !== sourceLayers.length)) throw new Error('Invalid source layers.');
-    const key = keyOf(origin as LyraMapFeatureOrigin, source);
-    if (routes.has(key)) throw new Error('Duplicate feature-state route.');
-    routes.set(key, Object.freeze({ origin: origin as LyraMapFeatureOrigin, source, nativeSource, identity,
-      ...(sourceLayers ? { sourceLayers } : {}) }));
-  }
-  return routes;
-}
 interface NativeRetirement extends MapFeatureStateRetirement { readonly sourceHandle: unknown; }
 interface ReplayContext { readonly peer: MapFeatureStatePeer; readonly epoch: number; readonly current: () => boolean; readonly signal?: AbortSignal; }
 
@@ -109,7 +61,7 @@ export class MapFeatureStateRoutes {
 
   configure(input: unknown): MapFeatureStateResult {
     return this.run(failure, () => {
-      const epoch = this.epoch, next = snapshot(input);
+      const epoch = this.epoch, next = admitMapFeatureStateRoutes(input);
       if (epoch !== this.epoch || this.disposed) return failure('cancelled');
       const retiring = [...this.routes].filter(([key, route]) => {
         const replacement = next.get(key); return !replacement || !Object.is(replacement.identity, route.identity);
@@ -142,19 +94,7 @@ export class MapFeatureStateRoutes {
   }
 
   private resolveTarget(input: unknown): { readonly target: LyraMapResolvedFeatureStateTarget; readonly route: MapFeatureStateRoute; readonly logical: LyraMapFeatureIdentifier } | undefined {
-    const keys = fields(input, ['origin', 'source', 'sourceLayer', 'id']);
-    const source = own(input as object, 'source'), id = own(input as object, 'id');
-    if (!validName(source, 128) || !(typeof id === 'string' && id.length <= 1024 || typeof id === 'number' && Number.isFinite(id))) return undefined;
-    const origin = keys.includes('origin') ? own(input as object, 'origin') : undefined;
-    if (origin !== undefined && (typeof origin !== 'string' || !origins.has(origin))) return undefined;
-    const matches = [...this.routes.values()].filter(route => route.source === source && (origin === undefined || route.origin === origin));
-    if (matches.length !== 1) return undefined;
-    const route = matches[0]!;
-    const sourceLayer = keys.includes('sourceLayer') ? own(input as object, 'sourceLayer') : undefined;
-    if (route.sourceLayers ? !validName(sourceLayer) || !route.sourceLayers.includes(sourceLayer) : keys.includes('sourceLayer')) return undefined;
-    const target = Object.freeze({ origin: route.origin, source, id, ...(sourceLayer === undefined ? {} : { sourceLayer: sourceLayer as string }) });
-    const logical = Object.freeze({ source: keyOf(route.origin, source), id, ...(sourceLayer === undefined ? {} : { sourceLayer: sourceLayer as string }) });
-    return { target, route, logical };
+    return resolveMapFeatureStateTarget(this.routes, input);
   }
 
   /** Resolve public ambiguity and source-layer constraints without exposing internal route keys. */

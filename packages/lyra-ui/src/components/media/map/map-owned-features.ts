@@ -1,15 +1,18 @@
 import { isPlainDataRecord } from '../../../internal/data-descriptors.js';
-import { admitMapImages, MAP_IMAGE_LIMITS, prepareMapImages, type LyraMapImage, type PreparedMapImage } from './map-images.js';
+import { loadMapImageRuntime, loadMapStyleOverrideRuntime } from './map-feature-loader.js';
+import { admitMapImages, MAP_IMAGE_LIMITS, type LyraMapImage } from './map-image-admission.js';
+import type { prepareMapImages, PreparedMapImage } from './map-images.js';
 import type { MapLibreMapCapability } from './map-loader.js';
-import { admitMapOverlays, MapOwnedResources, type MapOwnedOverlaySnapshot, type MapOwnedResourcePeer, type MapOwnedSourceChange } from './map-owned-resources.js';
-import { MapStyleOverrides, projectMapStyleOverrides, type MapStyleOverridePeer, type LyraMapStyleValue } from './map-style-overrides.js';
+import { failMapResources as failed, type MapOwnedFeatureInput } from './map-owned-feature-input.js';
+import { admitMapOverlays, type MapOwnedOverlaySnapshot } from './map-overlay-admission.js';
+import { MapOwnedResources, type MapOwnedResourcePeer, type MapOwnedSourceChange } from './map-owned-resources.js';
+import { projectMapStyleOverrides, type LyraMapStyleValue } from './map-style-override-admission.js';
+import type { MapStyleOverridePeer, MapStyleOverrides } from './map-style-overrides.js';
 import { planMapSourceUpdate } from './map-source-updates.js';
 
-export interface MapOwnedFeatureInput {
-  readonly overlays: unknown;
-  readonly images: unknown;
-  readonly styleOverrides: unknown;
-}
+// Admission runs here too, so a map without overlays, images or overrides never loads it.
+export { snapshotMapOwnedFeatureInput } from './map-owned-feature-input.js';
+export { projectMapStyleOverrides };
 export interface MapOwnedFeatureContext {
   readonly owner: Element;
   readonly signal: AbortSignal;
@@ -19,9 +22,6 @@ export interface MapOwnedFeatureContext {
   readonly beforeSourceChange?: (change: MapOwnedSourceChange) => void;
 }
 interface CachedImage { readonly key: string; readonly image: PreparedMapImage; }
-function failed(): never {
-  const error = new Error('Map resources could not be restored.'); error.name = 'MapResourceError'; throw error;
-}
 function aborted(): never { throw new DOMException('Map resource work was cancelled.', 'AbortError'); }
 const imageKey = (descriptor: LyraMapImage): string => JSON.stringify(descriptor);
 
@@ -36,19 +36,14 @@ function sameSnapshot(left: unknown, right: unknown): boolean {
     Object.hasOwn(right, key) && sameSnapshot(left[key], right[key]));
 }
 
-/** Capture component assignments before any unrelated feature preparation can yield. */
-export function snapshotMapOwnedFeatureInput(input: MapOwnedFeatureInput): MapOwnedFeatureInput {
-  const overlays = admitMapOverlays(input.overlays);
-  const images = admitMapImages(input.images);
-  const overrides = projectMapStyleOverrides(input.styleOverrides);
-  if (!overlays.ok || !images.ok || !overrides) failed();
-  return Object.freeze({ overlays: overlays.overlays, images: images.images, styleOverrides: overrides });
-}
+/** Image fetching, sanitizing and rasterizing load only once admitted images need preparing. */
+const prepareOnDemand: typeof prepareMapImages = async (value, context, services) =>
+  (loadMapImageRuntime.loaded ?? await loadMapImageRuntime()).prepareMapImages(value, context, services);
 
 /** Coordinates admitted resources and portable image preparation for one component owner. */
 export class MapOwnedFeatures {
   private readonly resources = new MapOwnedResources();
-  private readonly overrides = new MapStyleOverrides();
+  private overrides?: MapStyleOverrides;
   private cache = new Map<string, CachedImage>();
   private peer?: MapLibreMapCapability;
   private resourcePeer?: MapOwnedResourcePeer;
@@ -62,7 +57,7 @@ export class MapOwnedFeatures {
   private overriding = false;
   private disposing = false;
 
-  constructor(private readonly prepareImages: typeof prepareMapImages = prepareMapImages) {}
+  constructor(private readonly prepareImages: typeof prepareMapImages = prepareOnDemand) {}
 
   ownsLayer(id: string): boolean { return this.resources.ownsLayer(id); }
 
@@ -70,7 +65,7 @@ export class MapOwnedFeatures {
     const abort = this.abort;
     this.abort = undefined; this.epoch += 1;
     this.resources.cancel();
-    if (this.overriding) this.overrides.reset();
+    if (this.overriding) this.overrides?.reset();
     abort?.abort();
   }
 
@@ -79,7 +74,7 @@ export class MapOwnedFeatures {
     if (this.disposing) return;
     this.disposing = true;
     try {
-      this.cancel(); this.resources.dispose(); this.overrides.reset(); this.cache.clear();
+      this.cancel(); this.resources.dispose(); this.overrides?.reset(); this.cache.clear();
       this.peer = undefined; this.resourcePeer = undefined; this.overridePeer = undefined;
       this.hasResources = false; this.hasOverrides = false; this.committedResources = undefined;
     } finally { this.disposing = false; }
@@ -98,7 +93,7 @@ export class MapOwnedFeatures {
     const check = (): void => { if (!current()) aborted(); };
     const cancel = (): void => {
       controller.abort();
-      if (this.epoch === epoch) { this.resources.cancel(); if (this.overriding) this.overrides.reset(); }
+      if (this.epoch === epoch) { this.resources.cancel(); if (this.overriding) this.overrides?.reset(); }
     };
     context.signal.addEventListener('abort', cancel, { once: true });
     this.resources.cancel();
@@ -114,6 +109,13 @@ export class MapOwnedFeatures {
       const hasResources = overlays.overlays.sources.length > 0 || overlays.overlays.layers.length > 0 || images.images.length > 0;
       const hasOverrides = overrides.length > 0;
       if (!hasResources && !hasOverrides && !this.hasResources && !this.hasOverrides) return;
+      if (hasOverrides && !this.overrides) {
+        // Basemap override ownership loads once an override is requested, before any native
+        // mutation, so a slow or failed load never leaves resources applied without overrides.
+        const runtime = loadMapStyleOverrideRuntime.loaded ?? await loadMapStyleOverrideRuntime();
+        check();
+        this.overrides ??= new runtime.MapStyleOverrides();
+      }
       this.bind(map);
       const desired = new Map<string, CachedImage>();
       const changed = images.images.filter(descriptor => {
@@ -167,10 +169,13 @@ export class MapOwnedFeatures {
       if (hasOverrides || this.hasOverrides) {
         if (typeof map.getPaintProperty !== 'function' || typeof map.getLayoutProperty !== 'function' ||
           typeof map.setLayoutProperty !== 'function' || typeof map.triggerRepaint !== 'function') failed();
+        // Created above for requested overrides; earlier overrides created it when they were applied.
+        const owner = this.overrides;
+        if (!owner) failed();
         this.overriding = true;
         const result = (() => {
           try {
-            return this.overrides.reconcile(this.overridePeer!, style, overrides, {
+            return owner.reconcile(this.overridePeer!, style, overrides, {
               isOwned: id => this.resources.ownsLayer(id) || context.isGeneratedLayer(id),
               resolve: (value, detail) => context.resolve(value, detail.property),
             });

@@ -30,6 +30,10 @@ export interface LyraMapDrawingSnapshot {
   }>;
 }
 
+/** Why an armed mode or drawing session ended without completing. */
+export type LyraMapDrawingCancelReason = 'cancel' | 'escape' | 'mode-change' | 'pick-mode' | 'style-change' | 'disconnect' | 'disabled' | 'pointercancel';
+export interface LyraMapDrawingCancelDetail extends LyraMapDrawingSnapshot { readonly reason: LyraMapDrawingCancelReason; }
+
 export interface MapDrawingResult {
   readonly accepted: boolean;
   readonly error?: MapDrawingError;

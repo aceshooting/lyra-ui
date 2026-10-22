@@ -1,11 +1,7 @@
 import { isPlainDataRecord } from '../../../internal/data-descriptors.js';
+import { LyraMapImageExportError, type LyraMapImageExportErrorCode, type LyraMapImageExportOptions, type LyraMapImageExportType } from './map-image-export-error.js';
 
-export type LyraMapImageExportType = 'image/png' | 'image/jpeg' | 'image/webp';
-export interface LyraMapImageExportOptions { readonly type?: LyraMapImageExportType; readonly attribution?: boolean; }
-export type LyraMapImageExportErrorCode = 'invalid-options' | 'busy' | 'cancelled' | 'timeout' | 'not-ready' | 'capture-failed' | 'blank-frame' | 'limit' | 'attribution-failed' | 'encoding-failed';
-export class LyraMapImageExportError extends Error {
-  constructor(readonly code: LyraMapImageExportErrorCode) { super(`Map image export failed: ${code}`); this.name = 'LyraMapImageExportError'; }
-}
+export { LyraMapImageExportError };
 /** Explicit owner-bound hooks. A render listener must run synchronously after drawing. */
 export interface MapImageExportServices {
   ready(signal: AbortSignal): Promise<void>;

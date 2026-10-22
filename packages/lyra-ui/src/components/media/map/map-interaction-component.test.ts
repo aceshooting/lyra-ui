@@ -4,6 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraMapFeatureState, LyraMapFeatureIdentifier } from './map-feature-state.js';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { loadMapFeatureStateRuntime } from './map-feature-loader.js';
 
 class Control {
   readonly listeners = new Map<string, Set<(event: unknown) => void>>();
@@ -171,6 +172,8 @@ async function restore(element: LyraMap) { await element.updateComplete; await e
 async function idle(element: LyraMap, peer: ControlMap) { peer.idle = true; peer.fire('idle'); await element.whenIdle(); }
 
 describe('lr-map interaction and retained state integration', () => {
+  // Exercises the steady state after the on-demand runtime has loaded; map-lazy-runtimes.test.ts covers the loading itself.
+  before(() => loadMapFeatureStateRuntime());
   beforeEach(() => {
     originalUrl = location.href; originalState = history.state; ControlMap.initialReady = true; ControlMap.prepare = undefined;
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });

@@ -1,6 +1,6 @@
-export const MAP_IMAGE_MAX_DIMENSION = 2048;
-export const MAP_IMAGE_MAX_PIXELS = 4_194_304;
-export const MAP_IMAGE_MAX_ENCODED_BYTES = 1_048_576;
+import { MAP_IMAGE_MAX_DIMENSION, MAP_IMAGE_MAX_ENCODED_BYTES, MAP_IMAGE_MAX_PIXELS } from './map-image-admission.js';
+
+export { MAP_IMAGE_MAX_ENCODED_BYTES };
 const MAX_ITEMS = 4096;
 
 type MapImageRasterMime = 'image/png' | 'image/jpeg' | 'image/webp';

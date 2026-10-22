@@ -135,6 +135,30 @@ it('keeps same-family data updates synchronous after successful preparation', as
   } finally { element.remove(); restore(); }
 });
 
+it('settles update-driven generated-layer reconciliation without a rejection when native preparation fails', async () => {
+  const { element, peer, restore } = await setup();
+  const unhandled: unknown[] = [];
+  const onUnhandled = (event: PromiseRejectionEvent): void => { unhandled.push(event.reason); };
+  window.addEventListener('unhandledrejection', onUnhandled);
+  try {
+    peer.fire('load'); peer.preparations[0]!.pending.resolve();
+    await waitUntil(() => peer.layers.size === 3);
+    // A family change reconciles from updated(); every call site fires and forgets that promise.
+    element.dataLayers = [{ sourceId: 'points', geojson, kind: 'heatmap' }];
+    await element.updateComplete;
+    expect(peer.preparations.length).to.equal(2);
+    const seam = element as unknown as { reconcileGeneratedLayers(): Promise<void> };
+    const direct = seam.reconcileGeneratedLayers();
+    expect(peer.preparations.length).to.equal(3);
+    peer.preparations[2]!.pending.reject(new Error('Native preparation sentinel'));
+    let outcome = 'pending';
+    await direct.then(() => { outcome = 'resolved'; }, () => { outcome = 'rejected'; });
+    expect(outcome).to.equal('resolved');
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(unhandled.length).to.equal(0);
+  } finally { window.removeEventListener('unhandledrejection', onUnhandled); element.remove(); restore(); }
+});
+
 it('aborts old overlay readiness when a replacement style starts and prepares its new style load', async () => {
   const { element, peer, restore } = await setup();
   try {
