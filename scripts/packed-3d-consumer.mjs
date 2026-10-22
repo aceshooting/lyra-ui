@@ -66,22 +66,28 @@ export function packed3dGraphFindings(graph, { engine, present, companionRoot })
   return findings;
 }
 
+/** Update the disposable consumer after its original lockfile has already been verified. */
+export async function installPacked3dFixture({ optionalFixture, engine3dTarball, version, run, pnpm }) {
+  const file = join(optionalFixture, 'package.json');
+  const consumer = JSON.parse(await readFile(file, 'utf8'));
+  consumer.dependencies['@aceshooting/lyra-3d'] = `file:${engine3dTarball}`;
+  // pnpm 12 reads peer rules from workspace settings, not package.json. This fixture has none yet.
+  // Only the local preparation version is accommodated; the npm strict-peer fixture is untouched.
+  if (version === '0.0.0') {
+    await writeFile(join(optionalFixture, 'pnpm-workspace.yaml'),
+      "packages: []\nautoInstallPeers: false\npeerDependencyRules:\n  allowedVersions:\n    '@aceshooting/lyra-ui>@aceshooting/lyra-3d': '0.0.0'\n",
+      { flag: 'wx' });
+  }
+  await writeFile(file, `${JSON.stringify(consumer, null, 2)}\n`);
+  // Adding the packed companion intentionally changes this fixture's dependency graph, including in CI.
+  await run(pnpm, ['install', '--no-frozen-lockfile', '--ignore-scripts', '--config.auto-install-peers=false'], optionalFixture, 'packed 3D preparation fixture install');
+}
+
 /** Reuse isolated consumer installations; mutate only the pnpm fixture after its existing checks. */
 export async function verifyPacked3dConsumer({ coreFixture, optionalFixture, engine3dTarball, optionalPeers, run, pnpm }) {
   const manifest = packedManifest(engine3dTarball);
   validatePacked3dPreparation(manifest);
-  const file = join(optionalFixture, 'package.json');
-  const consumer = JSON.parse(await readFile(file, 'utf8'));
-  consumer.dependencies['@aceshooting/lyra-3d'] = `file:${engine3dTarball}`;
-  // Narrow preparation-only accommodation. The npm strict-peer fixture is never modified.
-  if (manifest.version === '0.0.0') {
-    consumer.pnpm ??= {};
-    consumer.pnpm.peerDependencyRules ??= {};
-    consumer.pnpm.peerDependencyRules.allowedVersions ??= {};
-    consumer.pnpm.peerDependencyRules.allowedVersions['@aceshooting/lyra-ui>@aceshooting/lyra-3d'] = '0.0.0';
-  }
-  await writeFile(file, `${JSON.stringify(consumer, null, 2)}\n`);
-  await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], optionalFixture, 'packed 3D preparation fixture install');
+  await installPacked3dFixture({ optionalFixture, engine3dTarball, version: manifest.version, run, pnpm });
   const companionRoot = await realpath(join(optionalFixture, 'node_modules', '@aceshooting', 'lyra-3d'));
   const installed = JSON.parse(await readFile(join(companionRoot, 'package.json'), 'utf8'));
   assert.deepEqual(installed.exports, manifest.exports);
@@ -116,7 +122,7 @@ export default defineConfig({
     external: id => ${JSON.stringify(optionalPeers.filter(peer => !present || peer !== '@aceshooting/lyra-3d'))}.some(peer => id === peer || id.startsWith(peer + '/')),
   }},
 });\n`);
-      await run(pnpm, ['exec', 'vite', 'build', '--config', 'packed-3d.config.mjs'], fixture, `packed 3D ${route} ${present ? 'present' : 'absent'} graph`);
+      await run(pnpm, ['--config.auto-install-peers=false', 'exec', 'vite', 'build', '--config', 'packed-3d.config.mjs'], fixture, `packed 3D ${route} ${present ? 'present' : 'absent'} graph`);
       const graph = JSON.parse(await readFile(join(fixture, 'packed-3d-graph.json'), 'utf8'));
       assert.deepEqual(packed3dGraphFindings(graph, { engine, present, companionRoot }), [], `${route} ${present ? 'present' : 'absent'} packed 3D contract`);
     }

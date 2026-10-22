@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { packed3dGraphFindings, validatePacked3dPreparation, PACKED_3D_ENTRIES } from './packed-3d-consumer.mjs';
+import { packed3dGraphFindings, validatePacked3dPreparation, installPacked3dFixture, PACKED_3D_ENTRIES } from './packed-3d-consumer.mjs';
 
 const companionRoot = '/consumer/node_modules/@aceshooting/lyra-3d';
 const three = '/consumer/node_modules/three/build/three.core.js';
@@ -110,5 +110,118 @@ test('artifact-only CI selects exactly one 3D tarball through the canonical envi
     assert.throws(execute, 'ambiguous 3D artifacts must fail');
   } finally {
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('3D fixture mutation refreshes a stale lockfile in CI with the exact pnpm preparation peer rule', async () => {
+  const { mkdtemp, mkdir, writeFile, readFile, rm } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const { tmpdir } = await import('node:os');
+  const { execFileSync, spawnSync } = await import('node:child_process');
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-3d-ci-install-'));
+  try {
+    const consumer = join(directory, 'consumer');
+    const core = join(directory, 'core');
+    const companion = join(directory, 'companion');
+    await mkdir(consumer);
+    for (const path of [core, companion]) await mkdir(join(path, 'package'), { recursive: true });
+    await writeFile(join(core, 'package/package.json'), JSON.stringify({
+      name: '@aceshooting/lyra-ui', version: '1.0.0',
+      peerDependencies: { '@aceshooting/lyra-3d': '^1.0.0' },
+      peerDependenciesMeta: { '@aceshooting/lyra-3d': { optional: true } },
+    }));
+    await writeFile(join(companion, 'package/package.json'), JSON.stringify({ name: '@aceshooting/lyra-3d', version: '0.0.0' }));
+    for (const path of [core, companion]) execFileSync('tar', ['-czf', `${path}.tgz`, '-C', path, 'package']);
+    await writeFile(join(consumer, 'package.json'), JSON.stringify({
+      name: 'packed-3d-ci-regression', private: true,
+      dependencies: { '@aceshooting/lyra-ui': `file:${core}.tgz` },
+    }));
+    const execute = args => execFileSync('pnpm', [...args, '--offline', '--strict-peer-dependencies'], {
+      cwd: consumer, env: { ...process.env, CI: 'true' }, encoding: 'utf8', stdio: 'pipe',
+    });
+    execute(['install', '--ignore-scripts', '--config.auto-install-peers=false']);
+    const coreExecution = spawnSync('pnpm', ['--config.auto-install-peers=false', 'exec', process.execPath, '-e', "process.stdout.write('core-ready')"], {
+      cwd: consumer, env: { ...process.env, CI: 'true' }, encoding: 'utf8', stdio: 'pipe',
+    });
+    assert.equal(coreExecution.status, 0, coreExecution.stderr);
+    assert.equal(coreExecution.stdout.trim(), 'core-ready');
+    assert.doesNotMatch(`${coreExecution.stdout}\n${coreExecution.stderr}`, /ERR_PNPM_LOCKFILE_CONFIG_MISMATCH/u);
+    const implementation = await readFile(new URL('packed-3d-consumer.mjs', import.meta.url), 'utf8');
+    assert.ok(implementation.includes("['--config.auto-install-peers=false', 'exec', 'vite', 'build', '--config', 'packed-3d.config.mjs']"));
+    const before = await readFile(join(consumer, 'pnpm-lock.yaml'), 'utf8');
+    let installs = 0;
+    await installPacked3dFixture({
+      optionalFixture: consumer, engine3dTarball: `${companion}.tgz`, version: '0.0.0', pnpm: 'pnpm',
+      run: async (_command, args, cwd) => {
+        installs++;
+        assert.equal(cwd, consumer);
+        assert.throws(() => execute(args.filter(arg => arg !== '--no-frozen-lockfile')), error =>
+          /ERR_PNPM_(?:OUTDATED_LOCKFILE|LOCKFILE_CONFIG_MISMATCH)/u.test(`${error.stdout}\n${error.stderr}`));
+        const output = execute(args);
+        assert.doesNotMatch(output, /peerDependencyRules.*ignored/u);
+      },
+    });
+    assert.equal(installs, 1);
+    const after = await readFile(join(consumer, 'pnpm-lock.yaml'), 'utf8');
+    assert.notEqual(after, before);
+    assert.match(after, /@aceshooting\/lyra-3d/u);
+    assert.equal(JSON.parse(await readFile(join(consumer, 'node_modules/@aceshooting/lyra-3d/package.json'), 'utf8')).version, '0.0.0');
+    assert.equal(JSON.parse(await readFile(join(consumer, 'package.json'), 'utf8')).pnpm, undefined);
+    assert.equal(await readFile(join(consumer, 'pnpm-workspace.yaml'), 'utf8'),
+      "packages: []\nautoInstallPeers: false\npeerDependencyRules:\n  allowedVersions:\n    '@aceshooting/lyra-ui>@aceshooting/lyra-3d': '0.0.0'\n");
+    execute(['install', '--frozen-lockfile', '--ignore-scripts']);
+    const executed = spawnSync('pnpm', ['exec', process.execPath, '-e', "process.stdout.write('fixture-ready')"], {
+      cwd: consumer, env: { ...process.env, CI: 'true' }, encoding: 'utf8', stdio: 'pipe',
+    });
+    assert.equal(executed.status, 0, executed.stderr);
+    assert.equal(executed.stdout.trim(), 'fixture-ready');
+    assert.doesNotMatch(`${executed.stdout}\n${executed.stderr}`, /ERR_PNPM_LOCKFILE_CONFIG_MISMATCH/u);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('preparation peer allowance excludes other versions and dependents and is absent for published companions', async () => {
+  const { mkdtemp, mkdir, writeFile, readFile, rm } = await import('node:fs/promises');
+  const { join } = await import('node:path');
+  const { tmpdir } = await import('node:os');
+  const { execFileSync } = await import('node:child_process');
+  for (const scenario of [
+    { name: '@aceshooting/lyra-ui', version: '0.0.1', preparation: '0.0.0', range: '^1.0.0', valid: false },
+    { name: 'other-consumer', version: '0.0.0', preparation: '0.0.0', range: '^1.0.0', valid: false },
+    { name: '@aceshooting/lyra-ui', version: '1.0.0', preparation: '1.0.0', range: '^1.0.0', valid: true },
+    { name: '@aceshooting/lyra-ui', version: '1.0.0', preparation: '1.0.0', range: '^2.0.0', valid: false },
+  ]) {
+    const directory = await mkdtemp(join(tmpdir(), 'lyra-3d-peer-rule-'));
+    try {
+      const consumer = join(directory, 'consumer');
+      const core = join(directory, 'core');
+      const companion = join(directory, 'companion');
+      await mkdir(consumer);
+      for (const path of [core, companion]) await mkdir(join(path, 'package'), { recursive: true });
+      await writeFile(join(core, 'package/package.json'), JSON.stringify({
+        name: scenario.name, version: '1.0.0', peerDependencies: { '@aceshooting/lyra-3d': scenario.range },
+      }));
+      await writeFile(join(companion, 'package/package.json'), JSON.stringify({ name: '@aceshooting/lyra-3d', version: scenario.version }));
+      for (const path of [core, companion]) execFileSync('tar', ['-czf', `${path}.tgz`, '-C', path, 'package']);
+      await writeFile(join(consumer, 'package.json'), JSON.stringify({
+        name: 'packed-3d-peer-regression', private: true, dependencies: { [scenario.name]: `file:${core}.tgz` },
+      }));
+      await installPacked3dFixture({
+        optionalFixture: consumer, engine3dTarball: `${companion}.tgz`, version: scenario.preparation, pnpm: 'pnpm',
+        run: async (_command, args) => {
+          const execute = () => execFileSync('pnpm', [...args, '--offline', '--strict-peer-dependencies'], {
+            cwd: consumer, env: { ...process.env, CI: 'true' }, encoding: 'utf8', stdio: 'pipe',
+          });
+          if (scenario.valid) execute();
+          else assert.throws(execute, error => /ERR_PNPM_PEER_DEP_ISSUES/u.test(`${error.stdout}\n${error.stderr}`), JSON.stringify(scenario));
+        },
+      });
+      if (scenario.preparation !== '0.0.0') {
+        await assert.rejects(readFile(join(consumer, 'pnpm-workspace.yaml')), { code: 'ENOENT' });
+      }
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   }
 });
