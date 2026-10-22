@@ -803,12 +803,15 @@ function staticValueImportClosure(entry) {
 test('lr-map keeps every on-demand feature runtime out of its static module graph', () => {
   const mapDir = path.join(packageDir, 'src', 'components', 'media', 'map');
   const internalDir = path.join(packageDir, 'src', 'internal');
-  const loaderSource = readFileSync(path.join(mapDir, 'map-feature-loader.ts'), 'utf8');
-  const runtimes = [...loaderSource.matchAll(/import\(['"]\.\/([^'"]+)\.js['"]\)/gu)].map(([, name]) => `${name}.ts`);
+  const loaderModules = staticValueImportClosure(path.join(mapDir, 'map-feature-loader.ts'));
+  const runtimes = [...loaderModules].flatMap((file) =>
+    [...readFileSync(file, 'utf8').matchAll(/import\(['"]\.\/([^'"]+)\.js['"]\)/gu)]
+      .map(([, name]) => `${name}.ts`),
+  );
   assert.deepEqual(runtimes.sort(), [
     'map-anchor-controller.ts', 'map-controls-lifecycle.ts', 'map-drawing-controller.ts', 'map-feature-state-routes.ts', 'map-hash-owner.ts',
     'map-image-export-controller.ts', 'map-images.ts', 'map-owned-features.ts', 'map-style-overrides.ts',
-  ], 'the shared loader must import each optional runtime through a literal specifier bundlers can split');
+  ], 'the shared loaders must import each optional runtime through a literal specifier bundlers can split');
   // Implementation modules only those runtimes need; the class may still import their types.
   const onDemand = [
     ...runtimes, 'map-anchor-options.ts', 'map-drawing.ts', 'map-drawing-gesture.ts', 'map-drawing-pan.ts', 'map-drawing-pointer.ts',

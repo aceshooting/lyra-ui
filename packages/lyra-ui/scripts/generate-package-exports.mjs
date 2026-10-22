@@ -129,6 +129,10 @@ export const ACKNOWLEDGED_INTERNAL_HELPER_MODULES = Object.freeze([
   // module on first use. Nothing re-exports it, its runtimes are private implementation, and its
   // only other export is a test hook, so there is no public contract to route.
   'src/components/media/map/map-feature-loader.ts',
+  // Shared cache factory and importer test hook for those private map runtimes.
+  'src/components/media/map/map-feature-loader-core.ts',
+  // Private image/style loader leaf shared by the map class and owned-resource runtime.
+  'src/components/media/map/map-resource-feature-loaders.ts',
 
   // Structurally these two look like the pptx-loader.ts case above: a real adapter-shaped "Api"
   // type surface (PdfJsApi/PdfDocumentApi/PdfPageApi/... and EpubBook/EpubRendition/...) imported

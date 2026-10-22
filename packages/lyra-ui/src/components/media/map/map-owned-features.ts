@@ -1,5 +1,5 @@
 import { isPlainDataRecord } from '../../../internal/data-descriptors.js';
-import { loadMapImageRuntime, loadMapStyleOverrideRuntime } from './map-feature-loader.js';
+import { loadMapImageRuntime, loadMapStyleOverrideRuntime } from './map-resource-feature-loaders.js';
 import { admitMapImages, MAP_IMAGE_LIMITS, type LyraMapImage } from './map-image-admission.js';
 import type { prepareMapImages, PreparedMapImage } from './map-images.js';
 import type { MapLibreMapCapability } from './map-loader.js';
