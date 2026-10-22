@@ -9,6 +9,10 @@ const { chromium, firefox, webkit } = require('playwright');
 const root = process.env.LYRA_3D_TEST_ASSETS;
 if (!root) throw new Error('Missing test asset directory');
 const channel = process.argv[2] ?? 'chromium';
+// Set by scripts/coverage.mjs: each page's Chromium V8 ranges are saved for the coverage report.
+const coverageOutput = process.env.LYRA_3D_COVERAGE_OUTPUT;
+if (coverageOutput) fs.mkdirSync(coverageOutput, { recursive: true });
+let coveragePages = 0;
 const engine = { chromium, firefox, webkit, chrome: chromium, msedge: chromium }[channel];
 if (!engine) throw new Error(`Unknown browser ${channel}`);
 
@@ -84,6 +88,7 @@ async function openPage() {
   const context = await browser.newContext({ viewport: { width: 1000, height: 700 } });
   const errors = [];
   const page = await context.newPage();
+  if (coverageOutput) await page.coverage.startJSCoverage({ resetOnNavigation: false });
   page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(`console: ${message.text()}`);
@@ -91,6 +96,15 @@ async function openPage() {
   await page.goto(url);
   await page.waitForFunction(() => window.ready, null, { timeout: 15000 });
   return { context, page, errors };
+}
+
+async function saveCoverage(page) {
+  if (!coverageOutput) return;
+  // Page scripts are served from the consumer build, which the report reads again; only the
+  // ranges are kept, one file per page.
+  const entries = (await page.coverage.stopJSCoverage()).map(({ url, functions }) => ({ url, functions }));
+  coveragePages += 1;
+  fs.writeFileSync(path.join(coverageOutput, `page-${String(coveragePages).padStart(4, '0')}.json`), JSON.stringify(entries));
 }
 
 /**
@@ -104,6 +118,7 @@ async function runCase(name) {
   const { context, page, errors } = await openPage();
   try {
     const result = await page.evaluate((caseName) => window.fixture.run(caseName), name);
+    await saveCoverage(page);
     return { ...result, errors: unexpected(errors) };
   } finally {
     await context.close();
@@ -171,6 +186,7 @@ async function runPointerCase(name) {
       await page.keyboard.up('Shift');
     }
     const result = await page.evaluate(([caseName, setup]) => window.fixture.verify(caseName, setup), [name, prepared]);
+    await saveCoverage(page);
     return { ...result, errors: unexpected(errors) };
   } finally {
     await context.close();

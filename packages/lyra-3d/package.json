@@ -69,7 +69,8 @@
     "prepack": "pnpm build",
     "lint": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && node scripts/check-package.mjs",
     "test": "pnpm build && node --test test/*.test.mjs",
-    "test:browser": "node scripts/browser-test.mjs"
+    "test:browser": "node scripts/browser-test.mjs",
+    "test:coverage": "node scripts/coverage.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"
