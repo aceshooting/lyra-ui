@@ -313,11 +313,17 @@ export const panoramaCases = {
       const u = (best % 64 + 0.5) / 64; const v = (Math.floor(best / 64) + 0.5) / 32;
       await seek(video, initialTime);
       draws = observeNativeDraws(record, video);
-      record.engine.setCamera({ yaw: (u - 0.5) * Math.PI * 2, pitch: (0.5 - v) * Math.PI, fieldOfView: 75 });
+      const camera = { yaw: (u - 0.5) * Math.PI * 2, pitch: (0.5 - v) * Math.PI, fieldOfView: 75 };
+      record.engine.setCamera(camera);
+      const describeDraw = (message, expected) => () => `${message}: ${JSON.stringify({
+        u, v, expected, source: sampleVideo(video, u, v),
+        actual: draws.latest && centerPixels(record, draws.latest.pixels),
+        mediaTime: draws.latest?.mediaTime, sequence: draws.latest?.sequence, camera,
+      })}`;
       const earlierExpected = sampleVideo(video, u, v);
       await until(() => draws.latest && near(draws.latest.mediaTime, initialTime, 0.01) &&
         colorMatches(centerPixels(record, draws.latest.pixels), earlierExpected.slice(0, 3), 45),
-      'Initial paused video did not draw the expected pixels', 5000);
+      describeDraw('Initial paused video did not draw the expected pixels', earlierExpected), 5000);
       const earlierActual = centerPixels(record, draws.latest.pixels);
       const sequence = draws.latest.sequence;
       // Keep the camera fixed across the discriminating seek. A stale old framebuffer must
@@ -327,7 +333,7 @@ export const panoramaCases = {
       const expected = sampleVideo(video, u, v);
       await until(() => draws.latest && draws.latest.sequence > sequence && near(draws.latest.mediaTime, callerTime, 0.01) &&
         colorMatches(centerPixels(record, draws.latest.pixels), expected.slice(0, 3), 45),
-      'Automatic paused video seek did not draw the updated pixels', 5000);
+      describeDraw('Automatic paused video seek did not draw the updated pixels', expected), 5000);
       const actual = centerPixels(record, draws.latest.pixels);
       const earlierMatches = colorMatches(earlierActual, earlierExpected.slice(0, 3), 45);
       const staleRejected = !colorMatches(earlierActual, expected.slice(0, 3), 45);
