@@ -1,6 +1,6 @@
 const receipt = await (await fetch('./receipt.json')).json();
 const entry = receipt.entries.find((x) => x.facade === '\0modular-entry').file;
-const engine = await import('./' + entry);
+const engine = await import(/* @vite-ignore */ './' + entry);
 const data = await (await fetch('./data.json')).json();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const errors = [];
@@ -113,6 +113,17 @@ async function finish() {
 window.fixture = {
   engine,
   errors,
+  inspect() {
+    return [...maps].map((map) => {
+      let rendered = [], queryError;
+      try { rendered = map.queryRenderedFeatures().map((feature) => ({ id: feature.id, layer: feature.layer?.id })); }
+      catch (error) { queryError = String(error); }
+      const sourceExists = !!map.getSource('sample');
+      return { loaded: map.loaded(), styleLoaded: map.isStyleLoaded(),
+        sourceExists, sourceLoaded: sourceExists && map.isSourceLoaded('sample'),
+        layerExists: !!map.getLayer('new-circle'), rendered, queryError };
+    });
+  },
   base,
   geoStyle,
   rasterStyle,
@@ -124,7 +135,39 @@ window.fixture = {
   sleep,
   async run(name) {
     const startErrors = errors.length;
-    if (name === 'canvas-image') {
+    if (name === 'prepared-canvas-identity') {
+      const m = await make(base());
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 4;
+      const context = canvas.getContext('2d'); context.fillStyle = '#ff0000'; context.fillRect(0, 0, 4, 4);
+      await m.addPreparedFeatures({ sources: { pixels: { type: 'canvas', canvas,
+        coordinates: [[-20,20],[20,20],[20,-20],[-20,-20]], animate: false } },
+        layers: [{ layer: { id: 'pixels', type: 'raster', source: 'pixels' } }] });
+      assert(m.getSource('pixels').getCanvas() === canvas, 'prepared canvas retains DOM identity');
+      await until(() => m.loaded(), 'prepared canvas rendered'); remove(m);
+    } else if (name === 'prepared-features-null-style') {
+      const m = await make(null, { waitForLoad: false });
+      const result = await m.addPreparedFeatures({
+        sources: { sample: { type: 'geojson', data } },
+        layers: [{ layer: { id: 'new-circle', type: 'circle', source: 'sample', paint: { 'circle-radius': 12 } } }]
+      });
+      assert(result === m, 'prepared shorthand returns map');
+      await until(() => m.loaded() && m.queryRenderedFeatures().some(f => f.layer.id === 'new-circle'), 'new prepared family renders');
+      assert(m.addLayer({ id: 'another-circle', type: 'circle', source: 'sample' }) === m, 'native addLayer remains synchronous');
+      remove(m);
+    } else if (name === 'built-in-mixed-direction-label') {
+      const label = 'بيروت Beirut 123';
+      const m = await make({ ...base(),
+        'font-faces': { 'Test Font': [{ url: location.origin + '/font.ttf' }] },
+        sources: { label: { type: 'geojson', data: { type: 'FeatureCollection', features: [
+          { type: 'Feature', properties: { label }, geometry: { type: 'Point', coordinates: [0, 0] } }
+        ] } } },
+        layers: [...base().layers, { id: 'mixed-label', type: 'symbol', source: 'label',
+          layout: { 'text-field': ['get', 'label'], 'text-font': ['Test Font'], 'text-size': 28,
+            'text-allow-overlap': true }, paint: { 'text-color': '#ffffff' } }]
+      });
+      await until(() => m.queryRenderedFeatures().some(f => f.layer.id === 'mixed-label' && f.properties.label === label), 'mixed direction local-font symbol renders');
+      remove(m);
+    } else if (name === 'canvas-image') {
       const canvas = document.createElement('canvas');
       canvas.width = 64;
       canvas.height = 64;

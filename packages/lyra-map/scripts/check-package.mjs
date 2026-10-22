@@ -49,6 +49,7 @@ const actual = await import(new URL('../dist/index.mjs', import.meta.url));
 const upstream = await import('maplibre-gl');
 for (const name of Object.keys(upstream)) assert.ok(name in actual, `Missing upstream runtime export ${name}`);
 assert.equal(typeof actual.Map.prototype.prepareFeatures, 'function');
+assert.equal(typeof actual.Map.prototype.addPreparedFeatures, 'function');
 assert.equal(typeof actual.prepareStyle, 'function');
 assert.ok((await readdir(resolve(root, 'dist'))).includes('map.css'));
 console.log('Map package exports, provenance, and generated module checks passed.');

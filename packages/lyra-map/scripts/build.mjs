@@ -172,6 +172,8 @@ replaceDeclaration(
   '  _lazyInitEmptyStyle(): void;',
   `  /** Prepares main and worker features before synchronous imperative mutations. */
   prepareFeatures(requirements: MapFeatureRequirements, options?: MapFeaturePreparationOptions): Promise<void>;
+  /** Prepares and adds a bounded source/layer batch; native mutations remain synchronous. */
+  addPreparedFeatures(descriptors: MapPreparedFeatures, options?: MapFeaturePreparationOptions): Promise<this>;
   _lazyInitEmptyStyle(): void;`
 );
 declarations += await readFile(resolve(packageRoot, 'types/features.d.ts'), 'utf8');

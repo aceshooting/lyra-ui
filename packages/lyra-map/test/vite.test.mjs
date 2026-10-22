@@ -57,3 +57,18 @@ test('uses Vite worker URL handling during development without a document preloa
 test('leaves unrelated modules unchanged', () => {
   assert.equal(lyraMapWorkerPlugin().transform('export const value = 1;'), undefined);
 });
+
+test('resets worker bridge state for each watch rebuild without hiding same-build duplicates', () => {
+  const plugin = lyraMapWorkerPlugin({ workerEntry: '/engine/worker.mjs' });
+  plugin.configResolved({ command: 'build' });
+  let count = 0;
+  const context = { emitFile() { return 'build' + (++count); } };
+  for (let build = 1; build <= 2; build++) {
+    plugin.buildStart?.();
+    const result = plugin.transform.call(context, bridge);
+    assert.match(result.code, new RegExp('ROLLUP_FILE_URL_build' + build));
+    assert.doesNotThrow(() => plugin.generateBundle());
+  }
+  plugin.transform.call(context, bridge);
+  assert.throws(() => plugin.generateBundle(), /found 2/);
+});

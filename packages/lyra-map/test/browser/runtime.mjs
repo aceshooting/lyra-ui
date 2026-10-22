@@ -1,3 +1,4 @@
+import { preparedAdversarial, preparedAdversarialCases } from './prepared-adversarial.mjs';
 import { adversarial, adversarialCases } from './adversarial.mjs';
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -128,6 +129,14 @@ async function positive(name) {
   const context = await browser.newContext();
   const pageErrors = [],
     consoleErrors = [];
+  const externalScripts = [];
+  if (name === 'built-in-mixed-direction-label') context.on('request', (request) => {
+    const target = new URL(request.url());
+    if ((request.resourceType() === 'script' || /\.m?js$/.test(target.pathname)) &&
+        target.origin !== new URL(url).origin) {
+      externalScripts.push(request.url());
+    }
+  });
   context.on('page', (page) => {
     page.on('pageerror', (e) => pageErrors.push({ url: page.url(), message: e.message }));
     page.on('console', (m) => {
@@ -142,6 +151,9 @@ async function positive(name) {
     await page.waitForFunction(() => window.ready, null, { timeout: 15000 });
     result = await page.evaluate((name) => window.fixture.run(name), name);
     await page.evaluate(() => window.fixture.finish());
+    if (name === 'built-in-mixed-direction-label' && externalScripts.length) {
+      throw Error('Mixed-direction label requested an external text plugin: ' + JSON.stringify(externalScripts));
+    }
   } catch (error) {
     failure = error;
   } finally {
@@ -157,10 +169,13 @@ async function positive(name) {
     error.consoleErrors = consoleErrors;
     throw error;
   }
-  return { ...result, pageErrors, consoleErrors };
+  return { ...result, pageErrors, consoleErrors, ...(name === 'built-in-mixed-direction-label' ? { externalScripts } : {}) };
 }
 const results = [];
 const cases = process.env.MAP_TEST_CASES?.split(',') ?? [
+  'prepared-canvas-identity',
+  'prepared-features-null-style',
+  'built-in-mixed-direction-label',
   'canvas-image',
   'raster',
   'geojson',
@@ -176,13 +191,15 @@ const cases = process.env.MAP_TEST_CASES?.split(',') ?? [
   'url-transform',
   'context-restore',
   'reconnect',
+  ...preparedAdversarialCases,
   ...adversarialCases
 ];
 for (const name of cases) {
   const requestStart = requests.length;
   let result;
   try {
-    result = adversarialCases.includes(name) ? await adversarial(browser, url, name) : await positive(name);
+    result = preparedAdversarialCases.includes(name) ? await preparedAdversarial(browser, url, name) :
+      adversarialCases.includes(name) ? await adversarial(browser, url, name) : await positive(name);
   } catch (error) {
     result = {
       name,
@@ -201,7 +218,6 @@ for (const name of cases) {
     .reduce((sum, request) => sum + request.bytes, 0);
   results.push(result);
   console.log(JSON.stringify(result));
-  if (!result.passed) break;
 }
 const closeStart = performance.now();
 let closed = false;

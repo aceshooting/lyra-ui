@@ -9,8 +9,12 @@ const requirements: MapFeatureRequirements = {
   layers: [{ id: 'points', source: 'points', type: 'circle' }]
 };
 const ready: Promise<void> = map.prepareFeatures(requirements, { signal: new AbortController().signal });
+const added: Promise<Map> = map.addPreparedFeatures({
+  sources: requirements.sources, layers: [{ layer: { id: 'prepared', type: 'circle', source: 'points' } }]
+});
+const synchronous: Map = map.addSource('sync', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
 const warmed: Promise<void> = prepareStyle({ version: 8, sources: {}, layers: [] });
 const changed: Promise<boolean> = style.setState({ version: 8, sources: {}, layers: [] });
 map.addControl(new NavigationControl());
 lyraMapWorkerPlugin();
-void [ready, warmed, changed];
+void [ready, added, synchronous, warmed, changed];

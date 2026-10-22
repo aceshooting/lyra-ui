@@ -19,6 +19,9 @@ export function lyraMapWorkerPlugin({
     config() {
       return { build: { modulePreload: false }, optimizeDeps: { exclude: packageName ? [packageName] : [] } };
     },
+    buildStart() {
+      reference = undefined; hits = 0;
+    },
     configResolved(config) {
       command = config.command;
     },

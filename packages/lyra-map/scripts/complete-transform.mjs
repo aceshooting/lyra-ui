@@ -5,6 +5,7 @@ import { basePlugin } from './base-transform.mjs';
 import { transformWorker } from './worker-transform.mjs';
 import { transformMetadata } from './metadata-transform.mjs';
 import { transformSpriteKeys } from './sprite-key-transform.mjs';
+import { addPreparedFeatures } from './prepared-mutations.mjs';
 
 const base = dirname(fileURLToPath(import.meta.resolve('maplibre-gl/package.json')));
 export const src = resolve(base, 'src');
@@ -60,6 +61,7 @@ import {prepareShaders} from ${path('shaders/shaders.ts')};
 import {prepareUniforms} from ${path('webgl/program/program_uniforms.ts')};
 import {prepareProjection} from ${path('geo/projection/projection_factory.ts')};
 import {prepareSymbols,prepareTerrain} from ${serializeJavaScript(runtimeId)};
+export ${addPreparedFeatures.toString()}
 export function snapshotStyle(value){if(Array.isArray(value))return value.map(snapshotStyle);if(value&&typeof value==='object'){const prototype=Object.getPrototypeOf(value);if(prototype===null||Object.getPrototypeOf(prototype)===null)return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,snapshotStyle(item)]));}return value;}
 import {validateStyleAndEmit} from ${path('style/validate_style.ts')};
 export async function prepareReplacement(style,json,options,controller){const previous=options.transformStyle?style.serialize():undefined;const state=snapshotStyle(options.transformStyle?options.transformStyle(previous,json):json);if((options.validate??true)&&validateStyleAndEmit(style,state))return;await prepareTransaction(style,state,controller);return state;}
@@ -187,18 +189,19 @@ export const completePlugin = {
       code += `\nlet projectionReady;export async function prepareProjection(name){if(name==='mercator')return;return projectionReady??=(Promise.all([${loaders}]).catch(e=>{projectionReady=undefined;throw e;}));}`;
     }
     if (rel === 'ui/map.ts') {
-      code = `import {prepareReplacement,prepareMapFeatures,beginPreparation} from ${serializeJavaScript(
+      code = `import {prepareReplacement,prepareMapFeatures,beginPreparation,addPreparedFeatures} from ${serializeJavaScript(
         prepareId
       )};\n${code}`;
       code = replace(
         code,
         'setStyle(style: StyleSpecification | string | null, options?: StyleSwapOptions & StyleOptions): this {',
-        'setStyle(style: StyleSpecification | string | null, options?: StyleSwapOptions & StyleOptions): this {\n        this._modularReplacement?.abort();this._modularReplacement=undefined;'
+        'setStyle(style: StyleSpecification | string | null, options?: StyleSwapOptions & StyleOptions): this {\n        {const mutation=this._modularMutation;this._modularMutation=undefined;mutation?.abort();}this._modularReplacement?.abort();this._modularReplacement=undefined;'
       );
       code = replace(
         code,
         '_updateStyle(style: StyleSpecification | string | null, options?: StyleSwapOptions & StyleOptions): this {',
-        `prepareFeatures(requirements,options={}) {return prepareMapFeatures(this,requirements,options);}
+        `addPreparedFeatures(descriptors,options={}) {return addPreparedFeatures(this,descriptors,options);}
+    prepareFeatures(requirements,options={}) {return prepareMapFeatures(this,requirements,options);}
     _updateStyle(style: StyleSpecification | string | null, options?: StyleSwapOptions & StyleOptions): this {
         if(!style||!this.style?._loaded)return this._commitStyle(style,options);
         this._diffStyleRequest?.abort();this._diffStyleRequest=null;
@@ -213,7 +216,7 @@ export const completePlugin = {
     }
     _commitStyle(style: StyleSpecification | string | null, options?: StyleSwapOptions & StyleOptions): this {`
       );
-      code = replace(code, 'remove(): void {', 'remove(): void {\n        this._modularReplacement?.abort();');
+      code = replace(code, 'remove(): void {', 'remove(): void {\n        {const mutation=this._modularMutation;this._modularMutation=undefined;mutation?.abort();}this._modularReplacement?.abort();');
 
       code = replace(
         code,
