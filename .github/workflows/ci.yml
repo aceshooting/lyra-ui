@@ -64,7 +64,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @aceshooting/lyra-map build
+      - run: pnpm --filter @aceshooting/lyra-map --filter @aceshooting/lyra-3d build
       - run: pnpm --filter @aceshooting/lyra-ui run lint:parallel
         env:
           CI_JOBS: "3"
@@ -172,6 +172,12 @@ jobs:
           path: packages/lyra-map/dist
           if-no-files-found: error
           retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lyra-3d-dist
+          path: packages/lyra-3d/dist
+          if-no-files-found: error
+          retention-days: 1
 
   build_and_coverage_quality:
     name: build-and-coverage / quality
@@ -238,6 +244,10 @@ jobs:
         with:
           name: lyra-map-dist
           path: packages/lyra-map/dist
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lyra-3d-dist
+          path: packages/lyra-3d/dist
       - run: pnpm --filter @aceshooting/lyra-ui test:scale
       - run: pnpm --filter @aceshooting/lyra-ui check:scale-budgets
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -371,6 +381,10 @@ jobs:
         with:
           name: lyra-map-dist
           path: packages/lyra-map/dist
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lyra-3d-dist
+          path: packages/lyra-3d/dist
       # One cost-balanced quarter of the suite per runner, with the release-time strict console gate.
       - name: Run coverage shard
         working-directory: packages/lyra-ui

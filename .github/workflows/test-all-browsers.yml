@@ -53,6 +53,12 @@ jobs:
           path: packages/lyra-map/dist
           if-no-files-found: error
           retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lyra-3d-dist
+          path: packages/lyra-3d/dist
+          if-no-files-found: error
+          retention-days: 1
 
   # Preserve each shard's exact process/concurrency shape while running the existing four shards
   # on independent runners. This changes scheduling only: the same deterministic shard commands
@@ -109,6 +115,10 @@ jobs:
         with:
           name: lyra-map-dist
           path: packages/lyra-map/dist
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: lyra-3d-dist
+          path: packages/lyra-3d/dist
       # As in ci.yml's chrome/edge legs, a cache hit reuses the hosted image's channel install.
       - name: Restore Playwright channel cache
         if: matrix.browser == 'chrome' || matrix.browser == 'edge'

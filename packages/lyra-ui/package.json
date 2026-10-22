@@ -2596,7 +2596,7 @@
     "./src/translations/**/*.ts"
   ],
   "scripts": {
-    "build": "pnpm --filter @aceshooting/lyra-map run build && node scripts/build.mjs && pnpm run check:build-artifacts && pnpm run check:theme-bootstrap",
+    "build": "pnpm --filter @aceshooting/lyra-map --filter @aceshooting/lyra-3d run build && node scripts/build.mjs && pnpm run check:build-artifacts && pnpm run check:theme-bootstrap",
     "regen": "pnpm run archive-changelog && pnpm run package-metadata && pnpm run default-string-slices && pnpm run translation-slices && pnpm run translation-review-fixture && pnpm run locale-manifest && pnpm run manifest && pnpm run component-inventory && pnpm run tag-aliases && pnpm run manifest && pnpm run component-metadata && pnpm run registrations && pnpm run manifest && pnpm run component-inventory && pnpm run visual-manifest && pnpm run framework-types && pnpm run events && pnpm run testing-event-registry && pnpm run autoloader-manifest && pnpm run registration-graph && pnpm run scoped-definitions && pnpm run palette && pnpm run chart-palette && pnpm run terminal-palette && pnpm run style-axes && pnpm run option-presets && pnpm run design-tokens && pnpm run theme-scopes && pnpm run generate-reservation-styles && pnpm run generate-editor-data && pnpm run llms",
     "check:build-artifacts": "node scripts/generate-shiki-wasm.mjs --check && node --test scripts/generate-shiki-wasm.test.mjs && node scripts/check-build-artifacts.mjs && node scripts/check-host-token-declarations.mjs && node --test scripts/ai-compile-contract.test.mjs && node --test scripts/theme-bootstrap-build-check.test.mjs",
     "pretest": "pnpm run build",

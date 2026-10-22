@@ -20,9 +20,9 @@ test('the coverage shard step runs under the strict console gate', () => {
   assert.match(step.slice(at, at + 400), /WTR_STRICT_CONSOLE: "1"/u);
 });
 
-test('complete browser suites receive the built Map companion before their shards run', () => {
+test('complete browser suites receive the built Map and 3D companions before their shards run', () => {
   const library = JSON.parse(read('packages/lyra-ui/package.json'));
-  assert.match(library.scripts.build, /@aceshooting\/lyra-map run build/u);
+  assert.match(library.scripts.build, /@aceshooting\/lyra-map --filter @aceshooting\/lyra-3d run build/u);
   for (const [workflowPath, buildJob, testJob, buildCommand, testCommand] of [
     ['.github/workflows/ci.yml', 'build_and_coverage_build', 'build_and_coverage_coverage_shard',
       'run: pnpm build', 'name: Run coverage shard'],
@@ -37,11 +37,13 @@ test('complete browser suites receive the built Map companion before their shard
     const build = job(workflow, buildJob);
     const shard = job(workflow, testJob);
     const builtAt = build.indexOf(buildCommand);
-    const uploadedAt = build.indexOf('name: lyra-map-dist\n          path: packages/lyra-map/dist');
-    const downloadedAt = shard.indexOf('name: lyra-map-dist\n          path: packages/lyra-map/dist');
     const testedAt = shard.indexOf(testCommand);
-    assert.ok(builtAt >= 0 && uploadedAt > builtAt, `${workflowPath} uploads built Map dist`);
-    assert.ok(downloadedAt >= 0 && testedAt > downloadedAt, `${workflowPath} downloads Map dist before tests`);
+    for (const [label, companion] of [['Map', 'lyra-map'], ['3D', 'lyra-3d']]) {
+      const artifact = `name: ${companion}-dist\n          path: packages/${companion}/dist`;
+      const uploadedAt = build.indexOf(artifact), downloadedAt = shard.indexOf(artifact);
+      assert.ok(builtAt >= 0 && uploadedAt > builtAt, `${workflowPath} uploads built ${label} dist`);
+      assert.ok(downloadedAt >= 0 && testedAt > downloadedAt, `${workflowPath} downloads ${label} dist before tests`);
+    }
   }
 });
 

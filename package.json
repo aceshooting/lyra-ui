@@ -9,7 +9,7 @@
   },
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
-    "build": "pnpm --filter @aceshooting/lyra-ui run build && pnpm -r --filter '!@aceshooting/lyra-ui' --filter '!@aceshooting/lyra-map' --if-present run build",
+    "build": "pnpm --filter @aceshooting/lyra-ui run build && pnpm -r --filter '!@aceshooting/lyra-ui' --filter '!@aceshooting/lyra-map' --filter '!@aceshooting/lyra-3d' --if-present run build",
     "test": "pnpm -r --if-present run test",
     "benchmark": "node benchmarks/run.mjs",
     "benchmark:compare": "node benchmarks/compare.mjs",
