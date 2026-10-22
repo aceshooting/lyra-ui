@@ -21,6 +21,22 @@ still open.
   [test health](roadmap/test-health.md) (coverage, speed, flakiness).
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
+## 30.0.0 preparation checkpoint
+
+As of 2026-10-22, the four companion 3D engines and prepared map source/layer batches are
+committed. UI coverage is 99.7722% on the latest measured source; the release remains unpublished.
+The remaining work, in order:
+
+1. Finish map component qualification: the current candidate passes 1,158 Chromium tests with
+   one overlapping-image hit-priority failure. Resolve it, then complete Firefox, WebKit,
+   generated documentation, lint, package budgets and consumer checks before integration.
+2. Finish the component 3D opt-ins, `lr-model-viewer` and `lr-chart-3d`, including accessible
+   fallbacks and documentation.
+3. Run the real-GPU performance benchmarks and application prototypes. Single-GPU rendering
+   was verified; frame-rate targets remain unmeasured.
+4. Refresh companion coverage and shard timing measurements, then prepare versions and budgets
+   and complete all browser, visual, SSR and exact-commit release gates.
+
 ## Shipped
 
 | Release | Delivered |
