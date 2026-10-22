@@ -947,7 +947,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "46cef1eed712a401dfbd",
+      "fingerprint": "1f0de51bbe846f14caa1",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -963,7 +963,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "e2c052171e1aa6c09054",
+      "fingerprint": "69323cd90227e8eab789",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1011,7 +1011,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "97d3a80e3b826a20e437",
+      "fingerprint": "a7d6bc7731590ec98fc9",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1027,7 +1027,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "0d7fb5185bd7fa8e8e7e",
+      "fingerprint": "2a1f7e7d60efdfb6fb3f",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "0e07b6d4e4d349270564",
+      "fingerprint": "e1c01bea707465b3db0e",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15602,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "65b21f26477b903e9f9a",
+      "fingerprint": "65cefca40747b3cc5584",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15736,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "b4684552df125f206662",
+      "fingerprint": "498a04a4d27b74b57941",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "b66d36e5ab156a1adedf",
+      "fingerprint": "1b8c269b4e8bcf41bc11",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "ef58b2f207b9e04aad93",
+      "fingerprint": "4788ae97123b8ae5b0d1",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "b805d3160ff4cfae72ef",
+      "fingerprint": "2f9e022e2c4e5161a54b",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16879,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "f8c875c50041d10df4eb",
+      "fingerprint": "da7375a650b81c3616c7",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "6900ec1b1a198ab02567",
+      "fingerprint": "9aab31dbc5f9df813480",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "30c5c683876eb6d548b2",
+      "fingerprint": "407f3f8182c5f15af72c",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17330,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "aa67f193a5216d25eaf7",
+      "fingerprint": "ab16a02b5c51e9ee2088",
       "routes": [
         "src/localization.ts"
       ],
@@ -21322,6 +21322,116 @@
         "kind": "utility",
         "name": "optional-renderer-column-contracts",
         "declaration": "LyraPointColumns"
+      }
+    },
+    {
+      "module": "src/components/charts/chart-3d/chart-3d-data.ts",
+      "exportName": "LyraChart3dAxis",
+      "kind": "interface",
+      "fingerprint": "dbd64a3a4afe23f9ae46",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart-3d/chart-3d.class.ts",
+        "src/components/charts/chart-3d/chart-3d.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart-3d.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-3d-chart-3d-contracts",
+        "declaration": "LyraChart3dAxis"
+      }
+    },
+    {
+      "module": "src/components/charts/chart-3d/chart-3d-data.ts",
+      "exportName": "LyraChart3dCamera",
+      "kind": "interface",
+      "fingerprint": "f001e1a3fcbdaecc41f9",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart-3d/chart-3d.class.ts",
+        "src/components/charts/chart-3d/chart-3d.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart-3d.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-3d-chart-3d-contracts",
+        "declaration": "LyraChart3dCamera"
+      }
+    },
+    {
+      "module": "src/components/charts/chart-3d/chart-3d-data.ts",
+      "exportName": "LyraChart3dColumns",
+      "kind": "interface",
+      "fingerprint": "5621ccebb4741d36883a",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart-3d/chart-3d.class.ts",
+        "src/components/charts/chart-3d/chart-3d.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart-3d.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-3d-chart-3d-contracts",
+        "declaration": "LyraChart3dColumns"
+      }
+    },
+    {
+      "module": "src/components/charts/chart-3d/chart-3d-data.ts",
+      "exportName": "LyraChart3dRow",
+      "kind": "interface",
+      "fingerprint": "aecfc594797af2447cd3",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart-3d/chart-3d.class.ts",
+        "src/components/charts/chart-3d/chart-3d.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart-3d.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-3d-chart-3d-contracts",
+        "declaration": "LyraChart3dRow"
+      }
+    },
+    {
+      "module": "src/components/charts/chart-3d/chart-3d.class.ts",
+      "exportName": "LyraChart3dSelectDetail",
+      "kind": "interface",
+      "fingerprint": "db015ce503c9d56c4787",
+      "routes": [
+        "src/all.ts",
+        "src/components/charts/chart-3d/chart-3d.class.ts",
+        "src/components/charts/chart-3d/chart-3d.ts",
+        "src/components/charts/index.ts",
+        "src/components/lr-chart-3d.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/charts.md",
+      "family": "charts",
+      "locator": {
+        "kind": "utility",
+        "name": "components-charts-chart-3d-chart-3d-contracts",
+        "declaration": "LyraChart3dSelectDetail"
       }
     }
   ],
