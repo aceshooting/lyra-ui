@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'هن ڪنڊ کي هلائڻ لاءِ تير واريون ڪنجيون استعمال ڪريو؛ وڏن قدمن لاءِ Shift دٻائي رکو. Page Up ۽ Page Down ڪنڊون چونڊين ٿا. Home ۽ End پهرين ۽ آخري ڏسڻ ۾ ايندڙ ڪنڊ چونڊين ٿا.',
   panoramaInstructions: 'چوڌاري ڏسڻ لاءِ تير واريون ڪنجيون، وڏو ۽ ننڍو ڪرڻ لاءِ جمع ۽ ڪاٽو، ۽ ڏيک بحال ڪرڻ لاءِ Home استعمال ڪريو.',
   panoramaHotspotsLabel: 'پينوراما جا تعاملي هنڌ',
+  mapActivate: 'انٽرڪٽو نقشو ڏيکاريو',
+  mapDrawingLength: 'ڊگھائي {value}',
+  mapDrawingArea: 'ايراضي {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

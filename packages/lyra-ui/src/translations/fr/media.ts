@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Utilisez les touches fléchées pour déplacer ce sommet ; maintenez Maj enfoncée pour avancer par pas plus grands. Page précédente et Page suivante sélectionnent les sommets. Début et Fin sélectionnent le premier et le dernier sommet visibles.',
   panoramaInstructions: 'Utilisez les flèches pour regarder autour de vous, plus et moins pour zoomer et Origine pour réinitialiser la vue.',
   panoramaHotspotsLabel: 'Points interactifs du panorama',
+  mapActivate: 'Afficher la carte interactive',
+  mapDrawingLength: 'Longueur {value}',
+  mapDrawingArea: 'Surface {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('fr', strings);

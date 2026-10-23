@@ -1761,6 +1761,12 @@ export type LyraMapDrawCompleteEvent = LyraMapEventMap['lr-map-draw-complete'];
 export type LyraMapDrawStartEvent = LyraMapEventMap['lr-map-draw-start'];
 
 /**
+ * `lr-map-draw-vertex-end` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-draw-vertex-end']`.
+ */
+export type LyraMapDrawVertexEndEvent = LyraMapEventMap['lr-map-draw-vertex-end'];
+
+/**
  * `lr-map-export-error` — dispatched by `<lr-map>`; detail
  * `LyraMapEventMap['lr-map-export-error']`.
  */
@@ -1777,6 +1783,11 @@ export type LyraMapFeatureEnterEvent = LyraMapEventMap['lr-map-feature-enter'];
  * `LyraMapEventMap['lr-map-feature-leave']`.
  */
 export type LyraMapFeatureLeaveEvent = LyraMapEventMap['lr-map-feature-leave'];
+
+/**
+ * `lr-map-geolocate` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-geolocate']`.
+ */
+export type LyraMapGeolocateEvent = LyraMapEventMap['lr-map-geolocate'];
 
 /**
  * `lr-map-geolocate-error` — dispatched by `<lr-map>`; detail
@@ -1827,6 +1838,18 @@ export type LyraMapMoveEvent = LyraMapEventMap['lr-map-move'];
  * `lr-map-pick` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-pick']`.
  */
 export type LyraMapPickEvent = LyraMapEventMap['lr-map-pick'];
+
+/**
+ * `lr-map-pointer-leave` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-pointer-leave']`.
+ */
+export type LyraMapPointerLeaveEvent = LyraMapEventMap['lr-map-pointer-leave'];
+
+/**
+ * `lr-map-pointer-move` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-pointer-move']`.
+ */
+export type LyraMapPointerMoveEvent = LyraMapEventMap['lr-map-pointer-move'];
 
 /**
  * `lr-map-style-load` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-style-load']`.
@@ -3692,9 +3715,11 @@ export interface LyraGlobalEventMap {
   'lr-map-draw-change': LyraMapDrawChangeEvent;
   'lr-map-draw-complete': LyraMapDrawCompleteEvent;
   'lr-map-draw-start': LyraMapDrawStartEvent;
+  'lr-map-draw-vertex-end': LyraMapDrawVertexEndEvent;
   'lr-map-export-error': LyraMapExportErrorEvent;
   'lr-map-feature-enter': LyraMapFeatureEnterEvent;
   'lr-map-feature-leave': LyraMapFeatureLeaveEvent;
+  'lr-map-geolocate': LyraMapGeolocateEvent;
   'lr-map-geolocate-error': LyraMapGeolocateErrorEvent;
   'lr-map-geolocate-out-of-bounds': LyraMapGeolocateOutOfBoundsEvent;
   'lr-map-idle': LyraMapIdleEvent;
@@ -3704,6 +3729,8 @@ export interface LyraGlobalEventMap {
   'lr-map-marker-activate': LyraMapMarkerActivateEvent;
   'lr-map-move': LyraMapMoveEvent;
   'lr-map-pick': LyraMapPickEvent;
+  'lr-map-pointer-leave': LyraMapPointerLeaveEvent;
+  'lr-map-pointer-move': LyraMapPointerMoveEvent;
   'lr-map-style-load': LyraMapStyleLoadEvent;
   'lr-map-view-change': LyraMapViewChangeEvent;
   'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;

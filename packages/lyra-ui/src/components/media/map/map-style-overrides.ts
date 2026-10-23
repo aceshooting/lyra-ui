@@ -1,4 +1,4 @@
-import { MAX_NODES, MAX_TEXT, projectMapStyleOverrides, safeValue, type LyraMapStyleValue, type SafeValue } from './map-style-override-admission.js';
+import { MAX_NODES, MAX_TEXT, projectMapStyleOverrides, safeValue, type LyraMapStyleOverride, type LyraMapStyleValue, type SafeValue } from './map-style-override-admission.js';
 
 export { projectMapStyleOverrides };
 export interface MapStyleOverridePeer {
@@ -62,7 +62,8 @@ export class MapStyleOverrides {
       if (this.peer !== peer || !Object.is(this.generation, generation)) { this.reset(); this.peer = peer; this.generation = generation; }
       const epoch = this.epoch;
       const current = () => epoch === this.epoch;
-      const overrides = projectMapStyleOverrides(input);
+      // Expanded input always addresses layers by id.
+      const overrides = projectMapStyleOverrides(input, true) as readonly (LyraMapStyleOverride & { readonly layerId: string })[] | undefined;
       if (!current()) { diagnostics.push({ code: 'cancelled' }); return finish(false); }
       if (!overrides) { diagnostics.push({ code: 'invalid-input' }); return finish(false); }
       const report = (code: MapStyleOverrideDiagnostic['code'], entry: MapStyleOverrideContext) => { diagnostics.push({ code, layerId: entry.layerId, property: entry.property }); };

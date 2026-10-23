@@ -1,4 +1,4 @@
-import { isPlainDataRecord } from '../../../internal/data-descriptors.js';
+import { getOwnDataDescriptor, isPlainDataRecord } from '../../../internal/data-descriptors.js';
 import { loadMapImageRuntime, loadMapStyleOverrideRuntime } from './map-resource-feature-loaders.js';
 import { admitMapImages, MAP_IMAGE_LIMITS, type LyraMapImage } from './map-image-admission.js';
 import type { prepareMapImages, PreparedMapImage } from './map-images.js';
@@ -6,7 +6,8 @@ import type { MapLibreMapCapability } from './map-loader.js';
 import { failMapResources as failed, type MapOwnedFeatureInput } from './map-owned-feature-input.js';
 import { admitMapOverlays, isIdentityGeoJsonData, type MapOwnedOverlaySnapshot } from './map-overlay-admission.js';
 import { MapOwnedResources, type MapOwnedResourcePeer, type MapOwnedSourceChange } from './map-owned-resources.js';
-import { projectMapStyleOverrides, type LyraMapStyleValue } from './map-style-override-admission.js';
+import { expandMapStyleOverrides, projectMapStyleOverrides, type LyraMapStyleValue } from './map-style-override-admission.js';
+import type { LyraMapStyleLayer } from './map-interaction-options.js';
 import type { MapStyleOverridePeer, MapStyleOverrides } from './map-style-overrides.js';
 import { planMapSourceUpdate } from './map-source-updates.js';
 
@@ -22,6 +23,8 @@ export interface MapOwnedFeatureContext {
   readonly isGeneratedLayer: (id: string) => boolean;
   readonly resolve: (value: LyraMapStyleValue, property: string) => unknown;
   readonly beforeSourceChange?: (change: MapOwnedSourceChange) => void;
+  /** The current basemap layers that `styleOverrides` selectors match against. */
+  readonly styleLayers?: () => readonly LyraMapStyleLayer[];
 }
 interface CachedImage { readonly key: string; readonly image: PreparedMapImage; }
 function aborted(): never { throw new DOMException('Map resource work was cancelled.', 'AbortError'); }
@@ -37,6 +40,44 @@ function sameSnapshot(left: unknown, right: unknown): boolean {
   const keys = Object.keys(left);
   return keys.length === Object.keys(right).length && keys.every(key =>
     Object.hasOwn(right, key) && sameSnapshot(left[key], right[key]));
+}
+
+/**
+ * Overlay layers whose paint values resolve through the element (theme tokens, modern color
+ * functions) before they reach the engine. Unchanged layers keep their admitted identity, so a
+ * theme that resolves to the same colors leaves every native layer in place.
+ */
+function resolveOverlayPaint(overlays: MapOwnedOverlaySnapshot, resolve: MapOwnedFeatureContext['resolve']): MapOwnedOverlaySnapshot {
+  let changed = false;
+  const layers = overlays.layers.map(entry => {
+    const paint = entry.layer['paint'];
+    if (!isPlainDataRecord(paint)) return entry;
+    let differs = false;
+    const resolved: Record<string, unknown> = {};
+    for (const [property, value] of Object.entries(paint)) {
+      const next = resolve(value as LyraMapStyleValue, property);
+      if (!sameSnapshot(next, value)) differs = true;
+      resolved[property] = next;
+    }
+    if (!differs) return entry;
+    changed = true;
+    return Object.freeze({ ...entry, layer: Object.freeze({ ...entry.layer, paint: Object.freeze(resolved) }) });
+  });
+  return changed ? Object.freeze({ sources: overlays.sources, layers: Object.freeze(layers) }) : overlays;
+}
+
+/**
+ * The admitted paint of `overlays.layers` as text, so the element can discover the theme tokens it
+ * names without snapshotting overlay source data. Empty for unusable input.
+ */
+export function overlayPaintText(overlays: unknown): string {
+  try {
+    if (!isPlainDataRecord(overlays)) return '';
+    const layers = getOwnDataDescriptor(overlays, 'layers');
+    if (typeof layers !== 'object' || layers.value === undefined) return '';
+    const admitted = admitMapOverlays({ layers: layers.value });
+    return admitted.ok ? JSON.stringify(admitted.overlays.layers.map(entry => entry.layer['paint'] ?? null)) : '';
+  } catch { return ''; }
 }
 
 /** Image fetching, sanitizing and rasterizing load only once admitted images need preparing. */
@@ -128,6 +169,8 @@ export class MapOwnedFeatures {
       const overrides = projectMapStyleOverrides(input.styleOverrides);
       check();
       if (!overlays.ok || !images.ok || !overrides) failed();
+      const overlaySnapshot = resolveOverlayPaint(overlays.overlays, context.resolve);
+      check();
       const hasResources = overlays.overlays.sources.length > 0 || overlays.overlays.layers.length > 0 || images.images.length > 0;
       const hasOverrides = overrides.length > 0;
       if (!hasResources && !hasOverrides && !this.hasResources && !this.hasOverrides) return;
@@ -167,7 +210,7 @@ export class MapOwnedFeatures {
       const desiredImages = images.images.map(descriptor => desired.get(descriptor.id)!.image);
       const committed = this.committedResources;
       const unchanged = committed?.map === map && Object.is(committed.style, style) &&
-        sameSnapshot(committed.overlays, overlays.overlays) &&
+        sameSnapshot(committed.overlays, overlaySnapshot) &&
         committed.images.length === desiredImages.length && committed.images.every((image, index) => image === desiredImages[index]) &&
         sameSnapshot(committed.layerIds, this.resourcePeer!.layerIds());
       check();
@@ -179,7 +222,7 @@ export class MapOwnedFeatures {
         // An ID that `images` now owns replaces its lazily provided copy instead of colliding.
         imageUpdate.detach(); check();
         transferred = true; this.hasResources = true; this.committedResources = undefined;
-        const result = await this.resources.reconcile(this.resourcePeer!, style, overlays.overlays, desiredImages, {
+        const result = await this.resources.reconcile(this.resourcePeer!, style, overlaySnapshot, desiredImages, {
             isCurrent: current,
             beforeMutation: () => { check(); imageUpdate!.beforeNativeMutation(); check(); },
             // Release the native lease before callback-queued work runs, not after this await.
@@ -194,7 +237,7 @@ export class MapOwnedFeatures {
         const layerIds = this.resourcePeer!.layerIds(); check();
         this.cache = desired; this.hasResources = hasResources;
         imageUpdate.commit(); check();
-        this.committedResources = { map, style, overlays: overlays.overlays, images: desiredImages, layerIds };
+        this.committedResources = { map, style, overlays: overlaySnapshot, images: desiredImages, layerIds };
       }
       if (hasOverrides || this.hasOverrides) {
         if (typeof map.getPaintProperty !== 'function' || typeof map.getLayoutProperty !== 'function' ||
@@ -205,7 +248,9 @@ export class MapOwnedFeatures {
         this.overriding = true;
         const result = (() => {
           try {
-            return owner.reconcile(this.overridePeer!, style, overrides, {
+            const targets = expandMapStyleOverrides(overrides, context.styleLayers?.() ?? []);
+            if (!targets) failed();
+            return owner.reconcile(this.overridePeer!, style, targets, {
               isOwned: id => this.resources.ownsLayer(id) || context.isGeneratedLayer(id),
               resolve: (value, detail) => context.resolve(value, detail.property),
             });

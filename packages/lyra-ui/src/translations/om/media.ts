@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Fiixee kana sochoosuuf furtuuwwan xiyyaa fayyadami; tarkaanfiiwwan guguddaaf Shift qabii turi. Page Up fi Page Down fiixeewwan filatu. Home fi End fiixee jalqabaa fi isa dhumaa mul’atu filatu.',
   panoramaInstructions: 'Naannoo ilaaluuf furtuuwwan xiyyaa, guddisuuf fi xiqqeessuuf ida\'uu fi hir\'isuu, ilaalcha deebisuuf Home fayyadami.',
   panoramaHotspotsLabel: 'Bakkeewwan walqunnamtii paanoraamaa',
+  mapActivate: 'Kaartaa walqunnamsiisaa agarsiisi',
+  mapDrawingLength: 'Dheerina {value}',
+  mapDrawingArea: 'Bal’ina {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('om', strings);

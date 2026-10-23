@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'ഈ ശീർഷബിന്ദു നീക്കാൻ അമ്പടയാള കീകൾ ഉപയോഗിക്കുക; വലിയ ചുവടുകൾക്ക് Shift അമർത്തിപ്പിടിക്കുക. Page Up, Page Down എന്നിവ ശീർഷബിന്ദുക്കൾ തിരഞ്ഞെടുക്കും. Home, End എന്നിവ ആദ്യം കാണുന്നതും അവസാനം കാണുന്നതുമായ ശീർഷബിന്ദുക്കൾ തിരഞ്ഞെടുക്കും.',
   panoramaInstructions: 'ചുറ്റും നോക്കാൻ അമ്പടയാള കീകളും സൂം ചെയ്യാൻ പ്ലസ്, മൈനസ് എന്നിവയും കാഴ്ച പുനഃസജ്ജമാക്കാൻ Home-ഉം ഉപയോഗിക്കുക.',
   panoramaHotspotsLabel: 'പനോരമയിലെ സംവേദനാത്മക സ്ഥാനങ്ങൾ',
+  mapActivate: 'ഇന്ററാക്ടീവ് മാപ്പ് കാണിക്കുക',
+  mapDrawingLength: 'നീളം {value}',
+  mapDrawingArea: 'വിസ്തീർണ്ണം {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('ml', strings);

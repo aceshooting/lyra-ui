@@ -781,6 +781,13 @@ export type {
   LyraMapFeatureStateValue,
   LyraMapFeatureValue,
   LyraMapGeolocationErrorCode,
+  LyraMapGeolocateDetail,
+  LyraMapPointerDetail,
+  LyraMapFeature,
+  LyraMapStyleLayerSelector,
+  LyraMapStyleLayer,
+  LyraMapStyleSource,
+  LyraMapDrawingVertexEndDetail,
 } from './components/media/map/map.class.js';
 export { LyraMapImageExportError } from './components/media/map/map-image-export.js';
 export { LYRA_MAP_EMPTY_STYLE } from './components/media/map/map-empty-style.js';

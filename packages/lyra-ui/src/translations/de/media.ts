@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Verschieben Sie diesen Stützpunkt mit den Pfeiltasten; halten Sie für größere Schritte die Umschalttaste gedrückt. Mit Bild auf und Bild ab wählen Sie Stützpunkte aus. Mit Pos1 und Ende wählen Sie den ersten und letzten sichtbaren Stützpunkt aus.',
   panoramaInstructions: 'Verwenden Sie die Pfeiltasten zum Umsehen, Plus und Minus zum Zoomen und Pos1 zum Zurücksetzen der Ansicht.',
   panoramaHotspotsLabel: 'Interaktive Punkte im Panorama',
+  mapActivate: 'Interaktive Karte anzeigen',
+  mapDrawingLength: 'Länge {value}',
+  mapDrawingArea: 'Fläche {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('de', strings);

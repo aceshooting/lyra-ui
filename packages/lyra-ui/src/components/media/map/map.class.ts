@@ -22,7 +22,7 @@ import { litDevWarnings } from '../../../internal/dev-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { DEFAULT_CANVAS_COLOR, resolveCanvasColor } from '../../../internal/canvas-color.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteDuration, finiteRange } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
@@ -54,10 +54,11 @@ import type { MapFeatureStateRoutes } from './map-feature-state-routes.js';
 import type { LyraMapFeatureState, MapFeatureStatePeer } from './map-feature-state.js';
 export type { LyraMapFeatureState, LyraMapFeatureStateValue, LyraMapFeatureIdentifier } from './map-feature-state.js';
 export type { LyraMapFeatureOrigin, LyraMapFeatureStateTarget, LyraMapResolvedFeatureStateTarget } from './map-feature-state-router.js';
-import type { MapDrawingError, LyraMapDrawingSnapshot, LyraMapDrawingMode, LyraMapDrawingCancelReason, LyraMapDrawingCancelDetail } from './map-drawing.js';
+import type { MapDrawingError, LyraMapDrawingSnapshot, LyraMapDrawingMode, LyraMapDrawingCancelReason, LyraMapDrawingCancelDetail,
+  LyraMapDrawingVertexEndDetail } from './map-drawing.js';
 import type { MapDrawingController, MapDrawingHost } from './map-drawing-controller.js';
 export type { LyraMapDrawingSnapshot, LyraMapDrawingMetrics, LyraMapDrawingMode, LyraMapDrawingPoint, LyraMapDrawingCancelReason,
-  LyraMapDrawingCancelDetail } from './map-drawing.js';
+  LyraMapDrawingCancelDetail, LyraMapDrawingVertexEndDetail } from './map-drawing.js';
 const DRAW_MODE = literalSetConverter<LyraMapDrawingMode>(['none', 'line', 'polygon'], 'none');
 /** URL fragment form that `hash` reads and writes: a `key=` field, or the engine's unnamed token. */
 export type LyraMapHashFormat = 'named' | 'unnamed';
@@ -94,8 +95,10 @@ function ownedFeaturesRequested(overlays: unknown, images: unknown, styleOverrid
 }
 import { MapCursorOwner } from './map-cursor.js';
 import { mapCoordinates, mapOwnValue, renderedSizeKey } from './map-readers.js';
-import { projectMapInteractionOptions, projectMapBasemapInteractions, type LyraMapInteractionOptions, type LyraMapBasemapInteraction, type CanonicalMapInteraction } from './map-interaction-options.js';
-export type { LyraMapInteractionOptions, LyraMapBasemapInteraction } from './map-interaction-options.js';
+import { projectMapInteractionOptions, projectMapBasemapInteractions, expandMapStyleLayerTargets, type LyraMapInteractionOptions,
+  type LyraMapBasemapInteraction, type CanonicalMapInteraction, type LyraMapStyleLayer, type LyraMapStyleSource } from './map-interaction-options.js';
+export type { LyraMapInteractionOptions, LyraMapBasemapInteraction, LyraMapStyleLayerSelector, LyraMapStyleLayer,
+  LyraMapStyleSource } from './map-interaction-options.js';
 import type { MapHashOwner } from './map-hash-owner.js';
 import type { MapHashCamera } from './map-hash.js';
 import { MAP_HASH_UNNAMED } from './map-hash-option.js';
@@ -173,7 +176,7 @@ import {
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_mapActivate, LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingArea, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingLength, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapSquareKilometers, LYRA_DEFAULT_mapSquareMeters, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -1910,6 +1913,13 @@ function setPopupContent(popup: MapLibrePopupCapability, marker: CanonicalMapMar
  */
 export interface LyraMapGeolocateErrorDetail { readonly code: LyraMapGeolocationErrorCode; }
 export interface LyraMapGeolocateOutOfBoundsDetail { readonly code: 'out-of-bounds'; }
+/** Detail of `lr-map-geolocate`: the position the user-activated geolocate control located. */
+export interface LyraMapGeolocateDetail {
+  /** `[longitude, latitude]` reported by the browser. */
+  readonly lngLat: readonly [number, number];
+  /** Radius of uncertainty in metres, as the browser reports it. */
+  readonly accuracy: number;
+}
 
 export interface LyraMapControls {
   readonly navigation?: boolean | LyraMapNavigationControlOptions;
@@ -2261,6 +2271,15 @@ const BASIC_MAP_PAINT_COLOR_NAMES = new Set([
  * numeric rgb() but not modern color()/oklch()/color-mix(), even when the browser computes them.
  * Preserve already-supported layer-paint strings, and only pay for the DOM probe when needed.
  */
+/** Paint strings the engine cannot parse itself: theme tokens, `currentColor` and CSS Color 4/5
+ *  functions. They resolve against the host, so they follow its theme. */
+const THEME_PAINT_COLOR = /^\s*(?:var\(|currentcolor\s*$|(?:color-mix|color|oklch|oklab|lch|lab|hwb|light-dark)\()/iu;
+/** Author token for the temporary drawing's color; the accent tone when unset. */
+const DRAWING_COLOR_TOKEN = '--lr-map-drawing-color';
+const EMPTY_STYLE_LAYERS: readonly LyraMapStyleLayer[] = Object.freeze([]);
+const EMPTY_STYLE_SOURCES: readonly LyraMapStyleSource[] = Object.freeze([]);
+/** Any theme-dependent color inside serialized overlay paint. */
+const OVERLAY_THEME_PAINT = /\x22\s*(?:var\(|currentcolor\s*\x22|(?:color-mix|color|oklch|oklab|lch|lab|hwb|light-dark)\()/iu;
 const paintColorCache = new WeakMap<Element, Map<string, string | undefined>>();
 function resolvedMapPaintColor(host: Element, color: string | undefined, preserveLegacy: boolean): string | undefined {
   let cache = paintColorCache.get(host);
@@ -2469,6 +2488,56 @@ export interface LyraMapFeatureHit {
 export interface LyraMapInteractionDetail {
   readonly lngLat: readonly [number, number];
   readonly hit?: LyraMapFeatureHit;
+  /** The hit as a detached, deeply frozen GeoJSON feature: `id`, `properties` (as in `hit`) and its
+   *  geometry in `[longitude, latitude]`. Rendered geometry comes from the engine's tiles, so a
+   *  large feature may be clipped to the tiles around the pointer; `geometry` is `null` past
+   *  100,000 coordinate values. Present whenever `hit` is. */
+  readonly feature?: LyraMapFeature;
+}
+/** A detached GeoJSON feature reported by hover, context-menu and pick events. */
+export type LyraMapFeature = Readonly<Feature>;
+/** Detail of `lr-map-pointer-move`. Frozen. */
+export interface LyraMapPointerDetail {
+  /** `[longitude, latitude]` under the pointer, longitude wrapped into `[-180, 180]`. */
+  readonly lngLat: readonly [number, number];
+  /** The pointer position in the map's container, `[x, y]` CSS pixels (see `project()`). */
+  readonly point: LyraMapPoint;
+}
+const MAX_FEATURE_COORDINATES = 100_000;
+const GEOMETRY_TYPES = new Set(['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon']);
+/** A frozen copy of a peer geometry, or `null` when it is not usable GeoJSON or too large. */
+function detachedGeometry(geometry: unknown): Feature['geometry'] | null {
+  let budget = MAX_FEATURE_COORDINATES;
+  const positions = (value: unknown, depth: number): unknown => {
+    if (!Array.isArray(value)) throw new TypeError('geometry');
+    if (depth === 0) {
+      if (value.length < 2 || value.length > 4 || (budget -= value.length) < 0) throw new TypeError('geometry');
+      return Object.freeze(value.map(entry => {
+        if (typeof entry !== 'number' || !Number.isFinite(entry)) throw new TypeError('geometry');
+        return entry;
+      }));
+    }
+    return Object.freeze(value.map(entry => positions(entry, depth - 1)));
+  };
+  const one = (value: unknown, nested: boolean): Feature['geometry'] => {
+    const type = mapOwnValue(value, 'type') ?? (value as { type?: unknown } | null)?.type;
+    if (type === 'GeometryCollection' && !nested) {
+      const members = (value as { geometries?: unknown }).geometries;
+      if (!Array.isArray(members)) throw new TypeError('geometry');
+      return Object.freeze({ type, geometries: Object.freeze(members.map(member => one(member, true))) }) as Feature['geometry'];
+    }
+    if (typeof type !== 'string' || !GEOMETRY_TYPES.has(type)) throw new TypeError('geometry');
+    const depth = type === 'Point' ? 0 : type === 'MultiPoint' || type === 'LineString' ? 1
+      : type === 'MultiPolygon' ? 3 : 2;
+    return Object.freeze({ type, coordinates: positions((value as { coordinates?: unknown }).coordinates, depth) }) as Feature['geometry'];
+  };
+  try { return one(geometry, false); } catch { return null; }
+}
+function detachedMapFeature(raw: unknown, hit: LyraMapFeatureHit): LyraMapFeature {
+  let geometry: unknown;
+  try { geometry = (raw as { geometry?: unknown } | null)?.geometry; } catch { geometry = undefined; }
+  return Object.freeze({ type: 'Feature', ...(hit.id === undefined ? {} : { id: hit.id }), properties: hit.properties,
+    geometry: detachedGeometry(geometry) }) as LyraMapFeature;
 }
 export interface LyraMapPickDetail extends LyraMapInteractionDetail {
   readonly trigger: 'pointer' | 'keyboard';
@@ -2505,11 +2574,15 @@ export interface LyraMapEventMap {
   'lr-map-draw-change': CustomEvent<LyraMapDrawingSnapshot>;
   'lr-map-draw-complete': CustomEvent<LyraMapDrawingSnapshot>;
   'lr-map-draw-cancel': CustomEvent<LyraMapDrawingCancelDetail>;
+  'lr-map-draw-vertex-end': CustomEvent<LyraMapDrawingVertexEndDetail>;
   'lr-map-feature-enter': CustomEvent<LyraMapInteractionDetail>;
   'lr-map-feature-leave': CustomEvent<LyraMapInteractionDetail>;
+  'lr-map-pointer-move': CustomEvent<LyraMapPointerDetail>;
+  'lr-map-pointer-leave': CustomEvent<null>;
   'lr-map-contextmenu': CustomEvent<LyraMapInteractionDetail>;
   'lr-map-pick': CustomEvent<LyraMapPickDetail>;
   'lr-map-load': CustomEvent<null>;
+  'lr-map-geolocate': CustomEvent<LyraMapGeolocateDetail>;
   'lr-map-geolocate-error': CustomEvent<LyraMapGeolocateErrorDetail>;
   'lr-map-geolocate-out-of-bounds': CustomEvent<LyraMapGeolocateOutOfBoundsDetail>;
   'lr-map-export-error': CustomEvent<LyraMapImageExportErrorDetail>;
@@ -2582,12 +2655,18 @@ export interface LyraMapEventMap {
  *
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
+ * @event lr-map-geolocate - `detail: { lngLat, accuracy }` (`LyraMapGeolocateDetail`). Fired each time
+ *   the user-activated geolocate control locates the user (including position updates while it
+ *   tracks), after the browser granted access. Never fired without that user activation.
  * @event lr-map-geolocate-error - `detail: { code }` (`LyraMapGeolocateErrorDetail`). Location
  *   permission, availability or timeout failure; no location or native error message is exposed.
  * @event lr-map-geolocate-out-of-bounds - `detail: { code: 'out-of-bounds' }`. A user-activated
  *   location lies outside maxBounds; no coordinates are exposed.
  * @event lr-map-export-error - `detail: { code }` (`LyraMapImageExportErrorDetail`). Frozen sanitized export failure.
- * @csspart initialization-placeholder - Stable noninteractive surface before native construction.
+ * @csspart initialization-placeholder - Stable surface before native construction. It is
+ *   noninteractive except for `initialization-activate`.
+ * @csspart initialization-activate - Localized button covering an `initialization="interaction"`
+ *   placeholder until the first input builds the map.
  * @csspart initialization-control - Decorative outline of a requested native control before construction.
  * @event lr-map-style-load - `detail: { generation }` (`LyraMapReadinessDetail`). Fired once per
  *   connection/style after generated and registered overlays, images, style overrides and their
@@ -2617,16 +2696,23 @@ export interface LyraMapEventMap {
  * @event lr-map-marker-activate - Fired once when an accepted declarative marker is activated by
  *   pointer/click or by Enter/Space. The immutable detail carries its normalized `id`, validated
  *   `lngLat`, accepted marker snapshot, and activation `source`.
- * @event lr-map-feature-enter - Pointer entered a different admitted feature (anonymous hits start a fresh transition on every pointer query); frozen `detail: { lngLat, hit }`.
- * @event lr-map-feature-leave - Pointer left its previous admitted feature; frozen `detail: { lngLat, hit }`.
- * @event lr-map-contextmenu - Frozen `detail: { lngLat, hit? }`; does not prevent the native context menu.
- * @event lr-map-pick - Pick mode selection, `detail: { lngLat, hit?, trigger }`. Pointer picks replace ordinary click dispatch; keyboard picks use the current camera center.
+ * @event lr-map-feature-enter - Pointer entered a different admitted feature (anonymous hits start a fresh transition on every pointer query); frozen `detail: { lngLat, hit, feature }`, where `feature` is the hit as a detached GeoJSON feature with its geometry.
+ * @event lr-map-feature-leave - Pointer left its previous admitted feature; frozen `detail: { lngLat, hit, feature }`, the detail its enter carried.
+ * @event lr-map-pointer-move - Fired at most once per animation frame while a mouse pointer moves over the map, whatever lies under it, carrying the frozen `detail: { lngLat, point }` (`LyraMapPointerDetail`): the coordinate and the container position, for tooltips and coordinate read-outs. Not fired while the map is inert or disabled.
+ * @event lr-map-pointer-leave - The pointer left the map after an `lr-map-pointer-move`; `detail` is `null`.
+ * @event lr-map-contextmenu - Frozen `detail: { lngLat, hit?, feature? }`; does not prevent the native context menu.
+ * @event lr-map-pick - Pick mode selection, `detail: { lngLat, hit?, feature?, trigger }`. Pointer picks replace ordinary click dispatch; keyboard picks use the current camera center.
  * @event lr-map-anchor-close - Frozen `detail: { reason }` after an actually open anchor closes by API, close action or Escape.
  * @csspart anchor-close - Optional localized anchor close button.
  * @event lr-map-draw-start - Frozen drawing snapshot after the first accepted vertex, before change.
  * @event lr-map-draw-change - Frozen drawing snapshot after an accepted vertex, undo or vertex edit; explicit completed edits include recomputed geometry and spherical metrics.
  * @event lr-map-draw-complete - Frozen valid geometry and spherical metrics; temporary drawing clears after dispatch.
  * @event lr-map-draw-cancel - Frozen cancelled snapshot with a stable reason; mode and temporary state are cleared.
+ * @event lr-map-draw-vertex-end - Frozen snapshot plus the moved vertex `index` (`LyraMapDrawingVertexEndDetail`) once a vertex drag that moved the vertex is released, and after each keyboard vertex move: the point to recompute anything derived from the shape, where `lr-map-draw-change` fires for every intermediate position.
+ * @csspart drawing-measurements - Decorative layer holding the on-map measurement labels of `drawingMeasurements`.
+ * @csspart drawing-measurement - One measurement label; `data-kind` is `segment`, `closing`, `area` or `length`.
+ * @csspart drawing-summary - Localized total length (line) or area (polygon) beside the vertex count while `drawingMeasurements` is set.
+ * @cssprop [--lr-map-drawing-color=var(--lr-color-brand)] - Color of the temporary drawing, its rubber band and vertex handles. Read from the resolved cascade, so a theme change repaints it.
  * @csspart drawing-controls - Wrapping keyboard-accessible drawing actions.
  * @csspart drawing-add - Add the current map center as a vertex.
  * @csspart drawing-undo - Remove the last vertex.
@@ -2782,16 +2868,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     legendTypeShown: LYRA_DEFAULT_legendTypeShown,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
+    mapActivate: LYRA_DEFAULT_mapActivate,
     mapCancelDrawing: LYRA_DEFAULT_mapCancelDrawing,
     mapCancelPick: LYRA_DEFAULT_mapCancelPick,
     mapCompleteDrawing: LYRA_DEFAULT_mapCompleteDrawing,
     mapControlUnavailable: LYRA_DEFAULT_mapControlUnavailable,
     mapDrawAtCenter: LYRA_DEFAULT_mapDrawAtCenter,
+    mapDrawingArea: LYRA_DEFAULT_mapDrawingArea,
     mapDrawingControls: LYRA_DEFAULT_mapDrawingControls,
     mapDrawingDuplicateVertex: LYRA_DEFAULT_mapDrawingDuplicateVertex,
     mapDrawingEditInstructions: LYRA_DEFAULT_mapDrawingEditInstructions,
     mapDrawingInvalidCoordinate: LYRA_DEFAULT_mapDrawingInvalidCoordinate,
     mapDrawingInvalidGeometry: LYRA_DEFAULT_mapDrawingInvalidGeometry,
+    mapDrawingLength: LYRA_DEFAULT_mapDrawingLength,
     mapDrawingTooFewVertices: LYRA_DEFAULT_mapDrawingTooFewVertices,
     mapDrawingUnavailable: LYRA_DEFAULT_mapDrawingUnavailable,
     mapDrawingVertex: LYRA_DEFAULT_mapDrawingVertex,
@@ -2820,6 +2909,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     mapScaleMeters: LYRA_DEFAULT_mapScaleMeters,
     mapScaleMiles: LYRA_DEFAULT_mapScaleMiles,
     mapScaleNauticalMiles: LYRA_DEFAULT_mapScaleNauticalMiles,
+    mapSquareKilometers: LYRA_DEFAULT_mapSquareKilometers,
+    mapSquareMeters: LYRA_DEFAULT_mapSquareMeters,
     mapStyleRequired: LYRA_DEFAULT_mapStyleRequired,
     mapToggleAttribution: LYRA_DEFAULT_mapToggleAttribution,
     mapUndoDrawing: LYRA_DEFAULT_mapUndoDrawing,
@@ -2841,15 +2932,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     'lr-map-click',
     'lr-map-feature-enter',
     'lr-map-feature-leave',
+    'lr-map-pointer-move',
     'lr-map-contextmenu',
     'lr-map-pick',
     'lr-map-anchor-close',
-    'lr-map-draw-start', 'lr-map-draw-change', 'lr-map-draw-complete', 'lr-map-draw-cancel',
+    'lr-map-draw-start', 'lr-map-draw-change', 'lr-map-draw-complete', 'lr-map-draw-cancel', 'lr-map-draw-vertex-end',
     'lr-map-legend-panel-toggle-request',
     'lr-map-legend-toggle-request',
     'lr-map-marker-activate',
     'lr-map-move',
     'lr-map-export-error',
+    'lr-map-geolocate',
     'lr-map-style-load',
     'lr-map-idle',
     'lr-map-view-change',
@@ -2859,6 +2952,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    *  `unsafeHtml` value therefore reaches both Popup and activation consumers by identity. */
   protected static override readonly identityEventDetailProperties = Object.freeze({
     'lr-map-click': Object.freeze(['feature']),
+    // Already a bounded, deeply frozen copy; walking a large geometry again would be wasted work.
+    'lr-map-feature-enter': Object.freeze(['feature']),
+    'lr-map-feature-leave': Object.freeze(['feature']),
+    'lr-map-contextmenu': Object.freeze(['feature']),
+    'lr-map-pick': Object.freeze(['feature']),
     'lr-map-marker-activate': Object.freeze(['marker']),
   });
 
@@ -2904,8 +3002,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!this.syncPaintTheme()) return;
       this.refreshThemePaint();
       // Overrides are applied only after their runtime loaded; a pending reconcile reads the new theme.
-      if (loadMapOwnedFeatureRuntime.loaded?.projectMapStyleOverrides(this.styleOverrides)?.length && this._styleLoaded) void this.reconcileGeneratedLayers();
+      if ((loadMapOwnedFeatureRuntime.loaded?.projectMapStyleOverrides(this.styleOverrides)?.length || this.overlayThemePaint) && this._styleLoaded) void this.reconcileGeneratedLayers();
       this.legendIsLine = this.legendDescribesLine();
+      this.drawingController?.repaint();
     });
     new GlassScrollLayer(this, '[part="legend"]');
   }
@@ -3210,9 +3309,32 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false }) anchorSafeArea?: LyraMapAnchorSafeArea;
   /** Adds a localized close action and nonmodal Escape ownership. Opening never moves focus. */
   @property({ type: Boolean, attribute: 'anchor-closable' }) anchorClosable = false;
-  /** Defers native construction until visible (default), browser idle time, or immediate admission.
-   * Changing this before construction reschedules admission; a live map is retained. */
+  /** Defers native construction until visible (default), browser idle time (`idle`), immediate
+   * admission (`eager`), or the first user input on the element (`interaction`): a pointer press,
+   * touch, wheel, key press or click anywhere on it. Until then an `interaction` map shows its
+   * placeholder with a localized `initialization-activate` button, so keyboard and assistive
+   * technology users can start it too; focus moves to the map once it has been built from that
+   * button. `whenIdle()` and `whenStyleReady()` wait for construction, so they settle only after
+   * that input (or `initializationDelay`). Changing this before construction reschedules
+   * admission; a live map is retained. */
   @property() initialization: LyraMapInitialization = 'visible';
+  /** With `initialization="interaction"`, also constructs the map this many milliseconds after it
+   * connected when no input arrived first. Unset (default) waits for input only; other modes ignore
+   * it. A negative or non-finite value counts as unset. */
+  @property({ type: Number, attribute: 'initialization-delay' }) initializationDelay?: number;
+  private get safeInitializationDelay(): number | undefined {
+    const delay = this.initializationDelay;
+    return typeof delay === 'number' && Number.isFinite(delay) && delay >= 0 ? finiteDuration(delay, 0) : undefined;
+  }
+  private get initializationMode(): LyraMapInitialization {
+    const mode = this.initialization;
+    return mode === 'idle' || mode === 'eager' || mode === 'interaction' ? mode : 'visible';
+  }
+  /** An `interaction` map waiting for its first input, with its activation button rendered. */
+  private get awaitingActivation(): boolean {
+    return this.initializationMode === 'interaction' && !this._map && !this.failure && !this.loading &&
+      this.constructionScheduler?.constructed !== true;
+  }
 
   private _mapStyle?: Readonly<LyraMapStyleSpecification> | string;
   private _mapStyleSource?: Readonly<LyraMapStyleSpecification> | string;
@@ -3585,9 +3707,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * retained object is not observed, and `updateSourceData()` forwards an incremental diff.
    * IDs must not collide with basemap/generated resources. Images, sources and layers replay in
    * dependency order after style changes; before targets refer to native layer IDs. A missing
-   * target appends the layer.
-   * Hits skip a layer outside its zoom range, hidden, or with every opacity known to be `0`.
-   * Direct mutation of registered peer IDs is unsupported. */
+   * target appends the layer. Hits skip a layer outside its zoom range, hidden, or with every
+   * opacity known to be `0`. Direct mutation of registered peer IDs is unsupported.
+   *
+   * A layer's `source` may name a source of the basemap style itself (for example its vector
+   * tiles, with a `source-layer`), so an application can restyle or highlight basemap features
+   * without registering a copy of that source; the layer is restored after every style change
+   * that still defines the source. Color-valued `paint` strings may be theme tokens (`var(--…)`),
+   * `currentColor` or CSS color functions (`oklch()`, `color-mix()`, …): they resolve against this
+   * host, convert to sRGB for the engine, and re-resolve when its theme changes. */
   @property({ attribute: false }) overlays: LyraMapOverlays = {};
 
   /** Immutable portable atlas images, prepared before registered symbol layers. Up to 1,024 stable
@@ -3611,10 +3739,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * for the provider before laying out the symbols that need the image, so `whenIdle()` covers it. */
   @property({ attribute: false }) imageProvider?: LyraMapImageProvider;
 
-  /** Immutable paint/layout overrides for existing basemap layer IDs only. Generated and
-   * registered layers own their own paint. Removing an override restores its original value;
-   * changing mapStyle captures a new baseline. Color-valued CSS var() strings resolve against
-   * this host and update with its theme. Up to 64 layers and 32 properties per kind are admitted. */
+  /** Immutable paint/layout overrides for existing basemap layers only. Each entry names one layer
+   * by `layerId`, or selects every current style layer whose `source`, `sourceLayer` and
+   * `layerType` match the fields it gives; an explicit id wins over a selector, and an earlier
+   * selector over a later one, and selectors re-match after each style swap (`styleLayers` lists
+   * the candidates). Generated and registered layers own their own paint. Removing an override
+   * restores its original value; changing mapStyle captures a new baseline. Color-valued strings
+   * that are CSS var() tokens, currentColor or CSS color functions resolve against this host and
+   * update with its theme. Up to 64 entries and 32 properties per kind are admitted, and a
+   * selector may expand to at most 1,024 layers in total. */
   @property({ attribute: false }) styleOverrides: readonly LyraMapStyleOverride[] = [];
 
 
@@ -3685,6 +3818,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private visible = false;
   private constructionScheduler?: MapConstructionScheduler;
   private constructionMode: LyraMapInitialization = 'visible';
+  private constructionDelay?: number;
 
 
   @query('[part="container"]') private containerEl?: HTMLElement;
@@ -3788,7 +3922,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private readonly appliedGeoLabels = new Map<string, string>();
   private readonly peerEvents = new MapEngineEvents();
   private optionalFeatureWorkStarted = false;
-  /** Explicit basemap layer opt-in; all other basemap features remain noninteractive. */
+  /** Explicit basemap layer opt-in; all other basemap features remain noninteractive. Each entry
+   * names one layer by `layerId`, or selects every current style layer whose `source`,
+   * `sourceLayer` and `layerType` match the fields it gives (for example
+   * `{ sourceLayer: 'poi', layerType: 'symbol' }`); an explicit id wins over a selector, and an
+   * earlier selector over a later one. Selectors re-match after each style swap; `styleLayers`
+   * lists what they match against. */
   @property({ attribute: false }) interactiveBasemapLayers: readonly LyraMapBasemapInteraction[] = [];
   /** Pick coordinates by clicking the map or using the localized center-pick button. */
   @property({ type: Boolean, attribute: 'pick-mode' }) pickMode = false;
@@ -3799,6 +3938,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * Arming loads the drawing runtime on demand: the controls render at once, and the session starts
    * once that runtime has loaded and the style is ready. whenIdle() also covers that load. */
   @property({ attribute: 'draw-mode', converter: DRAW_MODE }) drawMode: LyraMapDrawingMode = 'none';
+  /** Shows localized on-map measurement labels while drawing or editing: each segment's length,
+   * a polygon's closing segment and its area at the centroid, and a line's total length beside its
+   * last vertex. Lengths and areas are great-circle measurements, as in the drawing metrics,
+   * formatted in metric units with the component locale. The same total also appears, for
+   * assistive technology, beside the vertex count. Default `false`. */
+  @property({ type: Boolean, attribute: 'drawing-measurements', reflect: true }) drawingMeasurements = false;
   @state() private drawingIssue?: keyof typeof MAP_DRAWING_MESSAGE;
   /** Bumped whenever a rendered value owned by the drawing controller changes. */
   @state() private drawingRevision = 0;
@@ -4406,6 +4551,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (!current()) return;
         if (event.kind === 'geolocate-success') {
           if (this.pendingControlIssue !== 'mapControlUnavailable') this.setControlIssue(undefined);
+          if (event.lngLat && event.accuracy !== undefined) {
+            this.emit('lr-map-geolocate', { lngLat: event.lngLat, accuracy: event.accuracy } satisfies LyraMapGeolocateDetail);
+          }
           return;
         }
         const issue = event.kind === 'geolocate-out-of-bounds' ? 'mapGeolocateOutOfBounds'
@@ -4835,14 +4983,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const scheduler = createMapConstructionScheduler(this, () => {
       if (!this.isConnected || this._connectGeneration !== generation || this.constructionScheduler !== scheduler) return;
       this.visible = true;
+      const activator = this.shadowRoot?.activeElement?.matches?.('[part="initialization-activate"]') === true;
       this.tryConstructMap();
+      // The activation button is about to disappear; hand its focus to the map region it started.
+      if (activator && this._map) { try { this._map.getCanvas()?.focus?.({ preventScroll: true }); } catch { /* Focus stays put. */ } }
       this.scheduleAfterUpdate(() => {
         if (this.isConnected && this._connectGeneration === generation && this.constructionScheduler === scheduler) this.requestUpdate();
       }, `map-construction-${generation}`);
     });
     this.constructionScheduler = scheduler;
-    this.constructionMode = this.initialization === 'idle' || this.initialization === 'eager' ? this.initialization : 'visible';
-    scheduler.connect(this.constructionMode);
+    this.constructionMode = this.initializationMode;
+    this.constructionDelay = this.safeInitializationDelay;
+    scheduler.connect(this.constructionMode, this.constructionDelay);
     // A reconnect is a new, owner-realm initialization transaction.
     this.failure = undefined;
     this.loading = true;
@@ -4971,7 +5123,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.cancelFeaturePreparation();
     this.pointerCleanup?.(); this.pointerCleanup = undefined;
     this.interactionObserver?.disconnect(); this.interactionObserver = undefined;
-    this.mapCursor.clear(); this.hovered = undefined;
+    this.mapCursor.clear(); this.hovered = undefined; this.endPointerReports(false);
     this.featureStates?.dispose(); this.featureStates = undefined; this.stateRouter.configure([]);
     if (this.featureStateLoad === 'failed') this.featureStateLoad = undefined;
     this.stateRequested = false; this.stateRoutes = []; this.interactions = []; this.sourceIdentities.clear(); this.featureStateIssue = false;
@@ -5001,6 +5153,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.cancelMoveReport();
     this.appliedPadding = ZERO_CAMERA_PADDING;
     this._styleLoaded = false;
+    this._styleLayers = EMPTY_STYLE_LAYERS; this._styleSources = EMPTY_STYLE_SOURCES;
     this.boxZoomSettling = false;
     this.reflectedCamera = undefined;
     this._appliedChoroplethSourceId = undefined;
@@ -5110,8 +5263,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       });
       this.peerEvents.subscribe(candidate, 'click', event => { if (this._map === candidate) this.handleMapInteraction('click', event); });
       this.peerEvents.subscribe(candidate, 'contextmenu', event => { if (this._map === candidate) this.handleMapInteraction('contextmenu', event); });
-      this.peerEvents.subscribe(candidate, 'mousemove', event => { if (this._map === candidate) this.handleMapInteraction('mousemove', event); });
-      this.peerEvents.subscribe(candidate, 'mouseout', () => { if (this._map === candidate) this.clearMapHover(); });
+      this.peerEvents.subscribe(candidate, 'mousemove', event => {
+        if (this._map !== candidate) return;
+        this.schedulePointerReport(candidate!, event);
+        this.drawingController?.preview(mapCoordinates(mapOwnValue(event, 'lngLat')));
+        this.handleMapInteraction('mousemove', event);
+      });
+      this.peerEvents.subscribe(candidate, 'mouseout', () => {
+        if (this._map === candidate) { this.clearMapHover(); this.endPointerReports(); this.drawingController?.preview(undefined); }
+      });
       this.peerEvents.subscribe(candidate, 'movestart', (event: Readonly<Record<string, unknown>> | undefined) => {
         if (this._map === candidate && event?.['originalEvent']) this.clusterZoomToken += 1;
       });
@@ -5222,6 +5382,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (started || !current()) return;
       started = true;
       this._styleLoaded = true;
+      this.captureStyleCatalog(map);
       this._appliedChoroplethSourceId = undefined;
       this._appliedFillLayerId = undefined;
       this.appliedChoroplethPaintKey = undefined;
@@ -5322,7 +5483,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // Arming again retries a drawing runtime whose import failed.
     if (valueChanged && args[0] === 'drawMode' && this.drawingLoad === 'failed') this.drawingLoad = undefined;
     if (valueChanged && args[0] === 'pickMode' && this.pickMode && (drawing || this.drawMode === 'line' || this.drawMode === 'polygon')) this.cancelMapDrawing('pick-mode');
-    if (valueChanged && args[0] === 'mapStyle' && (drawing || this.drawMode === 'line' || this.drawMode === 'polygon')) this.cancelMapDrawing('style-change');
     if (valueChanged && this.isUpdatePending && (args[0] === undefined || ['mapStyle', 'dataLayers', 'choropleth', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0])))) {
       this.interactionGeneration = (this.interactionGeneration ?? 0) + 1;
       this.featureStates?.cancel();
@@ -5352,7 +5512,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.cameraUpdatePending = false;
-    this.setAttribute('aria-busy', String(this.loading || (!this._map && !this.failure)));
+    this.setAttribute('aria-busy', String(this.loading || (!this._map && !this.failure && !this.awaitingActivation)));
     if (this.legendCollapsed && (changed.has('legendOpen') || changed.has('legendCollapsible'))) {
       // Reset before the sticky material measures the collapsed viewport. WebKit can otherwise
       // retain the previous offset as scrollable overflow even after the legend rows disappear.
@@ -5369,6 +5529,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `loadMaplibre().then()` chain in connectedCallback() above).
     if (changed.has('mapStyle')) {
       this.cancelImageExport();
+      this.drawingController?.styleChanging();
       this.drawingController?.cancelResources(true);
       this._styleGeneration += 1;
       this.cancelFeaturePreparation();
@@ -5383,6 +5544,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.tryConstructMap();
     } else if (changed.has('mapStyle') && this._map) {
       this._styleLoaded = false;
+      this._styleLayers = EMPTY_STYLE_LAYERS; this._styleSources = EMPTY_STYLE_SOURCES;
       const map = this._map;
       this.beginStyleReadiness(map, false, () => {
         for (const sourceId of this.appliedPointIcons.keys()) this.removePointIcons(sourceId);
@@ -5392,10 +5554,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       changed.has('overlays') || changed.has('images') || changed.has('styleOverrides') || changed.has('interactiveBasemapLayers'))) {
       void this.reconcileGeneratedLayers();
     }
-    const constructionMode = this.initialization === 'idle' || this.initialization === 'eager' ? this.initialization : 'visible';
-    if (changed.has('initialization') && constructionMode !== this.constructionMode) {
-      this.constructionMode = constructionMode;
-      this.constructionScheduler?.reconfigure(constructionMode);
+    const constructionMode = this.initializationMode, constructionDelay = this.safeInitializationDelay;
+    if ((changed.has('initialization') || changed.has('initializationDelay')) &&
+      (constructionMode !== this.constructionMode || (constructionMode === 'interaction' && constructionDelay !== this.constructionDelay))) {
+      this.constructionMode = constructionMode; this.constructionDelay = constructionDelay;
+      this.constructionScheduler?.reconfigure(constructionMode, constructionDelay);
     }
     this.constructionScheduler?.setReady(!!this.containerEl && this._webglReady && !!this._maplibreModule && hasMapStyle(this.mapStyle));
     if (changed.has('hiddenCategories') && this._map && this._styleLoaded) this.refreshThemePaint();
@@ -5405,6 +5568,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if ((changed.has('minZoom') || changed.has('maxZoom')) && this._map) this.applyZoomLimits();
     if (changed.has('imageProvider') && this._map) this.syncImageProvider();
     if (changed.has('controls') && this._map) this.syncControls();
+    if (changed.has('drawingMeasurements')) this.drawingController?.scheduleHandles();
     if (changed.has('pickMode') || changed.has('interactionBlocked')) { this.clearMapHover(); this.syncMapCursor(); }
     if (changed.has('hash') || changed.has('hashFormat')) { this.syncHash(); this.applyHash(); }
     if (this._map && (this.anchorSyncRequested || ['anchorLngLat', 'anchorBoundary', 'anchorSafeArea', 'anchorClosable', 'dir', 'strings', 'lang', 'locale'].some(name => changed.has(name)))) { this.anchorSyncRequested = false; this.syncAnchor(); }
@@ -5463,17 +5627,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private paintThemeKey?: string;
   private paintThemeSources?: readonly unknown[];
   private paintThemeTokens: string[] = [];
+  /** Whether admitted overlay paint names theme-dependent colors, re-resolved on theme change. */
+  private overlayThemePaint = false;
   private syncPaintTheme(): boolean {
     // The ownership runtime is part of the key: override tokens are discovered once it can admit them.
-    const sources = [this.dataLayers, this.choropleth, this.styleOverrides, loadMapOwnedFeatureRuntime.loaded];
+    const sources = [this.dataLayers, this.choropleth, this.styleOverrides, this.overlays, loadMapOwnedFeatureRuntime.loaded];
     if (!this.paintThemeSources || sources.some((source, index) => source !== this.paintThemeSources![index])) {
       this.paintThemeSources = sources;
       const tokens = new Set([...Object.values(TONE_TOKEN), ...Object.values(ON_TONE_TOKEN),
-        '--lr-map-choropleth-fill-opacity', '--lr-map-hidden-category-opacity']);
+        '--lr-map-choropleth-fill-opacity', '--lr-map-hidden-category-opacity', DRAWING_COLOR_TOKEN]);
       const inputs = JSON.stringify([this.canonicalDataLayers.map(({geojson: _geojson, geojsonProjection: _projection, ...paint}) => paint),
         [this.canonicalChoropleth?.stops, this.canonicalChoropleth?.stepBaseColor, this.canonicalChoropleth?.noData],
         loadMapOwnedFeatureRuntime.loaded?.projectMapStyleOverrides(this.styleOverrides),
         this._canonicalExternalLayers.map(({ source: _source, ...paint }) => paint)]);
+      const overlayPaint = loadMapOwnedFeatureRuntime.loaded?.overlayPaintText(this.overlays) ?? '';
+      this.overlayThemePaint = OVERLAY_THEME_PAINT.test(overlayPaint);
+      for (const match of overlayPaint.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
       for (const match of inputs.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
       this.paintThemeTokens = [...tokens];
     }
@@ -5622,6 +5791,50 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const token = Object.freeze({}); this.sourceIdentities.set(key, { data, shape, token }); return token;
   }
 
+  /** Explicit `interactiveBasemapLayers` ids, then every current style layer a selector matches. */
+  private basemapInteractionTargets(): readonly (CanonicalMapInteraction & { readonly layerId: string })[] | undefined {
+    const opted = projectMapBasemapInteractions(this.interactiveBasemapLayers);
+    if (!opted) return undefined;
+    return expandMapStyleLayerTargets(opted, this._styleLayers, entry => entry)
+      .map(({ layerId, entry }) => ({ layerId, interactive: entry.interactive, priority: entry.priority }));
+  }
+
+  private _styleLayers: readonly LyraMapStyleLayer[] = EMPTY_STYLE_LAYERS;
+  private _styleSources: readonly LyraMapStyleSource[] = EMPTY_STYLE_SOURCES;
+  /**
+   * The layers of the current `mapStyle` as the engine loaded it, in paint order, before this
+   * element added its own: `{ id, type, source?, sourceLayer? }`, frozen. Read it after
+   * `lr-map-style-load` (or `whenStyleReady()`) to discover basemap layers for
+   * `interactiveBasemapLayers`, `styleOverrides` or an overlay that targets a basemap source. Empty
+   * before the style has loaded; replaced on every style swap. At most 4,096 layers are listed.
+   */
+  get styleLayers(): readonly LyraMapStyleLayer[] { return this._styleLayers; }
+  /** The sources of the current `mapStyle`, `{ id, type }`, frozen, with the same timing as
+   *  `styleLayers`. At most 1,024 sources are listed. */
+  get styleSources(): readonly LyraMapStyleSource[] { return this._styleSources; }
+
+  /** Records the basemap catalog when a style becomes ready, before generated resources exist. */
+  private captureStyleCatalog(map: MapLibreMapCapability): void {
+    let layers: LyraMapStyleLayer[] = [], sources: LyraMapStyleSource[] = [];
+    try {
+      const style = map.getStyle?.();
+      const rawLayers = mapOwnValue(style, 'layers'), rawSources = mapOwnValue(style, 'sources');
+      if (Array.isArray(rawLayers)) for (const layer of rawLayers.slice(0, 4096)) {
+        const id = mapOwnValue(layer, 'id'), type = mapOwnValue(layer, 'type');
+        const source = mapOwnValue(layer, 'source'), sourceLayer = mapOwnValue(layer, 'source-layer');
+        if (typeof id !== 'string' || typeof type !== 'string') continue;
+        layers.push(Object.freeze({ id, type, ...(typeof source === 'string' ? { source } : {}),
+          ...(typeof sourceLayer === 'string' ? { sourceLayer } : {}) }));
+      }
+      if (isPlainDataRecord(rawSources)) for (const id of Object.keys(rawSources).slice(0, 1024)) {
+        const type = mapOwnValue(mapOwnValue(rawSources, id), 'type');
+        if (typeof type === 'string') sources.push(Object.freeze({ id, type }));
+      }
+    } catch { layers = []; sources = []; }
+    this._styleLayers = layers.length ? Object.freeze(layers) : EMPTY_STYLE_LAYERS;
+    this._styleSources = sources.length ? Object.freeze(sources) : EMPTY_STYLE_SOURCES;
+  }
+
   private mapStateDefinitions(owned: MapOwnedOverlaySnapshot): readonly MapFeatureStateRoute[] {
     const routes: MapFeatureStateRoute[] = [], map = this._map;
     this.stateRoutingAvailable = true;
@@ -5647,7 +5860,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         .map(row => row.layer['source-layer']).filter((value): value is string => typeof value === 'string'))].sort();
       if (type === 'geojson' || type === 'vector' && layers.length) add('overlay', source.id, source.id, ...sourceIdentity(source.source, layers), type === 'vector' ? layers : undefined);
     }
-    const opted = projectMapBasemapInteractions(this.interactiveBasemapLayers);
+    const opted = this.basemapInteractionTargets();
     if (opted?.length && this.stateRoutingAvailable) {
       const nativeOwned = new Set([...routes.map(route => route.nativeSource), ...owned.sources.map(source => source.id), ...this.externalSourceIds.values(), ...[...this.externalSourceIds.values()].map(id => `${id}-hit-source`), ...(this.drawingController?.sourceId ? [this.drawingController.sourceId] : [])]);
       const style = map.getStyle?.() ?? this.mapStyle;
@@ -5723,7 +5936,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const source = row.layer['source'], sourceLayer = row.layer['source-layer'];
       if (typeof source === 'string') add(row.layer.id, 'overlay', source, row, typeof sourceLayer === 'string' ? sourceLayer : undefined);
     }
-    const opted = projectMapBasemapInteractions(this.interactiveBasemapLayers);
+    const opted = this.basemapInteractionTargets();
     if (opted) for (const row of opted) {
       if (this.drawingController?.ownsLayer(row.layerId) === true || rules.some(rule => rule.layerId === row.layerId)) continue;
       const layer = map?.getLayer(row.layerId);
@@ -5779,6 +5992,39 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (this.interactionBlocked) { this.cancelMapDrawing('disabled'); this.clearMapHover(); this.anchorController?.hide(); } else { this.syncMapCursor(); this.scheduleAnchorSync(); }
     });
     for (let node: Element | null = this; node; node = flattenedParentElement(node)) this.interactionObserver.observe(node, { attributes: true, attributeFilter: ['inert', 'disabled'] });
+  }
+
+  private pointerFrame?: number;
+  private pendingPointer?: LyraMapPointerDetail;
+  /** An `lr-map-pointer-move` was reported since the last `lr-map-pointer-leave`. */
+  private pointerInside = false;
+
+  /** Queues one `lr-map-pointer-move` per animation frame, carrying the latest position. */
+  private schedulePointerReport(map: MapLibreMapCapability, event: unknown): void {
+    const lngLat = mapCoordinates(mapOwnValue(event, 'lngLat'));
+    const point = mapOwnValue(event, 'point');
+    const x = mapOwnValue(point, 'x'), y = mapOwnValue(point, 'y');
+    if (!lngLat || !isFiniteCoordinate(x) || !isFiniteCoordinate(y)) return;
+    this.pendingPointer = Object.freeze({ lngLat: Object.freeze([wrapLongitude(lngLat[0]), lngLat[1]] as const), point: Object.freeze([x, y] as const) });
+    if (this.pointerFrame !== undefined) return;
+    const report = (): void => {
+      this.pointerFrame = undefined;
+      const detail = this.pendingPointer; this.pendingPointer = undefined;
+      if (!detail || this._map !== map || !this.isConnected || this.mapInteractionBlocked()) return;
+      this.pointerInside = true;
+      this.emit('lr-map-pointer-move', detail);
+    };
+    const view = ownerWindow(this);
+    if (!view || typeof view.requestAnimationFrame !== 'function') { report(); return; }
+    this.pointerFrame = view.requestAnimationFrame(report);
+  }
+
+  /** Drops a queued pointer report and reports the leave of a pointer that was reported inside. */
+  private endPointerReports(emit = true): void {
+    if (this.pointerFrame !== undefined) ownerWindow(this)?.cancelAnimationFrame?.(this.pointerFrame);
+    this.pointerFrame = undefined; this.pendingPointer = undefined;
+    const inside = this.pointerInside; this.pointerInside = false;
+    if (inside && emit && this.isConnected) this.emit('lr-map-pointer-leave');
   }
 
   private clearMapHover(): void {
@@ -5880,6 +6126,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       afterUpdate: (callback, key) => { this.scheduleAfterUpdate(callback, key); },
       emit: (type: 'lr-map-draw-start' | 'lr-map-draw-change' | 'lr-map-draw-complete', state) => { this.emit(type, state); },
       emitCancel: detail => { this.emit('lr-map-draw-cancel', detail); },
+      emitVertexEnd: detail => { this.emit('lr-map-draw-vertex-end', detail); },
       showError: error => { this.showDrawingError(error); },
       clearError: () => { this.drawingIssue = undefined; },
       resetMode: () => { this.resetDrawingMode(); },
@@ -5890,7 +6137,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       check: () => { this.readiness.check(); },
       fail: () => { this.readiness.fail(); },
       direction: () => this.effectiveDirection,
-      accentColor: () => resolvedLayerColor(this, undefined, 'accent'),
+      accentColor: () => resolvedLayerColor(this, `var(${DRAWING_COLOR_TOKEN})`, 'accent'),
       resolve: (value, property) => this.resolveStyleOverride(value, property),
     };
   }
@@ -5959,17 +6206,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!current()) return;
     } finally { this.queryingMap = false; }
     if (!lngLat) return;
-    const detail: LyraMapInteractionDetail = Object.freeze({ lngLat, ...(hit ? { hit } : {}) });
+    // The detached feature is built only for a detail that is dispatched, never per pointer move.
+    const interaction = (): LyraMapInteractionDetail => Object.freeze({ lngLat, ...(hit ? { hit, feature: detachedMapFeature(raw, hit) } : {}) });
     if (kind === 'mousemove') {
       const key = hit ? JSON.stringify([hit.origin, hit.source, hit.sourceLayer ?? null, hit.layerId, hit.id === undefined ? ['anonymous', query] : ['id', hit.id]]) : undefined;
       if (key !== this.hovered?.key) {
         this.clearMapHover(); if (!current()) return;
-        if (hit && key) { this.hovered = { key, detail }; this.emit('lr-map-feature-enter', detail); }
+        if (hit && key) { const detail = interaction(); this.hovered = { key, detail }; this.emit('lr-map-feature-enter', detail); }
       }
       if (current()) this.syncMapCursor(); return;
     }
-    if (kind === 'contextmenu') { this.emit('lr-map-contextmenu', detail); return; }
-    if (this.pickMode) { this.emit('lr-map-pick', Object.freeze({ ...detail, trigger: 'pointer' } satisfies LyraMapPickDetail)); return; }
+    if (kind === 'contextmenu') { this.emit('lr-map-contextmenu', interaction()); return; }
+    if (this.pickMode) { this.emit('lr-map-pick', Object.freeze({ ...interaction(), trigger: 'pointer' } satisfies LyraMapPickDetail)); return; }
     const clickToken = ++this.clusterZoomToken;
     const origin = rule?.cluster ? 'cluster' : rule?.origin;
     const choropleth = this.canonicalChoropleth;
@@ -6128,6 +6376,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           isGeneratedLayer: id => this.externalFeatures?.ownsLayer(id) === true || id === this._appliedFillLayerId || [...this._appliedDataLayerIds.values()]
             .some(sourceId => DATA_LAYER_SUFFIXES.some(suffix => id === `${sourceId}${suffix}`)),
           resolve: (value, property) => this.resolveStyleOverride(value, property),
+          styleLayers: () => this._styleLayers,
         });
         if (external) {
           void (this.externalFeatures ??= new MapOwnedFeatures()).reconcile(map, styleGeneration, { overlays: { sources: externalInput.sources, layers: externalInput.layers }, images: [], styleOverrides: [] }, {
@@ -6199,8 +6448,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private resolveStyleOverride(value: LyraMapStyleValue, property: string): LyraMapStyleValue {
     if (!/(?:-color|-gradient)$/u.test(property)) return value;
     const resolve = (entry: LyraMapStyleValue): LyraMapStyleValue => {
-      if (typeof entry === 'string' && /^\s*var\(/u.test(entry)) {
-        const color = resolveCanvasColor(this, entry, '');
+      if (typeof entry === 'string' && THEME_PAINT_COLOR.test(entry)) {
+        // Engines parse only sRGB notations, so tokens and modern color functions resolve against
+        // this host and convert to sRGB; the theme watcher re-resolves them after a theme change.
+        const color = resolvedMapPaintColor(this, entry, true);
         if (!color) throw new Error('Map color could not be resolved.');
         return color;
       }
@@ -7472,6 +7723,34 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.syncPeerChromeParts();
   }
 
+  /** A metric distance in the component locale: metres below 1 km, kilometres above. */
+  private formatDistance(metres: number): string {
+    return metres < 1000
+      ? getNumberFormat(this.effectiveLocale, { style: 'unit', unit: 'meter', unitDisplay: 'short', maximumFractionDigits: 0 }).format(metres)
+      : getNumberFormat(this.effectiveLocale, { style: 'unit', unit: 'kilometer', unitDisplay: 'short', maximumFractionDigits: metres < 10_000 ? 2 : 1 }).format(metres / 1000);
+  }
+
+  /** A metric area in the component locale: square metres below 1 km², square kilometres above. */
+  private formatArea(squareMetres: number): string {
+    return squareMetres < 1_000_000
+      ? this.localize('mapSquareMeters', undefined, { value: getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0 }).format(squareMetres) })
+      : this.localize('mapSquareKilometers', undefined, { value: getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(squareMetres / 1_000_000) });
+  }
+
+  private drawingSummary(snapshot: LyraMapDrawingSnapshot | undefined): string | undefined {
+    if (!snapshot || snapshot.vertices.length < 2) return undefined;
+    const metrics = loadMapDrawingRuntime.loaded?.measureDrawing(snapshot.mode, snapshot.vertices);
+    if (!metrics) return undefined;
+    if (snapshot.mode === 'line') return this.localize('mapDrawingLength', undefined, { value: this.formatDistance(metrics.length) });
+    return metrics.area === undefined ? undefined : this.localize('mapDrawingArea', undefined, { value: this.formatArea(metrics.area) });
+  }
+
+  private drawingLabelText(kind: 'segment' | 'closing' | 'area' | 'length', value: number): string {
+    return kind === 'area' ? this.localize('mapDrawingArea', undefined, { value: this.formatArea(value) })
+      : kind === 'length' ? this.localize('mapDrawingLength', undefined, { value: this.formatDistance(value) })
+        : this.formatDistance(value);
+  }
+
   private formatCount(value: number): string {
     return getNumberFormat(this.effectiveLocale).format(value);
   }
@@ -7722,7 +8001,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return html`
       <div
         part="base"
-        aria-busy=${String(this.loading || (!this._map && !this.failure))}
+        aria-busy=${String(this.loading || (!this._map && !this.failure && !this.awaitingActivation))}
       >
         ${this.failure
           ? html`<div part="error">${this.failureMessage()}</div>`
@@ -7733,7 +8012,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               `
             : html`<div part="container" id="map-container" lang=${this.effectiveLocale}></div>`}
         ${!this.failure && !this.loading && !this._map ? html`<div part="initialization-placeholder">
-          <span class="sr-only">${this.localize('loading')}</span>
+          ${this.awaitingActivation
+            ? html`<button type="button" part="initialization-activate"><span class="activate-label">${this.localize('mapActivate')}</span></button>`
+            : html`<span class="sr-only">${this.localize('loading')}</span>`}
           <lr-skeleton class="initialization-skeleton" shape="rect" .announce=${false}></lr-skeleton>
           <div class="initialization-controls" aria-hidden="true">${[...normalizeMapControlOptions(this.controls).controls.keys()].map(kind => html`<span part="initialization-control" data-control=${kind}></span>`)}</div>
         </div>` : nothing}
@@ -7750,7 +8031,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           <button type="button" part="drawing-complete" ?disabled=${this.interactionBlocked || !drawing?.active} @click=${() => this.completeDrawing()}>${this.localize('mapCompleteDrawing')}</button>
           <button type="button" part="drawing-cancel" ?disabled=${this.interactionBlocked} @click=${() => this.cancelDrawing()}>${this.localize('mapCancelDrawing')}</button>
           <span part="drawing-status">${this.localize('mapDrawingVertices', undefined, { count: drawing?.snapshot?.vertices.length ?? 0 })}</span>
+          ${this.drawingMeasurements && this.drawingSummary(drawing?.snapshot) ? html`<span part="drawing-summary">${this.drawingSummary(drawing?.snapshot)}</span>` : nothing}
         </div>` : nothing}
+        ${this.drawingMeasurements && drawing?.labels.length ? html`<div part="drawing-measurements" aria-hidden="true">${drawing.labels.map(label => html`<span
+          part="drawing-measurement" data-kind=${label.kind} style=${styleMap({ left: `${label.x}px`, top: `${label.y}px` })}
+          >${this.drawingLabelText(label.kind, label.value)}</span>`)}</div>` : nothing}
         ${drawing?.handles.length ? html`<span id="drawing-edit-instructions" class="sr-only">${this.localize('mapDrawingEditInstructions')}</span>
           <div part="drawing-handles">${drawing.handles.map(handle => html`<button type="button" part="drawing-vertex"
             style=${styleMap({ left: `${handle.x}px`, top: `${handle.y}px` })} tabindex=${handle.index === drawing.selected ? '0' : '-1'}

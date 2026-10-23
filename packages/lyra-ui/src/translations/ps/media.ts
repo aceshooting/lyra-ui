@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'د دې څوکې د خوځولو لپاره د غشو تڼۍ وکاروئ؛ د لویو ګامونو لپاره Shift ونیسئ. Page Up او Page Down څوکې ټاکي. Home او End لومړۍ او وروستۍ ښکاره څوکه ټاکي.',
   panoramaInstructions: 'د شاوخوا کتلو لپاره غشي تڼۍ، د لویولو او کوچني کولو لپاره جمع او منفي، او د لید بیاټاکلو لپاره Home وکاروئ.',
   panoramaHotspotsLabel: 'د پانوراما تعاملي ټکي',
+  mapActivate: 'متقابله نقشه ښکاره کړئ',
+  mapDrawingLength: 'اوږدوالی {value}',
+  mapDrawingArea: 'ساحه {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

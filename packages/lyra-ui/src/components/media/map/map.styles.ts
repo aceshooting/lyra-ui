@@ -13,6 +13,25 @@ export const styles = css`
   [part='initialization-placeholder'] { position: absolute; inset: 0; pointer-events: none; }
   .initialization-skeleton { inline-size: 100%; block-size: 100%; }
   .initialization-controls { position: absolute; inset-block-start: var(--lr-space-s); inset-inline-end: var(--lr-space-s); display: flex; flex-direction: column; gap: var(--lr-space-xs); }
+  /* Covers the whole placeholder: any press on it starts the map, and the label stays centered. */
+  [part='initialization-activate'] {
+    ${iconHitTarget}
+    position: absolute; inset: 0; z-index: 1; pointer-events: auto;
+    display: grid; place-items: center; padding: var(--lr-space-m);
+    border: 0; background: transparent; color: var(--lr-color-text); font: inherit; cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  [part='initialization-activate']::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    opacity: 0;
+  }
+  [part='initialization-activate']:where(:hover)::after { opacity: 1; }
+  [part='initialization-activate']:where(:active)::after {
+    opacity: 1; background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='initialization-activate']:focus-visible { ${focusRing} outline-offset: calc(-1 * var(--lr-focus-ring-width)); }
+  .activate-label { position: relative; padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
   [part='initialization-control'] { inline-size: var(--lr-icon-button-size); block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
   [part='pick-controls'], [part='drawing-controls'] {
     position: absolute;
@@ -52,10 +71,20 @@ export const styles = css`
     position: absolute; transform: translate(-50%, -50%); pointer-events: auto;
     display: grid; place-items: center; touch-action: none; padding: 0; border: 0; background: transparent; color: var(--lr-color-text); cursor: grab;
   }
-  [part='drawing-vertex'] > span { inline-size: var(--lr-space-s); block-size: var(--lr-space-s); border-radius: var(--lr-radius-pill); background: var(--lr-color-brand); border: var(--lr-border-width-thin) solid var(--lr-color-surface); }
-  [part='drawing-vertex']:where(:hover) > span { background: color-mix(in srgb, var(--lr-color-brand), var(--lr-color-surface) 20%); }
+  [part='drawing-vertex'] > span { inline-size: var(--lr-space-s); block-size: var(--lr-space-s); border-radius: var(--lr-radius-pill); background: var(--lr-map-drawing-color, var(--lr-color-brand)); border: var(--lr-border-width-thin) solid var(--lr-color-surface); }
+  [part='drawing-vertex']:where(:hover) > span { background: color-mix(in srgb, var(--lr-map-drawing-color, var(--lr-color-brand)), var(--lr-color-surface) 20%); }
   [part='drawing-vertex']:where(:active) { cursor: grabbing; }
-  [part='drawing-vertex']:where(:active) > span { background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='drawing-vertex']:where(:active) > span { background: color-mix(in oklab, var(--lr-map-drawing-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='drawing-measurements'] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+  [part='drawing-measurement'] {
+    position: absolute; transform: translate(-50%, -50%); white-space: nowrap;
+    padding: 0 var(--lr-space-2xs); border-radius: var(--lr-radius-xs);
+    background: var(--lr-color-surface); color: var(--lr-color-text); font-size: var(--lr-font-size-sm);
+    box-shadow: var(--lr-shadow-s);
+  }
+  [part='drawing-measurement'][data-kind='length'] { transform: translate(-50%, calc(var(--lr-space-s) + 50%)); }
+  [part='drawing-measurement'][data-kind='area'] { font-weight: var(--lr-font-weight-semibold); }
+  [part='drawing-summary'] { align-self: center; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); color: var(--lr-color-text); }
   [part='drawing-vertex']:focus-visible { ${focusRing} }
   [part='drawing-vertex']:where(:disabled) { cursor: default; }
   [part='drawing-status'] { color: var(--lr-color-text); background: var(--lr-color-surface); padding: var(--lr-space-xs); overflow-wrap: anywhere; }

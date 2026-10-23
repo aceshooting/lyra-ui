@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'ایس کونے نوں ہلاؤن لئی تیر والیاں کنجیاں ورتو؛ وڈے قدم لئی Shift دبا کے رکھو۔ Page Up تے Page Down کونے چنندے نیں۔ Home تے End پہلا تے آخری نظر آؤندا کونا چنندے نیں۔',
   panoramaInstructions: 'آسے پاسے ویکھن لئی تیر والیاں کُنجیاں، وڈا تے نکا کرن لئی جمع تے منفی، تے منظر مُڑ بحال کرن لئی Home ورتو۔',
   panoramaHotspotsLabel: 'پینوراما دیاں تعاملی تھاواں',
+  mapActivate: 'انٹرایکٹو نقشہ دکھاؤ',
+  mapDrawingLength: 'لمبائی {value}',
+  mapDrawingArea: 'رقبہ {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

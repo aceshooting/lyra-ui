@@ -173,21 +173,24 @@ describe('lr-map drawing integration', () => {
     element.pickMode = true; await settle(element, peer); expect(cancels.length).to.equal(1); expect((cancels[0] as { reason: string }).reason).to.equal('pick-mode'); expect(element.drawMode).to.equal('none'); expect(peer.zoomGesture).to.equal(true);
     element.pickMode = false; await settle(element, peer); expect(element.shadowRoot!.querySelector('[part="drawing-controls"]') === null).to.equal(true);
   });
-  it('cancels drawing on style change and preserves no ephemeral replay', async () => {
+  it('keeps a started drawing across a style change and re-renders its temporary resources there', async () => {
     const { element, peer } = await drawing(); await vertex(element, peer, 0, 0); const cancels = capture(element, 'lr-map-draw-cancel');
     element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE }; await element.updateComplete; await element.whenStyleReady(); await settle(element, peer);
-    expect(cancels.length).to.equal(1); expect((cancels[0] as { reason: string }).reason).to.equal('style-change'); expect(element.drawMode).to.equal('none'); expect(peer.sources.size).to.equal(0); expect(peer.zoomGesture).to.equal(true);
+    expect(cancels.length).to.equal(0); expect(element.drawMode).to.equal('line'); expect(peer.sources.size).to.equal(1); expect(peer.zoomGesture).to.equal(false);
+    expect(element.cancelDrawing()).to.equal(true); await settle(element, peer); expect(peer.sources.size).to.equal(0); expect(peer.zoomGesture).to.equal(true);
   });
-  it('cancels an armed pre-ready mode exactly once for style, mode and pick replacement', async () => {
+  it('cancels an armed pre-ready mode exactly once for mode and pick replacement and keeps it across a style replacement', async () => {
     for (const kind of ['style', 'mode', 'pick'] as const) {
       const { element, peer } = await pendingDrawing(); const cancels = capture(element, 'lr-map-draw-cancel'), starts = capture(element, 'lr-map-draw-start');
       if (kind === 'style') element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE }; else if (kind === 'mode') element.drawMode = 'polygon'; else element.pickMode = true;
-      await element.updateComplete; expect(cancels.length).to.equal(1);
-      const cancelled = cancels[0] as LyraMapDrawingSnapshot & { reason: string };
-      expect(cancelled).to.include({ mode: 'line', phase: 'cancelled', reason: kind === 'style' ? 'style-change' : kind === 'mode' ? 'mode-change' : 'pick-mode' });
-      expect(cancelled.vertices).to.deep.equal([]); expect(Object.isFrozen(cancelled)).to.equal(true); expect(Object.isFrozen(cancelled.vertices)).to.equal(true);
+      await element.updateComplete; expect(cancels.length).to.equal(kind === 'style' ? 0 : 1);
+      if (kind !== 'style') {
+        const cancelled = cancels[0] as LyraMapDrawingSnapshot & { reason: string };
+        expect(cancelled).to.include({ mode: 'line', phase: 'cancelled', reason: kind === 'mode' ? 'mode-change' : 'pick-mode' });
+        expect(cancelled.vertices).to.deep.equal([]); expect(Object.isFrozen(cancelled)).to.equal(true); expect(Object.isFrozen(cancelled.vertices)).to.equal(true);
+      }
       peer.ready = true; peer.fire('load'); await element.updateComplete; await element.whenStyleReady(); await element.updateComplete;
-      expect(starts.length).to.equal(0); expect(element.drawMode).to.equal(kind === 'mode' ? 'polygon' : 'none'); expect(peer.sources.size).to.equal(0); element.remove();
+      expect(starts.length).to.equal(0); expect(element.drawMode).to.equal(kind === 'mode' ? 'polygon' : kind === 'style' ? 'line' : 'none'); expect(peer.sources.size).to.equal(0); element.remove();
     }
   });
   for (const addSource of [false, true]) {
@@ -391,11 +394,14 @@ describe('lr-map drawing integration', () => {
     const cancels = capture(element, 'lr-map-draw-cancel'); pointer(peer, 'pointerdown', 100, 100); pointer(peer, 'pointercancel', 100, 100); await settle(element, peer);
     expect(cancels.length).to.equal(1); expect((cancels[0] as { reason: string }).reason).to.equal('pointercancel'); expect(peer.panEnabled).to.equal(true); expect(peer.zoomGesture).to.equal(true); expect(peer.sources.size).to.equal(0);
   });
-  it('retires captured editing before style replacement and ignores late pointer movement', async () => {
+  it('retires a captured vertex drag before style replacement, ignores late pointer movement and keeps the edit session', async () => {
     const { element, peer } = await mount(); await editSurface(element, peer); element.editDrawing(completed()); await settle(element, peer);
-    const changes = capture(element, 'lr-map-draw-change'); pointer(peer, 'pointerdown', 100, 100); element.mapStyle = { version: 8, sources: {}, layers: [] };
-    pointer(peer, 'pointermove', 120, 100); await settle(element, peer);
-    expect(changes.length).to.equal(0); expect(peer.panEnabled).to.equal(true); expect(peer.zoomGesture).to.equal(true); expect(peer.sources.size).to.equal(0);
+    const changes = capture(element, 'lr-map-draw-change'), cancels = capture(element, 'lr-map-draw-cancel');
+    pointer(peer, 'pointerdown', 100, 100); element.mapStyle = { version: 8, sources: {}, layers: [] };
+    pointer(peer, 'pointermove', 120, 100); await element.updateComplete; await element.whenStyleReady(); await settle(element, peer);
+    expect(changes.length).to.equal(0); expect(cancels.length).to.equal(0); expect(peer.panEnabled).to.equal(true);
+    expect(peer.zoomGesture).to.equal(false); expect(peer.sources.size).to.equal(1);
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer); expect(peer.zoomGesture).to.equal(true); expect(peer.sources.size).to.equal(0);
   });
   it('retires a captured edit on disconnect and rejects disconnected admission', async () => {
     const { element, peer } = await mount(); await editSurface(element, peer); element.editDrawing(completed()); await settle(element, peer);

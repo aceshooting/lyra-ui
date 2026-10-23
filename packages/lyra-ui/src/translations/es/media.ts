@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Use las teclas de flecha para mover este vértice; mantenga pulsada Mayús para dar pasos más grandes. Re Pág y Av Pág seleccionan vértices. Inicio y Fin seleccionan el primer y el último vértice visibles.',
   panoramaInstructions: 'Use las flechas para mirar alrededor, más y menos para acercar o alejar e Inicio para restablecer la vista.',
   panoramaHotspotsLabel: 'Puntos interactivos del panorama',
+  mapActivate: 'Mostrar mapa interactivo',
+  mapDrawingLength: 'Longitud {value}',
+  mapDrawingArea: 'Área {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('es', strings);

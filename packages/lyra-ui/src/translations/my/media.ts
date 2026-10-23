@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'ဤထောင့်မှတ်ကို ရွှေ့ရန် မြှားခလုတ်များကို သုံးပါ။ ပိုကြီးသော အဆင့်များအတွက် Shift ကို ဖိထားပါ။ Page Up နှင့် Page Down သည် ထောင့်မှတ်များကို ရွေးသည်။ Home နှင့် End သည် မြင်ရသော ပထမနှင့် နောက်ဆုံး ထောင့်မှတ်ကို ရွေးသည်။',
   panoramaInstructions: 'ပတ်ဝန်းကျင်ကို ကြည့်ရန် မြားခလုတ်များ၊ ချဲ့ရန်နှင့် ချုံ့ရန် အပေါင်းနှင့် အနုတ်၊ မြင်ကွင်းကို ပြန်သတ်မှတ်ရန် Home ကို အသုံးပြုပါ။',
   panoramaHotspotsLabel: 'ပနိုရာမာ၏ အပြန်အလှန်တုံ့ပြန်နိုင်သော နေရာများ',
+  mapActivate: 'အပြန်အလှန်ဆက်သွယ်နိုင်သော မြေပုံကို ပြပါ',
+  mapDrawingLength: 'အရှည် {value}',
+  mapDrawingArea: 'ဧရိယာ {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('my', strings);

@@ -81612,6 +81612,16 @@
             "default": "none"
           },
           {
+            "name": "drawing-measurements",
+            "property": "drawingMeasurements",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "engine",
             "property": "engine",
             "type": "LyraMapEngine",
@@ -81640,6 +81650,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "initialization-delay",
+            "property": "initializationDelay",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "label",
@@ -81853,6 +81872,16 @@
             "default": "[]"
           },
           {
+            "name": "drawingMeasurements",
+            "attribute": "drawing-measurements",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "drawMode",
             "attribute": "draw-mode",
             "type": "LyraMapDrawingMode",
@@ -81929,6 +81958,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "initializationDelay",
+            "attribute": "initialization-delay",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "interactiveBasemapLayers",
@@ -82149,6 +82187,15 @@
             "hasDefault": false
           },
           {
+            "name": "styleLayers",
+            "attribute": null,
+            "type": "readonly LyraMapStyleLayer[]",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "styleOverrides",
             "attribute": null,
             "type": "readonly LyraMapStyleOverride[]",
@@ -82157,6 +82204,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "styleSources",
+            "attribute": null,
+            "type": "readonly LyraMapStyleSource[]",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "zoom",
@@ -82227,6 +82283,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-map-draw-vertex-end",
+            "type": "CustomEvent<LyraMapDrawingVertexEndDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-map-export-error",
             "type": "CustomEvent<LyraMapImageExportErrorDetail>",
             "cancelable": "never",
@@ -82241,6 +82303,12 @@
           {
             "name": "lr-map-feature-leave",
             "type": "CustomEvent<LyraMapInteractionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-geolocate",
+            "type": "CustomEvent<LyraMapGeolocateDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -82296,6 +82364,18 @@
           {
             "name": "lr-map-pick",
             "type": "CustomEvent<LyraMapPickDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-pointer-leave",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-pointer-move",
+            "type": "CustomEvent<LyraMapPointerDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -82366,7 +82446,19 @@
             "deprecated": null
           },
           {
+            "name": "drawing-measurement",
+            "deprecated": null
+          },
+          {
+            "name": "drawing-measurements",
+            "deprecated": null
+          },
+          {
             "name": "drawing-status",
+            "deprecated": null
+          },
+          {
+            "name": "drawing-summary",
             "deprecated": null
           },
           {
@@ -82383,6 +82475,10 @@
           },
           {
             "name": "geolocate",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-activate",
             "deprecated": null
           },
           {
@@ -82504,6 +82600,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0.75
+          },
+          {
+            "name": "--lr-map-drawing-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-map-height",

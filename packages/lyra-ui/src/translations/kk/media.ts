@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Бұл төбені жылжыту үшін көрсеткі пернелерді пайдаланыңыз; үлкенірек қадамдар үшін Shift пернесін басып тұрыңыз. Page Up және Page Down төбелерді таңдайды. Home және End бірінші және соңғы көрінетін төбені таңдайды.',
   panoramaInstructions: 'Айналаны қарау үшін көрсеткі пернелерін, масштабтау үшін плюс пен минусты, көріністі қалпына келтіру үшін Home пернесін пайдаланыңыз.',
   panoramaHotspotsLabel: 'Панораманың интерактивті нүктелері',
+  mapActivate: 'Интерактивті картаны көрсету',
+  mapDrawingLength: 'Ұзындығы {value}',
+  mapDrawingArea: 'Ауданы {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('kk', strings);

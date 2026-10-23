@@ -9,13 +9,22 @@ export interface MapDrawingPointerContext {
   replace(index: number, point: LyraMapDrawingPoint): boolean;
   acquirePan(): { readonly accepted: boolean; release(): boolean };
   cancel(): void;
+  /** A press on a vertex released without moving it; `distance` is its visual CSS-pixel offset. */
+  tap?(index: number, distance: number): void;
+  /** A drag that moved the vertex was released. */
+  end?(index: number): void;
 }
 interface Drag {
   readonly pointer: number;
   readonly index: number;
   readonly lease: { release(): boolean };
+  readonly distance: number;
+  readonly start: readonly [number, number];
   capture: boolean;
+  moved: boolean;
 }
+/** Visual CSS pixels a press may travel and still count as a tap rather than a drag. */
+const TAP_SLOP = 4;
 /** Canvas-local vertex drag ownership; geometry admission remains the session owner's decision. */
 export class MapDrawingPointer {
   private drag?: Drag;
@@ -84,7 +93,8 @@ export class MapDrawingPointer {
       if (!this.current(epoch) || nearest < 0) return false;
       lease = this.context.acquirePan();
       if (!this.current(epoch) || !lease.accepted) { const rejected = lease; lease = undefined; rejected.release(); return false; }
-      const drag: Drag = { pointer: event.pointerId, index: nearest, lease, capture: false };
+      const drag: Drag = { pointer: event.pointerId, index: nearest, lease, capture: false, distance,
+        start: [event.clientX, event.clientY], moved: false };
       this.drag = drag;
       const capturedEpoch = ++this.epoch;
       drag.capture = true;
@@ -117,6 +127,8 @@ export class MapDrawingPointer {
     const drag = this.drag, epoch = this.epoch;
     if (!drag || drag.pointer !== event.pointerId) return;
     if (!this.current(epoch)) { this.retire(drag); return; }
+    if (!drag.moved && Math.hypot(event.clientX - drag.start[0], event.clientY - drag.start[1]) <= TAP_SLOP) return;
+    drag.moved = true;
     try {
       const point = this.coordinates(event); if (!this.current(epoch) || this.drag !== drag) { this.retire(drag); return; }
       if (!point) return;
@@ -130,7 +142,12 @@ export class MapDrawingPointer {
   private move = (event: PointerEvent): void => { if (this.drag?.pointer === event.pointerId) { event.preventDefault(); this.update(event); } };
   private up = (event: PointerEvent): void => {
     const drag = this.drag; if (!drag || drag.pointer !== event.pointerId) return;
-    event.preventDefault(); this.update(event); this.retire(drag);
+    event.preventDefault(); this.update(event);
+    const epoch = this.epoch, notify = this.drag === drag && this.current(epoch);
+    this.retire(drag);
+    if (!notify || this.disposed) return;
+    try { if (drag.moved) this.context.end?.(drag.index); else this.context.tap?.(drag.index, drag.distance); }
+    catch { /* The owner reports its own failures. */ }
   };
   private cancelled = (event: PointerEvent): void => {
     const drag = this.drag; if (!drag || drag.pointer !== event.pointerId) return;

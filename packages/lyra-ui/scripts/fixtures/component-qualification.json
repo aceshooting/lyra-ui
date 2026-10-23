@@ -31436,7 +31436,7 @@
           "evidence": [
             {
               "file": "src/components/media/map/map-construction-scheduler.ts",
-              "line": 27,
+              "line": 33,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31474,6 +31474,7 @@
         "tests": [
           "src/components/media/map/map-anchor-component.test.ts",
           "src/components/media/map/map-anchor-options.test.ts",
+          "src/components/media/map/map-app-parity.test.ts",
           "src/components/media/map/map-camera.test.ts",
           "src/components/media/map/map-construction-scheduler.test.ts",
           "src/components/media/map/map-control-options.test.ts",

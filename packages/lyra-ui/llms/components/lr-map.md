@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 46 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 50 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -150,6 +150,35 @@ mapEl.imageProvider = async (id) => id.startsWith('poi-')
 `styleOverrides: readonly LyraMapStyleOverride[] = []` applies `paint` and `layout` records by `layerId` to existing unowned style layers. Reassign fresh
 descriptors to change desired state; unsupported or conflicting resources fail closed.
 
+An overlay layer's `source` may name a source of the basemap style itself rather than one of
+`overlays.sources`, for example a vector tile source plus its `source-layer`, so you can add a
+highlight or a restyled copy of basemap features without registering the source twice; the layer is
+restored after every style swap whose new style still defines that source. Color-valued `paint`
+strings in overlay layers and `styleOverrides` may be theme tokens (`var(--brand)`), `currentColor`
+or CSS color functions (`oklch()`, `color-mix()`, `light-dark()`, …), also inside expressions. They
+resolve against the host, convert to sRGB (engines parse only sRGB notations) and re-resolve when an
+ancestor theme, class, style or color scheme changes; an unresolvable token fails closed like any
+other invalid resource.
+
+```js
+map.overlays = {
+  layers: [{ layer: { id: 'poi-highlight', type: 'circle', source: 'openmaptiles', 'source-layer': 'poi',
+    paint: { 'circle-color': 'var(--lr-color-brand)', 'circle-radius': 6 } } }],
+};
+```
+
+**Basemap selectors and the style catalog:** an `interactiveBasemapLayers` or `styleOverrides`
+entry names one layer by `layerId`, or selects every layer of the current style whose `source`,
+`sourceLayer` and `layerType` match the fields it gives (`LyraMapStyleLayerSelector`), for example
+`{ sourceLayer: 'poi', layerType: 'symbol', paint: { 'icon-opacity': 0.4 } }`. An explicit id wins
+over a selector and an earlier selector over a later one; an entry with both an id and a selector,
+or with an empty selector, fails closed. Selectors re-match after each style swap, and a selector
+may expand to at most 1,024 overridden layers. The read-only `styleLayers`
+(`{ id, type, source?, sourceLayer? }[]`, at most 4,096) and `styleSources` (`{ id, type }[]`, at
+most 1,024) list what the current `mapStyle` loaded, before the element added its own resources.
+Both are frozen, empty until the style has loaded and replaced on every style swap; read them after
+`lr-map-style-load` or `whenStyleReady()`.
+
 `LyraMapDataLayer` includes GeoJSON and explicitly discriminated `vector`, `raster`, `image`, and
 `canvas` descriptors. Tile descriptors use `source`; vector descriptors also require `sourceLayer`
 and `render`. Image descriptors use `url` and canvas descriptors retain an `HTMLCanvasElement`;
@@ -181,7 +210,18 @@ initial hash still sets the first camera, and it takes precedence over a queued 
 absent, unrelated (`#section`) or malformed fragment leaves the fit to run, and a malformed owned
 value is left untouched (no camera is written over it) until navigation replaces it.
 `controls` also supports `geolocate` and `attribution` options; geolocation errors are sanitized in
-`lr-map-geolocate-error`, and out-of-bounds reports use `lr-map-geolocate-out-of-bounds`.
+`lr-map-geolocate-error`, and out-of-bounds reports use `lr-map-geolocate-out-of-bounds`. A
+successful location, which only the user's activation of the geolocate button can start, emits
+`lr-map-geolocate` with frozen `LyraMapGeolocateDetail { lngLat, accuracy }` (`accuracy` in metres),
+again for each position update while the control tracks the user. Use it to store the position or
+to compare it against your own bounds.
+`lr-map-pointer-move` (frozen `LyraMapPointerDetail { lngLat, point }`) reports the mouse position
+at most once per animation frame whatever lies under it, for tooltips and coordinate read-outs, and
+`lr-map-pointer-leave` (detail `null`) follows when it leaves the map. `lr-map-feature-enter`,
+`lr-map-feature-leave`, `lr-map-contextmenu` and `lr-map-pick` add `feature`, the hit as a detached,
+deeply frozen GeoJSON `Feature` (`LyraMapFeature`) with its `[longitude, latitude]` geometry. That
+geometry is the rendered one, so a large feature may be clipped to the tiles around the pointer, and
+`geometry` is `null` above 100,000 coordinate values.
 
 **Drawing:** `drawMode: LyraMapDrawingMode = 'none'` arms `line` or `polygon` drawing. The
 controls render as soon as a mode is armed; the session starts once the drawing runtime has loaded
@@ -199,6 +239,26 @@ snapshot and starts the load; await `whenIdle()` and call it again. Keyboard ver
 pointer edits update the same session.
 Use `whenIdle()` to await temporary rendering work.
 
+While drawing, a dashed rubber band runs from the last vertex to the pointer (and, for a polygon,
+on to the first vertex). A press within 12 CSS pixels of a polygon's first vertex, once it has three
+vertices, completes it as clicking near the start does in common drawing tools. While the map
+canvas has focus, Enter completes the drawing (or an edit) and Backspace removes the last vertex;
+the canvas advertises them through `aria-keyshortcuts`, and the visible buttons remain the
+discoverable path. A drawing or edit session survives a `mapStyle` swap: its temporary resources are
+rebuilt on the new style and a captured vertex drag is released (the `style-change` cancel reason is
+no longer reported). `lr-map-draw-change` fires for every intermediate drag position, so recompute
+derived state on `lr-map-draw-vertex-end` (`LyraMapDrawingVertexEndDetail`, the snapshot plus the
+moved vertex `index`), fired once when a drag that moved the vertex is released and after each
+keyboard vertex move. Setting `drawingMeasurements` to `true` (attribute `drawing-measurements`;
+default `false`) shows
+localized, decorative on-map labels (`drawing-measurement`, with `data-kind` `segment`, `closing`,
+`area` or `length`): every segment length, a polygon's closing segment and its area at the centroid,
+and a line's total length; the same total is written beside the vertex count as `drawing-summary`
+for assistive technology. Lengths are metres or kilometres through `Intl.NumberFormat` in the
+component locale, areas `mapSquareMeters`/`mapSquareKilometers`. The temporary drawing, its rubber
+band and the vertex handles use `--lr-map-drawing-color` (default: the brand accent), re-read after
+a theme change.
+
 **Anchored content:** `anchorLngLat` is the sole declarative open request for the `anchor` slot.
 Its first coordinate loads anchor placement; placement, already asynchronous, follows that load.
 `anchorBoundary?: LyraMapAnchorBoundary` accepts connected same-document elements (one element or
@@ -213,7 +273,14 @@ The close button is exposed as `anchor-close`.
 
 **Initialization and image export:** `initialization: LyraMapInitialization = 'visible'` defers
 construction until visible; `idle` schedules idle construction and `eager` requests immediate
-construction. Deferred UI exposes `initialization-placeholder` and `initialization-control`.
+construction. `interaction` waits for the first input on the element (pointer press, touch, wheel,
+key press or click) and shows the localized `initialization-activate` button over the placeholder,
+so keyboard and screen-reader users can start the map; focus moves to the map canvas when the map
+was started from that button. `initializationDelay?: number` (attribute `initialization-delay`,
+milliseconds) also starts an `interaction` map that long after it connected; leave it unset to wait
+for input only. Until then `map` is undefined and `whenStyleReady()`/`whenIdle()` wait; camera
+commands and fits queue as usual. Deferred UI exposes `initialization-placeholder` and
+`initialization-control`.
 Static `LyraMap.preload(engine)` loads the engine without constructing a map.
 `exportImage(options?: LyraMapImageExportOptions): Promise<Blob>` captures the current native
 frame with `type` of `image/png` (default), `image/jpeg`, or `image/webp`. Attribution is included
@@ -1013,8 +1080,9 @@ asynchronous preparation are restored; `lr-map-idle` (same detail) fires after s
 whenever the peer and current component work are idle, including after later camera or source
 updates. `generation` increases monotonically across reconnects and style replacements.
 Interactions: `lr-map-feature-enter` and `lr-map-feature-leave` (frozen `LyraMapInteractionDetail
-{ lngLat, hit? }`) report the pointer entering a different admitted feature and leaving the previous
-one; `lr-map-contextmenu` (same detail) reports a secondary click without preventing the native
+{ lngLat, hit?, feature? }`) report the pointer entering a different admitted feature and leaving the previous
+one; `lr-map-pointer-move` (frozen `LyraMapPointerDetail { lngLat, point }`, at most once per frame) and
+`lr-map-pointer-leave` (detail `null`) report the pointer itself; `lr-map-contextmenu` (same detail) reports a secondary click without preventing the native
 context menu; `lr-map-pick` (frozen `LyraMapPickDetail { lngLat, hit?, trigger }`, `trigger` being
 `'pointer' | 'keyboard'`) reports a pick-mode selection, a keyboard pick using the camera center.
 `lr-map-anchor-close` (frozen `LyraMapAnchorCloseDetail { reason }`) fires after an open anchor
@@ -1022,7 +1090,10 @@ closes by `closeAnchor()`, its close button or Escape.
 Drawing: `lr-map-draw-start` (after the first accepted vertex), `lr-map-draw-change` (after an
 accepted vertex, undo or vertex edit) and `lr-map-draw-complete` (valid geometry with spherical
 metrics) carry a frozen `LyraMapDrawingSnapshot`; `lr-map-draw-cancel` carries
-`LyraMapDrawingCancelDetail`, the cancelled snapshot plus a stable `reason`.
+`LyraMapDrawingCancelDetail`, the cancelled snapshot plus a stable `reason`; `lr-map-draw-vertex-end`
+carries `LyraMapDrawingVertexEndDetail` once a vertex drag or keyboard move ends.
+Location: `lr-map-geolocate` (frozen `LyraMapGeolocateDetail { lngLat, accuracy }`) after the
+user-activated geolocate control locates the user.
 Failures: `lr-map-geolocate-error` (frozen `LyraMapGeolocateErrorDetail { code }`, a
 `LyraMapGeolocationErrorCode`) and `lr-map-geolocate-out-of-bounds` (`{ code: 'out-of-bounds' }`)
 expose no coordinates or native messages; `lr-map-export-error` (frozen
@@ -1059,11 +1130,14 @@ which only reaches rows projected from `legend`.
 `anchor-close`, `marker`, `popup`, `popup-content`, `popup-close-button`, `attribution`,
 `attribution-toggle`, `navigation`, `zoom-in`, `zoom-out`, `compass`, `scale`, `geolocate`,
 `configuration-error`, `error`.
-Before native construction, `initialization-placeholder` is the stable noninteractive surface and
-`initialization-control` outlines each requested control. Pick mode renders `pick-controls` with
+Before native construction, `initialization-placeholder` is the stable surface,
+`initialization-control` outlines each requested control and, for `initialization="interaction"`,
+`initialization-activate` is the localized button that starts the map. Pick mode renders `pick-controls` with
 `pick-center` and `pick-cancel`; draw mode renders `drawing-controls` with `drawing-add`,
-`drawing-undo`, `drawing-complete`, `drawing-cancel` and the `drawing-status` vertex count, and
-vertex editing renders `drawing-handles` containing one `drawing-vertex` per editable vertex.
+`drawing-undo`, `drawing-complete`, `drawing-cancel` and the `drawing-status` vertex count (plus
+`drawing-summary` with `drawingMeasurements`), vertex editing renders `drawing-handles` containing
+one `drawing-vertex` per editable vertex, and `drawingMeasurements` renders `drawing-measurements`
+holding the `drawing-measurement` labels.
 The compact attribution summary has a decorative, current-color information glyph and retains
 MapLibre's accessible name, keyboard/touch disclosure behavior and attribution links. To make
 only this control compact, scope the shared target-size token to its public wrapper:
@@ -1169,6 +1243,8 @@ geometry and foreground overrides remain available through the existing public p
 - `--lr-map-legend-hidden-swatch-opacity` (default `0.5`) — opacity of a hidden interactive legend
   row's decorative swatch. Only the `aria-hidden` swatch dims; the label re-colours through
   `--lr-color-text-quiet` instead, so it never drops below 4.5:1.
+- `--lr-map-drawing-color` (default `var(--lr-color-brand)`) — color of the temporary drawing, its
+  rubber band and the vertex handles. Read from the resolved cascade, so a theme change repaints it.
 - `--lr-map-popup-close-button-hover-bg` (default `var(--lr-color-brand-quiet)`) and
   `--lr-map-popup-close-button-hover-color` (default `var(--lr-color-brand)`) — hover background
   and foreground of `popup-close-button`.

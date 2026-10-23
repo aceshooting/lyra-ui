@@ -1461,3 +1461,111 @@ export const CanvasSourceZoomAndOpacity: Story = {
     `;
   },
 };
+
+/** A local "basemap" whose layers the selectors below address by source and type. */
+const selectorBasemap = () => ({
+  version: 8,
+  sources: { places: { type: 'geojson', data: { type: 'FeatureCollection', features: [
+    { type: 'Feature', id: 1, properties: { name: 'North square' }, geometry: { type: 'Polygon', coordinates: [[[-8, 2], [-2, 2], [-2, 8], [-8, 8], [-8, 2]]] } },
+    { type: 'Feature', id: 2, properties: { name: 'South square' }, geometry: { type: 'Polygon', coordinates: [[[2, -8], [8, -8], [8, -2], [2, -2], [2, -8]]] } },
+  ] } } },
+  layers: [
+    { id: 'background', type: 'background', paint: { 'background-color': storyColor('surface') } },
+    { id: 'places-fill', type: 'fill', source: 'places', paint: { 'fill-color': storyColor('quiet') } },
+    { id: 'places-outline', type: 'line', source: 'places', paint: { 'line-color': storyColor('text') } },
+  ],
+});
+
+export const InteractionInitialization: Story = {
+  render: () => html`
+    <p>Each map shows its placeholder until the first press, touch, wheel or key on it. The second also starts by itself after three seconds.</p>
+    <lr-map label="Starts on first input" initialization="interaction" style="block-size: 16rem" .mapStyle=${OFFLINE_RASTER_STYLE}
+      .controls=${{ navigation: true }}></lr-map>
+    <lr-map label="Starts on input or after a delay" initialization="interaction" initialization-delay="3000"
+      style="block-size: 16rem" .mapStyle=${OFFLINE_RASTER_STYLE}></lr-map>
+  `,
+};
+
+export const ThemedOverlayPaint: Story = {
+  render: () => {
+    let wrapper: HTMLElement | undefined;
+    return html`
+      <lr-button @click=${() => { wrapper?.style.setProperty('--story-overlay', wrapper.style.getPropertyValue('--story-overlay') ? '' : 'oklch(0.6 0.2 30)'); }}>
+        Toggle the overlay token</lr-button>
+      <div ${ref(node => { wrapper = node as HTMLElement | undefined; })}>
+        <lr-map label="Theme tokens in overlay paint" style="block-size: 20rem" zoom="3" .mapStyle=${selectorBasemap()}
+          .overlays=${{ layers: [{ layer: { id: 'places-highlight', type: 'line', source: 'places',
+            paint: { 'line-color': 'var(--story-overlay, var(--lr-color-brand))', 'line-width': 5 } } }] }}></lr-map>
+      </div>
+      <p>The highlight layer reads the basemap's own <code>places</code> source; its color is a token that follows the theme.</p>
+    `;
+  },
+};
+
+export const BasemapSelectorsAndPointer: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let catalog: HTMLElement | undefined;
+    let pointer: HTMLElement | undefined;
+    let hover: HTMLElement | undefined;
+    return html`
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })} label="Basemap selectors" style="block-size: 20rem" zoom="3"
+        .mapStyle=${selectorBasemap()}
+        .styleOverrides=${[{ source: 'places', layerType: 'fill', paint: { 'fill-color': 'var(--lr-color-brand)' } }]}
+        .interactiveBasemapLayers=${[{ source: 'places', layerType: 'fill' }]}
+        @lr-map-style-load=${() => { if (catalog && map) catalog.textContent = map.styleLayers.map(layer => `${layer.id} (${layer.type})`).join(', '); }}
+        @lr-map-pointer-move=${(event: CustomEvent<import('./map.js').LyraMapPointerDetail>) => {
+          if (pointer) pointer.textContent = event.detail.lngLat.map(value => value.toFixed(3)).join(', ');
+        }}
+        @lr-map-pointer-leave=${() => { if (pointer) pointer.textContent = 'Outside the map'; }}
+        @lr-map-feature-enter=${(event: CustomEvent<import('./map.js').LyraMapInteractionDetail>) => {
+          if (hover) hover.textContent = `${String(event.detail.feature?.properties?.['name'])}: ${event.detail.feature?.geometry?.type ?? 'no geometry'}`;
+        }}
+        @lr-map-feature-leave=${() => { if (hover) hover.textContent = 'No feature'; }}
+      ></lr-map>
+      <p>Style layers: <span ${ref(node => { catalog = node as HTMLElement | undefined; })}>loading</span></p>
+      <p>Pointer: <span ${ref(node => { pointer = node as HTMLElement | undefined; })}>Outside the map</span></p>
+      <p>Hovered feature: <span ${ref(node => { hover = node as HTMLElement | undefined; })}>No feature</span></p>
+    `;
+  },
+};
+
+export const DrawingMeasurementsAndShortcuts: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let status: HTMLElement | undefined;
+    let raster = true;
+    return html`
+      <lr-button @click=${() => { if (map) map.drawMode = 'polygon'; }}>Draw polygon</lr-button>
+      <lr-button @click=${() => { if (map) map.drawMode = 'line'; }}>Draw line</lr-button>
+      <lr-button @click=${() => { raster = !raster; if (map) map.mapStyle = raster ? OFFLINE_RASTER_STYLE : LYRA_MAP_EMPTY_STYLE; }}>
+        Swap the style while drawing</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })} label="Measured drawing" style="block-size: 22rem; --lr-map-drawing-color: var(--lr-color-danger)"
+        zoom="3" drawing-measurements .mapStyle=${OFFLINE_RASTER_STYLE}
+        @lr-map-draw-vertex-end=${(event: CustomEvent<import('./map.js').LyraMapDrawingVertexEndDetail>) => {
+          if (status) status.textContent = `Vertex ${event.detail.index + 1} moved`;
+        }}
+        @lr-map-draw-complete=${(event: CustomEvent<import('./map.js').LyraMapDrawingSnapshot>) => {
+          if (status) status.textContent = `Completed: ${JSON.stringify(event.detail.metrics)}`;
+        }}
+      ></lr-map>
+      <p>Click near the first vertex to close a polygon. With the map focused, Enter finishes and Backspace removes the last vertex.</p>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Start a drawing.</p>
+    `;
+  },
+};
+
+export const GeolocationSuccess: Story = {
+  render: () => {
+    let status: HTMLElement | undefined;
+    return html`
+      <lr-map label="Geolocation" style="block-size: 18rem" .mapStyle=${OFFLINE_RASTER_STYLE} .controls=${{ geolocate: true }}
+        @lr-map-geolocate=${(event: CustomEvent<import('./map.js').LyraMapGeolocateDetail>) => {
+          if (status) status.textContent = `Located ${event.detail.lngLat.map(value => value.toFixed(4)).join(', ')} within ${Math.round(event.detail.accuracy)} m`;
+        }}
+        @lr-map-geolocate-error=${(event: CustomEvent) => { if (status) status.textContent = `Location failed: ${String(event.detail.code)}`; }}
+      ></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Use the location button on the map.</p>
+    `;
+  },
+};

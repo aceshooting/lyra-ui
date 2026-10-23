@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'यो शीर्षबिन्दु सार्न तीर कुञ्जीहरू प्रयोग गर्नुहोस्; ठूला चरणका लागि Shift थिचिराख्नुहोस्। Page Up र Page Down ले शीर्षबिन्दुहरू छान्छन्। Home र End ले पहिलो र अन्तिम देखिने शीर्षबिन्दु छान्छन्।',
   panoramaInstructions: 'वरिपरि हेर्न तीर कुञ्जीहरू, जुम गर्न प्लस र माइनस र दृश्य रिसेट गर्न Home प्रयोग गर्नुहोस्।',
   panoramaHotspotsLabel: 'पानोरामाका अन्तरक्रियात्मक बिन्दुहरू',
+  mapActivate: 'अन्तरक्रियात्मक नक्सा देखाउनुहोस्',
+  mapDrawingLength: 'लम्बाइ {value}',
+  mapDrawingArea: 'क्षेत्रफल {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('ne', strings);

@@ -2,8 +2,8 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { acquireMapDrawingGesture } from './map-drawing-gesture.js';
 import { acquireMapDrawingPan } from './map-drawing-pan.js';
 import { MapDrawingPointer } from './map-drawing-pointer.js';
-import { MapDrawing, type LyraMapDrawingCancelDetail, type LyraMapDrawingCancelReason, type LyraMapDrawingMode, type LyraMapDrawingSnapshot,
-  type MapDrawingError } from './map-drawing.js';
+import { MapDrawing, measureDrawing, type LyraMapDrawingCancelDetail, type LyraMapDrawingCancelReason, type LyraMapDrawingMode,
+  type LyraMapDrawingPoint, type LyraMapDrawingSnapshot, type LyraMapDrawingVertexEndDetail, type MapDrawingError } from './map-drawing.js';
 import type { MapLibreMapCapability } from './map-loader.js';
 import { mapCoordinates, mapOwnValue } from './map-readers.js';
 import { snapshotMapOwnedFeatureInput } from './map-owned-feature-input.js';
@@ -13,6 +13,10 @@ import type { LyraMapStyleValue } from './map-style-override-admission.js';
 
 /** A projected, viewport-clipped vertex edit handle, positioned inside the element's base part. */
 export interface MapDrawingHandle { readonly index: number; readonly x: number; readonly y: number; }
+/** A projected on-map measurement label: a segment, the closing segment, the area or the total length. */
+export interface MapDrawingLabel { readonly kind: 'segment' | 'closing' | 'area' | 'length'; readonly value: number; readonly x: number; readonly y: number; }
+/** Visual CSS pixels within which a press on the first vertex closes a polygon. */
+const CLOSE_DISTANCE = 12;
 
 /** The private element capabilities drawing uses. Generations identify the current engine. */
 export interface MapDrawingHost {
@@ -21,6 +25,7 @@ export interface MapDrawingHost {
     readonly drawMode: LyraMapDrawingMode;
     readonly pickMode: boolean;
     readonly overlays: unknown;
+    readonly drawingMeasurements: boolean;
     project(lngLat: readonly [number, number]): readonly [number, number] | undefined;
     unproject(point: readonly [number, number]): readonly [number, number] | undefined;
   };
@@ -38,6 +43,7 @@ export interface MapDrawingHost {
   updateActive(): boolean;
   afterUpdate(callback: () => void, key: string): void;
   emit(type: 'lr-map-draw-start' | 'lr-map-draw-change' | 'lr-map-draw-complete', state: LyraMapDrawingSnapshot): void;
+  emitVertexEnd(detail: LyraMapDrawingVertexEndDetail): void;
   emitCancel(detail: LyraMapDrawingCancelDetail): void;
   showError(error?: MapDrawingError): void;
   clearError(): void;
@@ -55,6 +61,8 @@ export interface MapDrawingHost {
   resolve(value: LyraMapStyleValue, property: string): LyraMapStyleValue;
 }
 
+export { measureDrawing };
+
 /**
  * Drawing sessions, explicit vertex editing, native gesture leases and temporary resources for one
  * element. Loaded on demand: the element keeps `drawMode`, its localized controls and the cancel
@@ -66,6 +74,13 @@ export class MapDrawingController {
   private snapshotState?: LyraMapDrawingSnapshot;
   private editingState = false;
   private handlesState: readonly MapDrawingHandle[] = [];
+  private labelsState: readonly MapDrawingLabel[] = [];
+  /** The pointer coordinate a rubber-band segment runs to, while drawing. */
+  private previewPoint?: LyraMapDrawingPoint;
+  private previewFrame?: number;
+  /** The style generation the temporary resources were last rendered for. */
+  private resourceStyle?: number;
+  private keyCleanup?: () => void;
   private selectedState = 0;
   private dispatchingState = false;
   private pointer?: MapDrawingPointer;
@@ -90,6 +105,8 @@ export class MapDrawingController {
   get snapshot(): LyraMapDrawingSnapshot | undefined { return this.snapshotState; }
   get editing(): boolean { return this.editingState; }
   get handles(): readonly MapDrawingHandle[] { return this.handlesState; }
+  /** Projected measurement labels while `drawingMeasurements` is set. */
+  get labels(): readonly MapDrawingLabel[] { return this.labelsState; }
   get selected(): number { return this.selectedState; }
   /** A drawing event or native gesture admission is being dispatched. */
   get dispatching(): boolean { return this.dispatchingState; }
@@ -157,7 +174,9 @@ export class MapDrawingController {
     const owns = (): boolean => engine() && host.epoch() === admittedEpoch && !this.editCancelled && element.mapStyle === authoredStyle &&
       (!this.session || this.session === candidate) && !element.pickMode && element.drawMode === 'none';
     if (!owns() || !host.actionAllowed()) return false;
-    const lease = acquireMapDrawingGesture(map, { current: () => engine() && host.epoch() === admittedEpoch && (!this.session || this.session === candidate) });
+    // The gesture lease outlives a style swap: only the engine instance and connection bound it.
+    const sameEngine = (): boolean => host.map() === map && host.generations()[1] === connection;
+    const lease = acquireMapDrawingGesture(map, { current: () => sameEngine() && host.epoch() === admittedEpoch && (!this.session || this.session === candidate) });
     if (!lease.accepted || !owns() || !host.actionAllowed()) { lease.release(); return false; }
     this.release = lease.release; this.session = candidate; this.setEditing(true);
     this.started = true; this.select(0); this.setSnapshot(candidate.snapshot()); host.clearError();
@@ -206,6 +225,7 @@ export class MapDrawingController {
     if (!keepMode && host.element.drawMode === mode) host.resetMode();
     if (pointer?.consumeClick()) host.suppressClick();
     pointer?.dispose(); release?.(); overlay?.deactivate();
+    this.keyCleanup?.(); this.keyCleanup = undefined; this.clearPreview(false); this.setLabels([]);
     if (this.session) return;
     host.advanceEpoch();
     this.renderResources(); host.syncCursor();
@@ -225,8 +245,9 @@ export class MapDrawingController {
     if (!this.session) {
       const mode = element.drawMode;
       if (mode !== 'line' && mode !== 'polygon') return;
-      const [style, connection] = host.generations(), epoch = host.epoch();
-      const current = (): boolean => { const [s, c] = host.generations(); return host.map() === map && s === style && host.epoch() === epoch && c === connection; };
+      const [, connection] = host.generations(), epoch = host.epoch();
+      // Bound to the engine and connection, not the style: a session survives a style swap.
+      const current = (): boolean => host.map() === map && host.epoch() === epoch && host.generations()[1] === connection;
       this.dispatchingState = true;
       let lease: ReturnType<typeof acquireMapDrawingGesture>;
       try { lease = acquireMapDrawingGesture(map, { current }); }
@@ -238,7 +259,8 @@ export class MapDrawingController {
       this.session = new MapDrawing(mode);
       this.setSnapshot(this.session.snapshot());
     }
-    this.installPointer(); this.scheduleHandles();
+    this.installPointer(); this.installKeys(); this.scheduleHandles();
+    if (this.resourceStyle !== host.generations()[0]) this.renderResources();
     if (!this.overlay) this.overlay = activateOverlay({
       host: element, panel: () => element.shadowRoot?.querySelector<HTMLElement>('[part="drawing-controls"]') ?? null,
       onEscape: () => { this.cancel('escape', false, element.drawMode); }, beforeInitialFocus: () => false,
@@ -256,18 +278,22 @@ export class MapDrawingController {
       const canvas = map.getCanvas();
       if (!owns() || !host.interactionAllowed()) return;
       this.pointer = new MapDrawingPointer({
-        canvas, current: () => owns() && host.interactionAllowed(),
+        // A drag continues through the render its own previous step requested; configuration
+        // changes and blocking still retire it.
+        canvas, current: () => owns() && host.actionAllowed(),
         vertices: () => session.snapshot().vertices,
         project: point => host.element.project(point), unproject: point => host.element.unproject(point),
         replace: (index, point) => this.replaceVertex(session, index, point),
-        acquirePan: () => acquireMapDrawingPan(map, { current: engine }),
+        acquirePan: () => acquireMapDrawingPan(map, { current: () => host.map() === map && host.epoch() === epoch && host.generations()[1] === connection }),
         cancel: () => { if (owns()) this.cancel('pointercancel', false, host.element.drawMode); },
+        tap: (index, distance) => { if (owns()) this.tap(session, index, distance); },
+        end: index => { if (owns()) this.emitVertexEnd(session, index); },
       });
     } catch { if (owns()) host.showError(); }
   }
 
   private replaceVertex(session: MapDrawing, index: number, point: unknown): boolean {
-    if (this.session !== session || this.dispatchingState || !this.host.interactionAllowed()) return false;
+    if (this.session !== session || this.dispatchingState || !this.host.actionAllowed()) return false;
     const result = session.replace(index, point);
     if (this.session !== session) return false;
     if (!result.accepted) { this.host.showError(result.error); return false; }
@@ -277,6 +303,83 @@ export class MapDrawingController {
     return true;
   }
 
+  /** A swapped style discards temporary resources and invalidates style-bound pointer ownership;
+   * the session itself, its gesture lease and keyboard shortcuts carry over to the new style. */
+  styleChanging(): void {
+    const pointer = this.pointer; this.pointer = undefined;
+    if (pointer?.consumeClick()) this.host.suppressClick();
+    pointer?.dispose(); this.resourceStyle = undefined; this.clearPreview(false);
+  }
+
+  /** Closes a polygon from a press on its first vertex, as clicking near it closes the ring. */
+  private tap(session: MapDrawing, index: number, distance: number): void {
+    const state = session.snapshot();
+    if (this.session !== session || this.editingState || state.mode !== 'polygon' || state.phase !== 'drawing' ||
+      index !== 0 || state.vertices.length < 3 || !(distance <= CLOSE_DISTANCE)) return;
+    this.complete();
+  }
+
+  private emitVertexEnd(session: MapDrawing, index: number): void {
+    if (this.session !== session) return;
+    const state = session.snapshot();
+    if (!Number.isSafeInteger(index) || index < 0 || index >= state.vertices.length) return;
+    this.dispatchingState = true;
+    try { this.host.emitVertexEnd(Object.freeze({ ...state, index } satisfies LyraMapDrawingVertexEndDetail)); }
+    finally { this.dispatchingState = false; }
+  }
+
+  /** Enter completes and Backspace removes the last vertex while the map canvas has focus. */
+  private installKeys(): void {
+    const host = this.host, map = host.map(), session = this.session;
+    if (!map || !session || this.keyCleanup) return;
+    let canvas: HTMLCanvasElement;
+    try { canvas = map.getCanvas(); } catch { return; }
+    const key = (event: KeyboardEvent): void => {
+      if (this.session !== session || host.map() !== map || event.defaultPrevented || event.isComposing ||
+        event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.target !== canvas) return;
+      if (event.key === 'Enter' && !event.repeat) { event.preventDefault(); this.complete(); }
+      else if (event.key === 'Backspace' && !this.editingState) { event.preventDefault(); this.undo(); }
+    };
+    canvas.addEventListener('keydown', key);
+    const shortcuts = canvas.getAttribute('aria-keyshortcuts');
+    canvas.setAttribute('aria-keyshortcuts', this.editingState ? 'Enter' : 'Enter Backspace');
+    this.keyCleanup = () => {
+      canvas.removeEventListener('keydown', key);
+      if (shortcuts === null) canvas.removeAttribute('aria-keyshortcuts'); else canvas.setAttribute('aria-keyshortcuts', shortcuts);
+    };
+  }
+
+  /** Moves the rubber-band end to the pointer coordinate (`undefined` hides it), once per frame. */
+  preview(point: LyraMapDrawingPoint | undefined): void {
+    const state = this.snapshotState;
+    const next = this.session && !this.editingState && state?.phase === 'drawing' && state.vertices.length > 0 ? point : undefined;
+    if (next === undefined && this.previewPoint === undefined) return;
+    this.previewPoint = next;
+    if (this.previewFrame !== undefined) return;
+    const view = this.host.element.ownerDocument.defaultView;
+    const render = (): void => { this.previewFrame = undefined; if (this.session) this.renderResources(); };
+    if (!view || typeof view.requestAnimationFrame !== 'function') { render(); return; }
+    this.previewFrame = view.requestAnimationFrame(render);
+  }
+
+  private clearPreview(render = true): void {
+    if (this.previewFrame !== undefined) this.host.element.ownerDocument.defaultView?.cancelAnimationFrame(this.previewFrame);
+    this.previewFrame = undefined;
+    const had = this.previewPoint !== undefined; this.previewPoint = undefined;
+    if (had && render && this.session) this.renderResources();
+  }
+
+  private setLabels(value: readonly MapDrawingLabel[]): void {
+    const previous = this.labelsState;
+    if (value.length === previous.length && value.every((label, index) => {
+      const old = previous[index]!; return old.kind === label.kind && old.value === label.value && old.x === label.x && old.y === label.y;
+    })) return;
+    this.labelsState = value; this.host.changed();
+  }
+
+  /** Re-renders temporary resources in the current drawing color after a theme change. */
+  repaint(): void { if (this.session) this.renderResources(); }
+
   scheduleHandles(): void {
     this.host.afterUpdate(() => this.syncHandles(), 'map-drawing-handles');
   }
@@ -285,6 +388,7 @@ export class MapDrawingController {
     const host = this.host, map = host.map(), session = this.session, state = this.snapshotState, epoch = host.epoch();
     const current = (): boolean => host.map() === map && this.session === session && this.snapshotState === state && host.epoch() === epoch && host.interactionAllowed();
     const next: MapDrawingHandle[] = [];
+    const labels: MapDrawingLabel[] = [];
     if (map && session && state && current()) {
       try {
         const canvas = map.getCanvas(); if (!current()) return;
@@ -302,6 +406,26 @@ export class MapDrawingController {
               const y = (viewport.top - rect.top + point[1] * viewport.height / height) * baseHeight / rect.height;
               if (Number.isFinite(x) && Number.isFinite(y)) next.push({ index, x, y });
             }
+            if (host.element.drawingMeasurements && state.vertices.length > 1) {
+              // Labels share the handles' viewport projection, so they follow pans, zooms and resizes.
+              const place = (kind: MapDrawingLabel['kind'], value: number, ...points: LyraMapDrawingPoint[]): void => {
+                let sx = 0, sy = 0;
+                for (const point of points) {
+                  const projected = host.element.project(point); if (!projected) return;
+                  sx += projected[0] / points.length; sy += projected[1] / points.length;
+                }
+                if (!(sx >= 0 && sy >= 0 && sx <= width && sy <= height) || !Number.isFinite(value)) return;
+                const x = (viewport.left - rect.left + sx * viewport.width / width) * baseWidth / rect.width;
+                const y = (viewport.top - rect.top + sy * viewport.height / height) * baseHeight / rect.height;
+                if (Number.isFinite(x) && Number.isFinite(y)) labels.push({ kind, value, x, y });
+              };
+              const vertices = state.vertices, measured = measureDrawing(state.mode, vertices);
+              measured.segments.forEach((value, index) => { place('segment', value, vertices[index]!, vertices[index + 1]!); });
+              if (measured.closing !== undefined) place('closing', measured.closing, vertices[vertices.length - 1]!, vertices[0]!);
+              if (measured.area !== undefined && measured.centroid) place('area', measured.area, measured.centroid);
+              if (state.mode === 'line') place('length', measured.length, vertices[vertices.length - 1]!);
+              if (!current()) return;
+            }
           }
         }
       } catch { if (!current()) return; }
@@ -310,6 +434,7 @@ export class MapDrawingController {
     if (next.length !== this.handlesState.length || next.some((handle, index) => {
       const previous = this.handlesState[index]; return !previous || previous.index !== handle.index || previous.x !== handle.x || previous.y !== handle.y;
     })) this.setHandles(next);
+    this.setLabels(labels);
   }
 
   vertexKey(event: KeyboardEvent, index: number): void {
@@ -336,7 +461,7 @@ export class MapDrawingController {
     const dx = event.key === 'ArrowLeft' ? -step * rtl : event.key === 'ArrowRight' ? step * rtl : 0;
     const dy = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0;
     const coordinate = host.element.unproject([point[0] + dx, point[1] + dy]);
-    if (coordinate && current()) this.replaceVertex(session, index, coordinate);
+    if (coordinate && current() && this.replaceVertex(session, index, coordinate)) this.emitVertexEnd(session, index);
   }
 
   private emitChange(session: MapDrawing): void {
@@ -390,6 +515,7 @@ export class MapDrawingController {
     this.cancelResources();
     if (!map || !host.styleLoaded() || !host.element.isConnected) return;
     const state = this.snapshotState, [style] = host.generations(), epoch = ++this.resourceEpoch;
+    this.resourceStyle = style;
     const controller = new AbortController(); this.abort = controller;
     const current = (): boolean => host.map() === map && host.generations()[0] === style && epoch === this.resourceEpoch &&
       host.element.isConnected && !controller.signal.aborted;
@@ -407,7 +533,7 @@ export class MapDrawingController {
           const used = new Set([...reserved.sources.map(row => row.id), ...reserved.layers.map(row => row.layer.id)]);
           for (let attempt = 0; attempt < 512 && current(); attempt++) {
             const candidate = `lr-drawing-${this.idCounter++}`;
-            const ids = [candidate, `${candidate}-points`, `${candidate}-line`, `${candidate}-fill`];
+            const ids = [candidate, `${candidate}-points`, `${candidate}-line`, `${candidate}-fill`, `${candidate}-preview`];
             if (ids.some(value => used.has(value) || map.getSource(value) || map.getLayer(value))) continue;
             if (current()) id = candidate;
             break;
@@ -419,10 +545,18 @@ export class MapDrawingController {
         const features: unknown[] = vertices.map(point => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [...point] } }));
         if (vertices.length > 1) features.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: vertices.map(point => [...point]) } });
         if (state?.mode === 'polygon' && vertices.length > 2) features.push({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[...vertices.map(point => [...point]), [...vertices[0]!]]] } });
+        // Rubber band: from the last vertex to the pointer and, for a polygon, back to the first.
+        const preview = this.previewPoint, drawingPhase = state?.phase === 'drawing' && !this.editingState;
+        if (preview && drawingPhase && vertices.length) {
+          const last = vertices[vertices.length - 1]!;
+          const band = state?.mode === 'polygon' && vertices.length > 1 ? [[...last], [...preview], [...vertices[0]!]] : [[...last], [...preview]];
+          features.push({ type: 'Feature', properties: { preview: true }, geometry: { type: 'LineString', coordinates: band } });
+        }
         const color = host.accentColor();
         const layers = vertices.length ? [
           { layer: { id: `${id}-fill`, type: 'fill', source: id, filter: ['==', '$type', 'Polygon'], paint: { 'fill-color': color, 'fill-opacity': 0.2 } } },
-          { layer: { id: `${id}-line`, type: 'line', source: id, filter: ['==', '$type', 'LineString'], paint: { 'line-color': color, 'line-width': 2 } } },
+          { layer: { id: `${id}-line`, type: 'line', source: id, filter: ['all', ['==', '$type', 'LineString'], ['!has', 'preview']], paint: { 'line-color': color, 'line-width': 2 } } },
+          { layer: { id: `${id}-preview`, type: 'line', source: id, filter: ['all', ['==', '$type', 'LineString'], ['has', 'preview']], paint: { 'line-color': color, 'line-width': 2, 'line-dasharray': [2, 2] } } },
           { layer: { id: `${id}-points`, type: 'circle', source: id, filter: ['==', '$type', 'Point'], paint: { 'circle-color': color, 'circle-radius': 5 } } },
         ] : [];
         await (this.features ??= new MapOwnedFeatures()).reconcile(map, style, { overlays: { sources: vertices.length ? [{ id, source: { type: 'geojson', data: { type: 'FeatureCollection', features } } }] : [], layers }, images: [], styleOverrides: [] }, {

@@ -158,13 +158,50 @@ describe('map construction scheduling', () => {
     const host = document.implementation.createHTMLDocument().createElement('div');
     let count = 0;
     const scheduler = createMapConstructionScheduler(host, () => { count += 1; });
-    for (const mode of ['visible', 'idle', 'eager'] as const) {
+    for (const mode of ['visible', 'idle', 'eager', 'interaction'] as const) {
       scheduler.connect(mode);
       scheduler.setReady(true);
       scheduler.disconnect();
     }
     expect(host.ownerDocument.defaultView === null).to.equal(true);
     expect(count).to.equal(0);
+  });
+
+  it('admits interaction construction on the first host input and retires every listener', () => {
+    for (const type of ['pointerdown', 'touchstart', 'wheel', 'keydown', 'click']) {
+      const host = document.createElement('div'); document.body.append(host);
+      let count = 0;
+      try {
+        const scheduler = createMapConstructionScheduler(host, () => { count += 1; });
+        scheduler.connect('interaction'); scheduler.setReady(true);
+        document.body.dispatchEvent(new Event(type, { bubbles: true }));
+        expect(count, `${type} outside the host`).to.equal(0);
+        host.dispatchEvent(new Event(type, { bubbles: true }));
+        host.dispatchEvent(new Event(type, { bubbles: true }));
+        expect(count, type).to.equal(1);
+      } finally { host.remove(); }
+    }
+  });
+
+  it('admits interaction construction after the delay and cancels the timer and listeners on disconnect', async () => {
+    const host = document.createElement('div'); document.body.append(host);
+    let count = 0;
+    try {
+      const scheduler = createMapConstructionScheduler(host, () => { count += 1; });
+      scheduler.connect('interaction', 20); scheduler.setReady(true);
+      await new Promise(resolve => setTimeout(resolve, 60));
+      expect(count).to.equal(1);
+      scheduler.connect('interaction', 20); scheduler.setReady(true); scheduler.disconnect();
+      host.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      await new Promise(resolve => setTimeout(resolve, 60));
+      expect(count).to.equal(1);
+    } finally { host.remove(); }
+  });
+
+  it('treats interaction as visibility on a port without an input capability', () => {
+    const h = harness();
+    h.scheduler.connect('interaction'); h.scheduler.setReady(true);
+    expect(h.jobs[0]!.kind).to.equal('visible');
   });
 
   it('uses the host realm idle queue with its timeout and cancels on disconnect', () => {

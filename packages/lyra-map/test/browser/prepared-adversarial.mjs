@@ -120,21 +120,17 @@ export async function preparedAdversarial(browser, url, name) {
     release();
     await page.waitForFunction(() => window.preparedOutcome !== null);
     outcome = await page.evaluate(() => window.preparedOutcome);
-    const module = await page.evaluate(async moduleUrl => {
-      try { await import(moduleUrl); return { loaded: true }; }
-      catch (error) { return { loaded: false, message: error.message }; }
-    }, imports[0]);
-    assert(failed ? !module.loaded && /Prepared fixture module evaluation failure/.test(module.message) : module.loaded,
-      'The intercepted real module did not finish as expected: ' + JSON.stringify(module));
+    // Settle the renderer's own preparation path without issuing a separate raw import from
+    // the test. Count only requests made by the public API, including renderer/worker recovery.
+    // Failed evaluation is proved by the original shorthand's rejection; do not retry it.
+    const module = failed ? { loaded: false, message: outcome.message } : await page.evaluate(async () => {
+      await window.targetMap.prepareFeatures({ sources: window.preparedInput.sources,
+        layers: window.preparedInput.layers.map(entry => entry.layer) });
+      return { loaded: true };
+    });
+    assert(failed ? outcome.status === 'rejected' && /Prepared fixture module evaluation failure/.test(module.message) : module.loaded,
+      'The intercepted renderer preparation did not finish as expected: ' + JSON.stringify(module));
     assert(imports.length === 1, 'Duplicate renderer module request: ' + JSON.stringify(imports));
-    if (!failed && name !== 'prepared-held-import') {
-      // Await actual renderer and worker registration after the ignored import finishes. This
-      // does not add held IDs, supersede shorthand ownership or reuse its aborted signal.
-      await page.evaluate(async () => {
-        await window.targetMap.prepareFeatures({ sources: window.preparedInput.sources,
-          layers: window.preparedInput.layers.map(entry => entry.layer) });
-      });
-    }
 
     if (name === 'prepared-held-import') {
       assert(outcome.status === 'fulfilled' && outcome.sameMap, 'Released shorthand did not fulfill: ' + JSON.stringify(outcome));

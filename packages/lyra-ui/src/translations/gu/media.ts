@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'આ શિરોબિંદુ ખસેડવા તીર કી વાપરો; મોટા પગલાં માટે Shift દબાવી રાખો. Page Up અને Page Down શિરોબિંદુઓ પસંદ કરે છે. Home અને End પ્રથમ અને છેલ્લું દેખાતું શિરોબિંદુ પસંદ કરે છે.',
   panoramaInstructions: 'આસપાસ જોવા માટે તીર કી, ઝૂમ કરવા માટે પ્લસ અને માઇનસ તથા દૃશ્ય ફરી સેટ કરવા માટે Home વાપરો.',
   panoramaHotspotsLabel: 'પૅનોરમાના ક્રિયાપ્રતિક્રિયાશીલ બિંદુઓ',
+  mapActivate: 'ઇન્ટરેક્ટિવ નકશો બતાવો',
+  mapDrawingLength: 'લંબાઈ {value}',
+  mapDrawingArea: 'ક્ષેત્રફળ {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('gu', strings);

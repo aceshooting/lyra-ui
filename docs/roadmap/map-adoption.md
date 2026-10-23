@@ -108,13 +108,13 @@ regional site, whose map package is a separate fork of the main site's):
   rule for whether any fragment suppresses the initial fit.
 - [x] Image capacity for sprite catalogs (more than 64 images, `sdf`, a missing-image provider)
   without re-adding every owned layer on an image change.
-- [ ] Lazy construction on first interaction or after a delay, with an interactive placeholder.
-- [ ] Theme tokens in `overlays` paint.
-- [ ] A geolocation success event carrying the position.
-- [ ] Drawing parity: closing snap, rubber band, measurement labels, map-level Backspace/Enter,
+- [x] Lazy construction on first interaction or after a delay, with an interactive placeholder.
+- [x] Theme tokens in `overlays` paint.
+- [x] A geolocation success event carrying the position.
+- [x] Drawing parity: closing snap, rubber band, measurement labels, map-level Backspace/Enter,
   surviving a style swap, a drag-end signal and a color option.
-- [ ] Pointer events with `{ lngLat, point }` and feature geometry on hover events.
-- [ ] Basemap layer selectors and a read-only style-layer list.
+- [x] Pointer events with `{ lngLat, point }` and feature geometry on hover events.
+- [x] Basemap layer selectors and a read-only style-layer list.
 - [ ] Canvas redraw signal and `data:`/`blob:` image URLs for image layers; in-place updates of owned
   layers; owner-scoped composition; control order within a corner and linked custom attribution.
 - [ ] Prototype each raw-engine application on `lr-map` against the release candidate build and

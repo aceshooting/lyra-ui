@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Lo àwọn kọ́kọ́rọ́ ọfà láti gbé orígun yìí; di Shift mú fún ìgbésẹ̀ tó tóbi sí i. Page Up àti Page Down yan àwọn orígun. Home àti End yan orígun àkọ́kọ́ àti èyí tó kẹ́yìn tí a lè rí.',
   panoramaInstructions: 'Lo àwọn kọ́kọ́rọ́ ọfà láti wo àyíká, àmì àfikún àti àyọkúrò láti sún un súnmọ́ àti jìnnà, àti Home láti dá ojú ìwò padà.',
   panoramaHotspotsLabel: 'Àwọn ibi ìbáṣepọ̀ nínú panorama',
+  mapActivate: 'Fi màpù ìbánisọ̀rọ̀ hàn',
+  mapDrawingLength: 'Gígùn {value}',
+  mapDrawingArea: 'Ìbú agbègbè {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('yo', strings);

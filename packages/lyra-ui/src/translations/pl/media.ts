@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Użyj klawiszy strzałek, aby przesunąć ten wierzchołek; przytrzymaj Shift, aby zwiększyć krok. Page Up i Page Down wybierają wierzchołki. Home i End wybierają pierwszy i ostatni widoczny wierzchołek.',
   panoramaInstructions: 'Użyj strzałek do rozglądania się, plusa i minusa do powiększania i pomniejszania oraz Home do resetowania widoku.',
   panoramaHotspotsLabel: 'Interaktywne punkty panoramy',
+  mapActivate: 'Pokaż mapę interaktywną',
+  mapDrawingLength: 'Długość {value}',
+  mapDrawingArea: 'Powierzchnia {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('pl', strings);

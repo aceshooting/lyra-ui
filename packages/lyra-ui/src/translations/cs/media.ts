@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Tento vrchol přesunete klávesami se šipkami; pro větší kroky podržte Shift. Klávesami Page Up a Page Down vybíráte vrcholy. Klávesami Home a End vyberete první a poslední viditelný vrchol.',
   panoramaInstructions: 'Pomocí šipek se rozhlížejte, klávesami plus a minus přibližujte a klávesou Home obnovte zobrazení.',
   panoramaHotspotsLabel: 'Interaktivní body panoramatu',
+  mapActivate: 'Zobrazit interaktivní mapu',
+  mapDrawingLength: 'Délka {value}',
+  mapDrawingArea: 'Plocha {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('cs', strings);

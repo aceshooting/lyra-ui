@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Pomičite ovaj vrh tipkama sa strelicama; držite Shift za veće korake. Page Up i Page Down odabiru vrhove. Home i End odabiru prvi i posljednji vidljivi vrh.',
   panoramaInstructions: 'Tipkama sa strelicama gledajte oko sebe, tipkama plus i minus zumirajte, a tipkom Home vratite početni prikaz.',
   panoramaHotspotsLabel: 'Interaktivne točke panorame',
+  mapActivate: 'Prikaži interaktivnu kartu',
+  mapDrawingLength: 'Duljina {value}',
+  mapDrawingArea: 'Površina {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('hr', strings);

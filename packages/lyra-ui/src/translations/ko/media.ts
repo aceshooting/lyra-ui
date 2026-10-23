@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: '화살표 키로 이 꼭짓점을 이동하세요. 더 크게 이동하려면 Shift 키를 누른 상태로 조작하세요. Page Up과 Page Down으로 꼭짓점을 선택합니다. Home과 End로 처음과 마지막으로 보이는 꼭짓점을 선택합니다.',
   panoramaInstructions: '방향키로 주변을 둘러보고, 더하기와 빼기 키로 확대하거나 축소하고, Home 키로 보기를 초기화합니다.',
   panoramaHotspotsLabel: '파노라마의 상호작용 지점',
+  mapActivate: '대화형 지도 표시',
+  mapDrawingLength: '길이 {value}',
+  mapDrawingArea: '면적 {value}',
+  mapSquareMeters: '{value}㎡',
+  mapSquareKilometers: '{value}㎢',
 };
 
 registerLyraLocale('ko', strings);

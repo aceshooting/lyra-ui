@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Salelá bafungola ya flɛ́shɛ mpo na kotambolisa nsuka oyo; simbá Shift mpo na matambe minene. Page Up ná Page Down eponaka bansuka. Home ná End eponaka nsuka ya liboso mpe ya nsuka oyo ezali komonana.',
   panoramaInstructions: 'Salelá bafungola ya flɛ́mɛ mpo na kotala zingazinga, kobakisa mpe kolongola mpo na kokómisa monene to moke, mpe Home mpo na kozongisa botali.',
   panoramaHotspotsLabel: 'Bisika ya boyokani na panorama',
+  mapActivate: 'Komisa mapa ya interaktif',
+  mapDrawingLength: 'Molai {value}',
+  mapDrawingArea: 'Bonene ya esika {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('ln', strings);

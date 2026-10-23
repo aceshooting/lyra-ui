@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'ਇਸ ਸਿਖਰ ਬਿੰਦੂ ਨੂੰ ਹਿਲਾਉਣ ਲਈ ਤੀਰ ਕੁੰਜੀਆਂ ਵਰਤੋ; ਵੱਡੇ ਕਦਮਾਂ ਲਈ Shift ਦਬਾਈ ਰੱਖੋ। Page Up ਅਤੇ Page Down ਸਿਖਰ ਬਿੰਦੂ ਚੁਣਦੇ ਹਨ। Home ਅਤੇ End ਪਹਿਲਾ ਅਤੇ ਆਖਰੀ ਦਿਸਦਾ ਸਿਖਰ ਬਿੰਦੂ ਚੁਣਦੇ ਹਨ।',
   panoramaInstructions: 'ਆਲੇ-ਦੁਆਲੇ ਵੇਖਣ ਲਈ ਤੀਰ ਕੁੰਜੀਆਂ, ਵੱਡਾ ਅਤੇ ਛੋਟਾ ਕਰਨ ਲਈ ਪਲੱਸ ਅਤੇ ਮਾਈਨਸ ਅਤੇ ਦ੍ਰਿਸ਼ ਮੁੜ ਸੈੱਟ ਕਰਨ ਲਈ Home ਵਰਤੋ।',
   panoramaHotspotsLabel: 'ਪੈਨੋਰਾਮਾ ਦੀਆਂ ਪਰਸਪਰ ਕਿਰਿਆਸ਼ੀਲ ਥਾਵਾਂ',
+  mapActivate: 'ਇੰਟਰਐਕਟਿਵ ਨਕਸ਼ਾ ਦਿਖਾਓ',
+  mapDrawingLength: 'ਲੰਬਾਈ {value}',
+  mapDrawingArea: 'ਖੇਤਰਫਲ {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('pa', strings);

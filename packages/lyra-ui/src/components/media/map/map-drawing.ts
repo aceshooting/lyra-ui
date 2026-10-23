@@ -30,9 +30,13 @@ export interface LyraMapDrawingSnapshot {
   }>;
 }
 
-/** Why an armed mode or drawing session ended without completing. */
+/** Why an armed mode or drawing session ended without completing. `style-change` is no longer
+ *  reported: a drawing or edit session survives a `mapStyle` swap. */
 export type LyraMapDrawingCancelReason = 'cancel' | 'escape' | 'mode-change' | 'pick-mode' | 'style-change' | 'disconnect' | 'disabled' | 'pointercancel';
 export interface LyraMapDrawingCancelDetail extends LyraMapDrawingSnapshot { readonly reason: LyraMapDrawingCancelReason; }
+/** Detail of `lr-map-draw-vertex-end`: the snapshot after a vertex drag or keyboard move ended,
+ *  with the moved vertex's `index`. */
+export interface LyraMapDrawingVertexEndDetail extends LyraMapDrawingSnapshot { readonly index: number; }
 
 export interface MapDrawingResult {
   readonly accepted: boolean;
@@ -160,6 +164,27 @@ function measurements(vertices: readonly Vector[], mode: MapDrawingMode): LyraMa
     area: Math.abs(solidAngle) * RADIUS * RADIUS,
     centroid: centroid(polygon ? scale(moment, Math.sign(solidAngle)) : moment, polygon ? 1e-16 : totalAngle * 1e-12),
   });
+}
+
+/** In-progress measurements for on-map labels: every accepted segment's great-circle length, the
+ *  implicit closing segment and area of a polygon with three or more vertices, and the total
+ *  length of a line. A polygon whose ring is not yet valid has no area. */
+export interface MapDrawingMeasurement {
+  readonly segments: readonly number[];
+  readonly closing?: number;
+  readonly length: number;
+  readonly area?: number;
+  readonly centroid?: LyraMapDrawingPoint;
+}
+export function measureDrawing(mode: MapDrawingMode, points: readonly LyraMapDrawingPoint[]): MapDrawingMeasurement {
+  const vectors = points.map(vector);
+  const segments = vectors.slice(1).map((point, index) => angle(vectors[index]!, point) * RADIUS);
+  const length = segments.reduce((total, value) => total + value, 0);
+  if (mode !== 'polygon' || vectors.length < 3) return Object.freeze({ segments: Object.freeze(segments), length });
+  const closing = angle(vectors[vectors.length - 1]!, vectors[0]!) * RADIUS;
+  const metrics = measurements(vectors, 'polygon');
+  return Object.freeze({ segments: Object.freeze(segments), closing, length: length + closing,
+    ...(typeof metrics === 'string' ? {} : { area: metrics.area, ...(metrics.centroid ? { centroid: metrics.centroid } : {}) }) });
 }
 
 /**

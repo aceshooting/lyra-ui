@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Use arrow key dem move dis kona; hold Shift make e move big-big. Page Up and Page Down dey choose kona dem. Home and End dey choose di first and last kona wey dey show.',
   panoramaInstructions: 'Use arrow keys to look around, plus and minus to zoom, and Home to reset di view.',
   panoramaHotspotsLabel: 'Di panorama interactive points',
+  mapActivate: 'Show di interactive map',
+  mapDrawingLength: 'Length {value}',
+  mapDrawingArea: 'Area {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('pcm', strings);

@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'برای جابه‌جایی این رأس از کلیدهای جهت‌نما استفاده کنید؛ برای گام‌های بزرگ‌تر Shift را نگه دارید. Page Up و Page Down رأس‌ها را انتخاب می‌کنند. Home و End نخستین و آخرین رأس قابل دید را انتخاب می‌کنند.',
   panoramaInstructions: 'برای دیدن اطراف از کلیدهای جهت‌نما، برای بزرگ‌نمایی و کوچک‌نمایی از مثبت و منفی و برای بازنشانی نما از Home استفاده کنید.',
   panoramaHotspotsLabel: 'نقاط تعاملی پانوراما',
+  mapActivate: 'نمایش نقشه تعاملی',
+  mapDrawingLength: 'طول {value}',
+  mapDrawingArea: 'مساحت {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

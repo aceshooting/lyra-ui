@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Folosește tastele săgeată pentru a muta acest vârf; ține apăsat Shift pentru pași mai mari. Page Up și Page Down selectează vârfuri. Home și End selectează primul și ultimul vârf vizibil.',
   panoramaInstructions: 'Folosiți săgețile pentru a privi în jur, plus și minus pentru zoom și Home pentru resetarea vizualizării.',
   panoramaHotspotsLabel: 'Puncte interactive ale panoramei',
+  mapActivate: 'Afișează harta interactivă',
+  mapDrawingLength: 'Lungime {value}',
+  mapDrawingArea: 'Suprafață {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('ro', strings);

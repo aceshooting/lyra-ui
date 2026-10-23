@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Используйте клавиши со стрелками, чтобы переместить эту вершину; удерживайте Shift для более крупных шагов. Page Up и Page Down выбирают вершины. Home и End выбирают первую и последнюю видимую вершину.',
   panoramaInstructions: 'Используйте стрелки, чтобы осмотреться, плюс и минус для масштабирования и Home для сброса вида.',
   panoramaHotspotsLabel: 'Интерактивные точки панорамы',
+  mapActivate: 'Показать интерактивную карту',
+  mapDrawingLength: 'Длина {value}',
+  mapDrawingArea: 'Площадь {value}',
+  mapSquareMeters: '{value} м²',
+  mapSquareKilometers: '{value} км²',
 };
 
 registerLyraLocale('ru', strings);

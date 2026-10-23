@@ -56,15 +56,21 @@ describe('map controls lifecycle', () => {
     resolves[0]!(Control); await first; expect(h.installed.length).to.equal(0);
     resolves[1]!(Control); await second; expect(h.installed.length).to.equal(1); manager.dispose();
   });
-  it('reports a retry success without native position data and rejects a retired success callback', async () => {
+  it('reports a retry success with only a validated position and accuracy, and rejects a retired success callback', async () => {
     const h = harness(); await h.manager.sync(h.map, options({ geolocate: true }), h.context);
     const control = h.created[0]!;
     control.fire('error', { code: 1 });
-    control.fire('geolocate', { get coords() { throw new Error('Position data must not be read'); } });
-    expect(h.events).to.deep.equal([{ kind: 'geolocate-error', code: 'permission-denied' }, { kind: 'geolocate-success' }]);
+    control.fire('geolocate', { coords: { longitude: 6.13, latitude: 49.61, accuracy: 25, altitude: 300, speed: 2 }, timestamp: 1 });
+    control.fire('geolocate', { get coords() { throw new Error('Unreadable position'); } });
+    control.fire('geolocate', { coords: { longitude: 200, latitude: 49, accuracy: 5 } });
+    control.fire('geolocate', { coords: { longitude: 6, latitude: 49, accuracy: -1 } });
+    expect(h.events).to.deep.equal([{ kind: 'geolocate-error', code: 'permission-denied' },
+      { kind: 'geolocate-success', lngLat: [6.13, 49.61], accuracy: 25 },
+      { kind: 'geolocate-success' }, { kind: 'geolocate-success' }, { kind: 'geolocate-success' }]);
+    expect(Object.isFrozen(h.events[1]) && Object.isFrozen((h.events[1] as { lngLat: unknown }).lngLat)).to.equal(true);
     const callback = [...control.listeners.get('geolocate')!][0]!;
-    await h.manager.sync(h.map, options({ attribution: false }), h.context); callback({ coords: { latitude: 42 } });
-    expect(h.events.length).to.equal(2); expect(control.retired).to.deep.equal(['error', 'outofmaxbounds', 'geolocate']);
+    await h.manager.sync(h.map, options({ attribution: false }), h.context); callback({ coords: { longitude: 1, latitude: 42, accuracy: 3 } });
+    expect(h.events.length).to.equal(5); expect(control.retired).to.deep.equal(['error', 'outofmaxbounds', 'geolocate']);
   });
   it('retires listeners before removing a partially installed control when addControl throws', async () => {
     const h = harness(); h.map.addControl = control => { h.installed.push(control); throw new Error('private'); };

@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Dùng các phím mũi tên để di chuyển đỉnh này; giữ Shift để di chuyển theo bước lớn hơn. Page Up và Page Down chọn các đỉnh. Home và End chọn đỉnh hiển thị đầu tiên và cuối cùng.',
   panoramaInstructions: 'Dùng phím mũi tên để nhìn xung quanh, dấu cộng và trừ để thu phóng, Home để đặt lại khung nhìn.',
   panoramaHotspotsLabel: 'Các điểm tương tác trong ảnh toàn cảnh',
+  mapActivate: 'Hiển thị bản đồ tương tác',
+  mapDrawingLength: 'Chiều dài {value}',
+  mapDrawingArea: 'Diện tích {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('vi', strings);

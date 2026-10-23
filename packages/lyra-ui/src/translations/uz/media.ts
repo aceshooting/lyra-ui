@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Bu uchni siljitish uchun o‘q tugmalaridan foydalaning; kattaroq qadamlar uchun Shift tugmasini bosib turing. Page Up va Page Down uchlarni tanlaydi. Home va End birinchi va oxirgi ko‘rinadigan uchni tanlaydi.',
   panoramaInstructions: 'Atrofga qarash uchun strelka tugmalaridan, kattalashtirish va kichraytirish uchun plyus va minusdan, ko‘rinishni tiklash uchun Home tugmasidan foydalaning.',
   panoramaHotspotsLabel: 'Panoramadagi interaktiv nuqtalar',
+  mapActivate: 'Interaktiv xaritani ko‘rsatish',
+  mapDrawingLength: 'Uzunlik {value}',
+  mapDrawingArea: 'Maydon {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('uz', strings);

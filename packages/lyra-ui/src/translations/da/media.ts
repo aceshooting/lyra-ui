@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Brug piletasterne til at flytte dette hjørnepunkt; hold Shift nede for større trin. Page Up og Page Down vælger hjørnepunkter. Home og End vælger det første og sidste synlige hjørnepunkt.',
   panoramaInstructions: 'Brug piletasterne til at se dig omkring, plus og minus til at zoome og Home til at nulstille visningen.',
   panoramaHotspotsLabel: 'Interaktive punkter i panoramaet',
+  mapActivate: 'Vis interaktivt kort',
+  mapDrawingLength: 'Længde {value}',
+  mapDrawingArea: 'Areal {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('da', strings);

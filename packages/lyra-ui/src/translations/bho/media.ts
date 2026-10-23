@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'ई कोना के हिलावे खातिर तीर वाला कुंजी इस्तेमाल करीं; बड़ कदम खातिर Shift दबवले राखीं। Page Up आ Page Down से कोना चुनीं। Home आ End से पहिला आ आखिरी देखाई देवे वाला कोना चुनीं।',
   panoramaInstructions: 'चारों ओर देखे खातिर तीर कुंजी, बड़ आ छोट करे खातिर प्लस आ माइनस, आ दृश्य रीसेट करे खातिर Home इस्तेमाल करीं।',
   panoramaHotspotsLabel: 'पैनोरमा के इंटरैक्टिव बिंदु',
+  mapActivate: 'इंटरैक्टिव नक्शा देखाईं',
+  mapDrawingLength: 'लंबाई {value}',
+  mapDrawingArea: 'क्षेत्रफल {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('bho', strings);

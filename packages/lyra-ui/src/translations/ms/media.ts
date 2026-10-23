@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Gunakan kekunci anak panah untuk mengalihkan bucu ini; tahan Shift untuk langkah yang lebih besar. Page Up dan Page Down memilih bucu. Home dan End memilih bucu pertama dan terakhir yang kelihatan.',
   panoramaInstructions: 'Gunakan kekunci anak panah untuk melihat sekeliling, tambah dan tolak untuk mengezum serta Home untuk menetapkan semula paparan.',
   panoramaHotspotsLabel: 'Titik interaktif panorama',
+  mapActivate: 'Papar peta interaktif',
+  mapDrawingLength: 'Panjang {value}',
+  mapDrawingArea: 'Luas {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('ms', strings);

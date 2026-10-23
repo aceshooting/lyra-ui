@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: '使用方向鍵移動此頂點；按住 Shift 可加大移動步幅。Page Up 與 Page Down 用於選取頂點。Home 與 End 用於選取第一個與最後一個可見頂點。',
   panoramaInstructions: '使用方向鍵環顧四周，加號和減號鍵縮放，Home 鍵重設檢視。',
   panoramaHotspotsLabel: '全景圖互動點',
+  mapActivate: '顯示互動式地圖',
+  mapDrawingLength: '長度 {value}',
+  mapDrawingArea: '面積 {value}',
+  mapSquareMeters: '{value}平方公尺',
+  mapSquareKilometers: '{value}平方公里',
 };
 
 registerLyraLocale('zh-TW', strings);

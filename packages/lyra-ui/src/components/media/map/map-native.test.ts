@@ -4,8 +4,8 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
-import { loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime } from './map-feature-loader.js';
-import type { LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot } from './map.class.js';
+import { loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime, loadMapOwnedFeatureRuntime } from './map-feature-loader.js';
+import type { LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot, LyraMapInteractionDetail, LyraMapPointerDetail } from './map.class.js';
 void LyraMap;
 
 /** Only real native methods, reached through the documented map getter. */
@@ -125,7 +125,7 @@ describe('lr-map actual modular companion integration', function () {
   // These cases need a real WebGL2 context; a browser without one shows the map's fallback instead.
   before(function () { if (!document.createElement('canvas').getContext('webgl2')) this.skip(); });
   // Exercises the steady state after the on-demand runtime has loaded; map-lazy-runtimes.test.ts covers the loading itself.
-  before(() => Promise.all([loadMapDrawingRuntime(), loadMapFeatureStateRuntime(), loadMapHashRuntime()]));
+  before(() => Promise.all([loadMapDrawingRuntime(), loadMapFeatureStateRuntime(), loadMapHashRuntime(), loadMapOwnedFeatureRuntime(), loadMapControlRuntime()]));
   beforeEach(() => {
     previousWorkerUrl = getWorkerUrl();
     setWorkerUrl(new URL('/__lyra-map-worker__/worker.mjs', location.origin).href);
@@ -337,7 +337,7 @@ describe('lr-map actual modular companion integration', function () {
     expect(map.doubleClickZoom.isEnabled()).to.equal(zoom); expect(map.dragPan.isEnabled()).to.equal(pan);
     expect(el.shadowRoot!.querySelector('[part="drawing-vertex"]') === null).to.equal(true);
   });
-  it('M09 renders a 600,000-value GeoJSON overlay with native paint, filter, zoom gating, order, picking and state across style swaps', async () => {
+  it('renders a 600,000-value GeoJSON overlay with native paint, filter, zoom gating, order, picking and state across style swaps', async () => {
     const data = largeGrid('#ff0000');
     expect(countValues(data)).to.be.greaterThan(600_000);
     const { el } = await mount(map => { map.overlays = largeOverlays(data); });
@@ -374,7 +374,7 @@ describe('lr-map actual modular companion integration', function () {
     color(await centerPixel(el), [0, 255, 0, 255]);
   });
 
-  it('M10 supplies lazy SDF icons, takes a sprite catalog beyond 64 and changes images without re-adding layers', async () => {
+  it('supplies lazy SDF icons, takes a sprite catalog beyond 64 and changes images without re-adding layers', async () => {
     const square = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#ffffff"/></svg>';
     const catalog = Array.from({ length: 100 }, (_, index) => ({ id: `poi-${index}`, width: 8, height: 8, pixelRatio: 1,
       source: { kind: 'svg' as const, markup: square.replace('#ffffff', '#ff0000') } }));
@@ -449,4 +449,108 @@ describe('lr-map actual modular companion integration', function () {
     await clickCanvas(el); await waitUntil(() => clicks.length === 9); expect(clicks.at(-1)!.hit).to.equal(undefined);
   });
 
+  it('builds an interaction-initialized map from a real press on its activation button', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size:480px"></div>`);
+    const el = document.createElement('lr-map') as LyraMap;
+    el.style.cssText = 'inline-size:480px;block-size:360px'; el.engine = 'modular'; el.mapStyle = localStyle();
+    el.initialization = 'interaction'; wrapper.append(el);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="initialization-activate"]') !== null);
+    // wait-reason: interaction mode must remain unconstructed after the placeholder settles without input.
+    await new Promise(resolve => setTimeout(resolve, 100)); expect(el.map).to.equal(undefined);
+    const loaded = oneEvent(el, 'lr-map-load'); await click(button(el, 'initialization-activate')); await loaded;
+    expect(el.map!.getCanvas().getContext('webgl2') !== null).to.equal(true);
+  });
+
+  it('paints theme-token overlay colors and repaints them after a real theme change', async () => {
+    const { el, wrapper } = await mount(map => {
+      map.style.setProperty('--native-overlay', 'rgb(0, 160, 0)');
+      map.overlays = { ...overlays(), layers: [{ layer: { id: 'local-fill', type: 'fill', source: 'local-area', paint: { 'fill-color': 'var(--native-overlay)', 'fill-opacity': 1 } } }] };
+    });
+    color(await centerPixel(el), [0, 160, 0, 255]);
+    wrapper.style.setProperty('--unused', '1'); el.style.setProperty('--native-overlay', 'oklch(0.45 0.3 264)');
+    await waitUntil(async () => (await centerPixel(el))[2]! > 150, 'theme change repaints the overlay');
+  });
+
+  it('closes a polygon on its first vertex, measures it, keeps it across a style swap and edits by keyboard', async () => {
+    const { el } = await mount(map => { map.overlays = {}; map.drawingMeasurements = true; }); const map = peer(el);
+    const doubleClick = map.doubleClickZoom.isEnabled();
+    el.drawMode = 'polygon'; await el.updateComplete; await waitUntil(() => !button(el, 'drawing-add').disabled);
+    const box = () => map.getCanvas().getBoundingClientRect();
+    const at = async (lngLat: [number, number], type: 'click' | 'move' = 'click') => {
+      const point = map.project(lngLat), rect = box();
+      await sendMouse({ type, position: [Math.round(rect.left + point.x), Math.round(rect.top + point.y)] }); await el.updateComplete;
+    };
+    const changes: LyraMapDrawingSnapshot[] = []; el.addEventListener('lr-map-draw-change', event => { changes.push(event.detail); });
+    for (const lngLat of [[-4, -4], [4, -4], [4, 4]] as [number, number][]) { await at(lngLat); await waitUntil(() => changes.at(-1)?.vertices.length === changes.length); }
+    await at([0, 6], 'move');
+    await waitUntil(() => map.getStyle().layers.some(layer => layer.id.endsWith('-preview')), 'rubber band layer');
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="drawing-measurement"]').length === 4, 'measurement labels');
+    el.mapStyle = localStyle(); await el.updateComplete; await el.whenIdle();
+    expect(el.drawMode).to.equal('polygon'); expect(map.doubleClickZoom.isEnabled()).to.equal(false);
+    await waitUntil(() => map.getStyle().layers.some(layer => layer.id.startsWith('lr-drawing-')), 'drawing restored on the new style');
+    map.getCanvas().focus(); await sendKeys({ press: 'Backspace' }); await waitUntil(() => changes.at(-1)!.vertices.length === 2);
+    await at([4, 4]);
+    const completed = oneEvent(el, 'lr-map-draw-complete'); await at([-4, -4]);
+    const detail = (await completed).detail as LyraMapDrawingSnapshot;
+    expect(detail.geometry?.type).to.equal('Polygon'); expect(detail.vertices.length).to.equal(3); expect(detail.metrics!.area).to.be.greaterThan(1e11);
+    await el.whenIdle(); expect(map.doubleClickZoom.isEnabled()).to.equal(doubleClick);
+    expect(map.getStyle().layers.some(layer => layer.id.startsWith('lr-drawing-'))).to.equal(false);
+    el.drawMode = 'line'; await el.updateComplete; await waitUntil(() => !button(el, 'drawing-add').disabled);
+    await at([-2, 0]); await at([2, 0]);
+    const line = oneEvent(el, 'lr-map-draw-complete'); map.getCanvas().focus(); await sendKeys({ press: 'Enter' });
+    expect(((await line).detail as LyraMapDrawingSnapshot).geometry?.type).to.equal('LineString');
+  });
+
+  it('reports frame-throttled pointer positions and hover features with real geometry', async () => {
+    const { el } = await mount(); const map = peer(el);
+    const enters: LyraMapInteractionDetail[] = []; el.addEventListener('lr-map-feature-enter', event => { enters.push(event.detail); });
+    const moved = oneEvent(el, 'lr-map-pointer-move');
+    const point = map.project([0, 0]), rect = map.getCanvas().getBoundingClientRect();
+    await sendMouse({ type: 'move', position: [Math.round(rect.left + point.x), Math.round(rect.top + point.y)] });
+    const detail = (await moved).detail as LyraMapPointerDetail;
+    expect(detail.lngLat[0]).to.be.closeTo(0, 0.5); expect(detail.lngLat[1]).to.be.closeTo(0, 0.5);
+    expect(detail.point[0]).to.be.closeTo(point.x, 1.5); expect(detail.point[1]).to.be.closeTo(point.y, 1.5);
+    await waitUntil(() => enters.length === 1, 'hover enters the overlay feature');
+    const feature = enters[0]!.feature!;
+    expect(feature.id).to.equal(7); expect(feature.properties).to.deep.equal({ name: 'Local area' });
+    expect(feature.geometry?.type).to.equal('Polygon'); expect(Object.isFrozen(feature.geometry)).to.equal(true);
+    const left = oneEvent(el, 'lr-map-pointer-leave'); await sendMouse({ type: 'move', position: [2, 2] }); await left;
+  });
+
+  it('selects real basemap layers by source and type for overrides and interaction, and lists the style', async () => {
+    const basemap = () => ({ ...LYRA_MAP_EMPTY_STYLE, sources: { base: { type: 'geojson', data: geometry(3) } }, layers: [
+      { id: 'plain-background', type: 'background', paint: { 'background-color': '#ffffff' } },
+      { id: 'base-fill', type: 'fill', source: 'base', paint: { 'fill-color': '#ff0000' } },
+      { id: 'base-outline', type: 'line', source: 'base', paint: { 'line-color': '#000000' } },
+    ] });
+    const { el } = await mount(map => {
+      map.overlays = {}; map.mapStyle = basemap() as never;
+      map.styleOverrides = [{ source: 'base', layerType: 'fill', paint: { 'fill-color': 'rgb(0, 0, 255)' } }];
+      map.interactiveBasemapLayers = [{ source: 'base', layerType: 'fill' }];
+    });
+    expect(el.styleLayers.map(layer => layer.id)).to.deep.equal(['plain-background', 'base-fill', 'base-outline']);
+    expect(el.styleLayers[1]).to.deep.equal({ id: 'base-fill', type: 'fill', source: 'base' });
+    expect(el.styleSources).to.deep.equal([{ id: 'base', type: 'geojson' }]);
+    color(await centerPixel(el), [0, 0, 255, 255]);
+    const clicked = oneEvent(el, 'lr-map-click'); await clickCanvas(el);
+    const hit = (await clicked).detail.hit!; expect(hit.origin).to.equal('basemap'); expect(hit.layerId).to.equal('base-fill');
+    el.styleOverrides = []; await el.updateComplete; await el.whenIdle(); color(await centerPixel(el), [255, 0, 0, 255]);
+  });
+
+  it('reports the position of a user-activated real geolocate control', async () => {
+    const geolocation = navigator.geolocation;
+    const own = Object.getOwnPropertyDescriptor(geolocation, 'getCurrentPosition');
+    try {
+      Object.defineProperty(geolocation, 'getCurrentPosition', { configurable: true, value(success: PositionCallback) {
+        setTimeout(() => success({ coords: { longitude: 1.5, latitude: 2.5, accuracy: 30, altitude: null, altitudeAccuracy: null, heading: null, speed: null,
+          toJSON() { return {}; } }, timestamp: Date.now(), toJSON() { return {}; } } as GeolocationPosition), 0);
+      } });
+      const { el } = await mount(map => { map.controls = { geolocate: true }; });
+      await waitUntil(() => el.shadowRoot!.querySelector('[part~="geolocate"]') !== null, 'geolocate control installed');
+      const located = oneEvent(el, 'lr-map-geolocate'); await click(button(el, 'geolocate'));
+      expect((await located).detail).to.deep.equal({ lngLat: [1.5, 2.5], accuracy: 30 });
+    } finally {
+      if (own) Object.defineProperty(geolocation, 'getCurrentPosition', own); else Reflect.deleteProperty(geolocation, 'getCurrentPosition');
+    }
+  });
 });

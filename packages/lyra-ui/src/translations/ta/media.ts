@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'இந்த முனைப்புள்ளியை நகர்த்த அம்புக்குறி விசைகளைப் பயன்படுத்தவும்; பெரிய படிகளுக்கு Shift-ஐ அழுத்திப் பிடிக்கவும். Page Up மற்றும் Page Down முனைப்புள்ளிகளைத் தேர்ந்தெடுக்கும். Home மற்றும் End முதல் மற்றும் கடைசி காணக்கூடிய முனைப்புள்ளியைத் தேர்ந்தெடுக்கும்.',
   panoramaInstructions: 'சுற்றிப் பார்க்க அம்புக்குறி விசைகளையும், பெரிதாக்கவும் சிறிதாக்கவும் கூட்டல் மற்றும் கழித்தல் விசைகளையும், காட்சியை மீட்டமைக்க Home விசையையும் பயன்படுத்தவும்.',
   panoramaHotspotsLabel: 'பனோரமாவின் ஊடாடும் புள்ளிகள்',
+  mapActivate: 'ஊடாடும் வரைபடத்தைக் காட்டு',
+  mapDrawingLength: 'நீளம் {value}',
+  mapDrawingArea: 'பரப்பளவு {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('ta', strings);

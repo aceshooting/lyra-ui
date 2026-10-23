@@ -13,12 +13,26 @@ export interface MapControlLifecyclePeer {
 export type MapControlLifecycleEvent =
   { readonly kind: 'geolocate-error'; readonly code: LyraMapGeolocationErrorCode } |
   { readonly kind: 'geolocate-out-of-bounds'; readonly code: 'out-of-bounds' } |
-  { readonly kind: 'geolocate-success' };
+  { readonly kind: 'geolocate-success'; readonly lngLat?: readonly [number, number]; readonly accuracy?: number };
 export interface MapControlLifecycleContext {
   /** Captures the component's current connection, map and control configuration. */
   readonly isCurrent: () => boolean;
   readonly onEvent: (event: MapControlLifecycleEvent) => void;
   readonly onFailure: (failure: { readonly kind: MapOwnedControlKind; readonly code: 'control-failed' }) => void;
+}
+/** Reads a native `GeolocationPosition` through own data or its standard prototype getters only:
+ *  finite `longitude`/`latitude` within range and a finite nonnegative `accuracy`, or nothing. */
+function geolocatedPosition(event: unknown): { readonly lngLat: readonly [number, number]; readonly accuracy: number } | Record<string, never> {
+  try {
+    if (event === null || typeof event !== 'object') return {};
+    const coords = (event as { readonly coords?: unknown }).coords;
+    if (coords === null || typeof coords !== 'object') return {};
+    const { longitude, latitude, accuracy } = coords as { readonly longitude?: unknown; readonly latitude?: unknown; readonly accuracy?: unknown };
+    if (typeof longitude !== 'number' || typeof latitude !== 'number' || typeof accuracy !== 'number' ||
+      !Number.isFinite(longitude) || !Number.isFinite(latitude) || !Number.isFinite(accuracy) ||
+      Math.abs(longitude) > 180 || Math.abs(latitude) > 90 || accuracy < 0) return {};
+    return { lngLat: Object.freeze([longitude, latitude] as const), accuracy };
+  } catch { return {}; }
 }
 interface Entry {
   readonly map: MapControlLifecyclePeer;
@@ -109,8 +123,10 @@ export class MapControlsLifecycle {
           if (this.current(entry)) entry.context.onEvent({ kind: 'geolocate-out-of-bounds', code: 'out-of-bounds' });
         });
         if (!this.current(entry)) { this.release(entry); return; }
-        this.subscribe(entry, 'geolocate', () => {
-          if (this.current(entry)) entry.context.onEvent({ kind: 'geolocate-success' });
+        this.subscribe(entry, 'geolocate', event => {
+          if (!this.current(entry)) return;
+          const position = geolocatedPosition(event);
+          if (this.current(entry)) entry.context.onEvent(Object.freeze({ kind: 'geolocate-success', ...position }));
         });
         if (!this.current(entry)) { this.release(entry); return; }
       }

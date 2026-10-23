@@ -7399,6 +7399,7 @@ export interface LyraComponentTypeMap {
       | 'choroplethLegend'
       | 'controls'
       | 'dataLayers'
+      | 'drawingMeasurements'
       | 'drawMode'
       | 'engine'
       | 'hash'
@@ -7407,6 +7408,7 @@ export interface LyraComponentTypeMap {
       | 'imageProvider'
       | 'images'
       | 'initialization'
+      | 'initializationDelay'
       | 'interactiveBasemapLayers'
       | 'label'
       | 'legend'
@@ -7441,9 +7443,11 @@ export interface LyraComponentTypeMap {
       | 'lr-map-draw-change'
       | 'lr-map-draw-complete'
       | 'lr-map-draw-start'
+      | 'lr-map-draw-vertex-end'
       | 'lr-map-export-error'
       | 'lr-map-feature-enter'
       | 'lr-map-feature-leave'
+      | 'lr-map-geolocate'
       | 'lr-map-geolocate-error'
       | 'lr-map-geolocate-out-of-bounds'
       | 'lr-map-idle'
@@ -7453,9 +7457,12 @@ export interface LyraComponentTypeMap {
       | 'lr-map-marker-activate'
       | 'lr-map-move'
       | 'lr-map-pick'
+      | 'lr-map-pointer-leave'
+      | 'lr-map-pointer-move'
       | 'lr-map-style-load'
       | 'lr-map-view-change';
     cssNames:       | '--lr-map-choropleth-fill-opacity'
+      | '--lr-map-drawing-color'
       | '--lr-map-height'
       | '--lr-map-hidden-category-opacity'
       | '--lr-map-legend-hidden-swatch-opacity'
@@ -7467,7 +7474,9 @@ export interface LyraComponentTypeMap {
       'anchor-closable'?: LyraMap['anchorClosable'];
       'choropleth-legend'?: LyraMap['choroplethLegend'];
       'draw-mode'?: LyraMap['drawMode'];
+      'drawing-measurements'?: LyraMap['drawingMeasurements'];
       'hash-format'?: LyraMap['hashFormat'];
+      'initialization-delay'?: LyraMap['initializationDelay'];
       'legend-collapsible'?: LyraMap['legendCollapsible'];
       'legend-control-role'?: LyraMap['legendControlRole'];
       'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];

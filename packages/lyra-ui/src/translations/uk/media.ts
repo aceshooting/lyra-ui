@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Використовуйте клавіші зі стрілками, щоб перемістити цю вершину; утримуйте Shift для більших кроків. Page Up і Page Down вибирають вершини. Home і End вибирають першу та останню видиму вершину.',
   panoramaInstructions: 'Використовуйте стрілки, щоб озирнутися, плюс і мінус для масштабування та Home для скидання вигляду.',
   panoramaHotspotsLabel: 'Інтерактивні точки панорами',
+  mapActivate: 'Показати інтерактивну мапу',
+  mapDrawingLength: 'Довжина {value}',
+  mapDrawingArea: 'Площа {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('uk', strings);

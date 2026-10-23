@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: '使用方向键移动此顶点；按住 Shift 可增大移动步长。Page Up 和 Page Down 用于选取顶点。Home 和 End 用于选取第一个和最后一个可见顶点。',
   panoramaInstructions: '使用方向键环顾四周，加号和减号键缩放，Home 键重置视图。',
   panoramaHotspotsLabel: '全景图交互点',
+  mapActivate: '显示交互式地图',
+  mapDrawingLength: '长度 {value}',
+  mapDrawingArea: '面积 {value}',
+  mapSquareMeters: '{value}平方米',
+  mapSquareKilometers: '{value}平方公里',
 };
 
 registerLyraLocale('zh-CN', strings);

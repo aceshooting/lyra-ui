@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Gamitin ang mga arrow key para ilipat ang vertex na ito; pindutin nang matagal ang Shift para sa mas malalaking hakbang. Pinipili ng Page Up at Page Down ang mga vertex. Pinipili ng Home at End ang una at huling nakikitang vertex.',
   panoramaInstructions: 'Gamitin ang mga arrow key para tumingin sa paligid, plus at minus para mag-zoom, at Home para i-reset ang view.',
   panoramaHotspotsLabel: 'Mga interaktibong punto sa panorama',
+  mapActivate: 'Ipakita ang interactive na mapa',
+  mapDrawingLength: 'Haba {value}',
+  mapDrawingArea: 'Lawak {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('tl', strings);

@@ -32,7 +32,9 @@ function content(): HTMLElement { const section = document.createElement('sectio
 function capture(element: LyraMap): unknown[] { const values: unknown[] = []; element.addEventListener('lr-map-anchor-close', event => { values.push((event as CustomEvent).detail); }); return values; }
 async function placed(element: LyraMap): Promise<void> {
   await element.updateComplete;
-  await waitUntil(() => { const panel = anchor(element); return !panel.hidden && panel.style.left !== '' && getComputedStyle(panel).visibility !== 'hidden'; }, 'anchor did not finish real placement');
+  // The positioner loads asynchronously; parallel browser suites can delay that import beyond
+  // waitUntil's 1-second default even though the real placement completes successfully.
+  await waitUntil(() => { const panel = anchor(element); return !panel.hidden && panel.style.left !== '' && getComputedStyle(panel).visibility !== 'hidden'; }, 'anchor did not finish real placement', { timeout: 4000 });
 }
 async function open(configure?: (element: LyraMap) => void) {
   const slot = content(); const result = await mount(element => { element.append(slot); element.anchorLngLat = [0, 0]; configure?.(element); });

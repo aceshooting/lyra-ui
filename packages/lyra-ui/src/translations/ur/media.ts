@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'اس رأس کو حرکت دینے کے لیے تیر والے بٹن استعمال کریں؛ بڑے قدموں کے لیے Shift دبائے رکھیں۔ Page Up اور Page Down رؤوس منتخب کرتے ہیں۔ Home اور End پہلا اور آخری نظر آنے والا رأس منتخب کرتے ہیں۔',
   panoramaInstructions: 'آس پاس دیکھنے کے لیے تیر والی کلیدیں، بڑا اور چھوٹا کرنے کے لیے جمع اور تفریق، اور منظر بحال کرنے کے لیے Home استعمال کریں۔',
   panoramaHotspotsLabel: 'پینوراما کے تعاملی مقامات',
+  mapActivate: 'انٹرایکٹو نقشہ دکھائیں',
+  mapDrawingLength: 'لمبائی {value}',
+  mapDrawingArea: 'رقبہ {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

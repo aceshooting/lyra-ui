@@ -1,4 +1,8 @@
-export type LyraMapInitialization = 'visible' | 'idle' | 'eager';
+/** When `<lr-map>` constructs its engine: once visible, at browser idle time, at once, or on the
+ *  first user input on the element (optionally also after `initializationDelay`). */
+export type LyraMapInitialization = 'visible' | 'idle' | 'eager' | 'interaction';
+/** Host input events that admit an `interaction` construction. */
+const MAP_ACTIVATION_EVENTS = ['pointerdown', 'touchstart', 'wheel', 'keydown', 'click'] as const;
 
 type Cancel = () => void;
 
@@ -7,6 +11,8 @@ export interface MapConstructionPort {
   connected(): boolean;
   visible(admit: () => void): Cancel;
   idle(admit: () => void): Cancel;
+  /** Admits on the first input on the host, or after `delay` milliseconds when it is given. */
+  interaction?(admit: () => void, delay: number | undefined): Cancel;
 }
 
 /** One construction attempt per connection, after both admission and caller readiness. */
@@ -21,14 +27,14 @@ export class MapConstructionScheduler {
 
   constructor(private readonly port: MapConstructionPort | null, private readonly construct: () => void) {}
 
-  connect(mode: LyraMapInitialization = 'visible'): void {
+  connect(mode: LyraMapInitialization = 'visible', delay?: number): void {
     const generation = this.generation + 1;
     this.disconnect();
     if (generation !== this.generation) return;
     this.active = true;
     this.ready = false;
     this.consumed = false;
-    this.reconfigure(mode);
+    this.reconfigure(mode, delay);
   }
 
   disconnect(): void {
@@ -39,7 +45,10 @@ export class MapConstructionScheduler {
     cancel?.();
   }
 
-  reconfigure(mode: LyraMapInitialization): void {
+  /** Whether construction already happened for this connection. */
+  get constructed(): boolean { return this.consumed; }
+
+  reconfigure(mode: LyraMapInitialization, delay?: number): void {
     const generation = ++this.generation;
     const previous = this.cancel;
     this.cancel = undefined;
@@ -57,7 +66,8 @@ export class MapConstructionScheduler {
     };
     if (mode === 'eager') admit();
     else {
-      const cancel = mode === 'idle' ? this.port.idle(admit) : this.port.visible(admit);
+      const cancel = mode === 'idle' ? this.port.idle(admit) : mode === 'interaction' && this.port.interaction ? this.port.interaction(admit, delay)
+        : this.port.visible(admit);
       // A scheduler may admit synchronously (for example absent IntersectionObserver).
       if (generation !== this.generation || this.admitted || !this.active) cancel();
       else this.cancel = cancel;
@@ -106,6 +116,16 @@ export function createMapConstructionScheduler(host: Element, construct: () => v
       });
       observer.observe(host);
       return () => observer.disconnect();
+    },
+    interaction(admit, delay) {
+      // Passive capture listeners only observe the input; the event itself continues unchanged.
+      const options = { capture: true, passive: true } as const;
+      for (const type of MAP_ACTIVATION_EVENTS) host.addEventListener(type, admit, options);
+      const handle = delay === undefined ? undefined : view.setTimeout(admit, delay);
+      return () => {
+        for (const type of MAP_ACTIVATION_EVENTS) host.removeEventListener(type, admit, options);
+        if (handle !== undefined) view.clearTimeout(handle);
+      };
     },
     idle(admit) {
       if (typeof view.requestIdleCallback === 'function' && typeof view.cancelIdleCallback === 'function') {

@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'ಈ ಶೃಂಗವನ್ನು ಸರಿಸಲು ಬಾಣದ ಕೀಲಿಗಳನ್ನು ಬಳಸಿ; ದೊಡ್ಡ ಹೆಜ್ಜೆಗಳಿಗೆ Shift ಒತ್ತಿಹಿಡಿಯಿರಿ. Page Up ಮತ್ತು Page Down ಶೃಂಗಗಳನ್ನು ಆಯ್ಕೆ ಮಾಡುತ್ತವೆ. Home ಮತ್ತು End ಮೊದಲ ಮತ್ತು ಕೊನೆಯ ಗೋಚರ ಶೃಂಗವನ್ನು ಆಯ್ಕೆ ಮಾಡುತ್ತವೆ.',
   panoramaInstructions: 'ಸುತ್ತಲೂ ನೋಡಲು ಬಾಣದ ಕೀಲಿಗಳನ್ನು, ಹಿಗ್ಗಿಸಲು ಮತ್ತು ಕುಗ್ಗಿಸಲು ಪ್ಲಸ್ ಮತ್ತು ಮೈನಸ್ ಹಾಗೂ ನೋಟ ಮರುಹೊಂದಿಸಲು Home ಬಳಸಿ.',
   panoramaHotspotsLabel: 'ಪನೋರಮಾದ ಸಂವಾದಾತ್ಮಕ ಬಿಂದುಗಳು',
+  mapActivate: 'ಸಂವಾದಾತ್ಮಕ ನಕ್ಷೆಯನ್ನು ತೋರಿಸಿ',
+  mapDrawingLength: 'ಉದ್ದ {value}',
+  mapDrawingArea: 'ವಿಸ್ತೀರ್ಣ {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('kn', strings);

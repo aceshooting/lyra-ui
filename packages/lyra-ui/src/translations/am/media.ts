@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'ይህን ጫፍ ለማንቀሳቀስ የቀስት ቁልፎችን ይጠቀሙ፤ በትልቅ ደረጃ ለማንቀሳቀስ Shift ን ይያዙ። Page Up እና Page Down ጫፎችን ይመርጣሉ። Home እና End የመጀመሪያውን እና የመጨረሻውን የሚታይ ጫፍ ይመርጣሉ።',
   panoramaInstructions: 'ዙሪያውን ለማየት የቀስት ቁልፎችን፣ ለማቅረብና ለማራቅ የመደመርና የመቀነስ ቁልፎችን፣ እይታውን ለመመለስ Homeን ይጠቀሙ።',
   panoramaHotspotsLabel: 'የፓኖራማ መስተጋብር ነጥቦች',
+  mapActivate: 'በይነተገናኝ ካርታ አሳይ',
+  mapDrawingLength: 'ርዝመት {value}',
+  mapDrawingArea: 'ስፋት {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('am', strings);

@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Siirrä tätä kärkipistettä nuolinäppäimillä; pidä Vaihto-näppäintä painettuna suurempia askelia varten. Page Up ja Page Down valitsevat kärkipisteitä. Home ja End valitsevat ensimmäisen ja viimeisen näkyvän kärkipisteen.',
   panoramaInstructions: 'Katsele ympärillesi nuolinäppäimillä, lähennä ja loitonna plus- ja miinusnäppäimillä ja palauta näkymä Home-näppäimellä.',
   panoramaHotspotsLabel: 'Panoraaman vuorovaikutteiset pisteet',
+  mapActivate: 'Näytä interaktiivinen kartta',
+  mapDrawingLength: 'Pituus {value}',
+  mapDrawingArea: 'Pinta-ala {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('fi', strings);

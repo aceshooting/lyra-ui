@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'Gunakake tombol panah kanggo mindhah titik pucuk iki; tahan Shift supaya langkah luwih gedhe. Page Up lan Page Down milih titik pucuk. Home lan End milih titik pucuk kapisan lan pungkasan sing katon.',
   panoramaInstructions: 'Gunakake tombol panah kanggo ndeleng sakubenge, tambah lan kurang kanggo nggedhekake lan nyilikake, lan Home kanggo mulihake tampilan.',
   panoramaHotspotsLabel: 'Titik interaktif panorama',
+  mapActivate: 'Tuduhna peta interaktif',
+  mapDrawingLength: 'Dawa {value}',
+  mapDrawingArea: 'Jembar {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('jv', strings);

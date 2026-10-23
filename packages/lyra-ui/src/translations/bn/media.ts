@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'এই শীর্ষবিন্দুটি সরাতে তীরচিহ্নের কী ব্যবহার করুন; বড় ধাপে সরাতে Shift চেপে ধরুন। Page Up ও Page Down দিয়ে শীর্ষবিন্দু নির্বাচন করুন। Home ও End দিয়ে প্রথম ও শেষ দৃশ্যমান শীর্ষবিন্দু নির্বাচন করুন।',
   panoramaInstructions: 'চারপাশে দেখতে তীরচিহ্নের কী, জুম করতে প্লাস ও মাইনাস এবং দৃশ্য ফিরিয়ে আনতে Home ব্যবহার করুন।',
   panoramaHotspotsLabel: 'প্যানোরামার ইন্টারঅ্যাকটিভ স্থান',
+  mapActivate: 'ইন্টারঅ্যাক্টিভ মানচিত্র দেখান',
+  mapDrawingLength: 'দৈর্ঘ্য {value}',
+  mapDrawingArea: 'ক্ষেত্রফল {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('bn', strings);

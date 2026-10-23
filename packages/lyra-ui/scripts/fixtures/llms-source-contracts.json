@@ -10100,7 +10100,7 @@
       "module": "src/components/media/map/map-interaction-options.ts",
       "exportName": "LyraMapBasemapInteraction",
       "kind": "interface",
-      "fingerprint": "53569af6eb2e4faa1809",
+      "fingerprint": "41853a99413d9c1da015",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -10517,7 +10517,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapInteractionDetail",
       "kind": "interface",
-      "fingerprint": "454792f43a74e57d677b",
+      "fingerprint": "f864ae29cbbda5ab7527",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -10693,7 +10693,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapPickDetail",
       "kind": "interface",
-      "fingerprint": "f561762c06048ad828d1",
+      "fingerprint": "dddc05d81346a01f918e",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "184826bf22e887519661",
+      "fingerprint": "7e39fc65f97b8eb79ebe",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15602,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "a6709d00bd3a116aec6b",
+      "fingerprint": "90147dd0c7953f33b3c4",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15736,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "fdf518cb1d95b102a895",
+      "fingerprint": "2eeeea21d83f9f5a2f12",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "c2c84108cb41e8db4e52",
+      "fingerprint": "ef3f2b870ba588af03de",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "0e157a19059ed945d5fe",
+      "fingerprint": "10f1a6243ab5fc394708",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "700009516bf2805b686f",
+      "fingerprint": "9d32943acaa0f79a2ef8",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16879,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "5fd8db4ef872e2abe7e6",
+      "fingerprint": "2bd2214757b4dec6d6f0",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "753dd7ffac4f71105f2d",
+      "fingerprint": "4df050f8284c9fe276a0",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "10abb78d76499254039c",
+      "fingerprint": "32fa3657aafa5653371e",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17330,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "01dd4f3c6610d5c186a6",
+      "fingerprint": "06f87b5ee205912f5097",
       "routes": [
         "src/localization.ts"
       ],
@@ -21173,7 +21173,7 @@
       "module": "src/components/media/map/map-style-override-admission.ts",
       "exportName": "LyraMapStyleOverride",
       "kind": "interface",
-      "fingerprint": "357c7ee5fda9e53a99f9",
+      "fingerprint": "a2606cb5efc4a9c30cd4",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -21499,6 +21499,138 @@
         "name": "components-viewers-model-viewer-contracts",
         "declaration": "LyraModelCamera"
       }
+    },
+    {
+      "module": "src/components/media/map/map-drawing.ts",
+      "exportName": "LyraMapDrawingVertexEndDetail",
+      "kind": "interface",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapDrawingVertexEndDetail"
+      },
+      "fingerprint": "99a51901c89d56ade08d"
+    },
+    {
+      "module": "src/components/media/map/map-interaction-options.ts",
+      "exportName": "LyraMapStyleLayer",
+      "kind": "interface",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapStyleLayer"
+      },
+      "fingerprint": "8c5803a320e879705512"
+    },
+    {
+      "module": "src/components/media/map/map-interaction-options.ts",
+      "exportName": "LyraMapStyleLayerSelector",
+      "kind": "interface",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapStyleLayerSelector"
+      },
+      "fingerprint": "a68327f34e517906347c"
+    },
+    {
+      "module": "src/components/media/map/map-interaction-options.ts",
+      "exportName": "LyraMapStyleSource",
+      "kind": "interface",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapStyleSource"
+      },
+      "fingerprint": "20e5edfbb77ca2871347"
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapGeolocateDetail",
+      "kind": "interface",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapGeolocateDetail"
+      },
+      "fingerprint": "6e8dd764b89866199814"
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapPointerDetail",
+      "kind": "interface",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapPointerDetail"
+      },
+      "fingerprint": "8e1fb68427d9d3af33e3"
     }
   ],
   "legacy": []

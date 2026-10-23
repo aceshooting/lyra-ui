@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: '矢印キーでこの頂点を移動します。大きく移動するには Shift キーを押し続けます。Page Up キーと Page Down キーで頂点を選択します。Home キーと End キーで最初と最後の表示中の頂点を選択します。',
   panoramaInstructions: '矢印キーで周囲を見回し、プラスとマイナスキーで拡大縮小、Homeキーで表示をリセットします。',
   panoramaHotspotsLabel: 'パノラマの操作可能なポイント',
+  mapActivate: 'インタラクティブマップを表示',
+  mapDrawingLength: '長さ {value}',
+  mapDrawingArea: '面積 {value}',
+  mapSquareMeters: '{value}m²',
+  mapSquareKilometers: '{value}km²',
 };
 
 registerLyraLocale('ja', strings);

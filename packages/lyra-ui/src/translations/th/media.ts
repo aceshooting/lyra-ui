@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'ใช้ปุ่มลูกศรเพื่อย้ายจุดยอดนี้ กด Shift ค้างไว้เพื่อขยับทีละมากขึ้น Page Up และ Page Down ใช้เลือกจุดยอด Home และ End ใช้เลือกจุดยอดแรกและจุดยอดสุดท้ายที่มองเห็น',
   panoramaInstructions: 'ใช้ปุ่มลูกศรเพื่อมองไปรอบ ๆ ปุ่มบวกและลบเพื่อซูม และ Home เพื่อรีเซ็ตมุมมอง',
   panoramaHotspotsLabel: 'จุดโต้ตอบในภาพพาโนรามา',
+  mapActivate: 'แสดงแผนที่แบบโต้ตอบ',
+  mapDrawingLength: 'ความยาว {value}',
+  mapDrawingArea: 'พื้นที่ {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('th', strings);

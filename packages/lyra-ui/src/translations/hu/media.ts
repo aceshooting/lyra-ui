@@ -151,6 +151,11 @@ const strings: LyraLocaleStrings = {
   mapDrawingEditInstructions: 'A csúcspontot a nyílbillentyűkkel mozgathatja; nagyobb lépésekhez tartsa lenyomva a Shift billentyűt. A Page Up és a Page Down csúcspontokat választ ki. A Home és az End az első és az utolsó látható csúcspontot választja ki.',
   panoramaInstructions: 'A nyílbillentyűkkel nézhet körül, a plusz és mínusz gombbal nagyíthat és kicsinyíthet, a Home gombbal pedig visszaállíthatja a nézetet.',
   panoramaHotspotsLabel: 'A panoráma interaktív pontjai',
+  mapActivate: 'Interaktív térkép megjelenítése',
+  mapDrawingLength: 'Hossz {value}',
+  mapDrawingArea: 'Terület {value}',
+  mapSquareMeters: '{value} m²',
+  mapSquareKilometers: '{value} km²',
 };
 
 registerLyraLocale('hu', strings);

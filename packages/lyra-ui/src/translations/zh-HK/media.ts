@@ -9,6 +9,8 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   attachmentMenuImage: '上傳相片',
   fileInputDefaultLabel: '將檔案拖放到此處，或點擊瀏覽',
+  mapActivate: '顯示互動地圖',
+  mapSquareMeters: '{value}平方米',
 };
 
 registerLyraLocaleDelta('zh-HK', 'zh-TW', strings, { dir: 'ltr' });
