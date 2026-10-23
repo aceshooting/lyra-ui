@@ -74,11 +74,11 @@ it('uses one compact localized import instruction with a matching accessible nam
   await picker.updateComplete;
   // The tight dropzone density comes from the dropzone hooks, not the deprecated `compact`.
   expect(picker.hasAttribute('compact')).to.equal(false);
-  expect(getComputedStyle(picker.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!).paddingTop).to.equal('8px');
+  expect(getComputedStyle(picker.shadowRoot!.querySelector<HTMLElement>('[part~="file-input"]')!).paddingTop).to.equal('8px');
   expect(picker.label).to.equal(undefined);
   expect(picker.querySelector('[slot="dropzone"]')!.textContent).to.equal('Importer les exemples');
   expect(picker.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!.hidden).to.equal(true);
-  expect(picker.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('Importer les exemples');
+  expect(picker.shadowRoot!.querySelector('[part~="file-input"]')!.getAttribute('aria-label')).to.equal('Importer les exemples');
   await expect(picker).to.be.accessible();
 });
 

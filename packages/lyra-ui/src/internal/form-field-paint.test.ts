@@ -179,13 +179,13 @@ const FIELDS: readonly Field[] = [
   {
     name: 'lr-file-input dropzone',
     tag: 'lr-file-input',
-    surface: '[part~="base"]',
+    surface: '[part~="file-input"]',
     fillHook: '--lr-file-input-dropzone-fill',
     borderHook: '--lr-file-input-dropzone-border-color',
     hoverBorderHook: '--lr-file-input-dropzone-hover-border-color',
     restingFill: '--lr-color-surface',
     render: () => html`<lr-file-input label="Docs"></lr-file-input>`,
-    enterFocusState: (host) => focusPart(host, '[part~="base"]', 'lr-file-input'),
+    enterFocusState: (host) => focusPart(host, '[part~="file-input"]', 'lr-file-input'),
   },
   {
     name: 'lr-phone-input row',

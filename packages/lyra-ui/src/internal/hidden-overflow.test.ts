@@ -107,7 +107,7 @@ for (const direction of ['ltr', 'rtl'] as const) {
     port.append(input);
     await input.updateComplete;
     await focusByKeyboard(input);
-    expect(input.shadowRoot!.activeElement?.getAttribute('part')?.split(' ').includes('base')).to.equal(true);
+    expect(input.shadowRoot!.activeElement?.getAttribute('part')?.split(' ').includes('file-input')).to.equal(true);
     expect(input.shadowRoot!.querySelector('[part="input"]')?.getAttribute('tabindex')).to.equal('-1');
     await waitUntil(() => port.scrollTop > 1000, 'focused content scrolls into its own viewport');
     expect(extent()).to.deep.equal(before);

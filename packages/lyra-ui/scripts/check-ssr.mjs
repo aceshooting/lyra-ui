@@ -1107,7 +1107,7 @@ assert.match(
   'lr-file-input SSR output is missing its error surface'
 );
 const semanticDropzoneDescribesError =
-  /<button(?=[^>]*\bpart="[^"]*\bbase\b[^"]*")(?=[^>]*\baria-describedby="[^"]*\bfile-input-error\b[^"]*")[^>]*>/;
+  /<button(?=[^>]*\bpart="[^"]*\bfile-input\b[^"]*")(?=[^>]*\baria-describedby="[^"]*\bfile-input-error\b[^"]*")[^>]*>/;
 
 const fileInputErrorHtml = await renderSsrStateProbe(
   {
@@ -1193,7 +1193,7 @@ assert.equal(
 );
 assert.match(
   fileInputLabelHtmlWithoutHostAttribute,
-  /part="form-control-label label"[^>]*>(?:(?!<\/label>)[\s\S])*?Reference files/,
+  /part="form-control-label"[^>]*>(?:(?!<\/label>)[\s\S])*?Reference files/,
   'lr-file-input SSR output must render the label text inside its form-control-label element'
 );
 // Anchor on the actual `<span ... part="dropzone-text" ...>` opening tag, not a bare
