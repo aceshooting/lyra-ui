@@ -1,86 +1,170 @@
-import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, PlaneGeometry, ShaderMaterial, Vector2 } from 'three';
+import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, PlaneGeometry, ShaderMaterial, Vector2, Vector4 } from 'three';
 import type { Lyra3dViewport } from '../core/viewport.js';
 import { graphSpatialNodeFragment, type createGraphSpatialNodes } from './spatial-nodes.js';
 import { graphSpatialEdgeFragment, type createGraphSpatialEdges } from './spatial-edges.js';
+import { graphSpatialEdgeVertexChunk, graphSpatialNodeVertexChunk, graphSpatialProjectionChunk, graphSpatialView, graphViewForward, graphScale, type GraphSpatialView } from './spatial-paths.js';
 
-const nodePaintSlots = [[2, 'nodeFill'], [3, 'nodeRing'], [4, 'nodeMarker']] as const;
-const vertex = `
+/**
+ * Translucent painter order is re-sorted only once the view direction has turned this far (radians)
+ * since the last sort. Orbit eye depth is `distance - dot(point - target, forward)`, so the order of
+ * fixed world anchors depends on the view direction alone. CSS-sized loop segments are the exception:
+ * their world radii depend on centre eye depth and viewport scale, so those changes re-sort. A
+ * small turn can swap nearby depths before the next sort. This bounds sorting work but can retain
+ * approximate blend order during motion; a final exact sort follows when rotation settles.
+ * Opaque scenes never sort: they draw in a fixed order with depth writes, and depth testing
+ * resolves occlusion per pixel.
+ */
+export const GRAPH_RESORT_ANGLE = 0.02;
+const SETTLE_MS = 100;
+const RESORT_COSINE = Math.cos(GRAPH_RESORT_ANGLE);
+const INDEX_BITS = 2 ** 22;
+const KEY_STEPS = 2 ** 31 - 1;
+
+const vertex = graphSpatialProjectionChunk + graphSpatialNodeVertexChunk + graphSpatialEdgeVertexChunk + `
 attribute vec4 payload0; attribute vec4 payload1; attribute vec4 payload2; attribute vec4 payload3; attribute vec4 payload4;
-uniform vec2 viewportSize;
 varying float primitiveKind;
-varying vec2 offset; varying float radius; varying float shape; varying vec2 flags;
-varying vec4 fill; varying vec4 ring; varying vec4 marker;
-varying vec4 tint; varying vec2 pattern; varying vec3 arrowUv; varying vec3 cap; varying float strokeRadius; flat varying vec2 depthEnds;
 void main() {
   primitiveKind = payload4.a < 0.0 ? 0.0 : 1.0;
-  offset=vec2(0.0); radius=0.0; shape=0.0; flags=vec2(0.0);
+  offset=vec2(0.0); radius=0.0; shape=0.0; flags=vec2(0.0); pickDepth=0.0;
   fill=vec4(0.0); ring=vec4(0.0); marker=vec4(0.0);
   tint=vec4(0.0); pattern=vec2(0.0); arrowUv=vec3(0.0); cap=vec3(0.0); strokeRadius=0.0; depthEnds=vec2(0.0);
-  if (primitiveKind > 0.5) {
-    offset=position.xy*payload1.y; radius=payload0.w; shape=payload1.x; flags=payload1.zw;
-    fill=payload2; ring=payload3; marker=payload4;
-    gl_Position=projectionMatrix*modelViewMatrix*vec4(payload0.xyz,1.0);
-    gl_Position.xy+=offset*2.0/viewportSize*gl_Position.w;
-  } else {
-    vec2 delta=payload1.xy-payload0.xy; float span=length(delta); float width=payload0.w;
-    tint=payload2; pattern=vec2(payload3.x,payload3.y+uv.x*payload3.z); arrowUv=vec3(uv,payload1.w);
-    if(width<=0.0 || span<0.0001){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
-    vec3 point=mix(payload0.xyz,payload1.xyz,uv.x);
-    point.xy+=vec2(-delta.y,delta.x)/span*position.y*width*0.5;
-    vec2 ndc=point.xy/viewportSize*2.0-1.0; gl_Position=vec4(ndc.x,-ndc.y,point.z,1.0);
-  }
+  if (primitiveKind > 0.5) graphSpatialNodeVertex(payload0.xyz, payload0.w, payload1.x, payload1.yz, payload2, payload3, payload4, vec3(0.0));
+  else graphSpatialEdgeVertex(payload0.xyz, payload1.xyz, vec4(payload0.w, payload1.w, payload3.xy), vec3(payload3.z, 0.0, payload3.w), payload2, vec3(0.0), payload4.x);
 }`;
 const fragment = graphSpatialNodeFragment + graphSpatialEdgeFragment + `
 varying float primitiveKind;
 void main(){ if(primitiveKind>0.5) paintGraphSpatialNode(); else paintGraphSpatialEdge(); }
 `;
 
-/** One painter-ordered visual draw across glyphs and strokes; pick meshes retain row identity. */
+/** One visual draw across glyphs and strokes; pick meshes retain row identity. Payloads are
+ * rebuilt only when the batches' attributes change, and re-ordered only for translucent paint. */
 export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraphSpatialNodes>, edges: ReturnType<typeof createGraphSpatialEdges>) {
   const nodeCount = nodes.mesh.geometry.instanceCount, edgeCount = edges.mesh.geometry.instanceCount;
-  const count = nodeCount + edgeCount, order = new Uint32Array(count);
+  const count = nodeCount + edgeCount;
   const plane = new PlaneGeometry(2, 2), geometry = new InstancedBufferGeometry();
   geometry.index = plane.index; geometry.attributes = { ...plane.attributes }; plane.dispose(); geometry.instanceCount = 0;
   const payloads = Array.from({ length: 5 }, (_, i) => {
     const attribute = new InstancedBufferAttribute(new Float32Array(count * 4), 4);
     geometry.setAttribute(`payload${i}`, attribute); return attribute;
   });
-  const viewportSize = new Vector2(1, 1);
+  // Unsorted payloads and world anchors of the active primitives, in edge-then-node order.
+  const staged = Array.from({ length: 5 }, () => new Float32Array(count * 4));
+  const anchors = new Float32Array(count * 3);
+  let keys = new Float64Array(0);
+  const viewportSize = new Vector2(1, 1), viewWindow = new Vector4(0, 0, 1, 1), lyraView = new Vector4(1, 1, 0.5, 1e4);
+  const nodeUniforms = nodes.mesh.material.uniforms, edgeUniforms = edges.mesh.material.uniforms;
   const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, vertexShader: vertex, fragmentShader: fragment, transparent: true, depthWrite: false, depthTest: true,
-    uniforms: { viewportSize: { value: viewportSize }, markerArm: nodes.mesh.material.uniforms['markerArm']!,
-      dashAtlas: edges.mesh.material.uniforms['dashAtlas']!, atlasHeight: edges.mesh.material.uniforms['atlasHeight']! } });
+    uniforms: { viewportSize: { value: viewportSize }, viewWindow: { value: viewWindow }, lyraView: { value: lyraView }, worldSizes: nodeUniforms['worldSizes']!, markerArm: nodeUniforms['markerArm']!,
+      dashAtlas: edgeUniforms['dashAtlas']!, atlasHeight: edgeUniforms['atlasHeight']! } });
   const mesh = new Mesh(geometry, material); mesh.frustumCulled = false; let disposed = false;
-  const node = (name: string) => nodes.mesh.geometry.getAttribute(name);
-  const edge = (name: string) => edges.mesh.geometry.getAttribute(name);
-  const depth = (index: number) => index < edgeCount ? edges.depthAt(index) : nodes.depthAt(index - edgeCount);
-  return { mesh,
-    update(viewport: Pick<Lyra3dViewport, 'width' | 'height'>) {
-      if (disposed) return;
-      viewportSize.set(Math.max(1, viewport.width), Math.max(1, viewport.height));
-      let active = 0;
-      for (let i = 0; i < edgeCount; i++) if (edge('stroke').getX(i) > 0 && edge('edgeColor').getW(i) > 0) order[active++] = i;
-      for (let i = 0; i < nodeCount; i++) if (node('nodeExtent').getX(i) > 0) order[active++] = edgeCount + i;
-      const sorted = order.subarray(0, active); sorted.sort((a, b) => depth(b) - depth(a) || a - b);
-      for (let row = 0; row < active; row++) {
-        const index = sorted[row]!;
-        if (index < edgeCount) {
-          const a = edge('screenStart'), b = edge('screenEnd'), stroke = edge('stroke'), dash = edge('dash'), color = edge('edgeColor');
-          payloads[0]!.setXYZW(row, a.getX(index), a.getY(index), a.getZ(index), stroke.getX(index));
-          payloads[1]!.setXYZW(row, b.getX(index), b.getY(index), b.getZ(index), stroke.getZ(index));
-          payloads[2]!.setXYZW(row, color.getX(index), color.getY(index), color.getZ(index), color.getW(index));
-          payloads[3]!.setXYZW(row, dash.getX(index), dash.getY(index), dash.getZ(index), 0);
-          payloads[4]!.setXYZW(row, 0, 0, 0, -1);
-        } else {
-          const i = index - edgeCount, position = node('nodePosition'), flags = node('nodeFlags');
-          payloads[0]!.setXYZW(row, position.getX(i), position.getY(i), position.getZ(i), node('nodeRadius').getX(i));
-          payloads[1]!.setXYZW(row, node('nodeShape').getX(i), node('nodeExtent').getX(i), flags.getX(i), flags.getY(i));
-          for (const [slot, name] of nodePaintSlots) {
-            const color = node(name); payloads[slot]!.setXYZW(row, color.getX(i), color.getY(i), color.getZ(i), color.getW(i));
-          }
-        }
+  let seenNodes = -1, seenEdges = -1, active = 0, translucent = false, sorted: [number, number, number] | undefined;
+  let settling: ReturnType<typeof setTimeout> | undefined;
+  let lastForward: [number, number, number] | undefined;
+  let loopOffsets: Float32Array | undefined, hasCssLoops = false;
+  let lastLoopView: number[] | undefined;
+  const cancelSettling = () => { if (settling !== undefined) clearTimeout(settling); settling = undefined; };
+  const rebuild = () => {
+    cancelSettling(); lastForward = undefined; lastLoopView = undefined; hasCssLoops = false;
+    loopOffsets?.fill(0);
+    seenNodes = nodes.revision; seenEdges = edges.revision; active = 0;
+    const node = (name: string) => nodes.mesh.geometry.getAttribute(name).array as Float32Array;
+    const edge = (name: string) => edges.mesh.geometry.getAttribute(name).array as Float32Array;
+    const [p0, p1, p2, p3, p4] = staged as [Float32Array, Float32Array, Float32Array, Float32Array, Float32Array];
+    const start = edge('edgeStart'), end = edge('edgeEnd'), path = edge('edgePath'), stroke = edge('stroke'), color = edge('edgeColor'), dash = edge('dash');
+    for (let i = 0; i < edgeCount; i++) {
+      if (!(stroke[i * 3]! > 0 && color[i * 4 + 3]! > 0)) continue;
+      const o = active * 4;
+      p0[o] = start[i * 3]!; p0[o + 1] = start[i * 3 + 1]!; p0[o + 2] = start[i * 3 + 2]!; p0[o + 3] = path[i * 4]!;
+      p1[o] = end[i * 3]!; p1[o + 1] = end[i * 3 + 1]!; p1[o + 2] = end[i * 3 + 2]!; p1[o + 3] = path[i * 4 + 1]!;
+      p2.set(color.subarray(i * 4, i * 4 + 4), o);
+      p3[o] = path[i * 4 + 2]!; p3[o + 1] = path[i * 4 + 3]!; p3[o + 2] = stroke[i * 3]!; p3[o + 3] = stroke[i * 3 + 2]!;
+      p4[o] = dash[i]!; p4[o + 1] = 0; p4[o + 2] = 0; p4[o + 3] = -1;
+      anchors.set(edges.anchors.subarray(i * 3, i * 3 + 3), active * 3);
+      if (nodeUniforms['worldSizes']!.value < 0.5 && path[i * 4 + 2]! > 0 && stroke[i * 3 + 2]! < 0.5) {
+        // CSS loop endpoints are expanded in world XY by the shader. Store their midpoint in
+        // CSS units; only its sort key needs the camera-dependent conversion to world units.
+        loopOffsets ??= new Float32Array(count * 2);
+        const a = path[i * 4]! * Math.PI * 2, b = path[i * 4 + 1]! * Math.PI * 2, radius = path[i * 4 + 2]!;
+        loopOffsets[active * 2] = (Math.sin(a) + Math.sin(b)) * radius / 2;
+        loopOffsets[active * 2 + 1] = -(2 - Math.cos(a) - Math.cos(b)) * radius / 2;
+        hasCssLoops = true;
       }
-      geometry.instanceCount = active; for (const payload of payloads) payload.needsUpdate = true;
+      active++;
+    }
+    const position = node('nodePosition'), size = node('nodeSize'), shape = node('nodeShape'), flags = node('nodeFlags');
+    const fill = node('nodeFill'), ring = node('nodeRing'), marker = node('nodeMarker');
+    for (let i = 0; i < nodeCount; i++) {
+      if (!(size[i]! > 0 || flags[i * 2]! > 0 || flags[i * 2 + 1]! > 0)) continue;
+      const o = active * 4;
+      p0[o] = position[i * 3]!; p0[o + 1] = position[i * 3 + 1]!; p0[o + 2] = position[i * 3 + 2]!; p0[o + 3] = size[i]!;
+      p1[o] = shape[i]!; p1[o + 1] = flags[i * 2]!; p1[o + 2] = flags[i * 2 + 1]!; p1[o + 3] = 0;
+      p2.set(fill.subarray(i * 4, i * 4 + 4), o); p3.set(ring.subarray(i * 4, i * 4 + 4), o); p4.set(marker.subarray(i * 4, i * 4 + 4), o);
+      anchors.set(position.subarray(i * 3, i * 3 + 3), active * 3); active++;
+    }
+    translucent = nodes.translucent || edges.translucent;
+    if (material.transparent !== translucent) { material.transparent = translucent; material.needsUpdate = true; }
+    material.depthWrite = !translucent;
+    geometry.instanceCount = active; sorted = undefined;
+    if (!translucent) {
+      payloads.forEach((payload, slot) => { (payload.array as Float32Array).set(staged[slot]!.subarray(0, active * 4)); payload.needsUpdate = true; });
+    }
+  };
+  // Back-to-front is ascending `dot(anchor, forward)`; equal depths keep edges before nodes.
+  const sort = (forward: [number, number, number], depthOrigin: number, view: GraphSpatialView) => {
+    sorted = forward;
+    if (keys.length < active) keys = new Float64Array(count);
+    let min = Infinity, max = -Infinity;
+    for (let i = 0; i < active; i++) {
+      let key = anchors[i * 3]! * forward[0] + anchors[i * 3 + 1]! * forward[1] + anchors[i * 3 + 2]! * forward[2];
+      if (hasCssLoops) {
+        const depth = depthOrigin - key;
+        // Match lyraGraphPathPoint: CSS loops collapse while their centre is behind near.
+        if (depth >= view.near) key += (loopOffsets![i * 2]! * forward[0] + loopOffsets![i * 2 + 1]! * forward[1]) / graphScale(depth, view);
+      }
+      keys[i] = key; if (key < min) min = key; if (key > max) max = key;
+    }
+    // Quantized key and original index share one exactly representable double, so the native
+    // numeric sort orders by depth and breaks ties by index without a comparator.
+    const scale = max > min ? KEY_STEPS / (max - min) : 0;
+    for (let i = 0; i < active; i++) keys[i] = Math.min(KEY_STEPS, Math.floor((keys[i]! - min) * scale)) * INDEX_BITS + i;
+    const order = keys.subarray(0, active).sort();
+    payloads.forEach((payload, slot) => {
+      const target = payload.array as Float32Array, source = staged[slot]!;
+      for (let row = 0; row < active; row++) {
+        const from = (order[row]! % INDEX_BITS) * 4, to = row * 4;
+        target[to] = source[from]!; target[to + 1] = source[from + 1]!; target[to + 2] = source[from + 2]!; target[to + 3] = source[from + 3]!;
+      }
+      payload.needsUpdate = true;
+    });
+  };
+  return { mesh,
+    /** Per frame: uniforms always; payload rewrites only after a batch update or, for translucent
+     * paint, a material change of view direction. */
+    update(viewport: Pick<Lyra3dViewport, 'width' | 'height' | 'orbit' | 'invalidate'>) {
+      if (disposed) return;
+      const view = graphSpatialView(viewport.width, viewport.height, viewport.orbit);
+      viewportSize.set(view.width, view.height); viewWindow.set(0, 0, viewport.width, viewport.height); lyraView.set(view.width, view.height, view.near, view.far);
+      if (nodes.revision !== seenNodes || edges.revision !== seenEdges) rebuild();
+      if (!translucent) return;
+      const forward = graphViewForward(viewport.orbit);
+      const camera = viewport.orbit;
+      const loopView = hasCssLoops ? [camera.distance, camera.target.x, camera.target.y, camera.target.z, view.height] : undefined;
+      const loopChanged = loopView !== undefined && (!lastLoopView || loopView.some((value, index) => value !== lastLoopView![index]));
+      lastLoopView = loopView;
+      const depthOrigin = camera.distance + camera.target.x * forward[0] + camera.target.y * forward[1] + camera.target.z * forward[2];
+      if (!loopChanged && lastForward && forward.every((value, index) => value === lastForward![index])) return;
+      lastForward = forward; cancelSettling();
+      if (loopChanged || !sorted || forward[0] * sorted[0] + forward[1] * sorted[1] + forward[2] * sorted[2] < RESORT_COSINE) sort(forward, depthOrigin, view);
+      else if (forward.some((value, index) => value !== sorted![index])) {
+        // Camera updates may stop without another render. Finish the exact painter order once
+        // rotation settles, and explicitly request the frame that displays the corrected buffers.
+        settling = setTimeout(() => {
+          settling = undefined;
+          if (disposed) return;
+          sort(forward, depthOrigin, view); viewport.invalidate();
+        }, SETTLE_MS);
+      }
     },
-    dispose() { if (disposed) return; disposed = true; mesh.removeFromParent(); geometry.dispose(); material.dispose(); },
+    dispose() { if (disposed) return; disposed = true; cancelSettling(); mesh.removeFromParent(); geometry.dispose(); material.dispose(); },
   };
 }

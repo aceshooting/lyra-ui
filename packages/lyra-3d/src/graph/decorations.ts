@@ -120,6 +120,7 @@ export function createGraphDecorations(viewport: Lyra3dViewport, data: Decoratio
   const direction = new Vector3(); const rotation = new Quaternion(); const up = new Vector3(0, 1, 0);
   let phase = 0; let previousTime: number | undefined;
   let lastLabels = '';
+  let lastPainted = -1;
   let lastArrowTransforms = '';
   let lastArrowStyle: ResolvedLyra3dStyle | undefined;
   let lastState: Lyra3dState | undefined;
@@ -135,7 +136,8 @@ export function createGraphDecorations(viewport: Lyra3dViewport, data: Decoratio
     lastLabels = key; lastState = frame.state; lastStyle = style;
     const ratio = Math.min(style.devicePixelRatio, MAX_LABEL_CANVAS / Math.max(1, viewport.width, viewport.height));
     const width = Math.max(1, Math.floor(viewport.width * ratio)); const height = Math.max(1, Math.floor(viewport.height * ratio));
-    if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
+    const resized = canvas.width !== width || canvas.height !== height;
+    if (resized) { canvas.width = width; canvas.height = height; }
     context.setTransform(ratio, 0, 0, ratio, 0, 0); context.clearRect(0, 0, viewport.width, viewport.height);
     context.font = `${style.fontSize}px ${style.fontFamily}`; context.textBaseline = 'middle'; context.textAlign = 'left';
     const foreground = style.foreground;
@@ -166,11 +168,19 @@ export function createGraphDecorations(viewport: Lyra3dViewport, data: Decoratio
       context!.fillText(text, x, y, Math.max(1, Math.min(512, viewport.width - x)));
       painted += 1;
     };
-    paint(frame.state.focus); if (frame.state.hover !== frame.state.focus) paint(frame.state.hover);
-    for (let item = 0; item < data.nodeCount + data.source.length && painted < labelLimit; item += 1) {
-      if (item !== frame.state.focus && item !== frame.state.hover) paint(item);
+    // Skip the per-item scan when no row can paint at this zoom, and the texture upload while the
+    // plane stays empty: a camera move over an unlabelled graph then costs no canvas work.
+    const nodesPaint = !!data.labels && data.nodeLabels !== 'none' && (data.nodeLabels === 'always' || zoom >= 0.5);
+    const edgesPaint = !!data.edgeLabels && !!data.withEdgeLabels && zoom >= (data.edgeLabelMinZoom ?? 0.6);
+    if (nodesPaint || edgesPaint) {
+      paint(frame.state.focus); if (frame.state.hover !== frame.state.focus) paint(frame.state.hover);
+      for (let item = 0; item < data.nodeCount + data.source.length && painted < labelLimit; item += 1) {
+        if (item !== frame.state.focus && item !== frame.state.hover) paint(item);
+      }
     }
-    context.globalAlpha = 1; labelTexture.needsUpdate = true;
+    context.globalAlpha = 1;
+    if (painted > 0 || lastPainted !== 0 || resized) labelTexture.needsUpdate = true;
+    lastPainted = painted;
   };
   return {
     update(frame: GraphDecorationFrame) {

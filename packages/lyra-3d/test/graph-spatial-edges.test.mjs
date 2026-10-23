@@ -31,7 +31,12 @@ test('spatial directed loops have a visible arrow without introducing another pi
   const batch = createGraphSpatialEdges(data); batch.update(viewport, point, state());
   assert.equal(batch.mesh.geometry.instanceCount, 17);
   const strokes = batch.mesh.geometry.getAttribute('stroke'); assert.ok(strokes.getX(16) > 0); assert.equal(strokes.getY(16), 0); assert.equal(strokes.getZ(16), 1);
-  const dash = batch.mesh.geometry.getAttribute('dash'); assert.ok(dash.getY(15) > dash.getY(1)); batch.dispose();
+  // Each loop segment carries its own path interval and the loop radius (1.6 node radii); the shader
+  // derives screen geometry and the running dash offset from them.
+  const path = batch.mesh.geometry.getAttribute('edgePath');
+  assert.deepEqual([path.getX(15), path.getY(15), path.getZ(15)], [15 / 16, 1, 24]);
+  assert.deepEqual([path.getX(16), path.getY(16), path.getW(16)], [15 / 16, 1, 15], 'the arrow follows the terminal segment, inset by the node radius');
+  batch.dispose();
 });
 
 test('alpha-only dimming preserves edge pick reach while transparent source paint stays excluded', () => {
@@ -56,12 +61,27 @@ test('unsafe derived world loop sizes reject before attribute allocation', () =>
   assert.throws(() => createGraphSpatialEdges({ nodeCount: 1, source: new Uint32Array([0]), target: new Uint32Array([0]), sizes: new Float32Array([3e38]), spatialAppearance: { sizeUnits: 'world' } }), /diameters/);
 });
 
-test('translucent stroke sorting carries original pick IDs and restores opaque writes', () => {
+test('translucent strokes keep row-ordered pick IDs and world anchors, and restore opaque writes', () => {
   const data = { nodeCount: 4, source: new Uint32Array([0, 2]), target: new Uint32Array([1, 3]), spatialAppearance: { edgeColors: new Float32Array([1, 0, 0, 0.5, 0, 1, 0, 0.5]) } };
   const position = (row) => ({ x: row % 2 ? 80 : 0, y: 0, z: row < 2 ? 30 : -30 });
   const batch = createGraphSpatialEdges(data); batch.update(viewport, position, state());
-  assert.equal(batch.mesh.material.transparent, true); assert.equal(batch.mesh.material.depthWrite, false);
-  assert.equal(batch.mesh.geometry.getAttribute('pickColor').getX(0), Math.fround(6 / 255));
+  assert.equal(batch.translucent, true); assert.equal(batch.mesh.material.transparent, true); assert.equal(batch.mesh.material.depthWrite, false);
+  assert.deepEqual([...batch.mesh.geometry.getAttribute('pickColor').array].filter((_, i) => i % 3 === 0), [Math.fround(5 / 255), Math.fround(6 / 255)]);
+  assert.deepEqual([...batch.anchors], [40, 0, 30, 40, 0, -30]);
+  const revision = batch.revision;
   batch.update({ ...viewport, style: resolveLyra3dStyle({ forcedColors: true }) }, position, state());
+  assert.equal(batch.revision, revision + 1); assert.equal(batch.translucent, false);
   assert.equal(batch.mesh.material.depthWrite, true); assert.equal(batch.mesh.geometry.getAttribute('pickColor').getX(0), Math.fround(5 / 255)); batch.dispose();
+});
+
+test('a camera change only moves uniforms: no stroke attribute is rewritten', () => {
+  const data = { nodeCount: 2, source: new Uint32Array([0]), target: new Uint32Array([1]), directed: new Uint8Array([1]), spatialAppearance: {} };
+  const batch = createGraphSpatialEdges(data); batch.update(viewport, point, state());
+  const versions = () => ['edgeStart', 'edgeEnd', 'edgePath', 'stroke', 'edgeColor', 'pickColor', 'dash'].map((name) => batch.mesh.geometry.getAttribute(name).version);
+  const before = versions(), revision = batch.revision;
+  batch.setView({ width: 320, height: 200, orbit: { ...DEFAULT_ORBIT_CAMERA, yaw: 1, distance: 50 } });
+  assert.deepEqual(versions(), before); assert.equal(batch.revision, revision);
+  assert.deepEqual(batch.mesh.material.uniforms.lyraView.value.toArray(), [320, 200, 0.05, 10200]);
+  assert.deepEqual(batch.mesh.material.uniforms.viewWindow.value.toArray(), [0, 0, 320, 200]);
+  batch.dispose();
 });

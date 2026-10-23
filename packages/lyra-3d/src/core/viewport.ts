@@ -294,12 +294,21 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       }
       if (transition) invalidate();
     };
+    // After each render one idle frame stays armed, so a host that changes the camera from its own
+    // animation-frame callback is drawn in that same frame. A request made from inside an animation
+    // frame otherwise lands in the next one, and a per-frame camera writer would render every other frame.
+    let pendingRender = false;
     const tick = (time: number) => {
       frame = 0;
+      if (!pendingRender) return;
+      pendingRender = false;
       render(time);
+      if (!disposed && !lost && frame === 0) frame = requestAnimationFrame(tick);
     };
     function invalidate(): void {
-      if (!disposed && !lost && frame === 0) frame = requestAnimationFrame(tick);
+      if (disposed || lost) return;
+      pendingRender = true;
+      if (frame === 0) frame = requestAnimationFrame(tick);
     }
     const userCamera = (next: Lyra3dOrbitCamera) => {
       if (disposed || lost) return;
@@ -522,7 +531,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       },
       renderNow() {
         if (frame !== 0) cancelAnimationFrame(frame);
-        frame = 0;
+        frame = 0; pendingRender = false;
         render(performance.now());
       },
       dispose() {

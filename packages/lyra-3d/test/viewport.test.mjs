@@ -184,7 +184,17 @@ test('invalidate schedules a single frame and renderNow replaces it with an imme
   assert.ok(gl.callsOf('clear').length > draws, 'the scene was rendered synchronously');
   viewport.invalidate();
   assert.equal(browser.flushFrames(), 1);
-  assert.equal(browser.pendingFrames(), 0, 'a quiet viewport schedules nothing further');
+  // One idle frame stays armed so a camera write from a host animation frame draws in that frame.
+  assert.equal(browser.pendingFrames(), 1, 'one idle frame follows a render');
+  const rendered = gl.callsOf('clear').length;
+  viewport.invalidate();
+  assert.equal(browser.pendingFrames(), 1, 'a request inside the idle window reuses its frame');
+  browser.flushFrames();
+  assert.ok(gl.callsOf('clear').length > rendered, 'and is drawn by it');
+  const settled = gl.callsOf('clear').length;
+  assert.equal(browser.flushFrames(), 1, 'the idle frame runs');
+  assert.equal(gl.callsOf('clear').length, settled, 'without drawing');
+  assert.equal(browser.pendingFrames(), 0, 'a quiet viewport then schedules nothing further');
 });
 
 test('frame callbacks run before every render until unsubscribed', (t) => {
@@ -229,6 +239,7 @@ test('setOrbit moves the camera silently and cancels a running transition', (t) 
   viewport.setOrbit({ ...DEFAULT_ORBIT_CAMERA, yaw: 0.5, pitch: 0.25 });
   assert.equal(viewport.orbit.yaw, 0.5);
   browser.flushFrames(performance.now() + 1000);
+  browser.flushFrames(performance.now() + 1100);
   assert.deepEqual(calls.camera, []);
   assert.equal(viewport.orbit.yaw, 0.5);
   assert.equal(browser.pendingFrames(), 0);
@@ -248,6 +259,9 @@ test('transitionTo animates toward the target, tells the host once per frame and
   browser.flushFrames(started + 5000);
   assert.deepEqual(calls.camera.at(-1), { yaw: 1, pitch: 0, distance: 800, target: { x: 0, y: 0, z: 0 } });
   assert.equal(calls.camera.length, 2);
+  assert.equal(browser.pendingFrames(), 1, 'one idle frame follows the last render');
+  browser.flushFrames(started + 5100);
+  assert.equal(calls.camera.length, 2);
   assert.equal(browser.pendingFrames(), 0);
 });
 
@@ -257,6 +271,7 @@ test('reduced motion jumps straight to the target and an active transition compl
   viewport.setStyle({ reducedMotion: true });
   viewport.transitionTo({ ...DEFAULT_ORBIT_CAMERA, yaw: 1 });
   assert.equal(viewport.orbit.yaw, 1);
+  browser.flushFrames();
   browser.flushFrames();
   assert.equal(calls.camera.length, 1);
   assert.equal(browser.pendingFrames(), 0);
@@ -498,6 +513,7 @@ test('a user gesture replaces a running transition', (t) => {
   canvas.dispatchEvent(pointerEvent('pointerdown', { clientX: 0 }));
   canvas.dispatchEvent(pointerEvent('pointermove', { clientX: 50 }));
   browser.flushFrames(started + 10_000);
+  browser.flushFrames(started + 10_100);
   assert.ok(Math.abs(calls.camera.at(-1).yaw - 50 * 0.008) < 1e-9, 'only the gesture moved the camera');
   assert.equal(browser.pendingFrames(), 0);
 });

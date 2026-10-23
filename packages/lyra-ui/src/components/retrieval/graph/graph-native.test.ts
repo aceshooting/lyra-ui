@@ -27,16 +27,30 @@ async function ready(el: LyraGraph): Promise<HTMLCanvasElement> {
   }, 'Actual graph companion did not mount a visible WebGL canvas', { timeout: 15000 });
   return el.shadowRoot!.querySelector<HTMLCanvasElement>('[data-webgl-host] canvas:not([data-graph-labels])')!;
 }
-/** A fresh public camera object schedules a frame without touching the engine or GL state. */
+/** Flush queued component data, then observe pixels while the default framebuffer is still valid. */
 async function capture(el: LyraGraph, canvas: HTMLCanvasElement): Promise<Uint8Array> {
-  el.camera = { ...el.camera!, target: { ...el.camera!.target } }; await el.updateComplete;
-  return new Promise(resolve => requestAnimationFrame(() => {
-    const gl = canvas.getContext('webgl2')!;
-    const pixels = new Uint8Array(canvas.width * canvas.height * 4);
-    gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-    resolve(pixels);
-  }));
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  const gl = canvas.getContext('webgl2')!;
+  const original = gl.drawElementsInstanced;
+  let pixels: Uint8Array | undefined;
+  gl.drawElementsInstanced = (...args: Parameters<WebGL2RenderingContext['drawElementsInstanced']>) => {
+    original.apply(gl, args);
+    // WebKit may discard a non-preserved framebuffer before another rAF callback can read it.
+    // Observe the real visual draw immediately, excluding offscreen picking passes.
+    if (gl.getParameter(gl.FRAMEBUFFER_BINDING) === null) {
+      pixels = new Uint8Array(canvas.width * canvas.height * 4);
+      gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    }
+  };
+  try {
+    el.camera = { ...el.camera!, target: { ...el.camera!.target } }; await el.updateComplete;
+    await waitUntil(() => pixels !== undefined, 'The companion must issue a visual draw before pixel capture');
+    return pixels!;
+  } finally {
+    gl.drawElementsInstanced = original;
+  }
 }
+
 function screen(el: LyraGraph, id: string): { x: number; y: number } {
   const point = el.getNodeScreenPosition(id); expect(point !== undefined).to.equal(true); return point!;
 }

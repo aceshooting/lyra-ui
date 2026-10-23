@@ -141,3 +141,24 @@ graphSpatialCases['graph-spatial-appearance-empty-label-scene'] = async () => {
       errors, before, changed, cleared, picked, unchangedPosition };
   } finally { console.error = originalError; }
 };
+
+
+// A CSS loop expands in world XY; its far-side segments lie behind a glyph on the same ray,
+// although the loop centre lies in front. Both colors must contribute in the correct order.
+graphSpatialCases['graph-spatial-css-loop-translucent-order'] = async () => {
+  const pitch = Math.PI / 6, distance = 500;
+  const radius = 16 * 2 * Math.tan(Math.PI / 8) * distance / HEIGHT;
+  const a = 7 / 16 * Math.PI * 2, b = Math.PI;
+  const midpoint = { x: (Math.sin(a) + Math.sin(b)) * radius / 2, y: -(2 - Math.cos(a) - Math.cos(b)) * radius / 2, z: 0 };
+  const depth = distance - Math.sin(pitch) * midpoint.y;
+  const ratio = (distance + (depth - distance) / 2) / depth;
+  const eye = { x: 0, y: Math.sin(pitch) * distance, z: Math.cos(pitch) * distance };
+  const position = { x: midpoint.x * ratio, y: eye.y + (midpoint.y - eye.y) * ratio, z: eye.z * (1 - ratio) };
+  const record = await mount({ nodeCount: 2, positions: new Float32Array([0, 0, 0, position.x, position.y, position.z]),
+    sizes: new Float32Array([20, 20]), source: new Uint32Array([0]), target: new Uint32Array([0]),
+    spatialAppearance: { sizeUnits: 'css', nodeColors: new Float32Array([0, 0, 0, 0, 1, 0, 0, 0.5]),
+      edgeColors: new Float32Array([0, 0, 1, 0.5]), edgeWidths: new Float32Array([8]) } });
+  record.engine.setCamera({ ...DEFAULT_ORBIT_CAMERA, pitch, distance });
+  const rgba = pixel(await pixels(record), record.engine.project(1));
+  return { passed: record.lost.length === 0 && rgba[2] > 30 && rgba[0] > rgba[2] + 30, rgba, midpoint, position };
+};

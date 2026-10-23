@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createGraphSpatialEdges } from '../dist/graph/spatial-edges.js';
 import { DEFAULT_ORBIT_CAMERA, projectOrbitPoint } from '../dist/core/orbit.js';
 import { resolveLyra3dStyle } from '../dist/core/style.js';
+import { graphArrowScreen, graphEye, graphSegmentScreen, graphSpatialView } from '../dist/graph/spatial-paths.js';
 
 const state = (extra = {}) => ({ selected: new Set(), dimmed: new Set(), hover: -1, focus: -1, ...extra });
 const viewport = { width: 640, height: 480, orbit: DEFAULT_ORBIT_CAMERA, style: resolveLyra3dStyle(), project(point) { return projectOrbitPoint(point, this.orbit, this); } };
@@ -11,14 +12,16 @@ const BEHIND = 600;
 const at = (...rows) => (row) => rows[row] ?? null;
 const pair = (extra = {}) => ({ nodeCount: 2, source: new Uint32Array([0]), target: new Uint32Array([1]), spatialAppearance: {}, ...extra });
 const attribute = (batch, name) => batch.mesh.geometry.getAttribute(name);
+const view = graphSpatialView(viewport.width, viewport.height, viewport.orbit);
+const eye = (point) => graphEye(point, viewport.orbit);
 
-test('an edge wholly behind the camera is neither drawn nor pickable and sorts to the far end', () => {
+test('an edge wholly behind the camera is neither drawn nor pickable', () => {
+  // Visibility behind the camera is decided per frame by the vertex stage (its twin is checked
+  // here); the batch keeps the camera-independent widths, so turning around needs no upload.
   const batch = createGraphSpatialEdges(pair());
   batch.update(viewport, at({ x: 0, y: 0, z: BEHIND }, { x: 50, y: 0, z: BEHIND }), state());
-  const stroke = attribute(batch, 'stroke');
-  assert.deepEqual([stroke.getX(0), stroke.getY(0)], [0, 0], 'no line and no pick strip');
-  assert.deepEqual([attribute(batch, 'pickDepth').getX(0), attribute(batch, 'pickDepth').getY(0)], [0, 0]);
-  assert.equal(batch.depthAt(0), Infinity);
+  assert.equal(graphSegmentScreen(eye({ x: 0, y: 0, z: BEHIND }), eye({ x: 50, y: 0, z: BEHIND }), view), null, 'no line and no pick strip');
+  assert.ok(attribute(batch, 'stroke').getX(0) > 0 && attribute(batch, 'stroke').getY(0) > 0, 'until the camera turns around');
   batch.dispose();
 });
 
@@ -26,10 +29,9 @@ test('an edge with only one end behind the camera is clipped at the near plane o
   for (const [source, target] of [[FRONT, BEHIND], [BEHIND, FRONT]]) {
     const batch = createGraphSpatialEdges(pair());
     batch.update(viewport, at({ x: -40, y: 0, z: source }, { x: 40, y: 0, z: target }), state());
-    const stroke = attribute(batch, 'stroke');
-    assert.ok(stroke.getX(0) > 0, `the visible part is drawn (${source} -> ${target})`);
-    assert.ok(Number.isFinite(attribute(batch, 'screenStart').getX(0)) && Number.isFinite(attribute(batch, 'screenEnd').getX(0)));
-    assert.ok(Number.isFinite(batch.depthAt(0)) && batch.depthAt(0) > 0);
+    assert.ok(attribute(batch, 'stroke').getX(0) > 0, `the visible part is drawn (${source} -> ${target})`);
+    const screen = graphSegmentScreen(eye({ x: -40, y: 0, z: source }), eye({ x: 40, y: 0, z: target }), view);
+    assert.ok(screen && screen.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y) && point.z >= -1 && point.z <= 1));
     batch.dispose();
   }
 });
@@ -51,10 +53,9 @@ test('arrows follow their edge: shown at the target, hidden when the edge is hid
   visible.dispose();
   const hidden = createGraphSpatialEdges(pair({ directed: new Uint8Array([1]) }));
   hidden.update(viewport, at({ x: -60, y: 0, z: BEHIND }, { x: 60, y: 0, z: BEHIND }), state());
-  assert.equal(attribute(hidden, 'stroke').getX(1), 0, 'an arrow behind the camera has no width');
+  assert.equal(graphArrowScreen(eye({ x: -60, y: 0, z: BEHIND }), eye({ x: 60, y: 0, z: BEHIND }), 0, 20, false, view), null, 'an arrow behind the camera is not drawn');
   hidden.update(viewport, at({ x: -60, y: 0, z: FRONT }, null), state());
   assert.equal(attribute(hidden, 'stroke').getX(1), 0, 'an arrow without a target position has no width');
-  assert.equal(hidden.depthAt(1), Infinity);
   hidden.dispose();
 });
 
@@ -80,7 +81,7 @@ test('a disposed edge batch ignores further updates and repeated disposal', () =
 });
 
 test('arrows on dangling stubs, translucent edges and coincident endpoints stay finite and well ordered', () => {
-  const finite = (batch) => ['screenStart', 'screenEnd', 'stroke', 'edgeColor', 'dash'].every((name) => Array.from(attribute(batch, name).array).every(Number.isFinite));
+  const finite = (batch) => ['edgeStart', 'edgeEnd', 'edgePath', 'stroke', 'edgeColor', 'dash'].every((name) => Array.from(attribute(batch, name).array).every(Number.isFinite));
   // A directed self loop drawn as a dangling stub keeps its arrow at the stub tip.
   const stub = createGraphSpatialEdges({ nodeCount: 1, source: new Uint32Array([0]), target: new Uint32Array([0]), directed: new Uint8Array([1]), spatialAppearance: { dangling: new Uint8Array([1]) } });
   stub.update(viewport, at({ x: 0, y: 0, z: 0 }), state());
@@ -89,7 +90,7 @@ test('arrows on dangling stubs, translucent edges and coincident endpoints stay 
   // Coincident endpoints have no direction: the arrow collapses instead of dividing by zero.
   const coincident = createGraphSpatialEdges(pair({ directed: new Uint8Array([1]) }));
   coincident.update(viewport, at({ x: 10, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }), state());
-  assert.equal(attribute(coincident, 'stroke').getX(1), 0);
+  assert.equal(graphArrowScreen(eye({ x: 10, y: 0, z: 0 }), eye({ x: 10, y: 0, z: 0 }), 0, attribute(coincident, 'stroke').getX(1), false, view), null);
   assert.ok(finite(coincident));
   coincident.dispose();
   // A translucent authored color makes both the line and its arrow blend, so edges are depth sorted.

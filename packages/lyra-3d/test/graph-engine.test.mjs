@@ -206,6 +206,29 @@ test('spatial appearance preserves node/edge IDs and invalid replacements retain
   engine.setData(data(), 1); assert.equal(old.stopped, true); assert.equal(nodes.parent, null); engine.dispose();
 });
 
+test('spatial camera frames update uniforms only; positions and paint state rewrite attributes', async () => {
+  const { engine, viewport, host } = harness();
+  engine.setData({ ...data(), directed: new Uint8Array([1]), spatialAppearance: { edgeColors: new Float32Array([1, 0, 0, 0.5]) } }, 0); await engine.mount({}, host);
+  const edge = viewport.pickWorld.children.find((mesh) => mesh.geometry.getAttribute('stroke'));
+  const nodes = viewport.pickWorld.children.find((mesh) => mesh.geometry.getAttribute('nodeShape'));
+  const composite = viewport.world.children.find((mesh) => mesh.geometry.getAttribute('payload0'));
+  const versions = () => [edge.geometry.getAttribute('edgeStart'), edge.geometry.getAttribute('stroke'), nodes.geometry.getAttribute('nodePosition'), nodes.geometry.getAttribute('nodeFill'), composite.geometry.getAttribute('payload0')].map((a) => a.version);
+  viewport.tick(0); const before = versions();
+  for (const camera of [{ ...DEFAULT_ORBIT_CAMERA, distance: 900 }, { ...DEFAULT_ORBIT_CAMERA, target: { x: 30, y: 0, z: 0 } }, { ...DEFAULT_ORBIT_CAMERA, yaw: 0.01 }]) {
+    engine.setCamera(camera); viewport.tick(1); assert.deepEqual(versions(), before, JSON.stringify(camera));
+  }
+  assert.equal(composite.material.uniforms.lyraView.value.w, Math.max(0.5, 500 * 4 + 1e4));
+  engine.resize(320, 200); viewport.tick(2); assert.deepEqual(versions(), before);
+  assert.deepEqual(composite.material.uniforms.viewWindow.value.toArray(), [0, 0, 320, 200]);
+  engine.setCamera({ ...DEFAULT_ORBIT_CAMERA, yaw: 1 }); viewport.tick(3);
+  assert.deepEqual(versions().slice(0, 4), before.slice(0, 4)); assert.ok(versions()[4] > before[4], 'translucent strokes re-sort after a material turn');
+  engine.setPins({ indices: new Uint32Array([0]), positions: new Float32Array([7, 8, 9]), pinned: new Uint8Array([1]) }); viewport.tick(4);
+  assert.ok(versions().every((value, index) => value > before[index])); assert.equal(nodes.geometry.getAttribute('nodePosition').getX(0), 7);
+  const pinned = versions(); engine.setState({ selected: new Set([0]), dimmed: new Set(), hover: -1, focus: -1 });
+  assert.ok(versions()[3] > pinned[3]); assert.equal(nodes.geometry.getAttribute('nodeFlags').getX(0), 1);
+  engine.dispose();
+});
+
 test('appearance transactions preserve positions, pins, task, revision and selection', async () => {
   const { engine, viewport, host, jobs } = harness();
   engine.setData({ ...data(), spatialAppearance: { nodeShapes: new Uint8Array([0, 0]) } }, 0); await engine.mount({}, host);

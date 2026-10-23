@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hottest, parse, summarize } from './run.mjs';
+import { hottest, measurementStatus, parse, summarize } from './run.mjs';
 
 test('frame intervals summarize to a rate, nearest-rank percentiles and long frames', () => {
   const summary = summarize([16, 17, 16, 50, 16]);
@@ -28,4 +28,17 @@ test('options reject unknown modes, profiles, flags and unbounded durations', ()
   assert.throws(() => parse(['--profile', 'huge']), /--profile/);
   assert.throws(() => parse(['--duration-ms', '600000']), /durationMs/);
   assert.throws(() => parse(['--fast']), /Unknown option/);
+});
+
+
+test('animation timing without rendered WebGL frames never qualifies as measured', () => {
+  const active = { frames: 300, fps: 60, drawnFrameRatio: 1, drawCallsPerFrame: 2, fallbacks: [] };
+  assert.equal(measurementStatus(active), 'measured');
+  assert.equal(measurementStatus({ ...active, drawnFrameRatio: 0.5 }), 'measured', 'partial drawing remains reported without adding a performance threshold');
+  for (const field of ['frames', 'fps', 'drawnFrameRatio', 'drawCallsPerFrame']) {
+    for (const value of [0, -1, NaN, Infinity, undefined]) {
+      assert.equal(measurementStatus({ ...active, [field]: value }), 'unqualified', `${field}=${value}`);
+    }
+  }
+  assert.equal(measurementStatus({ ...active, drawnFrameRatio: 0, fallbacks: ['unsupported'] }), 'fallback');
 });

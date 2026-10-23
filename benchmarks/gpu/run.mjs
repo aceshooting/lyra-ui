@@ -108,6 +108,14 @@ async function profiled(page, options, work) {
   return measured;
 }
 
+/** A timing sample qualifies only when the measured frames actually issued WebGL draws. */
+export function measurementStatus(measured) {
+  if (measured.fallbacks.length) return 'fallback';
+  const recorded = [measured.frames, measured.fps, measured.drawnFrameRatio, measured.drawCallsPerFrame]
+    .every((value) => Number.isFinite(value) && value > 0);
+  return recorded ? 'measured' : 'unqualified';
+}
+
 async function measure(page, scenario, options) {
   const call = (name, argument) => page.evaluate(([method, value]) => window.__gpuBenchmark[method](value), [name, argument]);
   const mounted = await call(scenario.kind, scenario);
@@ -172,7 +180,7 @@ export async function run(options) {
           await page.waitForFunction(() => !!window.__gpuBenchmark);
           report.renderer ??= await page.evaluate(() => window.__gpuBenchmark.renderer());
           const measured = await measure(page, scenario, options);
-          report.scenarios.push({ ...scenario, status: measured.fallbacks.length ? 'fallback' : 'measured', ...measured });
+          report.scenarios.push({ ...scenario, status: measurementStatus(measured), ...measured });
         } catch (error) {
           report.scenarios.push({ ...scenario, status: 'failed', error: String(error?.message ?? error).slice(0, 200) });
         } finally {

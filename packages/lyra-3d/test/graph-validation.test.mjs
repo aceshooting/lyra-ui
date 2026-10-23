@@ -7,7 +7,7 @@ import { createGraphTaskKernel } from '../dist/graph/layout-task.js';
 import { buildGraphOctree, graphChargeForces } from '../dist/graph/octree.js';
 import { admitGraphSpatialAppearance } from '../dist/graph/spatial-appearance.js';
 import { createGraphSpatialNodes } from '../dist/graph/spatial-nodes.js';
-import { spatialEdgePoint, spatialNodeWorldRadius } from '../dist/graph/spatial-paths.js';
+import { graphEye, graphNodeExtents, graphSpatialView, spatialEdgePoint, spatialNodeWorldRadius } from '../dist/graph/spatial-paths.js';
 
 const state = (extra = {}) => ({ selected: new Set(), dimmed: new Set(), hover: -1, focus: -1, ...extra });
 
@@ -63,9 +63,10 @@ test('nodes behind the camera get no extent, and categories choose palette color
   const viewport = { width: 640, height: 480, orbit: DEFAULT_ORBIT_CAMERA, style };
   const batch = spatialNodes({ categories: new Uint16Array([0, 1, 3]) });
   batch.update(viewport, new Float32Array([0, 0, 0, 0, 0, 0, 0, 0, 2000]), state());
-  const extent = batch.mesh.geometry.getAttribute('nodeExtent');
-  assert.ok(extent.getX(0) > 0 && extent.getY(0) > 0, 'a visible node has a body and a hit area');
-  assert.deepEqual([extent.getX(2), extent.getY(2)], [0, 0], 'a node behind the near plane is neither drawn nor pickable');
+  const view = graphSpatialView(640, 480, DEFAULT_ORBIT_CAMERA), size = batch.mesh.geometry.getAttribute('nodeSize');
+  const extent = (row, z) => graphNodeExtents(graphEye({ x: 0, y: 0, z }, DEFAULT_ORBIT_CAMERA), size.getX(row), 0, false, false, false, 3, view);
+  assert.ok(extent(0, 0).paint > 0 && extent(0, 0).pick > 0, 'a visible node has a body and a hit area');
+  assert.deepEqual([extent(2, 2000).paint, extent(2, 2000).pick], [0, 0], 'a node behind the near plane is neither drawn nor pickable');
   const fill = batch.mesh.geometry.getAttribute('nodeFill');
   assert.ok(fill.getX(0) > 0.9 && fill.getY(0) < 0.01, 'category 0 is the first palette color');
   assert.ok(fill.getY(1) > 0.9 && fill.getX(1) < 0.01, 'category 1 is the second palette color');

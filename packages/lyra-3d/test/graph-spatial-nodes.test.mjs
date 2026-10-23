@@ -6,13 +6,14 @@ import { createGraphSpatialNodes } from '../dist/graph/spatial-nodes.js';
 import { DEFAULT_ORBIT_CAMERA, projectOrbitPoint } from '../dist/core/orbit.js';
 import { resolveLyra3dStyle } from '../dist/core/style.js';
 import { decodePickId } from '../dist/core/picking.js';
+import { GRAPH_EDGE_DEPTH_BIAS, graphEye, graphNdcDepth, graphNodeExtents, graphSpatialView } from '../dist/graph/spatial-paths.js';
 
 const state = (extra = {}) => ({ selected: new Set(), dimmed: new Set(), hover: -1, focus: -1, ...extra });
 const viewport = (style = {}) => ({ width: 640, height: 480, orbit: DEFAULT_ORBIT_CAMERA, style: resolveLyra3dStyle(style) });
 const attr = (batch, name) => batch.mesh.geometry.getAttribute(name).array;
 const make = (extra = {}) => createGraphSpatialNodes({ nodeCount: 3, spatialAppearance: { nodeShapes: new Uint8Array([0, 1, 2]) }, ...extra });
 
-test('spatial node quads retain all shapes and original IDs through depth ordering', () => {
+test('spatial node quads keep row order, shapes and original IDs; translucency only flags blending', () => {
   const batch = make({ spatialAppearance: { nodeShapes: new Uint8Array([0, 1, 2]), nodeColors: new Float32Array([1, 0, 0, 0.5, 0, 1, 0, 0.5, 0, 0, 1, 0.5]) } });
   batch.update(viewport(), new Float32Array([0, 0, 100, 0, 0, -100, 0, 0, 0]), state());
   assert.equal(batch.mesh.geometry.isInstancedBufferGeometry, true);
@@ -21,24 +22,37 @@ test('spatial node quads retain all shapes and original IDs through depth orderi
   const ids = attr(batch, 'pickColor');
   const rows = [];
   for (let index = 0; index < 3; index++) rows.push(decodePickId(...[...ids.slice(index * 3, index * 3 + 3)].map((v) => Math.round(v * 255))));
-  assert.deepEqual(rows, [1, 2, 0]);
-  assert.deepEqual([...attr(batch, 'nodeShape')], [1, 2, 0]);
-  assert.equal(batch.mesh.geometry, batch.pick.geometry);
-  assert.equal(batch.mesh.material.transparent, true); assert.equal(batch.mesh.material.depthWrite, false);
-  batch.update(viewport({ forcedColors: true }), new Float32Array([0, 0, 100, 0, 0, -100, 0, 0, 0]), state());
-  assert.equal(batch.mesh.material.transparent, false); assert.equal(batch.mesh.material.depthWrite, true);
+  assert.deepEqual(rows, [0, 1, 2]);
   assert.deepEqual([...attr(batch, 'nodeShape')], [0, 1, 2]);
+  assert.equal(batch.mesh.geometry, batch.pick.geometry);
+  assert.equal(batch.translucent, true); assert.equal(batch.mesh.material.transparent, true); assert.equal(batch.mesh.material.depthWrite, false);
+  batch.update(viewport({ forcedColors: true }), new Float32Array([0, 0, 100, 0, 0, -100, 0, 0, 0]), state());
+  assert.equal(batch.translucent, false); assert.equal(batch.mesh.material.transparent, false); assert.equal(batch.mesh.material.depthWrite, true);
   batch.dispose();
 });
 
-test('world diameters project with depth while CSS diameters remain fixed', () => {
+test('glyph sizes stay in their authored units; the shader resolves world diameters with depth', () => {
   const positions = new Float32Array([0, 0, 0, 0, 0, 250, 0, 0, 0]); const view = viewport();
   const world = make({ sizes: new Float32Array([20, 20, 20]), spatialAppearance: { sizeUnits: 'world' } });
   world.update(view, positions, state());
-  assert.ok(Math.abs(attr(world, 'nodeRadius')[0] - 10 * projectOrbitPoint({ x: 0, y: 0, z: 0 }, view.orbit, view).scale) < 0.00001);
-  assert.ok(attr(world, 'nodeRadius')[1] > attr(world, 'nodeRadius')[0] * 1.99);
+  assert.deepEqual([...attr(world, 'nodeSize')], [10, 10, 10]); assert.equal(world.mesh.material.uniforms.worldSizes.value, 1);
   const css = make({ sizes: new Float32Array([20, 20, 20]) }); css.update(view, positions, state());
-  assert.deepEqual([...attr(css, 'nodeRadius')], [10, 10, 10]); world.dispose(); css.dispose();
+  assert.deepEqual([...attr(css, 'nodeSize')], [10, 10, 10]); assert.equal(css.mesh.material.uniforms.worldSizes.value, 0);
+  const spatial = graphSpatialView(640, 480, view.orbit), radius = (z) => graphNodeExtents(graphEye({ x: 0, y: 0, z }, view.orbit), 10, 0, false, false, true, 3, spatial).radius;
+  assert.ok(Math.abs(radius(0) - 10 * projectOrbitPoint({ x: 0, y: 0, z: 0 }, view.orbit, view).scale) < 0.00001);
+  assert.ok(radius(250) > radius(0) * 1.99);
+  world.dispose(); css.dispose();
+});
+
+test('a camera change only moves uniforms: no glyph attribute is rewritten', () => {
+  const batch = make(); batch.update(viewport(), new Float32Array(9), state());
+  const versions = () => ['nodePosition', 'nodeSize', 'nodeShape', 'nodeFlags', 'nodeFill', 'nodeRing', 'nodeMarker', 'pickColor'].map((name) => batch.mesh.geometry.getAttribute(name).version);
+  const before = versions(), revision = batch.revision;
+  batch.setView({ width: 320, height: 200, orbit: { ...DEFAULT_ORBIT_CAMERA, pitch: 0.5, distance: 2000 } });
+  assert.deepEqual(versions(), before); assert.equal(batch.revision, revision);
+  assert.deepEqual(batch.mesh.material.uniforms.lyraView.value.toArray(), [320, 200, 2, 18000]);
+  assert.deepEqual(batch.mesh.material.uniforms.viewportSize.value.toArray(), [320, 200]);
+  batch.dispose();
 });
 
 test('selected hover and focus retain linearized RGBA fill and paint independent rings', () => {
@@ -63,11 +77,8 @@ test('forced colors bypass supplied color and dim alpha while preserving ring an
   assert.deepEqual([...attr(batch, 'nodeFlags').slice(0, 2)], [1, 1]); batch.dispose();
 });
 
-test('shape-specific hit extents preserve twelve CSS-pixel reach and compensate one-pixel picker', () => {
+test('the one-pixel picker compensates the glyph viewport so hit extents keep their CSS reach', () => {
   const batch = make({ sizes: new Float32Array([2, 2, 2]) }); batch.update(viewport(), new Float32Array(9), state());
-  const extents = attr(batch, 'nodeExtent');
-  assert.equal(extents[1], 12); assert.equal(extents[3], 12);
-  assert.ok(Math.abs(extents[5] - 12 * Math.sqrt(Math.PI / 2)) < 0.00001);
   const camera = new PerspectiveCamera(); camera.setViewOffset(640, 480, 320, 240, 1, 1);
   batch.pick.onBeforeRender(null, null, camera);
   assert.deepEqual(batch.pick.material.uniforms.viewportSize.value.toArray(), [1, 1]);
@@ -87,9 +98,9 @@ test('invalid batch data and position updates fail atomically before buffer writ
 });
 
 test('nodes behind the near plane have no visual or pick quad extent', () => {
-  const batch = make(); batch.update(viewport(), new Float32Array([0, 0, 501, 0, 0, 500, 0, 0, 0]), state({ selected: new Set([0]) }));
-  assert.deepEqual([...attr(batch, 'nodeExtent').slice(0, 4)], [0, 0, 0, 0]);
-  assert.ok(attr(batch, 'nodeExtent')[4] > 0 && attr(batch, 'nodeExtent')[5] >= 12); batch.dispose();
+  const view = graphSpatialView(640, 480, DEFAULT_ORBIT_CAMERA), extents = (z) => graphNodeExtents(graphEye({ x: 0, y: 0, z }, DEFAULT_ORBIT_CAMERA), 3, 0, true, false, false, 3, view);
+  assert.deepEqual([extents(501), extents(500)].map(({ paint, pick }) => [paint, pick]), [[0, 0], [0, 0]]);
+  assert.ok(extents(0).paint > 0 && extents(0).pick >= 12);
 });
 
 test('disposal releases shared geometry once and both materials, without caller mutations', () => {
@@ -105,13 +116,16 @@ test('spatial node and edge picks use matching quantized depth at shared endpoin
   const nodes = createGraphSpatialNodes(input), edges = createGraphSpatialEdges(input);
   const positions = new Float32Array([-80, 0, 0, 80, 0, 0]);
   const position = (row) => ({ x: positions[row * 3], y: positions[row * 3 + 1], z: positions[row * 3 + 2] });
-  const windowDepth = (value) => value;
   for (const yaw of [0, 0.4, Math.PI]) for (const distance of [100, 500, 10000]) {
     const view = { ...viewport(), orbit: { ...DEFAULT_ORBIT_CAMERA, yaw, distance } };
-    view.project = (point) => projectOrbitPoint(point, view.orbit, view);
     nodes.update(view, positions, state()); edges.update(view, position, state());
-    const nodeDepth = attr(nodes, 'nodePickDepth'), edgeDepth = attr(edges, 'pickDepth');
-    for (let row = 0; row < 2; row++) assert.ok(windowDepth(nodeDepth[row]) <= windowDepth(edgeDepth[row]), `endpoint ${row}, yaw ${yaw}, distance ${distance}`);
+    // Edge endpoints are the node positions bit for bit, so both shaders evaluate the same depth.
+    assert.deepEqual([...attr(edges, 'edgeStart'), ...attr(edges, 'edgeEnd')], [...attr(nodes, 'nodePosition')]);
+    const spatial = graphSpatialView(640, 480, view.orbit);
+    for (let row = 0; row < 2; row++) {
+      const depth = graphEye(position(row), view.orbit).z;
+      assert.ok(graphNdcDepth(depth, spatial) * 0.5 + 0.5 < graphNdcDepth(depth + 0.001, spatial) * 0.5 + 0.5 + GRAPH_EDGE_DEPTH_BIAS, `endpoint ${row}, yaw ${yaw}, distance ${distance}`);
+    }
   }
   assert.ok(nodes.pick.material.fragmentShader.includes('gl_FragDepth = pickDepth'));
   assert.ok(nodes.pick.material.vertexShader.includes('flat varying float pickDepth'));

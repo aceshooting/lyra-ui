@@ -1,52 +1,15 @@
 import { DoubleSide, Color, DataTexture, FloatType, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, NearestFilter, NoBlending, PerspectiveCamera, PlaneGeometry, RedFormat, ShaderMaterial, SRGBColorSpace, Vector4 } from 'three';
 import type { Lyra3dState, Lyra3dWorldPoint } from '../core/contract.js';
-import { orbitNearPlane, type Lyra3dOrbitCamera } from '../core/orbit.js';
 import { encodePickId } from '../core/picking.js';
 import type { Lyra3dViewport } from '../core/viewport.js';
 import { validateGraphSpatialSizes } from './spatial-appearance.js';
-import { spatialEdgePoint, spatialEdgeSegments, spatialNodeWorldRadius, spatialPrimitiveCount, type GraphPositionLookup, type GraphSpatialData } from './spatial-paths.js';
+import { GRAPH_ARROW_HALF_ANGLE, graphSpatialEdgeVertexChunk, graphSpatialProjectionChunk, graphSpatialView, spatialEdgeSegments, spatialPrimitiveCount, type GraphPositionLookup, type GraphSpatialData } from './spatial-paths.js';
 
-function eye(point: Lyra3dWorldPoint, camera: Lyra3dOrbitCamera): Lyra3dWorldPoint {
-  const x = point.x - camera.target.x, y = point.y - camera.target.y, z = point.z - camera.target.z;
-  const depth = Math.sin(camera.yaw) * x + Math.cos(camera.yaw) * z;
-  return { x: Math.cos(camera.yaw) * x - Math.sin(camera.yaw) * z, y: Math.cos(camera.pitch) * y - Math.sin(camera.pitch) * depth,
-    z: camera.distance - Math.sin(camera.pitch) * y - Math.cos(camera.pitch) * depth };
-}
-function clipped(a: Lyra3dWorldPoint, b: Lyra3dWorldPoint, near: number): [Lyra3dWorldPoint, Lyra3dWorldPoint] | null {
-  if (a.z < near && b.z < near) return null;
-  const mix = (from: Lyra3dWorldPoint, to: Lyra3dWorldPoint) => { const t = (near - from.z) / (to.z - from.z); return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, z: near }; };
-  return [a.z < near ? mix(a, b) : a, b.z < near ? mix(b, a) : b];
-}
-const vertex = `
-attribute vec3 screenStart; attribute vec3 screenEnd; attribute vec3 stroke;
-attribute vec2 pickDepth; attribute vec4 edgeColor; attribute vec3 pickColor; attribute vec3 dash;
-uniform vec4 viewWindow;
-varying vec4 tint; varying vec2 pattern; varying vec3 arrowUv; varying vec3 cap; varying float strokeRadius; flat varying vec2 depthEnds;
-void main(){
-  vec2 delta=screenEnd.xy-screenStart.xy; float span=length(delta);
-  #ifdef PICKING
-    float width=stroke.y; tint=vec4(pickColor,1.0);
-  #else
-    float width=stroke.x; tint=edgeColor;
-  #endif
-  #ifndef PICKING
-    if(edgeColor.a<=0.0)width=0.0;
-  #endif
-  strokeRadius=width*0.5; depthEnds=pickDepth;
-  pattern=vec2(dash.x,dash.y+uv.x*dash.z); arrowUv=vec3(uv,stroke.z);
-  if(width<=0.0 || span<0.0001){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
-  vec3 point=mix(screenStart,screenEnd,uv.x);
-  cap=vec3(uv.x*span,position.y*width*0.5,span);
-  #ifdef PICKING
-    point.z=(pickDepth.x+(pickDepth.y-pickDepth.x)*uv.x)*2.0-1.0;
-    point.xy+=delta/span*(uv.x*2.0-1.0)*width*0.5;
-    cap.x+= (uv.x*2.0-1.0)*width*0.5;
-    cap.z=span;
-  #endif
-  point.xy+=vec2(-delta.y,delta.x)/span*position.y*width*0.5;
-  vec2 ndc=(point.xy-viewWindow.xy)/viewWindow.zw*2.0-1.0;
-  gl_Position=vec4(ndc.x,-ndc.y,point.z,1.0);
-}`;
+type EdgeView = Pick<Lyra3dViewport, 'width' | 'height' | 'orbit'>;
+const vertex = graphSpatialProjectionChunk + graphSpatialEdgeVertexChunk + `
+attribute vec3 edgeStart; attribute vec3 edgeEnd; attribute vec4 edgePath; attribute vec3 stroke;
+attribute vec4 edgeColor; attribute vec3 pickColor; attribute float dash;
+void main(){ graphSpatialEdgeVertex(edgeStart, edgeEnd, edgePath, stroke, edgeColor, pickColor, dash); }`;
 export const graphSpatialEdgeFragment = `
 uniform sampler2D dashAtlas; uniform float atlasHeight;
 varying vec4 tint; varying vec2 pattern; varying vec3 arrowUv; varying vec3 cap; varying float strokeRadius; flat varying vec2 depthEnds;
@@ -74,18 +37,23 @@ void paintGraphSpatialEdge(){
   #endif
 }`;
 const fragment = graphSpatialEdgeFragment + '\nvoid main() { paintGraphSpatialEdge(); }';
+const DANGLING_REACH = 28;
 
-/** Batched projected strokes: segment expansion never changes the public edge row identity. */
+/** Batched strokes in world space. Segment expansion never changes the public edge row identity;
+ * the vertex stage projects, clips and widens every segment from camera uniforms. */
 export function createGraphSpatialEdges(data: GraphSpatialData) {
   const appearance = data.spatialAppearance;
   validateGraphSpatialSizes(data.sizes, data.nodeCount, appearance);
-  const count = spatialPrimitiveCount(data);
+  const count = spatialPrimitiveCount(data), worldSizes = appearance.sizeUnits === 'world';
   const plane = new PlaneGeometry(2, 2), geometry = new InstancedBufferGeometry(); geometry.index = plane.index; geometry.attributes = { ...plane.attributes }; geometry.instanceCount = count; plane.dispose();
-  const start = new InstancedBufferAttribute(new Float32Array(count * 3), 3), end = new InstancedBufferAttribute(new Float32Array(count * 3), 3);
-  const stroke = new InstancedBufferAttribute(new Float32Array(count * 3), 3), colors = new InstancedBufferAttribute(new Float32Array(count * 4), 4);
-  const pickDepth = new InstancedBufferAttribute(new Float32Array(count * 2), 2);
-  const picks = new InstancedBufferAttribute(new Float32Array(count * 3), 3), dash = new InstancedBufferAttribute(new Float32Array(count * 3), 3);
-  geometry.setAttribute('pickDepth', pickDepth); geometry.setAttribute('screenStart', start); geometry.setAttribute('screenEnd', end); geometry.setAttribute('stroke', stroke); geometry.setAttribute('edgeColor', colors); geometry.setAttribute('pickColor', picks); geometry.setAttribute('dash', dash);
+  const attribute = (name: string, components: number) => {
+    const result = new InstancedBufferAttribute(new Float32Array(count * components), components);
+    geometry.setAttribute(name, result); return result;
+  };
+  const start = attribute('edgeStart', 3), end = attribute('edgeEnd', 3), path = attribute('edgePath', 4), stroke = attribute('stroke', 3);
+  const colors = attribute('edgeColor', 4), picks = attribute('pickColor', 3), dash = attribute('dash', 1);
+  /** World anchor of each primitive, from which the composite derives painter order. */
+  const anchors = new Float32Array(count * 3);
   const mutablePatterns: number[][] = [[]]; const byPattern = new Map<string, number>([['', 0]]); const patternRows = new Uint32Array(data.source.length);
   for (let row = 0; row < data.source.length; row++) {
     const pattern = appearance.dangling?.[row] ? [4, 4] : appearance.edgeDashes?.[row] ?? []; const key = pattern.join(',');
@@ -94,74 +62,87 @@ export function createGraphSpatialEdges(data: GraphSpatialData) {
   const height = Math.max(1, Math.ceil(mutablePatterns.length * 64 / 2048)), values = new Float32Array(2048 * height);
   mutablePatterns.forEach((pattern, row) => { values[row * 64] = pattern.length; values[row * 64 + 1] = pattern.reduce((sum, value) => sum + value, 0); values.set(pattern, row * 64 + 2); });
   const texture = new DataTexture(values, 2048, height, RedFormat, FloatType); texture.minFilter = texture.magFilter = NearestFilter; texture.generateMipmaps = false; texture.needsUpdate = true;
-  const window = new Vector4(0, 0, 1, 1), pickWindow = new Vector4(0, 0, 1, 1);
-  const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewWindow: { value: window }, dashAtlas: { value: texture }, atlasHeight: { value: height } }, vertexShader: vertex, fragmentShader: fragment, transparent: true });
-  const pickMaterial = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewWindow: { value: pickWindow } }, vertexShader: vertex, fragmentShader: fragment, defines: { PICKING: 1 }, blending: NoBlending, toneMapped: false });
+  // Identity and path shape are fixed per batch; only paint and positions are rewritten.
+  for (let edge = 0, index = 0; edge < data.source.length; edge++) {
+    const segments = spatialEdgeSegments(data, edge), primitives = segments + (data.directed?.[edge] ? 1 : 0), id = encodePickId(data.nodeCount + edge)!;
+    for (let primitive = 0; primitive < primitives; primitive++, index++) {
+      const arrow = primitive === segments;
+      picks.setXYZ(index, id[0] / 255, id[1] / 255, id[2] / 255); dash.setX(index, arrow ? 0 : patternRows[edge]!);
+      path.setXY(index, arrow ? 1 - 1 / segments : primitive / segments, arrow ? 1 : (primitive + 1) / segments);
+    }
+  }
+  const window = new Vector4(0, 0, 1, 1), pickWindow = new Vector4(0, 0, 1, 1), lyraView = new Vector4(1, 1, 0.5, 1e4);
+  const shared = { lyraView: { value: lyraView }, worldSizes: { value: worldSizes ? 1 : 0 } };
+  const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { ...shared, viewWindow: { value: window }, dashAtlas: { value: texture }, atlasHeight: { value: height } }, vertexShader: vertex, fragmentShader: fragment, transparent: true });
+  const pickMaterial = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { ...shared, viewWindow: { value: pickWindow } }, vertexShader: vertex, fragmentShader: fragment, defines: { PICKING: 1 }, blending: NoBlending, toneMapped: false });
   const mesh = new Mesh(geometry, material), pick = new Mesh(geometry, pickMaterial); mesh.frustumCulled = pick.frustumCulled = false;
   pick.onBeforeRender = (_renderer, _scene, camera) => {
     const view = camera instanceof PerspectiveCamera ? camera.view : null;
     if (view?.enabled) pickWindow.set(view.offsetX, view.offsetY, view.width, view.height); else pickWindow.copy(window);
     pickMaterial.uniformsNeedUpdate = true;
   };
-  const color = new Color(); let disposed = false;
-  const depths = new Float64Array(count), order = new Uint32Array(count), scratch = new Float32Array(count * 4);
-  return { mesh, pick,
-    depthAt(index: number) { return depths[order[index]!]!; },
-    update(viewport: Lyra3dViewport, position: GraphPositionLookup, state: Lyra3dState) {
+  const color = new Color(); let disposed = false, translucent = false, revision = 0;
+  const setView = (viewport: EdgeView) => {
+    const next = graphSpatialView(viewport.width, viewport.height, viewport.orbit);
+    window.set(0, 0, viewport.width, viewport.height); lyraView.set(next.width, next.height, next.near, next.far);
+  };
+  const anchor = (index: number, x: number, y: number, z: number) => { anchors[index * 3] = x; anchors[index * 3 + 1] = y; anchors[index * 3 + 2] = z; };
+  return { mesh, pick, anchors,
+    /** True when any visible stroke blends; the composite then paints in back-to-front order. */
+    get translucent() { return translucent; },
+    /** Increases with every attribute rewrite. */
+    get revision() { return revision; },
+    /** Camera and viewport changes only touch uniforms. */
+    setView(viewport: EdgeView) { if (!disposed) setView(viewport); },
+    update(viewport: EdgeView & Pick<Lyra3dViewport, 'style'>, position: GraphPositionLookup, state: Lyra3dState) {
       if (disposed) return;
-      window.set(0, 0, viewport.width, viewport.height); const style = viewport.style, near = orbitNearPlane(viewport.orbit), far = Math.max(near * 10, viewport.orbit.distance * 4 + 1e4);
-      const project = (point: Lyra3dWorldPoint) => { const scale = viewport.height / (2 * Math.tan(Math.PI / 8) * point.z); return { x: viewport.width / 2 + point.x * scale, y: viewport.height / 2 + point.y * scale, z: (far + near) / (far - near) - (2 * far * near) / ((far - near) * point.z) }; };
-      let index = 0, translucent = false;
+      setView(viewport);
+      const style = viewport.style;
+      translucent = false;
+      let index = 0;
       for (let edge = 0; edge < data.source.length; edge++) {
-        const segments = spatialEdgeSegments(data, edge), item = data.nodeCount + edge;
+        const segments = spatialEdgeSegments(data, edge), item = data.nodeCount + edge, source = data.source[edge]!, dangling = appearance.dangling?.[edge] === 1;
         const selected = state.selected.has(item) || state.hover === item;
         const raw = appearance.edgeColors; const rgba = selected ? style.accent : style.forcedColors ? style.foreground : raw ? { r: raw[edge * 4]!, g: raw[edge * 4 + 1]!, b: raw[edge * 4 + 2]!, a: raw[edge * 4 + 3]! } : style.muted;
         color.setRGB(rgba.r, rgba.g, rgba.b, SRGBColorSpace);
         const alpha = rgba.a * (!style.forcedColors && state.dimmed.has(item) ? appearance.dimmedOpacity ?? 0.35 : 1);
         const baseWidth = appearance.edgeWidths?.[edge] ?? style.lineWidth;
-        const id = encodePickId(item)!; let offset = 0;
-        for (let segment = 0; segment < segments; segment++, index++) {
-          const a = spatialEdgePoint(data, edge, segment / segments, position, viewport), b = spatialEdgePoint(data, edge, (segment + 1) / segments, position, viewport);
-          const clip = a && b ? clipped(eye(a, viewport.orbit), eye(b, viewport.orbit), near) : null;
-          const eligible = baseWidth > 0 && (raw?.[edge * 4 + 3] ?? style.muted.a) > 0 && clip !== null;
-          const visible = eligible && alpha > 0;
-          if (visible && alpha < 1) translucent = true;
-          order[index] = index; depths[index] = clip ? (clip[0].z + clip[1].z) / 2 : Infinity;
-          const pa = clip ? project(clip[0]) : { x: 0, y: 0, z: 0 }, pb = clip ? project(clip[1]) : pa;
-          const length = Math.hypot(pb.x - pa.x, pb.y - pa.y);
-          start.setXYZ(index, pa.x, pa.y, pa.z); end.setXYZ(index, pb.x, pb.y, pb.z);
-          pickDepth.setXY(index, clip ? project({ ...clip[0], z: clip[0].z + 0.001 }).z * 0.5 + 0.5 : 0, clip ? project({ ...clip[1], z: clip[1].z + 0.001 }).z * 0.5 + 0.5 : 0);
-          stroke.setXYZ(index, visible ? baseWidth + (selected ? 2 : 0) : 0, eligible && !appearance.dangling?.[edge] ? Math.max(12, baseWidth) : 0, 0);
-          colors.setXYZW(index, color.r, color.g, color.b, alpha); picks.setXYZ(index, id[0] / 255, id[1] / 255, id[2] / 255); dash.setXYZ(index, patternRows[edge]!, offset, length); offset += length;
-        }
-        if (data.directed?.[edge]) {
-          const a = spatialEdgePoint(data, edge, 1 - 1 / segments, position, viewport), b = spatialEdgePoint(data, edge, 1, position, viewport);
-          const terminal = a && b ? clipped(eye(a, viewport.orbit), eye(b, viewport.orbit), near) : null;
-          const pa = terminal ? project(terminal[0]) : null, pb = b ? viewport.project(b) : null;
-          const target = position(data.target[edge]!);
-          const inset = pb && target && !appearance.dangling?.[edge] ? spatialNodeWorldRadius(data, data.target[edge]!, target, viewport) * pb.scale : 0;
-          const dx = pa && pb ? pb.x - pa.x : 0, dy = pa && pb ? pb.y - pa.y : 0, span = Math.hypot(dx, dy);
-          const height = Math.max(6, (baseWidth + (selected ? 2 : 0)) * 3), visible = pa && pb && span > 0 && baseWidth > 0 && (raw?.[edge * 4 + 3] ?? style.muted.a) > 0 && alpha > 0;
-          const tipX = pb ? pb.x - dx / (span || 1) * inset : 0, tipY = pb ? pb.y - dy / (span || 1) * inset : 0;
-          const depth = pb && b ? project(eye(b, viewport.orbit)).z : 0;
-          order[index] = index; depths[index] = b ? eye(b, viewport.orbit).z : Infinity;
-          if (visible && alpha < 1) translucent = true;
-          start.setXYZ(index, tipX - dx / (span || 1) * height, tipY - dy / (span || 1) * height, depth); end.setXYZ(index, tipX, tipY, depth);
-          stroke.setXYZ(index, visible ? height * Math.tan(0.45) * 2 : 0, 0, 1); colors.setXYZW(index, color.r, color.g, color.b, alpha); picks.setXYZ(index, id[0] / 255, id[1] / 255, id[2] / 255); dash.setXYZ(index, 0, 0, 0); index++;
-        }
-      }
-      const attributes = [start, end, stroke, colors, picks, dash, pickDepth];
-      if (translucent) {
-        order.sort((a, b) => depths[b]! - depths[a]! || a - b);
-        for (const attribute of attributes) {
-          const array = attribute.array, size = attribute.itemSize;
-          for (let row = 0; row < count; row++) for (let component = 0; component < size; component++) scratch[row * size + component] = array[order[row]! * size + component]!;
-          array.set(scratch.subarray(0, count * size));
+        // Mirrors spatialEdgePoint: dangling stubs reach a fixed world offset and self loops circle
+        // their node at 1.6 node radii (world units, or CSS pixels resolved by the shader).
+        const a: Lyra3dWorldPoint | null = position(source);
+        const loop = !dangling && source === data.target[edge];
+        const b: Lyra3dWorldPoint | null = !a ? null : dangling ? { x: a.x + DANGLING_REACH, y: a.y - DANGLING_REACH, z: a.z } : loop ? a : position(data.target[edge]!);
+        const loopRadius = loop ? (data.sizes?.[source] ?? style.pointSize) / 2 * 1.6 : 0;
+        const eligible = a !== null && b !== null && baseWidth > 0 && (raw?.[edge * 4 + 3] ?? style.muted.a) > 0;
+        const visible = eligible && alpha > 0;
+        if (visible && alpha < 1) translucent = true;
+        const primitives = segments + (data.directed?.[edge] ? 1 : 0);
+        for (let primitive = 0; primitive < primitives; primitive++, index++) {
+          const arrow = primitive === segments, t0 = path.getX(index), t1 = path.getY(index);
+          start.setXYZ(index, a?.x ?? 0, a?.y ?? 0, a?.z ?? 0); end.setXYZ(index, b?.x ?? 0, b?.y ?? 0, b?.z ?? 0);
+          path.setZ(index, loopRadius); path.setW(index, arrow && !dangling ? (data.sizes?.[data.target[edge]!] ?? style.pointSize) / 2 : 0);
+          colors.setXYZW(index, color.r, color.g, color.b, alpha);
+          if (arrow) {
+            const head = Math.max(6, (baseWidth + (selected ? 2 : 0)) * 3);
+            stroke.setXYZ(index, visible ? head * Math.tan(GRAPH_ARROW_HALF_ANGLE) * 2 : 0, 0, 1);
+            if (b) anchor(index, b.x, b.y, b.z); else anchor(index, 0, 0, 0);
+          } else {
+            stroke.setXYZ(index, visible ? baseWidth + (selected ? 2 : 0) : 0, eligible && !dangling ? Math.max(12, baseWidth) : 0, 0);
+            if (!a || !b) anchor(index, 0, 0, 0);
+            else if (loop && worldSizes) {
+              const mid = (t0 + t1) * Math.PI;
+              anchor(index, a.x + Math.sin(mid) * loopRadius, a.y - (1 - Math.cos(mid)) * loopRadius, a.z);
+            } else {
+              const mid = loop ? 0 : (t0 + t1) / 2;
+              anchor(index, a.x + (b.x - a.x) * mid, a.y + (b.y - a.y) * mid, a.z + (b.z - a.z) * mid);
+            }
+          }
         }
       }
       if (material.transparent !== translucent) { material.transparent = translucent; material.needsUpdate = true; }
       material.depthWrite = !translucent;
-      for (const attribute of attributes) attribute.needsUpdate = true;
+      for (const buffer of [start, end, path, stroke, colors]) buffer.needsUpdate = true;
+      revision += 1;
     },
     dispose() { if (disposed) return; disposed = true; mesh.removeFromParent(); pick.removeFromParent(); geometry.dispose(); material.dispose(); pickMaterial.dispose(); texture.dispose(); },
   };

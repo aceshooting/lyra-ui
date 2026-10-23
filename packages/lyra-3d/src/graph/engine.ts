@@ -70,6 +70,7 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
   let spatialComposite: ReturnType<typeof createGraphSpatialComposite> | undefined;
   let spatialEdges: ReturnType<typeof createGraphSpatialEdges> | undefined;
   let lastTransformState: Lyra3dState | undefined;
+  let lastSpatialRevision = -1;
   let decorations: ReturnType<typeof createGraphDecorations> | undefined;
   let positionRevision = 0;
   let fittedDistance = DEFAULT_ORBIT_CAMERA.distance;
@@ -87,7 +88,7 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
   const stop = () => { generation += 1; const old = task; task = undefined; old?.stop(); };
   const clear = () => {
     spatialComposite?.dispose(); spatialComposite = undefined;
-    spatialNodes?.dispose(); spatialNodes = undefined; spatialEdges?.dispose(); spatialEdges = undefined; lastTransformState = undefined;
+    spatialNodes?.dispose(); spatialNodes = undefined; spatialEdges?.dispose(); spatialEdges = undefined; lastTransformState = undefined; lastSpatialRevision = -1;
     decorations?.dispose(); decorations = undefined; lastTransforms = ''; lastTransformStyle = undefined;
     const geometries = new Set(meshes.map((mesh) => mesh.geometry));
     for (const mesh of meshes) { mesh.removeFromParent(); (mesh.material as MeshBasicMaterial).dispose(); mesh.dispose(); }
@@ -116,11 +117,19 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
   };
   const transforms = () => {
     if (!viewport || !data || (!spatialNodes && meshes.length === 0)) return;
+    if (spatialNodes && spatialEdges) {
+      // The spatial batches project on the GPU: a camera or viewport change only updates uniforms,
+      // and attributes are rewritten when positions, paint state or style change.
+      if (lastSpatialRevision !== positionRevision || lastTransformStyle !== viewport.style || lastTransformState !== state) {
+        lastSpatialRevision = positionRevision; lastTransformStyle = viewport.style; lastTransformState = state;
+        spatialNodes.update(viewport, positions, state); spatialEdges.update(viewport, positionOf, state);
+      } else { spatialNodes.setView(viewport); spatialEdges.setView(viewport); }
+      spatialComposite?.update(viewport); return;
+    }
     const orbit = viewport.orbit;
     const key = [positionRevision, viewport.width, viewport.height, orbit.yaw, orbit.pitch, orbit.distance, orbit.target.x, orbit.target.y, orbit.target.z].join('|');
-    if (lastTransforms === key && lastTransformStyle === viewport.style && (!spatialNodes || lastTransformState === state)) return;
-    lastTransforms = key; lastTransformStyle = viewport.style; lastTransformState = state;
-    if (spatialNodes && spatialEdges) { spatialNodes.update(viewport, positions, state); spatialEdges.update(viewport, positionOf, state); spatialComposite?.update(viewport); return; }
+    if (lastTransforms === key && lastTransformStyle === viewport.style) return;
+    lastTransforms = key; lastTransformStyle = viewport.style;
     for (let kind = 0; kind < 2; kind += 1) {
       const mesh = meshes[kind * 2]!;
       const pick = meshes[kind * 2 + 1]!;
@@ -213,7 +222,7 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
     if (disposed || viewport !== current || data !== previousData) { ornaments.dispose(); composite.dispose(); edges.dispose(); nodes.dispose(); return; }
     const previous = { nodes: spatialNodes, edges: spatialEdges, composite: spatialComposite, decorations };
     data = next; spatialNodes = nodes; spatialEdges = edges; spatialComposite = composite; decorations = ornaments;
-    lastTransforms = ''; lastTransformStyle = undefined; lastTransformState = undefined;
+    lastTransforms = ''; lastTransformStyle = undefined; lastTransformState = undefined; lastSpatialRevision = -1;
     current.world.add(composite.mesh, ...staging.world.children); current.pickWorld.add(edges.pick, nodes.pick, ...staging.pickWorld.children);
     if (staging.scene.children.length) current.scene.add(...staging.scene.children);
     previous.decorations?.dispose(); previous.composite?.dispose(); previous.edges?.dispose(); previous.nodes?.dispose();
