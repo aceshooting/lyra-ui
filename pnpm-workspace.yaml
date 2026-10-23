@@ -213,6 +213,11 @@ minimumReleaseAgeExclude:
   - chart.js@4.6.1
   - oxlint-tsgolint@7.0.2005
   - prosemirror-transform@1.12.4
+  - '@stryker-mutator/api@10.1.1'
+  - '@stryker-mutator/core@10.1.1'
+  - '@stryker-mutator/instrumenter@10.1.1'
+  - '@stryker-mutator/tap-runner@10.1.1'
+  - '@stryker-mutator/util@10.1.1'
 allowBuilds:
   esbuild: true
   rs-module-lexer: true
